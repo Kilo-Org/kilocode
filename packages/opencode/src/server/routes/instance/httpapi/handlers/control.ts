@@ -10,18 +10,19 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { RootHttpApi } from "../api"
 import { LogInput } from "../groups/control"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { remove as removeAuth } from "@/kilocode/auth/remove" // kilocode_change
+// kilocode_change start
+import { remove as removeAuth } from "@/kilocode/auth/remove"
+import { set as setAuth } from "@/kilocode/auth/set"
+// kilocode_change end
 
 export const controlHandlers = HttpApiBuilder.group(RootHttpApi, "control", (handlers) =>
   Effect.gen(function* () {
-    const auth = yield* Auth.Service
-
     const authSet = Effect.fn("ControlHttpApi.authSet")(function* (ctx: {
       params: { providerID: ProviderV2.ID }
       payload: Auth.Info
     }) {
-      yield* auth.set(ctx.params.providerID, ctx.payload).pipe(Effect.orDie)
-      // kilocode_change start - drop old presence socket before instance disposal on Kilo auth changes
+      // kilocode_change start
+      yield* setAuth(ctx.params.providerID, ctx.payload)
       if (ctx.params.providerID === "kilo") yield* invalidatePresence()
       yield* invalidateAfterProviderAuthChange(ctx.params.providerID)
       // kilocode_change end

@@ -85,18 +85,10 @@ const UsageCard: Component<{
       <Tag>{source(props.item, props.language)}</Tag>
     </CardHeader>
 
-    <Show
-      when={
-        props.item.planState !== "active" && !(props.item.planState === "unknown" && props.item.fetchState !== "ready")
-      }
-    >
+    <Show when={props.item.planState === "past_due" || props.item.planState === "canceling"}>
       <CardDescription>
         {props.language.t(
-          props.item.planState === "past_due"
-            ? "profile.usage.plan.pastDue"
-            : props.item.planState === "canceling"
-              ? "profile.usage.plan.canceling"
-              : "profile.usage.plan.unknown",
+          props.item.planState === "past_due" ? "profile.usage.plan.pastDue" : "profile.usage.plan.canceling",
         )}
       </CardDescription>
     </Show>
@@ -150,14 +142,6 @@ const UsageCard: Component<{
         }}
       </For>
     </div>
-
-    <Show when={props.item.routingState !== "active" && props.item.routingState !== "not_applicable"}>
-      <p class="provider-usage-notice">
-        {props.language.t("profile.usage.routing", {
-          state: props.language.t(`profile.usage.routingState.${props.item.routingState}`),
-        })}
-      </p>
-    </Show>
 
     <Show when={props.item.managementUrl}>
       {(url) => (

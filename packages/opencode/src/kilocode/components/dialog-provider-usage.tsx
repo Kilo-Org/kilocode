@@ -34,9 +34,6 @@ function Item(props: { item: ProviderUsageSnapshot }) {
           </box>
         )}
       </For>
-      <Show when={props.item.routingState !== "not_applicable" && props.item.routingState !== "active"}>
-        <text fg={theme.warning}>Routing: {props.item.routingState}</text>
-      </Show>
       <Show when={props.item.error}>{(error) => <text fg={theme.warning}>{error().message}</text>}</Show>
       <Show when={props.item.managementUrl}>
         {(url) => (

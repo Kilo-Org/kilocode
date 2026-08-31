@@ -30,43 +30,37 @@ interface AdapterContext {
   prune(prefix: string, keep: string[]): void
 }
 
-interface AdapterResult {
-  items: ReadonlyArray<Contract.UsageSnapshot>
-}
-
 interface Adapter {
-  cachePrefixes: readonly string[]
+  prefix: string
   cloudScoped?: boolean
-  run(ctx: AdapterContext): Promise<AdapterResult>
+  run(ctx: AdapterContext): Promise<Contract.UsageSnapshot[]>
 }
 
 const managed: Adapter = {
-  cachePrefixes: ["kilo-managed:"],
+  prefix: "kilo-managed:",
   cloudScoped: true,
   async run(ctx) {
     if (!ctx.cloud || !ctx.token || !ctx.cloudIdentity) {
-      return { items: ctx.cloudReliable ? [] : ctx.preserve("kilo-managed:") }
+      return ctx.cloudReliable ? [] : ctx.preserve("kilo-managed:")
     }
     const state = await ctx.cloud()
-    if (!ctx.identityCurrent(ctx.cloudIdentity)) return { items: [] }
-    if (!state.plans.ok || !state.byok.ok) return { items: ctx.preserve("kilo-managed:", ctx.cloudIdentity) }
+    if (!ctx.identityCurrent(ctx.cloudIdentity)) return []
+    if (!state.plans.ok || !state.byok.ok) return ctx.preserve("kilo-managed:", ctx.cloudIdentity)
     const token = ctx.token
     const identity = ctx.cloudIdentity
     const detected = Cloud.plans(state)
     const ids = detected.map((subscription) => `kilo-managed:${subscription.id}`)
     ctx.prune("kilo-managed:", ids)
-    return {
-      items: await Promise.all(
-        detected.map((subscription) =>
-          ctx.source(`kilo-managed:${subscription.id}`, () => Cloud.managed(token, subscription, ctx.usage), identity),
-        ),
+    return Promise.all(
+      detected.map((subscription) =>
+        ctx.source(`kilo-managed:${subscription.id}`, () => Cloud.managed(token, subscription, ctx.usage), identity),
       ),
-    }
+    )
   },
 }
 
 const minimax: Adapter = {
-  cachePrefixes: ["minimax-direct-"],
+  prefix: "minimax-direct-",
   async run(ctx) {
     const items = await direct(ctx.candidates, ctx.fetch, ctx.source)
     // A candidate is either live or failed, never both, so the id sets are disjoint.
@@ -76,7 +70,7 @@ const minimax: Adapter = {
       "minimax-direct-",
       merged.map((item) => item.id),
     )
-    return { items: merged }
+    return merged
   },
 }
 
@@ -353,13 +347,9 @@ function makeService(
           // Adapters are expected to be total (they absorb their own failures into
           // unavailable/stale snapshots). This catch is the containment boundary so a
           // faulty future adapter degrades to stale output instead of failing the endpoint.
-          adapter.run(ctx).catch(
-            (): AdapterResult => ({
-              items: adapter.cachePrefixes.flatMap((prefix) =>
-                ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
-              ),
-            }),
-          ),
+          adapter
+            .run(ctx)
+            .catch(() => ctx.preserve(adapter.prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined)),
         ),
       ),
     )
@@ -367,7 +357,7 @@ function makeService(
       (value): value is string => value !== undefined,
     )
     return {
-      items: results.flatMap((result) => result.items),
+      items: results.flat(),
       generatedAt: stamps.toSorted().at(-1) ?? new Date().toISOString(),
     } satisfies Contract.Info
   })

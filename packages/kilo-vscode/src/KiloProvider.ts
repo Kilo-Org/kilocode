@@ -2501,6 +2501,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async fetchAndSendProviderUsage(force = false): Promise<void> {
     const generation = ++this.providerUsageGeneration
+    if (this.connectionService.getConnectionState() !== "error") {
+      await this.connectionService.connect(this.settingsDirectory()).catch((error) => {
+        console.error("[Kilo New] KiloProvider: Failed to connect for provider usage:", error)
+      })
+      if (generation !== this.providerUsageGeneration) return
+    }
     const client = this.client
     if (!client) {
       this.postMessage(
@@ -4384,6 +4390,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       getWorkspaceDirectory: () => this.getWorkspaceDirectory(),
       disposeGlobal: () => this.disposeGlobal(),
       invalidateProviderUsage: () => this.invalidateProviderUsage(),
+      fetchAndSendProviderUsage: () => this.fetchAndSendProviderUsage(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
       fetchAndSendSpeechToTextModels: () => this.fetchAndSendSpeechToTextModels(),

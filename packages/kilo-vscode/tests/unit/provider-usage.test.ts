@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import type { ProviderUsage, ProviderUsageWindow } from "@kilocode/sdk/v2/client"
 import { formatWindow, windowLabel, windowProgress } from "@kilocode/kilo-gateway/provider-usage"
+import {
+  handleLogin,
+  handleLogout,
+  handleSetOrganization,
+  type AuthContext,
+} from "../../src/kilo-provider/handlers/auth"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
@@ -32,17 +38,30 @@ const benign = (value: unknown): unknown =>
         apply: () => Promise.resolve({ data: [] }),
       })
 
-function bridge(usage: UsageClient) {
+function bridge(usage: UsageClient, opts?: { startup?: Promise<void>; state?: string }) {
   const messages: unknown[] = []
+  const connections: string[] = []
+  let ready = !opts?.startup
   const provider = new KiloProvider(
     {} as never,
-    { getClient: () => benign({ kilocode: { providerUsage: usage } }) } as never,
+    {
+      getConnectionState: () => opts?.state ?? "disconnected",
+      connect: async (directory: string) => {
+        connections.push(directory)
+        await opts?.startup
+        ready = true
+      },
+      getClient: () => {
+        if (!ready || opts?.state === "error") throw new Error("Not connected")
+        return benign({ kilocode: { providerUsage: usage } })
+      },
+    } as never,
     undefined,
     { projectDirectory: "/repo" },
   )
   const internal = provider as unknown as Internals
   internal.postMessage = (message) => messages.push(message)
-  return { provider, internal, messages }
+  return { provider, internal, messages, connections }
 }
 
 const usageMessages = (messages: unknown[]) =>
@@ -80,7 +99,115 @@ describe("provider usage presentation", () => {
   })
 })
 
+describe("profile auth usage", () => {
+  it.each([
+    ["login", (ctx: AuthContext) => handleLogin(ctx, 1, () => 1)],
+    ["logout", handleLogout],
+    ["organization switch", (ctx: AuthContext) => handleSetOrganization(ctx, "org")],
+  ] as const)("%s refreshes the initiating profile after disposal finishes", async (_, run) => {
+    const started = Promise.withResolvers<void>()
+    const disposed = Promise.withResolvers<void>()
+    const calls: string[] = []
+    const ctx: AuthContext = {
+      client: benign({}) as AuthContext["client"],
+      postMessage: () => {},
+      getWorkspaceDirectory: () => "/repo",
+      invalidateProviderUsage: () => void calls.push("reset"),
+      disposeGlobal: async () => {
+        calls.push("dispose")
+        started.resolve()
+        await disposed.promise
+      },
+      fetchAndSendProviderUsage: async () => void calls.push("usage"),
+      fetchAndSendProviders: async () => {},
+      fetchAndSendAgents: async () => {},
+      fetchAndSendSpeechToTextModels: async () => {},
+    }
+
+    const pending = run(ctx)
+    await started.promise
+    expect(calls).toEqual(["reset", "dispose"])
+    disposed.resolve()
+    await pending
+    expect(calls).toEqual(["reset", "dispose", "usage"])
+  })
+})
+
 describe("KiloProvider provider usage bridge", () => {
+  it.each([false, true])("waits for startup before requesting usage (force=%s)", async (force) => {
+    const startup = Promise.withResolvers<void>()
+    const requests: string[] = []
+    const { internal, messages, connections } = bridge(
+      {
+        get: async () => {
+          requests.push("GET")
+          return { data }
+        },
+        refresh: async () => {
+          requests.push("POST")
+          return { data }
+        },
+      },
+      { startup: startup.promise },
+    )
+
+    const pending = internal.fetchAndSendProviderUsage(force)
+    expect(messages).toEqual([])
+    expect(requests).toEqual([])
+    startup.resolve()
+    await pending
+
+    expect(connections).toEqual(["/repo"])
+    expect(requests).toEqual([force ? "POST" : "GET"])
+    expect(messages).toEqual([{ type: "providerUsageLoaded", data }])
+  })
+
+  it("does not load usage after the project changes while waiting for startup", async () => {
+    const startup = Promise.withResolvers<void>()
+    const requests: unknown[] = []
+    const { provider, internal, messages } = bridge(
+      {
+        get: async (input) => {
+          requests.push(input)
+          return { data }
+        },
+        refresh: async () => ({ data }),
+      },
+      { startup: startup.promise },
+    )
+
+    const pending = internal.fetchAndSendProviderUsage()
+    provider.setProjectDirectory("/other")
+    startup.resolve()
+    await pending
+
+    expect(requests).toEqual([])
+    expect(usageMessages(messages)).toEqual([])
+  })
+
+  it("reports a terminal error when the backend cannot connect", async () => {
+    const { internal, messages } = bridge(
+      { get: async () => ({ data }), refresh: async () => ({ data }) },
+      { startup: Promise.reject(new Error("startup failed")) },
+    )
+
+    await internal.fetchAndSendProviderUsage()
+
+    expect(messages).toEqual([{ type: "providerUsageLoaded", error: "Provider usage could not be loaded." }])
+  })
+
+  it("does not start a backend from the error state", async () => {
+    const { internal, messages, connections } = bridge(
+      { get: async () => ({ data }), refresh: async () => ({ data }) },
+      { state: "error" },
+    )
+
+    await internal.fetchAndSendProviderUsage()
+
+    expect(connections).toEqual([])
+    expect(messages).toEqual([{ type: "providerUsageLoaded", error: "Provider usage could not be loaded." }])
+  })
+
   it("uses cache-aware GET on open and forced POST for refresh", async () => {
     const get: Array<{ directory?: string }> = []
     const refresh: Array<{ directory?: string }> = []
@@ -130,59 +257,45 @@ describe("KiloProvider provider usage bridge", () => {
     expect(messages).toEqual([{ type: "providerUsageLoaded", error: "Provider usage could not be loaded." }])
   })
 
-  it("invalidates cached usage without reloading on auth change", async () => {
-    const requests: unknown[] = []
+  it("invalidates usage without background GET or POST requests on a disposal broadcast", async () => {
+    const requests: string[] = []
     const { internal, messages } = bridge({
-      get: async (input) => {
-        requests.push(input)
-        return { data: { generatedAt: "a", items: [] } }
+      get: async () => {
+        requests.push("GET")
+        return { data }
       },
-      refresh: async () => ({ data }),
-    })
-
-    await internal.fetchAndSendProviderUsage()
-    await internal.reloadAfterAuthChange()
-
-    expect(usageMessages(messages)).toEqual([
-      { type: "providerUsageLoaded", data: { generatedAt: "a", items: [] } },
-      { type: "providerUsageLoaded", reset: true },
-    ])
-    expect(requests).toHaveLength(1)
-    expect(internal.cachedProviderUsageMessage).toBeNull()
-  })
-
-  it("resets usage without fetching when auth changes before the profile is opened", async () => {
-    const requests: unknown[] = []
-    const { internal, messages } = bridge({
-      get: async () => ({ data }),
-      refresh: async (input) => {
-        requests.push(input)
+      refresh: async () => {
+        requests.push("POST")
         return { data }
       },
     })
+    internal.cachedProviderUsageMessage = { type: "providerUsageLoaded", data }
 
     await internal.reloadAfterAuthChange()
 
     expect(requests).toEqual([])
     expect(usageMessages(messages)).toEqual([{ type: "providerUsageLoaded", reset: true }])
+    expect(internal.cachedProviderUsageMessage).toBeNull()
   })
 
   it("drops an in-flight usage response from the previous account", async () => {
-    let release!: (value: { data: ProviderUsage }) => void
-    const first = new Promise<{ data: ProviderUsage }>((resolve) => (release = resolve))
+    const response = Promise.withResolvers<{ data: ProviderUsage }>()
+    const started = Promise.withResolvers<void>()
     const calls: unknown[] = []
     const { internal, messages } = bridge({
       get: (input) => {
         calls.push(input)
-        return first
+        started.resolve()
+        return response.promise
       },
       refresh: async () => ({ data }),
     })
 
-    const hung = internal.fetchAndSendProviderUsage()
+    const pending = internal.fetchAndSendProviderUsage()
+    await started.promise
     await internal.reloadAfterAuthChange()
-    release({ data: { generatedAt: "a", items: [] } })
-    await hung
+    response.resolve({ data: { generatedAt: "stale", items: [] } })
+    await pending
 
     expect(usageMessages(messages)).toEqual([{ type: "providerUsageLoaded", reset: true }])
     expect(calls).toHaveLength(1)
