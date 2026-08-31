@@ -224,20 +224,23 @@ export namespace KiloSessionProcessor {
       import("@/provider/provider").catch(() => undefined),
     ])
     if (!runtime || !provider) return undefined
-    // Bound the lookup: a wedged runtime must not stall the watchdog.
-    const deadline = new Promise<undefined>((resolve) => setTimeout(resolve, 2_000))
-    const info = await Promise.race([
-      runtime.AppRuntime.runPromise(
-        Effect.gen(function* () {
-          const svc = yield* provider.Provider.Service
-          return yield* svc.getProvider(id)
-        }),
-      ),
-      deadline,
-    ]).catch((err) => {
+    // Bound the lookup: a wedged runtime must not stall the watchdog. The lookup
+    // keeps its own catch, so a rejection after the deadline is still handled,
+    // and the timer is cleared whichever side wins.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), 2_000)
+    })
+    const lookup = runtime.AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const svc = yield* provider.Provider.Service
+        return yield* svc.getProvider(id)
+      }),
+    ).catch((err) => {
       log.warn("offline probe provider lookup failed", { err })
       return undefined
     })
+    const info = await Promise.race([lookup, deadline]).finally(() => clearTimeout(timer))
     // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
     const base = info?.options?.baseURL
     return typeof base === "string" && base !== "" ? base : undefined
