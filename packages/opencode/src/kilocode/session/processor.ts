@@ -203,13 +203,19 @@ export namespace KiloSessionProcessor {
     return Object.values(calls).some((call) => call.executing)
   }
 
+  /** resolveSDK's env pass: ${VAR} names resolve from the environment or stay intact. */
+  export function expandEnv(url: string) {
+    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+  }
+
   // Dynamic import: app-runtime depends on this module, so a static import would
   // be circular; the annotated return type keeps the AppLayer type graph acyclic.
   async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
     const url = (id ? await configured(id) : undefined) ?? apiUrl
     if (!url) return url
-    // Same placeholder pass as resolveSDK: unresolved ${VAR} names stay intact.
-    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+    // varsLoaders vars from resolveSDK are unreachable here; unexpanded names
+    // fail the endpoint probe and fall back to the public probe.
+    return expandEnv(url)
   }
 
   async function configured(id: ProviderV2.ID): Promise<string | undefined> {
@@ -218,12 +224,17 @@ export namespace KiloSessionProcessor {
       import("@/provider/provider").catch(() => undefined),
     ])
     if (!runtime || !provider) return undefined
-    const info = await runtime.AppRuntime.runPromise(
-      Effect.gen(function* () {
-        const svc = yield* provider.Provider.Service
-        return yield* svc.getProvider(id)
-      }),
-    ).catch((err) => {
+    // Bound the lookup: a wedged runtime must not stall the watchdog.
+    const deadline = new Promise<undefined>((resolve) => setTimeout(resolve, 2_000))
+    const info = await Promise.race([
+      runtime.AppRuntime.runPromise(
+        Effect.gen(function* () {
+          const svc = yield* provider.Provider.Service
+          return yield* svc.getProvider(id)
+        }),
+      ),
+      deadline,
+    ]).catch((err) => {
       log.warn("offline probe provider lookup failed", { err })
       return undefined
     })

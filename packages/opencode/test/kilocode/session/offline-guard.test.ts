@@ -187,3 +187,17 @@ describe("kilocode.session.probeProvider", () => {
     }
   })
 })
+
+describe("kilocode.session.expandEnv", () => {
+  test("${VAR} resolves from the environment and unknown names stay intact", () => {
+    process.env.KILO_TEST_EXPAND = "8123"
+    try {
+      expect(KiloSessionProcessor.expandEnv("http://127.0.0.1:${KILO_TEST_EXPAND}/v1")).toBe("http://127.0.0.1:8123/v1")
+      expect(KiloSessionProcessor.expandEnv("http://127.0.0.1:${KILO_TEST_MISSING}/v1")).toBe(
+        "http://127.0.0.1:${KILO_TEST_MISSING}/v1",
+      )
+    } finally {
+      delete process.env.KILO_TEST_EXPAND
+    }
+  })
+})
