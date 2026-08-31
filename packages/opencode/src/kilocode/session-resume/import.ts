@@ -13,12 +13,15 @@
 
 import fs from "node:fs"
 import path from "node:path"
+import { and, eq, isNotNull } from "drizzle-orm"
 import { Cause, Effect, Exit, Option } from "effect"
 import * as InstanceState from "@/effect/instance-state"
 import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -272,13 +275,28 @@ export namespace SessionResumeImport {
     return { format, id }
   }
 
-  /** Map of already-migrated source identity to the Kilo session holding it. */
+  /**
+   * Map of already-migrated source identity to the Kilo session holding it.
+   *
+   * Queried straight off the table rather than through `Session.list`, which
+   * pages to the 100 most recently updated sessions — older markers would fall
+   * out of that window and the same source would be migrated again. Narrowing to
+   * rows that carry any metadata keeps this far smaller than the full project.
+   */
   const migrated = Effect.fn("SessionResumeImport.migrated")(function* () {
-    const sessions = yield* Session.Service
+    const ctx = yield* InstanceState.context
+    const { db } = yield* Database.Service
+    const rows = yield* db
+      .select({ id: SessionTable.id, metadata: SessionTable.metadata })
+      .from(SessionTable)
+      .where(and(eq(SessionTable.project_id, ctx.project.id), isNotNull(SessionTable.metadata)))
+      .all()
+      .pipe(Effect.orDie)
+
     const found = new Map<string, string>()
-    for (const session of yield* sessions.list()) {
-      const mark = marker(session.metadata)
-      if (mark) found.set(identity(mark.format, mark.id), session.id)
+    for (const row of rows) {
+      const mark = marker(row.metadata ?? undefined)
+      if (mark) found.set(identity(mark.format, mark.id), row.id)
     }
     return found
   })

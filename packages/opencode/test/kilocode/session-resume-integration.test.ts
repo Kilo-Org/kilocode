@@ -1469,6 +1469,40 @@ it.instance(
 )
 
 it.instance(
+  "migrate still skips a source once its session falls outside the recent-session page",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(first.migrated).toBe(1)
+
+      // Session.list pages to the 100 most recently updated sessions. Push the
+      // migrated session out of that window; the marker must still be found or
+      // the transcript gets migrated a second time.
+      for (let i = 0; i < 101; i++) {
+        yield* sessions.create({ title: `filler ${i}` })
+      }
+
+      const found = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(found.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+
+      const second = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(second.migrated).toBe(0)
+      expect(second.skipped).toBe(1)
+      expect(second.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+    }),
+  { config: cfg },
+  60_000,
+)
+
+it.instance(
   "migrate with force re-migrates an already migrated source",
   () =>
     Effect.gen(function* () {
