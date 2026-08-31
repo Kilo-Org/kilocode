@@ -61,7 +61,7 @@ Extension-specific settings should live in the Kilo extension settings, not defa
 
 ## Constrained / Cloud Environments
 
-Ephemeral sandboxes (cloud agents, CI-less containers) often miss tooling the pre-push hook needs. Run `./script/setup-sandbox.sh` at session start; it installs Java 21, trusts the sandbox TLS intercept CA for git/gh/the JVM, and runs `bun install`.
+Ephemeral sandboxes (cloud agents, CI-less containers) often miss tooling the pre-push hook needs. Run `./script/setup-sandbox.sh` at session start; it upgrades bun to the version range required by `package.json`, installs Java 21, trusts the sandbox TLS intercept CA for git/gh/the JVM, and runs `bun install`.
 
 - The pre-push hook skips the JetBrains typecheck when Java is not installed, and honors `KILO_SKIP_BUN_VERSION_CHECK=1` when the sandbox bun is below the required range. Only set that override after verifying the push content (package typecheck/tests) yourself.
 - System state (Java, /tmp, node_modules, bun) may be reset between operations in ephemeral sandboxes — re-run `script/setup-sandbox.sh` if tools disappear.

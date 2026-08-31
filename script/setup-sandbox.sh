@@ -7,7 +7,9 @@
 #   1. Java 21 (required by the JetBrains typecheck)
 #   2. TLS intercept CA trust (required by git, gh, and the JVM behind a
 #      transparent proxy, e.g. Cloudflare in cloud sandboxes)
-#   3. Workspace dependencies (bun install)
+#   3. Bun version (the pre-push hook gates on the packageManager range in
+#      package.json; a stale system bun is upgraded in place)
+#   4. Workspace dependencies (bun install)
 #
 # Usage:
 #   bun run script/setup-sandbox.sh
@@ -17,7 +19,7 @@
 # Env:
 #   KILO_SKIP_JAVA=1        skip Java install/verification
 #   KILO_SKIP_CA=1          skip TLS CA setup
-#   KILO_SKIP_INSTALL=1     skip bun install
+#   KILO_SKIP_INSTALL=1     skip bun version check/upgrade and bun install
 #   KILO_SANDBOX_STATE_DIR  where to store generated CA bundle (default ~/.kilocode-sandbox)
 set -euo pipefail
 
@@ -141,7 +143,32 @@ setup_ca() {
   fi
 }
 
+setup_bun() {
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "Warning: bun not found; install it (https://bun.sh/docs/installation) before pushing"
+    return
+  fi
+  local required range
+  required="$(sed -n 's/.*"packageManager": "bun@\([^"]*\)".*/\1/p' "$root/package.json" | head -1)"
+  if [ -z "$required" ]; then
+    echo "Warning: could not read the required bun version from package.json"
+    return
+  fi
+  range="^$required"
+  if bun -e "import { semver } from 'bun'; process.exit(semver.satisfies(process.versions.bun, '$range') ? 0 : 1)"; then
+    echo "bun $(bun --version): OK (requires $range)"
+    return
+  fi
+  echo "Upgrading bun $(bun --version) to satisfy $range..."
+  if bun upgrade >/dev/null 2>&1 && bun -e "import { semver } from 'bun'; process.exit(semver.satisfies(process.versions.bun, '$range') ? 0 : 1)"; then
+    echo "bun $(bun --version): upgraded to satisfy $range"
+  else
+    echo "Warning: could not upgrade bun to $range; push with KILO_SKIP_BUN_VERSION_CHECK=1 only after verifying the push content yourself"
+  fi
+}
+
 setup_install() {
+  setup_bun
   if command -v bun >/dev/null 2>&1; then
     (cd "$root" && bun install --frozen-lockfile)
   else
@@ -156,7 +183,7 @@ setup_install() {
 echo
 echo "Environment summary:"
 echo "  bun: $(bun --version 2>/dev/null || echo missing)"
-echo "  java: $(java -version 2>&1 | head -1 || echo missing)"
+echo "  java: $(command -v java >/dev/null 2>&1 && java -version 2>&1 | head -1 || echo missing)"
 echo "  git http.sslCAInfo: $(git config --global --get http.sslCAInfo || echo unset)"
 echo "  sandbox state: $state_dir"
 echo
