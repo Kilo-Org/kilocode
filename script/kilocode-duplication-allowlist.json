@@ -259,18 +259,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/services/marketplace/types.ts",
-        "packages/kilo-vscode/webview-ui/src/types/marketplace.ts"
-      ],
-      "fingerprint": "96a848236212dea1",
-      "maxMatches": 1,
-      "maxTokens": 171,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
         "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
       ],
