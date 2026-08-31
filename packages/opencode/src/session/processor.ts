@@ -945,7 +945,7 @@ const layer = Layer.effect(
               // kilocode_change start - fail the attempt when the provider stalls on a dead network
               const guard = KiloSessionProcessor.offlineGuard({
                 busy: () => KiloSessionProcessor.executingTools(ctx.toolcalls),
-                providerID: input.model.providerID, // local providers are probed directly
+                providerID: input.model.providerID, // probe the provider's own endpoint
                 apiUrl: input.model.api.url,
               })
               // kilocode_change end

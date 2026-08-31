@@ -225,32 +225,23 @@ export namespace SessionNetwork {
     ).catch(() => false)
   }
 
-  /** True for loopback, private LAN, and bare-hostname endpoints that public probes cannot vouch for. */
-  export function local(url: string | undefined) {
-    if (!url) return false
-    try {
-      const host = new URL(url).hostname.toLowerCase()
-      if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true
-      if (!host.includes(".")) return true
-      return /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)
-    } catch {
-      return false
-    }
-  }
-
   /**
-   * Probe for the offline guard's connectivity check. Local/private providers are
-   * probed directly — any HTTP response proves the server is reachable, and public
-   * probes say nothing about them. Remote providers keep the public-host probe.
+   * Probe for the offline guard's connectivity check. The provider's own endpoint
+   * is probed directly — any HTTP response proves it is reachable, however its
+   * host resolves. When the endpoint does not answer, the public probe
+   * distinguishes a dead network from a provider-specific outage.
    */
-  export async function probeProvider(baseURL: string | undefined) {
-    if (!baseURL || !local(baseURL)) return probe()
-    const ctl = new AbortController()
-    const timer = setTimeout(() => ctl.abort(), PROBE_MS)
-    return fetch(baseURL, { method: "HEAD", signal: ctl.signal })
-      .then(() => true)
-      .catch(() => false)
-      .finally(() => clearTimeout(timer))
+  export async function probeProvider(baseURL: string | undefined, fallback: () => Promise<boolean> = probe) {
+    if (baseURL) {
+      const ctl = new AbortController()
+      const timer = setTimeout(() => ctl.abort(), PROBE_MS)
+      const ok = await fetch(baseURL, { method: "HEAD", signal: ctl.signal })
+        .then(() => true)
+        .catch(() => false)
+        .finally(() => clearTimeout(timer))
+      if (ok) return true
+    }
+    return fallback()
   }
 
   async function delay(abort: AbortSignal) {

@@ -205,13 +205,19 @@ export namespace KiloSessionProcessor {
 
   // Dynamic import: app-runtime depends on this module, so a static import would
   // be circular; the annotated return type keeps the AppLayer type graph acyclic.
-  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
-    if (!id) return apiUrl
+  export async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+    const url = (id ? await configured(id) : undefined) ?? apiUrl
+    if (!url) return url
+    // Same placeholder pass as resolveSDK: unresolved ${VAR} names stay intact.
+    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+  }
+
+  async function configured(id: ProviderV2.ID): Promise<string | undefined> {
     const [runtime, provider] = await Promise.all([
       import("@/effect/app-runtime").catch(() => undefined),
       import("@/provider/provider").catch(() => undefined),
     ])
-    if (!runtime || !provider) return apiUrl
+    if (!runtime || !provider) return undefined
     const info = await runtime.AppRuntime.runPromise(
       Effect.gen(function* () {
         const svc = yield* provider.Provider.Service
@@ -223,7 +229,7 @@ export namespace KiloSessionProcessor {
     })
     // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
     const base = info?.options?.baseURL
-    return typeof base === "string" && base !== "" ? base : apiUrl
+    return typeof base === "string" && base !== "" ? base : undefined
   }
 
   /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
