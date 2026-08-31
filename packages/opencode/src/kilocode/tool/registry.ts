@@ -226,7 +226,9 @@ export namespace KiloToolRegistry {
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { image_generation?: boolean; native_notebook_tools?: boolean } },
+    cfg: {
+      experimental?: { image_generation?: boolean; native_notebook_tools?: boolean; task_model_selection?: boolean }
+    },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
@@ -237,7 +239,10 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
-      ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
+        ? [tools.managerModels]
+        : []),
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&

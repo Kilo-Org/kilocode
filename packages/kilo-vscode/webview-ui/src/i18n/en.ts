@@ -874,6 +874,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
+  "settings.experimental.taskModelSelection.description":
+    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
