@@ -9,7 +9,7 @@ import javax.swing.JButton
 
 @Suppress("UnstableApiUsage")
 class ActiveListEditPopupTest : BasePlatformTestCase() {
-    fun `test edit content disables unchanged and blank values`() {
+    fun `test edit content keeps the commit button enabled for every value`() {
         val content = activeListEditContent(
             ActiveListEditOptions(value = "Current"),
             hide = {},
@@ -18,13 +18,50 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
         val field = component<JBTextField>(content)
         val button = component<JButton>(content)
 
-        assertFalse(button.isEnabled)
+        assertTrue(button.isEnabled)
         field.text = "   "
-        assertFalse(button.isEnabled)
+        assertTrue(button.isEnabled)
         field.text = "Current"
-        assertFalse(button.isEnabled)
+        assertTrue(button.isEnabled)
         field.text = "Next"
         assertTrue(button.isEnabled)
+    }
+
+    fun `test edit content hides without committing an unchanged value`() {
+        val hides = mutableListOf<Unit>()
+        val commits = mutableListOf<String>()
+        val content = activeListEditContent(
+            ActiveListEditOptions(value = "Current"),
+            hide = { hides += Unit },
+            commit = { commits += it },
+        )
+        val field = component<JBTextField>(content)
+        val button = component<JButton>(content)
+
+        // Padding around an otherwise identical name is still no change.
+        field.text = "  Current  "
+        button.doClick()
+
+        assertEquals(1, hides.size)
+        assertTrue(commits.isEmpty())
+    }
+
+    fun `test edit content hides without committing a blank value`() {
+        val hides = mutableListOf<Unit>()
+        val commits = mutableListOf<String>()
+        val content = activeListEditContent(
+            ActiveListEditOptions(value = "Current"),
+            hide = { hides += Unit },
+            commit = { commits += it },
+        )
+        val field = component<JBTextField>(content)
+        val button = component<JButton>(content)
+
+        field.text = "   "
+        button.doClick()
+
+        assertEquals(1, hides.size)
+        assertTrue(commits.isEmpty())
     }
 
     fun `test edit content shows rename help label by default`() {

@@ -3,6 +3,7 @@ import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { BoardReadTool, BoardPostTool } from "./board"
+import { BrowserOpenTool } from "./browser-open"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
 import { InteractiveTerminalTool } from "./interactive-terminal"
@@ -14,6 +15,7 @@ import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
+import * as Network from "@/kilocode/sandbox/network"
 import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
@@ -74,6 +76,7 @@ export namespace KiloToolRegistry {
       const save = yield* MemorySaveTool
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
+      const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool
@@ -85,7 +88,21 @@ export namespace KiloToolRegistry {
       const send = yield* SendFileTool
       const board = yield* Effect.all({ boardRead: BoardReadTool, boardPost: BoardPostTool })
       if (!notebook)
-        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...board }
+        return {
+          recall,
+          managerModels,
+          memory,
+          save,
+          manager,
+          process,
+          browser,
+          chart,
+          image,
+          terminal,
+          notify,
+          send,
+          ...board,
+        }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
@@ -98,6 +115,7 @@ export namespace KiloToolRegistry {
         save,
         manager,
         process,
+        browser,
         chart,
         image,
         terminal,
@@ -119,6 +137,7 @@ export namespace KiloToolRegistry {
       save: Tool.Info
       manager: Tool.Info
       process: Tool.Info
+      browser?: Tool.Info
       chart: Tool.Info
       image: Tool.Info
       terminal?: Tool.Info
@@ -151,6 +170,7 @@ export namespace KiloToolRegistry {
         tools.boardRead && tools.boardPost
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
           : {}
+      const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -160,7 +180,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, ...board, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return { ...base, ...board, terminal, browser, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -219,6 +239,7 @@ export namespace KiloToolRegistry {
       save: Tool.Def
       manager: Tool.Def
       process: Tool.Def
+      browser?: Tool.Def
       chart: Tool.Def
       image: Tool.Def
       terminal?: Tool.Def
@@ -255,6 +276,7 @@ export namespace KiloToolRegistry {
         ? [tools.managerModels]
         : []),
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&
       tools.notebookRead &&
@@ -309,8 +331,17 @@ export namespace KiloToolRegistry {
   export const applyVisibility = Effect.fn("KiloToolRegistry.applyVisibility")(function* (tools: Tool.Def[]) {
     const ctx = yield* InstanceState.context
     const memoryEnabled = yield* memoryToolsEnabled({ ctx })
+    const browser = tools.some((tool) => tool.id === "browser_open")
+      ? yield* Effect.gen(function* () {
+          const base = process.env.KILO_BROWSER_BROKER_URL
+          const token = process.env.KILO_BROWSER_BROKER_TOKEN
+          if (!base || !token || !URL.canParse(base)) return false
+          return yield* Network.available(new URL(base), token)
+        })
+      : false
     return tools.filter((tool) => {
       if (tool.id.startsWith("kilo_memory_")) return memoryEnabled
+      if (tool.id === "browser_open") return browser
       return true
     })
   })

@@ -68,6 +68,7 @@ import {
   dropSet,
   emptyPageState,
   messageParts,
+  optimistic,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
@@ -87,7 +88,8 @@ import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
-import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
+import { type ReviewMessageData } from "../../../src/shared/review-comments"
+import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
@@ -2097,6 +2099,7 @@ export const SessionProvider: ParentComponent = (props) => {
     text: string,
     files?: FileAttachment[],
     review?: ReviewMessageData,
+    browserFeedback?: BrowserFeedbackData,
   ) {
     const now = Date.now()
     const temp: Message = {
@@ -2110,32 +2113,7 @@ export const SessionProvider: ParentComponent = (props) => {
     pending.add(messageID)
     pendingOptimistic.set(sid, pending)
 
-    const parts: Part[] = []
-    const partIds = new Set<string>()
-    if (text) {
-      const partId = Identifier.ascending("part")
-      partIds.add(partId)
-      parts.push({
-        type: "text" as const,
-        id: partId,
-        messageID,
-        text,
-        metadata: review ? reviewMetadata(review) : undefined,
-      })
-    }
-    for (const file of files ?? []) {
-      const partId = Identifier.ascending("part")
-      partIds.add(partId)
-      parts.push({
-        type: "file" as const,
-        id: partId,
-        messageID,
-        mime: file.mime,
-        url: file.url,
-        filename: file.filename,
-        source: file.source,
-      })
-    }
+    const parts = optimistic(messageID, text, files, review, browserFeedback)
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
     if (parts.length > 0) optimisticParts.set(messageID, new Set(parts.map((part) => part.id)))
@@ -2152,6 +2130,7 @@ export const SessionProvider: ParentComponent = (props) => {
     context?: string,
     review?: ReviewMessageData,
     origin?: string | null,
+    browserFeedback?: BrowserFeedbackData,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -2182,6 +2161,7 @@ export const SessionProvider: ParentComponent = (props) => {
         variant: variants.request(scope),
         files,
         review,
+        browserFeedback,
       })
       return
     }
@@ -2197,7 +2177,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
-      addOptimistic(scope, messageID, text, files, review)
+      addOptimistic(scope, messageID, text, files, review, browserFeedback)
       startSubmission(scope, messageID)
       if (!sid && (!draftID || draftSessionID() === scope)) {
         setUserClearedSession(false)
@@ -2218,6 +2198,7 @@ export const SessionProvider: ParentComponent = (props) => {
       variant: variants.request(scope),
       files,
       review,
+      browserFeedback,
       agentManagerContext: context,
     })
   }
@@ -2735,14 +2716,12 @@ export const SessionProvider: ParentComponent = (props) => {
     // Restore the reverted user message's prompt text and attachments into the
     // input. Dispatch as a window message so PromptInput picks it up via onMessage.
     const state = revertPromptState(getParts(messageID))
-    const { text, paths, sessions, images } = state
+    const { text, paths, sessions, images, review, browser } = state
     // Paths carry the attachments' exact locations so PromptInput can seed them
     // directly rather than re-deriving mentions from the text via regex, which
     // truncates at the first space in a filename (see PromptInput's
     // setChatBoxMessage handler).
-    if (text || paths.length > 0 || sessions.length > 0 || images.length > 0) {
-      window.postMessage({ type: "setChatBoxMessage", text, paths, sessions, images }, "*")
-    }
+    window.postMessage({ type: "setChatBoxMessage", text, paths, sessions, images, review, browser }, window.origin)
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
 
@@ -2750,7 +2729,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
-    window.postMessage({ type: "setChatBoxMessage", text: "", images: [] }, "*")
+    window.postMessage({ type: "setChatBoxMessage", text: "", images: [], review: [], browser: [] }, window.origin)
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 

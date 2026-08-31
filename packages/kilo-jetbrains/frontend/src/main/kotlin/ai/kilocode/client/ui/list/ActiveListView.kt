@@ -15,7 +15,6 @@ import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
@@ -303,9 +302,11 @@ internal class ActiveListView(
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        val x = if (rect != null) target.x + target.width / 2 else target.x + JBUI.scale(48)
-        // Anchor to the icon's bottom edge so the balloon callout points at the icon, not its center.
-        val y = if (rect != null) target.y + target.height else target.y + target.height / 2
+        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
+        // a center anchor would bury the callout under the balloon body and cover the row instead of
+        // pointing at it.
+        val x = target.x + target.width / 2
+        val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
 
@@ -335,8 +336,18 @@ internal class ActiveListView(
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
-        if (value) setHovered(-1)
         list.setPaintBusy(value)
+        setLocked(value)
+    }
+
+    /**
+     * Blocks input on the list without the [setBusy] progress spinner. For a list whose own content
+     * already shows the work in flight, where a second spinner would just be noise.
+     */
+    @RequiresEdt
+    fun setLocked(value: Boolean) {
+        checkEdt()
+        if (value) setHovered(-1)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()
@@ -580,23 +591,19 @@ internal class ActiveListView(
             ?: onActivate?.invoke(item)
     }
 
-    /**
-     * Dispatches a click on a button. A per-cell action or a metrics handler ([ActiveListMetrics])
-     * takes precedence; otherwise the click routes through the list-level [onCell] callback.
-     */
+    /** Dispatches a click from the row model, never the renderer stamp reused across rows. */
     private fun fire(item: ActiveListItem, id: String) {
-        when (id) {
-            ACTIVE_LIST_CHANGES_CELL -> {
-                item.metrics?.onChanges?.invoke()
-                return
-            }
-            ACTIVE_LIST_PR_CELL -> {
-                item.metrics?.onPr?.invoke()
-                return
-            }
+        val cell = item.cells.firstOrNull { it.id == id }?.action
+        if (cell != null) {
+            cell()
+            return
         }
-        val action = item.cells.firstOrNull { it.id == id }?.action
-        if (action != null) action() else onCell(item.key, id)
+        val region = activeListRegions(item)[id]
+        if (region != null) {
+            region()
+            return
+        }
+        onCell(item.key, id)
     }
 
     @RequiresEdt
@@ -714,7 +721,7 @@ internal class ActiveListView(
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && item.metrics == null) return baseCursor
+        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor

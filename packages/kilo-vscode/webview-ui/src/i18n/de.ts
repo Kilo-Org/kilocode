@@ -1199,61 +1199,17 @@ export const dict = {
   "question.summary": "{{n}} von {{total}} Fragen",
   "common.review": "Überprüfen",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Von der Legacy-Version migrieren",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
   "settings.aboutKiloCode.rooImport.description":
     "Importieren Sie den Konversationsverlauf von einer Installation von Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Sitzungen aus Roo Code importieren",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
-  "migration.whatsNew.subtitle":
-    "Wir haben die Erweiterung auf einer schnelleren, effizienteren Grundlage neu aufgebaut.",
-  "migration.whatsNew.features.performance.title": "Schnellere Agentenleistung",
-  "migration.whatsNew.features.performance.detail":
-    "Parallele Werkzeugaufrufe und Unteragenten lassen Ihren Agenten mehr gleichzeitig erledigen — so verbringen Sie weniger Zeit mit Warten und mehr Zeit mit Ergebnissen.",
-  "migration.whatsNew.features.interface.title": "Optimierte Oberfläche",
-  "migration.whatsNew.features.interface.detail": "Weniger Ablenkungen, einfacher und schneller zu lesen.",
-  "migration.whatsNew.features.agentManager.title": "Agentenverwaltung",
-  "migration.whatsNew.features.agentManager.detail":
-    "Eine einheitliche Oberfläche zum parallelen Ausführen mehrerer Agenten, jeweils in einem eigenen Worktree — Fortschritt überwachen, Kontext wechseln und Änderungen an einem Ort überprüfen.",
-  "migration.whatsNew.features.foundation.title": "Gemeinsame Grundlage",
-  "migration.whatsNew.features.foundation.detail":
-    "Ein kleiner, effizienter Kern über alle Kilo-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
-  "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
-  "migration.whatsNew.docsLink": "Neuigkeiten & häufige Fragen",
-  "migration.whatsNew.continue": "Weiter",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Ihre Einstellungen migrieren",
-  "migration.migrate.subtitle":
-    "Wir haben Einstellungen aus Ihrer vorherigen Installation gefunden. Hier ist, was wir übernehmen können.",
+  "migration.roo.button": "Sitzungen importieren",
+  "migration.roo.empty": "Keine Roo Code-Sitzungen gefunden.",
   "migration.migrate.selectLabel": "Auswählen, was migriert werden soll",
   "migration.migrate.chatHistory": "Chat-Sitzungen & Verlauf",
-  "migration.migrate.button": "Einstellungen migrieren",
-  "migration.migrate.skip": "Überspringen",
-  "migration.migrate.keysDetected": "{{count}} Schlüssel erkannt",
-  "migration.migrate.serversConfigured": "{{count}} Server konfiguriert",
-  "migration.migrate.modesFound": "{{count}} Modus/Modi gefunden",
-  "migration.migrate.nothingToMigrate": "In den Legacy-Einstellungen wurde nichts zum Migrieren gefunden.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Anbieter-API-Schlüssel",
-  "migration.select.mcpServers": "MCP-Server",
-  "migration.select.customModes": "Benutzerdefinierte Modi / Agenten",
-  "migration.select.defaultModel": "Standardmodell",
-  "migration.select.autoApproval": "Automatische Genehmigung",
-  "migration.select.language": "UI-Sprache",
-  "migration.select.autocomplete": "Einstellungen für Autovervollständigung",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} von {{total}} Elementen erfolgreich migriert.",
-  "migration.complete.cleanup": "Legacy-Einstellungsdaten entfernen",
-  "migration.complete.cleanupDescription":
-    "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
   "migration.complete.done": "Fertig",
   "migration.migrate.sessionsDetected": "{{count}} Sitzungen erkannt",
   "migration.error.continue": "Weiter",
@@ -1287,7 +1243,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Unbekanntes Datum",
   "migration.sessionFormat.unknown": "Unbekannt",
   "migration.sessionFormat.unknownError": "Unbekannter Fehler",
-  // legacy-migration end
 
   "error.details.show": "Details",
 

@@ -126,9 +126,7 @@ export type KiloEmbeddingModelCatalog = {
 export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {
-  enabled: boolean
   useSystemChrome: boolean
-  headless: boolean
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"

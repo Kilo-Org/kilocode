@@ -8,7 +8,6 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -315,11 +314,6 @@ class KiloSessionService internal constructor(
                 }
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=client-events stop=true failed message=${cause.message}", cause)
             }
-    }
-
-    /** Update config (model, agent/mode, temperature). */
-    suspend fun updateConfig(dir: String, config: ConfigUpdateDto) {
-        call { updateConfig(dir, config) }
     }
 
     // ------ permission / question resolution ------

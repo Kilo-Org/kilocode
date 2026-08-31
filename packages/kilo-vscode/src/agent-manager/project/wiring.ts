@@ -42,6 +42,7 @@ export function createProjectWiring(opts: {
   pushState: (ctx?: ProjectContext) => void
   /** Re-derive the pinned project after workspace folder changes. */
   changed: () => void
+  removed?: (id: string) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: import("./route").SidebarTarget) => void
   /** Route one session to a directory inside a project (override + project route). */
@@ -55,7 +56,10 @@ export function createProjectWiring(opts: {
     workspaceRoot: () => opts.host.workspacePath(),
     registry,
     enabled: () => opts.host.multiProject(),
-    remove: (id) => opts.host.unregisterProjectRoutes(id),
+    remove: (id) => {
+      opts.host.unregisterProjectRoutes(id)
+      opts.removed?.(id)
+    },
     deps: { log: opts.output, git: opts.git },
   })
   const messages: ProjectMessageDeps = {

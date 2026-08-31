@@ -1152,58 +1152,16 @@ export const dict = {
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
   "common.review": "검토",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "레거시 버전에서 마이그레이션",
-  "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
   "settings.aboutKiloCode.rooImport.description": "Roo Code 설치에서 대화 기록을 가져옵니다.",
   "settings.aboutKiloCode.rooImport.button": "Roo Code에서 세션 가져오기",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code의 새로운 기능",
-  "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
-  "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
-  "migration.whatsNew.features.performance.detail":
-    "병렬 도구 호출과 하위 에이전트를 통해 에이전트가 더 많은 작업을 동시에 처리할 수 있습니다 — 대기 시간은 줄이고 작업 효율은 높입니다.",
-  "migration.whatsNew.features.interface.title": "간소화된 인터페이스",
-  "migration.whatsNew.features.interface.detail": "불필요한 요소를 줄여 더 쉽고 빠르게 읽을 수 있습니다.",
-  "migration.whatsNew.features.agentManager.title": "에이전트 관리자",
-  "migration.whatsNew.features.agentManager.detail":
-    "여러 에이전트를 각자의 작업 트리에서 병렬로 실행할 수 있는 통합 인터페이스 — 진행 상황 모니터링, 컨텍스트 전환, 변경 사항 검토를 한 곳에서 수행합니다.",
-  "migration.whatsNew.features.foundation.title": "공유 기반",
-  "migration.whatsNew.features.foundation.detail":
-    "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
-  "migration.whatsNew.blogLink": "전체 공지 읽기",
-  "migration.whatsNew.docsLink": "새로운 기능 및 자주 묻는 질문",
-  "migration.whatsNew.continue": "계속",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "설정 마이그레이션",
-  "migration.migrate.subtitle": "이전 설치에서 설정을 찾았습니다. 가져올 수 있는 항목은 다음과 같습니다.",
+  "migration.roo.button": "세션 가져오기",
+  "migration.roo.empty": "Roo Code 세션을 찾을 수 없습니다.",
   "migration.migrate.selectLabel": "마이그레이션할 항목 선택",
   "migration.migrate.chatHistory": "채팅 세션 및 기록",
-  "migration.migrate.button": "설정 마이그레이션",
-  "migration.migrate.skip": "건너뛰기",
-  "migration.migrate.keysDetected": "{{count}}개의 키 감지됨",
-  "migration.migrate.serversConfigured": "{{count}}개의 서버 구성됨",
-  "migration.migrate.modesFound": "{{count}}개의 모드 발견됨",
-  "migration.migrate.nothingToMigrate": "레거시 설정에서 마이그레이션할 항목을 찾지 못했습니다.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "공급자 API 키",
-  "migration.select.mcpServers": "MCP 서버",
-  "migration.select.customModes": "사용자 지정 모드 / 에이전트",
-  "migration.select.defaultModel": "기본 모델",
-  "migration.select.autoApproval": "자동 승인",
-  "migration.select.language": "UI 언어",
-  "migration.select.autocomplete": "자동 완성 설정",
 
   // Migrate — completion
   "migration.complete.summary": "{{total}}개 중 {{success}}개 항목이 성공적으로 마이그레이션되었습니다.",
-  "migration.complete.cleanup": "레거시 설정 데이터 제거",
-  "migration.complete.cleanupDescription":
-    "이 작업은 VS Code 저장소에서 이전 설정을 제거합니다. 이 마이그레이션을 다시 실행할 수 없게 됩니다.",
   "migration.complete.done": "완료",
   "migration.migrate.sessionsDetected": "{{count}}개의 세션이 감지되었습니다",
   "migration.error.continue": "계속",
@@ -1237,7 +1195,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "알 수 없는 날짜",
   "migration.sessionFormat.unknown": "알 수 없음",
   "migration.sessionFormat.unknownError": "알 수 없는 오류",
-  // legacy-migration end
 
   "error.details.show": "상세 정보",
 

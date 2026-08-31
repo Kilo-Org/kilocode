@@ -377,16 +377,30 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
       "type": "string",
     },
     "model": {
-      "description": "Optional subagent model name or qualified provider/model ID from agent_manager_models. Choose a model suited to this task; omit to use the normal subagent model.",
-      "type": "string",
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional subagent model name or qualified provider/model ID from agent_manager_models. Only set when the user explicitly requests a different model. Omit or send null to keep the normal subagent model.",
     },
     "prompt": {
       "description": "The task for the agent to perform",
       "type": "string",
     },
     "provider": {
-      "description": "Optional provider ID from agent_manager_models. Requires model; omit to prefer the current turn's provider, then Kilo Gateway.",
-      "type": "string",
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional provider ID from agent_manager_models. Only set when the user explicitly requests a provider. Requires model; omit or send null to prefer the current turn's provider, then Kilo Gateway.",
     },
     "subagent_type": {
       "description": "The type of specialized agent to use for this task",
@@ -397,8 +411,15 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
       "type": "string",
     },
     "variant": {
-      "description": "Optional reasoning effort variant from agent_manager_models. Can be used without model to change only the normal subagent model's reasoning effort.",
-      "type": "string",
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional reasoning effort override from agent_manager_models. Only set when the user explicitly requests a different reasoning effort. Omit or send null to keep the normal reasoning effort. Can be used without model.",
     },
   },
   "required": [

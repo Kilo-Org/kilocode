@@ -65,6 +65,14 @@ internal class GhBanner(
                 BrowserUtil.browse("https://cli.github.com/manual/gh_auth_login")
             }
         }
+        // Offered only for gh problems: a missing git is not the GitHub integration, and turning the
+        // integration off would not make worktree stats work. The coordinator publishes OK in
+        // response, which routes back through render() and hides this banner.
+        if (next == GhAvailability.MISSING || next == GhAvailability.UNAUTH) {
+            createActionLabel(KiloBundle.message("worktree.gh.disable")) {
+                setGithubIntegration(false, "worktree_gh_banner")
+            }.toolTipText = KiloBundle.message("worktree.gh.disable.tooltip")
+        }
         synced = next
     }
 

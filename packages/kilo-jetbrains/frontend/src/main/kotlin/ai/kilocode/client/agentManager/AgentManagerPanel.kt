@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.CopySessionPrRefAction
 import ai.kilocode.client.agentManager.worktree.CreateFailure
 import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
@@ -13,6 +14,8 @@ import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
+import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
@@ -22,9 +25,8 @@ import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.ui.prTooltip
 import ai.kilocode.client.ui.style
-import ai.kilocode.client.diff.KiloDiffEditorKind
-import ai.kilocode.client.diff.diffParams
-import ai.kilocode.client.diff.ensureDiffEditorKind
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
@@ -64,6 +66,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
@@ -72,6 +75,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Component
+import java.awt.datatransfer.StringSelection
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
@@ -113,7 +117,10 @@ class AgentManagerPanel(
             open(item, focus)
         },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
-            (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
+            (row as? WorktreeRow)?.dto?.takeIf {
+                canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
+                    canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
+            }
         }),
         reorder = ActiveListReorder(
             movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
@@ -139,9 +146,10 @@ class AgentManagerPanel(
         }
         // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
         // leaving the new row without its stats and PR badge until the next poll.
-        controller.onCreated = {
+        controller.onCreated = { created ->
             project?.service<WorktreeStatusService>()?.refreshStats()
             project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+            autoRunSetupScript(created)
         }
         controller.onReload = { sync() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
@@ -256,15 +264,21 @@ class AgentManagerPanel(
 
     internal fun canDelete(item: WorktreeDto?): Boolean = deletable(item)
 
-    internal fun canOpenPr(item: WorktreeDto?): Boolean = prUrl(item) != null
+    internal fun canOpenPr(item: WorktreeDto?): Boolean = prDto(item) != null
 
-    internal fun openPr(item: WorktreeDto) = prUrl(item)?.let { BrowserUtil.browse(it) }
+    internal fun openPr(item: WorktreeDto) = prDto(item)?.let { BrowserUtil.browse(it.url) }
 
-    /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
-    private fun prUrl(item: WorktreeDto?): String? {
+    internal fun copyPrRef(item: WorktreeDto) {
+        val pr = prDto(item) ?: return
+        Telemetry.send("Worktree Action", mapOf("action" to "copy_pr_ref"))
+        CopyPasteManager.getInstance().setContents(StringSelection(CopySessionPrRefAction.reference(pr)))
+    }
+
+    /** The PR for [item], or null when it has none or is not in a stable, openable state. */
+    private fun prDto(item: WorktreeDto?): WorktreePrDto? {
         if (item == null) return null
         if (controller.progress(item.id) != null) return null
-        return prs[normalizeWorktreePath(item.path)]?.url
+        return prs[normalizeWorktreePath(item.path)]
     }
 
     internal fun canOpenDiff(item: WorktreeDto?): Boolean {
@@ -272,8 +286,64 @@ class AgentManagerPanel(
         return controller.progress(item.id) == null
     }
 
+    @RequiresEdt
     internal fun openDiff(item: WorktreeDto) {
-        if (canOpenDiff(item)) openBranchDiff(item.path)
+        val target = project ?: return
+        if (!canOpenDiff(item)) return
+        openKiloDiff(target, item.path, KiloDiffComparison.BASE, item.branch.takeUnless { it == "(detached)" })
+    }
+
+    internal fun canOpenLocalDiff(item: WorktreeDto?): Boolean {
+        if (item == null || item.main || project == null) return false
+        return controller.progress(item.id) == null
+    }
+
+    @RequiresEdt
+    internal fun openLocalDiff(item: WorktreeDto) {
+        val target = project ?: return
+        if (!canOpenLocalDiff(item)) return
+        openKiloDiff(target, item.path, KiloDiffComparison.LOCAL)
+    }
+
+    /** Copying the branch name/path works for any worktree row, including the main one. */
+    internal fun canCopyBranch(item: WorktreeDto?): Boolean = item != null
+
+    /** The Open/Create setup-script action is repo-scoped, so it never targets the main worktree row. */
+    internal fun canOpenSetupScript(item: WorktreeDto?): Boolean = item != null && !item.main
+
+    internal fun canRunSetup(item: WorktreeDto?): Boolean {
+        if (item == null || item.main) return false
+        if (controller.progress(item.id) != null) return false
+        val service = service<KiloWorkspaceService>()
+        val target = service.setupScript[controller.directory] ?: run {
+            service.refreshSetupScriptTarget(controller.directory)
+            return false
+        }
+        return target.exists
+    }
+
+    @RequiresEdt
+    internal fun runSetup(item: WorktreeDto) {
+        val target = project ?: return
+        if (!canRunSetup(item)) return
+        val script = service<KiloWorkspaceService>().setupScript[controller.directory] ?: return
+        Telemetry.send("Worktree Setup Script Run", mapOf("surface" to "worktree_row"))
+        runWorktreeSetupScript(target, script, item.path, controller.directory)
+    }
+
+    /**
+     * Fires the setup script right after worktree creation, mirroring VS Code's trigger point but not
+     * its blocking semantics: this does not await the script or gate session creation. Silently does
+     * nothing when [created] is the main worktree or no script is configured, matching VS Code.
+     */
+    @RequiresEdt
+    private fun autoRunSetupScript(created: WorktreeDto) {
+        if (created.main) return
+        val target = project ?: return
+        service<KiloWorkspaceService>().ifSetupScriptExists(controller.directory) { script ->
+            Telemetry.send("Worktree Setup Script Run", mapOf("surface" to "auto"))
+            runWorktreeSetupScript(target, script, created.path, controller.directory)
+        }
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
@@ -297,7 +367,7 @@ class AgentManagerPanel(
 
     private fun renameable(item: WorktreeDto?): Boolean {
         if (!renameVisible(item)) return false
-        return prUrl(item) == null
+        return prDto(item) == null
     }
 
     private fun renameVisible(item: WorktreeDto?): Boolean {
@@ -508,12 +578,6 @@ class AgentManagerPanel(
         }
     }
 
-    /**
-     * Inner (not data) class so [metrics] can bind each row's changes/PR handlers to the panel.
-     * Value equality is over the data fields only — the derived handlers are intentionally excluded
-     * so a stats/PR refresh that produced identical rows still skips the model rebuild in
-     * [ActiveListView].
-     */
     private inner class WorktreeRow(
         val dto: WorktreeDto,
         override val progress: String?,
@@ -532,21 +596,30 @@ class AgentManagerPanel(
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
+        override val secondaryBadges: List<ActiveListBadge>
+            get() {
+                if (progress != null) return emptyList()
+                val p = pr ?: return emptyList()
+                return listOf(
+                    ActiveListBadge(
+                        "#${p.number}",
+                        style(p.state),
+                        id = "pull-request",
+                        tooltip = prTooltip(p, customName),
+                        action = { BrowserUtil.browse(p.url) },
+                    ),
+                )
+            }
         override val metrics: ActiveListMetrics?
             get() {
                 if (progress != null) return null
-                val s = stats
-                val p = pr
-                if (s == null && p == null) return null
+                val s = stats?.takeIf { it.files > 0 } ?: return null
                 return ActiveListMetrics(
-                    additions = s?.additions ?: 0,
-                    deletions = s?.deletions ?: 0,
-                    ahead = s?.ahead ?: 0,
-                    behind = s?.behind ?: 0,
-                    pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
-                    prTooltip = p?.let { prTooltip(it, customName) },
-                    onChanges = s?.let { { openBranchDiff(dto.path) } },
-                    onPr = p?.url?.let { url -> { BrowserUtil.browse(url) } },
+                    files = s.files,
+                    additions = s.additions,
+                    deletions = s.deletions,
+                    base = s.base,
+                    onChanges = { openDiff(dto) },
                 )
             }
 
@@ -569,16 +642,6 @@ class AgentManagerPanel(
             result = 31 * result + current.hashCode()
             return result
         }
-    }
-
-    @RequiresEdt
-    private fun openBranchDiff(path: String) {
-        val target = project ?: return
-        ensureDiffEditorKind()
-        target.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", path, null, KiloBundle.message("diff.editor.branch.title")),
-        )
     }
 }
 
