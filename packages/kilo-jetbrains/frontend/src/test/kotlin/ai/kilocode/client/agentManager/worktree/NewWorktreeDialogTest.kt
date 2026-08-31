@@ -52,6 +52,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
+        KiloPluginSettings.unsetAgent()
     }
 
     override fun tearDown() {
@@ -60,6 +61,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -77,7 +79,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test selecting a mode forwards it with the created prompt and writes no global config`() {
+    fun `test selecting a mode forwards it with the created prompt only`() {
         open()
         flushUntil { edt { model().selectionKeyForTest() != null } }
 
@@ -88,9 +90,10 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
 
+        // The prompt is the only place the pick travels: writing it to the CLI's global default_agent
+        // disposed every instance the CLI held and cancelled every running turn in every worktree.
         assertEquals("plan", submitted().prompt?.agent)
-        // Picking a mode must no longer mutate the global default_agent config.
-        assertTrue(sessionRpc.configs.none { it.second.agent != null })
+        assertNull(KiloPluginSettings.getAgent())
     }
 
     fun `test selecting a model persists it for the default agent`() {

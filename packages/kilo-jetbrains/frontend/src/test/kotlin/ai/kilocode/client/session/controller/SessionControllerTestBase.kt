@@ -13,6 +13,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
@@ -106,12 +107,19 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     protected lateinit var scope: CoroutineScope
     protected lateinit var parent: Disposable
 
+    /** Balloons a controller raised, instead of real IDE notifications. */
+    protected val notifications = mutableListOf<Pair<String, String>>()
+
     override fun setUp() {
         super.setUp()
         rpc = FakeSessionRpcApi()
         appRpc = FakeAppRpcApi()
         projectRpc = FakeWorkspaceRpcApi()
         timers = TestUiTimers()
+        notifications.clear()
+        // Application-level and shared across tests in a fixture, and it now seeds a new session's
+        // mode, so a leftover pick from another test would decide this one's starting agent.
+        KiloPluginSettings.unsetAgent()
 
         coroutines = TestCoroutines()
         scope = coroutines.scope
@@ -127,6 +135,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         try {
             Disposer.dispose(parent)
             coroutines.close()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -184,6 +193,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
+            notify = { title, body -> notifications.add(title to body) },
             timers = timers,
             log = log ?: KiloLog.create(SessionController::class.java),
         )
