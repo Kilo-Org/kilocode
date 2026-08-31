@@ -344,6 +344,26 @@
 
 ## [Unreleased]
 
+## [7.1.2-rc.1] - 2026-08-31
+
+### Added
+
+- Add a session right-click menu with sharing actions.
+- Run and manage build/run configurations directly from the worktree editor.
+- Render all Mermaid diagram types in chat, not just flowcharts.
+- Add worktree transfer safety checks, unified change summaries, setup scripts, and GitHub integration controls.
+
+### Fixed
+
+- Stop showing a false "Git is not installed" warning for worktrees that were deleted from disk.
+- Linkify URLs inside inline code in chat.
+- Stop the mode picker from cancelling a running session.
+- Reduce Kilo Core CLI startup initialization work.
+
+### Changed
+
+- Consolidate worktree change summaries into the Changes panel.
+
 ## [7.1.1] - 2026-08-28
 
 ### Added
