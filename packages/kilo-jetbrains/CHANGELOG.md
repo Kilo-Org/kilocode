@@ -344,6 +344,47 @@
 
 ## [Unreleased]
 
+## [7.1.2-rc.1] - 2026-08-31
+
+### Added
+- feat(vscode): edit queued messages in the prompt input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13556
+- feat(jetbrains): add a session right-click menu with sharing by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13552
+- feat(jetbrains): run configs from worktree editor by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13278
+- feat(jetbrains): render all Mermaid diagram types in chat by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13569
+- feat: allow experimental task model selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13557
+- feat(tui): add last-commit diff view option by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/13257
+- feat(tui): add About dialog by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/12466
+- feat(jetbrains): worktree transfer safety, unified change summaries, setup scripts, and GitHub integration controls by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13566
+- feat(agent-manager): add local browser previews and element feedback by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13501
+
+### Fixed
+- fix(vscode): honor configured reasoning defaults by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13546
+- fix(agent-manager): queue prompts for busy sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13548
+- fix(vscode): preserve activity during routine reconnects by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13553
+- fix(cli): reduce startup initialization work by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13555
+- fix(jetbrains): skip git and gh probes for removed worktrees by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13525
+- fix(vscode): build missing bundles before isolated launch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13559
+- fix(vscode): preserve background agent dismissals across navigation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13560
+- fix(jetbrains): linkify urls inside inline code by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13551
+- fix(agent-manager): show live subagent tab activity by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13597
+- fix(agent-manager): release worktree locks on Windows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13468
+- fix(cli): keep cancelled agent sessions idle by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13601
+- fix(vscode): make subagent task headers collapsible by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13602
+- fix(vscode): preserve background agent spinner animation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13604
+- fix(vscode): reduce chat prompt bottom spacing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13603
+- fix(jetbrains): stop mode picker from cancelling running sessions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13591
+- fix(cli): preserve default subagent model and reasoning by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13606
+- fix(agent-manager): decode JSON-encoded task arrays by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13608
+
+### Changed
+- release(jetbrains): v7.1.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13550
+- docs(vscode): refresh extension agent guide by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13549
+- ci: fall back to GitHub-hosted runners in forks by @maphew in https://github.com/Kilo-Org/kilocode/pull/13364
+- docs: enforce Promise.withResolvers() more explicitly. by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13600
+- test(cli): catch blank TUI in release smoke checks by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13598
+- refactor(jetbrains): consolidate worktree change summaries into ChangesPanel by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13583
+
+
 ## [7.1.1] - 2026-08-28
 
 ### Added
