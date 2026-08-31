@@ -181,18 +181,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/agent-manager/diff-scope.ts",
-        "packages/kilo-vscode/webview-ui/agent-manager/diff-scope-state.ts"
-      ],
-      "fingerprint": "b4d0b555891237a8",
-      "maxMatches": 1,
-      "maxTokens": 233,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
         "packages/kilo-vscode/src/services/notebook/bridge.ts"
       ],
@@ -253,18 +241,6 @@
       "fingerprint": "edde84a63bcdb8a0",
       "maxMatches": 1,
       "maxTokens": 108,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/src/services/marketplace/types.ts",
-        "packages/kilo-vscode/webview-ui/src/types/marketplace.ts"
-      ],
-      "fingerprint": "96a848236212dea1",
-      "maxMatches": 1,
-      "maxTokens": 171,
       "kind": "legacy",
       "owner": "kilo-vscode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
@@ -337,18 +313,6 @@
       "fingerprint": "3474d577ea4814b0",
       "maxMatches": 1,
       "maxTokens": 105,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css",
-        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css"
-      ],
-      "fingerprint": "aee459acfb62435f",
-      "maxMatches": 1,
-      "maxTokens": 109,
       "kind": "legacy",
       "owner": "kilo-vscode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
