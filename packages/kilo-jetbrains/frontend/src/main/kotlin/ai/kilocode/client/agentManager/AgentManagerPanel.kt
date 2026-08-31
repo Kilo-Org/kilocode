@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.CopySessionPrRefAction
 import ai.kilocode.client.agentManager.worktree.CreateFailure
 import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
@@ -65,6 +66,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
@@ -73,6 +75,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Component
+import java.awt.datatransfer.StringSelection
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
@@ -116,7 +119,7 @@ class AgentManagerPanel(
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf {
                 canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
-                    canOpenSetupScript(it) || canRunSetup(it)
+                    canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
             }
         }),
         reorder = ActiveListReorder(
@@ -261,15 +264,21 @@ class AgentManagerPanel(
 
     internal fun canDelete(item: WorktreeDto?): Boolean = deletable(item)
 
-    internal fun canOpenPr(item: WorktreeDto?): Boolean = prUrl(item) != null
+    internal fun canOpenPr(item: WorktreeDto?): Boolean = prDto(item) != null
 
-    internal fun openPr(item: WorktreeDto) = prUrl(item)?.let { BrowserUtil.browse(it) }
+    internal fun openPr(item: WorktreeDto) = prDto(item)?.let { BrowserUtil.browse(it.url) }
 
-    /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
-    private fun prUrl(item: WorktreeDto?): String? {
+    internal fun copyPrRef(item: WorktreeDto) {
+        val pr = prDto(item) ?: return
+        Telemetry.send("Worktree Action", mapOf("action" to "copy_pr_ref"))
+        CopyPasteManager.getInstance().setContents(StringSelection(CopySessionPrRefAction.reference(pr)))
+    }
+
+    /** The PR for [item], or null when it has none or is not in a stable, openable state. */
+    private fun prDto(item: WorktreeDto?): WorktreePrDto? {
         if (item == null) return null
         if (controller.progress(item.id) != null) return null
-        return prs[normalizeWorktreePath(item.path)]?.url
+        return prs[normalizeWorktreePath(item.path)]
     }
 
     internal fun canOpenDiff(item: WorktreeDto?): Boolean {
@@ -295,6 +304,9 @@ class AgentManagerPanel(
         if (!canOpenLocalDiff(item)) return
         openKiloDiff(target, item.path, KiloDiffComparison.LOCAL)
     }
+
+    /** Copying the branch name/path works for any worktree row, including the main one. */
+    internal fun canCopyBranch(item: WorktreeDto?): Boolean = item != null
 
     /** The Open/Create setup-script action is repo-scoped, so it never targets the main worktree row. */
     internal fun canOpenSetupScript(item: WorktreeDto?): Boolean = item != null && !item.main
@@ -355,7 +367,7 @@ class AgentManagerPanel(
 
     private fun renameable(item: WorktreeDto?): Boolean {
         if (!renameVisible(item)) return false
-        return prUrl(item) == null
+        return prDto(item) == null
     }
 
     private fun renameVisible(item: WorktreeDto?): Boolean {

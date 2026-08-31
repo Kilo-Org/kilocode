@@ -15,7 +15,6 @@ import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
@@ -303,9 +302,11 @@ internal class ActiveListView(
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        val x = if (rect != null) target.x + target.width / 2 else target.x + JBUI.scale(48)
-        // Anchor to the icon's bottom edge so the balloon callout points at the icon, not its center.
-        val y = if (rect != null) target.y + target.height else target.y + target.height / 2
+        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
+        // a center anchor would bury the callout under the balloon body and cover the row instead of
+        // pointing at it.
+        val x = target.x + target.width / 2
+        val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
 
