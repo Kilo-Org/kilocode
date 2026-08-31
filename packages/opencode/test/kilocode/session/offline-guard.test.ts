@@ -173,4 +173,17 @@ describe("kilocode.session.probeProvider", () => {
       busy.stop(true)
     }
   })
+
+  test("a redirect to an unreachable destination does not fail the probe", async () => {
+    const redirect = Bun.serve({
+      port: 0,
+      fetch: () =>
+        new Response(null, { status: 302, headers: { Location: "http://192.0.2.1:1/unreachable" } }), // TEST-NET-1, unroutable
+    })
+    try {
+      expect(await SessionNetwork.probeProvider(`http://localhost:${redirect.port}`, () => Promise.resolve(false))).toBe(true)
+    } finally {
+      redirect.stop(true)
+    }
+  })
 })
