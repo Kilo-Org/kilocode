@@ -220,6 +220,34 @@ it.instance(
 )
 
 it.instance(
+  "a resumed waiter can acquire work without waking newly registered waiters repeatedly",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const id = SessionID.make("ses_reentrant_drain")
+    const release = yield* drain.hold(id)
+    const first = yield* drain.wait(id).pipe(
+      Effect.flatMap(() => drain.hold(id)),
+      Effect.forkChild({ startImmediately: true }),
+    )
+    let done = false
+    const second = yield* drain.wait(id).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          done = true
+        }),
+      ),
+      Effect.forkChild({ startImmediately: true }),
+    )
+    release()
+    const releaseAgain = yield* Fiber.join(first)
+    expect(done).toBe(false)
+    releaseAgain()
+    yield* Fiber.join(second)
+    expect(done).toBe(true)
+  }),
+)
+
+it.instance(
   "resuming an idle child still contributes to its parent",
   Effect.gen(function* () {
     const drain = yield* SessionDrain.Service

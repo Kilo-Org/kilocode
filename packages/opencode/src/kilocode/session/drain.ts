@@ -89,8 +89,9 @@ export const layer = Layer.effect(
       for (let current: Entry | undefined = value; current; current = current.parent) {
         current.count += delta
         if (current.count !== 0) continue
-        for (const waiter of current.waiters) Deferred.doneUnsafe(waiter, Effect.void)
+        const waiters = [...current.waiters]
         current.waiters.clear()
+        for (const waiter of waiters) Deferred.doneUnsafe(waiter, Effect.void)
         prune(data, current)
       }
     }
