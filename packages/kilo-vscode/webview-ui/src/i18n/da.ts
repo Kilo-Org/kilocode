@@ -866,6 +866,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.experimental.sharedAgentBoard.title": "Delt agentboard",
+  "settings.experimental.sharedAgentBoard.description":
+    "Lad hovedagenten og dens underagenter dele opdagelser i den samme session.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",

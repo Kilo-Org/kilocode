@@ -832,6 +832,8 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
+  "settings.experimental.sharedAgentBoard.title": "共享智能体看板",
+  "settings.experimental.sharedAgentBoard.description": "让主智能体及其子智能体在同一会话中共享发现。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",

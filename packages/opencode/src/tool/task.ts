@@ -237,7 +237,7 @@ export const TaskTool = Tool.define(
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
         model,
-        variant, // kilocode_change
+        ...(variant === undefined ? {} : { variant }), // kilocode_change
         ...(runInBackground ? { background: true } : {}),
       }
 
@@ -298,12 +298,10 @@ export const TaskTool = Tool.define(
           .prompt({
             sessionID: ctx.sessionID,
             agent: currentParent.agent ?? ctx.agent,
-            model: selection
-              ? currentParent.model
-                ? { providerID: currentParent.model.providerID, modelID: currentParent.model.id }
-                : source
-              : undefined,
-            variant: selection ? (currentParent.model?.variant ?? reasoning) : variant,
+            model: currentParent.model
+              ? { providerID: currentParent.model.providerID, modelID: currentParent.model.id }
+              : source,
+            variant: currentParent.model ? currentParent.model.variant : reasoning,
             parts: [
               {
                 type: "text",

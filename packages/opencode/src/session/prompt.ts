@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -1473,6 +1474,7 @@ export const layer = Layer.effect(
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
       const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
+      const board = BoardContext.cache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1719,6 +1721,23 @@ export const layer = Layer.effect(
 
           yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
+          // kilocode_change start
+          const update = tools.board_read
+            ? yield* BoardContext.prepare({
+                cache: board,
+                session,
+                agent,
+                user: lastUser,
+                messages: msgs,
+              }).pipe(
+                Effect.provideService(Config.Service, config),
+                Effect.provideService(Database.Service, database),
+                Effect.provideService(Agent.Service, agents),
+                Effect.provideService(Session.Service, sessions),
+              )
+            : undefined
+          // kilocode_change end
+
           // kilocode_change start — ephemeral context injection + post-summary
           // media strip (keeps outgoing body under the gateway body-size limit
           // even when filterCompacted couldn't trim the pre-summary history).
@@ -1737,6 +1756,7 @@ export const layer = Layer.effect(
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
             Effect.provideService(Database.Service, database),
           )
+          modelMsgs.push(...BoardContext.inject(msgs, update))
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
             yield* compaction.prune({ sessionID, reason: "payload-limit" })
@@ -1751,6 +1771,7 @@ export const layer = Layer.effect(
             modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
               Effect.provideService(Database.Service, database),
             )
+            modelMsgs.push(...BoardContext.inject(msgs, update))
             const nextSize = Buffer.byteLength(JSON.stringify(modelMsgs))
             if (nextSize > REQUEST_PRUNE_BYTES)
               yield* Effect.logWarning("payload still large after pruning", { "session.id": sessionID, size: nextSize })
@@ -1759,6 +1780,7 @@ export const layer = Layer.effect(
           const system = [
             ...env,
             ...mem, // kilocode_change
+            ...(update?.system ?? []), // kilocode_change
             ...instructions,
             ...(mcpInstructions ? [mcpInstructions] : []),
             ...(skills ? [skills] : []),
@@ -1793,6 +1815,16 @@ export const layer = Layer.effect(
                 : undefined,
             // kilocode_change end
           })
+
+          // kilocode_change start
+          BoardContext.accept(
+            board,
+            update,
+            result !== "compact" &&
+              !handle.message.error &&
+              !["error", "content-filter"].includes(handle.message.finish ?? ""),
+          )
+          // kilocode_change end
 
           // kilocode_change start - persist a lightweight marker when this assistant step had memory context
           const marker = KiloSessionPrompt.memoryPart({ sessionID, message: handle.message, cache: memoryCache })

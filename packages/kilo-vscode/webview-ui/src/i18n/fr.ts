@@ -886,6 +886,9 @@ export const dict = {
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
+  "settings.experimental.sharedAgentBoard.title": "Tableau d'agents partagé",
+  "settings.experimental.sharedAgentBoard.description":
+    "Permet à l'agent principal et à ses sous-agents de partager leurs découvertes au sein d'une même session.",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
   "settings.experimental.imageGenerationModel.description": "Modèle de génération d'images",
   "settings.experimental.imageGenerationModel.placeholder": "Par défaut (Auto Router)",

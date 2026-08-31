@@ -153,7 +153,11 @@ const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
   "find *": "deny",
 }
 
-function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function board(enabled: boolean): Record<string, "allow"> {
+  return enabled ? { board_read: "allow", board_post: "allow" } : {}
+}
+
+function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}, enabled = false) {
   return Permission.fromConfig({
     "*": "deny",
     bash: readOnlyBash,
@@ -175,6 +179,7 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
       [Truncate.GLOB]: "allow",
     },
     ...mcp,
+    ...board(enabled),
     // After the MCP rules: a server named `agent`/`notebook` emits `agent_*`/`notebook_*`,
     // which wildcard-match these tools and would otherwise reopen them.
     ...guardedDenies,
@@ -198,10 +203,7 @@ function editRestrictions(rules: Permission.Ruleset) {
 }
 
 function restrictions(user: Permission.Ruleset) {
-  return [
-    ...user.filter((rule) => rule.action === "deny" && rule.permission !== "edit"),
-    ...editRestrictions(user),
-  ]
+  return [...user.filter((rule) => rule.action === "deny" && rule.permission !== "edit"), ...editRestrictions(user)]
 }
 
 function askEditGuard() {
@@ -321,7 +323,7 @@ export function hardenExplore(
   )
 }
 
-function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}, enabled = false) {
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
@@ -351,6 +353,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     },
     edit: planEditRules(worktree),
     ...mcp,
+    ...board(enabled),
     ...guardedDenies,
   })
 }
@@ -375,6 +378,7 @@ export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
   const defaultsPatch = Permission.fromConfig({
     bash,
+    ...board(cfg.experimental?.shared_agent_board === true),
     recall: "ask",
     ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
       ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
@@ -393,6 +397,7 @@ export function cacheKey(cfg: Config.Info) {
     mode: cfg.mode,
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
+    shared_agent_board: cfg.experimental?.shared_agent_board,
     references: cfg.references,
     reference: cfg.reference,
   })
@@ -503,6 +508,7 @@ export function patchAgents(
   worktree: string,
   whitelistedDirs: string[],
 ) {
+  const enabled = cfg.experimental?.shared_agent_board === true
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = {
@@ -520,7 +526,7 @@ export function patchAgents(
 
   // Patch plan mode
   if (agents.plan) {
-    const guard = planGuard(worktree, kilo.mcpRules)
+    const guard = planGuard(worktree, kilo.mcpRules, enabled)
     agents.plan = {
       ...agents.plan,
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
@@ -551,6 +557,7 @@ export function patchAgents(
           websearch: "allow",
           semantic_search: "allow",
           read: "allow",
+          ...board(enabled),
           external_directory: {
             // Mirror upstream explore's shape: the outer "*": "deny" above wins
             // over defaults' external_directory rules via findLast, so re-apply
@@ -580,7 +587,7 @@ export function patchAgents(
       defaults,
       Permission.fromConfig({
         question: "allow",
-        suggest: "allow", // kilocode_change
+        suggest: "allow",
         plan_enter: "allow",
         semantic_search: "allow",
       }),
@@ -606,12 +613,13 @@ export function patchAgents(
         list: "allow",
         question: "allow",
         skill: "allow",
-        suggest: "allow", // kilocode_change
+        suggest: "allow",
         task: "allow",
         todoread: "allow",
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
+        ...board(enabled),
         external_directory: {
           [Truncate.GLOB]: "allow",
         },
@@ -628,7 +636,7 @@ export function patchAgents(
   }
 
   // Add ask agent
-  const guard = askGuard(kilo.mcpRules)
+  const guard = askGuard(kilo.mcpRules, enabled)
   agents.ask = {
     name: "ask",
     description: "Get answers and explanations without making changes to the codebase.",
@@ -762,9 +770,8 @@ async function removeConfigAgent(name: string, sources: KilocodeConfigSources.So
     const opts = { formattingOptions: { insertSpaces: true, tabSize: 2 } }
     const next = applyEdits(text, modify(text, ["agent", name], undefined, opts))
     const parsed = parseJsonc(next)
-    const final = parsed.default_agent === name
-      ? applyEdits(next, modify(next, ["default_agent"], undefined, opts))
-      : next
+    const final =
+      parsed.default_agent === name ? applyEdits(next, modify(next, ["default_agent"], undefined, opts)) : next
     await Bun.write(file, final)
     found = true
   }

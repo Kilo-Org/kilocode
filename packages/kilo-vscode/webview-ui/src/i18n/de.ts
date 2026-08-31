@@ -884,6 +884,9 @@ export const dict = {
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
   "settings.experimental.imageGeneration.title": "Bildgenerierung",
   "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
+  "settings.experimental.sharedAgentBoard.title": "Gemeinsames Agent-Board",
+  "settings.experimental.sharedAgentBoard.description":
+    "Ermöglicht dem Hauptagenten und seinen Unteragenten, Erkenntnisse innerhalb einer Sitzung zu teilen.",
   "settings.experimental.imageGenerationModel.title": "Bildmodell",
   "settings.experimental.imageGenerationModel.description": "Bildgenerierungsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",

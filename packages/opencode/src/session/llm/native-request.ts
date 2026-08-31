@@ -180,12 +180,19 @@ export const model = (input: Provider.Model | RequestInput, headers?: Record<str
 
 export const request = (input: RequestInput) => {
   const converted = messages(input.messages)
+  const tail = input.messages.at(-1) // kilocode_change
   // This is the only native adapter boundary that should construct canonical
   // @opencode-ai/llm request objects from opencode's session/AI SDK-shaped data.
   return LLM.request({
     model: model(input, input.headers),
     system: [...(input.system ?? []).map(SystemPart.make), ...converted.system],
     messages: converted.messages,
+    // kilocode_change start
+    cache:
+      tail?.role === "user" && typeof tail.content === "string" && tail.content.startsWith("<shared-agent-board>")
+        ? { tools: true, system: true, messages: { tail: 2 } }
+        : undefined,
+    // kilocode_change end
     tools: tools(input.tools),
     toolChoice: input.toolChoice,
     generation: generation(input),

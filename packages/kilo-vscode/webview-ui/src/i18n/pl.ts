@@ -823,6 +823,9 @@ export const dict = {
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
+  "settings.experimental.sharedAgentBoard.title": "Wspólna tablica agentów",
+  "settings.experimental.sharedAgentBoard.description":
+    "Pozwól agentowi głównemu i jego podagentom dzielić się odkryciami w ramach jednej sesji.",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",
   "settings.experimental.imageGenerationModel.description": "Model generowania obrazów",
   "settings.experimental.imageGenerationModel.placeholder": "Domyślny (Auto Router)",

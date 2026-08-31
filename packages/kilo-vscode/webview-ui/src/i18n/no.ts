@@ -827,6 +827,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
+  "settings.experimental.sharedAgentBoard.title": "Delt agenttavle",
+  "settings.experimental.sharedAgentBoard.description":
+    "La hovedagenten og underagentene dele oppdagelser i samme økt.",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
   "settings.experimental.imageGenerationModel.description": "Bildegenereringsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",

@@ -2,6 +2,7 @@ import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { BoardReadTool, BoardPostTool } from "./board"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
 import { InteractiveTerminalTool } from "./interactive-terminal"
@@ -82,14 +83,29 @@ export namespace KiloToolRegistry {
       const sessions = yield* KiloSessions.Service
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const send = yield* SendFileTool
+      const board = yield* Effect.all({ boardRead: BoardReadTool, boardPost: BoardPostTool })
       if (!notebook)
-        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
+        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...board }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
+      return {
+        recall,
+        managerModels,
+        memory,
+        save,
+        manager,
+        process,
+        chart,
+        image,
+        terminal,
+        notify,
+        send,
+        ...board,
+        ...tools,
+      }
     })
   }
 
@@ -108,6 +124,8 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Info
       notify: Tool.Info
       send: Tool.Info
+      boardRead?: Tool.Info
+      boardPost?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -129,6 +147,10 @@ export namespace KiloToolRegistry {
         send: Tool.init(tools.send),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
+      const board =
+        tools.boardRead && tools.boardPost
+          ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
+          : {}
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -138,7 +160,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return { ...base, ...board, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -202,16 +224,26 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Def
       notify: Tool.Def
       send: Tool.Def
+      boardRead?: Tool.Def
+      boardPost?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
     cfg: {
-      experimental?: { image_generation?: boolean; native_notebook_tools?: boolean; task_model_selection?: boolean }
+      experimental?: {
+        image_generation?: boolean
+        native_notebook_tools?: boolean
+        task_model_selection?: boolean
+        shared_agent_board?: boolean
+      }
     },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
+      ...(cfg.experimental?.shared_agent_board === true && tools.boardRead && tools.boardPost
+        ? [tools.boardRead, tools.boardPost]
+        : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,

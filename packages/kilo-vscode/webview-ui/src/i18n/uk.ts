@@ -857,6 +857,9 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
+  "settings.experimental.sharedAgentBoard.title": "Спільна дошка агентів",
+  "settings.experimental.sharedAgentBoard.description":
+    "Дозволяє головному агенту та його підлеглим агентам ділитися відкриттями в межах одного сеансу.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
