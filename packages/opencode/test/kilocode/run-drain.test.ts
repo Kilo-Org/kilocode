@@ -39,6 +39,64 @@ test.each([
   )
 })
 
+test.each([401, 403])("reports HTTP %i as an authentication or authorization failure", async (status) => {
+  const sdk = client(async () => new Response("private error body", { status }))
+  await expect(KiloRunDrain.check(sdk, new AbortController().signal)).rejects.toThrow(
+    `Server rejected access (HTTP ${status})`,
+  )
+})
+
+test.each([429, 500, 503])("preserves HTTP %i instead of recommending a server upgrade", async (status) => {
+  const sdk = client(async () => new Response("private error body", { status }))
+  await expect(KiloRunDrain.check(sdk, new AbortController().signal)).rejects.toThrow(
+    `Server capability check failed (HTTP ${status})`,
+  )
+})
+
+test("reports invalid JSON without exposing the response body", async () => {
+  const sdk = client(
+    async () => new Response("private invalid payload", { headers: { "content-type": "application/json" } }),
+  )
+  await expect(KiloRunDrain.check(sdk, new AbortController().signal)).rejects.toThrow(
+    "Server returned invalid capability JSON",
+  )
+})
+
+test.each(["EPIPE", "ERR_STREAM_DESTROYED"])("flush tolerates closed output %s", async (code) => {
+  const error = Object.assign(new Error("closed output"), { code })
+  await KiloRunDrain.flush([{ write: (_chunk, callback) => callback(error) }])
+  await KiloRunDrain.flush([
+    {
+      write: () => {
+        throw error
+      },
+    },
+  ])
+})
+
+test("flush preserves other I/O errors", async () => {
+  const error = Object.assign(new Error("output failed"), { code: "EIO" })
+  await expect(KiloRunDrain.flush([{ write: (_chunk, callback) => callback(error) }])).rejects.toBe(error)
+})
+
+test("flush waits for all output callbacks", async () => {
+  const first = Promise.withResolvers<void>()
+  const second = Promise.withResolvers<void>()
+  let done = false
+  const output = KiloRunDrain.flush([
+    { write: (_chunk, callback) => first.promise.then(() => callback()) },
+    { write: (_chunk, callback) => second.promise.then(() => callback()) },
+  ]).then(() => {
+    done = true
+  })
+  first.resolve()
+  await first.promise
+  expect(done).toBe(false)
+  second.resolve()
+  await output
+  expect(done).toBe(true)
+})
+
 test("accepts an acknowledgment that arrives before the HTTP result", async () => {
   const response = Promise.withResolvers<Response>()
   const drain = KiloRunDrain.create("ses_parent")

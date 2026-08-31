@@ -337,6 +337,9 @@ export const TaskTool = Tool.define(
       const notify = Effect.fn("TaskTool.notifyBackgroundResult")((jobID: string) =>
         Effect.uninterruptible(
           Effect.gen(function* () {
+            if (delivery.retained) return
+            const owner = yield* Scope.fork(scope, "parallel")
+            yield* Scope.addFinalizer(owner, Effect.sync(delivery.release))
             yield* background.wait({ id: jobID }).pipe(
               Effect.flatMap((result) => {
                 if (result.info?.status === "completed") return inject("completed", result.info.output ?? "")
@@ -356,7 +359,7 @@ export const TaskTool = Tool.define(
                       }).toObject(),
                     }),
               ),
-              Effect.ensuring(Effect.sync(delivery.release)),
+              Effect.ensuring(Scope.close(owner, Exit.void)),
               Effect.forkIn(scope, { startImmediately: true }),
             )
             delivery.retained = true
@@ -411,20 +414,16 @@ export const TaskTool = Tool.define(
         type: id,
         title: params.description,
         metadata,
-        onPromote: Effect.all([
-          ctx.metadata({
-            title: params.description,
-            metadata: { ...metadata, background: true, jobId: nextSession.id },
-          }),
-          notify(nextSession.id),
-        ]),
+        onPromote: ctx.metadata({
+          title: params.description,
+          metadata: { ...metadata, background: true, jobId: nextSession.id },
+        }),
         // kilocode_change - only the initial-background start needs its own cost bracket; the
         // foreground/promoted path below is already wrapped by the acquireUseRelease at the bottom of run()
         run: runInBackground ? backgroundRun : runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))),
       })
 
       function backgroundResult() {
-        delivery.retained = true // kilocode_change
         return {
           title: params.description,
           metadata: {
@@ -466,7 +465,10 @@ export const TaskTool = Tool.define(
               background.wait({ id: nextSession.id }).pipe(Effect.map((waited) => waited.info)),
               background.waitForPromotion(nextSession.id),
             )
-            if (result?.metadata?.background === true) return backgroundResult()
+            if (result?.metadata?.background === true) {
+              yield* notify(info.id)
+              return backgroundResult()
+            }
             if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
             if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled"))
             return {

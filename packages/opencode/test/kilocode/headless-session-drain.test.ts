@@ -151,6 +151,8 @@ function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "bus
       },
     }
     const script = `const r = await fetch(${JSON.stringify(`${tap.url}/tool`)}); if (!r.ok) throw new Error("tool gate failed"); console.log(await r.text())`
+    const scriptPath = path.join(home, "parent-gate.mjs")
+    yield* Effect.promise(() => Bun.write(scriptPath, script))
     yield* llm.pushMatch(
       ({ body }) => body.model === "parent",
       reply().tool("task", {
@@ -164,7 +166,7 @@ function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "bus
         : [
             mode === "busy"
               ? reply().tool("bash", {
-                  command: `bun -e ${JSON.stringify(script)}`,
+                  command: `bun ${JSON.stringify(scriptPath.replaceAll("\\", "/"))}`,
                   description: "Wait for the test request gate",
                 })
               : reply().text("WAITING_FOR_CHILD").stop(),

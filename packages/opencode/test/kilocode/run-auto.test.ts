@@ -115,7 +115,7 @@ const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
 const exitCode = process.exitCode
 
 afterEach(() => {
-  process.exitCode = exitCode
+  process.exitCode = exitCode ?? 0
   if (tty) {
     Object.defineProperty(process.stdin, "isTTY", tty)
     return

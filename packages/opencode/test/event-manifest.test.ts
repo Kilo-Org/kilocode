@@ -3,13 +3,15 @@ import { SessionEvent } from "@opencode-ai/core/session/event"
 import { EventManifest as SchemaEventManifest } from "@opencode-ai/schema/event-manifest"
 import { Todo } from "@/session/todo"
 import { EventManifest } from "@/event-manifest"
+import { Drained } from "@opencode-ai/schema/kilocode/session-drain" // kilocode_change
 
 describe("public event manifest", () => {
   test("contains every latest public wire type once", () => {
     expect(EventManifest.Definitions).toBe(SchemaEventManifest.Definitions)
     expect(EventManifest.Latest).toBe(SchemaEventManifest.Latest)
     expect(EventManifest.Durable).toBe(SchemaEventManifest.Durable)
-    expect(EventManifest.Latest.size).toBe(90) // kilocode_change - include global.config.updated and worktree.setup.ready
+    expect(EventManifest.Latest.size).toBe(91) // kilocode_change - include session.drained
+    expect(EventManifest.Latest.get("session.drained")).toBe(Drained) // kilocode_change
     expect(EventManifest.Latest.get("session.next.step.ended")).toBe(SessionEvent.Step.Ended)
     expect(EventManifest.Latest.get("todo.updated")).toBe(Todo.Event.Updated)
     expect(EventManifest.Latest.has("ide.installed")).toBe(false)

@@ -1,5 +1,8 @@
 import { expect } from "bun:test"
-import { Effect, Fiber } from "effect"
+import { Deferred, Effect, Exit, Fiber, Scheduler } from "effect"
+import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { disposeInstance, registerDisposer } from "@/effect/instance-registry"
 import { SessionDrain } from "@/kilocode/session/drain"
 import { SessionID } from "@/session/schema"
 import { testEffect } from "../lib/effect"
@@ -106,6 +109,138 @@ it.instance(
     expect(done).toBe(false)
     release()
     yield* Fiber.join(waiter)
+  }),
+)
+
+it.instance(
+  "disposal closes waiters before cancellation releases their last hold",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const ctx = yield* InstanceState.context
+    const id = SessionID.make("ses_dispose_drain")
+    const release = yield* drain.hold(id)
+    const cancelled = yield* Deferred.make<void>()
+    const finish = yield* Deferred.make<void>()
+    const off = registerDisposer(async (directory) => {
+      if (directory !== ctx.directory) return
+      release()
+      Deferred.doneUnsafe(cancelled, Effect.void)
+      await Effect.runPromise(Deferred.await(finish))
+    })
+    yield* Effect.addFinalizer(() =>
+      Effect.sync(() => {
+        off()
+        Deferred.doneUnsafe(finish, Effect.void)
+      }),
+    )
+    const waiting = yield* drain.wait(id).pipe(Effect.exit, Effect.forkChild({ startImmediately: true }))
+    const disposing = yield* Effect.promise(() => disposeInstance(ctx.directory)).pipe(Effect.forkChild)
+    yield* Deferred.await(cancelled)
+    expect(Exit.hasInterrupts(yield* Fiber.join(waiting))).toBe(true)
+    expect(Exit.hasInterrupts(yield* drain.wait(id).pipe(Effect.exit))).toBe(true)
+    yield* Deferred.succeed(finish, undefined)
+    yield* Fiber.join(disposing)
+    expect(Exit.hasInterrupts(yield* drain.wait(id).pipe(Effect.exit))).toBe(true)
+    yield* drain.wait(id).pipe(Effect.provideService(InstanceRef, { ...ctx }))
+  }),
+)
+
+it.instance(
+  "disposing one directory leaves another directory's waiter intact",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const ctx = yield* InstanceState.context
+    const other = { ...ctx, directory: `${ctx.directory}/other` }
+    const id = SessionID.make("ses_isolated_drain")
+    const release = yield* drain.hold(id).pipe(Effect.provideService(InstanceRef, other))
+    let done = false
+    const waiting = yield* drain.wait(id).pipe(
+      Effect.provideService(InstanceRef, other),
+      Effect.tap(() =>
+        Effect.sync(() => {
+          done = true
+        }),
+      ),
+      Effect.forkChild({ startImmediately: true }),
+    )
+    yield* Effect.promise(() => disposeInstance(ctx.directory))
+    yield* Effect.yieldNow
+    expect(done).toBe(false)
+    release()
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.instance(
+  "reacquiring a released entry cannot strand an awakened waiter on stale state",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const id = SessionID.make("ses_reacquire_drain")
+    const queued: Array<() => void> = []
+    const scheduler = new Scheduler.MixedScheduler("async", (task) => {
+      queued.push(task)
+      return () => {
+        const index = queued.indexOf(task)
+        if (index >= 0) queued.splice(index, 1)
+      }
+    })
+    let paused = false
+    scheduler.shouldYield = () => paused
+    const flush = () => {
+      while (queued.length) queued.shift()?.()
+    }
+    yield* Effect.addFinalizer(() =>
+      Effect.sync(() => {
+        paused = false
+        flush()
+      }),
+    )
+    const first = yield* drain.hold(id)
+    let done = false
+    const waiting = yield* drain.wait(id).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          done = true
+        }),
+      ),
+      Effect.forkChild({ startImmediately: true }),
+      Effect.provideService(Scheduler.Scheduler, scheduler),
+    )
+    flush()
+    paused = true
+    first()
+    const second = yield* drain.hold(id)
+    paused = false
+    flush()
+    expect(done).toBe(false)
+    second()
+    flush()
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.instance(
+  "resuming an idle child still contributes to its parent",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const parent = SessionID.make("ses_resume_parent")
+    const child = SessionID.make("ses_resume_child")
+    yield* drain.link(child, parent)
+    yield* drain.track(child, Effect.void)
+    yield* drain.wait(parent)
+    const release = yield* drain.hold(child)
+    let done = false
+    const waiting = yield* drain.wait(parent).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          done = true
+        }),
+      ),
+      Effect.forkChild({ startImmediately: true }),
+    )
+    expect(done).toBe(false)
+    release()
+    yield* Fiber.join(waiting)
   }),
 )
 

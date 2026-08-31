@@ -1457,6 +1457,88 @@ it.instance("returns the child's final answer after nested background delivery d
   }),
 )
 
+it.instance("promotion installs delivery cleanup even when its metadata hook fails", () =>
+  Effect.gen(function* () {
+    const background = yield* BackgroundJob.Service
+    const drain = yield* SessionDrain.Service
+    const { chat, assistant } = yield* seed()
+    const child = yield* Deferred.make<SessionID>()
+    const releaseChild = yield* Deferred.make<void>()
+    const metadata = yield* Deferred.make<void>()
+    const releaseMetadata = yield* Deferred.make<void>()
+    const notification = yield* Deferred.make<void>()
+    const releaseNotification = yield* Deferred.make<void>()
+    yield* Effect.addFinalizer(() =>
+      Effect.sync(() => {
+        for (const gate of [releaseChild, releaseMetadata, releaseNotification]) Deferred.doneUnsafe(gate, Effect.void)
+      }),
+    )
+    let notifications = 0
+    const factory = yield* TaskTool
+    const tool = yield* factory.init()
+    const ops: TaskPromptOps = {
+      ...stubOps(),
+      prompt: (input) =>
+        Effect.gen(function* () {
+          if (input.sessionID === chat.id) {
+            notifications++
+            yield* Deferred.succeed(notification, undefined)
+            yield* Deferred.await(releaseNotification)
+          } else {
+            yield* Deferred.succeed(child, input.sessionID)
+            yield* Deferred.await(releaseChild)
+          }
+          return reply(input, "completed")
+        }),
+    }
+    const running = yield* tool
+      .execute(
+        { description: "Promote", prompt: "Do work", subagent_type: "general", background: false },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps: ops },
+          messages: [],
+          ask: () => Effect.void,
+          metadata: (input) =>
+            input.metadata?.background === true
+              ? Effect.gen(function* () {
+                  yield* Deferred.succeed(metadata, undefined)
+                  yield* Deferred.await(releaseMetadata)
+                  return yield* Effect.die(new Error("metadata hook failed"))
+                })
+              : Effect.void,
+        },
+      )
+      .pipe(Effect.forkChild)
+    const childID = yield* Deferred.await(child)
+    const promotion = yield* background.promote(childID).pipe(Effect.exit, Effect.forkChild)
+    yield* Deferred.await(metadata)
+    const result = yield* Fiber.join(running)
+    expect(result.metadata.background).toBe(true)
+    let drained = false
+    const waiting = yield* drain.wait(chat.id).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          drained = true
+        }),
+      ),
+      Effect.forkChild({ startImmediately: true }),
+    )
+    yield* Deferred.succeed(releaseChild, undefined)
+    yield* Deferred.await(notification)
+    expect(drained).toBe(false)
+    yield* Deferred.succeed(releaseNotification, undefined)
+    yield* Fiber.join(waiting)
+    yield* Deferred.succeed(releaseMetadata, undefined)
+    expect(Exit.isFailure(yield* Fiber.join(promotion))).toBe(true)
+    expect(notifications).toBe(1)
+    yield* drain.wait(chat.id)
+  }),
+)
+
 const assistantCost = Effect.fn("TaskToolTest.assistantCost")(function* (sessionID: string) {
   const sessions = yield* Session.Service
   const msgs = yield* sessions.messages({ sessionID: SessionID.make(sessionID) })

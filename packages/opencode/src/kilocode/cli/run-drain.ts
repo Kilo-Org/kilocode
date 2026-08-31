@@ -31,10 +31,19 @@ export namespace KiloRunDrain {
       }
     const request = new Request(`${config.baseUrl.replace(/\/$/, "")}/doc`, { headers, signal })
     const response = await (config.fetch ?? globalThis.fetch)(request)
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`Server rejected access (HTTP ${response.status}); check server authentication and permissions`)
+    }
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Server capability check failed (HTTP ${response.status})`)
+    }
     if (!response.ok || !response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
       throw new Error("Server does not support session draining; upgrade or restart the server")
     }
-    if (!capability.safeParse(await response.json()).success) {
+    const body: unknown = await response.json().catch(() => {
+      throw new Error("Server returned invalid capability JSON")
+    })
+    if (!capability.safeParse(body).success) {
       throw new Error("Server does not support session draining; upgrade or restart the server")
     }
   }
@@ -96,12 +105,29 @@ export namespace KiloRunDrain {
     }
   }
 
-  export async function flush() {
+  export async function flush(
+    streams: readonly { write(chunk: string, callback: (error?: Error | null) => void): unknown }[] = [
+      process.stdout,
+      process.stderr,
+    ],
+  ) {
     await Promise.all(
-      [process.stdout, process.stderr].map(
+      streams.map(
         (stream) =>
           new Promise<void>((resolve, reject) => {
-            stream.write("", (error) => (error ? reject(error) : resolve()))
+            const done = (error?: unknown) => {
+              const closed =
+                error instanceof Error &&
+                "code" in error &&
+                (error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED")
+              if (error == null || closed) resolve()
+              else reject(error)
+            }
+            try {
+              stream.write("", done)
+            } catch (error) {
+              done(error)
+            }
           }),
       ),
     )
