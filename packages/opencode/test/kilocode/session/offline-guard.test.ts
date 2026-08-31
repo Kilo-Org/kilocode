@@ -164,4 +164,13 @@ describe("kilocode.session.probeProvider", () => {
     expect(await SessionNetwork.probeProvider(deadURL, () => Promise.resolve(true))).toBe(true)
     expect(await SessionNetwork.probeProvider(undefined, () => Promise.resolve(true))).toBe(true)
   })
+
+  test("a busy endpoint that never answers HTTP still passes", async () => {
+    const busy = Bun.serve({ port: 0, fetch: () => new Promise<Response>(() => {}) })
+    try {
+      expect(await SessionNetwork.probeProvider(`http://localhost:${busy.port}`, () => Promise.resolve(false))).toBe(true)
+    } finally {
+      busy.stop(true)
+    }
+  })
 })

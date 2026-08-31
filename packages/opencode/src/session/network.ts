@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { Context, Effect, Layer, Schema, Types } from "effect"
+import { connect } from "node:net"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { QuestionID } from "../question/schema"
@@ -225,22 +226,40 @@ export namespace SessionNetwork {
     ).catch(() => false)
   }
 
+  // A TCP connect tests path liveness without asking the server to answer HTTP,
+  // so a busy or slow provider is never mistaken for a dead network.
+  function dial(url: string) {
+    return new Promise<boolean>((resolve) => {
+      const target = URL.parse(url)
+      if (!target) return resolve(false)
+      const socket = connect({
+        host: target.hostname,
+        port: Number(target.port) || (target.protocol === "https:" ? 443 : 80),
+      })
+      const timer = setTimeout(() => {
+        socket.destroy()
+        resolve(false)
+      }, PROBE_MS)
+      socket.once("connect", () => {
+        clearTimeout(timer)
+        socket.destroy()
+        resolve(true)
+      })
+      socket.once("error", () => {
+        clearTimeout(timer)
+        resolve(false)
+      })
+    })
+  }
+
   /**
    * Probe for the offline guard's connectivity check. The provider's own endpoint
-   * is probed directly — any HTTP response proves it is reachable, however its
-   * host resolves. When the endpoint does not answer, the public probe
+   * is probed at the TCP level — an open socket proves the path is alive however
+   * its host resolves. When the socket does not open, the public probe
    * distinguishes a dead network from a provider-specific outage.
    */
   export async function probeProvider(baseURL: string | undefined, fallback: () => Promise<boolean> = probe) {
-    if (baseURL) {
-      const ctl = new AbortController()
-      const timer = setTimeout(() => ctl.abort(), PROBE_MS)
-      const ok = await fetch(baseURL, { method: "HEAD", signal: ctl.signal })
-        .then(() => true)
-        .catch(() => false)
-        .finally(() => clearTimeout(timer))
-      if (ok) return true
-    }
+    if (baseURL && (await dial(baseURL))) return true
     return fallback()
   }
 

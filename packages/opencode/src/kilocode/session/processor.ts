@@ -205,7 +205,7 @@ export namespace KiloSessionProcessor {
 
   // Dynamic import: app-runtime depends on this module, so a static import would
   // be circular; the annotated return type keeps the AppLayer type graph acyclic.
-  export async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
     const url = (id ? await configured(id) : undefined) ?? apiUrl
     if (!url) return url
     // Same placeholder pass as resolveSDK: unresolved ${VAR} names stay intact.
