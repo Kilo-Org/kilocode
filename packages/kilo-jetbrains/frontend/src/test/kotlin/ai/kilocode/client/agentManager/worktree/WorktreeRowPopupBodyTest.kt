@@ -14,14 +14,16 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import javax.swing.JScrollPane
 import javax.swing.JSeparator
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
@@ -109,7 +111,7 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
 
         edt {
             val badge = components(body).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
-            val title = components(body).filterIsInstance<JBTextArea>().single()
+            val title = components(body).filterIsInstance<SimpleColoredComponent>().single()
             val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
             val rule = components(body).filterIsInstance<JSeparator>().single { it.orientation == SwingConstants.HORIZONTAL }
             val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
@@ -129,13 +131,13 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a long title wraps instead of being cut off and keeps the pill at the top`() {
+    fun `test a long title stays reachable by scrolling sideways`() {
         val title = "fix(jetbrains): make gh/PR focus sync responsive without overwhelming the backend"
         val body = body()
         val disposable = Disposer.newDisposable("popup")
         Disposer.register(testRootDisposable, disposable)
 
-        val size = edt {
+        edt {
             body.update(
                 stats = WorktreeStatsDto(path, additions = 3191, deletions = 418, files = 63, ahead = 11, base = "origin/main"),
                 pull = pr(GhReview.APPROVED, GhChecksDto(GhChecks.PENDING, total = 1, pending = 1)).copy(title = title),
@@ -144,28 +146,23 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
             )
             // Measured the way the row popup measures it: the cap the panel allows, trimmed to the room
             // the geometry found beside the row.
-            val content = HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = 920)
-            content.fitWithin(JBUI.scale(420), JBUI.scale(320))
-            content.component.preferredSize.also {
-                content.component.setSize(it)
-                layout(content.component)
-            }
-        }
+            val content = HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = 920, horizontal = true)
+            content.fitWithin(JBUI.scale(360), JBUI.scale(320))
+            content.component.size = content.component.preferredSize
+            layout(content.component)
 
-        edt {
-            val text = components(body).filterIsInstance<JBTextArea>().single()
-            val badge = components(body).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
-            val lines = text.height / text.getFontMetrics(text.font).height
+            val scroll = components(content.component).filterIsInstance<JScrollPane>().first()
+            val view = scroll.viewport.view
 
-            assertTrue("a title this long must wrap, got height ${text.height}", lines >= 2)
-            assertEquals("$title #7", text.text)
-            // Every wrapped line is inside the popup: nothing is cut off horizontally or vertically.
-            assertTrue(text.width > 0)
-            assertTrue("the title overflows the popup", bottom(body, text) <= size.height)
-            assertTrue(right(body, text) <= size.width)
-            // The pill stays on the first line rather than centering against the whole block.
-            assertTrue("the state pill drifted down the title", bottom(body, badge) <= bottom(body, text))
-            assertTrue(top(body, badge) <= top(body, text) + text.getFontMetrics(text.font).height)
+            assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, scroll.horizontalScrollBarPolicy)
+            // The header wants more width than the popup can be, so the end of the title is behind the
+            // scrollbar rather than cut off.
+            assertTrue(
+                "the title fits, so this proves nothing: ${view.preferredSize.width} vs ${scroll.viewport.width}",
+                view.preferredSize.width > scroll.viewport.width,
+            )
+            val fragments = components(body).filterIsInstance<SimpleColoredComponent>().single()
+            assertEquals(listOf(title, " #7"), fragments(fragments))
         }
     }
 
@@ -179,6 +176,18 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     }
 
     private fun body(): WorktreeRowPopupBody = edt { WorktreeRowPopupBody(openDiff = {}, onLocal = {}) }
+
+    /** The title's styled fragments, which is where the full text lives once the line is too long. */
+    @RequiresEdt
+    private fun fragments(title: SimpleColoredComponent): List<String> {
+        val out = mutableListOf<String>()
+        val iter = title.iterator()
+        while (iter.hasNext()) {
+            iter.next()
+            out += iter.fragment
+        }
+        return out
+    }
 
     @RequiresEdt
     private fun layout(body: WorktreeRowPopupBody) {

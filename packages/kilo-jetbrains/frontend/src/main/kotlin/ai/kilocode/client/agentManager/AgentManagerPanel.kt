@@ -565,7 +565,9 @@ class AgentManagerPanel(
                     onLocal = { openLocalDiff(row.dto) },
                 )
                 body.update(stats[key], pull, WorktreeTitle.fallback(row.dto.path), dirty[key])
-                HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH)
+                // A PR title is as long as its author made it, and the popup exists to show the whole
+                // thing: past the width cap it scrolls sideways rather than losing the end of the line.
+                HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
             },
             place = { built -> place(built) },
         )
