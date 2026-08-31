@@ -25,10 +25,10 @@ Kilo Code doesn't use a single model for everything. There are four separate, in
 Each of these can be set independently. There's no single "offline mode" switch — going fully offline or self-hosted comes down to two things:
 
 1. Never sign in to the Kilo Gateway provider (so there's no `kilo-auto/*` fallback for the app to reach for).
-2. Explicitly set your **main model** to a local/BYOK provider (e.g. Ollama, LM Studio, or a direct API key), and set your **autocomplete model** to a direct Mistral or Inception BYOK key — see the warning below, as autocomplete has no local provider option. You can leave `small_model` and `subagent_model` unset — without a signed-in Kilo provider, they'll fall back to your main model rather than to Kilo Gateway.
+2. Explicitly set your **main model** to a local/BYOK provider (e.g. Ollama, LM Studio, or a direct API key), and **disable autocomplete** — there is no local autocomplete provider, so true offline requires turning it off entirely (see the warning below). You can leave `small_model` and `subagent_model` unset — without a signed-in Kilo provider, they'll fall back to your main model rather than to Kilo Gateway.
 
 {% callout type="warning" %}
-**Autocomplete has no local fallback.** Unlike the small and subagent models, autocomplete only supports the Kilo Gateway or a direct BYOK key for Mistral/Inception — if it resolves to Kilo Gateway without valid auth, the request fails outright rather than falling back to a local model. For a fully offline setup, either configure a direct Mistral BYOK key (see [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup)) or disable autocomplete.
+**Autocomplete has no local fallback.** Unlike the small and subagent models, autocomplete only supports the Kilo Gateway or a direct BYOK key for Mistral/Inception — if it resolves to Kilo Gateway without valid auth, the request fails outright rather than falling back to a local model. A Mistral/Inception BYOK key bypasses Kilo Gateway but still calls Mistral's or Inception's servers over the network, so it isn't a true offline option. For a fully offline setup, disable autocomplete entirely. If you only need to avoid Kilo Gateway (not all network access), a direct Mistral BYOK key works — see [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
 {% /callout %}
 
 {% callout type="note" %}
