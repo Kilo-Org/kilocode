@@ -342,18 +342,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": [
-        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css",
-        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css"
-      ],
-      "fingerprint": "aee459acfb62435f",
-      "maxMatches": 1,
-      "maxTokens": 109,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/opencode/src/kilocode/agent/index.ts", "packages/opencode/src/kilocode/agent/index.ts"],
       "fingerprint": "9044b540f896a694",
       "maxMatches": 1,
