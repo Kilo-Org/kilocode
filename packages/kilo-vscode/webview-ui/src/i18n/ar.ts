@@ -1141,58 +1141,16 @@ export const dict = {
   "question.summary": "{{n}} من {{total}} أسئلة",
   "common.review": "مراجعة",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "الترحيل من الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
   "settings.aboutKiloCode.rooImport.description": "استيراد سجل المحادثات من تثبيت Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "استيراد الجلسات من Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "ما الجديد في Kilo Code",
-  "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
-  "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
-  "migration.whatsNew.features.performance.detail":
-    "استدعاءات الأدوات المتوازية والوكلاء الفرعيون يتيحون لوكيلك إنجاز المزيد في وقت واحد — فتقضي وقتًا أقل في الانتظار ووقتًا أكثر في الإنجاز.",
-  "migration.whatsNew.features.interface.title": "واجهة مبسّطة",
-  "migration.whatsNew.features.interface.detail": "أقل تشتيتًا، أسهل وأسرع في القراءة.",
-  "migration.whatsNew.features.agentManager.title": "مدير الوكلاء",
-  "migration.whatsNew.features.agentManager.detail":
-    "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
-  "migration.whatsNew.features.foundation.title": "أساس مشترك",
-  "migration.whatsNew.features.foundation.detail":
-    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
-  "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
-  "migration.whatsNew.docsLink": "الجديد والأسئلة الشائعة",
-  "migration.whatsNew.continue": "متابعة",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "ترحيل إعداداتك",
-  "migration.migrate.subtitle": "لقد وجدنا إعدادات من تثبيتك السابق. إليك ما يمكننا نقله.",
+  "migration.roo.button": "استيراد الجلسات",
+  "migration.roo.empty": "لم يتم العثور على جلسات Roo Code.",
   "migration.migrate.selectLabel": "اختر ما تريد ترحيله",
   "migration.migrate.chatHistory": "جلسات الدردشة والسجل",
-  "migration.migrate.button": "ترحيل الإعدادات",
-  "migration.migrate.skip": "تخطي",
-  "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
-  "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
-  "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
-  "migration.migrate.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "مفاتيح API لمقدمي الخدمة",
-  "migration.select.mcpServers": "خوادم MCP",
-  "migration.select.customModes": "الأوضاع المخصصة / الوكلاء",
-  "migration.select.defaultModel": "النموذج الافتراضي",
-  "migration.select.autoApproval": "الموافقة التلقائية",
-  "migration.select.language": "لغة واجهة المستخدم",
-  "migration.select.autocomplete": "إعدادات الإكمال التلقائي",
 
   // Migrate — completion
   "migration.complete.summary": "تم ترحيل {{success}} من {{total}} عناصر بنجاح.",
-  "migration.complete.cleanup": "إزالة بيانات الإعدادات القديمة",
-  "migration.complete.cleanupDescription":
-    "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
   "migration.migrate.sessionsDetected": "تم اكتشاف {{count}} جلسة",
   "migration.error.continue": "متابعة",
@@ -1226,7 +1184,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "تاريخ غير معروف",
   "migration.sessionFormat.unknown": "غير معروف",
   "migration.sessionFormat.unknownError": "خطأ غير معروف",
-  // legacy-migration end
 
   "error.details.show": "التفاصيل",
 

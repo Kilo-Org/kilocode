@@ -197,11 +197,6 @@
         "category": "Kilo Code"
       },
       {
-        "command": "kilo-code.new.openMigrationWizard",
-        "title": "Migrate Settings from Legacy Version",
-        "category": "Kilo Code"
-      },
-      {
         "command": "kilo-code.new.showMemory",
         "title": "Show Project Memory",
         "category": "Kilo Code"
