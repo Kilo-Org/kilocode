@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.agentManager.worktree.KiloRunService
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
@@ -19,8 +20,10 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.testing.FakeRunRpcApi
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
@@ -79,6 +82,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         rpc = FakeWorktreeRpcApi()
         service = KiloWorktreeService(coroutines.scope, rpc)
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        // remove() releases any worktree run processes through this service before deleting.
+        ApplicationManager.getApplication()
+            .replaceService(KiloRunService::class.java, KiloRunService(coroutines.scope, FakeRunRpcApi()), testRootDisposable)
+        // Worktree stats/PR loading resolves the backend project root first.
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         ApplicationManager.getApplication()
             .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
     }

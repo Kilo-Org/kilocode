@@ -890,6 +890,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
+  "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Позволяет явно выбирать модель, провайдера и уровень рассуждения для субагентов Task.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
