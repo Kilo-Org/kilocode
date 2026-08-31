@@ -884,6 +884,16 @@ class KiloBackendAppServiceTest {
         withTimeout(5_000) { svc.sessions.statuses.first { it["ses_abc"]?.type == "busy" } }
 
         mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        // Disposal badges the session and then reloads, and the reload is what restarts the activity
+        // collector — so the restart proves the badge was already taken, and waiting for it is what
+        // makes the assertion below about surviving the restart instead of racing it. Reporting idle
+        // before that point would race too: the status map is fed by a separate collector that can
+        // reach it before the disposal watcher runs, leaving the cancelled turn looking finished.
+        assertTrue(
+            log.awaitMessage(20_000, count = 2) { it == "INFO: Activity manager started" },
+            "Disposal must reload the app and restart the activity collector; logs=${log.messages}",
+        )
+
         // The cancelled turn then reports idle, which is what lets the badge show: live work
         // deliberately outranks a past error so a resumed row keeps spinning instead.
         mock.pushEvent("session.status", """{"sessionID":"ses_abc","status":{"type":"idle"}}""")
