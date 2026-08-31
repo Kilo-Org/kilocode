@@ -198,10 +198,13 @@ export namespace KiloSessionProcessor {
   /** How long a stream may stay silent before the guard probes connectivity. */
   export const STALL_MS = 10_000
 
-  // Dynamic imports: app-runtime pulls in the session processor, so a static
-  // import here would be circular. The explicit return annotation keeps the
-  // runtime's types out of this module's exported signatures, which would
-  // otherwise make the AppLayer type graph circular as well.
+  /** True only for calls whose local execution started; pending input must not hold the guard back. */
+  export function executingTools(calls: Record<string, { executing?: boolean }>) {
+    return Object.values(calls).some((call) => call.executing)
+  }
+
+  // Dynamic import: app-runtime depends on this module, so a static import would
+  // be circular; the annotated return type keeps the AppLayer type graph acyclic.
   async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
     if (!id) return apiUrl
     const [runtime, provider] = await Promise.all([
@@ -218,8 +221,7 @@ export namespace KiloSessionProcessor {
       log.warn("offline probe provider lookup failed", { err })
       return undefined
     })
-    // Same resolution as resolveSDK: the provider's configured baseURL wins
-    // over the catalog URL.
+    // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
     const base = info?.options?.baseURL
     return typeof base === "string" && base !== "" ? base : apiUrl
   }
@@ -233,10 +235,9 @@ export namespace KiloSessionProcessor {
   }
 
   /**
-   * Fails a stalled attempt (no stream events for `stallMs`) with
-   * DisconnectedError when the connectivity probe also fails. A passing probe
-   * resets the clock; tool calls hold it back. Local providers are probed
-   * directly; remote ones via public hosts.
+   * Fails an attempt stalled for `stallMs` with DisconnectedError when the
+   * connectivity probe also fails. A passing probe resets the clock; only
+   * executing tool calls hold it back.
    */
   export function offlineGuard(input: {
     busy?: () => boolean

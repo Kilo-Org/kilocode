@@ -96,6 +96,37 @@ describe("kilocode.session.offlineGuard", () => {
     expect(asked).toBe(0)
   })
 
+  test("pending tool input does not hold the guard back", async () => {
+    let asked = 0
+    const guard = KiloSessionProcessor.offlineGuard({
+      ...fast,
+      busy: () => KiloSessionProcessor.executingTools({ "call-1": {} }),
+      check: () => {
+        asked++
+        return Promise.resolve(false)
+      },
+    })
+    const exit = await Effect.runPromiseExit(guard.watch.pipe(Effect.raceFirst(Effect.sleep("700 millis"))))
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(error(exit)).toBeInstanceOf(KiloSessionProcessor.DisconnectedError)
+    expect(asked).toBeGreaterThanOrEqual(1)
+  })
+
+  test("executing tool calls hold the guard back", async () => {
+    let asked = 0
+    const guard = KiloSessionProcessor.offlineGuard({
+      ...fast,
+      busy: () => KiloSessionProcessor.executingTools({ "call-1": { executing: true } }),
+      check: () => {
+        asked++
+        return Promise.resolve(false)
+      },
+    })
+    const exit = await Effect.runPromiseExit(guard.watch.pipe(Effect.raceFirst(Effect.sleep("700 millis"))))
+    expect(Exit.isSuccess(exit)).toBe(true)
+    expect(asked).toBe(0)
+  })
+
   test("the synthetic failure routes to the offline retry branch", () => {
     const err = new KiloSessionProcessor.DisconnectedError()
     expect(SessionNetwork.disconnected(err)).toBe(true)
