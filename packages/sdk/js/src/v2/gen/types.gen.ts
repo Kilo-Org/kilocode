@@ -95,6 +95,7 @@ export type Event =
   | EventServerConnected1
   | EventGlobalDisposed1
   | EventGlobalConfigUpdated1
+  | EventSessionDrained1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -214,6 +215,7 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
+  | EventSessionDrained
 
 export type QuestionReplied = {
   sessionID: string
@@ -1272,6 +1274,7 @@ export type GlobalEvent = {
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
+    | EventSessionDrained
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2155,6 +2158,14 @@ export type GlobalEvent = {
         type: "global.config.updated"
         properties: {
           [key: string]: unknown
+        }
+      }
+    | {
+        id: string
+        type: "session.drained"
+        properties: {
+          sessionID: string
+          token: string
         }
       }
     | SyncEventSessionCreated
@@ -4740,6 +4751,7 @@ export type V2Event =
   | ServerConnected
   | GlobalDisposed
   | GlobalConfigUpdated
+  | SessionDrained
 
 export type V2EventStream = string
 
@@ -6227,6 +6239,15 @@ export type EventGlobalConfigUpdated = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventSessionDrained = {
+  id: string
+  type: "session.drained"
+  properties: {
+    sessionID: string
+    token: string
   }
 }
 
@@ -9204,6 +9225,24 @@ export type GlobalConfigUpdated = {
   }
 }
 
+export type SessionDrained = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.drained"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+    token: string
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -10222,6 +10261,15 @@ export type EventGlobalConfigUpdated1 = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventSessionDrained1 = {
+  id: string
+  type: "session.drained"
+  properties: {
+    sessionID: string
+    token: string
   }
 }
 
@@ -16628,6 +16676,42 @@ export type KilocodeResumeSessionResponses = {
 }
 
 export type KilocodeResumeSessionResponse = KilocodeResumeSessionResponses[keyof KilocodeResumeSessionResponses]
+
+export type KilocodeDrainSessionData = {
+  body?: {
+    token: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session/{sessionID}/drain"
+}
+
+export type KilocodeDrainSessionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type KilocodeDrainSessionError = KilocodeDrainSessionErrors[keyof KilocodeDrainSessionErrors]
+
+export type KilocodeDrainSessionResponses = {
+  /**
+   * Session work drained
+   */
+  200: boolean
+}
+
+export type KilocodeDrainSessionResponse = KilocodeDrainSessionResponses[keyof KilocodeDrainSessionResponses]
 
 export type KilocodeHeapSnapshotData = {
   body?: never

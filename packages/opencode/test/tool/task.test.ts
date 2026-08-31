@@ -15,6 +15,7 @@ import { MessageV2 } from "@/session/message-v2" // kilocode_change
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { SessionStatus } from "@/session/status"
 import { Provider } from "../../src/provider/provider" // kilocode_change
 import { KiloSession } from "../../src/kilocode/session" // kilocode_change
@@ -47,6 +48,7 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
       Session.node,
       SessionProjector.node,
       SessionRunState.node,
+      SessionDrain.node, // kilocode_change
       SessionStatus.node,
       Truncate.node,
       ToolRegistry.node,
@@ -1402,6 +1404,59 @@ describe("tool.task", () => {
 })
 
 // kilocode_change start - subagent cost propagation coverage (#6321)
+it.instance("returns the child's final answer after nested background delivery drains", () =>
+  Effect.gen(function* () {
+    const sessions = yield* Session.Service
+    const drain = yield* SessionDrain.Service
+    const { chat, assistant } = yield* seed()
+    const entered = yield* Deferred.make<{ input: SessionPrompt.PromptInput; release: () => void }>()
+    const factory = yield* TaskTool
+    const tool = yield* factory.init()
+    const ops: TaskPromptOps = {
+      ...stubOps(),
+      prompt: (input) =>
+        Effect.gen(function* () {
+          const grandchild = yield* sessions.create({ parentID: input.sessionID, title: "nested background" })
+          yield* drain.link(grandchild.id, input.sessionID)
+          const release = yield* drain.hold(grandchild.id)
+          const initial = reply(input, "WAITING_FOR_NESTED_CHILD")
+          yield* sessions.updateMessage(initial.info)
+          for (const part of initial.parts) yield* sessions.updatePart(part)
+          yield* Deferred.succeed(entered, { input, release })
+          return initial
+        }),
+    }
+    const running = yield* tool
+      .execute(
+        {
+          description: "Nested result",
+          prompt: "Return the completed result",
+          subagent_type: "general",
+          background: false,
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps: ops },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+      .pipe(Effect.forkChild)
+    const pending = yield* Deferred.await(entered)
+    const final = reply(pending.input, "FINAL_NESTED_RESULT")
+    yield* sessions.updateMessage(final.info)
+    for (const part of final.parts) yield* sessions.updatePart(part)
+    pending.release()
+    const result = yield* Fiber.join(running)
+    expect(result.output).toContain("FINAL_NESTED_RESULT")
+    expect(result.output).not.toContain("WAITING_FOR_NESTED_CHILD")
+  }),
+)
+
 const assistantCost = Effect.fn("TaskToolTest.assistantCost")(function* (sessionID: string) {
   const sessions = yield* Session.Service
   const msgs = yield* sessions.messages({ sessionID: SessionID.make(sessionID) })

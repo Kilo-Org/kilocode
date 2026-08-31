@@ -1,4 +1,5 @@
-import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2"
+import type { KiloClient } from "@kilocode/sdk/v2"
+import { KiloRunDrain } from "../run-drain"
 import { UI } from "@/cli/ui"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { isBuiltinCommand, type BuiltinCommand } from "@/kilocode/session/builtin-commands"
@@ -28,6 +29,7 @@ export namespace KiloRun {
     model?: string,
     current?: { id: string; providerID: string },
     directory?: string,
+    signal?: AbortSignal,
   ) {
     const selected = resolve(model, current)
     if (!selected) {
@@ -38,12 +40,15 @@ export namespace KiloRun {
     switch (command) {
       case "compact":
       case "summarize":
-        return sdk.session.summarize({
-          sessionID,
-          directory,
-          providerID: selected.providerID,
-          modelID: selected.modelID,
-        })
+        return sdk.session.summarize(
+          {
+            sessionID,
+            directory,
+            providerID: selected.providerID,
+            modelID: selected.modelID,
+          },
+          { signal },
+        )
     }
   }
 }
@@ -58,7 +63,7 @@ export namespace KiloRunDaemon {
     const daemon = await DaemonClient.maybe()
     if (!daemon) return false
     const dir = input.directory ?? Filesystem.resolve(process.cwd())
-    const client = createKiloClient({ baseUrl: daemon.url, directory: dir, headers: daemon.headers })
+    const client = KiloRunDrain.client({ baseUrl: daemon.url, directory: dir, headers: daemon.headers })
     await input.execute(client)
     return true
   }

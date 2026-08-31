@@ -112,8 +112,10 @@ function args() {
 }
 
 const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
+const exitCode = process.exitCode
 
 afterEach(() => {
+  process.exitCode = exitCode
   if (tty) {
     Object.defineProperty(process.stdin, "isTTY", tty)
     return
@@ -123,7 +125,15 @@ afterEach(() => {
 
 async function run(sdk: Record<string, unknown>) {
   mock.module("@kilocode/sdk/v2", () => ({
-    createKiloClient: () => sdk,
+    createKiloClient: (config: { fetch?: () => Promise<Response> }) => {
+      config.fetch = async () =>
+        Response.json({
+          paths: {
+            "/kilocode/session/{sessionID}/drain": { post: { operationId: "kilocode.drainSession" } },
+          },
+        })
+      return sdk
+    },
   }))
 
   Object.defineProperty(process.stdin, "isTTY", {
@@ -147,7 +157,17 @@ describe("cli run auto permissions", () => {
         get: async () => ({ data: { share: "manual" } }),
       },
       event: {
-        subscribe: async () => ({ stream: q.stream() }),
+        subscribe: async () => {
+          q.push({ type: "server.connected", properties: {} })
+          return { stream: q.stream() }
+        },
+      },
+      kilocode: {
+        drainSession: async (input: { sessionID: string; token: string }) => {
+          q.push({ type: "session.drained", properties: input })
+          q.end()
+          return { data: true }
+        },
       },
       permission: {
         reply: async (input: { requestID: string; reply: string }) => {
@@ -165,8 +185,7 @@ describe("cli run auto permissions", () => {
           q.push(permission("perm_other", "ses_other"))
           q.push(permission("perm_child", "ses_child"))
           q.push(idle())
-          await Promise.race([done.promise, new Promise((resolve) => setTimeout(resolve, 25))])
-          q.end()
+          await done.promise
           return { data: undefined }
         },
       },
@@ -176,4 +195,90 @@ describe("cli run auto permissions", () => {
 
     expect(calls).toEqual([{ requestID: "perm_child", reply: "once" }])
   })
+
+  test("a failed prompt aborts a blocked permission reply during cleanup", async () => {
+    const q = feed<Event>()
+    const started = Promise.withResolvers<void>()
+    let aborted = false
+    const sdk = {
+      config: { get: async () => ({ data: { share: "manual" } }) },
+      event: {
+        subscribe: async () => {
+          q.push({ type: "server.connected", properties: {} })
+          return { stream: q.stream() }
+        },
+      },
+      permission: {
+        reply: async (_input: unknown, options: { signal: AbortSignal }) => {
+          expect(options.signal).toBeInstanceOf(AbortSignal)
+          started.resolve()
+          return new Promise((_resolve, reject) => {
+            options.signal.addEventListener(
+              "abort",
+              () => {
+                aborted = true
+                reject(options.signal.reason)
+              },
+              { once: true },
+            )
+          })
+        },
+      },
+      session: {
+        get: async (input: { sessionID: string }) => ({ data: { id: input.sessionID, directory: "/tmp/project" } }),
+        prompt: async () => {
+          q.push(task("ses_child"))
+          q.push(permission("perm_child", "ses_child"))
+          await started.promise
+          throw new Error("intentional prompt failure")
+        },
+      },
+    }
+    await run(sdk)
+    q.end()
+    expect(aborted).toBe(true)
+    expect(process.exitCode).toBe(1)
+  })
+
+  test("handles a tracked child's network retry without touching another session", async () => {
+    const q = feed<Event>()
+    const done = Promise.withResolvers<void>()
+    const calls: string[] = []
+    const sdk = {
+      config: { get: async () => ({ data: { share: "manual" } }) },
+      event: {
+        subscribe: async () => {
+          q.push({ type: "server.connected", properties: {} })
+          return { stream: q.stream() }
+        },
+      },
+      network: {
+        reply: async (input: { requestID: string }, options: { signal: AbortSignal }) => {
+          expect(options.signal).toBeInstanceOf(AbortSignal)
+          calls.push(input.requestID)
+          done.resolve()
+          return { data: true }
+        },
+      },
+      kilocode: {
+        drainSession: async (input: { sessionID: string; token: string }) => {
+          q.push({ type: "session.drained", properties: input })
+          q.end()
+          return { data: true }
+        },
+      },
+      session: {
+        get: async (input: { sessionID: string }) => ({ data: { id: input.sessionID, directory: "/tmp/project" } }),
+        prompt: async () => {
+          q.push(task("ses_child"))
+          q.push({ type: "session.network.asked", properties: { id: "net_other", sessionID: "ses_other" } })
+          q.push({ type: "session.network.asked", properties: { id: "net_child", sessionID: "ses_child" } })
+          await done.promise
+          return { data: undefined }
+        },
+      },
+    }
+    await run(sdk)
+    expect(calls).toEqual(["net_child"])
+  }, 15_000)
 })

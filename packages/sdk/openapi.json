@@ -15200,6 +15200,98 @@
         ]
       }
     },
+    "/kilocode/session/{sessionID}/drain": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.drainSession",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session work drained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Session work drained"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+        "summary": "Wait for session completion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["token"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.drainSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/heap/snapshot": {
       "post": {
         "tags": ["kilocode"],
@@ -26686,6 +26778,9 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionDrained1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -27041,6 +27136,9 @@
           },
           {
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrained"
           },
           {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
@@ -30240,6 +30338,9 @@
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
               },
               {
+                "$ref": "#/components/schemas/EventSessionDrained"
+              },
+              {
                 "type": "object",
                 "properties": {
                   "id": {
@@ -33289,6 +33390,37 @@
                   "properties": {
                     "type": "object",
                     "properties": {}
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.drained"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    },
+                    "required": ["sessionID", "token"],
+                    "additionalProperties": false
                   }
                 },
                 "required": ["id", "type", "properties"],
@@ -41135,6 +41267,9 @@
           },
           {
             "$ref": "#/components/schemas/GlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/SessionDrained"
           }
         ]
       },
@@ -46322,6 +46457,36 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -55282,6 +55447,59 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -58448,6 +58666,37 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrained1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],

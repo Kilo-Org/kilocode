@@ -76,6 +76,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { assertExternalDirectoryEffect } from "@/tool/external-directory" // kilocode_change
 import { SessionRunState } from "./run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Database } from "@opencode-ai/core/database/database"
@@ -139,14 +140,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (
-    input: PromptInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (
-    input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -176,6 +173,7 @@ export const layer = Layer.effect(
     const scope = yield* Scope.Scope
     const instruction = yield* Instruction.Service
     const state = yield* SessionRunState.Service
+    const drain = yield* SessionDrain.Service // kilocode_change
     const revert = yield* SessionRevert.Service
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
@@ -1432,16 +1430,19 @@ export const layer = Layer.effect(
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
-        return yield* KiloSessionPromptQueue.enqueue(
+        return yield* drain.track(
           input.sessionID,
-          message.info.id,
-          bridge.run(
-            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
-              Effect.orDie,
+          KiloSessionPromptQueue.enqueue(
+            input.sessionID,
+            message.info.id,
+            bridge.run(
+              loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
+                Effect.orDie,
+              ),
             ),
-          ), // kilocode_change
-          bridge.run(lastAssistant(input.sessionID)),
-          dismiss,
+            bridge.run(lastAssistant(input.sessionID)),
+            dismiss,
+          ),
         )
         // kilocode_change end
       },
@@ -1620,7 +1621,13 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true, overflow: false }) // kilocode_change
+          yield* compaction.create({
+            sessionID,
+            agent: lastUser.agent,
+            model: lastUser.model,
+            auto: true,
+            overflow: false,
+          }) // kilocode_change
           continue
         }
 
@@ -2660,6 +2667,7 @@ export const node = LayerNode.make({
     CrossSpawnSpawner.node,
     Instruction.node,
     SessionRunState.node,
+    SessionDrain.node, // kilocode_change
     SessionRevert.node,
     SessionSummary.node,
     SystemPrompt.node,
