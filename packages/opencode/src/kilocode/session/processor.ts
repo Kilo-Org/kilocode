@@ -202,13 +202,13 @@ export namespace KiloSessionProcessor {
   // import here would be circular. The explicit return annotation keeps the
   // runtime's types out of this module's exported signatures, which would
   // otherwise make the AppLayer type graph circular as well.
-  async function providerBaseURL(id: ProviderV2.ID | undefined): Promise<string | undefined> {
-    if (!id) return undefined
+  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+    if (!id) return apiUrl
     const [runtime, provider] = await Promise.all([
       import("@/effect/app-runtime").catch(() => undefined),
       import("@/provider/provider").catch(() => undefined),
     ])
-    if (!runtime || !provider) return undefined
+    if (!runtime || !provider) return apiUrl
     const info = await runtime.AppRuntime.runPromise(
       Effect.gen(function* () {
         const svc = yield* provider.Provider.Service
@@ -218,7 +218,10 @@ export namespace KiloSessionProcessor {
       log.warn("offline probe provider lookup failed", { err })
       return undefined
     })
-    return info?.options?.baseURL
+    // Same resolution as resolveSDK: the provider's configured baseURL wins
+    // over the catalog URL.
+    const base = info?.options?.baseURL
+    return typeof base === "string" && base !== "" ? base : apiUrl
   }
 
   /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
@@ -241,13 +244,14 @@ export namespace KiloSessionProcessor {
     tickMs?: number
     check?: () => Promise<boolean>
     providerID?: ProviderV2.ID
+    apiUrl?: string
   }) {
     const stall = input.stallMs ?? STALL_MS
     const tick = input.tickMs ?? 1_000
     const check =
       input.check ??
       (async () => {
-        const baseURL = await providerBaseURL(input.providerID)
+        const baseURL = await providerBaseURL(input.providerID, input.apiUrl)
         return SessionNetwork.probeProvider(baseURL)
       })
     const state = { at: Date.now() }

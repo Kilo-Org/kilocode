@@ -943,6 +943,7 @@ const layer = Layer.effect(
               const guard = KiloSessionProcessor.offlineGuard({
                 busy: () => Object.keys(ctx.toolcalls).length > 0,
                 providerID: input.model.providerID, // local providers are probed directly
+                apiUrl: input.model.api.url,
               })
               // kilocode_change end
               const stream = llm.stream({
