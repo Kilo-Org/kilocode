@@ -14,6 +14,8 @@ internal data class Palette(
     val line: Color,
     val font: Font,
     val bold: Font,
+    /** Categorical series colors for charts; falls back to [accent] when empty. */
+    val tones: List<Color> = emptyList(),
 ) {
     fun color(role: Role): Color = when (role) {
         Role.Surface -> surface
@@ -24,5 +26,10 @@ internal data class Palette(
         Role.Note -> note
         Role.Cluster -> cluster
         Role.Line -> line
+    }
+
+    fun tone(idx: Int): Color {
+        if (tones.isEmpty()) return accent
+        return tones[Math.floorMod(idx, tones.size)]
     }
 }
