@@ -1155,61 +1155,14 @@ export const dict = {
   "question.summary": "{{n}} of {{total}} questions",
   "common.review": "Review",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrate from Legacy Version",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
   "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
   "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
   "migration.roo.button": "Import Sessions",
   "migration.roo.empty": "No Roo Code sessions found.",
-
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
-  "migration.whatsNew.features.performance.title": "Faster Agent Performance",
-  "migration.whatsNew.features.performance.detail":
-    "Parallel tool calls and subagents let your agent tackle more at once — so you spend less time watching and more time shipping.",
-  "migration.whatsNew.features.interface.title": "Streamlined Interface",
-  "migration.whatsNew.features.interface.detail": "Fewer distractions, easier and quicker to read.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
-  "migration.whatsNew.features.agentManager.detail":
-    "A unified interface for running multiple agents in parallel, each on its own worktree — monitor progress, switch context, and review changes in one place.",
-  "migration.whatsNew.features.foundation.title": "Shared Foundation",
-  "migration.whatsNew.features.foundation.detail":
-    "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
-  "migration.whatsNew.blogLink": "Read the full announcement",
-  "migration.whatsNew.docsLink": "What's new & FAQ",
-  "migration.whatsNew.continue": "Continue",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrate Your Settings",
-  "migration.migrate.subtitle": "We found settings from your previous installation. Here's what we can bring over.",
   "migration.migrate.selectLabel": "Select what to migrate",
   "migration.migrate.chatHistory": "Chat Sessions & History",
-  "migration.migrate.button": "Migrate Settings",
-  "migration.migrate.skip": "Skip",
-  "migration.migrate.keysDetected": "{{count}} keys detected",
-  "migration.migrate.serversConfigured": "{{count}} server(s) configured",
-  "migration.migrate.modesFound": "{{count}} mode(s) found",
   "migration.migrate.sessionsDetected": "{{count}} sessions detected",
-  "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Provider API Keys",
-  "migration.select.mcpServers": "MCP Servers",
-  "migration.select.customModes": "Custom Modes / Agents",
-  "migration.select.defaultModel": "Default Model",
-  "migration.select.autoApproval": "Auto-Approval",
-  "migration.select.language": "UI Language",
-  "migration.select.autocomplete": "Autocomplete Settings",
-
-  // Migrate — completion
   "migration.complete.summary": "{{success}} of {{total}} items migrated successfully.",
-  "migration.complete.cleanup": "Remove legacy settings data",
-  "migration.complete.cleanupDescription":
-    "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
   "migration.error.continue": "Continue",
   "migration.sessionSummary.title": "Summary:",
@@ -1241,7 +1194,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Unknown date",
   "migration.sessionFormat.unknown": "Unknown",
   "migration.sessionFormat.unknownError": "Unknown error",
-  // legacy-migration end
 
   "error.details.show": "Details",
 
