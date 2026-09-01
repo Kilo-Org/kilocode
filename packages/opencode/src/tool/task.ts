@@ -237,7 +237,7 @@ export const TaskTool = Tool.define(
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
         model,
-        variant, // kilocode_change
+        ...(variant === undefined ? {} : { variant }), // kilocode_change
         ...(runInBackground ? { background: true } : {}),
       }
 
@@ -308,6 +308,7 @@ export const TaskTool = Tool.define(
               {
                 type: "text",
                 synthetic: true,
+                metadata: { background: true },
                 text: renderOutput({
                   sessionID: nextSession.id,
                   state,
@@ -378,7 +379,10 @@ export const TaskTool = Tool.define(
       const foregroundCost = runInBackground
         ? undefined
         : yield* KiloCostPropagation.childCost(sessions, nextSession.id) // kilocode_change - snapshot before the foreground job starts
-      const info = yield* background.start({
+      // kilocode_change start
+      const start = KiloTask.start(background, (id) => ops.cancel(id), runInBackground ? notify : undefined)
+      const info = yield* start({
+        // kilocode_change end
         id: nextSession.id,
         type: id,
         title: params.description,
@@ -412,13 +416,10 @@ export const TaskTool = Tool.define(
         }
       }
 
-      if (runInBackground) {
-        yield* notify(info.id)
-        return backgroundResult()
-      }
+      if (runInBackground) return backgroundResult() // kilocode_change
 
       const runCancel = yield* EffectBridge.make()
-      const cancel = ops.cancel(nextSession.id)
+      const cancel = KiloTask.cancelForeground(background, nextSession.id, ops.cancel(nextSession.id)) // kilocode_change
 
       function onAbort() {
         runCancel.fork(cancel)
@@ -450,7 +451,11 @@ export const TaskTool = Tool.define(
         (costBefore, exit) =>
           Effect.gen(function* () {
             if (Exit.hasInterrupts(exit))
-              yield* Effect.all([cancel, background.cancel(nextSession.id)], { discard: true })
+              yield* KiloTask.cancelForeground(
+                background,
+                nextSession.id,
+                Effect.all([cancel, background.cancel(nextSession.id)], { discard: true }),
+              )
           }).pipe(
             Effect.ensuring(
               Effect.gen(function* () {
@@ -494,7 +499,7 @@ export const TaskTool = Tool.define(
             }),
           ),
           execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-            run(params, ctx).pipe(Effect.orDie),
+            run(params, ctx).pipe(Effect.scoped, Effect.orDie),
         }
       })
     // kilocode_change end

@@ -52,6 +52,24 @@ function same(item: Item, ref: ModelRef) {
   return item.model.providerID === ref.providerID && item.model.id === ref.modelID
 }
 
+export function choices(search: string, items: Item[], fav: (item: Item) => boolean) {
+  const term = search.trim().toLowerCase()
+  return items
+    .filter((item) => {
+      if (!term) return true
+      return `${item.id} ${item.model.name} ${item.provider.name}`.toLowerCase().includes(term)
+    })
+    .sort((a, b) => {
+      const ranked = Number(fav(b)) - Number(fav(a))
+      if (ranked !== 0) return ranked
+      const named = a.model.name.localeCompare(b.model.name)
+      if (named !== 0) return named
+      const provider = a.provider.name.localeCompare(b.provider.name)
+      if (provider !== 0) return provider
+      return a.id.localeCompare(b.id)
+    })
+}
+
 export function useModelSettings() {
   const ctx = useConfig()
   const snap = () => ctx.data()
@@ -125,23 +143,7 @@ export function useModelSettings() {
       })
   })
 
-  const options = createMemo(() => {
-    const term = picker().trim().toLowerCase()
-    return all()
-      .filter((item) => {
-        if (!term) return true
-        return `${item.id} ${item.model.name} ${item.provider.name}`.toLowerCase().includes(term)
-      })
-      .sort((a, b) => {
-        const ranked = Number(fav(b)) - Number(fav(a))
-        if (ranked !== 0) return ranked
-        const named = a.model.name.localeCompare(b.model.name)
-        if (named !== 0) return named
-        const provider = a.provider.name.localeCompare(b.provider.name)
-        if (provider !== 0) return provider
-        return a.id.localeCompare(b.id)
-      })
-  })
+  const options = createMemo(() => choices(picker(), all(), fav))
 
   const label = createMemo(() => (field() === "model" ? "Default model" : "Small model"))
 

@@ -372,7 +372,14 @@ const AgentManagerContent: Component = () => {
   const setReviewCommentsByContext = reviewState.setComments
   const browser = createBrowserPanel(
     sidePanel,
-    (panel) => (panel ? panels.open(panel) : panels.close(SidePanel.Browser)),
+    (value) => {
+      const current = panels.selected()
+      const next = typeof value === "function" ? value(current) : value
+      if (next === current) return next
+      if (next) panels.open(next)
+      else panels.close(SidePanel.Browser)
+      return next
+    },
     setHistory,
     setReviewActive,
   )
@@ -905,6 +912,7 @@ const AgentManagerContent: Component = () => {
     active: activeProjectId,
     activityFor: session.activityFor,
     inUseFor: session.inUseFor,
+    terminal: (id, project) => terms.activityFor(`${project ?? currentProjectId() ?? "single"}:${id ?? LOCAL}`),
     worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
     subscribe: vscode.onMessage,
   })

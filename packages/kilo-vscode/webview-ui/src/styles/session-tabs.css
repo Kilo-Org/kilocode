@@ -319,7 +319,8 @@
 }
 
 /* Match tab context menus to dropdown-menu visuals on every tab surface. */
-.session-tab-menu {
+.session-tab-menu,
+.am-ctx-menu {
   min-width: 210px;
   border: 1px solid color-mix(in oklch, var(--border-base) 50%, transparent) !important;
   box-shadow: var(--shadow-md) !important;

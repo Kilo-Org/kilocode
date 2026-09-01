@@ -4,6 +4,7 @@ import type { AgentBuilderPreviewResponse, Model, Provider } from "@kilocode/sdk
 import { previewAgent, saveAgent, type AgentPayload, type Scope, type Snapshot } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, friendly, sorted, toMode, toolCapabilities, toolName } from "../../../shared/utils"
+import { choices } from "./models"
 import {
   defaults,
   defs,
@@ -199,23 +200,7 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
 
   const favorites = createMemo(() => snap()?.modelState.favorite ?? [])
   const fav = (item: Item) => favorites().some((ref) => same(item, ref))
-  const models = createMemo(() => {
-    const term = picker().trim().toLowerCase()
-    return all()
-      .filter((item) => {
-        if (!term) return true
-        return `${item.id} ${item.model.name} ${item.provider.name}`.toLowerCase().includes(term)
-      })
-      .sort((a, b) => {
-        const ranked = Number(fav(b)) - Number(fav(a))
-        if (ranked !== 0) return ranked
-        const named = a.model.name.localeCompare(b.model.name)
-        if (named !== 0) return named
-        const provider = a.provider.name.localeCompare(b.provider.name)
-        if (provider !== 0) return provider
-        return a.id.localeCompare(b.id)
-      })
-  })
+  const models = createMemo(() => choices(picker(), all(), fav))
   const item = (value: unknown) => {
     if (typeof value !== "string") return undefined
     return all().find((model) => model.id === value || `${model.model.providerID}/${model.model.id}` === value)

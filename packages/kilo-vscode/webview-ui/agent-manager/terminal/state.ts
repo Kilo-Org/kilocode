@@ -15,6 +15,7 @@
 import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 import { LOCAL } from "../navigate"
+import { strongest, type Activity } from "../../src/utils/session-activity"
 import type {
   ExtensionMessage,
   ScriptTerminalKind,
@@ -67,6 +68,9 @@ interface SideRequest {
 }
 
 export interface TerminalStateControls {
+  activity(terminalId: string): Activity
+  setActivity(terminalId: string, state: Activity): void
+  activityFor(context: string): Activity
   /** Add a terminal record to one context. */
   add(worktreeId: string | null, term: TerminalTabState): void
   /** Fill an optimistic terminal record without replacing its xterm-owning object. */
@@ -186,6 +190,20 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
   // <For> reference inequality (see the module comment above).
   const [titles, setTitles] = createSignal<Record<string, string>>({})
   const [scripts, setScripts] = createSignal<Record<string, ScriptTerminalStatus>>({})
+  const [activities, setActivities] = createSignal<Record<string, Activity>>({})
+  const activity = (id: string): Activity => activities()[id] ?? "idle"
+  const setActivity = (id: string, state: Activity) => {
+    if (!contextFor(id) || isScript(id)) return
+    setActivities((prev) => {
+      if ((prev[id] ?? "idle") === state) return prev
+      const next = { ...prev }
+      if (state === "idle") delete next[id]
+      else next[id] = state
+      return next
+    })
+  }
+  const activityFor = (context: string) =>
+    strongest((terminalsByContext()[context] ?? []).map((term) => activity(term.id)))
   // Active side terminal per context.
   const [actives, setActives] = createSignal<Record<string, string>>({})
   let focusSerial = 0
@@ -317,6 +335,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     const key = contextFor(terminalId)
     if (!key) return undefined
     const removed = terminalsByContext()[key]?.find((t) => t.id === terminalId)
+    setActivity(terminalId, "idle")
     setTerminalsByContext((prev) => {
       const list = (prev[key] ?? []).filter((t) => t.id !== terminalId)
       const next = { ...prev }
@@ -563,6 +582,9 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
   }
 
   return {
+    activity,
+    setActivity,
+    activityFor,
     add,
     attach,
     remove,

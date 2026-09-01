@@ -1572,7 +1572,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // messages themselves will be reconciled on the next messagesLoaded.
       pendingOptimistic.delete(sessionID)
     }
-    if (shouldAbort) vscode.postMessage({ type: "abort", sessionID })
+    if (shouldAbort) vscode.postMessage({ type: "abort", sessionID, scope: "session" })
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
@@ -2339,6 +2339,7 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({
       type: "abort",
       sessionID,
+      scope: "session",
     })
   }
 

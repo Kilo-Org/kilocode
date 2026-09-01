@@ -1226,6 +1226,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "キャンセル済み",
   "task.backgroundAgents.status.error": "エラー",
   "task.backgroundAgents.untitled": "バックグラウンドエージェント",
+  "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",
