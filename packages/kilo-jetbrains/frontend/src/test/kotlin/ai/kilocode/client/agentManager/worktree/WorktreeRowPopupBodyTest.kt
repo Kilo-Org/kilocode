@@ -166,6 +166,32 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a worktree with no pull request still breaks its changes out`() {
+        val body = body()
+
+        edt {
+            body.update(
+                stats = WorktreeStatsDto(path, ahead = 1, behind = 2),
+                pull = null,
+                name = "feature-x",
+                dirty = WorktreeDirtyDto(path, additions = 6, deletions = 2, files = 4),
+            )
+            layout(body)
+        }
+
+        edt {
+            // No pull request chrome to show, but the counters are the reason the popup opened.
+            assertTrue(components(body).filterIsInstance<JBLabel>().none { it.icon is FilledBadgeIcon })
+            assertFalse(components(body).filterIsInstance<SimpleColoredComponent>().single().isVisible)
+            val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
+            assertTrue(changes.isVisible)
+            assertEquals(
+                listOf("4 files", "-2", "+6", "1", "2"),
+                components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text },
+            )
+        }
+    }
+
     fun `test a clean worktree drops the rule with the changes row`() {
         val body = body()
 

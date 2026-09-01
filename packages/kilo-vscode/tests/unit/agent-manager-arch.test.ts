@@ -79,6 +79,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
 const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -145,7 +146,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -162,7 +163,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS

@@ -419,21 +419,29 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
     @RequiresEdt
     fun update(data: ActiveListMetrics?) {
         this.data = data
-        panel.update(data?.files ?: 0, data?.additions ?: 0, data?.deletions ?: 0, base = data?.base.orEmpty())
-        panel.setActions(data?.onChanges.takeIf { isEnabled })
+        panel.update(
+            data?.files ?: 0,
+            data?.additions ?: 0,
+            data?.deletions ?: 0,
+            localFiles = data?.localFiles ?: 0,
+            localAdditions = data?.localAdditions ?: 0,
+            localDeletions = data?.localDeletions ?: 0,
+            base = data?.base.orEmpty(),
+        )
+        panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
         toolTipText = panel.toolTipText
     }
 
     @RequiresEdt
-    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.onChanges != null
+    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.action != null
 
     override fun cellCursor(): Int = Cursor.HAND_CURSOR
 
     @RequiresEdt
     override fun cellTooltip(): String? = toolTipText
 
-    override fun cellAction(): (() -> Unit)? = data?.onChanges
+    override fun cellAction(): (() -> Unit)? = data?.action
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {

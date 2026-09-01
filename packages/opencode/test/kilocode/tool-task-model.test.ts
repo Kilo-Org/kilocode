@@ -10,6 +10,8 @@ import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { SessionRunState } from "../../src/session/run-state"
 import { SessionStatus } from "../../src/session/status"
+import { SessionDrain } from "@/kilocode/session/drain"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -110,6 +112,8 @@ const it = testEffect(
       RuntimeFlags.node,
       SessionRunState.node,
       SessionStatus.node,
+      SessionDrain.node,
+      EventV2Bridge.node,
       CrossSpawnSpawner.node,
       Session.node,
       SessionProjector.node,
