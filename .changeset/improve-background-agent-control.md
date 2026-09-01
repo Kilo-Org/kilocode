@@ -4,4 +4,4 @@
 "@kilocode/sdk": patch
 ---
 
-Keep background agents running when you stop the main agent. Show their activity beside the session controls and open the existing agent bar to stop individual agents or all background work.
+Support stopping the main agent without cancelling background agents, and add Stop all to the VS Code background-agent bar.

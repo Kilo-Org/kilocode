@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { Effect, Fiber, Schema } from "effect"
+import { Effect, Exit, Fiber, Schema } from "effect"
 import { Permission } from "@/permission"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
@@ -35,6 +35,23 @@ const it = testEffect(
     ]),
     [[KiloSessions.node, KiloSessions.testLayer]],
   ),
+)
+
+it.instance("background tickets stay paused after a later continuation", () =>
+  Effect.gen(function* () {
+    const control = yield* KiloSessionControl.make
+    const id = SessionID.descending()
+    yield* control.stop(id, Effect.void)
+    const paused = yield* control.begin(id, false)
+    expect(paused.running()).toBe(false)
+    const resumed = yield* control.begin(id, true, paused)
+    expect(resumed.running()).toBe(true)
+    expect(paused.running()).toBe(false)
+    yield* control.stop(id, Effect.void)
+    expect(resumed.running()).toBe(false)
+    expect(Exit.isFailure(yield* control.begin(id, true, resumed).pipe(Effect.exit))).toBe(true)
+    expect((yield* control.begin(id, false)).running()).toBe(false)
+  }),
 )
 
 function config(url: string) {
@@ -144,6 +161,10 @@ it.live(
           expect((yield* run.jobs.get(run.child.id))?.status).toBe("running")
           expect((yield* run.status.get(SessionID.make(run.child.id))).type).toBe("busy")
           expect(KiloSessionPromptQueue.snapshot(run.parent.id)).toEqual([])
+          const rejected = yield* run.prompt
+            .command({ sessionID: run.parent.id, command: "missing-scoped-abort-command", arguments: "" })
+            .pipe(Effect.exit)
+          expect(Exit.isFailure(rejected)).toBe(true)
 
           run.done.resolve()
           expect((yield* run.jobs.wait({ id: run.child.id, timeout: 5000 })).info).toMatchObject({
@@ -244,5 +265,3 @@ it.live(
     ),
   30000,
 )
-
-

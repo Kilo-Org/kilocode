@@ -30,16 +30,18 @@ export namespace KiloSessionControl {
       return next
     })
 
-    const begin = Effect.fn("KiloSessionControl.begin")(function* (id: SessionID, resume: boolean) {
+    const begin = Effect.fn("KiloSessionControl.begin")(function* (id: SessionID, resume: boolean, prior?: Ticket) {
       const data = yield* get(id)
       if (resume) {
         while (data.stopping > 0) yield* data.ready.await
+        if (prior && !prior.current()) return yield* Effect.interrupt
         data.paused = false
       }
       const version = data.version
+      const paused = data.paused
       return {
         current: () => version === data.version,
-        running: () => version === data.version && !data.paused,
+        running: () => version === data.version && !paused && !data.paused,
       } satisfies Ticket
     })
 

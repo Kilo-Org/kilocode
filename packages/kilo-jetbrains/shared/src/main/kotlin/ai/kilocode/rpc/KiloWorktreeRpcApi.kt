@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
@@ -41,14 +42,41 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun open(directory: String): Boolean
 
     suspend fun stats(directory: String): WorktreeStatsListDto
-    suspend fun ghStatus(directory: String): GhAvailability
-    suspend fun prStatus(directory: String): WorktreePrListDto
+
+    /**
+     * Uncommitted changes per managed worktree, vs each worktree's own HEAD. Separate from [stats]
+     * because the baseline differs (HEAD vs the base branch) and because it changes on every file
+     * save, so callers may refresh it independently.
+     */
+    suspend fun dirty(directory: String): WorktreeDirtyListDto
+    /**
+     * Resolves gh/git availability for [directory]. When [github] is false, resolves git state
+     * only ([GhAvailability.GIT_MISSING] or [GhAvailability.OK]) and never spawns `gh`.
+     *
+     * [maxAge] is the oldest cached answer the caller accepts, in milliseconds; null takes whatever
+     * the backend's own TTL allows. See [prStatus] for why callers state an age instead of a flag.
+     */
+    suspend fun ghStatus(directory: String, github: Boolean = true, maxAge: Long? = null): GhAvailability
+
+    /**
+     * Pull-request state per managed worktree. Answers from a short-lived backend cache so a poll
+     * and several panels can share one `gh` fan-out.
+     *
+     * [maxAge] caps how old that cached answer may be, in milliseconds; null accepts the backend's
+     * full TTL and 0 forces a fresh lookup. An age rather than a `fresh` flag because it composes:
+     * a caller returning from a long absence can ask for `maxAge = <time away>`, which keeps
+     * anything gathered while it was gone and rejects only what predates its departure, and several
+     * callers asking at once still collapse onto one lookup instead of each forcing its own.
+     */
+    suspend fun prStatus(directory: String, maxAge: Long? = null): WorktreePrListDto
 
     /**
      * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,
-     * gh availability, and the PR for the branch (if any). Cached with the same TTL as [prStatus].
+     * gh availability, and the PR for the branch (if any). Cached with the same TTL as [prStatus],
+     * and [maxAge] caps it the same way. When [github] is false, resolves git state only and returns
+     * a null PR without spawning `gh`.
      */
-    suspend fun branchStatus(directory: String): BranchStatusDto
+    suspend fun branchStatus(directory: String, github: Boolean = true, maxAge: Long? = null): BranchStatusDto
 
     /**
      * Moves the session [sessionId] running in [directory] into a fresh worktree on [branch]:

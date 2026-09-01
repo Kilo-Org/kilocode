@@ -26,14 +26,13 @@ import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
-import { BackgroundAgentsProvider } from "../context/background-agents"
-import { BackgroundAgentsFixture } from "./background-agents-fixture"
 import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
+  BrowserReference,
   Part,
   QuestionRequest,
   ReviewComment,
@@ -44,6 +43,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
@@ -198,15 +198,6 @@ export const ChatViewAgentManagerCompleted: Story = {
   },
 }
 
-export const ChatViewBackgroundAgents: Story = {
-  name: "ChatView - background agents with an idle or busy parent",
-  render: () => (
-    <BackgroundAgentsFixture>
-      <ChatView continueInWorktree />
-    </BackgroundAgentsFixture>
-  ),
-}
-
 /**
  * The session dock swaps the working indicator for the session actions when a
  * turn finishes. Toggling `busy` here drives that swap inside one mounted view
@@ -277,6 +268,28 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
   return <VscodeUserMessage message={message} parts={parts} />
 }
 
+function browserMessage(references: BrowserReference[]) {
+  const data = { version: 1 as const, references }
+  const message: Message = {
+    id: "browser-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "browser-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${formatBrowserFeedback(references)}\n\nPlease fix the selected browser elements.`,
+      metadata: feedbackMetadata(undefined, data),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -329,6 +342,39 @@ export const UserMessageManyReviewComments: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const UserMessageBrowserFeedback: Story = {
+  name: "User message — browser feedback",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {browserMessage([
+          {
+            id: "browser-1",
+            sessionId: SESSION_ID,
+            selector: "main > button.save",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "button.save"],
+            text: "Save settings",
+            html: '<button class="save">Save settings</button>',
+            styles: { color: "rgb(30, 30, 30)", backgroundColor: "white" },
+            source: { file: "src/settings.tsx", line: 42, column: 7 },
+          },
+          {
+            id: "browser-2",
+            sessionId: SESSION_ID,
+            selector: "form input[name=email]",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "form", "input[name=email]"],
+            text: "Email address",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /**
@@ -1203,11 +1249,9 @@ export const TaskHeaderWithTodos: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
-          <BackgroundAgentsProvider>
-            <div style={{ width: "100%" }}>
-              <TaskHeader />
-            </div>
-          </BackgroundAgentsProvider>
+          <div style={{ width: "100%" }}>
+            <TaskHeader />
+          </div>
         </SessionContext.Provider>
       </StoryProviders>
     )
@@ -1242,9 +1286,7 @@ export const TaskHeaderBackgroundAgents1280: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} noPadding>
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
-          <BackgroundAgentsProvider>
-            <TaskHeader />
-          </BackgroundAgentsProvider>
+          <TaskHeader />
         </SessionContext.Provider>
       </StoryProviders>
     )
@@ -1284,11 +1326,9 @@ export const TaskHeaderWithTodosAllDone: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
-          <BackgroundAgentsProvider>
-            <div style={{ width: "380px" }}>
-              <TaskHeader />
-            </div>
-          </BackgroundAgentsProvider>
+          <div style={{ width: "380px" }}>
+            <TaskHeader />
+          </div>
         </SessionContext.Provider>
       </StoryProviders>
     )

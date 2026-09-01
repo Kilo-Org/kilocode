@@ -20,6 +20,11 @@ describe("SessionProvider activity", () => {
       name: "solid-dedupe",
       setup(ctx: Parameters<NonNullable<Parameters<typeof build>[0]["plugins"]>[number]["setup"]>[0]) {
         ctx.onResolve({ filter: /^solid-js(\/web|\/store)?$/ }, (args) => ({ path: aliases[args.path] }))
+        ctx.onResolve({ filter: /\?worker&url$/ }, (args) => ({ path: args.path, namespace: "worker-url" }))
+        ctx.onLoad({ filter: /.*/, namespace: "worker-url" }, () => ({
+          contents: "export default undefined",
+          loader: "js",
+        }))
       },
     }
     const result = await build({
@@ -29,7 +34,7 @@ describe("SessionProvider activity", () => {
       external: ["happy-dom"],
       format: "esm",
       logLevel: "silent",
-      loader: { ".css": "empty" },
+      loader: { ".css": "empty", ".svg": "dataurl" },
       platform: "node",
       plugins: [dedupe, solidPlugin()],
       target: "es2022",

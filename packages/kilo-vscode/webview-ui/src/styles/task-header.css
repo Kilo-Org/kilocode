@@ -255,12 +255,6 @@
     color: var(--text-base);
   }
 
-  [data-slot="task-header-agents-actions"] {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 8px 4px;
-  }
-
   [data-slot="task-header-agent-attention"] {
     display: flex;
     align-items: center;

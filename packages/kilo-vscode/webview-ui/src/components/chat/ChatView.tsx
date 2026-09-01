@@ -26,7 +26,6 @@ import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
-import { BackgroundAgentsProvider, useBackgroundAgents } from "../../context/background-agents"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
@@ -51,15 +50,8 @@ interface ChatViewProps {
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
-export const ChatView: Component<ChatViewProps> = (props) => (
-  <BackgroundAgentsProvider>
-    <Content {...props} />
-  </BackgroundAgentsProvider>
-)
-
-const Content: Component<ChatViewProps> = (props) => {
+export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
-  const background = useBackgroundAgents()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -119,7 +111,6 @@ const Content: Component<ChatViewProps> = (props) => {
       if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
       e.preventDefault()
       session.abort()
-      window.dispatchEvent(new Event("focusPrompt"))
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
@@ -233,39 +224,13 @@ const Content: Component<ChatViewProps> = (props) => {
 
   const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
 
-  const count = () => background.active().length
-  const agents = () =>
-    language.t(count() === 1 ? "task.backgroundAgents.running.one" : "task.backgroundAgents.running.many", {
-      count: String(count()),
-    })
-  const activity = () => (
-    <Show when={count() > 0 && !props.readonly}>
-      <Button
-        class="session-background-agents"
-        variant="ghost"
-        size="small"
-        title={background.waiting() > 0 ? language.t("task.backgroundAgents.waiting") : agents()}
-        aria-label={agents()}
-        aria-controls={background.target}
-        aria-expanded={background.open()}
-        onClick={background.reveal}
-      >
-        <Show when={background.waiting() > 0} fallback={<Spinner class="chat-spinner-small" />}>
-          <Icon name="warning" size="small" />
-        </Show>
-        {count()}
-      </Button>
-    </Show>
-  )
-
   const hasActions = (hasChat: boolean) =>
-    count() > 0 || canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
+    canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
   const renderActions = (hasChat: boolean) => (
     <Show when={hasActions(hasChat)}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
-          {activity()}
           <Show when={canStartSession(hasChat)}>
             <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
               <Button
@@ -425,7 +390,6 @@ const Content: Component<ChatViewProps> = (props) => {
             </Show>
             <SessionDock
               blocked={dockBlocked()}
-              activity={activity}
               hasActions={() => !props.readonly && hasActions(hasMessages())}
               actions={() => renderActions(hasMessages())}
             />
