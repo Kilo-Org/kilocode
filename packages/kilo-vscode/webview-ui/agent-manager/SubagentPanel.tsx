@@ -7,10 +7,13 @@
 
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { createEffect, type Accessor, type Component } from "solid-js"
+import { createEffect, createMemo, type Accessor, type Component } from "solid-js"
 import { DataBridge } from "../src/App"
 import { ChatView } from "../src/components/chat"
+import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { useLanguage } from "../src/context/language"
 import { SessionProvider, useSession } from "../src/context/session"
+import { description, label, type Activity } from "../src/utils/session-activity"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
 import type { SubagentTab } from "./subagent-tabs"
@@ -44,8 +47,9 @@ const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props
   )
 }
 
-const SubagentContent: Component<Props> = (props) => {
+const SubagentContent: Component<Props & { activity: (id: string) => Activity }> = (props) => {
   const session = useSession()
+  const language = useLanguage()
   const ids = () => props.tabs().map((tab) => tab.id)
   const title = (id: string) => props.tabs().find((tab) => tab.id === id)?.title ?? "Sub-agent"
   const close = (id: string, focus: { restore: () => void }) => {
@@ -89,13 +93,19 @@ const SubagentContent: Component<Props> = (props) => {
         onSelect={props.onSelect}
         onReorder={props.onReorder}
         renderTab={(id, api) => {
-          const label = title(id)
+          const name = title(id)
+          const state = createMemo(() => props.activity(id))
           return (
             <SortableClosableTab
               id={id}
-              label={label}
-              tooltip={label}
+              label={name}
+              tooltip={() => (state() === "idle" ? name : `${name}: ${language.t(description(state()))}`)}
               icon="task"
+              iconNode={
+                <ActivityIcon state={state()} idle={<Icon name="task" size="small" />} spinner="am-tab-spinner" />
+              }
+              state={state()}
+              stateLabel={state() === "idle" ? undefined : language.t(label(state()))}
               showKeybind={false}
               keybind={props.active() === id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
@@ -124,8 +134,11 @@ const SubagentContent: Component<Props> = (props) => {
   )
 }
 
-export const SubagentPanel: Component<Props> = (props) => (
-  <SessionProvider>
-    <SubagentContent {...props} />
-  </SessionProvider>
-)
+export const SubagentPanel: Component<Props> = (props) => {
+  const session = useSession()
+  return (
+    <SessionProvider>
+      <SubagentContent {...props} activity={session.activityFor} />
+    </SessionProvider>
+  )
+}

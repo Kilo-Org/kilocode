@@ -4,13 +4,13 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
+import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
@@ -283,7 +283,7 @@ private fun saved(base: WorkflowsDraft, draft: WorkflowsDraft): Boolean = base =
 
 internal class WorkflowEditDialog(private val flow: CommandFileDto, private val savable: Boolean) : DialogWrapper(true), WorkflowEditDialogHandle {
     private val base = initial()
-    private val editor = SettingsContentField(base, workflowFileType(flow.location, base), savable)
+    private val editor = CodeViewField(base, workflowFileType(flow.location, base), savable)
 
     init {
         title = "/${flow.name}"

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Підключити провайдера",
 
+  "session.activity.waiting": "Очікується відповідь або підтвердження.",
+  "session.activity.error": "Помилка або втрата з'єднання.",
+  "session.activity.retry": "Автоматична повторна спроба.",
+  "session.activity.busy": "Виконується.",
+  "session.activity.done": "Хід завершено.",
+  "session.activity.idle": "Не запущено.",
+
   "command.session.new": "Нова сесія",
   "command.session.show.changes": "Показати зміни",
   "command.review.toggle": "Перемкнути огляд",
@@ -175,8 +182,11 @@ export const dict = {
   "common.saving": "Збереження...",
   "common.default": "За замовчуванням",
 
+  "prompt.worktrees.title": "Робочі дерева",
+  "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
+  "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
@@ -874,6 +884,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1018,6 +1031,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
   "settings.context.compaction.title": "Стискання",
+  "settings.context.compactionModel.title": "Модель стискання",
+  "settings.context.compactionModel.description":
+    "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
+  "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1124,59 +1141,16 @@ export const dict = {
   "question.summary": "{{n}} з {{total}} питань",
   "common.review": "Переглянути",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Перенести зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.title": "Перенесення зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Перенести налаштування з попередньої версії Kilo Code, включаючи API-ключі провайдерів та стандартну модель.",
   "settings.aboutKiloCode.rooImport.description": "Імпортувати історію розмов з інсталяції Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Імпортувати сесії з Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Що нового в Kilo Code",
-  "migration.whatsNew.badge": "Бета",
-  "migration.whatsNew.subtitle": "Ми відбудували розширення на більш швидкій та ефективній основі.",
-  "migration.whatsNew.features.performance.title": "Швидша продуктивність агента",
-  "migration.whatsNew.features.performance.detail":
-    "Паралельні виклики інструментів і підагенти дозволяють агенту робити більше одночасно — щоб ви більше створювали, а менше спостерігали.",
-  "migration.whatsNew.features.interface.title": "Спрощений інтерфейс",
-  "migration.whatsNew.features.interface.detail": "Менше відволікань, легше і швидше читати.",
-  "migration.whatsNew.features.agentManager.title": "Менеджер агентів",
-  "migration.whatsNew.features.agentManager.detail":
-    "Єдиний інтерфейс для запуску кількох агентів паралельно, кожен у власному робочому дереві — стежте за прогресом, перемикайте контекст і переглядайте зміни з одного місця.",
-  "migration.whatsNew.features.foundation.title": "Спільна основа",
-  "migration.whatsNew.features.foundation.detail":
-    "Малий та ефективний ядерний модуль у кожному продукті Kilo. Знайомий досвід незалежно від того, як ви вважаєте за краще працювати.",
-  "migration.whatsNew.blogLink": "Читати повне оголошення",
-  "migration.whatsNew.docsLink": "Що нового та часті запитання",
-  "migration.whatsNew.continue": "Продовжити",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Перенесіть свої налаштування",
-  "migration.migrate.subtitle": "Ми знайшли налаштування з попередньої версії. Ось що можна перенести.",
+  "migration.roo.button": "Імпортувати сесії",
+  "migration.roo.empty": "Сесій Roo Code не знайдено.",
   "migration.migrate.selectLabel": "Вибрати для перенесення",
   "migration.migrate.chatHistory": "Сесії чату та історія",
-  "migration.migrate.button": "Перенести налаштування",
-  "migration.migrate.skip": "Пропустити",
-  "migration.migrate.keysDetected": "Виявлено {{count}} ключів",
-  "migration.migrate.serversConfigured": "Налаштовано {{count}} серверів",
-  "migration.migrate.modesFound": "Знайдено {{count}} режимів",
-  "migration.migrate.nothingToMigrate": "У старих налаштуваннях нічого для перенесення не знайдено.",
-
-  // Migrate — item labels
-  "migration.select.providers": "API-ключі провайдерів",
-  "migration.select.mcpServers": "MCP-сервери",
-  "migration.select.customModes": "Власні режими / агенти",
-  "migration.select.defaultModel": "Стандартна модель",
-  "migration.select.autoApproval": "Автоматичне схвалення",
-  "migration.select.language": "Мова інтерфейсу",
-  "migration.select.autocomplete": "Налаштування автодоповнення",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} з {{total}} елементів успішно перенесено.",
-  "migration.complete.cleanup": "Видалити старі дані налаштувань",
-  "migration.complete.cleanupDescription":
-    "Це видалить старі налаштування зі сховища VS Code. Ви не зможете повторно запустити це перенесення.",
   "migration.complete.done": "Готово",
   "migration.migrate.sessionsDetected": "Знайдено {{count}} сесій",
   "migration.error.continue": "Продовжити",
@@ -1210,7 +1184,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Невідома дата",
   "migration.sessionFormat.unknown": "Невідомо",
   "migration.sessionFormat.unknownError": "Невідома помилка",
-  // legacy-migration end
 
   "error.details.show": "Деталі",
 
@@ -1218,6 +1191,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
+  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",

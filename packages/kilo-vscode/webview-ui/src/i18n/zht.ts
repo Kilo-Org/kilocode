@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "連接供應商",
 
+  "session.activity.waiting": "正在等待回覆或核准。",
+  "session.activity.error": "錯誤或連線已中斷。",
+  "session.activity.retry": "正在自動重試。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未執行。",
+
   "command.session.new": "新增工作階段",
   "command.session.show.changes": "顯示變更",
   "command.review.toggle": "切換審查",
@@ -169,8 +176,11 @@ export const dict = {
   "common.saving": "儲存中...",
   "common.default": "預設",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜尋 Worktree",
   "prompt.thinking.tooltip": "推理強度",
   "prompt.action.send": "傳送",
+  "prompt.action.continue": "繼續",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
@@ -808,6 +818,8 @@ export const dict = {
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
+  "settings.experimental.taskModelSelection.description": "允許為 Task 子代理選擇指定的模型、提供者和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -966,6 +978,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",
+  "settings.context.compactionModel.title": "壓縮模型",
+  "settings.context.compactionModel.description":
+    "用於自動和手動壓縮的模型。留空以使用聊天模型。成本、速度和摘要品質取決於模型。",
+  "settings.context.compactionModel.useChatModel": "使用聊天模型",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
@@ -1094,57 +1110,16 @@ export const dict = {
   "question.summary": "第 {{n}} / {{total}} 個問題",
   "common.review": "審查",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "從舊版遷移",
-  "settings.aboutKiloCode.legacyMigration.title": "舊版遷移",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "從舊版 Kilo Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
   "settings.aboutKiloCode.rooImport.description": "從 Roo Code 安裝匯入對話歷史記錄。",
   "settings.aboutKiloCode.rooImport.button": "從 Roo Code 匯入工作階段",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
-  "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
-  "migration.whatsNew.features.performance.detail":
-    "平行工具呼叫和子 Agent 讓你的 Agent 可以同時處理更多任務——減少等待時間，更快交付成果。",
-  "migration.whatsNew.features.interface.title": "簡潔的介面",
-  "migration.whatsNew.features.interface.detail": "更少干擾，更易閱讀，更快上手。",
-  "migration.whatsNew.features.agentManager.title": "代理程式管理員",
-  "migration.whatsNew.features.agentManager.detail":
-    "一個統一的介面，可以平行執行多個 Agent，每個 Agent 各自使用獨立的 worktree——在同一個地方監控進度、切換上下文和審查變更。",
-  "migration.whatsNew.features.foundation.title": "共享基礎",
-  "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
-  "migration.whatsNew.blogLink": "閱讀完整公告",
-  "migration.whatsNew.docsLink": "新功能與常見問題",
-  "migration.whatsNew.continue": "繼續",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "遷移你的設定",
-  "migration.migrate.subtitle": "我們發現了你之前安裝的設定。以下是可以遷移的內容。",
+  "migration.roo.button": "匯入工作階段",
+  "migration.roo.empty": "找不到 Roo Code 工作階段。",
   "migration.migrate.selectLabel": "選擇要遷移的內容",
   "migration.migrate.chatHistory": "聊天工作階段與歷史紀錄",
-  "migration.migrate.button": "遷移設定",
-  "migration.migrate.skip": "略過",
-  "migration.migrate.keysDetected": "偵測到 {{count}} 個金鑰",
-  "migration.migrate.serversConfigured": "已設定 {{count}} 個伺服器",
-  "migration.migrate.modesFound": "發現 {{count}} 個模式",
-  "migration.migrate.nothingToMigrate": "在舊版設定中找不到可遷移的項目。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "供應商 API 金鑰",
-  "migration.select.mcpServers": "MCP 伺服器",
-  "migration.select.customModes": "自訂模式 / 代理",
-  "migration.select.defaultModel": "預設模型",
-  "migration.select.autoApproval": "自動核准",
-  "migration.select.language": "介面語言",
-  "migration.select.autocomplete": "自動補全設定",
 
   // Migrate — completion
   "migration.complete.summary": "成功遷移 {{success}}/{{total}} 項。",
-  "migration.complete.cleanup": "清除舊版設定資料",
-  "migration.complete.cleanupDescription": "此操作將從 VS Code 儲存中刪除舊版設定。您將無法再次執行此遷移。",
   "migration.complete.done": "完成",
   "migration.migrate.sessionsDetected": "偵測到 {{count}} 個工作階段",
   "migration.error.continue": "繼續",
@@ -1177,7 +1152,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "未知日期",
   "migration.sessionFormat.unknown": "未知",
   "migration.sessionFormat.unknownError": "未知錯誤",
-  // legacy-migration end
 
   "error.details.show": "詳細資訊",
 
@@ -1185,6 +1159,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 個待辦已完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
+  "task.backgroundAgents.more": "+{{count}} 個",
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",

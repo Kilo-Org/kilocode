@@ -60,6 +60,7 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
   const log = opts.log ?? ((...args: unknown[]) => appendOutput(output!, "WorktreeDiffSource", ...args))
   const git = opts.git ?? new GitOps({ log })
   const controller = new AbortController()
+  let warmed = false
 
   const root = (): string | undefined => {
     const dir = opts.dir?.()
@@ -121,6 +122,16 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
         ? await opts.summary(current.directory, current.baseBranch)
         : await diffSummary(git, current.directory, current.baseBranch, log)
       const diffs = entries.map(toDiffFile)
+      if (!warmed && opts.file && !controller.signal.aborted) {
+        warmed = true
+        const initial = entries.filter((entry) => entry.summarized && !entry.kind && !entry.generatedLike).slice(0, 2)
+        for (const entry of initial) {
+          if (!entry.file) continue
+          void opts.file(current.directory, current.baseBranch, entry.file, controller.signal).catch((err) => {
+            log("Failed to prefetch initial diff:", err)
+          })
+        }
+      }
       log(`Diff: ${diffs.length} file(s)`)
       return { diffs }
     },

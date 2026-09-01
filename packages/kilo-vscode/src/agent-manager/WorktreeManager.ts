@@ -482,10 +482,15 @@ export class WorktreeManager {
     const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
     try {
       await fs.promises.rename(worktreePath, temp)
-    } catch {
-      // Rename failed (e.g. locked files on Windows) — fall back to force remove
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
-      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+    } catch (err) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
+        this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
+      })
+      if (fs.existsSync(worktreePath)) await fs.promises.rm(worktreePath, RM_OPTS)
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch((error: unknown) => {
+        this.log(`Failed to prune worktree metadata for ${worktreePath}: ${error}`)
+      })
       if (branch) await this.deleteBranch(branch)
       return
     }

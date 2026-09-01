@@ -30,13 +30,36 @@ export function sameParts(local: Part[] = [], snapshot: Part[] = []): boolean {
 }
 
 export function mergeOptimisticPart(current: Part[], ids: ReadonlySet<string>, part: Part) {
-  const index = current.findIndex((item) => ids.has(item.id) && item.type === part.type)
+  const index =
+    part.type === "text" && part.synthetic
+      ? -1
+      : current.findIndex((item) => ids.has(item.id) && item.type === part.type)
   const copy = isolate(part)
   if (index < 0) return { parts: [...current, copy] }
   const old = current[index]!
   const next = current.slice()
   next[index] = copy
   return { parts: next, replaced: old.id }
+}
+
+export function mergeOptimisticParts(current: Part[], ids: ReadonlySet<string>, snapshot: Part[]) {
+  if (ids.size === 0) return { parts: snapshot.map(isolate), pending: new Set<string>() }
+  const pending = new Set(ids)
+  let parts = current
+  for (const part of snapshot) {
+    const index = parts.findIndex((item) => item.id === part.id)
+    if (index >= 0) {
+      const next = parts.slice()
+      next[index] = isolate(part)
+      parts = next
+      pending.delete(part.id)
+      continue
+    }
+    const merged = mergeOptimisticPart(parts, pending, part)
+    parts = merged.parts
+    if (merged.replaced) pending.delete(merged.replaced)
+  }
+  return { parts, pending }
 }
 
 /**

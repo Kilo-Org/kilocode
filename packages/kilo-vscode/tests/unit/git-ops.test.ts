@@ -57,6 +57,20 @@ describe("GitOps", () => {
     })
   })
 
+  it("passes stdin to binary Git commands without decoding their output", async () => {
+    await withRepo(async (cwd) => {
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const value = "before\u0000after"
+      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
+      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
+        stdin: `${object.stdout.trim()}\n`,
+      })
+      expect(result.code).toBe(0)
+      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
+      git.dispose()
+    })
+  })
+
   it("uses an explicit Git executable path with spaces", async () => {
     await withRepo(async (cwd) => {
       const real = Bun.which("git")
@@ -705,6 +719,21 @@ describe("GitOps", () => {
       git.dispose()
       git.dispose()
       expect(git.disposed).toBe(true)
+    })
+
+    it("stops waiting for executable discovery when its request signal aborts", async () => {
+      let release!: (value: string) => void
+      const gate = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const git = new GitOps({ log: () => undefined, binary: () => gate })
+      const ctl = new AbortController()
+      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
+      ctl.abort()
+      const result = await pending
+      expect(result.code).not.toBe(0)
+      release("git")
+      git.dispose()
     })
   })
 

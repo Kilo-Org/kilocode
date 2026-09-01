@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "اتصال بموفر",
 
+  "session.activity.waiting": "في انتظار إجابة أو موافقة.",
+  "session.activity.error": "حدث خطأ أو فُقد الاتصال.",
+  "session.activity.retry": "إعادة المحاولة تلقائيًا.",
+  "session.activity.busy": "قيد التنفيذ.",
+  "session.activity.done": "اكتمل الدور.",
+  "session.activity.idle": "غير قيد التشغيل.",
+
   "command.session.new": "جلسة جديدة",
   "command.session.show.changes": "إظهار التغييرات",
   "command.review.toggle": "تبديل المراجعة",
@@ -170,8 +177,11 @@ export const dict = {
   "common.saving": "جارٍ الحفظ...",
   "common.default": "افتراضي",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.send": "إرسال",
+  "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
@@ -861,6 +871,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
+  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
+  "settings.experimental.taskModelSelection.description":
+    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1032,6 +1045,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",
+  "settings.context.compactionModel.title": "نموذج الضغط",
+  "settings.context.compactionModel.description":
+    "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
+  "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1124,58 +1141,16 @@ export const dict = {
   "question.summary": "{{n}} من {{total}} أسئلة",
   "common.review": "مراجعة",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "الترحيل من الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
   "settings.aboutKiloCode.rooImport.description": "استيراد سجل المحادثات من تثبيت Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "استيراد الجلسات من Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "ما الجديد في Kilo Code",
-  "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
-  "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
-  "migration.whatsNew.features.performance.detail":
-    "استدعاءات الأدوات المتوازية والوكلاء الفرعيون يتيحون لوكيلك إنجاز المزيد في وقت واحد — فتقضي وقتًا أقل في الانتظار ووقتًا أكثر في الإنجاز.",
-  "migration.whatsNew.features.interface.title": "واجهة مبسّطة",
-  "migration.whatsNew.features.interface.detail": "أقل تشتيتًا، أسهل وأسرع في القراءة.",
-  "migration.whatsNew.features.agentManager.title": "مدير الوكلاء",
-  "migration.whatsNew.features.agentManager.detail":
-    "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
-  "migration.whatsNew.features.foundation.title": "أساس مشترك",
-  "migration.whatsNew.features.foundation.detail":
-    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
-  "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
-  "migration.whatsNew.docsLink": "الجديد والأسئلة الشائعة",
-  "migration.whatsNew.continue": "متابعة",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "ترحيل إعداداتك",
-  "migration.migrate.subtitle": "لقد وجدنا إعدادات من تثبيتك السابق. إليك ما يمكننا نقله.",
+  "migration.roo.button": "استيراد الجلسات",
+  "migration.roo.empty": "لم يتم العثور على جلسات Roo Code.",
   "migration.migrate.selectLabel": "اختر ما تريد ترحيله",
   "migration.migrate.chatHistory": "جلسات الدردشة والسجل",
-  "migration.migrate.button": "ترحيل الإعدادات",
-  "migration.migrate.skip": "تخطي",
-  "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
-  "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
-  "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
-  "migration.migrate.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "مفاتيح API لمقدمي الخدمة",
-  "migration.select.mcpServers": "خوادم MCP",
-  "migration.select.customModes": "الأوضاع المخصصة / الوكلاء",
-  "migration.select.defaultModel": "النموذج الافتراضي",
-  "migration.select.autoApproval": "الموافقة التلقائية",
-  "migration.select.language": "لغة واجهة المستخدم",
-  "migration.select.autocomplete": "إعدادات الإكمال التلقائي",
 
   // Migrate — completion
   "migration.complete.summary": "تم ترحيل {{success}} من {{total}} عناصر بنجاح.",
-  "migration.complete.cleanup": "إزالة بيانات الإعدادات القديمة",
-  "migration.complete.cleanupDescription":
-    "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
   "migration.migrate.sessionsDetected": "تم اكتشاف {{count}} جلسة",
   "migration.error.continue": "متابعة",
@@ -1209,7 +1184,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "تاريخ غير معروف",
   "migration.sessionFormat.unknown": "غير معروف",
   "migration.sessionFormat.unknownError": "خطأ غير معروف",
-  // legacy-migration end
 
   "error.details.show": "التفاصيل",
 
@@ -1217,6 +1191,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} مهام مكتملة",
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
+  "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",

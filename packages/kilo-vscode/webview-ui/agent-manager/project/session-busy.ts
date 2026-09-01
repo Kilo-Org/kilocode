@@ -1,85 +1,71 @@
-import { createSignal, onCleanup } from "solid-js"
+import { createMemo, createSignal, onCleanup } from "solid-js"
 import type { ExtensionMessage } from "../../src/types/messages"
+import { strongest, type Activity } from "../../src/utils/session-activity"
 
 interface Item {
   id: string
   worktreeId?: string | null
 }
 
-interface Status {
-  type: string
-}
-
-interface Prompt {
-  sessionID: string
-  blocking?: boolean
-}
-
-export function createSessionBusy(opts: {
-  statuses: () => Record<string, Status>
-  permissions: () => Prompt[]
-  questions: () => Prompt[]
+export function createSessionActivity(opts: {
   managed: () => Item[]
   local: () => string[]
   projects: () => Record<string, Item[]>
   active: () => string | undefined
+  activityFor: (id: string) => Activity
 }) {
-  const any = (ids: string[], waiting = false) => {
-    if (ids.length === 0) return false
-    const statuses = opts.statuses()
-    const blocked = new Set(
-      [...opts.permissions(), ...opts.questions().filter((item) => item.blocking !== false)].map(
-        (item) => item.sessionID,
-      ),
-    )
-    return ids.some((id) => {
-      const status = statuses[id]
-      if (waiting)
-        return (
-          (!!status && status.type !== "idle") ||
-          [...opts.permissions(), ...opts.questions()].some((prompt) => prompt.sessionID === id)
-        )
-      return (status?.type === "busy" || status?.type === "retry") && !blocked.has(id)
-    })
+  const group = (items: Item[]) => {
+    const states = new Map<string | null, Activity[]>()
+    for (const item of items) {
+      const id = item.worktreeId ?? null
+      const values = states.get(id) ?? []
+      values.push(opts.activityFor(item.id))
+      states.set(id, values)
+    }
+    return new Map([...states].map(([id, values]) => [id, strongest(values)]))
   }
-  const agent = (id: string, waiting = false) =>
-    any(
-      opts
-        .managed()
-        .filter((item) => item.worktreeId === id)
-        .map((item) => item.id),
-      waiting,
-    )
-  const local = () => any(opts.local())
-  const project = (id: string, worktreeId: string | null, waiting = false) => {
-    if (id === opts.active()) return worktreeId === null ? any(opts.local(), waiting) : agent(worktreeId, waiting)
-    return any(
-      (opts.projects()[id] ?? []).filter((item) => item.worktreeId === worktreeId).map((item) => item.id),
-      waiting,
-    )
+  const local = createMemo(() => strongest(opts.local().map(opts.activityFor)))
+  const managed = createMemo(() => group(opts.managed()))
+  const projects = createMemo(() => {
+    const values = new Map<string, Map<string | null, Activity>>()
+    for (const [id, items] of Object.entries(opts.projects())) values.set(id, group(items))
+    return values
+  })
+  return {
+    local: () => local(),
+    agent: (id: string) => managed().get(id) ?? "idle",
+    project: (id: string, worktree: string | null): Activity => {
+      if (id === opts.active()) return worktree === null ? local() : (managed().get(worktree) ?? "idle")
+      return projects().get(id)?.get(worktree) ?? "idle"
+    },
   }
-  return { any, agent, local, project, session: (id: string) => any([id]) }
 }
 
-export function createWorktreeBusy(
-  opts: Parameters<typeof createSessionBusy>[0] & {
+export function createWorktreeActivity(
+  opts: Parameters<typeof createSessionActivity>[0] & {
+    inUseFor: (id: string) => boolean
     worktrees: (project?: string) => { id: string; path: string }[]
     subscribe: (callback: (message: ExtensionMessage) => void) => () => void
   },
 ) {
-  const busy = createSessionBusy(opts)
+  const activity = createSessionActivity(opts)
   const [active, setActive] = createSignal(new Set<string>())
   onCleanup(
     opts.subscribe((message) => {
       if (message.type === "agentManager.worktreeActivity") setActive(new Set(message.active))
     }),
   )
-  const working = (id: string, project?: string) =>
-    active().has(opts.worktrees(project).find((worktree) => worktree.id === id)?.path ?? "")
+  const working = (id: string, project?: string): Activity =>
+    active().has(opts.worktrees(project).find((worktree) => worktree.id === id)?.path ?? "") ? "busy" : "idle"
   return {
-    ...busy,
-    agent: (id: string, waiting = false) => busy.agent(id, waiting) || working(id),
-    project: (project: string, id: string | null, waiting = false) =>
-      busy.project(project, id, waiting) || (id !== null && working(id, project)),
+    ...activity,
+    agent: (id: string) => strongest([activity.agent(id), working(id)]),
+    project: (project: string, id: string | null) =>
+      strongest([activity.project(project, id), id === null ? "idle" : working(id, project)]),
+    blocked: (id: string, project?: string) => {
+      if (working(id, project) === "busy") return true
+      const items = project && project !== opts.active() ? (opts.projects()[project] ?? []) : opts.managed()
+      return items.some((item) => item.worktreeId === id && opts.inUseFor(item.id))
+    },
   }
 }

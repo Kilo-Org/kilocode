@@ -22,6 +22,9 @@ internal object MdCommon {
     private val single = setOf("readme.md", "package.json", "tsconfig.json", "jsconfig.json", "kilo.json", "kilo.jsonc")
     private const val REF_SEGMENT_LIMIT = 16_384
 
+    /** Anchor class [ai.kilocode.client.ui.md.hybrid.MdProjector]'s code-span linkifier tags its links with. */
+    const val URL_REF_CLASS = "kilo-url-ref"
+
     val tags = listOf(
         "body", "p", "div", "span", "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
         "blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "a", "tt", "code", "samp", "pre",
@@ -75,6 +78,7 @@ internal object MdCommon {
         rules.append("em, i { color: ${hex(opts.emphasisFg)} } ")
         rules.append("a { color: ${hex(opts.linkColor)} } ")
         rules.append("a.kilo-file-ref, code a.kilo-file-ref { color: ${hex(SessionUiStyle.View.Markdown.string())}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
+        rules.append("a.$URL_REF_CLASS, code a.$URL_REF_CLASS { color: ${hex(opts.linkColor)}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
         rules.append("ul, ol { color: ${hex(opts.listMarkerFg)} } ")
         rules.append("li { color: ${hex(opts.foreground)} } ")
         rules.append("tt, code, samp, pre, pre code { font-family: '${css(opts.codeFont)}', monospace; border-width: 0 } ")
