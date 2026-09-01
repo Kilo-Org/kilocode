@@ -184,13 +184,17 @@ export function useFileMention(
     onSelect?: () => void
   } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
-  // Offset of the "@" that opened the current query, and the last spaced query
-  // the file search resolved to nothing. Since a query may contain spaces,
-  // ordinary prose typed after a completed mention still matches AT_PATTERN;
-  // remembering the dead query stops the dropdown from reopening on every
-  // following keystroke until the user edits back into a query that can match.
+  // Offset of the "@" that opened the current query, the mention inserted at
+  // each "@" offset, and the last spaced query the file search resolved to
+  // nothing. Since a query may contain spaces, ordinary prose typed after a
+  // completed mention still matches AT_PATTERN. Keying settlement to the
+  // insertion offset keeps a short earlier mention from closing the search for
+  // a longer new path that happens to start the same way, and remembering the
+  // dead query stops a never-completed query from reopening the dropdown on
+  // every following keystroke until the user edits back into a match.
   let at = 0
   let dead: { at: number; query: string } | undefined
+  const inserted = new Map<number, string>()
 
   const showMention = () => mentionQuery() !== null
   const scope = () => sessionID?.() ?? ""
@@ -201,6 +205,7 @@ export function useFileMention(
     if (value === activeScope) return value
     activeScope = value
     dead = undefined
+    inserted.clear()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchRevision++
     fileSearchRequest = undefined
@@ -384,6 +389,19 @@ export function useFileMention(
     })
   }
 
+  // Record the mention inserted at an "@" offset, bounded so a long session
+  // cannot grow the map without limit. Entries whose offset later shifts simply
+  // stop matching, which only costs the synchronous close.
+  const remember = (offset: number, token: string) => {
+    inserted.delete(offset)
+    inserted.set(offset, token)
+    while (inserted.size > 16) {
+      const oldest = inserted.keys().next().value
+      if (oldest === undefined) return
+      inserted.delete(oldest)
+    }
+  }
+
   const selectMention = (
     result: MentionResult,
     textarea: HTMLTextAreaElement,
@@ -433,6 +451,7 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
+    remember(atPos, result.value)
     // Restore focus before execCommand: pickers (session search, native file
     // dialog) move focus away from the textarea, which makes execCommand
     // silently no-op.
@@ -495,9 +514,9 @@ export function useFileMention(
     }
     const query = match[1] ?? ""
     at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
-    // The query already covers a finished mention plus more text, so the rest
-    // is prose being written after it, not a longer filename being typed.
-    if (mentionSettled(query, mentionTokens())) {
+    // The query already covers the mention inserted at this "@" plus more text,
+    // so the rest is prose being written after it, not a longer filename.
+    if (mentionSettled(query, inserted.get(at), mentionTokens())) {
       closeMention()
       return
     }
@@ -749,6 +768,7 @@ export function useFileMention(
       suppress = false
     }
     knownPaths.add(norm)
+    remember(state.atStart, norm)
     setMentionedPaths((prev) => new Set([...prev, norm]))
     syncMentionedPaths(textarea.value)
     state.setText(textarea.value)

@@ -147,20 +147,28 @@ export function sessionMentionFilename(title: string, id: string) {
 }
 
 /**
- * Whether an in-progress query already holds a complete mention followed by
- * more text, meaning the user moved on to writing prose rather than typing a
- * longer filename. Because a query may contain spaces, `@notes.md and then`
- * still matches the mention trigger; this is what tells the two apart. A query
- * that is only a prefix of (or exactly) a known token is still an edit of that
- * mention, so it stays open.
+ * Whether an in-progress query continues past a mention that was inserted at
+ * this same `@`, meaning the user moved on to writing prose rather than typing
+ * a longer filename. Because a query may contain spaces, `@notes.md and then`
+ * still matches the mention trigger; this is what tells the two apart.
+ *
+ * `token` must be the mention actually inserted at this `@`, not merely a known
+ * path: paths stay in the mention hook's sticky known set for the whole
+ * session, so testing every known token would let a short earlier mention such
+ * as `my` close the search for a genuinely new `@my report.txt`.
+ *
+ * `tokens` guards the remaining ambiguity: while the query is still growing
+ * toward a longer known path, the user is completing a filename rather than
+ * writing prose, so the search stays open.
  */
-export function mentionSettled(query: string, tokens: Set<string>): boolean {
-  for (const token of [...tokens, TERMINAL_MENTION, GIT_CHANGES_MENTION]) {
-    if (query.length <= token.length) continue
-    if (!query.startsWith(token)) continue
-    if (/\s/.test(query[token.length] ?? "")) return true
+export function mentionSettled(query: string, token: string | undefined, tokens: Set<string>): boolean {
+  if (!token || query.length <= token.length) return false
+  if (!query.startsWith(token)) return false
+  if (!/\s/.test(query[token.length] ?? "")) return false
+  for (const known of tokens) {
+    if (known.length > query.length && known.startsWith(query)) return false
   }
-  return false
+  return true
 }
 
 export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {

@@ -22,6 +22,8 @@ import {
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
 } from "../../webview-ui/src/hooks/file-mention-utils"
+import { TERMINAL_MENTION } from "../../webview-ui/src/hooks/terminal-context-utils"
+import { GIT_CHANGES_MENTION } from "../../webview-ui/src/hooks/git-changes-context-utils"
 
 describe("AT_PATTERN", () => {
   it("matches @mention at start of string", () => {
@@ -676,33 +678,53 @@ describe("session mentions", () => {
   describe("mentionSettled", () => {
     const tokens = new Set(["my file.txt", "src/a.ts"])
 
-    it("reports a completed mention followed by prose", () => {
-      expect(mentionSettled("my file.txt and then", tokens)).toBe(true)
+    it("reports the inserted mention followed by prose", () => {
+      expect(mentionSettled("my file.txt and then", "my file.txt", tokens)).toBe(true)
     })
 
-    it("reports a completed mention followed by a single space", () => {
-      expect(mentionSettled("src/a.ts ", tokens)).toBe(true)
+    it("reports the inserted mention followed by a single space", () => {
+      expect(mentionSettled("src/a.ts ", "src/a.ts", tokens)).toBe(true)
     })
 
-    it("treats a prefix of a known path as an edit in progress", () => {
-      expect(mentionSettled("my file", tokens)).toBe(false)
+    it("treats a prefix of the inserted mention as an edit in progress", () => {
+      expect(mentionSettled("my file", "my file.txt", tokens)).toBe(false)
     })
 
-    it("treats the exact token as an edit in progress", () => {
-      expect(mentionSettled("my file.txt", tokens)).toBe(false)
+    it("treats the exact inserted mention as an edit in progress", () => {
+      expect(mentionSettled("my file.txt", "my file.txt", tokens)).toBe(false)
     })
 
-    it("does not report a longer path that merely starts like a known one", () => {
-      expect(mentionSettled("src/a.tsx", tokens)).toBe(false)
+    it("does not report a longer path that merely starts like the inserted one", () => {
+      expect(mentionSettled("src/a.tsx", "src/a.ts", tokens)).toBe(false)
     })
 
-    it("reports builtin mentions", () => {
-      expect(mentionSettled("terminal what failed", new Set())).toBe(true)
-      expect(mentionSettled("git-changes review", new Set())).toBe(true)
+    it("reports nothing when no mention was inserted at this @", () => {
+      expect(mentionSettled("my file.txt and then", undefined, tokens)).toBe(false)
+    })
+
+    it("does not settle on a short known path that only prefixes a new query", () => {
+      // "my" lingers in the sticky known set from an earlier mention; typing a
+      // longer, unrelated path that starts with it must keep searching.
+      expect(mentionSettled("my report.txt", undefined, new Set(["my"]))).toBe(false)
+    })
+
+    it("keeps searching while the query still grows toward a longer known path", () => {
+      const known = new Set(["my", "my report.txt"])
+      expect(mentionSettled("my report", "my", known)).toBe(false)
+    })
+
+    it("settles once the query passes every known path it could complete", () => {
+      const known = new Set(["my", "my report.txt"])
+      expect(mentionSettled("my report.txt and then", "my", known)).toBe(true)
+    })
+
+    it("reports inserted builtin mentions", () => {
+      expect(mentionSettled("terminal what failed", TERMINAL_MENTION, new Set())).toBe(true)
+      expect(mentionSettled("git-changes review", GIT_CHANGES_MENTION, new Set())).toBe(true)
     })
 
     it("reports nothing for an unrelated query", () => {
-      expect(mentionSettled("some other thing", tokens)).toBe(false)
+      expect(mentionSettled("some other thing", "my file.txt", tokens)).toBe(false)
     })
   })
 

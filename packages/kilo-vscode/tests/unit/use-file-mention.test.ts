@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { useFileMention } from "../../webview-ui/src/hooks/useFileMention"
-import { FILE_PICKER_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
+import { FILE_PICKER_RESULT, TERMINAL_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 declare global {
@@ -12,8 +12,40 @@ declare global {
 const hadDoc = "document" in globalThis
 const originalDoc = hadDoc ? globalThis.document : undefined
 
-function mockDocument() {
-  globalThis.document = { execCommand: () => true }
+function mockDocument(target?: { insert: (text: string) => void }) {
+  globalThis.document = {
+    execCommand: (_id: string, _show?: boolean, value?: string) => {
+      target?.insert(value ?? "")
+      return true
+    },
+  }
+}
+
+/** Minimal textarea stub whose selection and execCommand inserts mutate text. */
+function editor(initial: string) {
+  const state = { start: initial.length, end: initial.length, value: initial }
+  return {
+    get value() {
+      return state.value
+    },
+    get selectionStart() {
+      return state.start
+    },
+    get selectionEnd() {
+      return state.end
+    },
+    isConnected: true,
+    focus: () => {},
+    setSelectionRange: (start: number, end = start) => {
+      state.start = start
+      state.end = end
+    },
+    insert: (text: string) => {
+      state.value = state.value.slice(0, state.start) + text + state.value.slice(state.end)
+      state.start += text.length
+      state.end = state.start
+    },
+  } as unknown as HTMLTextAreaElement & { insert: (text: string) => void }
 }
 
 function restoreDocument() {
@@ -193,9 +225,8 @@ describe("useFileMention", () => {
   })
 
   it("keeps the dropdown closed while typing after a selected mention", () => {
-    const posted: WebviewMessage[] = []
     const ctx = {
-      postMessage: (message: WebviewMessage) => posted.push(message),
+      postMessage: () => {},
       onMessage: () => () => {},
     }
 
@@ -206,7 +237,15 @@ describe("useFileMention", () => {
     })
 
     const path = "packages/sdk/js/src/gen/types.gen.ts"
-    mention.addPaths([path], "/repo")
+    const input = editor("@types")
+    mockDocument(input)
+    try {
+      mention.onInput(input.value, input.selectionStart!)
+      mention.selectMention({ type: "file", value: path }, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+    expect(input.value).toBe(`@${path} `)
 
     // Typing straight after the inserted mention must not reopen the dropdown,
     // no matter what the pending file search would answer.
@@ -222,7 +261,7 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
-  it("keeps the dropdown closed while typing after a builtin mention", () => {
+  it("keeps the dropdown closed while typing after a selected builtin mention", () => {
     const ctx = {
       postMessage: () => {},
       onMessage: () => () => {},
@@ -234,8 +273,41 @@ describe("useFileMention", () => {
       return useFileMention(ctx, undefined, () => false)
     })
 
+    const input = editor("@term")
+    mockDocument(input)
+    try {
+      mention.onInput(input.value, input.selectionStart!)
+      mention.selectMention(TERMINAL_RESULT, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+
     mention.onInput("@terminal what failed", 21)
     expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("keeps searching a spaced path that starts like an earlier mention", () => {
+    const posted: WebviewMessage[] = []
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // "my" is a folder mentioned earlier in the session, so it stays in the
+    // sticky known set. Typing a longer, distinct path that begins with it must
+    // still search instead of being mistaken for prose after a mention.
+    mention.addPaths(["my"], "/repo")
+    mention.onInput("@my report", 10)
+
+    expect(mention.showMention()).toBe(true)
 
     dispose.fn?.()
   })
