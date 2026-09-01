@@ -138,7 +138,7 @@ export namespace KiloSessionOverflow {
       model: Provider.Model
       usable: number
       reported?: number
-    } & (Payload & { system?: string } | { tokens: number; tail: number; overhead?: number; continuation: boolean }),
+    } & (Payload | { tokens: number; tail: number; overhead?: number; continuation: boolean }),
   ) {
     if (!enabled(input)) return false
     const stats = "tokens" in input ? input : measure(input)
