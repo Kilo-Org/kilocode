@@ -214,18 +214,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/kilo-provider/handlers/permission-handler.ts",
-        "packages/kilo-vscode/src/kilo-provider/handlers/question.ts"
-      ],
-      "fingerprint": "edde84a63bcdb8a0",
-      "maxMatches": 1,
-      "maxTokens": 108,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
         "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
       ],
