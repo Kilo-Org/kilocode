@@ -77,9 +77,41 @@ class ChangesPanelTest : BasePlatformTestCase() {
 
         val compact = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
         compact.update(1, 2, 0)
-        compact.update(0, 0, 0, ahead = 8, localFiles = 2)
+        // A compact summary has no ahead/behind counters, so commits alone leave it with nothing to show.
+        compact.update(0, 0, 0, ahead = 8)
         assertFalse(compact.isVisible)
         assertNull(compact.toolTipText)
+    }
+
+    fun `test compact stands uncommitted counts in for an empty committed set`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+
+        view.update(0, 0, 0, ahead = 8, localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main")
+
+        assertTrue(view.isVisible)
+        assertEquals(listOf("2 files", "-3", "+9"), labels(view))
+        assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), view.toolTipText)
+
+        // One committed file outranks any amount of uncommitted work: it is the number a PR would show.
+        view.update(1, 4, 0, localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main")
+        assertEquals(listOf("1 file", "+4"), labels(view))
+        assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.toolTipText)
+    }
+
+    fun `test compact ignores uncommitted counts it is not showing`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+        view.update(2, 1, 1)
+        val previous = RepaintManager.currentManager(view)
+        val tracker = Tracker(view)
+        RepaintManager.setCurrentManager(tracker)
+        try {
+            repeat(100) { view.update(2, 1, 1, localFiles = it + 1, localAdditions = it, localDeletions = it) }
+            assertEquals(0, tracker.invalidations)
+            assertEquals(0, tracker.paints)
+        } finally {
+            RepaintManager.setCurrentManager(previous)
+        }
+        assertEquals(listOf("2 files", "-1", "+1"), labels(view))
     }
 
     fun `test ahead behind remain independent from file groups`() = edt {

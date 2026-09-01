@@ -52,6 +52,9 @@ internal class ChangesPanel @RequiresEdt constructor(
     private val behind = if (mode == Mode.FULL) counter("/icons/arrow-down-to-line.svg", "worktree.stats.behind.tooltip") else null
     private val separator = if (mode == Mode.FULL) JSeparator(SwingConstants.VERTICAL) else null
     private var state: State? = null
+    private var row: Stack? = null
+    // JPanel's constructor calls updateUI() before any field above exists, so guard the refresh.
+    private var wired = false
 
     init {
         isOpaque = false
@@ -61,12 +64,42 @@ internal class ChangesPanel @RequiresEdt constructor(
             add(base, BorderLayout.CENTER)
             addMouseListener(base.listener)
         } else {
-            add(Stack.horizontal(UiStyle.Gap.md()).next(local!!).next(separator!!).next(ahead!!).next(behind!!).next(base))
+            row = Stack.horizontal(UiStyle.Gap.md()).next(local!!).next(separator!!).next(ahead!!).next(behind!!).next(base)
+            add(row)
         }
         visit(this) { it.isFocusable = false }
+        // JBFont rescales itself when the IDE font changes, and the lazy colour re-reads the theme,
+        // so neither needs re-applying on a Look-and-Feel change — and re-applying them would clobber
+        // the font a host pushes in through [setFont].
         font = JBFont.small()
         foreground = JBColor.lazy { UiStyle.Colors.weak() }
+        wired = true
+        syncScale()
         setActions(onBase, onLocal)
+    }
+
+    /**
+     * [onBase] drives the only group a compact summary has, whichever counts it ended up showing — a
+     * compact host that passes an uncommitted set has to hand over the action that matches it, because
+     * this widget cannot know which comparison the counts came from.
+     */
+    @RequiresEdt
+    override fun updateUI() {
+        super.updateUI()
+        if (!wired) return
+        syncScale()
+    }
+
+    /**
+     * Re-derives the spacing for the current scale. A layout manager captures its gap and
+     * [JBLabel.setIconTextGap] its pixel value when they are set, so an IDE zoom would otherwise leave
+     * the stats strip with its pre-zoom gaps.
+     */
+    @RequiresEdt
+    private fun syncScale() {
+        row?.space = UiStyle.Gap.md()
+        ahead?.iconTextGap = UiStyle.Gap.xs()
+        behind?.iconTextGap = UiStyle.Gap.xs()
     }
 
     @RequiresEdt
@@ -88,10 +121,16 @@ internal class ChangesPanel @RequiresEdt constructor(
         localDeletions: Int = 0,
         base: String = "",
     ) {
-        val next = if (mode == Mode.COMPACT) {
-            State(files, additions, deletions, base = base)
-        } else {
-            State(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+        // A compact summary has one group, so uncommitted work is all it can show for a worktree that has
+        // committed nothing yet — and hiding instead would read as "this worktree changed nothing", which
+        // is the opposite of what the row is being asked. The counts it drops in that case are zero, so
+        // they stay out of the state and an unrelated poll cannot repaint the row.
+        val next = when {
+            mode == Mode.FULL ->
+                State(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+            files == 0 && localFiles > 0 ->
+                State(localFiles, localAdditions, localDeletions, base = base, local = true)
+            else -> State(files, additions, deletions, base = base)
         }
         if (state == next) return
         state = next
@@ -99,22 +138,24 @@ internal class ChangesPanel @RequiresEdt constructor(
         // its tooltip only has to say what a click does. The full form is the one that can be squeezed
         // out of a narrow header, and it keeps the counts and the base branch.
         val tip = when {
+            next.local -> KiloBundle.message("worktree.dirty.tooltip.open")
             mode == Mode.COMPACT -> KiloBundle.message("worktree.stats.tooltip.open")
             base.isBlank() -> KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
             else -> KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
         }
-        this.base.update(files, additions, deletions, tip)
+        this.base.update(next.files, next.additions, next.deletions, tip)
         local?.update(
-            localFiles, localAdditions, localDeletions,
-            KiloBundle.message("worktree.dirty.tooltip", localFiles, localAdditions, localDeletions),
+            next.localFiles, next.localAdditions, next.localDeletions,
+            KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions),
         )
-        this.ahead?.let { counter(it, ahead) }
-        this.behind?.let { counter(it, behind) }
-        val right = files > 0 || next.ahead > 0 || next.behind > 0
-        separator?.let { if (it.isVisible != (localFiles > 0 && right)) it.isVisible = localFiles > 0 && right }
+        this.ahead?.let { counter(it, next.ahead) }
+        this.behind?.let { counter(it, next.behind) }
+        val right = next.files > 0 || next.ahead > 0 || next.behind > 0
+        val fence = next.localFiles > 0 && right
+        separator?.let { if (it.isVisible != fence) it.isVisible = fence }
         val visible = right || next.localFiles > 0
         if (isVisible != visible) isVisible = visible
-        val tooltip = tip.takeIf { mode == Mode.COMPACT && files > 0 }
+        val tooltip = tip.takeIf { mode == Mode.COMPACT && next.files > 0 }
         if (toolTipText != tooltip) toolTipText = tooltip
         syncActions()
         revalidate()
@@ -178,6 +219,7 @@ internal class ChangesPanel @RequiresEdt constructor(
     private inner class Group @RequiresEdt constructor(fill: Boolean) : JPanel(BorderLayout()) {
         private val count = JBLabel().apply { foreground = JBColor.lazy { UiStyle.Colors.weak() } }
         private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
+        private lateinit var row: Stack
         private var over = false
         var action: (() -> Unit)? = null
         val listener = object : MouseAdapter() {
@@ -206,7 +248,8 @@ internal class ChangesPanel @RequiresEdt constructor(
             isOpaque = false
             isVisible = false
             stat.isVisible = false
-            add(Stack.horizontal(UiStyle.Gap.sm()).next(count).next(stat).align(HAlign.LEFT, VAlign.CENTER))
+            row = Stack.horizontal(UiStyle.Gap.sm()).next(count).next(stat)
+            add(row.align(HAlign.LEFT, VAlign.CENTER))
             visit(this) {
                 it.isFocusable = false
                 it.addMouseListener(listener)
@@ -229,7 +272,9 @@ internal class ChangesPanel @RequiresEdt constructor(
         @RequiresEdt
         override fun updateUI() {
             super.updateUI()
-            border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
+            border = JBUI.Borders.empty(0, UiStyle.Gap.SM)
+            // JPanel's constructor runs updateUI() before the row exists.
+            if (this::row.isInitialized) row.space = UiStyle.Gap.sm()
         }
 
         @RequiresEdt
@@ -326,6 +371,8 @@ internal class ChangesPanel @RequiresEdt constructor(
         val localAdditions: Int = 0,
         val localDeletions: Int = 0,
         val base: String = "",
+        /** The counts above are uncommitted, stood in for a committed set that is empty. Compact only. */
+        val local: Boolean = false,
     )
 
     private companion object {

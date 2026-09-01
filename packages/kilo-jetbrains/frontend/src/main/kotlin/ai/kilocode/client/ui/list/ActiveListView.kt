@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
@@ -74,6 +75,13 @@ internal class ActiveListView(
             return super.getBackground() ?: UIUtil.getListBackground(false, false)
         }
 
+        // The platform's Look-and-Feel pass reaches the list but never the renderer stamp, so [rescale]
+        // refreshes and re-measures it here.
+        override fun updateUI() {
+            super.updateUI()
+            rescale()
+        }
+
         override fun getToolTipText(event: MouseEvent): String? {
             val tip = super.getToolTipText(event)
             if (tip != null) return tip
@@ -109,6 +117,8 @@ internal class ActiveListView(
     private var restoring = false
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
+    // JBList's constructor calls updateUI() before the fields above exist, so guard the re-measure.
+    private var wired = false
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -217,6 +227,47 @@ internal class ActiveListView(
         reorder?.let { installActiveListReorder(this, list, it) }
         ScrollingUtil.installActions(list)
         next(list)
+        wired = true
+    }
+
+    /**
+     * Refreshes and re-measures the rows after a Look-and-Feel or IDE-zoom change.
+     *
+     * The renderer stamp has to be refreshed by hand. [javax.swing.JList.updateUI] only forwards to its
+     * renderer `if (renderer instanceof Component)`, and [JBList.setCellRenderer] wraps whatever it is
+     * given in a non-Component adapter, so the stamp is never reached by the platform's own
+     * Look-and-Feel pass. Fonts still follow a zoom on their own — a [com.intellij.util.ui.JBFont]
+     * re-derives its size from "Label.font" whenever it is read — but every inset, border and layout gap
+     * resolved through [JBUI.scale] is a plain pixel count that has to be recomputed.
+     *
+     * Re-measuring then needs [heightKey] dropped: zoom moves the scale and the label font without
+     * touching row data or the list width, so the key compares equal and [syncCellHeight] would keep
+     * `fixedCellHeight` at its pre-zoom value while the row content around it changes size.
+     *
+     * The measure itself is deferred. `LafManagerImpl` walks the window with
+     * `IJSwingUtilities.updateComponentTreeUI`, which visits children before their parents, so when this
+     * runs the list's own ancestors — and any theme value they still hold from before the zoom — have not
+     * been re-initialized yet. Measuring on the next EDT pass instead lets the whole tree settle at the
+     * new scale first, the same ordering [ai.kilocode.client.session.history.HistoryPanel] relies on.
+     */
+    @RequiresEdt
+    private fun rescale() {
+        if (!wired) return
+        SwingUtilities.updateComponentTreeUI(renderer)
+        heightKey = null
+        renderer.setBodyHeight(null)
+        sync()
+        val app = ApplicationManager.getApplication() ?: return
+        app.invokeLater({ remeasure() }, ModalityState.any())
+    }
+
+    /** Second, settled pass of [rescale]; safe to run when the list has since been detached. */
+    @RequiresEdt
+    private fun remeasure() {
+        if (!wired) return
+        heightKey = null
+        renderer.setBodyHeight(null)
+        sync()
     }
 
     @RequiresEdt
