@@ -22,11 +22,18 @@ or automatically via the x402 protocol. It runs hosted at
 ## Configure Kilo Code
 
 1. Open **Settings** in the Kilo Code extension.
-2. Go to the **Providers** tab and select **OpenAI Compatible**.
+2. Go to the **Providers** tab, choose **Add a custom provider**, and pick the
+   **OpenAI Compatible** type.
 3. Set the Base URL to `https://api.openzoo.fun/v1` (or
    `http://localhost:8402/v1` for local).
 4. Enter any API key value, e.g. `sk-openzoo`.
 5. Enter a model id from `/v1/models`.
+
+## CLI
+
+For the Kilo CLI, add a custom provider to `~/.config/kilo/kilo.json` pointing
+at the same base URL (`https://api.openzoo.fun/v1` or the local gateway), with
+any API key value, then select it with `kilo auth login --provider`.
 
 ## Tips and Notes
 
