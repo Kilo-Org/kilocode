@@ -372,7 +372,14 @@ const AgentManagerContent: Component = () => {
   const setReviewCommentsByContext = reviewState.setComments
   const browser = createBrowserPanel(
     sidePanel,
-    (panel) => (panel ? panels.open(panel) : panels.close(SidePanel.Browser)),
+    (value) => {
+      const current = panels.selected()
+      const next = typeof value === "function" ? value(current) : value
+      if (next === current) return next
+      if (next) panels.open(next)
+      else panels.close(SidePanel.Browser)
+      return next
+    },
     setHistory,
     setReviewActive,
   )
