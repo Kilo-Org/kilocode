@@ -344,6 +344,12 @@
 
 ## [Unreleased]
 
+## [7.1.5] - 2026-09-01
+
+### Fixed
+
+- Keep Agent Manager run/action buttons available while the IDE is indexing, instead of disabling them and showing "waits for analysis" tooltips.
+
 ## [7.1.4] - 2026-09-01
 
 ### Added
@@ -391,7 +397,6 @@
 - refactor(kilo-console): share model picker choices by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13661
 - refactor(vscode): reuse script error formatting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13662
 - refactor(kilo-console): share available provider selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13664
-
 
 ## [7.1.3] - 2026-08-31
 
