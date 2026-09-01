@@ -34,22 +34,22 @@ const ModelState = z
 
 export namespace KiloTask {
   export const ModelFields = {
-    model: Schema.optional(Schema.String).annotate({
+    model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
-        "Optional subagent model name or qualified provider/model ID from agent_manager_models. Choose a model suited to this task; omit to use the normal subagent model.",
+        "Optional subagent model name or qualified provider/model ID from agent_manager_models. Only set when the user explicitly requests a different model. Omit or send null to keep the normal subagent model.",
     }),
-    provider: Schema.optional(Schema.String).annotate({
+    provider: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
-        "Optional provider ID from agent_manager_models. Requires model; omit to prefer the current turn's provider, then Kilo Gateway.",
+        "Optional provider ID from agent_manager_models. Only set when the user explicitly requests a provider. Requires model; omit or send null to prefer the current turn's provider, then Kilo Gateway.",
     }),
-    variant: Schema.optional(Schema.String).annotate({
+    variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
-        "Optional reasoning effort variant from agent_manager_models. Can be used without model to change only the normal subagent model's reasoning effort.",
+        "Optional reasoning effort override from agent_manager_models. Only set when the user explicitly requests a different reasoning effort. Omit or send null to keep the normal reasoning effort. Can be used without model.",
     }),
   }
 
   export const modelDescription =
-    "Experimental subagent model selection is enabled. You may choose model, provider, and variant (reasoning effort) for each task based on its complexity, cost, and latency needs. Use agent_manager_models to find available models, providers, and variants before selecting them; do not guess. This does not create Agent Manager sessions. Omit these fields to keep the normal subagent defaults. Resumed tasks keep their last model and variant unless overridden. A model override does not inherit the parent's reasoning effort; specify variant when a particular effort is needed."
+    "Experimental subagent model selection is enabled. Omit these fields, or send null, to keep the normal subagent model and reasoning defaults. Only override model, provider, or variant when the user explicitly requests it. Do not choose overrides on your own based on task complexity, cost, or latency. Use agent_manager_models only when an override is requested to find available models, providers, and variants; do not guess names or use model knowledge from training. This does not create Agent Manager sessions. Resumed tasks keep their last model and variant unless overridden. A variant-only override keeps the resolved model. A model override does not inherit the parent's reasoning effort."
 
   /** Reject primary agents used as subagents */
   export function validate(info: Agent.Info, name: string) {
@@ -232,18 +232,18 @@ export namespace KiloTask {
   export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (
     input: Parameters<typeof defaults>[0] & {
       enabled?: boolean
-      selection?: { model?: string; provider?: string; variant?: string }
+      selection?: { model?: string | null; provider?: string | null; variant?: string | null }
       resume?: Session.Info["model"]
     },
   ) {
     const selection = input.selection ?? {}
-    const requested = Object.values(selection).some((value) => value !== undefined)
+    const requested = Object.values(selection).some((value) => value != null)
     if (requested && !input.enabled) {
       return yield* Effect.fail(
         new Error("Task model selection requires experimental.task_model_selection=true in Kilo config"),
       )
     }
-    if (requested && Object.values(selection).some((value) => value !== undefined && !value.trim())) {
+    if (requested && Object.values(selection).some((value) => value != null && !value.trim())) {
       return yield* Effect.fail(new Error("Task model, provider, and variant must not be empty when specified"))
     }
     if (selection.provider && !selection.model) {

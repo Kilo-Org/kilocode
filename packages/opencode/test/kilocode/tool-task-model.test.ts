@@ -208,7 +208,7 @@ function run(input: {
   variant?: string
   config?: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
   enabled?: boolean
-  selection?: { model?: string; provider?: string; variant?: string }
+  selection?: { model?: string | null; provider?: string | null; variant?: string | null }
   resume?: Session.Info["model"]
 }) {
   return provideTmpdirInstance(
@@ -281,6 +281,9 @@ describe("tool.task model resolution", () => {
     { selection: { model: "SUB model", provider: "sub-provider" }, model: sub, variant: undefined },
     { selection: { variant: overrideVariant }, model: cfg, variant: overrideVariant },
     { selection: {}, model: cfg, variant: cfgVariant },
+    { selection: { model: null, provider: null, variant: null }, model: cfg, variant: cfgVariant },
+    { selection: { model: "sub-model", provider: null, variant: null }, model: sub, variant: undefined },
+    { selection: { model: null, provider: null, variant: overrideVariant }, model: cfg, variant: overrideVariant },
   ]) {
     it.live(`selects ${JSON.stringify(example.selection)} when enabled`, () =>
       run({ agent: "pinned", enabled: true, selection: example.selection, variant: inherited }).pipe(
@@ -322,20 +325,40 @@ describe("tool.task model resolution", () => {
   }
 
   for (const enabled of [false, true]) {
-    it.live(`uses ${enabled ? "persisted" : "normal"} defaults on resume`, () =>
-      run({
-        agent: "pinned",
-        enabled,
-        resume: { id: sub.modelID, providerID: sub.providerID, variant: subVariant },
-      }).pipe(
-        Effect.tap((result) =>
-          Effect.sync(() => {
-            expect(result.prompt).toEqual(enabled ? sub : cfg)
-            expect(result.variant).toEqual(enabled ? subVariant : cfgVariant)
-          }),
-        ),
-      ),
-    )
+    for (const selection of [undefined, { model: null, provider: null, variant: null }]) {
+      it.live(
+        `inherits parent model and reasoning with selection ${JSON.stringify(selection)} and enabled ${enabled}`,
+        () =>
+          run({ agent: "worker", enabled, selection, variant: inherited }).pipe(
+            Effect.tap((result) =>
+              Effect.sync(() => {
+                expect(result.prompt).toEqual(parent)
+                expect(result.variant).toEqual(inherited)
+                expect(result.model).toEqual(parent)
+                expect(result.metadataVariant).toEqual(inherited)
+              }),
+            ),
+          ),
+      )
+
+      it.live(
+        `uses ${enabled ? "persisted" : "normal"} defaults on resume with selection ${JSON.stringify(selection)}`,
+        () =>
+          run({
+            agent: "pinned",
+            enabled,
+            selection,
+            resume: { id: sub.modelID, providerID: sub.providerID, variant: subVariant },
+          }).pipe(
+            Effect.tap((result) =>
+              Effect.sync(() => {
+                expect(result.prompt).toEqual(enabled ? sub : cfg)
+                expect(result.variant).toEqual(enabled ? subVariant : cfgVariant)
+              }),
+            ),
+          ),
+      )
+    }
   }
 
   it.live("allows a reasoning override on a resumed model", () =>
@@ -365,11 +388,21 @@ describe("tool.task model resolution", () => {
               )
               const def = yield* tool.init()
               const fields = def.jsonSchema?.properties ?? {}
-              for (const field of ["model", "provider", "variant"]) expect(field in fields).toBe(enabled === true)
+              for (const field of ["model", "provider", "variant"]) {
+                expect(field in fields).toBe(enabled === true)
+                expect(def.jsonSchema?.required).not.toContain(field)
+                if (enabled) expect(fields[field]).toMatchObject({ anyOf: [{ type: "string" }, { type: "null" }] })
+              }
               expect("background" in fields).toBe(background)
               expect(def.description.includes("Experimental subagent model selection is enabled")).toBe(
                 enabled === true,
               )
+              if (enabled) {
+                expect(def.description).toContain(
+                  "Only override model, provider, or variant when the user explicitly requests it",
+                )
+                expect(def.description).toContain("Omit these fields, or send null")
+              }
             }),
           { config: { experimental: { task_model_selection: enabled } } },
         ),

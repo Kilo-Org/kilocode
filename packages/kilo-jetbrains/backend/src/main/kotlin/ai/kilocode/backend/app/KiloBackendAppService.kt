@@ -19,6 +19,7 @@ import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.jetbrains.api.model.ProviderOauthAuthorizeRequest
 import ai.kilocode.jetbrains.api.model.ProviderOauthCallbackRequest
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -826,13 +827,13 @@ class KiloBackendAppService private constructor(
                             }
                         }
                         "global.disposed" -> {
-                            logSessionDisposalRisk("global.disposed")
+                            reportDisposal("global.disposed")
                             log.info("SSE global.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
                         }
                         "server.instance.disposed" -> {
-                            logSessionDisposalRisk("server.instance.disposed")
+                            reportDisposal("server.instance.disposed")
                             log.info("SSE server.instance.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
@@ -843,10 +844,22 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun logSessionDisposalRisk(event: String) {
+    /**
+     * Warn, and tell every running session that the CLI is about to cancel it.
+     *
+     * Disposing an instance cancels every runner it owns, and the CLI reports that as the same
+     * `MessageAbortedError` a user Stop produces. Naming the cause here is the only way the UI can
+     * tell the difference and explain itself instead of quietly reporting "Stopped".
+     */
+    private fun reportDisposal(event: String) {
         val active = sessions.statuses.value.filterValues { it.type != "idle" }
         if (active.isEmpty()) return
         log.warn("SSE $event while sessions are active; sessions may be cancelled count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        // Badged here rather than off the event below, because the reload that follows this restarts the
+        // activity collector and the event could be dropped in the gap. Both still matter: the badge
+        // marks the worktree row, the event lets the open session name its own reason.
+        activity.interrupt(active.keys)
+        chat.interrupt(active.keys, ChatEventDto.SessionInterrupted.RELOAD)
     }
 
     private suspend fun clear() {
