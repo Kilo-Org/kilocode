@@ -76,6 +76,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { assertExternalDirectoryEffect } from "@/tool/external-directory" // kilocode_change
 import { SessionRunState } from "./run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Database } from "@opencode-ai/core/database/database"
@@ -178,6 +179,7 @@ export const layer = Layer.effect(
     const scope = yield* Scope.Scope
     const instruction = yield* Instruction.Service
     const state = yield* SessionRunState.Service
+    const drain = yield* SessionDrain.Service // kilocode_change
     const revert = yield* SessionRevert.Service
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
@@ -202,7 +204,15 @@ export const layer = Layer.effect(
       scope: KiloSessionControl.AbortScope = "tree",
     ) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, scope, cancel: state.cancel, stop: control.stop })
+      yield* KiloSessionPrompt.cancelTree({
+        sessionID,
+        sessions,
+        scope,
+        drain,
+        events,
+        cancel: state.cancel,
+        stop: control.stop,
+      })
     })
     // kilocode_change end
 
@@ -1474,6 +1484,7 @@ export const layer = Layer.effect(
         // kilocode_change end
       },
       Effect.catchTag("NotFoundError", Effect.die),
+      (work, input) => drain.track(input.sessionID, work), // kilocode_change
     )
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
@@ -2660,6 +2671,7 @@ export const node = LayerNode.make({
     CrossSpawnSpawner.node,
     Instruction.node,
     SessionRunState.node,
+    SessionDrain.node, // kilocode_change
     SessionRevert.node,
     SessionSummary.node,
     SystemPrompt.node,
