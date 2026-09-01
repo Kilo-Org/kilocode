@@ -110,7 +110,6 @@ export const TaskTool = Tool.define(
     const run = Effect.fn("TaskTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context,
-      delivery: SessionDrain.Delivery, // kilocode_change
     ) {
       const cfg = yield* config.get()
       const selection = cfg.experimental?.task_model_selection === true // kilocode_change
@@ -337,9 +336,9 @@ export const TaskTool = Tool.define(
       const notify = Effect.fn("TaskTool.notifyBackgroundResult")((jobID: string) =>
         Effect.uninterruptible(
           Effect.gen(function* () {
-            if (delivery.retained) return
             const owner = yield* Scope.fork(scope, "parallel")
-            yield* Scope.addFinalizer(owner, Effect.sync(delivery.release))
+            const release = yield* drain.hold(ctx.sessionID)
+            yield* Scope.addFinalizer(owner, Effect.sync(release))
             yield* background.wait({ id: jobID }).pipe(
               Effect.flatMap((result) => {
                 if (result.info?.status === "completed") return inject("completed", result.info.output ?? "")
@@ -362,7 +361,6 @@ export const TaskTool = Tool.define(
               Effect.ensuring(Scope.close(owner, Exit.void)),
               Effect.forkIn(scope, { startImmediately: true }),
             )
-            delivery.retained = true
           }),
         ),
       )
@@ -414,10 +412,12 @@ export const TaskTool = Tool.define(
         type: id,
         title: params.description,
         metadata,
+        // kilocode_change start
         onPromote: ctx.metadata({
           title: params.description,
           metadata: { ...metadata, background: true, jobId: nextSession.id },
         }),
+        // kilocode_change end
         // kilocode_change - only the initial-background start needs its own cost bracket; the
         // foreground/promoted path below is already wrapped by the acquireUseRelease at the bottom of run()
         run: runInBackground ? backgroundRun : runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))),
@@ -465,10 +465,12 @@ export const TaskTool = Tool.define(
               background.wait({ id: nextSession.id }).pipe(Effect.map((waited) => waited.info)),
               background.waitForPromotion(nextSession.id),
             )
+            // kilocode_change start
             if (result?.metadata?.background === true) {
               yield* notify(info.id)
               return backgroundResult()
             }
+            // kilocode_change end
             if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
             if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled"))
             return {
@@ -525,16 +527,7 @@ export const TaskTool = Tool.define(
             }),
           ),
           execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-            Effect.acquireUseRelease(
-              drain
-                .hold(ctx.sessionID)
-                .pipe(Effect.map((release): SessionDrain.Delivery => ({ release, retained: false }))),
-              (delivery) => run(params, ctx, delivery),
-              (delivery) =>
-                Effect.sync(() => {
-                  if (!delivery.retained) delivery.release()
-                }),
-            ).pipe(Effect.orDie),
+            drain.track(ctx.sessionID, run(params, ctx)).pipe(Effect.orDie),
         }
       })
     // kilocode_change end

@@ -18,6 +18,12 @@ export namespace KiloRunDrain {
     return sdk
   }
 
+  export function scope(sdk: KiloClient, directory: string) {
+    const config = connections.get(sdk)
+    if (!config) throw new Error("Missing headless server transport")
+    return client({ ...config, directory })
+  }
+
   export async function check(sdk: KiloClient, signal: AbortSignal) {
     const config = connections.get(sdk)
     if (!config?.baseUrl) throw new Error("Missing headless server transport")
@@ -56,7 +62,7 @@ export namespace KiloRunDrain {
     const failure = Promise.withResolvers<Error>()
     let closing = false
     let drained = false
-    const race = <A>(work: Promise<A>) =>
+    const race = <A extends Promise<unknown>>(work: A) =>
       Promise.race([
         work,
         failure.promise.then((error): never => {
@@ -94,8 +100,7 @@ export namespace KiloRunDrain {
       },
       async wait(sdk: KiloClient, directory?: string) {
         const result = await race(sdk.kilocode.drainSession({ sessionID, directory, token }, { signal: abort.signal }))
-        if (result.error || !z.literal(true).safeParse(result.data).success)
-          throw new Error("Server did not acknowledge session completion")
+        if (result.error || result.data !== true) throw new Error("Server did not acknowledge session completion")
         await race(acknowledged.promise)
       },
       close() {

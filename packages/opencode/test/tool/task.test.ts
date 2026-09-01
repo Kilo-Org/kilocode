@@ -1200,6 +1200,8 @@ describe("tool.task", () => {
   background.instance("background task completion does not wait for the parent async prompt", () =>
     Effect.gen(function* () {
       const jobs = yield* BackgroundJob.Service
+      const drain = yield* SessionDrain.Service // kilocode_change
+      const finish = yield* Deferred.make<void>() // kilocode_change
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
       const def = yield* tool.init()
@@ -1219,8 +1221,12 @@ describe("tool.task", () => {
           extra: {
             promptOps: {
               ...stubOps({ text: "background done" }),
+              // kilocode_change start
               prompt: (input) =>
-                input.sessionID === chat.id ? Effect.never : Effect.succeed(reply(input, "background done")),
+                input.sessionID === chat.id
+                  ? Deferred.await(finish).pipe(Effect.as(reply(input, "parent done")))
+                  : Effect.succeed(reply(input, "background done")),
+              // kilocode_change end
             } satisfies TaskPromptOps,
           },
           messages: [],
@@ -1232,6 +1238,21 @@ describe("tool.task", () => {
       const waited = yield* jobs.wait({ id: result.metadata.sessionId, timeout: 1_000 })
       expect(waited.timedOut).toBe(false)
       expect(waited.info?.status).toBe("completed")
+      // kilocode_change start
+      let done = false
+      const waiting = yield* drain.wait(chat.id).pipe(
+        Effect.tap(() =>
+          Effect.sync(() => {
+            done = true
+          }),
+        ),
+        Effect.forkChild({ startImmediately: true }),
+      )
+      expect(done).toBe(false)
+      yield* Deferred.succeed(finish, undefined)
+      yield* Fiber.join(waiting)
+      expect(done).toBe(true)
+      // kilocode_change end
     }),
   )
 

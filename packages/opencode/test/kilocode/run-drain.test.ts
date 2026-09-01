@@ -28,6 +28,21 @@ test("checks capabilities through the selected transport before accepting comple
   await KiloRunDrain.check(sdk, new AbortController().signal)
 })
 
+test("scopes requests to the session directory without changing the transport", async () => {
+  const paths: Array<string | null> = []
+  const sdk = client(async (request) => {
+    const url = new URL(request.url)
+    expect(url.origin).toBe("http://drain.test")
+    expect(url.pathname).toBe("/prefix/config")
+    expect(request.headers.get("authorization")).toBe("Basic test-only")
+    paths.push(url.searchParams.get("directory"))
+    return Response.json({})
+  })
+  await KiloRunDrain.scope(sdk, "/session owner").config.get()
+  await sdk.config.get()
+  expect(paths).toEqual(["/session owner", null])
+})
+
 test.each([
   () => new Response("<html>old server</html>", { headers: { "content-type": "text/html" } }),
   () => Response.json({ paths: {} }),

@@ -2,6 +2,7 @@ import { expect } from "bun:test"
 import { Effect, Fiber } from "effect"
 import { createKiloClient, type Event } from "@kilocode/sdk/v2"
 import path from "node:path"
+import { mkdir } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 import { cliIt, type CliFixture } from "../lib/cli-process"
 import { awaitWithTimeout } from "../lib/effect"
@@ -26,7 +27,8 @@ function observer(url: string, busy: boolean) {
   const sdk = pathToFileURL(path.resolve(import.meta.dir, "../../../sdk/js/src/v2/index.ts")).href
   return `import { createKiloClient } from ${JSON.stringify(sdk)}
   export default async ({ client: legacy }) => {
-    const client = createKiloClient(legacy._client.getConfig())
+    const cfg = legacy._client.getConfig()
+    const client = createKiloClient({ ...cfg, headers: Object.fromEntries(new Headers(cfg.headers)) })
     const abort = new AbortController()
     const ready = Promise.withResolvers()
     let root
@@ -117,8 +119,14 @@ function probe(home: string, busy: boolean) {
   })
 }
 
-function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "busy" | "idle", attached = false) {
+function scenario(
+  { home, llm, opencode }: CliFixture,
+  mode: "foreground" | "busy" | "idle",
+  opts: { attach?: boolean; resume?: boolean; daemon?: boolean } = {},
+) {
   return Effect.gen(function* () {
+    const directory = opts.resume ? path.join(home, "session") : home
+    if (opts.resume) yield* Effect.promise(() => mkdir(directory))
     const tap = yield* probe(home, mode === "busy")
     const child = gate()
     const requested = gate()
@@ -184,7 +192,7 @@ function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "bus
       KILO_CONFIG_CONTENT: JSON.stringify(cfg),
       KILO_CONFIG: "",
       KILO_CONFIG_DIR: "",
-      KILO_DB: ":memory:",
+      KILO_DB: opts.resume ? path.join(home, "resume.db") : ":memory:",
       KILO_AUTH_CONTENT: "{}",
       KILO_SERVER_PASSWORD: "",
       KILO_SERVER_USERNAME: "kilo",
@@ -193,15 +201,45 @@ function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "bus
       KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "true",
       KILO_TELEMETRY_LEVEL: "off",
       KILO_AUTO_SHARE: "false",
+      KILO_NO_DAEMON: opts.daemon ? "" : "1",
+      KILO_PARENT_PID: "",
+      KILO_TEST_DAEMON_STATE_DIR: path.join(home, "daemon-state"),
+      KILO_TEST_DAEMON_LOG_DIR: path.join(home, "daemon-log"),
     }
-    const server = attached ? yield* opencode.serve({ env, readyTimeoutMs: 30_000 }) : undefined
+    const server = opts.attach || opts.resume ? yield* opencode.serve({ env, readyTimeoutMs: 30_000 }) : undefined
+    const session =
+      opts.resume && server
+        ? yield* Effect.promise(() =>
+            createKiloClient({ baseUrl: server.url, directory }).session.create({}, { throwOnError: true }),
+          )
+        : undefined
+    if (opts.daemon) {
+      yield* Effect.addFinalizer(() =>
+        opencode
+          .spawn(["daemon", "stop", "--json"], { env })
+          .pipe(Effect.tap((result) => Effect.sync(() => opencode.expectExit(result, 0)))),
+      )
+      const result = yield* opencode.spawn(["daemon", "start", "--hostname", "127.0.0.1", "--port", "0", "--json"], {
+        env,
+      })
+      opencode.expectExit(result, 0)
+      expect(JSON.parse(result.stdout).running).toBe(true)
+    }
     const run = yield* opencode.startRun("Exercise background completion.", {
       model: "test/parent",
       agent: "code",
       format: "json",
       printLogs: true,
-      extraArgs: ["--auto", "--dir", home, "--title", "drain regression", ...(server ? ["--attach", server.url] : [])],
-      env,
+      extraArgs: [
+        "--auto",
+        "--dir",
+        home,
+        "--title",
+        "drain regression",
+        ...(opts.attach && server ? ["--attach", server.url] : []),
+        ...(session ? ["--session", session.data.id] : []),
+      ],
+      env: opts.daemon ? { ...env, KILO_DB: path.join(home, "unused.db") } : env,
     })
     yield* Effect.raceFirst(
       requested.wait("child never reached the mock LLM"),
@@ -238,32 +276,25 @@ function scenario({ home, llm, opencode }: CliFixture, mode: "foreground" | "bus
   })
 }
 
-cliIt.live("foreground Task completes before headless exit", (fixture) => scenario(fixture, "foreground"), 90_000)
-cliIt.live(
-  "headless run drains a child callback queued behind a busy parent",
-  (fixture) => scenario(fixture, "busy"),
-  90_000,
-)
-cliIt.live(
-  "headless run waits for a child after the parent becomes idle",
-  (fixture) => scenario(fixture, "idle"),
-  90_000,
-)
-cliIt.live(
-  "attached run drains a callback queued behind the parent",
-  (fixture) => scenario(fixture, "busy", true),
-  90_000,
-)
-cliIt.live(
-  "attached run waits for a child after the parent becomes idle",
-  (fixture) => scenario(fixture, "idle", true),
-  90_000,
-)
+for (const [name, mode, opts] of [
+  ["foreground Task completes before headless exit", "foreground", {}],
+  ["headless run drains a child callback queued behind a busy parent", "busy", {}],
+  ["headless run waits for a child after the parent becomes idle", "idle", {}],
+  ["attached run drains a callback queued behind the parent", "busy", { attach: true }],
+  ["attached run waits for a child after the parent becomes idle", "idle", { attach: true }],
+  ["local run resumes and drains a session from another directory", "busy", { resume: true }],
+  ["attached run resumes and drains a session from another directory", "idle", { attach: true, resume: true }],
+  ["daemon run resumes and drains a session from another directory", "idle", { daemon: true, resume: true }],
+] as const) {
+  cliIt.live(name, (fixture) => scenario(fixture, mode, opts), 90_000)
+}
 
 cliIt.live(
-  "SDK drain validates requests and publishes its matching acknowledgment",
+  "SDK drain follows the session directory and validates acknowledgments",
   ({ home, opencode }) =>
     Effect.gen(function* () {
+      const directory = path.join(home, "caller")
+      yield* Effect.promise(() => mkdir(directory))
       const server = yield* opencode.serve({
         env: { KILO_SERVER_PASSWORD: "", KILO_SERVER_USERNAME: "kilo" },
         readyTimeoutMs: 30_000,
@@ -287,9 +318,12 @@ cliIt.live(
         throw new Error("Drain acknowledgment was not delivered")
       }).pipe(Effect.forkChild)
       yield* ready.wait("Event stream did not connect")
-      const result = yield* Effect.promise(() => sdk.kilocode.drainSession({ sessionID: id, token }))
+      const result = yield* Effect.promise(() => sdk.kilocode.drainSession({ sessionID: id, directory, token }))
       expect(result.data).toBe(true)
-      expect(yield* Fiber.join(received)).toEqual({ sessionID: id, token })
+      expect(yield* awaitWithTimeout(Fiber.join(received), "Drain acknowledged the wrong directory")).toEqual({
+        sessionID: id,
+        token,
+      })
       const invalid = yield* Effect.promise(() => sdk.kilocode.drainSession({ sessionID: id, token: "" }))
       expect(invalid.response?.status).toBe(400)
       const missing = yield* Effect.promise(() => sdk.kilocode.drainSession({ sessionID: "ses_missing_drain", token }))

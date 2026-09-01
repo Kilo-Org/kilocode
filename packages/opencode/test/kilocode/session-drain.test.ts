@@ -90,25 +90,29 @@ it.instance(
 )
 
 it.instance(
-  "interrupting a wait does not cancel tracked work",
+  "interrupting a wait does not cancel other waiters or later generations",
   Effect.gen(function* () {
     const drain = yield* SessionDrain.Service
-    const id = SessionID.make("ses_drain_parent")
-    const release = yield* drain.hold(id)
-    const cancelled = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
-    yield* Fiber.interrupt(cancelled)
-    let done = false
-    const waiter = yield* drain.wait(id).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
-    expect(done).toBe(false)
-    release()
-    yield* Fiber.join(waiter)
+    const id = SessionID.make("ses_drain_child")
+    yield* drain.link(id, SessionID.make("ses_drain_parent"))
+    for (let round = 0; round < 2; round++) {
+      const release = yield* drain.hold(id)
+      const cancelled = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
+      let done = false
+      const waiter = yield* drain.wait(id).pipe(
+        Effect.tap(() =>
+          Effect.sync(() => {
+            done = true
+          }),
+        ),
+        Effect.forkChild({ startImmediately: true }),
+      )
+      yield* Fiber.interrupt(cancelled)
+      expect(done).toBe(false)
+      release()
+      yield* Fiber.join(waiter)
+      expect(done).toBe(true)
+    }
   }),
 )
 
@@ -134,9 +138,11 @@ it.instance(
       }),
     )
     const waiting = yield* drain.wait(id).pipe(Effect.exit, Effect.forkChild({ startImmediately: true }))
+    const other = yield* drain.wait(id).pipe(Effect.exit, Effect.forkChild({ startImmediately: true }))
     const disposing = yield* Effect.promise(() => disposeInstance(ctx.directory)).pipe(Effect.forkChild)
     yield* Deferred.await(cancelled)
     expect(Exit.hasInterrupts(yield* Fiber.join(waiting))).toBe(true)
+    expect(Exit.hasInterrupts(yield* Fiber.join(other).pipe(Effect.timeout("2 seconds")))).toBe(true)
     expect(Exit.hasInterrupts(yield* drain.wait(id).pipe(Effect.exit))).toBe(true)
     yield* Deferred.succeed(finish, undefined)
     yield* Fiber.join(disposing)

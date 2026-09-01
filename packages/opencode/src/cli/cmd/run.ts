@@ -1028,8 +1028,8 @@ export const RunCommand = effectCmd({
           // kilocode_change end
           return error
         }
-        const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
-        const client = args.attach ? attachSDK(cwd) : sdk
+        const cwd = sess.directory ?? directory ?? (await current(sdk)) // kilocode_change
+        const client = KiloRunDrain.scope(sdk, cwd) // kilocode_change
         // kilocode_change start - classify deferred attach commands in the session directory
         const builtin = deferred ? await KiloRun.resolveBuiltin(client, args.command, cwd) : initial
         if (deferred) {
@@ -1060,74 +1060,41 @@ export const RunCommand = effectCmd({
               return undefined
             },
           )
-          async function finish() {
-            await drain.wait(client, cwd)
-            const error = await completed
-            if (error) process.exitCode = 1
-          }
-
           try {
             await drain.race(KiloRunDrain.check(client, drain.signal))
             await drain.ready()
-            if (builtin) {
-              const result = await drain.race(
-                KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd, drain.signal),
-              )
-              if (result.error) {
-                if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
-                process.exitCode = 1
-                await finish()
-                return
-              }
-              await finish()
-              return
-            }
-
-            if (args.command) {
-              const result = await drain.race(
-                client.session.command(
-                  {
-                    sessionID,
-                    agent,
-                    model: args.model,
-                    command: args.command,
-                    arguments: message,
-                    variant: args.variant,
-                  },
-                  { signal: drain.signal },
-                ),
-              )
-              if (result.error) {
-                if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
-                process.exitCode = 1
-                await finish()
-                return
-              }
-              await finish()
-              return
-            }
-
-            const model = pick(args.model)
             const result = await drain.race(
-              client.session.prompt(
-                {
-                  sessionID,
-                  agent,
-                  model,
-                  variant: args.variant,
-                  parts: [...files, { type: "text", text: message }],
-                },
-                { signal: drain.signal },
-              ),
+              builtin
+                ? KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd, drain.signal)
+                : args.command
+                  ? client.session.command(
+                      {
+                        sessionID,
+                        agent,
+                        model: args.model,
+                        command: args.command,
+                        arguments: message,
+                        variant: args.variant,
+                      },
+                      { signal: drain.signal },
+                    )
+                  : client.session.prompt(
+                      {
+                        sessionID,
+                        agent,
+                        model: pick(args.model),
+                        variant: args.variant,
+                        parts: [...files, { type: "text", text: message }],
+                      },
+                      { signal: drain.signal },
+                    ),
             )
             if (result.error) {
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
               process.exitCode = 1
-              await finish()
-              return
             }
-            await finish()
-            return
+            await drain.wait(client, cwd)
+            if (await completed) process.exitCode = 1
           } catch (error) {
             const text = error instanceof Error ? error.message : String(error)
             if (!emit("error", { error: text })) UI.error(text)

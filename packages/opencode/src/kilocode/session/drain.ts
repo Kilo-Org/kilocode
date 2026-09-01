@@ -11,12 +11,10 @@ type Entry = {
   children: number
   pins: number
   parent?: Entry
-  waiters: Set<Deferred.Deferred<void>>
+  done: Deferred.Deferred<void>
 }
 
 type State = { entries: Map<SessionID, Entry>; closed: boolean }
-
-export type Delivery = { release: () => void; retained: boolean }
 
 export interface Interface {
   readonly hold: (id: SessionID) => Effect.Effect<() => void>
@@ -37,10 +35,7 @@ export const layer = Layer.effect(
     function close(data: State) {
       if (data.closed) return
       data.closed = true
-      for (const entry of data.entries.values()) {
-        for (const waiter of entry.waiters) Deferred.doneUnsafe(waiter, Effect.interrupt)
-        entry.waiters.clear()
-      }
+      for (const entry of data.entries.values()) Deferred.doneUnsafe(entry.done, Effect.void)
       data.entries.clear()
     }
 
@@ -75,13 +70,13 @@ export const layer = Layer.effect(
     function entry(data: State, id: SessionID) {
       const found = data.entries.get(id)
       if (found) return found
-      const value: Entry = { id, count: 0, children: 0, pins: 0, waiters: new Set() }
+      const value: Entry = { id, count: 0, children: 0, pins: 0, done: Deferred.makeUnsafe<void>() }
       data.entries.set(id, value)
       return value
     }
 
     function prune(data: State, value: Entry) {
-      if (value.count || value.pins || value.parent || value.children || value.waiters.size) return
+      if (value.count || value.pins || value.parent || value.children) return
       if (data.entries.get(value.id) === value) data.entries.delete(value.id)
     }
 
@@ -89,9 +84,9 @@ export const layer = Layer.effect(
       for (let current: Entry | undefined = value; current; current = current.parent) {
         current.count += delta
         if (current.count !== 0) continue
-        const waiters = [...current.waiters]
-        current.waiters.clear()
-        for (const waiter of waiters) Deferred.doneUnsafe(waiter, Effect.void)
+        const done = current.done
+        current.done = Deferred.makeUnsafe<void>()
+        Deferred.doneUnsafe(done, Effect.void)
         prune(data, current)
       }
     }
@@ -135,15 +130,7 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             while (!data.closed) {
               if (value.count === 0) return yield* Effect.void
-              const waiter = Deferred.makeUnsafe<void>()
-              value.waiters.add(waiter)
-              yield* Deferred.await(waiter).pipe(
-                Effect.ensuring(
-                  Effect.sync(() => {
-                    value.waiters.delete(waiter)
-                  }),
-                ),
-              )
+              yield* Deferred.await(value.done)
             }
             return yield* Effect.interrupt
           }),
