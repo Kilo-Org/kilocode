@@ -143,11 +143,7 @@ const live: Layer.Layer<
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
       const usage =
         cap || preflight
-          ? KiloSessionOverflow.measure({
-              messages: estimated,
-              tools,
-              system: isOpenaiOauth || isWorkflow ? undefined : base.system.join("\n"),
-            })
+          ? KiloSessionOverflow.measure({ messages: estimated, tools })
           : undefined
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,

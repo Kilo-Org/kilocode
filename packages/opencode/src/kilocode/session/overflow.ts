@@ -47,8 +47,8 @@ function pending(messages: ModelMessage[]) {
   return messages.slice(idx + 1)
 }
 
-// System content prepended in front of the payload, e.g. provider-specific
-// instructions carried as a system message instead of a separate field.
+// System content delivered as leading system-role messages - request prep places
+// it there on every provider path. Only head-position messages are counted.
 function leading(messages: ModelMessage[]) {
   let chars = 0
   for (const message of messages) {
@@ -97,7 +97,7 @@ export namespace KiloSessionOverflow {
     return Math.min(input.usable, cap)
   }
 
-  export function measure(input: Payload & { system?: string }) {
+  export function measure(input: Payload) {
     const full = size(input.messages)
     const tools = Token.estimate(
       JSON.stringify(
@@ -109,17 +109,17 @@ export namespace KiloSessionOverflow {
       ),
     )
     const lead = leading(input.messages)
-    const fixed = Token.estimate(input.system ?? "")
     return {
-      normalized: Math.ceil((full.chars + tools + fixed) * FACTOR),
-      raw: Math.ceil((full.chars + full.extra + tools + fixed) * FACTOR),
-      // New messages only; the report already covers the rest of the previous request.
+      normalized: Math.ceil((full.chars + tools) * FACTOR),
+      raw: Math.ceil((full.chars + full.extra + tools) * FACTOR),
+      // New messages only; the report already covers the rest of the previous
+      // request. New media is priced as its placeholder, not its bytes.
       tail: Math.ceil(size(pending(input.messages)).chars * FACTOR),
       // System content and tool schemas are re-sent every request and may have changed
-      // since the report. Adding them in full double-counts unchanged copies - bounded
-      // over-projection, never an under-count that bypasses the threshold. Leading
-      // system messages already sit inside full.chars, so only the system string joins.
-      overhead: Math.ceil((tools + fixed + lead) * FACTOR),
+      // since the report. Adding the current copies in full double-counts unchanged
+      // ones - bounded over-projection, never an under-count that bypasses the
+      // threshold. Request prep delivers system content as leading messages.
+      overhead: Math.ceil((tools + lead) * FACTOR),
       continuation: continued(input.messages),
     }
   }
@@ -145,7 +145,10 @@ export namespace KiloSessionOverflow {
     if (stats.continuation) return false
     // Baseline = report plus inflated content added since it (messages, system, tools).
     // Without a usable report the full estimate decides alone.
-    const baseline = input.reported ? input.reported + stats.tail + (stats.overhead ?? 0) : undefined
+    const baseline =
+      typeof input.reported === "number" && input.reported > 0
+        ? input.reported + stats.tail + (stats.overhead ?? 0)
+        : undefined
     const projected = baseline ?? ("tokens" in stats ? stats.tokens : stats.normalized)
     return projected >= limit(input)
   }

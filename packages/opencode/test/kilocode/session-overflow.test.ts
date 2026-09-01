@@ -480,6 +480,20 @@ describe("Kilo preflight compaction", () => {
     ).toBe(false)
   })
 
+  test("counts the system prompt exactly once across paths", () => {
+    // Request prep delivers system content as leading messages on every provider
+    // path; the estimate must count it once, not once per delivery mechanism.
+    const system = "s".repeat(40_000)
+    const messages: ModelMessage[] = [
+      { role: "system", content: system },
+      { role: "user", content: "abcd" },
+    ]
+    const chars = (text: string) => Math.round(text.length / 4)
+    const stats = KiloSessionOverflow.measure({ messages, tools: {} })
+    expect(stats.normalized).toBe(Math.ceil((chars(JSON.stringify(messages)) + chars("[]")) * 1.3))
+    expect(stats.overhead).toBe(Math.ceil((chars("[]") + chars(system)) * 1.3))
+  })
+
   test("adds newly sent content on top of the provider-reported baseline", () => {
     // Reported usage reflects the previous request only; a large new message must
     // push the projection past the threshold even when opaque reasoning state in
