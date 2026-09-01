@@ -16,7 +16,7 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import path from "node:path"
 
-const env = { KILO_UNICODE_LOGO: "0" }
+const env = { KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" }
 
 function key(directory: string) {
   const value = path.resolve(directory)

@@ -49,6 +49,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       label={deps.terms.title(deps.id) ?? term.title}
       tooltip={deps.terms.title(deps.id) ?? term.title}
       status={deps.terms.scriptStatus(deps.id)}
+      state={deps.terms.activity(deps.id)}
       keybind={isActive() ? "" : deps.keybind()}
       closeKeybind={deps.closeKeybind()}
       focused={deps.terms.focusedId() === deps.id}
@@ -126,6 +127,7 @@ export function renderTerminalLayer(props: {
                   }}
                   onFocusPrompt={props.onFocusPrompt}
                   onTitleChange={(title) => props.state.setTitle(term.id, title)}
+                  onActivityChange={(state) => props.state.setActivity(term.id, state)}
                 />
               </div>
             )
@@ -180,6 +182,7 @@ export function renderSideTerminalLayer(props: {
                 }}
                 onFocusPrompt={props.onFocusPrompt}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
+                onActivityChange={(state) => props.state.setActivity(term.id, state)}
               />
             </div>
           )
