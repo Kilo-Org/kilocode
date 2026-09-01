@@ -231,15 +231,19 @@ export namespace KiloSessionProcessor {
     const deadline = new Promise<undefined>((resolve) => {
       timer = setTimeout(() => resolve(undefined), 2_000)
     })
-    const lookup = runtime.AppRuntime.runPromise(
-      Effect.gen(function* () {
-        const svc = yield* provider.Provider.Service
-        return yield* svc.getProvider(id)
-      }),
-    ).catch((err) => {
-      log.warn("offline probe provider lookup failed", { err })
-      return undefined
-    })
+    const lookup = Promise.resolve()
+      .then(() =>
+        runtime.AppRuntime.runPromise(
+          Effect.gen(function* () {
+            const svc = yield* provider.Provider.Service
+            return yield* svc.getProvider(id)
+          }),
+        ),
+      )
+      .catch((err) => {
+        log.warn("offline probe provider lookup failed", { err })
+        return undefined
+      })
     const info = await Promise.race([lookup, deadline]).finally(() => clearTimeout(timer))
     // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
     const base = info?.options?.baseURL
