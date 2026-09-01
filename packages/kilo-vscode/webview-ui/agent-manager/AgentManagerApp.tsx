@@ -912,6 +912,7 @@ const AgentManagerContent: Component = () => {
     active: activeProjectId,
     activityFor: session.activityFor,
     inUseFor: session.inUseFor,
+    terminal: (id, project) => terms.activityFor(`${project ?? currentProjectId() ?? "single"}:${id ?? LOCAL}`),
     worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
     subscribe: vscode.onMessage,
   })
