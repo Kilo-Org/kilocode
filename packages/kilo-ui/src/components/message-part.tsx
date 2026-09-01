@@ -757,6 +757,7 @@ export function UserMessageDisplay(props: {
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
+  onImageClick?: (url: string, filename?: string) => boolean
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -818,6 +819,7 @@ export function UserMessageDisplay(props: {
   })
 
   const openImagePreview = (url: string, alt?: string) => {
+    if (props.onImageClick?.(url, alt)) return
     dialog.show(() => <ImagePreview src={url} alt={alt} />)
   }
 
