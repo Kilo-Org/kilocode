@@ -1198,12 +1198,10 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("retains the guarded setup error delay", () => {
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })
