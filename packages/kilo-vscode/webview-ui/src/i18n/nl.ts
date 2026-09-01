@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "Bezig met opslaan...",
   "common.default": "Standaard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.send": "Verzenden",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",

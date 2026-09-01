@@ -177,6 +177,8 @@ export const dict = {
   "common.saving": "Lagrer...",
   "common.default": "Standard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",

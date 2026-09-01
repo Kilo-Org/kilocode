@@ -169,6 +169,8 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "默认",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜索 Worktree",
   "prompt.thinking.tooltip": "推理强度",
   "prompt.action.indexing": "索引设置",
   "prompt.action.autoApprove.enable": "启用自动审批",

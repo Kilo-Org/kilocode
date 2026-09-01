@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "デフォルト",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",

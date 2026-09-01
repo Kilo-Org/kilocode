@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "Zapisywanie...",
   "common.default": "Domyślny",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Wyszukaj Worktree",
   "prompt.thinking.tooltip": "Wysiłek rozumowania",
   "prompt.action.send": "Wyślij",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",

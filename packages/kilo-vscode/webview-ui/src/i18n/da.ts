@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "Gemmer...",
   "common.default": "Standard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Søg i Worktrees",
   "prompt.thinking.tooltip": "Ræsonnementsindsats",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",

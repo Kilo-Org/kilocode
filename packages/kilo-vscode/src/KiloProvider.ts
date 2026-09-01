@@ -379,6 +379,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private promptRecoveryQueued = false
   private promptRecovery: Promise<void> | null = null
   private trackedSessionIds: Set<string> = new Set()
+  private readonly removedSessionIds = new Set<string>()
   private readonly openSessionIds = new Set<string>()
   private modelUsageSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
@@ -751,7 +752,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       localResourceRoots: [this.extensionUri],
     }
 
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
+    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, true)
     this.setupWebviewMessageHandler(webviewView.webview)
 
     this.setSidebarVisible(webviewView.visible)
@@ -801,6 +802,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Register a session created externally and notify the webview. */
   public registerSession(session: Session, activate = false): void {
+    this.removedSessionIds.delete(session.id)
     this.stopCurrentSessionProcesses(session.id)
     this.setCurrentSession(session)
     this.contextSessionID = session.id
@@ -2340,6 +2342,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * a session the backend has already deleted.
    */
   private pruneDeletedSession(sessionID: string): void {
+    this.removedSessionIds.add(sessionID)
     this.trackedSessionIds.delete(sessionID)
     this.openSessionIds.delete(sessionID)
     for (const [key, session] of this.draftSessions) {
@@ -4724,6 +4727,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // busy-session warning on Save.
     if (event.type === "session.status") {
       const sid = event.properties.sessionID
+      if (this.removedSessionIds.has(sid)) return
       const status = event.properties.status
       this.mark(sid, directory)
       this.aborts.observe(sid, status.type, directory)
@@ -5319,8 +5323,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return resolveProjectDirectory(this.projectDirectory, () => this.getWorkspaceDirectory(sessionId))
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview): string {
+  private _getHtmlForWebview(webview: vscode.Webview, sidebar = false): string {
     return buildWebviewHtml(webview, {
+      // The rail follows the physical workbench edge. RTL text direction must not move it between chat and code.
+      sidebar: sidebar
+        ? vscode.workspace.getConfiguration("workbench").get("sideBar.location") === "right"
+          ? "right"
+          : "left"
+        : undefined,
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
@@ -5434,6 +5444,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)
     this.trackedSessionIds.clear()
+    this.removedSessionIds.clear()
     this.openSessionIds.clear()
     this.syncedChildSessions.clear()
     this.inspectorSessionIds.clear()
