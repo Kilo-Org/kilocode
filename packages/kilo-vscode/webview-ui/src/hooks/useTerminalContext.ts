@@ -5,8 +5,6 @@ import { useVSCode } from "../context/vscode"
 import { buildTerminalAttachment, hasTerminalMention } from "./terminal-context-utils"
 import { createContextRequests } from "./context-requests"
 
-const TERMINAL_CONTEXT_TIMEOUT_MS = 10_000
-
 type EmbeddedResolver = (context?: string) => Promise<string | undefined>
 
 export interface TerminalContext {
@@ -16,11 +14,7 @@ export interface TerminalContext {
 
 export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext {
   const vscode = useVSCode()
-  const requests = createContextRequests(
-    "terminal-context",
-    TERMINAL_CONTEXT_TIMEOUT_MS,
-    "Timed out while reading terminal output",
-  )
+  const requests = createContextRequests("terminal-context", 10_000, "Timed out while reading terminal output")
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "terminalContextResult") {
@@ -38,8 +32,10 @@ export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext
     requests.dispose("Terminal context request cancelled")
   })
 
-  const request = (sessionID?: string, context?: string) =>
-    requests.request((requestId) => {
+  const resolveAttachment = async (text: string, sessionID?: string, context?: string) => {
+    if (!hasTerminalMention(text)) return undefined
+
+    const content = await requests.request((requestId) => {
       if (!embedded) {
         vscode.postMessage({ type: "requestTerminalContext", requestId, sessionID, agentManagerContext: context })
         return
@@ -57,11 +53,6 @@ export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext
         },
       )
     })
-
-  const resolveAttachment = async (text: string, sessionID?: string, context?: string) => {
-    if (!hasTerminalMention(text)) return undefined
-
-    const content = await request(sessionID, context)
     if (!content.trim()) throw new Error("No terminal content available")
     return buildTerminalAttachment(text, content)
   }

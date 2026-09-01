@@ -4,8 +4,6 @@ import type { ExtensionMessage, FileAttachment, WebviewMessage } from "../types/
 import { buildGitChangesAttachment, hasGitChangesMention } from "./git-changes-context-utils"
 import { createContextRequests } from "./context-requests"
 
-const GIT_CHANGES_TIMEOUT_MS = 15_000
-
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -21,11 +19,7 @@ export function useGitChangesContext(
   context?: Accessor<string | undefined>,
   git?: Accessor<boolean>,
 ): GitChangesContext {
-  const requests = createContextRequests(
-    "git-changes-context",
-    GIT_CHANGES_TIMEOUT_MS,
-    "Timed out while reading git changes",
-  )
+  const requests = createContextRequests("git-changes-context", 15_000, "Timed out while reading git changes")
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "gitChangesContextResult") {
@@ -43,8 +37,11 @@ export function useGitChangesContext(
     requests.dispose("Git changes context request cancelled", true)
   })
 
-  const request = (sessionID?: string, scope?: string) =>
-    requests.request((requestId) => {
+  const resolveAttachment = async (text: string, sessionID?: string, scope?: string) => {
+    if (!hasGitChangesMention(text)) return undefined
+    if (git?.() === false) return undefined
+
+    const content = await requests.request((requestId) => {
       vscode.postMessage({
         type: "requestGitChangesContext",
         requestId,
@@ -52,12 +49,6 @@ export function useGitChangesContext(
         agentManagerContext: scope ?? context?.(),
       })
     })
-
-  const resolveAttachment = async (text: string, sessionID?: string, scope?: string) => {
-    if (!hasGitChangesMention(text)) return undefined
-    if (git?.() === false) return undefined
-
-    const content = await request(sessionID, scope)
     return buildGitChangesAttachment(text, content)
   }
 
