@@ -31,9 +31,10 @@ or automatically via the x402 protocol. It runs hosted at
 
 ## CLI
 
-For the Kilo CLI, add a custom provider to `~/.config/kilo/kilo.json` pointing
-at the same base URL (`https://api.openzoo.fun/v1` or the local gateway), with
-any API key value, then select it with `kilo auth login --provider`.
+For the Kilo CLI, add a custom OpenAI-compatible provider to
+`~/.config/kilo/kilo.json` pointing at the same base URL
+(`https://api.openzoo.fun/v1` or the local gateway) with any API key value,
+then select one of its models in the CLI's model picker.
 
 ## Tips and Notes
 
