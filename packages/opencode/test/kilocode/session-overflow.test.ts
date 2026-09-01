@@ -323,9 +323,8 @@ describe("Kilo preflight compaction", () => {
   })
 
   test("does not compact when reported usage plus the new message stays below the threshold", () => {
-    // GPT-5-style model (272k input of a 400k context),
-    // threshold 80%, provider reports ~40% displayed usage, and the whole-payload
-    // estimate overshoots past the old input-based limit. Compaction must not fire.
+    // GPT-5-style model (272k input of a 400k context), threshold 80%: the
+    // whole-payload estimate overshoots past the old input-based limit.
     const conf = cfg({ threshold_percent: 80 })
     const mdl = model({ context: 400_000, input: 272_000, output: 128_000 })
 
@@ -406,6 +405,81 @@ describe("Kilo preflight compaction", () => {
     ).toBe(true)
   })
 
+  test("counts system content and tool schemas in the baseline projection", () => {
+    // The provider report covers the previous request only; a new system prompt
+    // or grown tool schemas must be added on top regardless of the message tail.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    // Report of a small prior turn; the new system message alone crosses 160k.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 100,
+        tail: 100,
+        overhead: 161_000,
+        continuation: false,
+        reported: 5_000,
+      }),
+    ).toBe(true)
+
+    // Without the overhead the same baseline stays below the threshold.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 100,
+        tail: 100,
+        continuation: false,
+        reported: 5_000,
+      }),
+    ).toBe(false)
+  })
+
+  test("compacts a baseline session whose payload grew outside the message tail", () => {
+    // measure() derives the overhead itself: a leading per-message system prompt
+    // and a tool schema that alone cross the threshold, on a small reported baseline.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [
+      { role: "system", content: "x".repeat(600_000) },
+      { role: "user", content: "hello" },
+      { role: "assistant", content: "hi" },
+    ] satisfies ModelMessage[]
+    const tools = {
+      search: {
+        description: "search",
+        inputSchema: { type: "object", description: "x".repeat(20_000) },
+      },
+    }
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages,
+        tools,
+        reported: 5_000,
+      }),
+    ).toBe(true)
+
+    // The same payload without the system prompt stays below the threshold.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages: messages.slice(1),
+        tools,
+        reported: 5_000,
+      }),
+    ).toBe(false)
+  })
+
   test("adds newly sent content on top of the provider-reported baseline", () => {
     // Reported usage reflects the previous request only; a large new message must
     // push the projection past the threshold even when opaque reasoning state in
@@ -445,16 +519,25 @@ describe("Kilo preflight compaction", () => {
   })
 
   test("drops the provider baseline when an unfinished assistant trails the finished one", () => {
-    // A cancelled response leaves an assistant without a finish marker after the
-    // last finished one. Its request never completed, so the report predates the
-    // tool output and partial text the payload now replays - the tail estimate
-    // starts after that assistant and cannot count them either.
+    // A cancelled response leaves unfinished content (tool output, partial text)
+    // between the report and the tail; the baseline must not anchor on it.
     const finished = { id: "msg-1", tokens: tokens(150_000) }
     const cancelled = { id: "msg-2" }
 
     expect(KiloSessionOverflow.baseline({ assistant: cancelled, finished })).toBeUndefined()
     expect(KiloSessionOverflow.baseline({ assistant: finished, finished })).toBe(150_000)
     expect(KiloSessionOverflow.baseline({ assistant: finished, finished: undefined })).toBeUndefined()
+  })
+
+  test("ignores a report without prompt-side usage as a baseline", () => {
+    // A provider returning only completion tokens yields input=0; the report
+    // covers no prompt content, so growing prompts would bypass the threshold.
+    const outputOnly = { id: "msg-1", tokens: { input: 0, output: 100, reasoning: 0, cache: { read: 0, write: 0 } } }
+    expect(KiloSessionOverflow.baseline({ assistant: outputOnly, finished: outputOnly })).toBeUndefined()
+
+    // Cache-read-only input is still prompt coverage (e.g. fully cached prompt).
+    const cached = { id: "msg-1", tokens: { input: 0, output: 100, reasoning: 0, cache: { read: 50, write: 0 } } }
+    expect(KiloSessionOverflow.baseline({ assistant: cached, finished: cached })).toBe(150)
   })
 
   test("keeps the summary guard on the reported baseline", () => {
@@ -464,9 +547,8 @@ describe("Kilo preflight compaction", () => {
   })
 
   test("counts intervening tool output after a cancelled response", () => {
-    // The cancelled assistant's request never reported usage, so the baseline
-    // must fall back to the full estimate: reported + tail omits the 300k-char
-    // tool result that sits between the finished assistant and the tail.
+    // The cancelled response never reported usage, so the baseline falls back to
+    // the full estimate: reported + tail omits the 300k-char tool result.
     const conf = cfg({ threshold_percent: 80 })
     const mdl = model({ context: 200_000, output: 32_000 })
     const messages = [
