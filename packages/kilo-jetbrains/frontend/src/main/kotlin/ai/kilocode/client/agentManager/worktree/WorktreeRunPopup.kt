@@ -11,6 +11,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.project.DumbAwareAction
 import javax.swing.Icon
 
 /**
@@ -69,13 +70,18 @@ internal object WorktreeRunPopup {
         return group
     }
 
+    /**
+     * Dumb-aware so the popup does not render half its items greyed out while the host project
+     * indexes: [update] reads a captured flag, not an index. Whether the worktree project these
+     * run/build items target is ready is the backend's concern, not this menu's.
+     */
     private fun action(
         text: String,
         icon: Icon?,
         description: String? = null,
         enabled: Boolean = true,
         handler: () -> Unit,
-    ): AnAction = object : AnAction(text, description, icon) {
+    ): AnAction = object : DumbAwareAction(text, description, icon) {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {
