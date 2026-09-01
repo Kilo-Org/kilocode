@@ -1,4 +1,4 @@
-import { partReview, type ReviewMessageData } from "./review-comments"
+import { fenced, partReview, type ReviewMessageData } from "./review-comments"
 
 export interface BrowserReference {
   id: string
@@ -188,13 +188,6 @@ function normalize(references: readonly BrowserReference[]): BrowserReference[] 
 
 function escapeInline(value: string): string {
   return value.replace(/[\r\n]+/g, " ").replace(/([\\`*_[\]{}()#+\-!|<>])/g, "\\$1")
-}
-
-function fenced(value: string): string[] {
-  const matches = value.match(/`+/g) ?? []
-  const longest = matches.reduce((max, item) => Math.max(max, item.length), 0)
-  const fence = "`".repeat(Math.max(3, longest + 1))
-  return [fence, value, fence]
 }
 
 function page(item: BrowserReference): string | undefined {
