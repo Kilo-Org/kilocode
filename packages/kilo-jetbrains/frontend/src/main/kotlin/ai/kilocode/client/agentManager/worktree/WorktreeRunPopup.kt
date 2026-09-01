@@ -71,9 +71,16 @@ internal object WorktreeRunPopup {
     }
 
     /**
-     * Dumb-aware so the popup does not render half its items greyed out while the host project
-     * indexes: [update] reads a captured flag, not an index. Whether the worktree project these
-     * run/build items target is ready is the backend's concern, not this menu's.
+     * Dumb-aware, matching how the platform treats its own run actions: `ExecutorAction`,
+     * `RunConfigurationsComboBoxAction`, and `BaseRunConfigurationAction` are all `DumbAware` so the
+     * run UI stays live during indexing, and the decision about whether a given configuration may
+     * actually start is made separately, against `ConfigurationType.isDumbAware`.
+     *
+     * We keep the first half and cannot express the second: these items carry `RunConfigDto`s fetched
+     * over RPC rather than local `RunnerAndConfigurationSettings`, so there is no `ConfigurationType`
+     * to consult, and the host project's dumb state describes the wrong project anyway — the run
+     * happens in the worktree. So readiness is the backend's call, surfaced through the existing
+     * `worktree.run.failed` notification rather than a dead menu item.
      */
     private fun action(
         text: String,
