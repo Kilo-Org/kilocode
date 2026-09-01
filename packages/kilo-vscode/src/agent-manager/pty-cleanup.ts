@@ -3,6 +3,19 @@ import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { TerminalRouter } from "./terminal-routing"
 
+export async function block(target: string, blocked: Map<string, number>, creates?: Set<Promise<unknown>>) {
+  blocked.set(target, (blocked.get(target) ?? 0) + 1)
+  if (creates) await Promise.allSettled([...creates])
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    const count = blocked.get(target)
+    if (!count || count === 1) blocked.delete(target)
+    else blocked.set(target, count - 1)
+  }
+}
+
 export async function removePtys(
   getClient: (directory: string) => Promise<KiloClient>,
   directory: string,

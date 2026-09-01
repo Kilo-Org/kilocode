@@ -273,7 +273,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
             aria-expanded={open()}
             onClick={() => setOpen((value) => !value)}
           >
-            <Icon name={open() ? "chevron-up" : "chevron-down"} size="small" />
+            <Icon name="chevron-down" size="small" style={open() ? { transform: "rotate(180deg)" } : undefined} />
           </Button>
           <Show when={!props.readonly && visible().some((agent) => agent.status !== "running")}>
             <Button
