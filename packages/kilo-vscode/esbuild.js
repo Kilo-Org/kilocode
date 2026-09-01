@@ -5,6 +5,7 @@ const crypto = require("crypto")
 const core = require("@babel/core")
 const solid = require("babel-preset-solid")
 const ts = require("@babel/preset-typescript")
+const playwright = require("./script/playwright-runtime")
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
@@ -264,7 +265,7 @@ function getExtensionConfig() {
     outfile: "dist/extension.js",
     external: ["vscode"],
     logLevel: "silent",
-    plugins: watch ? [esbuildProblemMatcherPlugin] : [],
+    plugins: [playwright, ...(watch ? [esbuildProblemMatcherPlugin] : [])],
   }
 }
 

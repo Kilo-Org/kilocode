@@ -17,7 +17,7 @@ import { post } from "../src/utils/webview-message"
 
 export function createBrowserPanel(
   current: Accessor<SidePanel | null>,
-  panel: Setter<SidePanel | null>,
+  panel: (value: SidePanel.Browser | null) => void,
   history: Setter<boolean>,
   review: Setter<boolean>,
 ) {
