@@ -94,12 +94,12 @@ export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): st
   return lines.join("\n").trimEnd()
 }
 
-function record(value: unknown): Record<string, unknown> | undefined {
+export function record(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
 }
 
-function text(value: unknown, limit: number): string | undefined {
+export function text(value: unknown, limit: number): string | undefined {
   if (typeof value !== "string" || value.length > limit) return undefined
   return value
 }
@@ -139,7 +139,7 @@ function optional(value: unknown, limit: number, valid?: (item: string) => boole
   return item
 }
 
-function optionalLine(value: unknown): number | false | undefined {
+export function optionalLine(value: unknown): number | false | undefined {
   if (value === undefined) return undefined
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) return false
   return value
