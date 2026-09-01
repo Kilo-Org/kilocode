@@ -1,16 +1,11 @@
-import { createSignal, onCleanup } from "solid-js"
+import { onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { FileAttachment } from "../types/messages"
 import { useVSCode } from "../context/vscode"
 import { buildTerminalAttachment, hasTerminalMention } from "./terminal-context-utils"
+import { createContextRequests } from "./context-requests"
 
 const TERMINAL_CONTEXT_TIMEOUT_MS = 10_000
-
-type Pending = {
-  resolve: (content: string) => void
-  reject: (err: Error) => void
-  timer: ReturnType<typeof setTimeout>
-}
 
 type EmbeddedResolver = (context?: string) => Promise<string | undefined>
 
@@ -21,50 +16,30 @@ export interface TerminalContext {
 
 export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext {
   const vscode = useVSCode()
-  const [pending, setPending] = createSignal(false)
-  const requests = new Map<string, Pending>()
-  let counter = 0
-
-  const settle = (requestId: string, run: (req: Pending) => void) => {
-    const req = requests.get(requestId)
-    if (!req) return
-
-    clearTimeout(req.timer)
-    requests.delete(requestId)
-    setPending(requests.size > 0)
-    run(req)
-  }
+  const requests = createContextRequests(
+    "terminal-context",
+    TERMINAL_CONTEXT_TIMEOUT_MS,
+    "Timed out while reading terminal output",
+  )
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "terminalContextResult") {
-      settle(message.requestId, (req) => req.resolve(message.content))
+      requests.settle(message.requestId, (req) => req.resolve(message.content))
       return
     }
 
     if (message.type === "terminalContextError") {
-      settle(message.requestId, (req) => req.reject(new Error(message.error)))
+      requests.settle(message.requestId, (req) => req.reject(new Error(message.error)))
     }
   })
 
   onCleanup(() => {
     unsubscribe()
-    for (const req of requests.values()) {
-      clearTimeout(req.timer)
-      req.reject(new Error("Terminal context request cancelled"))
-    }
-    requests.clear()
+    requests.dispose("Terminal context request cancelled")
   })
 
   const request = (sessionID?: string, context?: string) =>
-    new Promise<string>((resolve, reject) => {
-      counter++
-      const requestId = `terminal-context-${counter}`
-      const timer = setTimeout(() => {
-        settle(requestId, (req) => req.reject(new Error("Timed out while reading terminal output")))
-      }, TERMINAL_CONTEXT_TIMEOUT_MS)
-
-      requests.set(requestId, { resolve, reject, timer })
-      setPending(true)
+    requests.request((requestId) => {
       if (!embedded) {
         vscode.postMessage({ type: "requestTerminalContext", requestId, sessionID, agentManagerContext: context })
         return
@@ -75,10 +50,10 @@ export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext
             vscode.postMessage({ type: "requestTerminalContext", requestId, sessionID, agentManagerContext: context })
             return
           }
-          settle(requestId, (req) => req.resolve(content))
+          requests.settle(requestId, (req) => req.resolve(content))
         },
         (error: unknown) => {
-          settle(requestId, (req) => req.reject(error instanceof Error ? error : new Error(String(error))))
+          requests.settle(requestId, (req) => req.reject(error instanceof Error ? error : new Error(String(error))))
         },
       )
     })
@@ -91,5 +66,5 @@ export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext
     return buildTerminalAttachment(text, content)
   }
 
-  return { pending, resolveAttachment }
+  return { pending: requests.pending, resolveAttachment }
 }
