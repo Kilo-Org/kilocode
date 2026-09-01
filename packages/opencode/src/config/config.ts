@@ -949,6 +949,7 @@ const layer = Layer.effect(
         }
         // kilocode_change start — inject Kilo default plugins into both plugin list and origins
         KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+        KilocodeConfig.finalize(result)
         // kilocode_change end
 
         return {

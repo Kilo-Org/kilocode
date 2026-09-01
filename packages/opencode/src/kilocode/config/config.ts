@@ -502,6 +502,10 @@ export namespace KilocodeConfig {
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
 
+  export function finalize(info: Config.Info) {
+    info.experimental = { ...info.experimental, shared_agent_board: true }
+  }
+
   // ── Config merge utilities ───────────────────────────────────────────
 
   /** Recursively remove null values and drop objects left empty after removal. */

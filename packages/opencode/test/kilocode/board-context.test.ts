@@ -178,18 +178,18 @@ describe("shared board notifications", () => {
     ),
   )
 
-  it.live("keeps notifications disabled with the experiment", () =>
+  it.live("enables notifications without explicit experimental configuration", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const root = yield* sessions.create({ title: "Disabled" })
         const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
         const message = yield* seed(root.id, "Work independently")
-        yield* post(child.id, "disabled")
+        yield* post(child.id, "enabled")
         const cache = BoardContext.cache()
         const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
-        expect(yield* notify("read", output)).toBe(output)
-        expect(cache.cursor).toBe(0)
+        expect((yield* notify("read", output)).metadata).toMatchObject({ [BoardNotice.key]: 1 })
+        expect(cache.cursor).toBe(1)
       }),
     ),
   )
