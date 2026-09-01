@@ -31,7 +31,7 @@ import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -106,18 +106,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
         data-sidebar-id="local"
         onClick={() => props.selectLocal()}
       >
-        <span class="am-local-status" data-activity={localState()} aria-label={props.t(label(localState()))}>
-          <ActivityIcon
-            state={localState()}
-            idle={
-              <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-                <path d="M10 13.5V16.5" stroke="currentColor" />
-              </svg>
-            }
-          />
-        </span>
+        <LocalActivity state={localState()} label={props.t(label(localState()))} />
         <div class="am-local-text">
           <span class="am-local-label">{props.t("agentManager.local")}</span>
           <Show when={props.repoBranch()}>

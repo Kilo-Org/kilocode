@@ -302,6 +302,21 @@
     color: var(--text-weak);
   }
 
+  [data-status="completed"] > [data-component="icon"] {
+    --icon-base: var(--icon-success-base);
+    color: var(--icon-success-base);
+  }
+
+  [data-status="error"] > [data-component="icon"] {
+    --icon-base: var(--icon-critical-base);
+    color: var(--icon-critical-base);
+  }
+
+  [data-status="waiting"] > [data-component="icon"] {
+    --icon-base: var(--icon-warning-base);
+    color: var(--icon-warning-base);
+  }
+
   [data-slot="task-header-agent-status-label"] {
     color: var(--text-weak);
     font-size: var(--kilo-font-size-11);

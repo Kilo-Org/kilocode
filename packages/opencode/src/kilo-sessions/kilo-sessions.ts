@@ -771,7 +771,11 @@ export namespace KiloSessions {
           for (const row of sessions) await syncPrLinkTriple(row.id, pr.triple)
         }
         const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
-        const instance = instanceAdvertisement
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Reuse the current session branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 

@@ -78,7 +78,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -482,10 +482,15 @@ export class WorktreeManager {
     const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
     try {
       await fs.promises.rename(worktreePath, temp)
-    } catch {
-      // Rename failed (e.g. locked files on Windows) — fall back to force remove
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
-      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+    } catch (err) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
+        this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
+      })
+      if (fs.existsSync(worktreePath)) await fs.promises.rm(worktreePath, RM_OPTS)
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch((error: unknown) => {
+        this.log(`Failed to prune worktree metadata for ${worktreePath}: ${error}`)
+      })
       if (branch) await this.deleteBranch(branch)
       return
     }
@@ -645,7 +650,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     const excludePath = path.join(gitDir, "info", "exclude")
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
@@ -707,17 +712,6 @@ export class WorktreeManager {
       await fs.promises.mkdir(this.dir, { recursive: true })
     }
     await markNoIndex(this.dir, this.log)
-  }
-
-  private async resolveGitDir(): Promise<string> {
-    const gitPath = path.join(this.root, ".git")
-    const stat = await fs.promises.stat(gitPath)
-    if (stat.isDirectory()) return gitPath
-
-    const content = await fs.promises.readFile(gitPath, "utf-8")
-    const match = content.match(/^gitdir:\s*(.+)$/m)
-    if (!match) throw new Error("Invalid .git file format")
-    return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
   }
 
   private async worktreeInfo(wtPath: string): Promise<WorktreeInfo | undefined> {
@@ -914,7 +908,7 @@ export class WorktreeManager {
 
   async repoUsesLfs(): Promise<boolean> {
     // Check .git/lfs/ directory
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     if (fs.existsSync(path.join(gitDir, "lfs"))) return true
 
     // Check .gitattributes

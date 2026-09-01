@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it, spyOn } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
@@ -483,6 +483,77 @@ describe("WorktreeManager.removeWorktree", () => {
       .catch(() => false)
     expect(exists).toBe(false)
   }, 15_000)
+
+  it("falls back to git removal when Windows prevents renaming the worktree", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const worktree = await manager.createWorktree({ branchName: "rename-blocked" })
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+
+    try {
+      await manager.removeWorktree(worktree.path, worktree.branch)
+      expect(existsSync(worktree.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(worktree.branch)
+    } finally {
+      rename.mockRestore()
+    }
+  })
+
+  it("keeps the branch when the worktree directory remains locked", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const worktree = await manager.createWorktree({ branchName: "locked-worktree" })
+    await simpleGit(root).raw(["worktree", "lock", worktree.path])
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+    const remove = spyOn(fs, "rm").mockRejectedValueOnce(Object.assign(new Error("directory busy"), { code: "EBUSY" }))
+
+    try {
+      await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow("directory busy")
+      expect(existsSync(worktree.path)).toBe(true)
+      expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
+    } finally {
+      rename.mockRestore()
+      remove.mockRestore()
+    }
+  })
+
+  it.skipIf(process.platform !== "win32")(
+    "keeps a Windows worktree tracked while a live process locks its directory",
+    async () => {
+      const root = await createTempRepo()
+      const manager = createManager(root)
+      const worktree = await manager.createWorktree({ branchName: "windows-process-lock" })
+      const child = Bun.spawn(
+        [process.execPath, "-e", 'process.stdout.write("ready\\n"); setInterval(() => {}, 1000)'],
+        {
+          cwd: worktree.path,
+          stdout: "pipe",
+          stderr: "pipe",
+          windowsHide: true,
+        },
+      )
+
+      try {
+        const ready = await child.stdout.getReader().read()
+        expect(Buffer.from(ready.value ?? []).toString()).toContain("ready")
+        await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow()
+        expect(existsSync(worktree.path)).toBe(true)
+        expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
+      } finally {
+        child.kill()
+        await child.exited
+      }
+
+      await manager.removeWorktree(worktree.path, worktree.branch)
+      expect(existsSync(worktree.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(worktree.branch)
+    },
+    30_000,
+  )
 
   it("does not throw when worktree path does not exist", async () => {
     const root = await createTempRepo()

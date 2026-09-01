@@ -251,10 +251,13 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         val (m, _, _) = prompted()
 
         emit(ChatEventDto.TurnOpen("ses_test"))
+        edt { m.abort() }
+        flush()
         emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "MessageAbortedError", message = "aborted")))
         emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
 
         assertTrue(appRpc.telemetry.none { it.event == "Session Error" && it.properties["errorClass"] == "MessageAbortedError" })
+        assertTrue(notifications.isEmpty())
         assertSession(
             """
             [code] [kilo/gpt-5] [interrupted]

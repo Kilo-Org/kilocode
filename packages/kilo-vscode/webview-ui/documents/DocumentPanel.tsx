@@ -161,7 +161,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       deleteComment,
       cancelDraft,
       labels: labels(t),
-      activeTerminalId: props.activeTerminalId,
+      activeTerminalId: () => props.activeTerminalId,
     })
   const gutter = (range: SelectedLineRange) => {
     if (draft()) return
