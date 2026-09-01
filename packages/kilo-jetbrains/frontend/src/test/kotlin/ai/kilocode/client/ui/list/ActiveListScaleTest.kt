@@ -9,6 +9,7 @@ import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.IJSwingUtilities
 import com.intellij.util.ui.UIUtil
 import javax.swing.UIManager
+import javax.swing.plaf.FontUIResource
 
 /**
  * Regression coverage for the Agent Manager / session-history list not re-scaling when the global
@@ -137,20 +138,28 @@ class ActiveListScaleTest : BasePlatformTestCase() {
         }
     }
 
-    /** Applies a real IDE zoom for the duration of [block]: the font defaults and the user scale. */
+    /**
+     * Applies a real IDE zoom for the duration of [block]: the font defaults and the user scale.
+     *
+     * The installed font must be a [FontUIResource], exactly as `LafManagerImpl.patchLafFonts` installs
+     * it. [javax.swing.LookAndFeel.installColorsAndFont] only replaces a component's font when the
+     * current one is `null` or a `UIResource`, so handing the defaults a plain font would let components
+     * adopt it once and then refuse every later update — the zoom would appear to stick permanently, in
+     * the test rather than in the product.
+     */
     private fun zoom(factor: Float, block: () -> Unit) {
         val label = UIManager.getFont("Label.font")
         val scale = JBUIScale.scale(1f)
         val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
         val fonts = keys.associateWith { UIManager.getFont(it) }
         try {
-            val bigger = label.deriveFont(label.size2D * factor)
+            val bigger = FontUIResource(label.deriveFont(label.size2D * factor))
             keys.forEach { UIManager.put(it, bigger) }
             JBUIScale.setUserScaleFactorForTest(scale * factor)
             block()
         } finally {
             JBUIScale.setUserScaleFactorForTest(scale)
-            fonts.forEach { (key, font) -> UIManager.put(key, font) }
+            fonts.forEach { (key, font) -> UIManager.put(key, FontUIResource(font)) }
         }
     }
 

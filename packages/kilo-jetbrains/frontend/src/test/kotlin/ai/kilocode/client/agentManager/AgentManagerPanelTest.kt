@@ -78,6 +78,7 @@ import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
+import javax.swing.plaf.FontUIResource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -284,7 +285,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val fonts = keys.associateWith { UIManager.getFont(it) }
         try {
             edt {
-                keys.forEach { UIManager.put(it, label.deriveFont(label.size2D * 2f)) }
+                keys.forEach { UIManager.put(it, FontUIResource(label.deriveFont(label.size2D * 2f))) }
                 JBUIScale.setUserScaleFactorForTest(scale * 2f)
                 IJSwingUtilities.updateComponentTreeUI(panel)
             }
@@ -294,7 +295,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         } finally {
             edt {
                 JBUIScale.setUserScaleFactorForTest(scale)
-                fonts.forEach { (key, font) -> UIManager.put(key, font) }
+                fonts.forEach { (key, font) -> UIManager.put(key, FontUIResource(font)) }
             }
         }
     }
@@ -717,9 +718,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
         val fonts = keys.associateWith { UIManager.getFont(it) }
         // Applies a real IDE zoom — the *.font defaults and the user scale — then refreshes the tree.
+        // The font has to be a FontUIResource like LafManagerImpl.patchLafFonts installs, because
+        // LookAndFeel.installColorsAndFont only replaces a component font that is null or a UIResource.
         val zoom = { factor: Float ->
             edt {
-                keys.forEach { UIManager.put(it, label.deriveFont(label.size2D * factor)) }
+                keys.forEach { UIManager.put(it, FontUIResource(label.deriveFont(label.size2D * factor))) }
                 JBUIScale.setUserScaleFactorForTest(scale * factor)
                 IJSwingUtilities.updateComponentTreeUI(panel)
             }
@@ -739,7 +742,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         } finally {
             edt {
                 JBUIScale.setUserScaleFactorForTest(scale)
-                fonts.forEach { (key, font) -> UIManager.put(key, font) }
+                fonts.forEach { (key, font) -> UIManager.put(key, FontUIResource(font)) }
             }
         }
     }
