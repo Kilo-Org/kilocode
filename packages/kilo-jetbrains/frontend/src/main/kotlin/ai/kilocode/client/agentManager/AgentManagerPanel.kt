@@ -568,22 +568,18 @@ class AgentManagerPanel(
     }
 
     /**
-     * The hover detail for one row, or null when the row has nothing to detail. A pull request is not the
-     * bar: a worktree that has no pull request yet is exactly the one whose changes are still uncommitted,
-     * and this popup is the only place that breaks those out. What it will not do is follow the pointer
-     * down a list of untouched worktrees as an empty balloon.
+     * The hover detail for one row, or null when the row has no pull request. This popup is the pull
+     * request view — state, title, verdicts — so a worktree that has none is left alone: its counts are
+     * already painted on the row, and opening for it means the pointer trails a balloon with nothing but
+     * a base-branch behind-count down a list of local worktrees.
      */
     @RequiresEdt
     private fun request(row: WorktreeRow): SidePopupRequest? {
         if (project == null || row.progress != null) return null
+        val pull = row.pr ?: return null
         val key = normalizeWorktreePath(row.dto.path)
-        val pull = row.pr
         val base = stats[key]
         val local = dirty[key]
-        val any = pull != null ||
-            (local != null && local.files > 0) ||
-            (base != null && (base.files > 0 || base.ahead > 0 || base.behind > 0))
-        if (!any) return null
         return SidePopupRequest(
             build = {
                 val disposable = Disposer.newDisposable("Worktree row popup")

@@ -7,8 +7,6 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.checksLabel
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.reviewLabel
-import ai.kilocode.rpc.dto.GhChecksDto
-import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -21,6 +19,9 @@ import javax.swing.Icon
  * Everything known about one worktree's pull request, for the row hover popup, one thing per line: state,
  * verdict glyphs and title, then the full changes summary under a rule, then a line each for the review
  * and CI verdicts whose row glyphs have no room to say more than their color.
+ *
+ * Only a row that has a pull request gets one, which is why [update] takes a non-null one: without that
+ * chrome the popup is a restatement of the counts already on the row.
  *
  * Reuses [PrHeaderView] in [ChangesPanel.Mode.FULL] rather than laying out PR title, number, state badge
  * and diff counts again — that widget already renders the committed and uncommitted counts side by side
@@ -46,7 +47,7 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto?, name: String, dirty: WorktreeDirtyDto?) {
+    fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto, name: String, dirty: WorktreeDirtyDto?) {
         header.update(
             files = stats?.files ?: 0,
             additions = stats?.additions ?: 0,
@@ -60,8 +61,8 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
             localDeletions = dirty?.deletions ?: 0,
             base = stats?.base.orEmpty(),
         )
-        line(review, PrIcons.review(pull?.review ?: GhReview.NONE), reviewLabel(pull?.review ?: GhReview.NONE))
-        line(checks, PrIcons.checks(pull?.checks ?: GhChecksDto()), checksLabel(pull?.checks ?: GhChecksDto()))
+        line(review, PrIcons.review(pull.review), reviewLabel(pull.review))
+        line(checks, PrIcons.checks(pull.checks), checksLabel(pull.checks))
     }
 
     /** Hidden when there is no glyph, so a PR with no CI does not leave an empty row behind. */
