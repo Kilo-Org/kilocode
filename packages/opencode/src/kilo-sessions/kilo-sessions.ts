@@ -298,7 +298,27 @@ export namespace KiloSessions {
   // AttachedState.announce) and detach on dispose, mirroring the create_session
   // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
   // fire-and-forget event handlers log failures instead of surfacing them.
+  // Per-session in-flight local announce tracker. A delete that races the
+  // announce — while it awaits the in-flight enable, or while the attach
+  // heartbeat is in flight — must converge on the same outcome instead of
+  // no-oping and leaving the dead id attached forever. `deleted` is set by
+  // detachLocalSession so an announce that has not yet attached can skip.
+  type LocalAnnounce = { promise: Promise<void>; deleted: boolean }
+  const localAnnounceInflight = new Map<string, LocalAnnounce>()
+
   async function announceLocalSession(id: string) {
+    const existing = localAnnounceInflight.get(id)
+    if (existing) {
+      await existing.promise
+      return
+    }
+    const entry: LocalAnnounce = { promise: Promise.resolve(), deleted: false }
+    localAnnounceInflight.set(id, entry)
+    entry.promise = doAnnounceLocalSession(id, entry)
+    await entry.promise
+  }
+
+  async function doAnnounceLocalSession(id: string, entry: LocalAnnounce) {
     try {
       // Do not announce when remote is disabled. A first turn that races
       // bootstrap auto-enable waits for the in-flight enable so the session
@@ -309,9 +329,14 @@ export namespace KiloSessions {
         await inflight.catch(() => undefined)
         if (!remote) return
       }
+      // A delete that fired while we awaited the enable must cancel this
+      // announce so the dead session never lands in the live list.
+      if (entry.deleted) return
       await attachRemoteSession(id)
     } catch (error) {
       log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    } finally {
+      if (localAnnounceInflight.get(id) === entry) localAnnounceInflight.delete(id)
     }
   }
 
@@ -321,6 +346,17 @@ export namespace KiloSessions {
   // SessionStatus, because the session row is already gone on delete.
   async function detachLocalSession(id: string) {
     try {
+      // Converge with an in-flight announce: mark it deleted so it skips the
+      // attach, then wait for it to settle. If it already attached (the delete
+      // raced the attach heartbeat), the ownership check below still sees it
+      // and detaches it. Without this, a delete during the enable await no-ops
+      // (the id is not yet attached) and the announce then attaches the dead
+      // session forever.
+      const announce = localAnnounceInflight.get(id)
+      if (announce) {
+        announce.deleted = true
+        await announce.promise
+      }
       if (!hasRemoteSession(id)) return
       await attachedState.detach(id)
     } catch (error) {

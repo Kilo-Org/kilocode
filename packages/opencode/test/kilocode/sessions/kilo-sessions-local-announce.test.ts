@@ -300,6 +300,54 @@ describe("KiloSessions locally started session announce", () => {
   )
 
   it.instance(
+    "delete during in-flight enable does not attach the dead session",
+    () => {
+      const id = SessionID.descending("ses_local_announce_delete_during_enable")
+      return Effect.gen(function* () {
+        const instance = yield* TestInstance
+        const kilo = yield* KiloSessions.Service
+        yield* kilo.init()
+
+        let release: () => void = () => {}
+        userGate = new Promise<void>((resolve) => {
+          release = resolve
+        })
+
+        // Park enableRemote() in authValid(); `remote` stays undefined while
+        // `enabling` is in flight, so the announce awaits the enable.
+        const enableFiber = yield* enable(instance.directory).pipe(Effect.forkScoped)
+        yield* pollWithTimeout(
+          Effect.sync(() => (KiloSessions.remoteStatus().enabled ? true : undefined)),
+          "enableRemote never entered",
+        )
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: false })
+
+        // First turn parks the announce on the in-flight enable.
+        turnOpen(instance.directory, id)
+        yield* Effect.sleep(100)
+        expect(beats).toHaveLength(0)
+
+        // The session is deleted while the announce awaits enable. detach must
+        // cancel the pending announce (not no-op), otherwise the announce
+        // attaches the dead session once enable resolves and it leaks forever.
+        sessionDeleted(instance.directory, id)
+        yield* Effect.sleep(100)
+        expect(beats).toHaveLength(0)
+
+        release()
+        yield* Fiber.join(enableFiber)
+        yield* Effect.sleep(150)
+        // The dead session was never announced (no attach beat) and never
+        // detached (it was never attached), so it is not in the live list.
+        expect(announced(id)).toBe(0)
+        expect(detached(id)).toBe(0)
+        expect(KiloSessions.hasRemoteSession(id)).toBe(false)
+      }).pipe(Effect.provide(layer()))
+    },
+    15000,
+  )
+
+  it.instance(
     "announce heartbeat failure rolls the attach back and the next turn retries",
     () => {
       const id = SessionID.descending("ses_local_announce_retry")
