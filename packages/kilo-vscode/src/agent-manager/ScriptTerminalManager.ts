@@ -2,6 +2,7 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import path from "node:path"
 import type { TerminalFont } from "./terminal-font"
 import type { RunHandle } from "./run/manager"
+import { block } from "./pty-cleanup"
 
 export type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -130,17 +131,7 @@ export class ScriptTerminalManager {
 
   async blockDirectory(directory: string) {
     const target = directoryKey(directory)
-    this.blocked.set(target, (this.blocked.get(target) ?? 0) + 1)
-    const creates = this.creates.get(target)
-    if (creates) await Promise.allSettled([...creates])
-    let released = false
-    return () => {
-      if (released) return
-      released = true
-      const count = this.blocked.get(target)
-      if (!count || count === 1) this.blocked.delete(target)
-      else this.blocked.set(target, count - 1)
-    }
+    return block(target, this.blocked, this.creates.get(target))
   }
 
   async closeDirectory(directory: string): Promise<void> {

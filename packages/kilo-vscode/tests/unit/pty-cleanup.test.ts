@@ -3,12 +3,54 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { ProjectContext } from "../../src/agent-manager/project/context"
 import type { LifecycleHost } from "../../src/agent-manager/provider-lifecycle"
 import { discardWorktree } from "../../src/agent-manager/discard-worktree"
-import { acquirePtyCleanup, removePtys } from "../../src/agent-manager/pty-cleanup"
+import { acquirePtyCleanup, block, removePtys } from "../../src/agent-manager/pty-cleanup"
 import type { ScriptTerminalManager } from "../../src/agent-manager/ScriptTerminalManager"
 import type { SessionTerminalManager } from "../../src/agent-manager/SessionTerminalManager"
 import type { TerminalRouter } from "../../src/agent-manager/terminal-routing"
 
 describe("Agent Manager PTY cleanup", () => {
+  it("reference-counts directory blocks and releases each block only once", async () => {
+    const blocked = new Map<string, number>()
+    const first = await block("/worktree", blocked)
+    const second = await block("/worktree", blocked)
+    const other = await block("/other", blocked)
+    expect(blocked.get("/worktree")).toBe(2)
+
+    first()
+    first()
+    expect(blocked.get("/worktree")).toBe(1)
+    second()
+    expect(blocked.has("/worktree")).toBe(false)
+    expect(blocked.get("/other")).toBe(1)
+    other()
+    expect(blocked.size).toBe(0)
+  })
+
+  it("blocks immediately and waits for the pending snapshot, including rejected creates", async () => {
+    const blocked = new Map<string, number>()
+    const first = Promise.withResolvers<void>()
+    const second = Promise.withResolvers<void>()
+    const late = Promise.withResolvers<void>()
+    const creates = new Set([first.promise, second.promise])
+    let settled = false
+    const pending = block("/worktree", blocked, creates).then((release) => {
+      settled = true
+      return release
+    })
+    expect(blocked.get("/worktree")).toBe(1)
+    creates.clear()
+    creates.add(late.promise)
+
+    first.reject(new Error("create failed"))
+    await Promise.allSettled([first.promise])
+    expect(settled).toBe(false)
+    second.resolve()
+    const release = await pending
+    expect(blocked.get("/worktree")).toBe(1)
+    release()
+    expect(blocked.size).toBe(0)
+  })
+
   it("removes every listed PTY even when one removal fails", async () => {
     const removed: string[] = []
     const client = {

@@ -193,18 +193,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/agent-manager/ScriptTerminalManager.ts",
-        "packages/kilo-vscode/src/agent-manager/terminal-manager.ts"
-      ],
-      "fingerprint": "83aaa96c32fb3894",
-      "maxMatches": 1,
-      "maxTokens": 127,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/src/agent-manager/types.ts",
         "packages/kilo-vscode/webview-ui/agent-manager/pr/pr-types.ts"
       ],
