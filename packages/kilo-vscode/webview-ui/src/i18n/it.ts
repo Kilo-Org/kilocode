@@ -1111,6 +1111,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Annullato",
   "task.backgroundAgents.status.error": "Errore",
   "task.backgroundAgents.untitled": "Agente in background",
+  "task.backgroundAgents.stopAll": "Arresta tutti ({{count}})",
   "settings.saveBar.unsavedChanges": "Modifiche non salvate",
   "settings.saveBar.discard": "Scarta",
   "settings.saveBar.save": "Salva",

@@ -451,7 +451,7 @@ try {
 
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   value.abort()
-  assert.deepEqual(sent.at(-1), { type: "abort", sessionID: "root" })
+  assert.deepEqual(sent.at(-1), { type: "abort", sessionID: "root", scope: "session" })
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "interrupted" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")

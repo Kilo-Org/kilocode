@@ -99,6 +99,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     const hidden = session.dismissedBackgroundJobs(id)
     return agents().filter((agent) => showBackgroundAgent(agent, hidden))
   })
+  const running = createMemo(() => visible().filter((agent) => agent.status === "running"))
   const summary = createMemo(() => {
     const running = visible().filter((agent) => agent.status === "running").length
     const total = visible().length
@@ -275,6 +276,18 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
           >
             <Icon name="chevron-down" size="small" style={open() ? { transform: "rotate(180deg)" } : undefined} />
           </Button>
+          <Show when={!props.readonly && running().length > 0}>
+            <Button
+              icon="stop"
+              variant="ghost"
+              size="small"
+              onClick={(event: MouseEvent) => {
+                for (const agent of running()) cancelAgent(event, agent)
+              }}
+            >
+              {language.t("task.backgroundAgents.stopAll", { count: String(running().length) })}
+            </Button>
+          </Show>
           <Show when={!props.readonly && visible().some((agent) => agent.status !== "running")}>
             <Button
               icon="close-small"

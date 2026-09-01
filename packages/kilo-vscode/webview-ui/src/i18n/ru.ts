@@ -1233,6 +1233,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Отменено",
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
+  "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",

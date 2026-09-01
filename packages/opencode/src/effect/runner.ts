@@ -4,7 +4,7 @@ import { KiloRunner } from "@/kilocode/effect/runner" // kilocode_change
 export interface Runner<A, E = never> {
   readonly state: State<A, E>
   readonly busy: boolean
-  readonly ensureRunning: (work: Effect.Effect<A, E>) => Effect.Effect<A, E>
+  readonly ensureRunning: (work: Effect.Effect<A, E>, valid?: () => boolean) => Effect.Effect<A, E> // kilocode_change
   readonly startShell: (work: Effect.Effect<A, E>, ready?: Latch.Latch) => Effect.Effect<A, E | Busy>
   readonly cancel: Effect.Effect<void>
 }
@@ -117,10 +117,11 @@ export const make = <A, E = never>(
     })
 
   // kilocode_change start - open work only after the Running state is committed
-  const ensureRunning = (work: Effect.Effect<A, E>) =>
+  const ensureRunning = (work: Effect.Effect<A, E>, valid?: () => boolean) =>
     SynchronizedRef.modifyEffect(
       ref,
       Effect.fnUntraced(function* (st) {
+        if (valid && !valid()) return [onInterrupt ?? Effect.die(new Cancelled()), st] as const
         switch (st._tag) {
           case "Running":
           case "ShellThenRun":
