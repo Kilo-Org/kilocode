@@ -64,18 +64,6 @@
     },
     {
       "files": [
-        "packages/kilo-console/src/routes/config/CliNotificationsRoute.tsx",
-        "packages/kilo-console/src/routes/config/CliUiRoute.tsx"
-      ],
-      "fingerprint": "3d8c2a788d682c4e",
-      "maxMatches": 1,
-      "maxTokens": 143,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-console/src/routes/config/state/agents.ts",
         "packages/kilo-console/src/routes/config/state/models.ts"
       ],
