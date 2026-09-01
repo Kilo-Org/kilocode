@@ -19,11 +19,23 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.WorktreeRowPopupBody
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
-import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.ui.PrIcons
+import ai.kilocode.client.ui.checksTooltip
+import ai.kilocode.client.ui.checksUrl
+import ai.kilocode.client.ui.popup.SidePopupContent
+import ai.kilocode.client.ui.popup.SidePopupController
+import ai.kilocode.client.ui.popup.SidePopupFit
+import ai.kilocode.client.ui.popup.SidePopupGeometry
+import ai.kilocode.client.ui.popup.SidePopupRequest
+import ai.kilocode.client.ui.popup.SidePopupSpot
+import ai.kilocode.client.ui.openTooltip
+import ai.kilocode.client.ui.reviewTooltip
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
@@ -45,6 +57,7 @@ import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -75,10 +88,13 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Component
+import java.awt.Point
+import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
+import javax.swing.SwingUtilities
 
 /**
  * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
@@ -108,6 +124,9 @@ class AgentManagerPanel(
             hoverActions = true,
             title = ActiveListWeight.PLAIN,
             header = ActiveListWeight.PLAIN,
+            // The review and CI glyphs are read as a column down the list, so they line up with the
+            // changes summary and PR pill below them rather than following each title's own width.
+            badgesRight = true,
         ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
@@ -126,12 +145,22 @@ class AgentManagerPanel(
             movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
             onMove = { move -> controller.reorder(move.keys) },
         ),
+        onHover = { row -> hover(row) },
     )
+    // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is
+    // longer here than for a transcript card the pointer goes to on purpose.
+    private val popup = SidePopupController(dwell = SidePopupController.LIST_MS)
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
+    private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
+    private var hovered: String? = null
 
     init {
         Disposer.register(parent, this)
+        Disposer.register(this, popup)
+        // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
+        // busy list or a rebuilt model has already dropped the hover the popup was opened from.
+        list.onScroll = { popup.hideAll() }
         isOpaque = true
         project?.let { addToTop(GhBanner(it, this)) }
         addToCenter(body())
@@ -144,11 +173,12 @@ class AgentManagerPanel(
             if (list.select(key)) list.focusList()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
-        // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
-        // leaving the new row without its stats and PR badge until the next poll.
+        // A fresh worktree changes what git reports, so bypass both the refresh throttle and the
+        // backend's PR cache — that cache was populated before this worktree existed, so serving it
+        // would leave the new row without its badge until the entry aged out.
         controller.onCreated = { created ->
             project?.service<WorktreeStatusService>()?.refreshStats()
-            project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+            project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
         controller.onReload = { sync() }
@@ -519,6 +549,84 @@ class AgentManagerPanel(
             .firstOrNull { it.id == key }
     }
 
+    /**
+     * Opens the row detail popup on hover, or begins hiding it when the pointer leaves the list. Keyed by
+     * worktree path so a model rebuild that replaces row objects does not read as a different row.
+     */
+    @RequiresEdt
+    private fun hover(row: ActiveListItem?) {
+        val item = row as? WorktreeRow
+        if (item == null) {
+            popup.notifyExit(hovered ?: return)
+            hovered = null
+            return
+        }
+        val key = item.dto.path
+        hovered = key
+        popup.show(key, this) { request(item) }
+    }
+
+    @RequiresEdt
+    private fun request(row: WorktreeRow): SidePopupRequest? {
+        val target = project ?: return null
+        val pull = row.pr ?: return null
+        val key = normalizeWorktreePath(row.dto.path)
+        return SidePopupRequest(
+            build = {
+                val disposable = Disposer.newDisposable("Worktree row popup")
+                val body = WorktreeRowPopupBody(
+                    openDiff = { openDiff(row.dto) },
+                    onLocal = { openLocalDiff(row.dto) },
+                )
+                body.update(stats[key], pull, WorktreeTitle.fallback(row.dto.path), dirty[key])
+                // A PR title is as long as its author made it, and the popup exists to show the whole
+                // thing: past the width cap it scrolls sideways rather than losing the end of the line.
+                HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
+            },
+            place = { built -> place(built) },
+        )
+    }
+
+    /**
+     * Places the balloon beside the hovered row on whichever side has more room, never above or below it.
+     * Height is budgeted against the visible list rather than the window, so a popup cannot run past the
+     * tool window into a neighbouring panel.
+     */
+    @RequiresEdt
+    private fun place(built: SidePopupContent): SidePopupSpot? {
+        val pane = SwingUtilities.getRootPane(list)?.layeredPane ?: return null
+        val subject = list.hoveredBounds(pane) ?: return null
+        val area = list.visibleBounds(pane) ?: return null
+        val gap = UiStyle.Gap.pad()
+        val insets = UiStyle.Balloon.insets()
+        // The shadow is reserved on every side, so it counts twice on each axis.
+        val shadow = UiStyle.Balloon.shadow()
+        val spot = SidePopupGeometry.beside(
+            pane = Rectangle(pane.size),
+            subject = subject,
+            view = area,
+            fit = SidePopupFit(
+                chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow * 2,
+                chromeHeight = insets.top + insets.bottom + shadow * 2,
+                gap = gap,
+                maxWidth = JBUI.scale(POPUP_WIDTH),
+                maxHeight = JBUI.scale(POPUP_HEIGHT),
+            ),
+        )
+        built.fitWithin(spot.maxWidth, spot.maxHeight)
+        val view = Rectangle(area.x, area.y + shadow, area.width, (area.height - shadow * 2).coerceAtLeast(0))
+        val height = built.component.preferredSize.height + insets.top + insets.bottom
+        val aim = SidePopupGeometry.aim(
+            view = view,
+            subject = subject,
+            y = subject.y + subject.height / 2,
+            height = height,
+            gap = gap,
+            indent = UiStyle.Balloon.arc() + UiStyle.Balloon.pointer().width / 2,
+        )
+        return SidePopupSpot(pane, Point(spot.x, aim.y), spot.position, aim.distance)
+    }
+
     private fun bindStatus() {
         val target = project ?: return
         WorktreeStatusBinding(
@@ -526,6 +634,9 @@ class AgentManagerPanel(
             this,
             onStats = { value -> stats = value; sync() },
             onPr = { value -> prs = value; sync() },
+            // Uncommitted counts only appear in the row popup, so they do not rebuild rows: sync() would
+            // churn every row on each poll for a number nothing on the row itself shows.
+            onDirty = { value -> dirty = value },
         )
     }
 
@@ -578,6 +689,15 @@ class AgentManagerPanel(
         }
     }
 
+    private companion object {
+        // Wider than a chat card popup: PR titles are conventional commit lines and the summary row puts
+        // the committed and uncommitted counts beside each other. This is only a cap — the popup asks for
+        // the width its content needs and [SidePopupGeometry.beside] trims it to the room beside the row,
+        // so a narrow window gets a narrow popup rather than one re-pointed above the list.
+        const val POPUP_WIDTH = 1840
+        const val POPUP_HEIGHT = 320
+    }
+
     private inner class WorktreeRow(
         val dto: WorktreeDto,
         override val progress: String?,
@@ -595,7 +715,42 @@ class AgentManagerPanel(
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
-        private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
+
+        /**
+         * Review then CI verdict, on the title line so they stay readable without hovering the row.
+         * Both are glyphs rather than pills: they are the states a reviewer scans a worktree list for,
+         * and GitHub's own icons say it faster than words at this size.
+         */
+        override val badges: List<ActiveListBadge>
+            get() {
+                if (progress != null) return emptyList()
+                val p = pr ?: return emptyList()
+                return listOfNotNull(reviewBadge(p), checksBadge(p))
+            }
+
+        private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = PrIcons.review(p.review) ?: return null
+            return ActiveListBadge(
+                "",
+                id = "pr-review",
+                tooltip = reviewTooltip(p.review),
+                action = { BrowserUtil.browse(p.url) },
+                icon = glyph,
+            )
+        }
+
+        private fun checksBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = PrIcons.checks(p.checks) ?: return null
+            return ActiveListBadge(
+                "",
+                id = "pr-checks",
+                tooltip = checksTooltip(p.checks),
+                // The checks tab rather than the conversation: someone clicking a red build wants the log.
+                action = { BrowserUtil.browse(checksUrl(p)) },
+                icon = glyph,
+            )
+        }
+
         override val secondaryBadges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
@@ -605,7 +760,7 @@ class AgentManagerPanel(
                         "#${p.number}",
                         style(p.state),
                         id = "pull-request",
-                        tooltip = prTooltip(p, customName),
+                        tooltip = openTooltip(),
                         action = { BrowserUtil.browse(p.url) },
                     ),
                 )

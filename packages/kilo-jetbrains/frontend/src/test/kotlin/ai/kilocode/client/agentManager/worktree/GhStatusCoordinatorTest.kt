@@ -7,6 +7,7 @@ import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.activateIde
+import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
@@ -87,6 +88,28 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator slows right down while the github budget is spent`() {
+        rpc.ghResult = GhAvailability.RATE_LIMITED
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.RATE_LIMITED, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+
+        // Slower than every other state, including MISSING: the window resets on GitHub's schedule, so
+        // each probe before then spends a call to be told the same thing.
+        timers.advanceBy(299_999)
+        drain()
+        assertEquals("a spent budget must not be re-probed on the ordinary cadence", 1, rpc.ghCalls.size)
+
+        rpc.ghResult = GhAvailability.OK
+        timers.advanceBy(1)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        // And the recovery is picked up on its own, without the user doing anything.
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
     fun `test coordinator backs off on backend failure without reporting ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val handle = edtWait { service.attach(project) }
@@ -143,36 +166,60 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         assertEquals(1, rpc.ghCalls.size)
     }
 
-    fun `test coordinator drops submitted syncs while busy instead of queueing`() {
+    fun `test a sync submitted while a probe runs is answered by that probe`() {
         val gate = CompletableDeferred<Unit>()
         rpc.beforeGhStatus = { gate.await() }
         val handle = edtWait { service.attach(project) }
         awaitCalls(1)
 
-        // Past the event throttle, so an in-flight probe is the only thing that can drop the submit.
+        // Past the event throttle, so an in-flight probe is the only thing holding this sync back.
         timers.advanceBy(EVENT_THROTTLE)
         edtWait { service.sync("test") }
         pump()
-        assertEquals(1, rpc.ghCalls.size)
+        assertEquals("a second probe must never run alongside the first", 1, rpc.ghCalls.size)
 
         gate.complete(Unit)
         drain()
+
+        // The completed probe reports state from after the event, so the held sync is satisfied
+        // rather than re-run: coalescing must not turn every deferral into a guaranteed second call.
         assertEquals(1, rpc.ghCalls.size)
         handle.close()
     }
 
-    fun `test coordinator throttles a burst of submitted syncs`() {
+    fun `test a throttled burst runs one trailing probe instead of none`() {
         val handle = edtWait { service.attach(project) }
         drain()
         assertEquals(1, rpc.ghCalls.size)
 
-        // Focus and tab-switch events can arrive in bursts; inside the window they collapse to none.
+        // Focus and tab-switch events arrive in bursts; inside the window they fold into one sync.
         repeat(5) { edtWait { service.sync("burst") } }
         drain()
-        assertEquals(1, rpc.ghCalls.size)
+        assertEquals("no event may run inside the throttle window", 1, rpc.ghCalls.size)
 
+        // At the end of the window that one sync runs. Dropping the burst outright would leave the
+        // stale verdict standing until the next scheduled poll, which is the staleness to avoid.
         timers.advanceBy(EVENT_THROTTLE)
+        drain()
+        assertEquals("the burst owes exactly one probe", 2, rpc.ghCalls.size)
+
+        // And it is spent: the same burst cannot produce a second trailing probe.
+        timers.advanceBy(EVENT_THROTTLE)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        handle.close()
+    }
+
+    fun `test the trailing window end is fixed rather than pushed back by later events`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        edtWait { service.sync("first") }
+
+        // A continuing burst must not behave like a sliding debounce, or a user clicking between tabs
+        // could postpone the probe indefinitely.
+        timers.advanceBy(EVENT_THROTTLE - 1)
         edtWait { service.sync("later") }
+        timers.advanceBy(1)
         drain()
 
         assertEquals(2, rpc.ghCalls.size)
@@ -186,29 +233,164 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         assertTrue(rpc.ghCalls.isEmpty())
     }
 
-    fun `test coordinator syncs when the ide frame is activated`() {
-        rpc.ghResult = GhAvailability.UNAUTH
+    fun `test detach discards a sync held behind a running probe`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeGhStatus = { gate.await() }
+        val handle = edtWait { service.attach(project) }
+        awaitCalls(1)
+        timers.advanceBy(EVENT_THROTTLE)
+        edtWait { service.sync("tab-switch") }
+
+        handle.close()
+        gate.complete(Unit)
+        drain()
+        timers.advanceBy(120_000)
+        drain()
+
+        assertEquals("a held sync must not outlive the last consumer", 1, rpc.ghCalls.size)
+    }
+
+    fun `test detach cancels the trailing probe`() {
         val handle = edtWait { service.attach(project) }
         drain()
-        assertEquals(GhAvailability.UNAUTH, service.current())
-        assertEquals(1, rpc.ghCalls.size)
-        timers.advanceBy(EVENT_THROTTLE)
+        edtWait { service.sync("tab-switch") }
 
-        // The user authorized gh in a terminal and came back to the IDE.
-        rpc.ghResult = GhAvailability.OK
+        handle.close()
+        timers.advanceBy(EVENT_THROTTLE)
+        drain()
+
+        assertEquals(1, rpc.ghCalls.size)
+    }
+
+    fun `test returning after a long absence probes past the backend cache`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(1, rpc.ghCalls.size)
+
+        // The user ran `gh auth login` in a terminal while the IDE sat in the background.
+        rpc.ghResult = GhAvailability.UNAUTH
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.FRESH)
         edtWait { activateIde(project) }
         drain()
 
         assertEquals(2, rpc.ghCalls.size)
-        assertEquals(GhAvailability.OK, service.current())
+        // The absence, not zero: a lookup that ran while we were gone is still current, and only an
+        // answer cached before we left has to be rejected.
+        assertEquals(listOf(null, Away.FRESH), rpc.ghAges.toList())
+        assertEquals(GhAvailability.UNAUTH, service.current())
+        handle.close()
+    }
+
+    fun `test returning from a quick switch probes without bypassing the backend cache`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        // Past the throttle, so only the absence rule decides what this activation costs.
+        timers.advanceBy(EVENT_THROTTLE)
+
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.REAL)
+        edtWait { activateIde(project) }
+        drain()
+
+        assertEquals(2, rpc.ghCalls.size)
+        assertNull("a quick switch has no claim on the cache", rpc.ghAges.last())
+        handle.close()
+    }
+
+    fun `test returning from a transient window does not probe at all`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        timers.advanceBy(EVENT_THROTTLE)
+
+        // A dialog or popup that closes right away never took focus out of the IDE for long enough
+        // to have changed anything, so it must cost nothing rather than one throttled probe.
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.REAL - 1)
+        edtWait { activateIde(project) }
+        drain()
+
+        assertEquals(1, rpc.ghCalls.size)
+        handle.close()
+    }
+
+    fun `test activation without a preceding absence does not probe`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        timers.advanceBy(EVENT_THROTTLE)
+
+        edtWait { activateIde(project) }
+        drain()
+
+        assertEquals("the first focus of a session is not a return", 1, rpc.ghCalls.size)
+        handle.close()
+    }
+
+    fun `test a burst of activations reloads once per absence`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        timers.advanceBy(EVENT_THROTTLE)
+
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.FRESH)
+        repeat(5) { edtWait { activateIde(project) } }
+        drain()
+
+        assertEquals("one departure owes one probe, however often the frame reports focus", 2, rpc.ghCalls.size)
         handle.close()
     }
 
     fun `test coordinator does not probe on activation before anything attaches`() {
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.FRESH)
         edtWait { activateIde(project) }
         drain()
 
         assertTrue(rpc.ghCalls.isEmpty())
+    }
+
+    fun `test a freshness requirement held behind a running probe survives it`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeGhStatus = { gate.await() }
+        val handle = edtWait { service.attach(project) }
+        awaitCalls(1)
+
+        edtWait { deactivateIde(project) }
+        timers.advanceBy(Away.FRESH)
+        // Only the calls after this one answer freely; the first is already suspended on the gate.
+        rpc.beforeGhStatus = {}
+        edtWait { activateIde(project) }
+        pump()
+        assertEquals(1, rpc.ghCalls.size)
+
+        gate.complete(Unit)
+        drain()
+
+        // The in-flight probe started before the absence was known, so unlike a plain sync this one
+        // is not satisfied by it and must still run — with its ceiling intact.
+        assertEquals(2, rpc.ghCalls.size)
+        assertEquals(Away.FRESH, rpc.ghAges.last())
+        handle.close()
+    }
+
+    fun `test a failed probe does not satisfy a held sync`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeGhStatus = {
+            gate.await()
+            throw RuntimeException("backend down")
+        }
+        val handle = edtWait { service.attach(project) }
+        awaitCalls(1)
+        timers.advanceBy(EVENT_THROTTLE)
+        edtWait { service.sync("tab-switch") }
+
+        gate.complete(Unit)
+        drain()
+
+        // A failure establishes nothing about gh state, so it cannot stand in for the answer the
+        // event asked for the way a successful probe does.
+        assertEquals(2, rpc.ghCalls.size)
+        handle.close()
     }
 
     fun `test coordinator probes git only while the github integration is off`() {

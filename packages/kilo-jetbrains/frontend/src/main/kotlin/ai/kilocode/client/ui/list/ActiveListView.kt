@@ -34,6 +34,7 @@ import javax.swing.JViewport
 import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 import javax.swing.event.ListSelectionEvent
 
 internal class ActiveListView(
@@ -48,11 +49,14 @@ internal class ActiveListView(
     private val onClick: ((ActiveListItem) -> Unit)? = null,
     private val menu: ActiveListMenu<*>? = null,
     private val reorder: ActiveListReorder? = null,
+    private val onHover: ((ActiveListItem?) -> Unit)? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
     private val renderer = ActiveListRenderer(model, cfg, menu)
-    private val hover = cfg.hoverActions || menu != null
+    // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
+    // have to turn on the hover action bar to get it.
+    private val hover = cfg.hoverActions || menu != null || onHover != null
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
@@ -457,6 +461,33 @@ internal class ActiveListView(
         hovered = idx
         repaintRow(old)
         repaintRow(idx)
+        // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
+        // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
+        onHover?.invoke(model.items.getOrNull(idx))
+    }
+
+    /**
+     * The hovered row's bounds in the coordinates of [pane], or null when no row is hovered. Callers
+     * placing a popup beside a row need its edges, which [point] does not give: that answers a single
+     * anchor point at a fixed inset, for balloons that hang below a cell.
+     *
+     * Deliberately does not check whether the list is on screen. A caller has to resolve a root pane to
+     * have a [pane] at all, which is the same question asked earlier and more directly.
+     */
+    @RequiresEdt
+    fun hoveredBounds(pane: JComponent): Rectangle? {
+        checkEdt()
+        if (hovered < 0) return null
+        val bounds = list.getCellBounds(hovered, hovered) ?: return null
+        return SwingUtilities.convertRectangle(list, bounds, pane)
+    }
+
+    /** The visible extent of the list in the coordinates of [pane], for budgeting a popup's height. */
+    @RequiresEdt
+    fun visibleBounds(pane: JComponent): Rectangle? {
+        checkEdt()
+        val visible = list.visibleRect.takeIf { !it.isEmpty } ?: return null
+        return SwingUtilities.convertRectangle(list, visible, pane)
     }
 
     @RequiresEdt
@@ -877,11 +908,23 @@ private data class ActiveListHeightRow(
     val description: String?,
     val icon: Any?,
     val section: String?,
-    val badges: List<ActiveListBadge>,
+    val badges: List<ActiveListHeightBadge>,
     val trailing: String?,
     val cells: List<ActiveListCell>,
     val disabled: Boolean,
     val progress: String?,
+)
+
+/**
+ * The parts of a badge that can change how tall a row wants to be. [ActiveListBadge.action] and its
+ * tooltip are deliberately left out: an owner is free to build the handler while answering `badges`,
+ * and a fresh lambda per read would make the height key miss on every sync.
+ */
+private data class ActiveListHeightBadge(
+    val text: String,
+    val style: UiStyle.Badge.Style,
+    val id: String?,
+    val icon: Any?,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -892,7 +935,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges,
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
         item.trailing,
         item.cells,
         item.disabled,

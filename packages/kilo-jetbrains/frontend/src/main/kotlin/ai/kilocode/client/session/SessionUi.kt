@@ -57,6 +57,7 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.held
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -1118,9 +1119,10 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                branch = status
-                dock?.setBranch(status)
-                empty?.setBranch(status)
+                val next = held(status, branch)
+                branch = next
+                dock?.setBranch(next)
+                empty?.setBranch(next)
             }
         }
     }
