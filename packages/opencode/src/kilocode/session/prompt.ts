@@ -475,7 +475,7 @@ export namespace KiloSessionPrompt {
       if (msg.info.role !== "user") continue
       if (
         msg.parts.some(
-          (part) => part.type === "text" && part.synthetic && part.text.startsWith("<environment_details>"),
+          (part) => part.type === "text" && part.synthetic && part.text.trimStart().startsWith("<environment_details>"),
         )
       )
         continue
@@ -535,7 +535,7 @@ export namespace KiloSessionPrompt {
     const ctx = Instance.bind(() => Instance.current)()
     const plan = Session.plan(input.session, ctx)
 
-    if (mode(input.agent.name) === "plan") add(NATIVE_PLAN_PROMPT)
+    if (mode(input.agent.name) === "plan") add(`\n\n${NATIVE_PLAN_PROMPT}`)
 
     const file = input.messages ? PlanFile.latest(input.messages) : undefined
     const saved = PlanFile.resolve(file, ctx)
@@ -557,7 +557,7 @@ export namespace KiloSessionPrompt {
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
-    add(`<system-reminder>\n${body}\n</system-reminder>`)
+    add(`\n\n<system-reminder>\n${body}\n</system-reminder>`)
   }
 
   export function insertAgentSwitchReminder(input: {
