@@ -19,6 +19,14 @@ function focusSerial(state: TerminalStateControls, id: string): number {
   return request?.id === id ? request.serial : 0
 }
 
+function focus(state: TerminalStateControls, id: string, report?: (focused: boolean) => void) {
+  return (focused: boolean) => {
+    if (focused) state.setFocusedId(id)
+    else if (state.focusedId() === id) state.setFocusedId(undefined)
+    report?.(focused)
+  }
+}
+
 export interface TerminalTabRenderDeps {
   id: string
   terms: TerminalStateControls
@@ -120,11 +128,7 @@ export function renderTerminalLayer(props: {
                   active={visible()}
                   focusSerial={focusSerial(props.state, term.id)}
                   font={term.font}
-                  onFocusChange={(focused) => {
-                    if (focused) props.state.setFocusedId(term.id)
-                    else if (props.state.focusedId() === term.id) props.state.setFocusedId(undefined)
-                    props.onFocusChange?.(focused)
-                  }}
+                  onFocusChange={focus(props.state, term.id, props.onFocusChange)}
                   onFocusPrompt={props.onFocusPrompt}
                   onTitleChange={(title) => props.state.setTitle(term.id, title)}
                   onActivityChange={(state) => props.state.setActivity(term.id, state)}
@@ -175,11 +179,7 @@ export function renderSideTerminalLayer(props: {
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
                 restartable={term.kind === undefined}
-                onFocusChange={(focused) => {
-                  if (focused) props.state.setFocusedId(term.id)
-                  else if (props.state.focusedId() === term.id) props.state.setFocusedId(undefined)
-                  props.onFocusChange?.(focused)
-                }}
+                onFocusChange={focus(props.state, term.id, props.onFocusChange)}
                 onFocusPrompt={props.onFocusPrompt}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
                 onActivityChange={(state) => props.state.setActivity(term.id, state)}
