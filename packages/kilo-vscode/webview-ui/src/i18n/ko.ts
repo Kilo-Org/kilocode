@@ -1216,6 +1216,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "취소됨",
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
+  "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",

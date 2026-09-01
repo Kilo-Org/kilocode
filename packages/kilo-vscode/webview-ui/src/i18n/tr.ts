@@ -1209,6 +1209,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "İptal edildi",
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
+  "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",

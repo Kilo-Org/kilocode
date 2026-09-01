@@ -267,7 +267,7 @@ describe("question handlers", () => {
 
   it("removes a fallback question when recovery confirms it is stale", async () => {
     const error = new Error("Question request not found", {
-      cause: { status: 404, body: { _tag: "NotFound" } },
+      cause: { body: { _tag: "NotFound" } },
     })
     const { fake, messages } = ctx({ errors: { reject: error } })
 
@@ -280,7 +280,7 @@ describe("question handlers", () => {
 
   it("keeps fallback questions retryable when recovery is incomplete", async () => {
     const error = new Error("Question request not found", {
-      cause: { status: 404, body: { _tag: "NotFound" } },
+      cause: { body: { _tag: "NotFound" } },
     })
     const dir = "/workspace/.kilo/worktrees/failing"
     const { fake, messages } = ctx({

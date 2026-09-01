@@ -15,6 +15,7 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import path from "node:path"
+import { block } from "./pty-cleanup"
 
 const env = { KILO_UNICODE_LOGO: "0" }
 
@@ -95,17 +96,7 @@ export class TerminalManager {
 
   async blockDirectory(directory: string) {
     const target = key(directory)
-    this.blocked.set(target, (this.blocked.get(target) ?? 0) + 1)
-    const creates = this.creates.get(target)
-    if (creates) await Promise.allSettled([...creates])
-    let released = false
-    return () => {
-      if (released) return
-      released = true
-      const count = this.blocked.get(target)
-      if (!count || count === 1) this.blocked.delete(target)
-      else this.blocked.set(target, count - 1)
-    }
+    return block(target, this.blocked, this.creates.get(target))
   }
 
   async closeDirectory(directory: string): Promise<void> {

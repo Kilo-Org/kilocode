@@ -1242,6 +1242,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Anulowano",
   "task.backgroundAgents.status.error": "Błąd",
   "task.backgroundAgents.untitled": "Agent w tle",
+  "task.backgroundAgents.stopAll": "Zatrzymaj wszystkich ({{count}})",
   "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
   "settings.saveBar.discard": "Odrzuć",
   "settings.saveBar.save": "Zapisz",

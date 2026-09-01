@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
@@ -158,7 +157,9 @@ export namespace KiloSessionPrompt {
   export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
     sessionID: SessionID
     sessions: Pick<Session.Interface, "children">
-    cancel: (sessionID: SessionID) => Effect.Effect<void>
+    cancel: (sessionID: SessionID, opts?: { background?: boolean }) => Effect.Effect<void>
+    stop: (sessionID: SessionID, work: Effect.Effect<void>) => Effect.Effect<void>
+    scope?: "session" | "tree"
   }) {
     function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
       return Effect.gen(function* () {
@@ -168,17 +169,24 @@ export namespace KiloSessionPrompt {
       })
     }
 
-    const children = yield* descendants(input.sessionID)
-    yield* Effect.forEach(
-      [input.sessionID, ...children],
-      (sessionID) =>
-        Effect.gen(function* () {
-          yield* KiloSessionPromptQueue.cancel(sessionID)
-          PlanFollowup.abort(sessionID)
-          yield* abortIntakes(sessionID)
-          yield* input.cancel(sessionID)
-        }),
-      { concurrency: "unbounded", discard: true },
+    const cancel = (sessionID: SessionID) =>
+      Effect.gen(function* () {
+        yield* KiloSessionPromptQueue.cancel(sessionID)
+        PlanFollowup.abort(sessionID)
+        yield* abortIntakes(sessionID)
+        yield* input.cancel(sessionID, { background: input.scope !== "session" })
+      })
+
+    yield* input.stop(
+      input.sessionID,
+      Effect.gen(function* () {
+        const children = input.scope === "session" ? [] : yield* descendants(input.sessionID)
+        yield* Effect.forEach(
+          [input.sessionID, ...children],
+          (id) => (id === input.sessionID ? cancel(id) : input.stop(id, cancel(id))),
+          { concurrency: "unbounded", discard: true },
+        )
+      }),
     )
   })
 
