@@ -83,20 +83,23 @@ describe("session dock layout", () => {
     expect(read("webview-ui/src/components/shared/WorkingIndicator.tsx")).not.toContain("working-indicator-slot")
   })
 
-  it("keeps goal controls outside the busy dock and hides them in readonly views", () => {
+  it("keeps the compact goal menu above the input and outside the model controls", () => {
     const view = read("webview-ui/src/components/chat/ChatView.tsx")
     const start = view.indexOf("<Show when={goal()}>")
     const end = view.indexOf("<PromptInput", start)
-    const row = view.slice(start, end)
+    const menu = view.slice(start, end)
     expect(view).toContain("!goal()?.active && hasActions(hasMessages())")
+    expect(view).not.toContain('class="session-goal"')
     expect(start).toBeGreaterThan(view.indexOf("<SessionDock"))
     expect(end).toBeGreaterThan(start)
-    expect(row).toContain("<Show when={!props.readonly}>")
-    expect(row).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
-    expect(row).toContain('session.sendCommand("goal", "clear")')
-    expect(row).toContain('aria-label={language.t("session.goal.clear")}')
-    expect(row).toContain('<Tooltip value={language.t("session.goal.clear")}')
-    expect(row).not.toMatch(/session\.(status|submitting)|blocked\(/)
+    expect(read("webview-ui/src/components/chat/PromptInput.tsx")).not.toContain('"session.goal.label"')
+    expect(menu).toContain("<DropdownMenu.Trigger")
+    expect(menu).toContain("as={Button}")
+    expect(menu).toContain("disabled={props.readonly}")
+    expect(menu).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
+    expect(menu).toContain('session.sendCommand("goal", "clear")')
+    expect(menu).toContain('aria-label={language.t("session.goal.label")}')
+    expect(menu).not.toMatch(/session\.(status|submitting)|blocked\(/)
   })
 
   it("keeps the composer column as the only owner of the row", () => {

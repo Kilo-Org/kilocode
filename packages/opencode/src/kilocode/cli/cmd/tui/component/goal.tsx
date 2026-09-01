@@ -1,9 +1,10 @@
 import { createMemo, Show } from "solid-js"
-import type { RGBA } from "@opentui/core"
 import { useLocal } from "@tui/context/local"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
+import { useDialog } from "@tui/ui/dialog"
+import { DialogSelect } from "@tui/ui/dialog-select"
 import { useToast } from "@tui/ui/toast"
 import { errorMessage } from "@tui/util/error"
 
@@ -33,33 +34,38 @@ export namespace GoalPrompt {
     if (message) toast.show({ title: "Goal", message, variant: "info" })
   }
 
-  export function Row(props: {
-    goal: ReturnType<typeof read>
-    theme: { text: RGBA; textMuted: RGBA; success: RGBA }
-    run: (action: "pause" | "resume" | "clear") => void
-  }) {
+  export function Row(props: { goal: ReturnType<typeof read>; run: (action: "pause" | "resume" | "clear") => void }) {
+    const dialog = useDialog()
+    const { theme } = useTheme()
     return (
       <Show when={props.goal}>
-        {(goal) => (
-          <box flexDirection="row" gap={1} height={1} flexShrink={0} paddingLeft={1} paddingRight={1}>
-            <text fg={goal().active ? props.theme.success : props.theme.textMuted} flexShrink={0}>
-              Goal {goal().active ? "active" : "paused"}
-            </text>
-            <text fg={props.theme.text} flexGrow={1} flexShrink={1} minWidth={0} wrapMode="none" truncate>
-              {goal().text.replace(/\s+/g, " ").trim()}
-            </text>
-            <text
-              fg={props.theme.textMuted}
-              flexShrink={0}
-              onMouseUp={() => props.run(goal().active ? "pause" : "resume")}
-            >
-              /goal {goal().active ? "pause" : "resume"}
-            </text>
-            <text fg={props.theme.textMuted} flexShrink={0} onMouseUp={() => props.run("clear")}>
-              /goal clear
-            </text>
-          </box>
-        )}
+        <text
+          alignSelf="flex-start"
+          fg={props.goal?.active ? theme.success : theme.textMuted}
+          flexShrink={0}
+          onMouseUp={() =>
+            dialog.replace(() => (
+              <DialogSelect<"pause" | "resume" | "clear">
+                title={`Goal ${props.goal?.active ? "active" : "paused"}`}
+                renderFilter={false}
+                options={[
+                  {
+                    title: props.goal?.active ? "Pause" : "Resume",
+                    description: props.goal?.text.replace(/\s+/g, " ").trim(),
+                    value: props.goal?.active ? "pause" : "resume",
+                  },
+                  { title: "Clear", value: "clear" },
+                ]}
+                onSelect={(option) => {
+                  dialog.clear()
+                  props.run(option.value)
+                }}
+              />
+            ))
+          }
+        >
+          Goal {props.goal?.active ? "active" : "paused"} ▾
+        </text>
       </Show>
     )
   }
@@ -70,9 +76,7 @@ export function GoalRow(props: { sessionID: string }) {
   const sdk = useSDK()
   const local = useLocal()
   const toast = useToast()
-  const { theme } = useTheme()
   const session = createMemo(() => sync.session.get(props.sessionID))
-  const goal = createMemo(() => GoalPrompt.read(session()?.metadata))
 
   function run(action: "pause" | "resume" | "clear") {
     const model = local.model.current()
@@ -95,5 +99,5 @@ export function GoalRow(props: { sessionID: string }) {
       .catch((err) => toast.show({ title: "Goal command failed", message: errorMessage(err), variant: "error" }))
   }
 
-  return <GoalPrompt.Row goal={goal()} theme={theme} run={run} />
+  return <GoalPrompt.Row goal={GoalPrompt.read(session()?.metadata)} run={run} />
 }

@@ -8,7 +8,6 @@
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -403,34 +402,45 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             />
             <Show when={goal()}>
               {(goal) => (
-                <div class="session-goal" role="group" aria-label={language.t("session.goal.label")}>
-                  <span class="session-goal-text" title={goal().text}>
-                    {goal().text}
-                  </span>
-                  <span class="session-goal-state" role="status">
-                    {goal().active ? language.t("session.goal.active") : language.t("session.goal.paused")}
-                  </span>
-                  <Show when={!props.readonly}>
-                    <Button
+                <DropdownMenu placement="top-start" gutter={4}>
+                  <Tooltip
+                    value={`${language.t(goal().active ? "session.goal.active" : "session.goal.paused")}: ${goal().text}`}
+                    contentStyle={{ "max-width": "min(320px, calc(100vw - 16px))" }}
+                    placement="top"
+                  >
+                    <DropdownMenu.Trigger
+                      as={Button}
                       variant="ghost"
                       size="small"
-                      disabled={!server.isConnected()}
-                      onClick={() => session.sendCommand("goal", goal().active ? "pause" : "resume")}
+                      class="session-goal-trigger"
+                      disabled={props.readonly}
+                      aria-label={language.t("session.goal.label")}
                     >
-                      {goal().active ? language.t("session.goal.pause") : language.t("session.goal.resume")}
-                    </Button>
-                    <Tooltip value={language.t("session.goal.clear")} placement="top">
-                      <IconButton
-                        icon="close-small"
-                        size="small"
-                        variant="ghost"
-                        aria-label={language.t("session.goal.clear")}
+                      <Icon name="chevron-down" size="small" />
+                      <span>
+                        {language.t("session.goal.label")}: {goal().text}
+                      </span>
+                    </DropdownMenu.Trigger>
+                  </Tooltip>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content>
+                      <DropdownMenu.Item
                         disabled={!server.isConnected()}
-                        onClick={() => session.sendCommand("goal", "clear")}
-                      />
-                    </Tooltip>
-                  </Show>
-                </div>
+                        onSelect={() => session.sendCommand("goal", goal().active ? "pause" : "resume")}
+                      >
+                        <DropdownMenu.ItemLabel>
+                          {language.t(goal().active ? "session.goal.pause" : "session.goal.resume")}
+                        </DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        disabled={!server.isConnected()}
+                        onSelect={() => session.sendCommand("goal", "clear")}
+                      >
+                        <DropdownMenu.ItemLabel>{language.t("session.goal.clear")}</DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
               )}
             </Show>
             <Show when={!props.readonly}>
