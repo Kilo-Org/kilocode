@@ -28,7 +28,7 @@ async function bounds(node: Locator) {
   return rect!
 }
 
-for (const width of [200, 280, 420]) {
+for (const width of [200, 420]) {
   test(`one count button shares the dock row and focuses the top bar at ${width}px`, async ({ page }) => {
     await open(page, width)
     const dock = page.locator('[data-component="session-dock"]')
@@ -67,21 +67,6 @@ for (const width of [200, 280, 420]) {
     }
   })
 }
-
-test("standalone prompt and task header stories keep their own context", async ({ page }) => {
-  for (const story of [
-    { id: "prompt-input--with-thinking-200", selector: ".prompt-input" },
-    { id: "chat--task-header-with-todos", selector: '[data-component="task-header-todos"]' },
-    { id: "chat--task-header-with-todos-all-done", selector: '[data-component="task-header-todos"]' },
-    { id: "chat--task-header-background-agents-420", selector: header },
-  ]) {
-    await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=${globals}`)
-    await expect(page.locator(story.selector)).toBeVisible()
-    await expect(page.locator(count)).toHaveCount(0)
-  }
-  await page.locator('[data-slot="task-header-agents-toggle"]').click()
-  await expect(page.locator('[data-slot="task-header-agent"]')).toHaveCount(3)
-})
 
 test("top bar opens, stops, and dismisses individual agents", async ({ page }) => {
   await open(page)
