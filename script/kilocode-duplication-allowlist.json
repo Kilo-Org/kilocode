@@ -297,15 +297,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/opencode/src/kilocode/agent/index.ts", "packages/opencode/src/kilocode/agent/index.ts"],
-      "fingerprint": "9044b540f896a694",
-      "maxMatches": 1,
-      "maxTokens": 113,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": [
         "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx",
         "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx"

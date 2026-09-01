@@ -18,8 +18,7 @@ import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 
-export const bash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "ask",
+const readable: Record<string, "allow"> = {
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -48,6 +47,11 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
+}
+
+export const bash: Record<string, "allow" | "ask" | "deny"> = {
+  "*": "ask",
+  ...readable,
   "touch *": "allow",
   "mkdir *": "allow",
   "cp *": "allow",
@@ -62,34 +66,7 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
 
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
-  "cat *": "allow",
-  "head *": "allow",
-  "tail *": "allow",
-  "less *": "allow",
-  "ls *": "allow",
-  "tree *": "allow",
-  "pwd *": "allow",
-  "echo *": "allow",
-  "wc *": "allow",
-  "which *": "allow",
-  "type *": "allow",
-  "file *": "allow",
-  "diff *": "allow",
-  "du *": "allow",
-  "df *": "allow",
-  "date *": "allow",
-  "uname *": "allow",
-  "whoami *": "allow",
-  "printenv *": "allow",
-  "man *": "allow",
-  "grep *": "allow",
-  "rg *": "allow",
-  "ag *": "allow",
-  "sort *": "allow",
-  "uniq *": "allow",
-  "cut *": "allow",
-  "tr *": "allow",
-  "jq *": "allow",
+  ...readable,
   "git *": "deny",
   "git log *": "allow",
   "git show *": "allow",
