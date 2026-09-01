@@ -15,7 +15,6 @@ import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
@@ -35,6 +34,7 @@ import javax.swing.JViewport
 import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 import javax.swing.event.ListSelectionEvent
 
 internal class ActiveListView(
@@ -49,11 +49,14 @@ internal class ActiveListView(
     private val onClick: ((ActiveListItem) -> Unit)? = null,
     private val menu: ActiveListMenu<*>? = null,
     private val reorder: ActiveListReorder? = null,
+    private val onHover: ((ActiveListItem?) -> Unit)? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
     private val renderer = ActiveListRenderer(model, cfg, menu)
-    private val hover = cfg.hoverActions || menu != null
+    // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
+    // have to turn on the hover action bar to get it.
+    private val hover = cfg.hoverActions || menu != null || onHover != null
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
@@ -303,9 +306,11 @@ internal class ActiveListView(
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        val x = if (rect != null) target.x + target.width / 2 else target.x + JBUI.scale(48)
-        // Anchor to the icon's bottom edge so the balloon callout points at the icon, not its center.
-        val y = if (rect != null) target.y + target.height else target.y + target.height / 2
+        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
+        // a center anchor would bury the callout under the balloon body and cover the row instead of
+        // pointing at it.
+        val x = target.x + target.width / 2
+        val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
 
@@ -335,8 +340,18 @@ internal class ActiveListView(
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
-        if (value) setHovered(-1)
         list.setPaintBusy(value)
+        setLocked(value)
+    }
+
+    /**
+     * Blocks input on the list without the [setBusy] progress spinner. For a list whose own content
+     * already shows the work in flight, where a second spinner would just be noise.
+     */
+    @RequiresEdt
+    fun setLocked(value: Boolean) {
+        checkEdt()
+        if (value) setHovered(-1)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()
@@ -446,6 +461,33 @@ internal class ActiveListView(
         hovered = idx
         repaintRow(old)
         repaintRow(idx)
+        // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
+        // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
+        onHover?.invoke(model.items.getOrNull(idx))
+    }
+
+    /**
+     * The hovered row's bounds in the coordinates of [pane], or null when no row is hovered. Callers
+     * placing a popup beside a row need its edges, which [point] does not give: that answers a single
+     * anchor point at a fixed inset, for balloons that hang below a cell.
+     *
+     * Deliberately does not check whether the list is on screen. A caller has to resolve a root pane to
+     * have a [pane] at all, which is the same question asked earlier and more directly.
+     */
+    @RequiresEdt
+    fun hoveredBounds(pane: JComponent): Rectangle? {
+        checkEdt()
+        if (hovered < 0) return null
+        val bounds = list.getCellBounds(hovered, hovered) ?: return null
+        return SwingUtilities.convertRectangle(list, bounds, pane)
+    }
+
+    /** The visible extent of the list in the coordinates of [pane], for budgeting a popup's height. */
+    @RequiresEdt
+    fun visibleBounds(pane: JComponent): Rectangle? {
+        checkEdt()
+        val visible = list.visibleRect.takeIf { !it.isEmpty } ?: return null
+        return SwingUtilities.convertRectangle(list, visible, pane)
     }
 
     @RequiresEdt
@@ -580,23 +622,19 @@ internal class ActiveListView(
             ?: onActivate?.invoke(item)
     }
 
-    /**
-     * Dispatches a click on a button. A per-cell action or a metrics handler ([ActiveListMetrics])
-     * takes precedence; otherwise the click routes through the list-level [onCell] callback.
-     */
+    /** Dispatches a click from the row model, never the renderer stamp reused across rows. */
     private fun fire(item: ActiveListItem, id: String) {
-        when (id) {
-            ACTIVE_LIST_CHANGES_CELL -> {
-                item.metrics?.onChanges?.invoke()
-                return
-            }
-            ACTIVE_LIST_PR_CELL -> {
-                item.metrics?.onPr?.invoke()
-                return
-            }
+        val cell = item.cells.firstOrNull { it.id == id }?.action
+        if (cell != null) {
+            cell()
+            return
         }
-        val action = item.cells.firstOrNull { it.id == id }?.action
-        if (action != null) action() else onCell(item.key, id)
+        val region = activeListRegions(item)[id]
+        if (region != null) {
+            region()
+            return
+        }
+        onCell(item.key, id)
     }
 
     @RequiresEdt
@@ -714,7 +752,7 @@ internal class ActiveListView(
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && item.metrics == null) return baseCursor
+        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor
@@ -870,11 +908,23 @@ private data class ActiveListHeightRow(
     val description: String?,
     val icon: Any?,
     val section: String?,
-    val badges: List<ActiveListBadge>,
+    val badges: List<ActiveListHeightBadge>,
     val trailing: String?,
     val cells: List<ActiveListCell>,
     val disabled: Boolean,
     val progress: String?,
+)
+
+/**
+ * The parts of a badge that can change how tall a row wants to be. [ActiveListBadge.action] and its
+ * tooltip are deliberately left out: an owner is free to build the handler while answering `badges`,
+ * and a fresh lambda per read would make the height key miss on every sync.
+ */
+private data class ActiveListHeightBadge(
+    val text: String,
+    val style: UiStyle.Badge.Style,
+    val id: String?,
+    val icon: Any?,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -885,7 +935,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges,
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
         item.trailing,
         item.cells,
         item.disabled,

@@ -12,6 +12,8 @@ internal interface SessionCopyTarget {
 
     val copyToolbar: JComponent? get() = null
 
+    val copyCorner: Boolean get() = false
+
     @RequiresEdt
     fun copyText(): String?
 }

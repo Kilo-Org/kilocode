@@ -1,8 +1,11 @@
-import type { ReviewCommentEntry } from "../types/messages"
+import type { BrowserReference, ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
+import type { RevertPromptState } from "../context/session-utils"
 import { pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
 
+export const mentionDrafts = new Map<string, Pick<RevertPromptState, "paths" | "sessions">>()
 export const drafts = new Map<string, string>()
+export const browserDrafts = new Map<string, BrowserReference[]>()
 export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 export const imageDrafts = new Map<string, ImageAttachment[]>()
 export const scrollDrafts = new Map<string, number>()
@@ -16,21 +19,25 @@ export function savePromptDraft(
   comments: ReviewCommentEntry[],
   images: ImageAttachment[],
   scroll = 0,
+  browsers: BrowserReference[] = [],
 ) {
+  if (!text) mentionDrafts.delete(key)
   if (text) drafts.set(key, text)
   else drafts.delete(key)
   if (comments.length > 0) reviewDrafts.set(key, comments)
   else reviewDrafts.delete(key)
   if (images.length > 0) imageDrafts.set(key, images)
   else imageDrafts.delete(key)
-  if (text || comments.length > 0 || images.length > 0) scrollDrafts.set(key, scroll)
+  if (browsers.length > 0) browserDrafts.set(key, browsers)
+  else browserDrafts.delete(key)
+  if (text || comments.length > 0 || images.length > 0 || browsers.length > 0) scrollDrafts.set(key, scroll)
   else scrollDrafts.delete(key)
 }
 
 function remove(raw: string | undefined) {
   if (!raw) return
   const suffix = `:${raw}`
-  for (const map of [drafts, reviewDrafts, imageDrafts, scrollDrafts]) {
+  for (const map of [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts, mentionDrafts]) {
     for (const key of map.keys()) {
       if (typeof key === "string" && key.endsWith(suffix)) map.delete(key)
     }

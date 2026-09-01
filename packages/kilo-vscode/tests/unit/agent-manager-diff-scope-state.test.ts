@@ -22,6 +22,14 @@ describe("agent-manager webview diff scope descriptors", () => {
     expect(descriptors[3]!.id).toBe("local#session:ses_abc")
   })
 
+  it("preserves legacy and malformed ids and parses the final separator", () => {
+    expect(parseDiffId("local")).toEqual({ ctx: "local", scope: "branch" })
+    expect(parseDiffId("wt_1#bogus")).toEqual({ ctx: "wt_1#bogus", scope: "branch" })
+    expect(parseDiffId("wt_1#")).toEqual({ ctx: "wt_1#", scope: "branch" })
+    expect(parseDiffId("wt#1#staged")).toEqual({ ctx: "wt#1", scope: "staged" })
+    expect(parseDiffId("local#session:")).toEqual({ ctx: "local", scope: "session", sessionId: "" })
+  })
+
   it("round-trips the session descriptor id", () => {
     expect(parseDiffId(composeDiffId("wt_1", "session", "ses_abc"))).toEqual({
       ctx: "wt_1",

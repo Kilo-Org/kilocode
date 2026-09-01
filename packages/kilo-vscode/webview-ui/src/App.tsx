@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
@@ -17,6 +17,7 @@ import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrid
 import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
+import { strongest } from "./utils/session-activity"
 import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
@@ -25,7 +26,7 @@ registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
-import { MigrationWizard } from "./components/migration" // legacy-migration
+import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
 import "./styles/chat.css"
@@ -221,14 +222,15 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
-  // legacy-migration: state-driven flag independent of currentView to avoid
-  // race conditions with SettingsEditorProvider's navigate messages.
-  const [migrationNeeded, setMigrationNeeded] = createSignal(false)
-  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
+  const [migration, setMigration] = createSignal(false)
   const session = useSession()
   const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
+  const activity = createMemo(() =>
+    strongest([session.currentSessionID(), ...(tabs?.ids() ?? [])].map(session.activityFor)),
+  )
+  createEffect(() => vscode.postMessage({ type: "sessionActivity", state: activity() }))
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -311,12 +313,6 @@ const AppContent: Component = () => {
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
-      // legacy-migration: state-driven migration wizard
-      if (message?.type === "migrationState") {
-        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
-        setMigrationSource(message.source)
-        setMigrationNeeded(message.needed)
-      }
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
@@ -360,9 +356,8 @@ const AppContent: Component = () => {
           surface={topBarSurface}
         />
       </Show>
-      {/* legacy-migration start — state-driven overlay, independent of currentView */}
       <Show
-        when={migrationNeeded()}
+        when={migration()}
         fallback={
           <Switch
             fallback={
@@ -405,10 +400,7 @@ const AppContent: Component = () => {
                 agentManagerProjectId={agentManagerProjectId()}
                 agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
-                onMigrationClick={(source) => {
-                  setMigrationSource(source)
-                  setMigrationNeeded(true)
-                }}
+                onMigrationClick={() => setMigration(true)}
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
@@ -417,13 +409,8 @@ const AppContent: Component = () => {
           </Switch>
         }
       >
-        <MigrationWizard
-          source={migrationSource()}
-          onBack={() => setMigrationNeeded(false)}
-          onComplete={() => setMigrationNeeded(false)}
-        />
+        <MigrationWizard onBack={() => setMigration(false)} onComplete={() => setMigration(false)} />
       </Show>
-      {/* legacy-migration end */}
     </div>
   )
 }

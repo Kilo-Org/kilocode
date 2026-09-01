@@ -334,7 +334,21 @@ function getMarkdownShikiWorkerConfig() {
   }
 }
 
+function notices() {
+  const deps = {
+    "playwright-core": ["LICENSE", "NOTICE", "ThirdPartyNotices.txt"],
+    "chromium-bidi": ["LICENSE"],
+  }
+  for (const [name, files] of Object.entries(deps)) {
+    const root = path.dirname(require.resolve(`${name}/package.json`))
+    const dir = path.join(__dirname, "dist", "licenses", name)
+    fs.mkdirSync(dir, { recursive: true })
+    for (const file of files) fs.copyFileSync(path.join(root, file), path.join(dir, file))
+  }
+}
+
 async function main() {
+  notices()
   const extensionConfig = getExtensionConfig()
   const webviewsConfig = getWebviewsConfig()
   const shikiWorkerConfig = getShikiWorkerConfig()

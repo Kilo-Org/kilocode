@@ -20,7 +20,6 @@ import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.CompactionConfigDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
@@ -72,6 +71,7 @@ import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -914,31 +914,6 @@ object KiloCliDataParser {
         return "{${fields.joinToString(",")}}"
     }
 
-    /**
-     * Build the partial JSON body for `PATCH /global/config`.
-     */
-    fun buildConfigPartial(update: ConfigUpdateDto): String {
-        val sb = StringBuilder("{")
-        var first = true
-        fun sep() { if (!first) sb.append(","); first = false }
-
-        val model = update.model
-        if (model != null) {
-            sep(); sb.append(""""model":${escape(model)}""")
-        }
-        val agent = update.agent
-        if (agent != null) {
-            sep(); sb.append(""""default_agent":${escape(agent)}""")
-        }
-        val temp = update.temperature
-        if (temp != null) {
-            val target = agent ?: "ask"
-            sep(); sb.append(""""agent":{"$target":{"temperature":$temp}}""")
-        }
-        sb.append("}")
-        return sb.toString()
-    }
-
     fun buildConfigPatch(patch: ConfigPatchDto): String {
         val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant", "default_agent")
         val obj = buildJsonObject {
@@ -1141,6 +1116,7 @@ object KiloCliDataParser {
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
+            finish = obj.str("finish"),
             error = error?.let { parseError(it) },
             summary = summary,
         )
@@ -1615,6 +1591,7 @@ object KiloCliDataParser {
                 )
             },
             revert = parseRevert(obj["revert"].obj()),
+            share = obj["share"].obj()?.str("url")?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 

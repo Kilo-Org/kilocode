@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.actions.ChatMoveToWorktreeAction
 import ai.kilocode.client.actions.ChatNewWorktreeAction
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.BranchStatusDto
@@ -19,6 +20,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Component
 import java.awt.Container
 import java.awt.Point
@@ -121,7 +123,7 @@ class BranchDockTest : BasePlatformTestCase() {
         val dock = dock()
         edt {
             dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
             dock.setBusy(true)
         }
         assertFalse(edt { dock.isVisible })
@@ -184,7 +186,7 @@ class BranchDockTest : BasePlatformTestCase() {
         val dock = dock()
         edt {
             dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
             dock.setHasSession(true)
         }
         val p = update(ChatMoveToWorktreeAction(), dock)
@@ -196,7 +198,7 @@ class BranchDockTest : BasePlatformTestCase() {
         val dock = dock()
         edt {
             dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1), DiffFileDto("src/B.kt", 1, 0)))
+            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1), DiffFileDto("src/B.kt", 1, 0)))
         }
         // A new sidebar session has no id until its first prompt; the local changes alone are worth
         // moving, so the action is offered with changes-only wording.
@@ -282,6 +284,56 @@ class BranchDockTest : BasePlatformTestCase() {
         assertEquals(1, fired)
     }
 
+    fun `test local only changes enable both actions without displaying a summary`() {
+        val dock = dockWithNewWorktree()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", availability = GhAvailability.OK))
+            dock.setLocal(listOf(DiffFileDto("rename.kt", 0, 0)))
+        }
+        assertTrue(edt { dock.isVisible })
+        assertTrue(update(ChatMoveToWorktreeAction(), dock).isEnabledAndVisible)
+        assertTrue(update(ChatNewWorktreeAction(), dock).isEnabledAndVisible)
+        assertEquals(1, edt { dock.changeCount() })
+        assertTrue(edt { components(dock).filterIsInstance<ChangesPanel>().all { !it.isVisible } })
+        edt { dock.setLocal(emptyList()) }
+        assertFalse(edt { dock.isVisible })
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test base changes do not enable transfer actions or inflate local counts`() {
+        val dock = dockWithNewWorktree()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", availability = GhAvailability.OK))
+            dock.setChanges(listOf(DiffFileDto("base.kt", 11, 3), DiffFileDto("binary.dat", 0, 0)))
+        }
+        assertTrue(edt { dock.isVisible })
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+        assertFalse(update(ChatNewWorktreeAction(), dock).isVisible)
+        assertEquals(0, edt { dock.changeCount() })
+        edt { dock.setLocal(listOf(DiffFileDto("local.kt", 99, 21))) }
+        assertEquals(1, edt { dock.changeCount() })
+        assertEquals(KiloBundle.message("session.dock.move.tooltip.changes.one"), update(ChatMoveToWorktreeAction(), dock).description)
+        edt { dock.setChanges(emptyList()) }
+        assertEquals(1, edt { dock.changeCount() })
+        assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test PR and standalone paths use compact retained summaries`() {
+        val dock = dock()
+        edt {
+            dock.setChanges(listOf(DiffFileDto("base.kt", 5, 2)))
+            dock.setLocal(listOf(DiffFileDto("local.kt", 99, 21)))
+            val nodes = components(dock).filterIsInstance<ChangesPanel>()
+            assertEquals(2, nodes.size)
+            repeat(100) { n ->
+                dock.setBranch(prBranch().copy(pr = if (n % 2 == 0) prBranch().pr else null))
+                val shown = nodes.single { generateSequence(it as Component) { item -> item.parent }.all { item -> item.isVisible } }
+                assertEquals(listOf("1 file", "-2", "+5"), components(shown).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text })
+                assertEquals(nodes, components(dock).filterIsInstance<ChangesPanel>())
+            }
+        }
+    }
+
     private fun dock(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}) }
 
     private fun dockWithNewWorktree(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}) }
@@ -293,6 +345,7 @@ class BranchDockTest : BasePlatformTestCase() {
         pr = WorktreePrDto("/repo", 7, GhState.OPEN, "https://pr/7", "Title"),
     )
 
+    @RequiresEdt
     private fun firstAttrs(title: SimpleColoredComponent): SimpleTextAttributes {
         val iter = title.iterator()
         check(iter.hasNext()) { "missing title fragment" }
@@ -300,11 +353,13 @@ class BranchDockTest : BasePlatformTestCase() {
         return iter.textAttributes
     }
 
+    @RequiresEdt
     private fun layout(root: Component) {
         root.doLayout()
         if (root is Container) root.components.forEach(::layout)
     }
 
+    @RequiresEdt
     private fun components(root: Component): List<Component> {
         val out = mutableListOf<Component>()
         fun visit(item: Component) {

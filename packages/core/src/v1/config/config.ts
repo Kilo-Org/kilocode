@@ -304,6 +304,9 @@ export const Info = Schema.Struct({
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
+      task_model_selection: Schema.optional(Schema.Boolean).annotate({
+        description: "Allow task subagents to select a model, provider, and reasoning effort",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),

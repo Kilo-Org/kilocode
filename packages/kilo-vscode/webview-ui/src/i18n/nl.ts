@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Provider verbinden",
 
+  "session.activity.waiting": "Wachten op een antwoord of goedkeuring.",
+  "session.activity.error": "Fout of verbinding verbroken.",
+  "session.activity.retry": "Automatisch opnieuw proberen.",
+  "session.activity.busy": "In uitvoering.",
+  "session.activity.done": "Beurt voltooid.",
+  "session.activity.idle": "Niet actief.",
+
   "command.session.new": "Nieuwe sessie",
   "command.session.show.changes": "Wijzigingen tonen",
   "command.review.toggle": "Review in-/uitschakelen",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.send": "Verzenden",
+  "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
@@ -884,6 +892,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
+  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
+  "settings.experimental.taskModelSelection.description":
+    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1033,6 +1044,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
   "settings.context.compaction.title": "Compactie",
+  "settings.context.compactionModel.title": "Compactiemodel",
+  "settings.context.compactionModel.description":
+    "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
+  "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1140,59 +1155,16 @@ export const dict = {
   "question.summary": "{{n}} van de {{total}} vragen",
   "common.review": "Beoordelen",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migreer van Legacy Versie",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migratie",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migreer instellingen van een eerdere installatie van Kilo Code, inclusief provider API-sleutels en standaard model.",
   "settings.aboutKiloCode.rooImport.description": "Importeer gespreksgeschiedenis van een Roo Code installatie.",
   "settings.aboutKiloCode.rooImport.button": "Sessies importeren uit Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
-  "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
-  "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
-  "migration.whatsNew.features.performance.detail":
-    "Parallelle tool calls en subagents laten je agent meer tegelijk aanpakken — zodat je minder tijd besteedt aan wachten en meer tijd aan releasen.",
-  "migration.whatsNew.features.interface.title": "Gestroomlijnde Interface",
-  "migration.whatsNew.features.interface.detail": "Minder afleiding, makkelijker en sneller te lezen.",
-  "migration.whatsNew.features.agentManager.title": "Agentenbeheer",
-  "migration.whatsNew.features.agentManager.detail":
-    "Een uniforme interface voor het parallel uitvoeren van meerdere agents, elk op zijn eigen worktree — monitor de voortgang, wissel van context en bekijk wijzigingen op één plek.",
-  "migration.whatsNew.features.foundation.title": "Gedeelde Basis",
-  "migration.whatsNew.features.foundation.detail":
-    "Één kleine, efficiënte kern voor elk Kilo-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
-  "migration.whatsNew.blogLink": "Lees de volledige aankondiging",
-  "migration.whatsNew.docsLink": "Wat is er nieuw & veelgestelde vragen",
-  "migration.whatsNew.continue": "Doorgaan",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migreer Je Instellingen",
-  "migration.migrate.subtitle":
-    "We hebben instellingen gevonden van je vorige installatie. Hier is wat we kunnen overzetten.",
+  "migration.roo.button": "Sessies importeren",
+  "migration.roo.empty": "Geen Roo Code-sessies gevonden.",
   "migration.migrate.selectLabel": "Selecteer wat je wilt migreren",
   "migration.migrate.chatHistory": "Chatsessies & Geschiedenis",
-  "migration.migrate.button": "Migreer Instellingen",
-  "migration.migrate.skip": "Overslaan",
-  "migration.migrate.keysDetected": "{{count}} sleutels gedetecteerd",
-  "migration.migrate.serversConfigured": "{{count}} server(s) geconfigureerd",
-  "migration.migrate.modesFound": "{{count}} modus(sen) gevonden",
-  "migration.migrate.nothingToMigrate": "Er is niets om te migreren gevonden in de oude instellingen.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Provider API-sleutels",
-  "migration.select.mcpServers": "MCP Servers",
-  "migration.select.customModes": "Aangepaste Modi / Agents",
-  "migration.select.defaultModel": "Standaard Model",
-  "migration.select.autoApproval": "Automatische Goedkeuring",
-  "migration.select.language": "UI Taal",
-  "migration.select.autocomplete": "Automatisch Aanvullen Instellingen",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} van de {{total}} items succesvol gemigreerd.",
-  "migration.complete.cleanup": "Verwijder oude instellingendata",
-  "migration.complete.cleanupDescription":
-    "Dit verwijdert de oude instellingen uit de VS Code-opslag. U zult deze migratie niet opnieuw kunnen uitvoeren.",
   "migration.complete.done": "Klaar",
   "migration.migrate.sessionsDetected": "{{count}} sessies gedetecteerd",
   "migration.error.continue": "Doorgaan",
@@ -1226,7 +1198,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Onbekende datum",
   "migration.sessionFormat.unknown": "Onbekend",
   "migration.sessionFormat.unknownError": "Onbekende fout",
-  // legacy-migration end
 
   "error.details.show": "Details",
 
@@ -1234,6 +1205,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} to-do's voltooid",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
+  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
