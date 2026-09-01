@@ -160,18 +160,6 @@
     },
     {
       "files": [
-        "packages/kilo-ui/src/components/message-part.tsx",
-        "packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx"
-      ],
-      "fingerprint": "16e0edc3d99b9858",
-      "maxMatches": 1,
-      "maxTokens": 111,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
         "packages/kilo-vscode/src/services/notebook/bridge.ts"
       ],
