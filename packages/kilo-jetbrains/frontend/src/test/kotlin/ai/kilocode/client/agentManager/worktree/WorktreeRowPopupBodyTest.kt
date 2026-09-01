@@ -166,13 +166,13 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a worktree with no pull request still breaks its changes out`() {
+    fun `test the uncommitted changes are broken out beside the committed ones`() {
         val body = body()
 
         edt {
             body.update(
-                stats = WorktreeStatsDto(path, ahead = 1, behind = 2),
-                pull = null,
+                stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, ahead = 1, behind = 2),
+                pull = pr(GhReview.NONE, GhChecksDto()),
                 name = "feature-x",
                 dirty = WorktreeDirtyDto(path, additions = 6, deletions = 2, files = 4),
             )
@@ -180,13 +180,13 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         }
 
         edt {
-            // No pull request chrome to show, but the counters are the reason the popup opened.
-            assertTrue(components(body).filterIsInstance<JBLabel>().none { it.icon is FilledBadgeIcon })
-            assertFalse(components(body).filterIsInstance<SimpleColoredComponent>().single().isVisible)
+            // The PR chrome leads, and every count the row cannot fit follows it.
+            assertNotNull(components(body).filterIsInstance<JBLabel>().find { it.icon is FilledBadgeIcon })
+            assertTrue(components(body).filterIsInstance<SimpleColoredComponent>().single().isVisible)
             val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
             assertTrue(changes.isVisible)
             assertEquals(
-                listOf("4 files", "-2", "+6", "1", "2"),
+                listOf("4 files", "-2", "+6", "1", "2", "3 files", "-4", "+9"),
                 components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text },
             )
         }
