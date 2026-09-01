@@ -69,7 +69,7 @@ internal class ActiveList(
             it.textEditor.emptyText.text = placeholder
             wireActiveListSearch(it, view)
             addToTop(it)
-            scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.sm())
+            scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.SM)
         } ?: run { scroll.border = JBUI.Borders.empty() }
         addToCenter(scroll)
     }

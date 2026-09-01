@@ -65,6 +65,9 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.ExpandedItemListCellRendererWrapper
+import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.IJSwingUtilities
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
@@ -74,6 +77,7 @@ import java.awt.event.MouseEvent
 import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -252,6 +256,47 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         iter.next()
 
         assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+    }
+
+    /**
+     * End-to-end cover for an IDE interface zoom on the real panel. Only the platform's own refresh is
+     * applied — raise the `*.font` defaults and the user scale like `LafManagerImpl.patchLafFonts`, then
+     * walk the tree — because that walk never reaches the shared row renderer and the list is what has
+     * to refresh it. See `ActiveListScaleTest` for the unit-level detail.
+     */
+    fun `test worktree row height grows after an IDE zoom instead of staying at the pre zoom size`() {
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        // Worktree rows carry a "Local worktrees" section, so the list keeps fixedCellHeight at -1 and
+        // BasicListUI measures each row from the renderer instead — this is the exact call it makes.
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        assertEquals(-1, edt { list.fixedCellHeight })
+        val before = edt { rowHeight(list) }
+        assertTrue("expected a real row height, got $before", before > 0)
+
+        val label = UIManager.getFont("Label.font")
+        val scale = JBUIScale.scale(1f)
+        val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
+        val fonts = keys.associateWith { UIManager.getFont(it) }
+        try {
+            edt {
+                keys.forEach { UIManager.put(it, label.deriveFont(label.size2D * 2f)) }
+                JBUIScale.setUserScaleFactorForTest(scale * 2f)
+                IJSwingUtilities.updateComponentTreeUI(panel)
+            }
+
+            val after = edt { rowHeight(list) }
+            assertTrue("expected the row height to grow with the zoom, was $before then $after", after > before)
+        } finally {
+            edt {
+                JBUIScale.setUserScaleFactorForTest(scale)
+                fonts.forEach { (key, font) -> UIManager.put(key, font) }
+            }
+        }
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
@@ -638,6 +683,65 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         assertSame(WorktreeIcons.locked, row(panel, 0).icon)
+    }
+
+    /**
+     * Zooming in and back out repeatedly must land on exactly the original row height. Rows carrying
+     * diff metrics and a PR badge are the tallest shape the panel renders, and the row height is the
+     * maximum across rows, so a single value that latches instead of being re-derived shows up here as
+     * padding that never shrinks back.
+     */
+    fun `test worktree row height round trips through repeated IDE zoom changes`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += main()
+        rpc.listed += item
+        rpc.statsResult = WorktreeStatsListDto(
+            listOf(WorktreeStatsDto(item.path, additions = 742, deletions = 169, ahead = 2, behind = 41, files = 14, base = "origin/main")),
+        )
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        waitUntil { row(panel, 0).metrics != null || row(panel, 1).metrics != null }
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(360, 600)
+            list.doLayout()
+        }
+        val label = UIManager.getFont("Label.font")
+        val scale = JBUIScale.scale(1f)
+        val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
+        val fonts = keys.associateWith { UIManager.getFont(it) }
+        // Applies a real IDE zoom — the *.font defaults and the user scale — then refreshes the tree.
+        val zoom = { factor: Float ->
+            edt {
+                keys.forEach { UIManager.put(it, label.deriveFont(label.size2D * factor)) }
+                JBUIScale.setUserScaleFactorForTest(scale * factor)
+                IJSwingUtilities.updateComponentTreeUI(panel)
+            }
+            edt { rowHeight(list) }
+        }
+        try {
+            val base = edt { rowHeight(list) }
+            assertTrue("expected a real row height, got $base", base > 0)
+
+            val zoomed = zoom(1.25f)
+            assertTrue("expected the row height to grow when zooming in, was $base then $zoomed", zoomed > base)
+
+            // Two full round trips, so a value that grows per zoom event cannot hide behind a single one.
+            assertEquals(base, zoom(1f))
+            assertEquals(zoomed, zoom(1.25f))
+            assertEquals(base, zoom(1f))
+        } finally {
+            edt {
+                JBUIScale.setUserScaleFactorForTest(scale)
+                fonts.forEach { (key, font) -> UIManager.put(key, font) }
+            }
+        }
     }
 
     fun `test worktree row shows metrics from status service`() {
@@ -1171,6 +1275,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun main(): WorktreeDto {
         val base = project.basePath!!
         return WorktreeDto(base, "repo", "main", base, main = true)
+    }
+
+    /** The preferred height BasicListUI itself measures for row 0 when fixedCellHeight is -1. */
+    @Suppress("UNCHECKED_CAST")
+    private fun rowHeight(rawList: JBList<*>): Int {
+        val list = rawList as JBList<Any?>
+        val renderer = ExpandedItemListCellRendererWrapper.unwrap(list.cellRenderer)
+        return renderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, false).preferredSize.height
     }
 
     private fun worktree(name: String): WorktreeDto {

@@ -113,7 +113,7 @@ internal class DiffEditorView(
     private val outdated = AtomicBoolean(false)
     private val refreshing = AtomicBoolean(false)
     private val tree = buildFileTree(start)
-    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
+    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.PAD)
     private val splitter = OnePixelSplitter(false, 0.25f)
     private val select = Debouncer<Int>(scope, parent) { show(it) }
     private val banner = EditorNotificationPanel(EditorNotificationPanel.Status.Warning).apply {

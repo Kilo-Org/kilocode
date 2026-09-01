@@ -52,6 +52,9 @@ internal class ChangesPanel @RequiresEdt constructor(
     private val behind = if (mode == Mode.FULL) counter("/icons/arrow-down-to-line.svg", "worktree.stats.behind.tooltip") else null
     private val separator = if (mode == Mode.FULL) JSeparator(SwingConstants.VERTICAL) else null
     private var state: State? = null
+    private var row: Stack? = null
+    // JPanel's constructor calls updateUI() before any field above exists, so guard the refresh.
+    private var wired = false
 
     init {
         isOpaque = false
@@ -61,12 +64,37 @@ internal class ChangesPanel @RequiresEdt constructor(
             add(base, BorderLayout.CENTER)
             addMouseListener(base.listener)
         } else {
-            add(Stack.horizontal(UiStyle.Gap.md()).next(local!!).next(separator!!).next(ahead!!).next(behind!!).next(base))
+            row = Stack.horizontal(UiStyle.Gap.md()).next(local!!).next(separator!!).next(ahead!!).next(behind!!).next(base)
+            add(row)
         }
         visit(this) { it.isFocusable = false }
+        // JBFont rescales itself when the IDE font changes, and the lazy colour re-reads the theme,
+        // so neither needs re-applying on a Look-and-Feel change — and re-applying them would clobber
+        // the font a host pushes in through [setFont].
         font = JBFont.small()
         foreground = JBColor.lazy { UiStyle.Colors.weak() }
+        wired = true
+        syncScale()
         setActions(onBase, onLocal)
+    }
+
+    @RequiresEdt
+    override fun updateUI() {
+        super.updateUI()
+        if (!wired) return
+        syncScale()
+    }
+
+    /**
+     * Re-derives the spacing for the current scale. A layout manager captures its gap and
+     * [JBLabel.setIconTextGap] its pixel value when they are set, so an IDE zoom would otherwise leave
+     * the stats strip with its pre-zoom gaps.
+     */
+    @RequiresEdt
+    private fun syncScale() {
+        row?.space = UiStyle.Gap.md()
+        ahead?.iconTextGap = UiStyle.Gap.xs()
+        behind?.iconTextGap = UiStyle.Gap.xs()
     }
 
     @RequiresEdt
@@ -175,6 +203,7 @@ internal class ChangesPanel @RequiresEdt constructor(
     private inner class Group @RequiresEdt constructor(fill: Boolean) : JPanel(BorderLayout()) {
         private val count = JBLabel().apply { foreground = JBColor.lazy { UiStyle.Colors.weak() } }
         private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
+        private lateinit var row: Stack
         private var over = false
         var action: (() -> Unit)? = null
         val listener = object : MouseAdapter() {
@@ -203,7 +232,8 @@ internal class ChangesPanel @RequiresEdt constructor(
             isOpaque = false
             isVisible = false
             stat.isVisible = false
-            add(Stack.horizontal(UiStyle.Gap.sm()).next(count).next(stat).align(HAlign.LEFT, VAlign.CENTER))
+            row = Stack.horizontal(UiStyle.Gap.sm()).next(count).next(stat)
+            add(row.align(HAlign.LEFT, VAlign.CENTER))
             visit(this) {
                 it.isFocusable = false
                 it.addMouseListener(listener)
@@ -226,7 +256,9 @@ internal class ChangesPanel @RequiresEdt constructor(
         @RequiresEdt
         override fun updateUI() {
             super.updateUI()
-            border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
+            border = JBUI.Borders.empty(0, UiStyle.Gap.SM)
+            // JPanel's constructor runs updateUI() before the row exists.
+            if (this::row.isInitialized) row.space = UiStyle.Gap.sm()
         }
 
         @RequiresEdt
