@@ -111,15 +111,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-gateway/src/auth/device-auth-tui.ts", "packages/kilo-gateway/src/auth/device-auth.ts"],
-      "fingerprint": "e6ac9a2221c1deb4",
-      "maxMatches": 1,
-      "maxTokens": 194,
-      "kind": "legacy",
-      "owner": "kilo-gateway",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": [
         "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
         "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
