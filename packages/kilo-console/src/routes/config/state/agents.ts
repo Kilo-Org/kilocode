@@ -4,7 +4,7 @@ import type { AgentBuilderPreviewResponse, Model, Provider } from "@kilocode/sdk
 import { previewAgent, saveAgent, type AgentPayload, type Scope, type Snapshot } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, friendly, sorted, toMode, toolCapabilities, toolName } from "../../../shared/utils"
-import { choices } from "./models"
+import { available, choices } from "./models"
 import {
   defaults,
   defs,
@@ -42,12 +42,6 @@ export const snippets = [
   "Inspect relevant files first, then summarize the root cause before editing.",
   "Run the smallest relevant validation checks and report any remaining failures.",
 ]
-
-function order(a: Provider, b: Provider) {
-  if (a.id === "kilo") return -1
-  if (b.id === "kilo") return 1
-  return a.name.localeCompare(b.name)
-}
 
 function same(item: Item, ref: Favorite) {
   if (item.provider.id === ref.providerID && item.model.id === ref.modelID) return true
@@ -178,15 +172,7 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
   const [search, setSearch] = createSignal("")
   const [chosen, setChosen] = createSignal<string[]>([])
 
-  const providers = createMemo(() => {
-    const data = snap()
-    if (!data) return []
-    const ids = new Set([...Object.keys(data.effective.provider ?? {}), ...data.providers.connected])
-    return data.providers.all
-      .filter((provider) => ids.has(provider.id))
-      .filter((provider) => Object.keys(provider.models).length > 0)
-      .sort(order)
-  })
+  const providers = createMemo(() => available(snap()))
 
   const all = createMemo(() => {
     return providers().flatMap((provider) =>
