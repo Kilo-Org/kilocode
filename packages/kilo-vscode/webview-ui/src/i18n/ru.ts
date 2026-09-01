@@ -1273,8 +1273,6 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Отменено",
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
-  "task.backgroundAgents.badge.one": "1 агент",
-  "task.backgroundAgents.badge.many": "Агентов: {{count}}",
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",

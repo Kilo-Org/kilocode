@@ -1279,8 +1279,6 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Otkazano",
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
-  "task.backgroundAgents.badge.one": "1 agent",
-  "task.backgroundAgents.badge.many": "Agenti: {{count}}",
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",

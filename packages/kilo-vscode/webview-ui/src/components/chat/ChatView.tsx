@@ -234,36 +234,27 @@ const Content: Component<ChatViewProps> = (props) => {
   const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
 
   const count = () => background.active().length
-  const badge = () =>
-    language.t(count() === 1 ? "task.backgroundAgents.badge.one" : "task.backgroundAgents.badge.many", {
+  const agents = () =>
+    language.t(count() === 1 ? "task.backgroundAgents.running.one" : "task.backgroundAgents.running.many", {
       count: String(count()),
     })
   const activity = () => (
     <Show when={count() > 0 && !props.readonly}>
-      <Tooltip
-        value={
-          background.waiting() > 0
-            ? language.t("task.backgroundAgents.waiting")
-            : language.t(count() === 1 ? "task.backgroundAgents.running.one" : "task.backgroundAgents.running.many", {
-                count: String(count()),
-              })
-        }
-        placement="top"
+      <Button
+        class="session-background-agents"
+        variant="ghost"
+        size="small"
+        title={background.waiting() > 0 ? language.t("task.backgroundAgents.waiting") : agents()}
+        aria-label={agents()}
+        aria-controls={background.target}
+        aria-expanded={background.open()}
+        onClick={background.reveal}
       >
-        <Button
-          class="session-background-agents"
-          variant="ghost"
-          size="small"
-          aria-controls={background.target}
-          aria-expanded={background.open()}
-          onClick={background.reveal}
-        >
-          <Show when={background.waiting() > 0} fallback={<Spinner class="chat-spinner-small" />}>
-            <Icon name="warning" size="small" />
-          </Show>
-          {badge()}
-        </Button>
-      </Tooltip>
+        <Show when={background.waiting() > 0} fallback={<Spinner class="chat-spinner-small" />}>
+          <Icon name="warning" size="small" />
+        </Show>
+        {count()}
+      </Button>
     </Show>
   )
 

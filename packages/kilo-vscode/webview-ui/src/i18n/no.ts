@@ -1270,8 +1270,6 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Avbrutt",
   "task.backgroundAgents.status.error": "Feil",
   "task.backgroundAgents.untitled": "Bakgrunnsagent",
-  "task.backgroundAgents.badge.one": "1 agent",
-  "task.backgroundAgents.badge.many": "{{count}} agenter",
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",

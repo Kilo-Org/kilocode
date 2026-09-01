@@ -1245,8 +1245,6 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "ملغى",
   "task.backgroundAgents.status.error": "خطأ",
   "task.backgroundAgents.untitled": "وكيل خلفي",
-  "task.backgroundAgents.badge.one": "وكيل واحد",
-  "task.backgroundAgents.badge.many": "الوكلاء: {{count}}",
   "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",

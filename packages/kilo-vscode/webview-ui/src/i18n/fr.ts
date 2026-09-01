@@ -1311,8 +1311,6 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Annulé",
   "task.backgroundAgents.status.error": "Erreur",
   "task.backgroundAgents.untitled": "Agent en arrière-plan",
-  "task.backgroundAgents.badge.one": "1 agent",
-  "task.backgroundAgents.badge.many": "{{count}} agents",
   "task.backgroundAgents.stopAll": "Tout arrêter ({{count}})",
   "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
   "settings.saveBar.discard": "Ignorer",

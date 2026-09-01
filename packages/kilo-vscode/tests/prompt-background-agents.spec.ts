@@ -12,7 +12,8 @@ async function open(page: Page, width = 420) {
   await page.addStyleTag({
     content: "*, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }",
   })
-  await expect(page.locator(count)).toHaveText("2 agents")
+  await expect(page.locator(count)).toHaveText("2")
+  await expect(page.locator(count)).toHaveAttribute("aria-label", "2 background agents")
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -106,7 +107,7 @@ test("top bar opens, stops, and dismisses individual agents", async ({ page }) =
     .toEqual([{ type: "cancelBackgroundJob", sessionID: parent, jobID: "job-limits", requestID: expect.any(String) }])
   await expect(rows.filter({ hasText: "Trace request limits" })).toHaveAttribute("data-status", "cancelled")
   await expect(rows.filter({ hasText: "Check prompt layout" })).toHaveAttribute("data-status", "running")
-  await expect(page.locator(count)).toHaveText("1 agent")
+  await expect(page.locator(count)).toHaveAttribute("aria-label", "1 background agent")
   await expect(page.locator(`${header} [data-slot="task-header-agents-actions"]`)).toHaveText("Stop all (1)")
   await list.getByRole("button", { name: "Dismiss: Trace request limits", exact: true }).click()
   await expect(rows).toHaveCount(2)
@@ -124,7 +125,7 @@ for (const action of ["Escape", "Stop"]) {
       : page.locator(".prompt-input-hint-actions").getByRole("button", { name: "Stop", exact: true }).click())
     await expect.poll(() => events(page, "abort")).toEqual([{ type: "abort", sessionID: parent, scope: "session" }])
     await expect(page.getByTestId("background-fixture")).toHaveAttribute("data-status", "idle")
-    await expect(page.locator(count)).toHaveText("2 agents")
+    await expect(page.locator(count)).toHaveText("2")
     expect(await events(page, "cancelBackgroundJob")).toEqual([])
   })
 }
