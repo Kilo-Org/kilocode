@@ -193,18 +193,6 @@
         "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
         "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
       ],
-      "fingerprint": "73d7672dd2e6cd26",
-      "maxMatches": 1,
-      "maxTokens": 155,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
-        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
-      ],
       "fingerprint": "9020d3c20123ef72",
       "maxMatches": 1,
       "maxTokens": 104,
