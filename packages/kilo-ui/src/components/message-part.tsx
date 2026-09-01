@@ -170,7 +170,7 @@ export type PartComponent = Component<MessagePartProps>
 
 export const PART_MAPPING: Record<string, PartComponent | undefined> = {}
 
-function relativizeProjectPath(path: string, directory?: string) {
+export function relativizeProjectPath(path: string, directory?: string) {
   if (!path) return ""
   if (!directory) return path
   if (directory === "/") return path

@@ -205,7 +205,7 @@ describe("handlePermissionResponse", () => {
 
   it("does not treat other SDK-wrapped errors as stale", async () => {
     const error = new Error("Internal server error", {
-      cause: { status: 500, body: { name: "InternalServerError" } },
+      cause: { status: 500, body: { name: "InternalServerError", _tag: "NotFound" } },
     })
     const { fake, messages, permDirs } = ctx({ tracked: ["s1"], errors: { reply: error } })
     const spy = spyOn(console, "error").mockImplementation(() => {})

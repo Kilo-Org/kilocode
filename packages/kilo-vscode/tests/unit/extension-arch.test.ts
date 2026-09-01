@@ -165,7 +165,7 @@ describe("Extension — package.json command sync", () => {
     expect(setting).toMatchObject({
       type: "string",
       scope: "application",
-      default: "vscode",
+      default: "agentManager",
       enum: ["vscode", "agentManager"],
     })
     expect(setting.enumDescriptions).toHaveLength(setting.enum.length)

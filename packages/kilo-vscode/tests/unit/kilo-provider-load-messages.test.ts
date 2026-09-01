@@ -2,6 +2,7 @@ import { describe, it, expect, spyOn } from "bun:test"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
+import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
@@ -79,7 +80,7 @@ function createClient(options?: {
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
-  const aborted: { sessionID: string; directory?: string }[] = []
+  const aborted: { sessionID: string; directory?: string; scope?: "session" | "tree" }[] = []
   const deleted: { sessionID: string; directory?: string }[] = []
   const deletedMessages: Array<{
     sessionID: string
@@ -126,7 +127,7 @@ function createClient(options?: {
         prompted.push(params)
         return { data: undefined }
       },
-      abort: async (params: { sessionID: string; directory?: string }) => {
+      abort: async (params: { sessionID: string; directory?: string; scope?: "session" | "tree" }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
         await options?.abortDeferred?.promise
@@ -213,7 +214,6 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
     onNotificationDismissed: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
@@ -252,7 +252,8 @@ type ProviderInternals = {
   seedSessionStatusMap: (reconcile?: boolean) => Promise<void>
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
-  handleAbort: (sid?: string) => Promise<void>
+  setupWebviewMessageHandler: (webview: unknown) => void
+  handleAbort: (sid?: string, scope?: "session" | "tree") => Promise<void>
   resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
@@ -291,6 +292,32 @@ function mockMaxCost(internal: ProviderInternals, value: number) {
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it.each([undefined, "session", "tree"] as const)(
+    "forwards %s abort scope without extra child or process stops",
+    async (scope) => {
+      const client = createClient()
+      const { provider, internal } = makeProvider(client)
+      const listener = Promise.withResolvers<(message: AbortRequest) => Promise<void>>()
+      internal.setupWebviewMessageHandler({
+        onDidReceiveMessage: (handler: (message: AbortRequest) => Promise<void>) => {
+          listener.resolve(handler)
+          return { dispose: () => {} }
+        },
+      })
+      const receive = await listener.promise
+      status(internal, "busy")
+      status(internal, "busy", "/repo", "child")
+
+      await receive({ type: "abort", sessionID: "s1", scope })
+
+      expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo", scope }])
+      expect(client.stopped).toEqual([])
+      expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+      expect(internal.sessionStatusMap.get("child")).toBe("busy")
+      provider.dispose()
+    },
+  )
+
   it("aborts a session whose busy status was seeded without an SSE event", async () => {
     const client = createClient()
     const { internal, sent } = makeProvider(client)

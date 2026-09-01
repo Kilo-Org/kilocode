@@ -6,6 +6,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
@@ -154,9 +155,17 @@ internal class KiloToolWindowSetupService(
             }
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
-                    if (event.operation == ContentManagerEvent.ContentOperation.add && event.content === agentContent) {
-                        agentManagerPanel.refresh()
-                    }
+                    if (event.operation != ContentManagerEvent.ContentOperation.add) return
+                    // Only on the way in: opening the Agent Manager is a deliberate act that often
+                    // follows an authorization or PR change made elsewhere, and this is the tab whose
+                    // banner and badges read gh state. Switching to Chat reveals no gh-dependent UI —
+                    // SessionUi re-reads branch/PR state itself once it becomes showing — so probing
+                    // then only spends a call to warm a cache nothing is waiting on.
+                    if (event.content !== agentContent) return
+                    // The coordinator folds a submit that cannot run now into one trailing probe, so
+                    // tab churn cannot stack up gh calls.
+                    service<GhStatusCoordinator>().sync("tab-switch")
+                    agentManagerPanel.refresh()
                 }
             }
             toolWindow.contentManager.addContentManagerListener(listener)
