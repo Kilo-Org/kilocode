@@ -209,7 +209,7 @@ class AgentManagerPanel(
         return object : BorderLayoutPanel() {
             override fun getBackground(): Color = activeListToolWindowBackground()
         }.apply {
-            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            border = JBUI.Borders.empty(UiStyle.Gap.SM)
             addToCenter(list)
         }
     }
