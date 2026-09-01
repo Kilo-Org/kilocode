@@ -2121,6 +2121,14 @@ export const SessionProvider: ParentComponent = (props) => {
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
+  function dismiss(sid?: string) {
+    const suggestion = scopedSuggestions(sid)[0]
+    if (suggestion) dismissSuggestion(suggestion.id)
+    for (const q of scopedQuestions(sid)) {
+      dismissQuestion(q.id)
+    }
+  }
+
   function sendMessage(
     text: string,
     providerID?: string,
@@ -2166,11 +2174,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
-    for (const q of scopedQuestions(sid)) {
-      dismissQuestion(q.id)
-    }
+    dismiss(sid)
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
@@ -2267,15 +2271,13 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const messageID = Identifier.ascending("message")
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
-    for (const q of scopedQuestions(sid)) {
-      dismissQuestion(q.id)
-    }
+    if (command !== "goal") dismiss(sid)
 
     if (scope) {
-      clearClose(scope)
-      addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      if (command !== "goal") {
+        clearClose(scope)
+        addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      }
       startSubmission(scope, messageID)
       if (!sid && (!draftID || draftSessionID() === scope)) {
         setUserClearedSession(false)
@@ -2334,7 +2336,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     const messageID = [...pendingSubmissions].reverse().find(([, sid]) => sid === scope)?.[0]
-    if (!aborts.request(scope, status(), messageID) || !sessionID) return
+    if ((!currentSession()?.goal?.active && !aborts.request(scope, status(), messageID)) || !sessionID) return
 
     vscode.postMessage({
       type: "abort",

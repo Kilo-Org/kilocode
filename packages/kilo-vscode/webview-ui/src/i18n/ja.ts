@@ -745,6 +745,12 @@ export const dict = {
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",
+  "session.goal.label": "目標",
+  "session.goal.active": "実行中",
+  "session.goal.paused": "一時停止中",
+  "session.goal.pause": "一時停止",
+  "session.goal.resume": "再開",
+  "session.goal.clear": "目標をクリア",
   "session.costAlert.header": "セッションコストアラート",
   "session.costAlert.continue": "続行",
   "session.costAlert.question":

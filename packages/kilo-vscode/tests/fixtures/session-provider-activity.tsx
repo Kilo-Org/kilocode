@@ -281,6 +281,56 @@ try {
   value.setCurrentSessionID("root")
   await check("root", "idle")
   await check("background", "idle")
+
+  const goal = { text: "Fix the failing tests", active: true }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal } })
+  assert.equal(value.currentSession()?.goal?.text, goal.text)
+  assert.equal(value.currentSession()?.goal?.active, true)
+  value.setCurrentSessionID("background")
+  assert.equal(value.currentSession()?.goal, undefined)
+  value.setCurrentSessionID("root")
+  value.abort()
+  assert.deepEqual(sent.at(-1), { type: "abort", sessionID: "root", scope: "session" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await emit({ type: "questionRequest", question: { id: "goal-question", sessionID: "root", questions: [] } })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "goal-suggestion", sessionID: "root", text: "Continue?", actions: [] },
+  })
+  const count = value.messages().length
+  for (const args of ["pause", "", "resume", "clear", "A new goal"]) {
+    const start = sent.length
+    value.sendCommand("goal", args)
+    const command = sent.at(-1) as { type: string; messageID: string; sessionID: string; arguments: string }
+    const posted = sent.slice(start) as { type: string }[]
+    assert.equal(posted.filter((message) => message.type === "sendCommand").length, 1)
+    assert.equal(
+      posted.some((message) =>
+        ["questionReply", "questionReject", "suggestionDismiss", "permissionResponse"].includes(message.type),
+      ),
+      false,
+    )
+    assert.equal(command.type, "sendCommand")
+    assert.equal(command.sessionID, "root")
+    assert.equal(command.arguments, args)
+    assert.equal(value.messages().length, count)
+    assert.equal(value.submitting(), true)
+    await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
+    assert.equal(value.submitting(), false)
+    assert.equal(value.status(), "busy")
+    assert.equal(value.questions().length, 1)
+    assert.equal(value.suggestions().length, 1)
+  }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active: false } } })
+  assert.equal(value.currentSession()?.goal?.active, false)
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: null } })
+  assert.equal(value.currentSession()?.goal, null)
+  await emit({ type: "questionResolved", requestID: "goal-question" })
+  await emit({ type: "suggestionResolved", requestID: "goal-suggestion" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  const start = sent.length
+  value.abort()
+  assert.equal(sent.length, start)
   for (const update of [setOperation, setRun]) {
     update(true)
     await settle()

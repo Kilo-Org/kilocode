@@ -696,6 +696,12 @@ export const dict = {
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",
+  "session.goal.label": "Goal",
+  "session.goal.active": "Active",
+  "session.goal.paused": "Paused",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Resume",
+  "session.goal.clear": "Clear goal",
   "session.costAlert.header": "Session Cost Alert",
   "session.costAlert.continue": "Continue",
   "session.costAlert.question":

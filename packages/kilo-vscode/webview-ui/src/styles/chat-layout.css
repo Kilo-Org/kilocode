@@ -69,6 +69,31 @@
   flex-shrink: 0;
 }
 
+.session-goal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 var(--prompt-min-gutter, 6px) 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-md);
+  color: var(--text-base);
+  font-size: var(--font-size-small);
+}
+
+.session-goal-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-goal-state {
+  flex-shrink: 0;
+  color: var(--text-weak);
+}
+
 /* ============================================
    Message List
    ============================================ */

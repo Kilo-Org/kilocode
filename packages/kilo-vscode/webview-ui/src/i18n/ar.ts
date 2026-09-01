@@ -735,6 +735,12 @@ export const dict = {
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",
+  "session.goal.label": "الهدف",
+  "session.goal.active": "نشط",
+  "session.goal.paused": "متوقف مؤقتًا",
+  "session.goal.pause": "إيقاف مؤقت",
+  "session.goal.resume": "استئناف",
+  "session.goal.clear": "مسح الهدف",
   "session.costAlert.header": "تنبيه تكلفة الجلسة",
   "session.costAlert.continue": "متابعة",
   "session.costAlert.question":

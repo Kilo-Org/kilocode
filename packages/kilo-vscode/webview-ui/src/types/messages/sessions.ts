@@ -46,6 +46,7 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+  goal?: { text: string; active: boolean } | null
   revert?: {
     messageID: string
     partID?: string

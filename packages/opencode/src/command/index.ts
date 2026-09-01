@@ -115,6 +115,13 @@ const layer = Layer.effect(
       }
       // kilocode_change start
       commands[Default.REVIEW] = reviewCommand()
+      commands.goal = {
+        name: "goal",
+        description: "Keep working toward a session goal. /goal <objective> or pause, resume, clear",
+        source: "command",
+        template: "$ARGUMENTS",
+        hints: ["<objective | pause | resume | clear>"],
+      }
       commands["resume-claude"] = SessionResume.resumeClaude
       commands["resume-codex"] = SessionResume.resumeCodex
       // kilocode_change end

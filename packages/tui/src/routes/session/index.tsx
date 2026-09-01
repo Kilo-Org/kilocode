@@ -95,6 +95,7 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { GoalRow } from "@/kilocode/cli/cmd/tui/component/goal"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
@@ -1423,6 +1424,7 @@ export function Session() {
               </scrollbox>
               <box flexShrink={0}>
                 {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
+                <GoalRow sessionID={route.sessionID} />
                 <Show when={!terminal() && permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}

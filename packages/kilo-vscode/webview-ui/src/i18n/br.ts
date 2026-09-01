@@ -752,6 +752,12 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrompido",
   "session.outcome.error": "Turno falhou",
   "session.outcome.finish": "Motivo da conclusão: {{reason}}",
+  "session.goal.label": "Objetivo",
+  "session.goal.active": "Ativo",
+  "session.goal.paused": "Pausado",
+  "session.goal.pause": "Pausar",
+  "session.goal.resume": "Retomar",
+  "session.goal.clear": "Limpar objetivo",
   "session.costAlert.header": "Alerta de custo da sessão",
   "session.costAlert.continue": "Continuar",
   "session.costAlert.question":

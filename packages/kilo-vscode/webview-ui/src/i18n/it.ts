@@ -1171,6 +1171,12 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrotto.",
   "session.outcome.error": "Turno fallito.",
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+  "session.goal.label": "Obiettivo",
+  "session.goal.active": "Attivo",
+  "session.goal.paused": "In pausa",
+  "session.goal.pause": "Pausa",
+  "session.goal.resume": "Riprendi",
+  "session.goal.clear": "Cancella obiettivo",
   "session.costAlert.header": "Avviso costo sessione",
   "session.costAlert.continue": "Continua",
   "session.costAlert.question":

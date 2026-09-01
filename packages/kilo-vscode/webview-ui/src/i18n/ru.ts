@@ -749,6 +749,12 @@ export const dict = {
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",
+  "session.goal.label": "Цель",
+  "session.goal.active": "Активна",
+  "session.goal.paused": "Приостановлена",
+  "session.goal.pause": "Пауза",
+  "session.goal.resume": "Возобновить",
+  "session.goal.clear": "Очистить цель",
   "session.costAlert.header": "Оповещение о стоимости сессии",
   "session.costAlert.continue": "Продолжить",
   "session.costAlert.question":

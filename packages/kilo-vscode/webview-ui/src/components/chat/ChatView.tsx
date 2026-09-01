@@ -8,6 +8,7 @@
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -64,6 +65,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const canContinueInWorktree = () => props.continueInWorktree === true
 
   const id = () => session.currentSessionID()
+  const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.
   const hasMessages = () => session.messages().length > 0 || session.submitting()
@@ -99,7 +101,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest() || session.submitting() || session.status() !== "idle"
+  const dock = () =>
+    !props.readonly || !!goal() || !!permissionRequest() || session.submitting() || session.status() !== "idle"
   // The session dock stays empty while another surface owns the interaction:
   // a permission card, a pending question or suggestion, or agent requirements.
   // A spinner there would claim the agent is working while it waits on the user.
@@ -108,7 +111,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
+      if (
+        e.key !== "Escape" ||
+        (!session.submitting() && session.status() === "idle" && !goal()?.active) ||
+        e.defaultPrevented
+      )
+        return
       e.preventDefault()
       session.abort()
     }
@@ -390,9 +398,41 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </Show>
             <SessionDock
               blocked={dockBlocked()}
-              hasActions={() => !props.readonly && hasActions(hasMessages())}
+              hasActions={() => !props.readonly && !goal()?.active && hasActions(hasMessages())}
               actions={() => renderActions(hasMessages())}
             />
+            <Show when={goal()}>
+              {(goal) => (
+                <div class="session-goal" role="group" aria-label={language.t("session.goal.label")}>
+                  <span class="session-goal-text" title={goal().text}>
+                    {goal().text}
+                  </span>
+                  <span class="session-goal-state" role="status">
+                    {goal().active ? language.t("session.goal.active") : language.t("session.goal.paused")}
+                  </span>
+                  <Show when={!props.readonly}>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      disabled={!server.isConnected()}
+                      onClick={() => session.sendCommand("goal", goal().active ? "pause" : "resume")}
+                    >
+                      {goal().active ? language.t("session.goal.pause") : language.t("session.goal.resume")}
+                    </Button>
+                    <Tooltip value={language.t("session.goal.clear")} placement="top">
+                      <IconButton
+                        icon="close-small"
+                        size="small"
+                        variant="ghost"
+                        aria-label={language.t("session.goal.clear")}
+                        disabled={!server.isConnected()}
+                        onClick={() => session.sendCommand("goal", "clear")}
+                      />
+                    </Tooltip>
+                  </Show>
+                </div>
+              )}
+            </Show>
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}

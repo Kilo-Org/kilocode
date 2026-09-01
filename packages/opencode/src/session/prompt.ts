@@ -93,6 +93,7 @@ import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
+import { Goal } from "@/kilocode/session/goal" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -199,9 +200,14 @@ export const layer = Layer.effect(
 
     // kilocode_change start
     const control = yield* KiloSessionControl.make
-    const cancel = Effect.fn("SessionPrompt.cancel")(function* (
+    const cancel: (
+      sessionID: SessionID,
+      scope?: KiloSessionControl.AbortScope,
+      preserve?: boolean,
+    ) => Effect.Effect<void> = Effect.fn("SessionPrompt.cancel")(function* (
       sessionID: SessionID,
       scope: KiloSessionControl.AbortScope = "tree",
+      preserve = false,
     ) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
       yield* KiloSessionPrompt.cancelTree({
@@ -211,8 +217,14 @@ export const layer = Layer.effect(
         drain,
         events,
         cancel: state.cancel,
-        stop: control.stop,
+        stop: (id, work) => control.stop(id, goals.pause(id, preserve && id === sessionID).pipe(Effect.andThen(work))),
       })
+    })
+    const goals = yield* Goal.make({
+      control,
+      cancel: (id, preserve) => cancel(id, "tree", preserve),
+      create: (input) => createUserMessage(input),
+      prompt: (input, ticket) => prompt(input, ticket),
     })
     // kilocode_change end
 
@@ -1416,6 +1428,9 @@ export const layer = Layer.effect(
     ) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
         const background = KiloSessionControl.background(input.parts)
+        if (!prior && input.parts.some((part) => part.type !== "text" || !part.synthetic)) {
+          yield* goals.pause(input.sessionID)
+        }
         const ticket =
           prior ??
           (yield* control.begin(
@@ -2000,6 +2015,7 @@ export const layer = Layer.effect(
     const shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError> = Effect.fn(
       "SessionPrompt.shell",
     )(function* (input: ShellInput) {
+      yield* goals.pause(input.sessionID) // kilocode_change
       const ready = yield* Latch.make()
       return yield* state.startShell(
         input.sessionID,
@@ -2271,6 +2287,10 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
+      // kilocode_change start
+      if (input.command === "goal") return yield* goals.command(input)
+      yield* goals.pause(input.sessionID)
+      // kilocode_change end
       const ticket = yield* control.begin(input.sessionID, false) // kilocode_change
       yield* Effect.logInfo("command", {
         "session.id": input.sessionID,

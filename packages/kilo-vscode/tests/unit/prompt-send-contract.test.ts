@@ -57,11 +57,13 @@ describe("sendMessage dismisses pending tool requests", () => {
   })
 
   it("dismisses suggestions before sending", () => {
-    expect(body).toContain("dismissSuggestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissSuggestion")
   })
 
   it("rejects questions before sending", () => {
-    expect(body).toContain("dismissQuestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissQuestion")
   })
 })
 
@@ -74,11 +76,13 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 
   it("dismisses suggestions before sending", () => {
-    expect(body).toContain("dismissSuggestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissSuggestion")
   })
 
   it("rejects questions before sending", () => {
-    expect(body).toContain("dismissQuestion")
+    expect(body).toContain("dismiss(sid)")
+    expect(extractFunctionBody(source, "dismiss")).toContain("dismissQuestion")
   })
 
   it("applies model, agent, and variant overrides when provided by a command", () => {

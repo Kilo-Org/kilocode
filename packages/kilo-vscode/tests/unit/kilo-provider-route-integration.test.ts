@@ -1,4 +1,5 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn } from "bun:test"
+import * as vscode from "vscode"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
@@ -109,6 +110,9 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   startStatsPolling: () => void
   contextSessionID: string | undefined
+  checkpoints: Map<string, Promise<void>>
+  sessionStatusMap: Map<string, string>
+  retryAbortControllers: Map<string, AbortController>
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
   refreshSessionDetails: (sessionID: string, dir: string) => void
@@ -475,6 +479,78 @@ describe("KiloProvider route integration", () => {
       (m) => typeof m === "object" && m !== null && (m as { type?: string }).type === "sendMessageFailed",
     )
     expect(failed, "expected a sendMessageFailed message for the ambiguous share command").toBeTruthy()
+  })
+
+  it.each(["Fix failing tests", "", "pause", "resume", "clear"])(
+    "completes goal %j without checkpoints, retries, or run status changes",
+    async (args) => {
+      const { connection } = mockConnection()
+      const calls: unknown[] = []
+      const client = connection.getClient()
+      client.session.command = async (input) => {
+        calls.push(input)
+        return {
+          data: {
+            parts: [
+              { type: "text", text: "Goal paused" },
+              { type: "reasoning", text: "hidden" },
+            ],
+          },
+        } as Awaited<ReturnType<typeof client.session.command>>
+      }
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => "/goal/worktree",
+      })
+      const internal = provider as unknown as ProviderInternals
+      connect(internal)
+      internal.isWebviewReady = true
+      const sent: unknown[] = []
+      internal.webview = { postMessage: async (message) => sent.push(message) }
+      const pending = Promise.withResolvers<void>()
+      const retry = new AbortController()
+      internal.checkpoints.set("goal-session", pending.promise)
+      internal.retryAbortControllers.set("goal-session", retry)
+      internal.sessionStatusMap.set("goal-session", "busy")
+      const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+      try {
+        await internal.handleSendCommand("goal", args, "goal-message", "goal-session")
+        expect(calls).toHaveLength(1)
+        expect(calls.at(0)).toMatchObject({
+          sessionID: "goal-session",
+          directory: "/goal/worktree",
+          command: "goal",
+          arguments: args,
+        })
+        expect(sent).toContainEqual({ type: "sessionCommandCompleted", messageID: "goal-message" })
+        expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionStatus" }))
+        expect(internal.sessionStatusMap.get("goal-session")).toBe("busy")
+        expect(internal.retryAbortControllers.get("goal-session")).toBe(retry)
+        expect(notice.mock.calls).toEqual(args ? [] : [["Goal paused"]])
+      } finally {
+        pending.resolve()
+        notice.mockRestore()
+      }
+    },
+  )
+
+  it("reports goal command errors without marking an active run idle", async () => {
+    const { connection } = mockConnection()
+    const client = connection.getClient()
+    client.session.command = async () =>
+      ({ error: "Goal is unavailable", response: new Response(null, { status: 409 }) }) as Awaited<
+        ReturnType<typeof client.session.command>
+      >
+    const provider = new KiloProvider({} as never, connection)
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.isWebviewReady = true
+    const sent: unknown[] = []
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+    internal.sessionStatusMap.set("goal-session", "busy")
+    await internal.handleSendCommand("goal", "resume", undefined, "goal-session")
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sendMessageFailed", error: "Goal is unavailable" }))
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionStatus" }))
+    expect(internal.sessionStatusMap.get("goal-session")).toBe("busy")
   })
 
   it("runs a share command on a unique session route against its exact directory", async () => {

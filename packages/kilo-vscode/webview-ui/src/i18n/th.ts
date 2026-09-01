@@ -741,6 +741,12 @@ export const dict = {
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
+  "session.goal.label": "เป้าหมาย",
+  "session.goal.active": "ทำงานอยู่",
+  "session.goal.paused": "หยุดชั่วคราว",
+  "session.goal.pause": "พัก",
+  "session.goal.resume": "ดำเนินการต่อ",
+  "session.goal.clear": "ล้างเป้าหมาย",
   "session.costAlert.header": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "session.costAlert.continue": "ดำเนินการต่อ",
   "session.costAlert.question":

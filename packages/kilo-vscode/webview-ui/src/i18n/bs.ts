@@ -752,6 +752,12 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.goal.label": "Cilj",
+  "session.goal.active": "Aktivan",
+  "session.goal.paused": "Pauziran",
+  "session.goal.pause": "Pauziraj",
+  "session.goal.resume": "Nastavi",
+  "session.goal.clear": "Obriši cilj",
   "session.costAlert.header": "Upozorenje o trošku sesije",
   "session.costAlert.continue": "Nastavi",
   "session.costAlert.question":

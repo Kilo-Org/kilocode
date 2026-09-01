@@ -1023,6 +1023,13 @@ export const RunCommand = effectCmd({
         }
         // kilocode_change end
 
+        // kilocode_change start
+        if (args.command === "goal") {
+          await KiloRun.goal(client, sessionID, message, emit)
+          return
+        }
+        // kilocode_change end
+
         // Validate agent if specified
         const agent = await pickAgent(client)
 

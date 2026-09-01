@@ -4119,7 +4119,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
       if (!resolved) return
-      if (sandbox) await sandbox
+      const stopping = command === "goal" && (args.trim() === "pause" || args.trim() === "clear")
+      if (sandbox && !stopping) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
 
@@ -4135,26 +4136,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         source: f.source,
       }))
 
-      await this.checkpoints.get(sid)
-      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
-        this.withRetry(
-          () =>
-            this.client!.session.command({
-              sessionID: sid,
-              directory: dir,
-              command,
-              arguments: args,
-              messageID,
-              model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-              agent,
-              variant,
-              parts,
-              snapshotInitialization: this.opts.snapshotInitialization,
-            }),
-          sid,
+      if (command !== "goal") await this.checkpoints.get(sid)
+      const send = () =>
+        this.client!.session.command({
+          sessionID: sid,
+          directory: dir,
+          command,
+          arguments: args,
           messageID,
-        ),
-      )
+          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+          agent,
+          variant,
+          parts,
+          snapshotInitialization: this.opts.snapshotInitialization,
+        })
+      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", async () => {
+        if (command !== "goal") return this.withRetry(send, sid, messageID)
+        const result = await send()
+        if (result.error) throw result.error
+        if (args.trim()) return
+        const message = result.data?.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("\n")
+        if (message) void vscode.window.showInformationMessage(message)
+      })
       if (messageID && completesWithoutStatus(command)) {
         this.postMessage({ type: "sessionCommandCompleted", messageID })
       }
@@ -4368,6 +4374,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       trackedSessionIds: this.trackedSessionIds,
       connectionService: this.connectionService,
       postMessage: (msg) => this.postMessage(msg),
+      notify: (message) => void vscode.window.showInformationMessage(message),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
       gatherEditorContext: () => this.gatherEditorContext(),
       runWithMessageConfirmation: (id, label, run) => runWithMessageConfirmation(this.confirmations, id, label, run),

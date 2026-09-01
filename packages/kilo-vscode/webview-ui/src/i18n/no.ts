@@ -712,6 +712,12 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.goal.label": "Mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Satt på pause",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Fortsett",
+  "session.goal.clear": "Fjern mål",
   "session.costAlert.header": "Varsel om øktkostnad",
   "session.costAlert.continue": "Fortsett",
   "session.costAlert.question":
