@@ -84,7 +84,6 @@ function connection() {
     onClearPendingPrompts: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,

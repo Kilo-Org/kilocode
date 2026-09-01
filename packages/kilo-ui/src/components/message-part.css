@@ -528,10 +528,11 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
   gap: 8px;
   padding: 8px;
   font-family: var(--font-family-sans);
-  font-size: var(--kilo-font-size-13);
+  font-size: var(--kilo-font-size-12);
   line-height: var(--line-height-large);
 
   [data-slot="question-answer-item"] {
+    font-size: inherit;
     display: flex;
     flex-direction: column;
     gap: 2px;

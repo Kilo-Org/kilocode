@@ -17,19 +17,39 @@ import javax.swing.UIManager
 /** Shared Swing style tokens that are not tied to one session component. */
 object UiStyle {
 
-    /** DPI-aware spacing primitives used across custom Swing layouts. */
+    /**
+     * DPI-aware spacing primitives used across custom Swing layouts.
+     *
+     * The functions return pixels for the current scale and suit manual layout and painting. The
+     * constants are the raw steps and belong in APIs that scale what they are handed — notably
+     * [JBUI.Borders] and [JBUI.insets], whose `JBInsets` re-applies the user scale on every read.
+     * Passing a function result there scales twice, which stays invisible at 100% and drifts as
+     * soon as the IDE is zoomed.
+     */
     object Gap {
-        fun xs() = JBUI.scale(2)
+        const val XS = 2
 
-        fun sm() = JBUI.scale(4)
+        const val SM = 4
 
-        fun md() = JBUI.scale(6)
+        const val MD = 6
 
-        fun lg() = JBUI.scale(8)
+        const val LG = 8
 
-        fun pad() = JBUI.scale(12)
+        const val PAD = 12
 
-        fun xl() = JBUI.scale(16)
+        const val XL = 16
+
+        fun xs() = JBUI.scale(XS)
+
+        fun sm() = JBUI.scale(SM)
+
+        fun md() = JBUI.scale(MD)
+
+        fun lg() = JBUI.scale(LG)
+
+        fun pad() = JBUI.scale(PAD)
+
+        fun xl() = JBUI.scale(XL)
     }
 
     /** Theme-aware component geometry tokens. */

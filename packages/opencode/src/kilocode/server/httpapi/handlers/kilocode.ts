@@ -34,6 +34,8 @@ import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain"
+import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
@@ -51,6 +53,7 @@ import {
   RemoveSkillPayload,
   RemoveSnapshotPayload,
   ResumeSessionPayload,
+  DrainSessionPayload,
   BackgroundJobInfo,
   BackgroundJobsQuery,
 } from "../groups/kilocode"
@@ -66,6 +69,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const notebook = yield* Notebook.Service
     const background = yield* BackgroundJob.Service
     const runState = yield* SessionRunState.Service
+    const drain = yield* SessionDrain.Service
     const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
     const fs = yield* FSUtil.Service
@@ -77,6 +81,16 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const question = yield* Question.Service
     const events = yield* EventV2Bridge.Service
     const scope = yield* Scope.Scope
+
+    const drainSession = Effect.fn("KilocodeHttpApi.drainSession")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof DrainSessionPayload.Type
+    }) {
+      yield* mapStorageNotFound(sessions.get(ctx.params.sessionID))
+      yield* drain.wait(ctx.params.sessionID)
+      yield* events.publish(Drained, { sessionID: ctx.params.sessionID, token: ctx.payload.token })
+      return true
+    })
 
     const resumeSession = Effect.fn("KilocodeHttpApi.resumeSession")(function* (ctx: {
       params: { sessionID: SessionID }
@@ -334,6 +348,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
 
     return handlers
       .handle("resumeSession", resumeSession)
+      .handle("drainSession", drainSession)
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)

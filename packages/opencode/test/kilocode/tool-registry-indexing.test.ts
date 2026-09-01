@@ -339,6 +339,7 @@ describe("kilocode tool registry indexing", () => {
       save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      browser: def("browser_open"),
       chart: def("chart"),
       image: def("generate_image"),
       terminal: def("interactive_terminal"),
@@ -375,6 +376,18 @@ describe("kilocode tool registry indexing", () => {
         "send_file",
       ])
 
+      for (const client of ["cli", "run", "acp"]) {
+        process.env["KILO_CLIENT"] = client
+        const enabled = KiloToolRegistry.extra(tools, { experimental: { task_model_selection: true } }).map(
+          (tool) => tool.id,
+        )
+        expect(enabled).toContain("agent_manager_models")
+        expect(enabled).not.toContain("agent_manager")
+        expect(
+          KiloToolRegistry.extra(tools, { experimental: { task_model_selection: false } }).map((tool) => tool.id),
+        ).not.toContain("agent_manager_models")
+      }
+
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
         "semantic_search",
@@ -385,6 +398,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notify_user",
         "send_file",
       ])
@@ -401,6 +415,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notebook_read",
         "notebook_edit",
         "notebook_execute",
@@ -415,6 +430,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notify_user",
         "send_file",
       ])
