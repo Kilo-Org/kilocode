@@ -214,18 +214,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/NewWorktreeDialog.tsx",
-        "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx"
-      ],
-      "fingerprint": "0772e382c935aa93",
-      "maxMatches": 1,
-      "maxTokens": 122,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/src/context/session-variant-store.ts",
         "packages/opencode/src/kilocode/cli/cmd/run/variant.ts"
       ],
