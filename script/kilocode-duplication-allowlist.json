@@ -238,18 +238,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/ProjectSidebarBody.tsx",
-        "packages/kilo-vscode/webview-ui/agent-manager/SidebarBody.tsx"
-      ],
-      "fingerprint": "94761ffc9ac99167",
-      "maxMatches": 1,
-      "maxTokens": 155,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/src/context/session-variant-store.ts",
         "packages/opencode/src/kilocode/cli/cmd/run/variant.ts"
       ],
