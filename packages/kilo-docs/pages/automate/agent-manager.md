@@ -307,6 +307,16 @@ The Branch scope also has a base-branch picker next to it for overriding the com
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
+## Browser previews (experimental)
+
+Agent Manager can show a live preview of a local application next to the chat, so frontend feedback is based on the rendered page instead of a hand-written description. The browser is session-scoped and experimental: enable **Browser Automation** under **Settings → Experimental** (the `kilo-code.new.experimental.browserAutomation` setting, off by default), then toggle the Browser panel from the session tab bar.
+
+- **Preview with developer tools** — open a local URL in the panel and expand the embedded DevTools frontend. Console diagnostics are grouped below the preview.
+- **Element feedback** — use the inspect control to click an element on the page. Kilo captures a unique selector, a bounded DOM breadcrumb, sanitized HTML, and relevant colors, and attaches them to your next message as a reference card. The agent receives that context alongside your instruction, so it can find the right source even when a page has several similar elements.
+- **Source hints** — when the page provides one and the file can be verified inside the session workspace, a captured element includes its source file and location.
+
+The browser runs headlessly; the page preview stays inside Agent Manager. By default it uses your installed Google Chrome; disable **Use System Chrome** in the same settings section to use a compatible Playwright Chromium instead.
+
 ## Documents inspector
 
 The Documents inspector previews Markdown file references from Agent Manager chat without leaving the panel. Open a file reference to add it as a document tab, then use the tab strip to switch, reorder, or close open documents. The inspector keeps one tab per file in the active project and worktree context.

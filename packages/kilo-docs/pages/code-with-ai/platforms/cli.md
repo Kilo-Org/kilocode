@@ -129,6 +129,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/editor` | - | Open external editor |
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
+| `/about` | - | Show version, runtime, config path, and provider info, with an option to copy diagnostics |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -234,7 +235,7 @@ There is no notification slash command or command-palette toggle. Use `tui.json`
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
 
-Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch, changes from the last assistant turn, or changes introduced by the most recent git commit (HEAD vs HEAD~1). Use `/move` to move the current session to another project directory.
 
 The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
 
