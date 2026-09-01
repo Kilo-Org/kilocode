@@ -285,18 +285,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": [
-        "packages/kilo-vscode/webview-ui/src/hooks/useGitChangesContext.ts",
-        "packages/kilo-vscode/webview-ui/src/hooks/useTerminalContext.ts"
-      ],
-      "fingerprint": "3474d577ea4814b0",
-      "maxMatches": 1,
-      "maxTokens": 105,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/opencode/src/kilocode/agent/index.ts", "packages/opencode/src/kilocode/agent/index.ts"],
       "fingerprint": "9044b540f896a694",
       "maxMatches": 1,
