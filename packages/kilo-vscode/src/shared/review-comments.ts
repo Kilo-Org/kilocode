@@ -53,7 +53,7 @@ function escapeInline(value: string): string {
 }
 
 /** Wrap a snippet in a fence long enough to survive backticks inside it. */
-function fenced(value: string): string[] {
+export function fenced(value: string): string[] {
   const matches = value.match(/`+/g) ?? []
   const longest = matches.reduce((max, item) => Math.max(max, item.length), 0)
   const fence = "`".repeat(Math.max(3, longest + 1))
