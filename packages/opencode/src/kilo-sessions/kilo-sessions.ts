@@ -291,6 +291,43 @@ export namespace KiloSessions {
       remote ? remote.conn.heartbeat(opts) : Promise.reject(new Error("attachRemoteSession: no remote connection")),
     log: attachedLog,
   })
+
+  // kilocode_change - locally started sessions never announce to the remote
+  // connection, so the mobile live list (fed by per-connection attached ids)
+  // never shows them. Announce on the first turn (idempotent via
+  // AttachedState.announce) and detach on dispose, mirroring the create_session
+  // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
+  // fire-and-forget event handlers log failures instead of surfacing them.
+  async function announceLocalSession(id: string) {
+    try {
+      // Do not announce when remote is disabled. A first turn that races
+      // bootstrap auto-enable waits for the in-flight enable so the session
+      // still lands in the live list.
+      if (!remote && !enabling) return
+      const inflight = enabling
+      if (inflight) {
+        await inflight.catch(() => undefined)
+        if (!remote) return
+      }
+      await attachRemoteSession(id)
+    } catch (error) {
+      log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    }
+  }
+
+  // kilocode_change - detach a locally announced session on dispose so it leaves
+  // the live list. No-op for an unowned id (e.g. an app-spawned session already
+  // detached via exit_cli). Detaches the raw attached state without touching
+  // SessionStatus, because the session row is already gone on delete.
+  async function detachLocalSession(id: string) {
+    try {
+      if (!hasRemoteSession(id)) return
+      await attachedState.detach(id)
+    } catch (error) {
+      log.warn("local session detach failed", { sessionID: id, error: String(error) })
+    }
+  }
+
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -518,6 +555,8 @@ export namespace KiloSessions {
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
+            // kilocode_change - detach a locally announced session on dispose.
+            void detachLocalSession(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -533,9 +572,13 @@ export namespace KiloSessions {
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          watch(Session.Event.TurnOpen, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
-          )
+          watch(Session.Event.TurnOpen, (evt) => {
+            const sessionID = evt.properties.sessionID
+            // kilocode_change - announce a locally started session on its first
+            // turn so it appears in the mobile live list.
+            void announceLocalSession(sessionID)
+            return ingest.sync(sessionID, [{ type: "session_open", data: {} }])
+          })
           watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
