@@ -66,6 +66,7 @@ export const layer = Layer.effect(
         }),
         onBusy: status.set(sessionID, { type: "busy" }),
         onInterrupt,
+        lease: drain.hold(sessionID), // kilocode_change
       })
       data.runners.set(sessionID, next)
       return next

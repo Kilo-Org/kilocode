@@ -20,7 +20,8 @@ import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode
 import { KiloSession } from "../kilocode/session" // kilocode_change
 import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
-import { Cause, Effect, Exit, Schema, Scope } from "effect" // kilocode_change
+import { Effect, Exit, Schema, Scope } from "effect"
+import { Cause } from "effect" // kilocode_change
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change

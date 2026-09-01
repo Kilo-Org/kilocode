@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
@@ -12,6 +11,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
+import type { SessionDrain } from "@/kilocode/session/drain"
+import type { EventV2 } from "@opencode-ai/core/event"
+import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
@@ -155,32 +157,41 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
-  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
-    sessionID: SessionID
-    sessions: Pick<Session.Interface, "children">
-    cancel: (sessionID: SessionID) => Effect.Effect<void>
-  }) {
-    function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
-      return Effect.gen(function* () {
-        const children = yield* input.sessions.children(sessionID)
-        const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
-        return [...children.map((child) => child.id), ...nested.flat()]
-      })
-    }
+  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(
+    function* (input: {
+      sessionID: SessionID
+      sessions: Pick<Session.Interface, "children">
+      drain: Pick<SessionDrain.Interface, "track">
+      events: Pick<EventV2.Interface, "publish">
+      cancel: (sessionID: SessionID) => Effect.Effect<void>
+    }) {
+      function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
+        return Effect.gen(function* () {
+          const children = yield* input.sessions.children(sessionID)
+          const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
+          return [...children.map((child) => child.id), ...nested.flat()]
+        })
+      }
 
-    const children = yield* descendants(input.sessionID)
-    yield* Effect.forEach(
-      [input.sessionID, ...children],
-      (sessionID) =>
-        Effect.gen(function* () {
-          yield* KiloSessionPromptQueue.cancel(sessionID)
-          PlanFollowup.abort(sessionID)
-          yield* abortIntakes(sessionID)
-          yield* input.cancel(sessionID)
-        }),
-      { concurrency: "unbounded", discard: true },
-    )
-  })
+      const children = yield* descendants(input.sessionID)
+      yield* Effect.forEach(
+        [input.sessionID, ...children],
+        (sessionID) =>
+          Effect.gen(function* () {
+            yield* KiloSessionPromptQueue.cancel(sessionID)
+            PlanFollowup.abort(sessionID)
+            yield* abortIntakes(sessionID)
+            yield* input.cancel(sessionID)
+          }),
+        { concurrency: "unbounded", discard: true },
+      )
+    },
+    (work, input) =>
+      input.drain.track(
+        input.sessionID,
+        work.pipe(Effect.ensuring(input.events.publish(Interrupted, { sessionID: input.sessionID }))),
+      ),
+  )
 
   export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
     sessionID: SessionID

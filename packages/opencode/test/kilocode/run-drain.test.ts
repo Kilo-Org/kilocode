@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { KiloRunDrain } from "@/kilocode/cli/run-drain"
+import { KiloRun } from "@/kilocode/cli/cmd/run"
 
 function client(handle: (request: Request) => Promise<Response>) {
   return KiloRunDrain.client({
@@ -28,19 +29,34 @@ test("checks capabilities through the selected transport before accepting comple
   await KiloRunDrain.check(sdk, new AbortController().signal)
 })
 
-test("scopes requests to the session directory without changing the transport", async () => {
+test("scopes requests without losing the transport or cancellation signal", async () => {
+  const abort = new AbortController()
   const paths: Array<string | null> = []
+  const signals: AbortSignal[] = []
   const sdk = client(async (request) => {
     const url = new URL(request.url)
     expect(url.origin).toBe("http://drain.test")
-    expect(url.pathname).toBe("/prefix/config")
+    expect(url.pathname).toBe(request.method === "GET" ? "/prefix/config" : "/prefix/session/ses_test/summarize")
     expect(request.headers.get("authorization")).toBe("Basic test-only")
     paths.push(url.searchParams.get("directory"))
-    return Response.json({})
+    signals.push(request.signal)
+    return Response.json(request.method === "GET" ? {} : true)
   })
-  await KiloRunDrain.scope(sdk, "/session owner").config.get()
+  const scoped = KiloRunDrain.scope(sdk, "/session owner", abort.signal)
+  await scoped.config.get()
+  await KiloRunDrain.scope(scoped, "/resumed owner").config.get()
+  await KiloRun.runBuiltin(
+    scoped,
+    "ses_test",
+    "compact",
+    undefined,
+    { providerID: "test", id: "model" },
+    "/session owner",
+  )
   await sdk.config.get()
-  expect(paths).toEqual(["/session owner", null])
+  abort.abort()
+  expect(paths).toEqual(["/session owner", "/resumed owner", "/session owner", null])
+  expect(signals.map((signal) => signal.aborted)).toEqual([true, true, true, false])
 })
 
 test.each([
@@ -99,8 +115,8 @@ test("flush waits for all output callbacks", async () => {
   const second = Promise.withResolvers<void>()
   let done = false
   const output = KiloRunDrain.flush([
-    { write: (_chunk, callback) => first.promise.then(() => callback()) },
-    { write: (_chunk, callback) => second.promise.then(() => callback()) },
+    { write: (_chunk, callback) => void first.promise.then(() => callback()) },
+    { write: (_chunk, callback) => void second.promise.then(() => callback()) },
   ]).then(() => {
     done = true
   })
@@ -158,6 +174,22 @@ test("closing a run aborts pending retry waits", async () => {
   const waiting = drain.pause(60_000)
   drain.close()
   await expect(waiting).rejects.toThrow()
+})
+
+test("session cancellation fails a drain after the parent turn already closed", async () => {
+  const drain = KiloRunDrain.create("ses_parent")
+  drain.event({
+    id: "evt_done",
+    type: "session.turn.close",
+    properties: { sessionID: "ses_parent", reason: "completed" },
+  })
+  drain.event({ id: "evt_other", type: "session.drain.interrupted", properties: { sessionID: "ses_other" } })
+  drain.event({ id: "evt_ready", type: "server.connected", properties: {} })
+  await drain.ready()
+  const waiting = drain.race(Promise.withResolvers<void>().promise)
+  drain.event({ id: "evt_cancel", type: "session.drain.interrupted", properties: { sessionID: "ses_parent" } })
+  await expect(waiting).rejects.toThrow("Session interrupted")
+  drain.close()
 })
 
 test("a root interruption fails but a superseded handoff and child interruption do not", async () => {

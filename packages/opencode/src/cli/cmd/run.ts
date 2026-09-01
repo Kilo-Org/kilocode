@@ -910,7 +910,7 @@ export const RunCommand = effectCmd({
             if (event.type === "suggestion.shown") {
               const suggestion = event.properties
               if (suggestion.sessionID === sessionID || KiloRunAuto.allowed(tracked, suggestion.sessionID)) {
-                await client.suggestion.dismiss({ requestID: suggestion.id }, { signal: drain.signal }).catch(() => {})
+                await client.suggestion.dismiss({ requestID: suggestion.id }).catch(() => {})
               }
               continue
             }
@@ -922,20 +922,17 @@ export const RunCommand = effectCmd({
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
               if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
-                await client.permission.reply({ requestID: permission.id, reply: "reject" }, { signal: drain.signal })
+                await client.permission.reply({ requestID: permission.id, reply: "reject" })
                 continue
               }
               // kilocode_change end
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
               if (args.auto) {
                 if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
-                await client.permission.reply(
-                  {
-                    requestID: permission.id,
-                    reply: "once",
-                  },
-                  { signal: drain.signal },
-                )
+                await client.permission.reply({
+                  requestID: permission.id,
+                  reply: "once",
+                })
                 continue
               }
               // kilocode_change end
@@ -946,13 +943,10 @@ export const RunCommand = effectCmd({
               if (permission.sessionID !== sessionID) {
                 if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
                 if (skipPermissions) {
-                  await client.permission.reply(
-                    {
-                      requestID: permission.id,
-                      reply: "once",
-                    },
-                    { signal: drain.signal },
-                  )
+                  await client.permission.reply({
+                    requestID: permission.id,
+                    reply: "once",
+                  })
                   continue
                 }
                 UI.println(
@@ -961,13 +955,10 @@ export const RunCommand = effectCmd({
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
                 autoRejected = true // kilocode_change
-                await client.permission.reply(
-                  {
-                    requestID: permission.id,
-                    reply: "reject",
-                  },
-                  { signal: drain.signal },
-                )
+                await client.permission.reply({
+                  requestID: permission.id,
+                  reply: "reject",
+                })
                 continue
               }
               // kilocode_change end
@@ -975,13 +966,10 @@ export const RunCommand = effectCmd({
               if (permission.sessionID !== sessionID) continue
 
               if (skipPermissions) {
-                await client.permission.reply(
-                  {
-                    requestID: permission.id,
-                    reply: "once",
-                  },
-                  { signal: drain.signal },
-                )
+                await client.permission.reply({
+                  requestID: permission.id,
+                  reply: "once",
+                })
               } else {
                 UI.println(
                   UI.Style.TEXT_WARNING_BOLD + "!",
@@ -989,13 +977,10 @@ export const RunCommand = effectCmd({
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
                 autoRejected = true // kilocode_change
-                await client.permission.reply(
-                  {
-                    requestID: permission.id,
-                    reply: "reject",
-                  },
-                  { signal: drain.signal },
-                )
+                await client.permission.reply({
+                  requestID: permission.id,
+                  reply: "reject",
+                })
               }
             }
 
@@ -1009,12 +994,12 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_WARNING_BOLD + "!",
                   UI.Style.TEXT_NORMAL + `network retry limit reached (${MAX_RETRIES}); rejecting`,
                 )
-                await client.network.reject({ requestID: request.id }, { signal: drain.signal })
+                await client.network.reject({ requestID: request.id })
                 continue
               }
               const delay = Math.min(5000 * Math.pow(2, retries - 1), 60000)
               await drain.pause(delay)
-              await client.network.reply({ requestID: request.id }, { signal: drain.signal })
+              await client.network.reply({ requestID: request.id })
             }
             // kilocode_change end
           }
@@ -1029,7 +1014,7 @@ export const RunCommand = effectCmd({
           return error
         }
         const cwd = sess.directory ?? directory ?? (await current(sdk)) // kilocode_change
-        const client = KiloRunDrain.scope(sdk, cwd) // kilocode_change
+        const client = KiloRunDrain.scope(sdk, cwd, interactive ? undefined : drain.signal) // kilocode_change
         // kilocode_change start - classify deferred attach commands in the session directory
         const builtin = deferred ? await KiloRun.resolveBuiltin(client, args.command, cwd) : initial
         if (deferred) {
@@ -1065,29 +1050,23 @@ export const RunCommand = effectCmd({
             await drain.ready()
             const result = await drain.race(
               builtin
-                ? KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd, drain.signal)
+                ? KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd)
                 : args.command
-                  ? client.session.command(
-                      {
-                        sessionID,
-                        agent,
-                        model: args.model,
-                        command: args.command,
-                        arguments: message,
-                        variant: args.variant,
-                      },
-                      { signal: drain.signal },
-                    )
-                  : client.session.prompt(
-                      {
-                        sessionID,
-                        agent,
-                        model: pick(args.model),
-                        variant: args.variant,
-                        parts: [...files, { type: "text", text: message }],
-                      },
-                      { signal: drain.signal },
-                    ),
+                  ? client.session.command({
+                      sessionID,
+                      agent,
+                      model: args.model,
+                      command: args.command,
+                      arguments: message,
+                      variant: args.variant,
+                    })
+                  : client.session.prompt({
+                      sessionID,
+                      agent,
+                      model: pick(args.model),
+                      variant: args.variant,
+                      parts: [...files, { type: "text", text: message }],
+                    }),
             )
             if (result.error) {
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))

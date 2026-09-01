@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
+import * as SDK from "@kilocode/sdk/v2"
+import { RunCommand } from "@/cli/cmd/run"
+
+const actual = { ...SDK }
 
 type Event = {
   type: string
@@ -114,7 +118,8 @@ function args() {
 const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
 const exitCode = process.exitCode
 
-afterEach(() => {
+afterEach(async () => {
+  await mock.module("@kilocode/sdk/v2", () => actual)
   process.exitCode = exitCode ?? 0
   if (tty) {
     Object.defineProperty(process.stdin, "isTTY", tty)
@@ -123,9 +128,12 @@ afterEach(() => {
   delete (process.stdin as { isTTY?: boolean }).isTTY
 })
 
-async function run(sdk: Record<string, unknown>) {
-  mock.module("@kilocode/sdk/v2", () => ({
-    createKiloClient: (config: { fetch?: () => Promise<Response> }) => {
+type Transport = { signal?: AbortSignal | null }
+
+async function run(sdk: Record<string, unknown>, transport: Transport = {}) {
+  await mock.module("@kilocode/sdk/v2", () => ({
+    createKiloClient: (config: Transport & { fetch?: () => Promise<Response> }) => {
+      transport.signal = config.signal
       config.fetch = async () =>
         Response.json({
           paths: {
@@ -141,8 +149,6 @@ async function run(sdk: Record<string, unknown>) {
     value: true,
   })
 
-  const key = JSON.stringify({ time: Date.now(), rand: Math.random() })
-  const { RunCommand } = await import(`../../src/cli/cmd/run?${key}`)
   return RunCommand.handler(args() as never)
 }
 
@@ -198,6 +204,7 @@ describe("cli run auto permissions", () => {
 
   test("a failed prompt aborts a blocked permission reply during cleanup", async () => {
     const q = feed<Event>()
+    const transport: Transport = {}
     const started = Promise.withResolvers<void>()
     let aborted = false
     const sdk = {
@@ -209,19 +216,21 @@ describe("cli run auto permissions", () => {
         },
       },
       permission: {
-        reply: async (_input: unknown, options: { signal: AbortSignal }) => {
-          expect(options.signal).toBeInstanceOf(AbortSignal)
+        reply: async () => {
+          const signal = transport.signal
+          expect(signal).toBeInstanceOf(AbortSignal)
+          if (!signal) throw new Error("Missing client cancellation signal")
+          const result = Promise.withResolvers<never>()
+          signal.addEventListener(
+            "abort",
+            () => {
+              aborted = true
+              result.reject(signal.reason)
+            },
+            { once: true },
+          )
           started.resolve()
-          return new Promise((_resolve, reject) => {
-            options.signal.addEventListener(
-              "abort",
-              () => {
-                aborted = true
-                reject(options.signal.reason)
-              },
-              { once: true },
-            )
-          })
+          return result.promise
         },
       },
       session: {
@@ -234,7 +243,7 @@ describe("cli run auto permissions", () => {
         },
       },
     }
-    await run(sdk)
+    await run(sdk, transport)
     q.end()
     expect(aborted).toBe(true)
     expect(process.exitCode).toBe(1)
@@ -242,6 +251,7 @@ describe("cli run auto permissions", () => {
 
   test("handles a tracked child's network retry without touching another session", async () => {
     const q = feed<Event>()
+    const transport: Transport = {}
     const done = Promise.withResolvers<void>()
     const calls: string[] = []
     const sdk = {
@@ -253,8 +263,8 @@ describe("cli run auto permissions", () => {
         },
       },
       network: {
-        reply: async (input: { requestID: string }, options: { signal: AbortSignal }) => {
-          expect(options.signal).toBeInstanceOf(AbortSignal)
+        reply: async (input: { requestID: string }) => {
+          expect(transport.signal).toBeInstanceOf(AbortSignal)
           calls.push(input.requestID)
           done.resolve()
           return { data: true }
@@ -278,7 +288,7 @@ describe("cli run auto permissions", () => {
         },
       },
     }
-    await run(sdk)
+    await run(sdk, transport)
     expect(calls).toEqual(["net_child"])
   }, 15_000)
 })

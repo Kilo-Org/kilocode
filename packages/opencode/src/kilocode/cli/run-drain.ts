@@ -1,6 +1,7 @@
 import { createKiloClient, type Event, type KiloClient } from "@kilocode/sdk/v2"
 import z from "zod"
 import { setTimeout } from "node:timers/promises"
+import { promisify } from "node:util"
 
 const connections = new WeakMap<KiloClient, NonNullable<Parameters<typeof createKiloClient>[0]>>()
 const capability = z.object({
@@ -18,10 +19,10 @@ export namespace KiloRunDrain {
     return sdk
   }
 
-  export function scope(sdk: KiloClient, directory: string) {
+  export function scope(sdk: KiloClient, directory: string, signal?: AbortSignal) {
     const config = connections.get(sdk)
     if (!config) throw new Error("Missing headless server transport")
-    return client({ ...config, directory })
+    return client({ ...config, directory, signal: signal ?? config.signal })
   }
 
   export async function check(sdk: KiloClient, signal: AbortSignal) {
@@ -78,9 +79,9 @@ export namespace KiloRunDrain {
       event(event: Event) {
         if (event.type === "server.connected") connected.resolve()
         if (
-          event.type === "session.turn.close" &&
-          event.properties.sessionID === sessionID &&
-          event.properties.reason === "interrupted"
+          (event.type === "session.drain.interrupted" ||
+            (event.type === "session.turn.close" && event.properties.reason === "interrupted")) &&
+          event.properties.sessionID === sessionID
         ) {
           failure.resolve(new Error("Session interrupted before completion"))
         }
@@ -117,23 +118,16 @@ export namespace KiloRunDrain {
     ],
   ) {
     await Promise.all(
-      streams.map(
-        (stream) =>
-          new Promise<void>((resolve, reject) => {
-            const done = (error?: unknown) => {
-              const closed =
-                error instanceof Error &&
-                "code" in error &&
-                (error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED")
-              if (error == null || closed) resolve()
-              else reject(error)
-            }
-            try {
-              stream.write("", done)
-            } catch (error) {
-              done(error)
-            }
-          }),
+      streams.map((stream) =>
+        promisify(stream.write.bind(stream))("").catch((error: unknown) => {
+          if (
+            error instanceof Error &&
+            "code" in error &&
+            (error.code === "EPIPE" || error.code === "ERR_STREAM_DESTROYED")
+          )
+            return
+          throw error
+        }),
       ),
     )
   }

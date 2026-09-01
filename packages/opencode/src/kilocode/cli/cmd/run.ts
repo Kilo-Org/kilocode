@@ -29,7 +29,6 @@ export namespace KiloRun {
     model?: string,
     current?: { id: string; providerID: string },
     directory?: string,
-    signal?: AbortSignal,
   ) {
     const selected = resolve(model, current)
     if (!selected) {
@@ -40,15 +39,12 @@ export namespace KiloRun {
     switch (command) {
       case "compact":
       case "summarize":
-        return sdk.session.summarize(
-          {
-            sessionID,
-            directory,
-            providerID: selected.providerID,
-            modelID: selected.modelID,
-          },
-          { signal },
-        )
+        return sdk.session.summarize({
+          sessionID,
+          directory,
+          providerID: selected.providerID,
+          modelID: selected.modelID,
+        })
     }
   }
 }

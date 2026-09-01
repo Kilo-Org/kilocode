@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
+import * as SDK from "@kilocode/sdk/v2"
+import { RunCommand } from "@/cli/cmd/run"
+import { KiloRunDrain } from "@/kilocode/cli/run-drain"
+
+const actual = { ...SDK }
 
 type Event = {
   type: string
@@ -96,7 +101,8 @@ const exitCode = process.exitCode
 const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
 const text = Bun.stdin.text
 
-afterEach(() => {
+afterEach(async () => {
+  await mock.module("@kilocode/sdk/v2", () => actual)
   process.exitCode = exitCode ?? 0
   Bun.stdin.text = text
   if (tty) {
@@ -142,9 +148,6 @@ async function run(
     value: terminal,
   })
 
-  const key = JSON.stringify({ time: Date.now(), rand: Math.random() })
-  const { RunCommand } = await import(`../../src/cli/cmd/run?${key}`)
-  const { KiloRunDrain } = await import("../../src/kilocode/cli/run-drain")
   const create = KiloRunDrain.create
   const clock = spyOn(KiloRunDrain, "create").mockImplementation((id) => ({
     ...create(id),

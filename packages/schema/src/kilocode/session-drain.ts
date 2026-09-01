@@ -9,4 +9,9 @@ export const Drained = Event.define({
   schema: { sessionID: SessionID, token: Token },
 })
 
-export const Definitions = Event.inventory(Drained)
+export const Interrupted = Event.define({
+  type: "session.drain.interrupted",
+  schema: { sessionID: SessionID },
+})
+
+export const Definitions = Event.inventory(Drained, Interrupted)

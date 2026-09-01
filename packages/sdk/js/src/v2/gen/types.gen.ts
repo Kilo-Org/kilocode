@@ -96,6 +96,7 @@ export type Event =
   | EventGlobalDisposed1
   | EventGlobalConfigUpdated1
   | EventSessionDrained1
+  | EventSessionDrainInterrupted1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -216,6 +217,7 @@ export type Event =
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
   | EventSessionDrained
+  | EventSessionDrainInterrupted
 
 export type QuestionReplied = {
   sessionID: string
@@ -1275,6 +1277,7 @@ export type GlobalEvent = {
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
     | EventSessionDrained
+    | EventSessionDrainInterrupted
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2166,6 +2169,13 @@ export type GlobalEvent = {
         properties: {
           sessionID: string
           token: string
+        }
+      }
+    | {
+        id: string
+        type: "session.drain.interrupted"
+        properties: {
+          sessionID: string
         }
       }
     | SyncEventSessionCreated
@@ -4844,6 +4854,7 @@ export type V2Event =
   | GlobalDisposed
   | GlobalConfigUpdated
   | SessionDrained
+  | SessionDrainInterrupted
 
 export type V2EventStream = string
 
@@ -6340,6 +6351,14 @@ export type EventSessionDrained = {
   properties: {
     sessionID: string
     token: string
+  }
+}
+
+export type EventSessionDrainInterrupted = {
+  id: string
+  type: "session.drain.interrupted"
+  properties: {
+    sessionID: string
   }
 }
 
@@ -9335,6 +9354,23 @@ export type SessionDrained = {
   }
 }
 
+export type SessionDrainInterrupted = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.drain.interrupted"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -10362,6 +10398,14 @@ export type EventSessionDrained1 = {
   properties: {
     sessionID: string
     token: string
+  }
+}
+
+export type EventSessionDrainInterrupted1 = {
+  id: string
+  type: "session.drain.interrupted"
+  properties: {
+    sessionID: string
   }
 }
 

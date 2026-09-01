@@ -141,10 +141,14 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -194,7 +198,7 @@ export const layer = Layer.effect(
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, cancel: state.cancel }) // kilocode_change - stop queued work and subagents
+      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, drain, events, cancel: state.cancel }) // kilocode_change - stop queued work and subagents
     })
 
     // kilocode_change start - preserve configured reference mentions on the Core reference architecture
@@ -1431,23 +1435,21 @@ export const layer = Layer.effect(
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
-        return yield* drain.track(
+        return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
-          KiloSessionPromptQueue.enqueue(
-            input.sessionID,
-            message.info.id,
-            bridge.run(
-              loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
-                Effect.orDie,
-              ),
+          message.info.id,
+          bridge.run(
+            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
+              Effect.orDie,
             ),
-            bridge.run(lastAssistant(input.sessionID)),
-            dismiss,
-          ),
+          ), // kilocode_change
+          bridge.run(lastAssistant(input.sessionID)),
+          dismiss,
         )
         // kilocode_change end
       },
       Effect.catchTag("NotFoundError", Effect.die),
+      (work, input) => drain.track(input.sessionID, work), // kilocode_change
     )
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
@@ -1622,13 +1624,7 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({
-            sessionID,
-            agent: lastUser.agent,
-            model: lastUser.model,
-            auto: true,
-            overflow: false,
-          }) // kilocode_change
+          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true, overflow: false }) // kilocode_change
           continue
         }
 

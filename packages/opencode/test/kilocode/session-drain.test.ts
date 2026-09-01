@@ -16,24 +16,16 @@ it.instance(
     const id = SessionID.make("ses_drain_parent")
     const parent = yield* drain.hold(id)
     const delivery = yield* drain.hold(id)
-    let done = false
-    const waiter = yield* drain.wait(id).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
-    expect(done).toBe(false)
+    const waiting = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
     parent()
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     const callback = yield* drain.hold(id)
     delivery()
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     callback()
-    yield* Fiber.join(waiter)
-    expect(done).toBe(true)
+    yield* Fiber.join(waiting)
+    expect(waiting.pollUnsafe()?._tag).toBe("Success")
   }),
 )
 
@@ -47,19 +39,11 @@ it.instance(
     yield* drain.link(child, parent)
     yield* drain.link(grandchild, child)
     const release = yield* drain.hold(grandchild)
-    let done = false
-    const waiter = yield* drain.wait(parent).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
     yield* drain.wait(SessionID.make("ses_drain_other"))
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     release()
-    yield* Fiber.join(waiter)
+    yield* Fiber.join(waiting)
     yield* drain.wait(child)
     yield* drain.wait(grandchild)
   }),
@@ -72,20 +56,12 @@ it.instance(
     const id = SessionID.make("ses_drain_parent")
     const previous = yield* drain.hold(id)
     const next = yield* drain.hold(id)
-    let done = false
-    const waiter = yield* drain.wait(id).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
+    const waiting = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
     previous()
     previous()
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     next()
-    yield* Fiber.join(waiter)
+    yield* Fiber.join(waiting)
   }),
 )
 
@@ -98,20 +74,12 @@ it.instance(
     for (let round = 0; round < 2; round++) {
       const release = yield* drain.hold(id)
       const cancelled = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
-      let done = false
-      const waiter = yield* drain.wait(id).pipe(
-        Effect.tap(() =>
-          Effect.sync(() => {
-            done = true
-          }),
-        ),
-        Effect.forkChild({ startImmediately: true }),
-      )
+      const waiting = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
       yield* Fiber.interrupt(cancelled)
-      expect(done).toBe(false)
+      expect(waiting.pollUnsafe()).toBeUndefined()
       release()
-      yield* Fiber.join(waiter)
-      expect(done).toBe(true)
+      yield* Fiber.join(waiting)
+      expect(waiting.pollUnsafe()?._tag).toBe("Success")
     }
   }),
 )
@@ -159,19 +127,12 @@ it.instance(
     const other = { ...ctx, directory: `${ctx.directory}/other` }
     const id = SessionID.make("ses_isolated_drain")
     const release = yield* drain.hold(id).pipe(Effect.provideService(InstanceRef, other))
-    let done = false
-    const waiting = yield* drain.wait(id).pipe(
-      Effect.provideService(InstanceRef, other),
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
+    const waiting = yield* drain
+      .wait(id)
+      .pipe(Effect.provideService(InstanceRef, other), Effect.forkChild({ startImmediately: true }))
     yield* Effect.promise(() => disposeInstance(ctx.directory))
     yield* Effect.yieldNow
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     release()
     yield* Fiber.join(waiting)
   }),
@@ -202,23 +163,16 @@ it.instance(
       }),
     )
     const first = yield* drain.hold(id)
-    let done = false
-    const waiting = yield* drain.wait(id).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-      Effect.provideService(Scheduler.Scheduler, scheduler),
-    )
+    const waiting = yield* drain
+      .wait(id)
+      .pipe(Effect.forkChild({ startImmediately: true }), Effect.provideService(Scheduler.Scheduler, scheduler))
     flush()
     paused = true
     first()
     const second = yield* drain.hold(id)
     paused = false
     flush()
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     second()
     flush()
     yield* Fiber.join(waiting)
@@ -235,21 +189,13 @@ it.instance(
       Effect.flatMap(() => drain.hold(id)),
       Effect.forkChild({ startImmediately: true }),
     )
-    let done = false
-    const second = yield* drain.wait(id).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
+    const waiting = yield* drain.wait(id).pipe(Effect.forkChild({ startImmediately: true }))
     release()
     const releaseAgain = yield* Fiber.join(first)
-    expect(done).toBe(false)
+    expect(waiting.pollUnsafe()).toBeUndefined()
     releaseAgain()
-    yield* Fiber.join(second)
-    expect(done).toBe(true)
+    yield* Fiber.join(waiting)
+    expect(waiting.pollUnsafe()?._tag).toBe("Success")
   }),
 )
 
@@ -263,16 +209,8 @@ it.instance(
     yield* drain.track(child, Effect.void)
     yield* drain.wait(parent)
     const release = yield* drain.hold(child)
-    let done = false
-    const waiting = yield* drain.wait(parent).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          done = true
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
-    expect(done).toBe(false)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
     release()
     yield* Fiber.join(waiting)
   }),

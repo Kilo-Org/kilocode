@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Effect, Fiber } from "effect"
-import { createKiloClient, type Event } from "@kilocode/sdk/v2"
+import { createKiloClient, type Event, type KiloClient } from "@kilocode/sdk/v2"
 import path from "node:path"
 import { mkdir } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
@@ -21,6 +21,66 @@ function gate() {
         "30 seconds",
       ),
   }
+}
+
+function environment(home: string, url: string, opts: { plugin?: string; resume?: boolean; daemon?: boolean } = {}) {
+  const base = testProviderConfig(url)
+  const model = base.provider.test.models["test-model"]
+  const cfg = {
+    ...base,
+    model: "test/parent",
+    small_model: "test/parent",
+    enabled_providers: ["test"],
+    share: "disabled",
+    snapshot: false,
+    sandbox: { enabled: false },
+    permission: { "*": "allow" },
+    plugin: opts.plugin ? [opts.plugin] : [],
+    agent: {
+      code: { model: "test/parent" },
+      general: { model: "test/child" },
+      title: { disable: true },
+    },
+    provider: {
+      test: {
+        ...base.provider.test,
+        models: {
+          parent: { ...model, id: "parent", name: "Parent" },
+          child: { ...model, id: "child", name: "Child" },
+        },
+      },
+    },
+  }
+  return {
+    PWD: home,
+    KILO_CONFIG_CONTENT: JSON.stringify(cfg),
+    KILO_CONFIG: "",
+    KILO_CONFIG_DIR: "",
+    KILO_DB: opts.resume ? path.join(home, "resume.db") : ":memory:",
+    KILO_AUTH_CONTENT: "{}",
+    KILO_SERVER_PASSWORD: "",
+    KILO_SERVER_USERNAME: "kilo",
+    KILO_PURE: "false",
+    KILO_DISABLE_DEFAULT_PLUGINS: "true",
+    KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "true",
+    KILO_TELEMETRY_LEVEL: "off",
+    KILO_AUTO_SHARE: "false",
+    KILO_NO_DAEMON: opts.daemon ? "" : "1",
+    KILO_PARENT_PID: "",
+    KILO_TEST_DAEMON_STATE_DIR: path.join(home, "daemon-state"),
+    KILO_TEST_DAEMON_LOG_DIR: path.join(home, "daemon-log"),
+  }
+}
+
+function drain(client: KiloClient, id: string, timeout = 30_000) {
+  return client.kilocode.drainSession(
+    { sessionID: id, token: crypto.randomUUID() },
+    { throwOnError: true, signal: AbortSignal.timeout(timeout) },
+  )
+}
+
+function pending(client: KiloClient, id: string) {
+  return Effect.promise(() => drain(client, id, 1_000).catch((err: unknown) => err))
 }
 
 function observer(url: string, busy: boolean) {
@@ -77,7 +137,7 @@ function observer(url: string, busy: boolean) {
   }`
 }
 
-function probe(home: string, busy: boolean) {
+function probe(home: string, mode: "foreground" | "busy" | "idle" | "intake") {
   return Effect.gen(function* () {
     const entered = gate()
     const release = gate()
@@ -114,7 +174,11 @@ function probe(home: string, busy: boolean) {
     )
     const url = `http://127.0.0.1:${server.port}`
     const file = path.join(home, "drain-observer.mjs")
-    yield* Effect.promise(() => Bun.write(file, observer(url, busy)))
+    const plugin =
+      mode === "intake"
+        ? `export default async () => ({ "chat.message": async () => { const response = await fetch(${JSON.stringify(`${url}/tool`)}); if (!response.ok) throw new Error("intake gate failed") } })`
+        : observer(url, mode === "busy")
+    yield* Effect.promise(() => Bun.write(file, plugin))
     return { url, plugin: pathToFileURL(file).href, entered, release, queued, idle }
   })
 }
@@ -122,42 +186,15 @@ function probe(home: string, busy: boolean) {
 function scenario(
   { home, llm, opencode }: CliFixture,
   mode: "foreground" | "busy" | "idle",
-  opts: { attach?: boolean; resume?: boolean; daemon?: boolean } = {},
+  opts: { attach?: boolean; resume?: boolean; daemon?: boolean; abort?: boolean } = {},
 ) {
   return Effect.gen(function* () {
     const directory = opts.resume ? path.join(home, "session") : home
     if (opts.resume) yield* Effect.promise(() => mkdir(directory))
-    const tap = yield* probe(home, mode === "busy")
+    const tap = yield* probe(home, mode)
     const child = gate()
     const requested = gate()
     yield* Effect.addFinalizer(() => Effect.sync(child.open))
-    const base = testProviderConfig(llm.url)
-    const model = base.provider.test.models["test-model"]
-    const cfg = {
-      ...base,
-      model: "test/parent",
-      small_model: "test/parent",
-      enabled_providers: ["test"],
-      share: "disabled",
-      snapshot: false,
-      sandbox: { enabled: false },
-      permission: { "*": "allow" },
-      plugin: mode === "foreground" ? [] : [tap.plugin],
-      agent: {
-        code: { model: "test/parent" },
-        general: { model: "test/child" },
-        title: { disable: true },
-      },
-      provider: {
-        test: {
-          ...base.provider.test,
-          models: {
-            parent: { ...model, id: "parent", name: "Parent" },
-            child: { ...model, id: "child", name: "Child" },
-          },
-        },
-      },
-    }
     const script = `const r = await fetch(${JSON.stringify(`${tap.url}/tool`)}); if (!r.ok) throw new Error("tool gate failed"); console.log(await r.text())`
     const scriptPath = path.join(home, "parent-gate.mjs")
     yield* Effect.promise(() => Bun.write(scriptPath, script))
@@ -187,28 +224,10 @@ function scenario(
       return true
     }, reply().wait(child.promise).text("CHILD_RESULT_SENTINEL").stop())
     if (mode === "foreground") child.open()
-    const env = {
-      PWD: home,
-      KILO_CONFIG_CONTENT: JSON.stringify(cfg),
-      KILO_CONFIG: "",
-      KILO_CONFIG_DIR: "",
-      KILO_DB: opts.resume ? path.join(home, "resume.db") : ":memory:",
-      KILO_AUTH_CONTENT: "{}",
-      KILO_SERVER_PASSWORD: "",
-      KILO_SERVER_USERNAME: "kilo",
-      KILO_PURE: "false",
-      KILO_DISABLE_DEFAULT_PLUGINS: "true",
-      KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "true",
-      KILO_TELEMETRY_LEVEL: "off",
-      KILO_AUTO_SHARE: "false",
-      KILO_NO_DAEMON: opts.daemon ? "" : "1",
-      KILO_PARENT_PID: "",
-      KILO_TEST_DAEMON_STATE_DIR: path.join(home, "daemon-state"),
-      KILO_TEST_DAEMON_LOG_DIR: path.join(home, "daemon-log"),
-    }
+    const env = environment(home, llm.url, { ...opts, plugin: mode === "foreground" ? undefined : tap.plugin })
     const server = opts.attach || opts.resume ? yield* opencode.serve({ env, readyTimeoutMs: 30_000 }) : undefined
     const session =
-      opts.resume && server
+      (opts.resume || opts.abort) && server
         ? yield* Effect.promise(() =>
             createKiloClient({ baseUrl: server.url, directory }).session.create({}, { throwOnError: true }),
           )
@@ -257,9 +276,52 @@ function scenario(
     }
     if (mode === "idle") {
       yield* tap.idle.wait("parent never became idle")
-      child.open()
+      if (!opts.abort) child.open()
+    }
+    if (opts.abort) {
+      if (!server || !session) throw new Error("Abort scenario requires an attached session")
+      const client = createKiloClient({ baseUrl: server.url, directory })
+      const controller = new AbortController()
+      yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()))
+      const ready = gate()
+      const token = crypto.randomUUID()
+      const stream = yield* Effect.promise(() =>
+        client.event.subscribe(undefined, { signal: controller.signal, sseMaxRetryAttempts: 1 }),
+      )
+      const received = yield* Effect.promise(async () => {
+        const signals: string[] = []
+        for await (const event of stream.stream) {
+          if (event.type === "server.connected") ready.open()
+          if (
+            (event.type === "session.drain.interrupted" ||
+              (event.type === "session.turn.close" && event.properties.reason === "interrupted")) &&
+            event.properties.sessionID === session.data.id
+          )
+            signals.push(event.type)
+          if (event.type === "session.drained" && event.properties.token === token) return signals
+        }
+        throw new Error("Cancellation event stream ended before the barrier")
+      }).pipe(Effect.forkChild)
+      yield* ready.wait("Cancellation event stream did not connect")
+      const aborted = yield* Effect.promise(() =>
+        client.session.abort({ sessionID: session.data.id }, { throwOnError: true }),
+      )
+      expect(aborted.data).toBe(true)
+      yield* Effect.promise(() =>
+        client.kilocode.drainSession({ sessionID: session.data.id, token }, { throwOnError: true }),
+      )
+      expect(yield* awaitWithTimeout(Fiber.join(received), "Cancellation barrier was not delivered")).toEqual([
+        "session.drain.interrupted",
+      ])
     }
     const result = yield* awaitWithTimeout(run.result, "CLI did not drain and exit", "45 seconds")
+    if (opts.abort) {
+      expect(result.exitCode).not.toBe(0)
+      expect(result.stdout).toContain("WAITING_FOR_CHILD")
+      expect(result.stdout).not.toContain("FINAL_AFTER_CHILD")
+      expect(yield* llm.pending).toBe(1)
+      return
+    }
     opencode.expectExit(result, 0)
     const events = opencode.parseJsonEvents(result.stdout)
     const texts = events.filter((event) => event.type === "text").map((event) => (event.part as { text: string }).text)
@@ -282,11 +344,91 @@ for (const [name, mode, opts] of [
   ["headless run waits for a child after the parent becomes idle", "idle", {}],
   ["attached run drains a callback queued behind the parent", "busy", { attach: true }],
   ["attached run waits for a child after the parent becomes idle", "idle", { attach: true }],
+  [
+    "attached run fails when the idle parent is aborted with a child still running",
+    "idle",
+    { attach: true, abort: true },
+  ],
   ["local run resumes and drains a session from another directory", "busy", { resume: true }],
   ["attached run resumes and drains a session from another directory", "idle", { attach: true, resume: true }],
   ["daemon run resumes and drains a session from another directory", "idle", { daemon: true, resume: true }],
 ] as const) {
   cliIt.live(name, (fixture) => scenario(fixture, mode, opts), 90_000)
+}
+
+for (const [name, mode] of [
+  ["SDK drain waits for accepted promptAsync intake and work", "intake"],
+  ["SDK drain waits for summarize work after HTTP cancellation", "summary"],
+] as const) {
+  cliIt.live(
+    name,
+    ({ home, llm, opencode }) =>
+      Effect.gen(function* () {
+        const tap = mode === "intake" ? yield* probe(home, "intake") : undefined
+        const release = gate()
+        yield* Effect.addFinalizer(() => Effect.sync(release.open))
+        const server = yield* opencode.serve({
+          env: environment(home, llm.url, { plugin: tap?.plugin }),
+          readyTimeoutMs: 30_000,
+        })
+        const client = createKiloClient({ baseUrl: server.url, directory: home })
+        const session = yield* Effect.promise(() => client.session.create({}, { throwOnError: true }))
+        const id = session.data.id
+        const text = mode === "intake" ? "INTAKE_WORK_FINISHED" : "SUMMARY_AFTER_DISCONNECT"
+        if (mode === "summary") {
+          yield* llm.text("Seed response")
+          yield* Effect.promise(() =>
+            client.session.prompt(
+              { sessionID: id, parts: [{ type: "text", text: "Seed the summary session" }] },
+              { throwOnError: true },
+            ),
+          )
+          yield* Effect.promise(() => drain(client, id))
+        }
+        yield* llm.hold(text, release.promise)
+        if (tap) {
+          const accepted = yield* Effect.promise(() =>
+            client.session.promptAsync(
+              { sessionID: id, parts: [{ type: "text", text: "Run admitted work" }] },
+              { throwOnError: true },
+            ),
+          )
+          expect(accepted.response.status).toBe(204)
+          yield* tap.entered.wait("accepted prompt did not enter the intake hook")
+          expect(yield* llm.calls).toBe(0)
+          expect(yield* pending(client, id)).toMatchObject({ name: "TimeoutError" })
+          tap.release.open()
+          yield* awaitWithTimeout(llm.wait(1), "accepted prompt never reached the provider", "30 seconds")
+        }
+        if (mode === "summary") {
+          const abort = new AbortController()
+          yield* Effect.addFinalizer(() => Effect.sync(() => abort.abort()))
+          const caller = client.session
+            .summarize(
+              { sessionID: id, providerID: "test", modelID: "parent", auto: false },
+              { throwOnError: true, signal: abort.signal },
+            )
+            .then(
+              () => undefined,
+              (err: unknown) => err,
+            )
+          yield* awaitWithTimeout(llm.wait(2), "summary never reached the provider", "30 seconds")
+          abort.abort()
+          expect(yield* Effect.promise(() => caller)).toMatchObject({ name: "AbortError" })
+          const status = yield* Effect.promise(() => client.session.status({}, { throwOnError: true }))
+          expect(status.data[id]?.type).toBe("busy")
+        }
+        const waiting = yield* pending(client, id)
+        release.open()
+        const finished = yield* Effect.promise(() => drain(client, id))
+        expect(waiting).toMatchObject({ name: "TimeoutError" })
+        expect(finished.data).toBe(true)
+        const messages = yield* Effect.promise(() => client.session.messages({ sessionID: id }, { throwOnError: true }))
+        expect(JSON.stringify(messages.data)).toContain(text)
+        expect(yield* llm.pending).toBe(0)
+      }),
+    90_000,
+  )
 }
 
 cliIt.live(
