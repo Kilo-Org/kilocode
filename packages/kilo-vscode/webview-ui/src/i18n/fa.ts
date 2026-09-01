@@ -1270,6 +1270,9 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "لغو شد",
   "task.backgroundAgents.status.error": "خطا",
   "task.backgroundAgents.untitled": "عامل پس‌زمینه",
+  "task.backgroundAgents.badge.one": "1 عامل",
+  "task.backgroundAgents.badge.many": "{{count}} عامل",
+  "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

@@ -36,6 +36,21 @@
   justify-content: center;
 }
 
+.new-task-button-wrapper:has(.session-background-agents) {
+  padding-inline: 0;
+}
+
+.working-indicator:has(.session-background-agents) {
+  gap: 4px;
+  padding-inline: 8px;
+}
+
+.working-indicator .session-background-agents {
+  padding-inline: 4px;
+  font-size: inherit;
+  color: inherit;
+}
+
 .session-actions-row > * {
   flex: 0 0 auto;
   min-width: 0;

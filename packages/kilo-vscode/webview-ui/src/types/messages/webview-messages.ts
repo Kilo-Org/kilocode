@@ -50,6 +50,7 @@ export interface ResumeSessionRequest {
 export interface AbortRequest {
   type: "abort"
   sessionID: string
+  scope?: "session" | "tree"
 }
 
 export interface RequestBackgroundJobsMessage {

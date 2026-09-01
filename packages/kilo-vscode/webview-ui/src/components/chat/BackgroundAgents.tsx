@@ -10,22 +10,16 @@
  * sidebar keeps opening an editor tab.
  */
 
-import { Component, For, Show, createMemo, createSignal, onCleanup, onMount, createEffect, on } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup, createEffect, on } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import type { BackgroundJobInfo } from "../../types/messages"
+import { useBackgroundAgents } from "../../context/background-agents"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import {
-  backgroundAgents,
-  backgroundJobAgents,
-  fitBackgroundAgents,
-  showBackgroundAgent,
-  type BackgroundAgent,
-} from "./background-agents"
+import { fitBackgroundAgents, type BackgroundAgent } from "./background-agents"
 import { openSubagent } from "./open-subagent"
 
 export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
@@ -33,72 +27,22 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
-  const [open, setOpen] = createSignal(false)
-  const [jobs, setJobs] = createSignal<BackgroundJobInfo[]>([])
-  const [loaded, setLoaded] = createSignal(false)
-  const [mounted, setMounted] = createSignal(false)
-  let pending: string | undefined
-  let revision = 0
+  const background = useBackgroundAgents()
+  const open = background.open
+  const setOpen = background.setOpen
+  const visible = background.visible
+  let toggle: HTMLButtonElement | undefined
 
   createEffect(
-    on(session.currentSessionID, () => {
-      setLoaded(false)
-      setJobs([])
-      pending = undefined
-      if (mounted()) requestJobs()
-    }),
+    on(
+      background.focus,
+      () => {
+        toggle?.scrollIntoView({ block: "nearest" })
+        toggle?.focus()
+      },
+      { defer: true },
+    ),
   )
-
-  const requestJobs = () => {
-    const id = session.currentSessionID()
-    if (!id || pending) return
-    pending = `${id}:${++revision}`
-    vscode.postMessage({ type: "requestBackgroundJobs", sessionID: id, requestID: pending })
-  }
-
-  onMount(() => {
-    setMounted(true)
-    const unsub = vscode.onMessage((message) => {
-      if (message.type !== "backgroundJobsLoaded") return
-      if (message.sessionID !== session.currentSessionID()) return
-      if (message.requestID !== pending) return
-      pending = undefined
-      if (message.error) {
-        setJobs([])
-        setLoaded(false)
-        return
-      }
-      setJobs(message.jobs)
-      setLoaded(true)
-    })
-    requestJobs()
-    const timer = setInterval(requestJobs, 1000)
-    onCleanup(() => {
-      setMounted(false)
-      unsub()
-      clearInterval(timer)
-    })
-  })
-
-  const fallback = createMemo(() => {
-    const id = session.currentSessionID()
-    if (!id) return []
-    return backgroundAgents(session.getSessionToolParts(id), session.allStatusMap())
-  })
-
-  const agents = createMemo(() => {
-    const id = session.currentSessionID()
-    if (!id) return []
-    if (loaded()) return backgroundJobAgents(jobs(), id, session.scopedPermissions(id), session.scopedQuestions(id))
-    return fallback()
-  })
-
-  const visible = createMemo(() => {
-    const id = session.currentSessionID()
-    if (!id) return []
-    const hidden = session.dismissedBackgroundJobs(id)
-    return agents().filter((agent) => showBackgroundAgent(agent, hidden))
-  })
   const summary = createMemo(() => {
     const running = visible().filter((agent) => agent.status === "running").length
     const total = visible().length
@@ -107,14 +51,13 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     return language.t("task.backgroundAgents.summary", { running: String(running), total: String(total) })
   })
 
-  const waiting = createMemo(() => visible().filter((agent) => agent.permission || agent.question).length)
+  const waiting = background.waiting
 
   const label = (agent: BackgroundAgent) =>
     agent.description ?? agent.agent ?? language.t("task.backgroundAgents.untitled")
 
-  const active = createMemo(() =>
-    visible().filter((agent) => agent.status === "running" || agent.permission || agent.question),
-  )
+  const active = background.active
+  const running = () => active().filter((agent) => agent.status === "running")
   const keys = createMemo(() => active().map((agent) => agent.jobID))
   const signature = createMemo(() => keys().join("\0"))
   const [box, setBox] = createSignal<HTMLDivElement>()
@@ -168,30 +111,14 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
       post: vscode.postMessage,
     })
 
-  const cancelAgent = (event: MouseEvent, agent: BackgroundAgent) => {
-    event.stopPropagation()
-    if (agent.status !== "running") return
-    const id = session.currentSessionID()
-    if (!id) return
-    pending = `${id}:${++revision}`
-    vscode.postMessage({ type: "cancelBackgroundJob", jobID: agent.jobID, sessionID: id, requestID: pending })
+  const stop = () => {
+    for (const agent of running()) background.cancel(agent)
+    toggle?.focus()
   }
-
-  const hide = (ids: string[]) => {
-    const id = session.currentSessionID()
-    if (id) session.dismissBackgroundJobs(id, ids)
-  }
-
-  const hideFinished = () =>
-    hide(
-      agents()
-        .filter((agent) => agent.status !== "running")
-        .map((agent) => agent.jobID),
-    )
 
   return (
     <Show when={visible().length > 0}>
-      <div data-component="task-header-agents">
+      <div data-component="task-header-agents" id={background.target}>
         <div data-slot="task-header-agents-toolbar">
           <div data-slot="task-header-agents-content" ref={setBox}>
             <Button
@@ -264,6 +191,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
             </Button>
           </div>
           <Button
+            ref={toggle}
             data-slot="task-header-agents-toggle"
             variant="ghost"
             size="small"
@@ -281,7 +209,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               variant="ghost"
               size="small"
               aria-label={language.t("task.backgroundAgents.clearFinished")}
-              onClick={hideFinished}
+              onClick={background.clear}
             >
               <span data-slot="task-header-agent-action-label">
                 {language.t("task.backgroundAgents.clearFinished")}
@@ -291,67 +219,71 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
         </div>
         <Show when={open()}>
           <div data-slot="task-header-todos-list">
-            <Show when={visible().some((agent) => agent.permission || agent.question)}>
+            <Show when={waiting() > 0}>
               <div data-slot="task-header-agent-attention">
                 <Icon name="warning" size="small" />
                 <span>{language.t("task.backgroundAgents.waiting")}</span>
               </div>
             </Show>
-            <For each={visible()}>
-              {(agent) => (
-                <div data-slot="task-header-agent" data-status={agent.status}>
-                  <Show when={icon(agent)} fallback={<Spinner />}>
-                    {(name) => <Icon name={name()} size="small" data-slot="task-header-agent-status" />}
-                  </Show>
-                  <button
-                    data-slot="task-header-agent-main"
-                    title={`${language.t("task.backgroundAgents.open")}: ${label(agent)}`}
-                    aria-label={`${language.t("task.backgroundAgents.open")}: ${label(agent)}`}
-                    onClick={() => openAgent(agent)}
-                  >
-                    <span data-slot="task-header-agent-label" dir="auto">
-                      {label(agent)}
-                    </span>
-                    <span data-slot="task-header-agent-status-label">{status(agent)}</span>
-                    <Show when={agent.permission || agent.question}>
-                      <span data-slot="task-header-agent-attention-label">
-                        {language.t("task.backgroundAgents.needsInput")}
-                      </span>
-                    </Show>
-                  </button>
-                  <Show when={!props.readonly && agent.status === "running"}>
-                    <Button
-                      icon="stop"
-                      variant="ghost"
-                      size="small"
-                      aria-label={`${language.t("task.backgroundAgents.cancel")}: ${label(agent)}`}
-                      onClick={(event: MouseEvent) => cancelAgent(event, agent)}
-                    >
-                      <span data-slot="task-header-agent-action-label">
-                        {language.t("task.backgroundAgents.cancel")}
-                      </span>
-                    </Button>
-                  </Show>
-                  <Show when={!props.readonly && agent.status !== "running"}>
-                    <Button
-                      icon="close-small"
-                      variant="ghost"
-                      size="small"
-                      aria-label={`${language.t("task.backgroundAgents.dismiss")}: ${label(agent)}`}
-                      onClick={(event: MouseEvent) => {
-                        event.stopPropagation()
-                        hide([agent.jobID])
-                      }}
-                    >
-                      <span data-slot="task-header-agent-action-label">
-                        {language.t("task.backgroundAgents.dismiss")}
-                      </span>
-                    </Button>
-                  </Show>
-                </div>
+            <For each={visible().map((agent) => agent.jobID)}>
+              {(id) => (
+                <Show when={visible().find((agent) => agent.jobID === id)}>
+                  {(agent) => (
+                    <div data-slot="task-header-agent" data-status={agent().status}>
+                      <Show when={icon(agent())} fallback={<Spinner />}>
+                        {(name) => <Icon name={name()} size="small" data-slot="task-header-agent-status" />}
+                      </Show>
+                      <Button
+                        data-slot="task-header-agent-main"
+                        variant="ghost"
+                        size="small"
+                        title={`${language.t("task.backgroundAgents.open")}: ${label(agent())}`}
+                        aria-label={`${language.t("task.backgroundAgents.open")}: ${label(agent())}`}
+                        onClick={() => openAgent(agent())}
+                      >
+                        <span data-slot="task-header-agent-label" dir="auto">
+                          {label(agent())}
+                        </span>
+                        <span data-slot="task-header-agent-status-label">{status(agent())}</span>
+                        <Show when={agent().permission || agent().question}>
+                          <span data-slot="task-header-agent-attention-label">
+                            {language.t("task.backgroundAgents.needsInput")}
+                          </span>
+                        </Show>
+                      </Button>
+                      <Show when={!props.readonly}>
+                        <Button
+                          icon={agent().status === "running" ? "stop" : "close-small"}
+                          variant="ghost"
+                          size="small"
+                          aria-label={`${language.t(agent().status === "running" ? "task.backgroundAgents.cancel" : "task.backgroundAgents.dismiss")}: ${label(agent())}`}
+                          onClick={() => {
+                            if (agent().status === "running") return background.cancel(agent())
+                            background.hide([agent().jobID])
+                          }}
+                        >
+                          <span data-slot="task-header-agent-action-label">
+                            {language.t(
+                              agent().status === "running"
+                                ? "task.backgroundAgents.cancel"
+                                : "task.backgroundAgents.dismiss",
+                            )}
+                          </span>
+                        </Button>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
               )}
             </For>
           </div>
+          <Show when={!props.readonly && running().length > 0}>
+            <div data-slot="task-header-agents-actions">
+              <Button variant="ghost" size="small" onClick={stop}>
+                {language.t("task.backgroundAgents.stopAll", { count: String(running().length) })}
+              </Button>
+            </div>
+          </Show>
         </Show>
       </div>
     </Show>

@@ -26,6 +26,8 @@ import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import { BackgroundAgentsProvider } from "../context/background-agents"
+import { BackgroundAgentsFixture } from "./background-agents-fixture"
 import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
@@ -194,6 +196,15 @@ export const ChatViewAgentManagerCompleted: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const ChatViewBackgroundAgents: Story = {
+  name: "ChatView - background agents with an idle or busy parent",
+  render: () => (
+    <BackgroundAgentsFixture>
+      <ChatView continueInWorktree />
+    </BackgroundAgentsFixture>
+  ),
 }
 
 /**
@@ -1192,9 +1203,11 @@ export const TaskHeaderWithTodos: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
-          <div style={{ width: "100%" }}>
-            <TaskHeader />
-          </div>
+          <BackgroundAgentsProvider>
+            <div style={{ width: "100%" }}>
+              <TaskHeader />
+            </div>
+          </BackgroundAgentsProvider>
         </SessionContext.Provider>
       </StoryProviders>
     )
@@ -1229,7 +1242,9 @@ export const TaskHeaderBackgroundAgents1280: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} noPadding>
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
-          <TaskHeader />
+          <BackgroundAgentsProvider>
+            <TaskHeader />
+          </BackgroundAgentsProvider>
         </SessionContext.Provider>
       </StoryProviders>
     )
@@ -1269,9 +1284,11 @@ export const TaskHeaderWithTodosAllDone: Story = {
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
-            <TaskHeader />
-          </div>
+          <BackgroundAgentsProvider>
+            <div style={{ width: "380px" }}>
+              <TaskHeader />
+            </div>
+          </BackgroundAgentsProvider>
         </SessionContext.Provider>
       </StoryProviders>
     )

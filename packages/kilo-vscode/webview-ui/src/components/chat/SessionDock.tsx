@@ -22,6 +22,7 @@ import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
 
 interface SessionDockProps {
+  activity?: () => JSX.Element
   /** Idle-state content. Renders nothing when no action applies. */
   actions?: () => JSX.Element
   /** Whether idle-state content exists for this surface. */
@@ -39,7 +40,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   return (
     <div class="session-dock" data-component="session-dock" data-active={active() ? "" : undefined}>
       <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
-        <WorkingIndicator />
+        <WorkingIndicator>{props.activity?.()}</WorkingIndicator>
       </div>
       <div class="session-dock-state" data-active={actions() ? "" : undefined} aria-hidden={!actions()}>
         {props.actions?.()}

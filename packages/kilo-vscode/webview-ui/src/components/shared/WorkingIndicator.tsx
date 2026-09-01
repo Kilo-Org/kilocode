@@ -8,7 +8,7 @@
  * a turn starts or ends.
  */
 
-import { type Component, Show, createSignal, createEffect, createMemo, onCleanup } from "solid-js"
+import { type ParentComponent, Show, createSignal, createEffect, createMemo, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -17,7 +17,7 @@ import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
 import { tracksElapsed } from "./working-indicator-utils"
 
-export const WorkingIndicator: Component = () => {
+export const WorkingIndicator: ParentComponent = (props) => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -89,7 +89,7 @@ export const WorkingIndicator: Component = () => {
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()
     if (sid) {
-      vscode.postMessage({ type: "abort", sessionID: sid })
+      vscode.postMessage({ type: "abort", sessionID: sid, scope: "session" })
     }
   }
 
@@ -109,6 +109,7 @@ export const WorkingIndicator: Component = () => {
           {formatElapsed()}
         </span>
       </Show>
+      {props.children}
       <Show when={isRetrying()}>
         <Button
           variant="secondary"

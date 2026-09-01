@@ -1668,7 +1668,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <Button
                 variant="ghost"
                 size="small"
-                onClick={() => session.abort()}
+                onClick={() => {
+                  session.abort()
+                  textareaRef?.focus()
+                }}
                 aria-label={language.t("prompt.action.stop")}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
