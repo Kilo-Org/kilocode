@@ -347,11 +347,8 @@
 ## [7.1.5] - 2026-09-01
 
 ### Fixed
-- fix(jetbrains): keep actions available while the IDE indexes by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13678
 
-### Changed
-- release(jetbrains): v7.1.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13677
-
+- Keep Agent Manager run/action buttons available while the IDE is indexing, instead of disabling them and showing "waits for analysis" tooltips.
 
 ## [7.1.4] - 2026-09-01
 
