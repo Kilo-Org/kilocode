@@ -100,18 +100,6 @@
     },
     {
       "files": [
-        "packages/kilo-console/src/routes/config/state/mcp.ts",
-        "packages/kilo-console/src/routes/config/state/mcp.ts"
-      ],
-      "fingerprint": "64494aa992cccc8d",
-      "maxMatches": 1,
-      "maxTokens": 129,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
         "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
       ],
