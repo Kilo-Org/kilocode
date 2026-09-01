@@ -14,6 +14,7 @@ import { Component, For, Show, createMemo, createSignal, onCleanup, onMount, cre
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { BackgroundJobInfo } from "../../types/messages"
 import { useLanguage } from "../../context/language"
@@ -334,6 +335,17 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               onClick={hideFinished}
             />
           </Show>
+          <Tooltip value={language.t("task.backgroundAgents.openAll")} placement="bottom">
+            <Button
+              data-slot="task-header-agents-open-all"
+              variant="ghost"
+              size="small"
+              aria-label={language.t("task.backgroundAgents.openAll")}
+              onClick={() => visible().forEach(openAgent)}
+            >
+              <Icon name="square-arrow-top-right" size="small" />
+            </Button>
+          </Tooltip>
         </div>
         <Show when={open()}>
           <div data-slot="task-header-todos-list" ref={list}>

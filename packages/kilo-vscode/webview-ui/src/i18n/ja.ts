@@ -1217,6 +1217,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
   "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
+  "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",

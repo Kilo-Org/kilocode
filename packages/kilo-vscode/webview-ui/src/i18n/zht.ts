@@ -1163,6 +1163,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
   "task.backgroundAgents.more": "+{{count}} 個",
   "task.backgroundAgents.open": "開啟背景 Agent",
+  "task.backgroundAgents.openAll": "開啟所有背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",

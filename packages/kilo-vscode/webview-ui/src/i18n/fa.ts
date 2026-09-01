@@ -1221,6 +1221,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
   "task.backgroundAgents.more": "+{{count}} بیشتر",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
+  "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",

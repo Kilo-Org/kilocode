@@ -1159,6 +1159,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
   "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
+  "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",

@@ -1197,6 +1197,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
+  "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",

@@ -1230,6 +1230,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
   "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
+  "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",

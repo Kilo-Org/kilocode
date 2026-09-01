@@ -1206,6 +1206,7 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",
   "task.backgroundAgents.open": "Open background agent",
+  "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
   "task.backgroundAgents.waiting": "A background agent needs your input",
