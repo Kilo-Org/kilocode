@@ -261,18 +261,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": [
-        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts",
-        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts"
-      ],
-      "fingerprint": "ec31254ab83e4a2a",
-      "maxMatches": 1,
-      "maxTokens": 133,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/opencode/src/kilocode/session/prompt.ts", "packages/opencode/src/kilocode/session/prompt.ts"],
       "fingerprint": "b985f7708c9b4632",
       "maxMatches": 1,
