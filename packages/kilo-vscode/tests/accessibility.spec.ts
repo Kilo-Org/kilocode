@@ -173,7 +173,12 @@ test.describe("webview accessibility ratchet", () => {
                 type: "backgroundJobsLoaded",
                 sessionID: message.sessionID,
                 requestID: message.requestID,
-                jobs: ["completed", "cancelled", "error"].map((status) => ({
+                jobs: [
+                  "completed",
+                  "cancelled",
+                  "error",
+                  ...(document.documentElement.dataset.running ? ["running"] : []),
+                ].map((status) => ({
                   id: `job-${status}`,
                   type: "task",
                   title: `Background agent ${status}`,
@@ -218,6 +223,16 @@ test.describe("webview accessibility ratchet", () => {
     await expect(summary.locator('[data-component="icon"]')).toBeVisible()
     await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-warning")
     await expect(agents.locator('[data-slot="task-header-agents-item"][aria-hidden="false"]')).toHaveCount(0)
+
+    await page.evaluate(() => {
+      document.documentElement.dataset.running = "true"
+    })
+    await page.setViewportSize({ width: 600, height: 720 })
+    await expect(items).toHaveCount(4)
+    await expect(items.first()).toHaveAttribute("data-status", "running")
+    await expect(items.first()).toHaveAttribute("aria-hidden", "false")
+    await expect(items.first().locator('[data-component="spinner"]')).toBeVisible()
+    await expect(agents.locator('[data-slot="task-header-agents-overflow"]')).toHaveAttribute("aria-hidden", "false")
   })
 
   test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {

@@ -133,7 +133,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     if (visible().some((agent) => agent.status === "cancelled")) return "cancelled"
     return "completed"
   })
-  const keys = createMemo(() => visible().map((agent) => agent.jobID))
+  const keys = createMemo(() =>
+    [...active(), ...visible().filter((agent) => !active().includes(agent))].map((agent) => agent.jobID),
+  )
   const signature = createMemo(() => keys().join("\0"))
   const [box, setBox] = createSignal<HTMLDivElement>()
   const [preview, setPreview] = createSignal<HTMLDivElement>()
