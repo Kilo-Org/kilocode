@@ -154,38 +154,6 @@ const expectOpenAIResponsesRequest = (input: {
   })
 
 describe("session.llm-native.request", () => {
-  // kilocode_change start
-  it.effect("keeps a cache boundary on stable history before board updates", () =>
-    Effect.gen(function* () {
-      const prepared = yield* prepareNativeRequest({
-        model: {
-          ...baseModel,
-          id: ModelV2.ID.make("claude-sonnet-4-6"),
-          providerID: ProviderV2.ID.make("anthropic"),
-          api: { id: "claude-sonnet-4-6", url: "", npm: "@ai-sdk/anthropic" },
-        },
-        apiKey: "test-key",
-        system: ["Stable system instructions"],
-        messages: [
-          { role: "user", content: "Original task" },
-          { role: "assistant", content: "Stable history" },
-          { role: "user", content: "<shared-agent-board>New note</shared-agent-board>" },
-        ],
-      })
-      expect(prepared.body).toMatchObject({
-        messages: [
-          { role: "user" },
-          {
-            role: "assistant",
-            content: [{ type: "text", text: "Stable history", cache_control: { type: "ephemeral" } }],
-          },
-          { role: "user" },
-        ],
-      })
-    }),
-  )
-  // kilocode_change end
-
   test("maps normalized stream inputs to a native LLM request", () => {
     const messages: ModelMessage[] = [
       {

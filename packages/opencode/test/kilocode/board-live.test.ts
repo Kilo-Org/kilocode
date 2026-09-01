@@ -1,6 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { expect } from "bun:test"
+import { expect, spyOn } from "bun:test"
+import path from "node:path"
 import { Effect, Fiber, Layer, Schema } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -14,6 +15,7 @@ import { SessionPrompt } from "../../src/session/prompt"
 import { SessionSummary } from "../../src/session/summary"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
+import { BoardNotice } from "../../src/kilocode/board/notice"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -200,7 +202,7 @@ function waitFor(llm: TestLLMServer["Service"], match: (input: Probe) => boolean
 }
 
 it.live(
-  "delivers important board posts live without changing task or completion delivery",
+  "delivers fixed tool notices and requires explicit reads without changing task completion",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
@@ -242,14 +244,15 @@ it.live(
           }),
         )
         yield* llm.pushMatch(main, reply().wait(gate.promise).tool("bash", { command: "printf main-boundary" }))
-        yield* llm.pushMatch(main, reply().tool("bash", { command: "printf main-important" }))
-        yield* llm.pushMatch(main, reply().text("main retained the important notes").stop())
+        yield* llm.pushMatch(main, reply().tool("board_read", { since: null, limit: null }))
+        yield* llm.pushMatch(main, reply().text("main read the peer notes as tool data").stop())
         yield* llm.pushMatch(
           sibling,
           reply()
             .wait(gate.promise)
             .tool("board_post", { to: "ALL", type: "INFO", body: "B boundary marker", reply_to: "" }),
         )
+        yield* llm.pushMatch(sibling, reply().tool("board_read", { since: null, limit: null }))
         yield* llm.pushMatch(sibling, reply().wait(done.promise).text("B final result").stop())
 
         yield* llm.pushMatch(
@@ -321,40 +324,50 @@ it.live(
 
         const received = yield* waitFor(
           llm,
-          (input) => main(input) && calls(input, "task") >= 1 && calls(input, "bash") >= 1,
-          "main request with live board context",
+          (input) => main(input) && calls(input, "bash") >= 1 && calls(input, "board_read") === 0,
+          "main request with a fixed board notice",
         )
-        const prefix = messages({ body: boundary }).slice(0, -1)
+        const prefix = messages({ body: boundary })
         const outgoing = messages({ body: received })
         expect(outgoing.slice(0, prefix.length)).toEqual(prefix)
-        expect(outgoing.at(-1)?.role).toBe("user")
-        expect(JSON.stringify(outgoing.at(-1)?.content)).toContain("<shared-agent-board>")
-        expect(JSON.stringify(outgoing.slice(0, -1))).not.toContain("<shared-agent-board>")
+        expect(outgoing.at(-1)?.role).toBe("tool")
+        expect(JSON.stringify(outgoing.at(-1)?.content)).toContain(BoardNotice.text)
+        expect(outgoing.filter((message) => message.role === "user")).toEqual(
+          prefix.filter((message) => message.role === "user"),
+        )
         const body = text({ body: received })
-        expect(body).toContain("A direct discovery for main")
-        expect(body).toContain("A broadcast warning for every worker")
-        expect(body).toContain("New general broadcasts are available")
+        expect(body).not.toContain("A direct discovery for main")
+        expect(body).not.toContain("A broadcast warning for every worker")
         expect(body).not.toContain("A routine broadcast body stays hidden")
 
         const update = yield* waitFor(
           llm,
-          (input) => sibling(input) && calls(input, "board_post") >= 1,
-          "sibling request with live board context",
+          (input) => sibling(input) && calls(input, "board_post") >= 1 && calls(input, "board_read") === 0,
+          "sibling request with a fixed board notice",
         )
         const notice = text({ body: update })
-        expect(notice).toContain("A broadcast warning for every worker")
-        expect(notice).toContain("New general broadcasts are available")
+        expect(notice).toContain(BoardNotice.text)
+        expect(notice).not.toContain("A broadcast warning for every worker")
         expect(notice).not.toContain("A direct discovery for main")
         expect(notice).not.toContain("A routine broadcast body stays hidden")
 
-        const retained = yield* waitFor(
-          llm,
-          (input) => main(input) && calls(input, "task") >= 1 && calls(input, "bash") >= 2,
-          "main retained board context request",
-        )
-        const content = text({ body: retained })
-        expect(content).toContain("A direct discovery for main")
-        expect(content).toContain("A broadcast warning for every worker")
+        for (const match of [main, sibling]) {
+          const read = yield* waitFor(
+            llm,
+            (input) => match(input) && calls(input, "board_read") === 1,
+            "request after an explicit board read",
+          )
+          const conversation = messages({ body: read })
+          expect(conversation.at(-1)?.role).toBe("tool")
+          const result = JSON.stringify(conversation.at(-1)?.content)
+          expect(result).toContain("A direct discovery for main")
+          expect(result).toContain("A broadcast warning for every worker")
+          expect(result).toContain("A routine broadcast body stays hidden")
+          expect(JSON.stringify(conversation.filter((message) => message.role !== "tool"))).not.toContain(
+            "A direct discovery for main",
+          )
+          expect(conversation.filter((message) => message.role === "user")).toHaveLength(1)
+        }
         yield* Fiber.join(run)
 
         expect((yield* jobs.get(child.id))?.status).toBe("running")
@@ -405,4 +418,68 @@ it.live(
       { git: true, config: config },
     ),
   60_000,
+)
+
+it.live(
+  "preserves a completed tool result when cancelled during a notification check",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir, llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        yield* Effect.promise(() => Bun.write(path.join(dir, "completed.txt"), "completed-before-notice"))
+        const entered = Promise.withResolvers<void>()
+        const release = Promise.withResolvers<void>()
+        const activity = BoardStore.activity
+        const probe = spyOn(BoardStore, "activity").mockImplementation((input) =>
+          Effect.gen(function* () {
+            entered.resolve()
+            yield* Effect.promise(() => release.promise)
+            return yield* activity(input)
+          }),
+        )
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            release.resolve()
+            probe.mockRestore()
+          }),
+        )
+        const chat = yield* sessions.create({
+          title: "Notification cancellation",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* llm.push(reply().tool("read", { filePath: "completed.txt" }))
+        const run = yield* prompt
+          .prompt({
+            sessionID: chat.id,
+            agent: "code",
+            parts: [{ type: "text", text: "Run the requested read-only check." }],
+          })
+          .pipe(Effect.forkChild)
+        yield* awaitWithTimeout(
+          Effect.promise(() => entered.promise),
+          "notification check started",
+          "5 seconds",
+        )
+        yield* awaitWithTimeout(prompt.cancel(chat.id), "cancel during notification check", "5 seconds")
+        release.resolve()
+        yield* Fiber.await(run)
+        const parts = (yield* sessions.messages({ sessionID: chat.id })).flatMap((message) => message.parts)
+        const tool = parts.find((part) => part.type === "tool" && part.tool === "read")
+        if (!tool || tool.type !== "tool") throw new Error("The real read tool was not persisted")
+        const saved =
+          tool.state.status === "completed"
+            ? tool.state.output
+            : tool.state.status === "error"
+              ? tool.state.metadata?.output
+              : undefined
+        expect(saved).toContain("completed-before-notice")
+        expect(tool.state.status).not.toBe("running")
+        expect(tool.state.status).not.toBe("pending")
+        expect(parts.filter((part) => part.type === "tool")).toHaveLength(1)
+        expect(JSON.stringify(parts)).not.toContain(BoardNotice.text)
+      }),
+      { git: true, config },
+    ),
+  30_000,
 )

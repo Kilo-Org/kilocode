@@ -182,16 +182,16 @@ describe("BoardStore", () => {
           body: "Pause before editing",
         })
         const read = yield* BoardStore.read({ sessionID: id("root") })
-        const updates = yield* BoardStore.updates({ sessionID: id("root") })
-        return { first, retry, read, updates }
+        const activity = yield* BoardStore.activity({ sessionID: id("root"), after: 0 })
+        return { first, retry, read, activity }
       }),
     )
     expect(result.retry).toEqual(result.first)
     expect(result.read.messages).toHaveLength(1)
-    expect(result.updates.messages).toMatchObject([{ id: result.first.id, type: "HOLD", from: id("child"), to: "ALL" }])
+    expect(result.activity).toEqual({ cursor: 1, message: 1 })
   })
 
-  test("does not deliver main-only direct messages to siblings", async () => {
+  test("does not notify siblings about main-only direct messages", async () => {
     const result = await setup(() =>
       Effect.gen(function* () {
         const post = yield* BoardStore.post({
@@ -201,15 +201,15 @@ describe("BoardStore", () => {
           type: "INFO",
           body: "Only main should receive this automatically",
         })
-        const main = yield* BoardStore.updates({ sessionID: id("root") })
-        const sibling = yield* BoardStore.updates({ sessionID: id("sibling") })
+        const main = yield* BoardStore.activity({ sessionID: id("root"), after: 0 })
+        const sibling = yield* BoardStore.activity({ sessionID: id("sibling"), after: 0 })
         const history = yield* BoardStore.read({ sessionID: id("sibling") })
         return { post, main, sibling, history }
       }),
     )
     expect(result.post.to).toBe("main")
-    expect(result.main.messages).toMatchObject([{ id: result.post.id, to: "main" }])
-    expect(result.sibling.messages).toEqual([])
+    expect(result.main).toEqual({ cursor: 1, message: 1 })
+    expect(result.sibling).toEqual({ cursor: 1, message: 0 })
     expect(result.history.messages).toContainEqual(result.post)
   })
 
@@ -497,22 +497,26 @@ describe("BoardStore", () => {
     expect(result.board.participants.map((item) => item.id)).toEqual(["main", id("child"), id("sibling"), id("nested")])
   })
 
-  test("uses ordered concurrent append transactions and important update pagination", async () => {
-    const result = await setup(() =>
+  test("coalesces concurrent activity without returning bodies or replaying irrelevant history", async () => {
+    const result = await setup((db) =>
       Effect.gen(function* () {
-        const writes = Array.from({ length: 60 }, (_, index) =>
-          BoardStore.post({
-            sessionID: id("child"),
-            messageID: `msg_${index}`,
-            callID: `call_${index}`,
-            to: "ALL",
-            type: "HOLD",
-            body: `message ${index}`,
-          }),
+        const values = yield* Effect.all(
+          Array.from({ length: 60 }, (_, index) =>
+            BoardStore.post({
+              sessionID: id("child"),
+              messageID: `msg_${index}`,
+              callID: `call_${index}`,
+              to: "ALL",
+              type: "HOLD",
+              body: `message ${index}`,
+            }),
+          ),
+          { concurrency: "unbounded" },
         )
-        const values = yield* Effect.all(writes, { concurrency: "unbounded" })
-        const updates = yield* BoardStore.updates({ sessionID: id("root"), after: 0 })
-        const recent = yield* BoardStore.updates({ sessionID: id("root") })
+        const first = yield* BoardStore.activity({ sessionID: id("root"), after: 0 })
+        const page = yield* BoardStore.read({ sessionID: id("root"), limit: 50 })
+        const rest = yield* BoardStore.read({ sessionID: id("root"), since: page.cursor })
+        const sequences = yield* db.all<{ seq: number }>(sql`SELECT seq FROM kilo_board_message ORDER BY seq`)
         yield* BoardStore.post({
           sessionID: id("root"),
           messageID: "msg_outgoing",
@@ -520,7 +524,7 @@ describe("BoardStore", () => {
           type: "INFO",
           body: "Outgoing note",
         })
-        const remaining = yield* BoardStore.updates({ sessionID: id("root"), after: updates.cursor })
+        const own = yield* BoardStore.activity({ sessionID: id("root"), after: first.cursor })
         yield* BoardStore.post({
           sessionID: id("child"),
           messageID: "msg_notice",
@@ -528,33 +532,30 @@ describe("BoardStore", () => {
           type: "INFO",
           body: "Available on demand",
         })
-        const notice = yield* BoardStore.updates({ sessionID: id("root"), after: remaining.cursor })
-        const caught = yield* BoardStore.updates({ sessionID: id("root"), after: notice.cursor })
-        const posted = yield* BoardStore.post({
+        const notice = yield* BoardStore.activity({ sessionID: id("root"), after: own.cursor })
+        const caught = yield* BoardStore.activity({ sessionID: id("root"), after: notice.cursor })
+        yield* BoardStore.post({
           sessionID: id("child"),
           messageID: "msg_incoming",
           to: "main",
           type: "INFO",
           body: "Incoming after catch-up",
         })
-        const incoming = yield* BoardStore.updates({ sessionID: id("root"), after: caught.cursor })
-        return { values, updates, recent, remaining, notice, caught, posted, incoming }
+        const incoming = yield* BoardStore.activity({ sessionID: id("root"), after: caught.cursor })
+        return { values, first, page, rest, sequences, own, notice, caught, incoming }
       }),
     )
     expect(new Set(result.values.map((item) => item.id)).size).toBe(60)
-    expect(result.updates.messages).toHaveLength(50)
-    expect(result.updates.messages.map((item) => item.seq)).toEqual([...Array(50)].map((_, index) => index + 1))
-    expect(result.updates.hasMore).toBe(true)
-    expect(result.updates.cursor).toBe(50)
-    expect(result.recent.messages.map((item) => item.seq)).toEqual([...Array(50)].map((_, index) => index + 11))
-    expect(result.recent.hasMore).toBe(true)
-    expect(result.recent.cursor).toBe(60)
-    expect(result.remaining.messages.map((item) => item.seq)).toEqual([...Array(10)].map((_, index) => index + 51))
-    expect(result.remaining.cursor).toBe(61)
-    expect(result.notice).toMatchObject({ messages: [], broadcast: 62, cursor: 62 })
-    expect(result.caught).toMatchObject({ messages: [], broadcast: 0, cursor: 62 })
-    expect(result.incoming.messages).toMatchObject([{ id: result.posted.id, seq: 63 }])
-    expect(result.incoming.cursor).toBe(63)
+    expect(result.sequences.map((item) => item.seq)).toEqual(Array.from({ length: 60 }, (_, index) => index + 1))
+    expect(result.first).toEqual({ cursor: 60, message: 60 })
+    expect(result.page.messages).toHaveLength(50)
+    expect(result.page.hasMore).toBe(true)
+    expect(result.rest.messages).toHaveLength(10)
+    expect(result.rest.hasMore).toBe(false)
+    expect(result.own).toEqual({ cursor: 61, message: 0 })
+    expect(result.notice).toEqual({ cursor: 62, message: 62 })
+    expect(result.caught).toEqual({ cursor: 62, message: 0 })
+    expect(result.incoming).toEqual({ cursor: 63, message: 63 })
   })
 
   test("bounds excerpts and read messages without evicting history", async () => {

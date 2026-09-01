@@ -65,8 +65,6 @@ export namespace BoardStore {
     reply_to?: string
   }
 
-  export type Entry = Message & { seq: number }
-
   export type Scope = {
     root: SessionID
     agent: "main" | SessionID
@@ -247,59 +245,29 @@ export namespace BoardStore {
       .pipe(Effect.mapError((error) => mapError(error)))
   })
 
-  export const updates = Effect.fn("BoardStore.updates")(function* (input: { sessionID: SessionID; after?: number }) {
-    if (input.after !== undefined && (!Number.isSafeInteger(input.after) || input.after < 0))
-      return yield* fail("Board update sequence must be a non-negative integer")
+  export const activity = Effect.fn("BoardStore.activity")(function* (input: { sessionID: SessionID; after: number }) {
+    if (!Number.isSafeInteger(input.after) || input.after < 0)
+      return yield* fail("Board activity sequence must be a non-negative integer")
     const { db } = yield* Database.Service
     const current = yield* scope(input.sessionID)
     const latest = yield* db
-      .get<{ seq: number }>(sql`SELECT next_seq - 1 AS seq FROM kilo_board WHERE root_session_id = ${current.root}`)
+      .get<{ cursor: number; message: number | null }>(
+        sql`
+        SELECT board.next_seq - 1 AS cursor, (
+          SELECT MAX(seq)
+          FROM kilo_board_message
+          WHERE board_root_session_id = board.root_session_id
+            AND seq > ${input.after} AND seq < board.next_seq
+            AND sender_session_id <> ${input.sessionID}
+            AND (recipient = ${input.sessionID} OR recipient = ${ALL})
+        ) AS message
+        FROM kilo_board board
+        WHERE board.root_session_id = ${current.root}
+      `,
+      )
       .pipe(Effect.mapError((error) => mapError(error)))
     if (!latest) return yield* fail("Board was not initialized")
-    const rows = yield* db
-      .all<MessageRow>(
-        sql`
-        SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
-          source_message_id, source_call_id
-        FROM kilo_board_message
-        WHERE board_root_session_id = ${current.root}
-          AND seq <= ${latest.seq}
-          AND sender_session_id <> ${input.sessionID}
-          AND (recipient = ${input.sessionID} OR (recipient = ${ALL} AND type IN ('HOLD', 'VETO')))
-          ${input.after === undefined ? sql`` : sql`AND seq > ${input.after}`}
-        ORDER BY seq ${input.after === undefined ? sql`DESC` : sql`ASC`}
-        LIMIT 51
-      `,
-      )
-      .pipe(Effect.mapError((error) => mapError(error)))
-    const hasMore = rows.length > 50
-    const page = hasMore ? rows.slice(0, 50) : rows
-    if (input.after === undefined) page.reverse()
-    const broadcast = yield* db
-      .get<{ seq: number }>(
-        sql`
-        SELECT seq
-        FROM kilo_board_message
-        WHERE board_root_session_id = ${current.root}
-          AND seq > ${input.after ?? 0} AND seq <= ${latest.seq}
-          AND sender_session_id <> ${input.sessionID}
-          AND recipient = ${ALL}
-          AND type IN ('INFO', 'ASK', 'RESULT')
-        ORDER BY seq DESC
-        LIMIT 1
-      `,
-      )
-      .pipe(Effect.mapError((error) => mapError(error)))
-    return {
-      scope: current,
-      messages: page.map((row) => ({ ...message(row, current.root), seq: row.seq })),
-      broadcast: broadcast?.seq ?? 0,
-      hasMore,
-      cursor:
-        input.after !== undefined && hasMore
-          ? (page.at(-1)?.seq ?? input.after)
-          : Math.max(input.after ?? 0, latest.seq),
-    }
+    return { cursor: Math.max(input.after, latest.cursor), message: latest.message ?? 0 }
   })
 
   export function format(value: Message) {
