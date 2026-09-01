@@ -286,18 +286,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/webview-ui/src/hooks/useGitChangesContext.ts",
-        "packages/kilo-vscode/webview-ui/src/hooks/useTerminalContext.ts"
-      ],
-      "fingerprint": "3474d577ea4814b0",
-      "maxMatches": 1,
-      "maxTokens": 105,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx",
         "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx"
       ],
