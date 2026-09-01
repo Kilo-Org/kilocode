@@ -64,18 +64,6 @@
     },
     {
       "files": [
-        "packages/kilo-console/src/routes/config/state/agents.ts",
-        "packages/kilo-console/src/routes/config/state/models.ts"
-      ],
-      "fingerprint": "1da5f78ab9ff1975",
-      "maxMatches": 1,
-      "maxTokens": 164,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
         "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
       ],
