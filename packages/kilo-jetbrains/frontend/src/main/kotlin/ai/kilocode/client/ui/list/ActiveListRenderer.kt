@@ -32,6 +32,7 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import javax.swing.Icon
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -93,9 +94,11 @@ internal class ActiveListRenderer(
         add(title, BorderLayout.CENTER)
         add(badges, BorderLayout.EAST)
     }
-    // Pin the title+badges group to the leading edge so badges trail the title text directly
-    // instead of drifting to the far right of the row.
-    private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
+    // Pin the title+badges group to the leading edge so badges trail the title text directly instead of
+    // drifting to the far right of the row. A list that opts into [ActiveListConfig.badgesRight] gets
+    // the group stretched across the row instead, which lands its badges on the same trailing edge as
+    // the metrics and secondary badges below them.
+    private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
@@ -464,7 +467,7 @@ internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
     }
 }
 
-/** A retained badge pill that opts into list hit-testing when its model carries an id. */
+/** A retained badge pill or status glyph that opts into list hit-testing when its model carries an id. */
 internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     private var badge: ActiveListBadge? = null
 
@@ -474,11 +477,17 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     fun update(badge: ActiveListBadge) {
         this.badge = badge
         cellId = badge.id.orEmpty()
-        val current = icon as? FilledBadgeIcon
-        if (current?.text != badge.text || current.style != badge.style) {
-            icon = FilledBadgeIcon(badge.text, badge.style)
-        }
+        val next = badge.icon ?: pill(badge)
+        // Both branches answer with the instance already installed when nothing changed, so a repaint
+        // of an unchanged row does not churn the label's icon.
+        if (icon !== next) icon = next
         toolTipText = cellTooltip()
+    }
+
+    private fun pill(badge: ActiveListBadge): Icon {
+        val current = icon as? FilledBadgeIcon
+        if (current?.text == badge.text && current.style == badge.style) return current
+        return FilledBadgeIcon(badge.text, badge.style)
     }
 
     override fun cellEnabled(): Boolean = badge?.action != null

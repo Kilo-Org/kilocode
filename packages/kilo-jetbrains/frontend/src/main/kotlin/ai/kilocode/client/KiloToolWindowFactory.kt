@@ -156,13 +156,16 @@ internal class KiloToolWindowSetupService(
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
                     if (event.operation != ContentManagerEvent.ContentOperation.add) return
-                    // Either direction: switching tabs is a deliberate act that often follows an
-                    // authorization or PR change made elsewhere. The coordinator drops the submit
-                    // when a probe is already running or too recent, so tab churn cannot stack up
-                    // gh calls. Chat needs nothing further — SessionUi re-reads branch/PR state
-                    // itself once it becomes showing.
+                    // Only on the way in: opening the Agent Manager is a deliberate act that often
+                    // follows an authorization or PR change made elsewhere, and this is the tab whose
+                    // banner and badges read gh state. Switching to Chat reveals no gh-dependent UI —
+                    // SessionUi re-reads branch/PR state itself once it becomes showing — so probing
+                    // then only spends a call to warm a cache nothing is waiting on.
+                    if (event.content !== agentContent) return
+                    // The coordinator folds a submit that cannot run now into one trailing probe, so
+                    // tab churn cannot stack up gh calls.
                     service<GhStatusCoordinator>().sync("tab-switch")
-                    if (event.content === agentContent) agentManagerPanel.refresh()
+                    agentManagerPanel.refresh()
                 }
             }
             toolWindow.contentManager.addContentManagerListener(listener)

@@ -344,6 +344,27 @@
 
 ## [Unreleased]
 
+## [7.1.3] - 2026-08-31
+
+### Added
+
+- Hover a worktree row to see its pull request details, review state, and CI status at a glance.
+- Copy a worktree's branch name, path, or pull request reference (title plus link) from the worktree row menu.
+- Guided onboarding on first launch, including a wizard that imports your Kilo v5 settings and providers.
+
+### Fixed
+
+- Selecting a model from a custom provider now resolves its API key environment variable correctly, and keeps custom headers when the variable is cleared.
+- Pull request and GitHub status now refresh promptly when you return to the IDE, without flooding the backend with lookups.
+- Keep showing a pull request when GitHub declines review details or the API budget is spent, instead of blanking the badges.
+- Onboarding and the migration wizard stay usable if Skip or Later fails.
+- Center the empty state in the diff editor.
+- Worktree row popups no longer clip long pull request titles or jump while the list refreshes.
+
+### Changed
+
+- Refreshed the JetBrains Marketplace listing description.
+
 ## [7.1.2] - 2026-08-31
 
 ### Added

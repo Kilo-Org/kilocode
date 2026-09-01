@@ -55,6 +55,36 @@ data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
 
+/**
+ * Aggregate review verdict for a pull request, from GitHub's `reviewDecision`. Orthogonal to
+ * [GhState]: a draft PR can be approved, and an open one can be waiting on review.
+ *
+ * [PENDING] means a review is required but not yet given; [NONE] means the repository asks for none.
+ */
+@Serializable
+enum class GhReview { NONE, PENDING, APPROVED, CHANGES_REQUESTED }
+
+/** Rolled-up CI verdict for a pull request head. [NONE] means the head reports no checks at all. */
+@Serializable
+enum class GhChecks { NONE, PENDING, PASSED, FAILED }
+
+/**
+ * Rolled-up CI state for a pull request head, from GitHub's `statusCheckRollup`.
+ *
+ * Counts only, deliberately: per-check names, URLs, and timestamps would make every poll produce a
+ * DTO that compares unequal to the last one, and both `WorktreeRow.equals` and `WorktreeNameCache`
+ * gate listener/row refreshes on whole-DTO equality. Aggregates stay stable between polls that found
+ * nothing new. [total] excludes skipped checks, matching what GitHub's own PR page counts.
+ */
+@Serializable
+data class GhChecksDto(
+    val state: GhChecks = GhChecks.NONE,
+    val total: Int = 0,
+    val passed: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+)
+
 @Serializable
 data class WorktreePrDto(
     val path: String,
@@ -62,10 +92,21 @@ data class WorktreePrDto(
     val state: GhState,
     val url: String,
     val title: String = "",
+    val review: GhReview = GhReview.NONE,
+    val checks: GhChecksDto = GhChecksDto(),
 )
 
+/**
+ * Why gh cannot answer, or [OK] when it can.
+ *
+ * [RATE_LIMITED] is temporary and fixes itself, unlike the others: GitHub refused the query because the
+ * token's hourly budget is spent. It still has to be a state of its own, because the alternative is
+ * reading a refusal as "this checkout has no pull request" — which blanks every badge with no reason
+ * given, and costs the most calls doing it, since a lookup that stops at the first answer instead walks
+ * its whole strategy ladder.
+ */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
+enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
 
 @Serializable
 data class WorktreePrListDto(

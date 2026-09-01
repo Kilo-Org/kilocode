@@ -3,10 +3,15 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -18,6 +23,8 @@ import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.event.MouseEvent
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JSeparator
 import javax.swing.SwingUtilities
@@ -52,6 +59,64 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         assertNull(edt { components(view).filterIsInstance<JBLabel>().firstOrNull { it.icon is FilledBadgeIcon } })
         assertFalse(edt { title(view).isVisible })
+    }
+
+    fun `test verdict glyphs sit between the state badge and the title`() {
+        val view = edt { PrHeaderView {} }
+
+        edt {
+            view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x")
+            layout(view)
+        }
+
+        edt {
+            val badge = badge(view)
+            val review = glyph(view, PrIcons.reviewApproved)
+            val checks = glyph(view, PrIcons.checksFailed)
+            // State, review, run, then the title: the same reading order the worktree rows use.
+            assertTrue(right(view, badge) <= left(view, review))
+            assertTrue(right(view, review) <= left(view, checks))
+            assertTrue(right(view, checks) <= left(view, title(view)))
+            assertEquals("<html>Review approved</html>", review.toolTipText)
+            // The glyph cannot say how many failed, so the tooltip has to.
+            assertEquals(
+                "<html>2 of 5 checks failed<br>Click to open the checks in your browser.</html>",
+                checks.toolTipText,
+            )
+            assertEquals(Cursor.HAND_CURSOR, review.cursor.type)
+            assertEquals(Cursor.HAND_CURSOR, checks.cursor.type)
+        }
+    }
+
+    fun `test the review glyph opens the pull request and the run glyph opens its checks`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+
+        edt { click(glyph(view, PrIcons.reviewApproved)) }
+        edt { click(glyph(view, PrIcons.checksFailed)) }
+
+        // Someone clicking a red build wants the log, not the conversation.
+        assertEquals(
+            listOf("https://github.com/kilo/test/pull/123", "https://github.com/kilo/test/pull/123/checks"),
+            browser.urls,
+        )
+    }
+
+    fun `test a pull request with no verdicts shows no glyphs`() {
+        val view = edt { PrHeaderView {} }
+
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+
+        // No CI on the head and a review nobody has given yet: both would leave a gap after the pill.
+        assertTrue(edt { glyphs(view).isEmpty() })
+
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+        assertEquals(2, edt { glyphs(view).size })
+
+        // A PR that goes away takes its verdicts with it.
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = null, name = "feature-x") }
+        assertTrue(edt { glyphs(view).isEmpty() })
     }
 
     fun `test changes default to compact aggregate presentation`() {
@@ -145,9 +210,35 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         title = "Implement header",
     )
 
+    private fun verdicts() = pull(GhState.OPEN).copy(
+        review = GhReview.APPROVED,
+        checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+    )
+
     @RequiresEdt
     private fun badge(view: PrHeaderView): JBLabel =
         components(view).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
+
+    /** The visible verdict labels, which are the only glyph-icon labels the header owns. */
+    @RequiresEdt
+    private fun glyphs(view: PrHeaderView): List<JBLabel> =
+        components(view).filterIsInstance<JBLabel>().filter { it.isVisible && it.icon != null && it.icon !is FilledBadgeIcon }
+
+    @RequiresEdt
+    private fun glyph(view: PrHeaderView, icon: Icon): JBLabel = glyphs(view).single { it.icon === icon }
+
+    @RequiresEdt
+    private fun left(view: PrHeaderView, child: Component): Int = SwingUtilities.convertPoint(child, 0, 0, view).x
+
+    @RequiresEdt
+    private fun right(view: PrHeaderView, child: Component): Int = left(view, child) + child.width
+
+    @RequiresEdt
+    private fun click(child: Component) {
+        child.dispatchEvent(
+            MouseEvent(child, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false, MouseEvent.BUTTON1),
+        )
+    }
 
     @RequiresEdt
     private fun title(view: PrHeaderView): SimpleColoredComponent =
