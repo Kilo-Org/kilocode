@@ -24,7 +24,7 @@ internal fun activeListRegions(item: ActiveListItem): Map<String, () -> Unit> {
         val act = badge.action
         if (!id.isNullOrBlank() && act != null) out[id] = act
     }
-    item.metrics?.onChanges?.let { out[ACTIVE_LIST_CHANGES_CELL] = it }
+    item.metrics?.action?.let { out[ACTIVE_LIST_CHANGES_CELL] = it }
     return out
 }
 

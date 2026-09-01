@@ -69,6 +69,11 @@ internal class ChangesPanel @RequiresEdt constructor(
         setActions(onBase, onLocal)
     }
 
+    /**
+     * [onBase] drives the only group a compact summary has, whichever counts it ended up showing — a
+     * compact host that passes an uncommitted set has to hand over the action that matches it, because
+     * this widget cannot know which comparison the counts came from.
+     */
     @RequiresEdt
     fun setActions(onBase: (() -> Unit)?, onLocal: (() -> Unit)? = null) {
         base.action = onBase
@@ -88,10 +93,16 @@ internal class ChangesPanel @RequiresEdt constructor(
         localDeletions: Int = 0,
         base: String = "",
     ) {
-        val next = if (mode == Mode.COMPACT) {
-            State(files, additions, deletions, base = base)
-        } else {
-            State(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+        // A compact summary has one group, so uncommitted work is all it can show for a worktree that has
+        // committed nothing yet — and hiding instead would read as "this worktree changed nothing", which
+        // is the opposite of what the row is being asked. The counts it drops in that case are zero, so
+        // they stay out of the state and an unrelated poll cannot repaint the row.
+        val next = when {
+            mode == Mode.FULL ->
+                State(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+            files == 0 && localFiles > 0 ->
+                State(localFiles, localAdditions, localDeletions, base = base, local = true)
+            else -> State(files, additions, deletions, base = base)
         }
         if (state == next) return
         state = next
@@ -99,22 +110,24 @@ internal class ChangesPanel @RequiresEdt constructor(
         // its tooltip only has to say what a click does. The full form is the one that can be squeezed
         // out of a narrow header, and it keeps the counts and the base branch.
         val tip = when {
+            next.local -> KiloBundle.message("worktree.dirty.tooltip.open")
             mode == Mode.COMPACT -> KiloBundle.message("worktree.stats.tooltip.open")
             base.isBlank() -> KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
             else -> KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
         }
-        this.base.update(files, additions, deletions, tip)
+        this.base.update(next.files, next.additions, next.deletions, tip)
         local?.update(
-            localFiles, localAdditions, localDeletions,
-            KiloBundle.message("worktree.dirty.tooltip", localFiles, localAdditions, localDeletions),
+            next.localFiles, next.localAdditions, next.localDeletions,
+            KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions),
         )
-        this.ahead?.let { counter(it, ahead) }
-        this.behind?.let { counter(it, behind) }
-        val right = files > 0 || next.ahead > 0 || next.behind > 0
-        separator?.let { if (it.isVisible != (localFiles > 0 && right)) it.isVisible = localFiles > 0 && right }
+        this.ahead?.let { counter(it, next.ahead) }
+        this.behind?.let { counter(it, next.behind) }
+        val right = next.files > 0 || next.ahead > 0 || next.behind > 0
+        val fence = next.localFiles > 0 && right
+        separator?.let { if (it.isVisible != fence) it.isVisible = fence }
         val visible = right || next.localFiles > 0
         if (isVisible != visible) isVisible = visible
-        val tooltip = tip.takeIf { mode == Mode.COMPACT && files > 0 }
+        val tooltip = tip.takeIf { mode == Mode.COMPACT && next.files > 0 }
         if (toolTipText != tooltip) toolTipText = tooltip
         syncActions()
         revalidate()
@@ -326,6 +339,8 @@ internal class ChangesPanel @RequiresEdt constructor(
         val localAdditions: Int = 0,
         val localDeletions: Int = 0,
         val base: String = "",
+        /** The counts above are uncommitted, stood in for a committed set that is empty. Compact only. */
+        val local: Boolean = false,
     )
 
     private companion object {
