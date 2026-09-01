@@ -109,6 +109,8 @@ export interface KiloProviderOptions {
    */
   dataCollection?: "allow" | "deny"
 
+  requestCompression?: boolean
+
   /**
    * Custom fetch function
    */
