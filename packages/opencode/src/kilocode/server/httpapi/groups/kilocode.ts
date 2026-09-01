@@ -23,7 +23,8 @@ import {
   Result as NotebookResult,
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
-import { SessionID } from "@/session/schema"
+import { MessageID, SessionID } from "@/session/schema"
+import { ApiNotFoundError, InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import {
   MarketplaceInstallPayload,
   MarketplaceInstallResult,
@@ -32,6 +33,7 @@ import {
   MarketplaceRemoveResult,
 } from "@/kilocode/marketplace/schema"
 import { CommandFiles } from "@/kilocode/command-files"
+import { Token } from "@opencode-ai/schema/kilocode/session-drain"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
@@ -69,6 +71,13 @@ export const RemoveSnapshotPayload = Schema.Struct({
   worktree: Schema.String,
 })
 
+export const ResumeSessionPayload = Schema.Struct({
+  messageID: MessageID,
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")),
+})
+
+export const DrainSessionPayload = Schema.Struct({ token: Token })
+
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
@@ -93,6 +102,8 @@ export const KilocodePaths = {
   agentManagerReply: `${root}/agent-manager/:requestID/reply`,
   agentManagerReject: `${root}/agent-manager/:requestID/reject`,
   sessionModelUsage: `/session/:sessionID/model-usage`,
+  resumeSession: `${root}/session/:sessionID/resume`,
+  drainSession: `${root}/session/:sessionID/drain`,
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
@@ -102,6 +113,34 @@ export const KilocodeApi = HttpApi.make("kilocode")
   .add(
     HttpApiGroup.make("kilocode")
       .add(
+        HttpApiEndpoint.post("resumeSession", KilocodePaths.resumeSession, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          payload: ResumeSessionPayload,
+          success: described(Schema.Boolean, "Session continuation accepted"),
+          error: [ApiNotFoundError, InvalidRequestError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.resumeSession",
+            summary: "Resume an interrupted session",
+            description:
+              "Resume the specified unfinished assistant turn without adding a user message. Active, completed, reverted, and blocked sessions cannot be resumed.",
+          }),
+        ),
+        HttpApiEndpoint.post("drainSession", KilocodePaths.drainSession, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          payload: DrainSessionPayload,
+          success: described(Schema.Boolean, "Session work drained"),
+          error: ApiNotFoundError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.drainSession",
+            summary: "Wait for session completion",
+            description:
+              "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+          }),
+        ),
         HttpApiEndpoint.post("heapSnapshot", KilocodePaths.heapSnapshot, {
           query: WorkspaceRoutingQuery,
           success: described(Schema.String, "Heap snapshot file path"),

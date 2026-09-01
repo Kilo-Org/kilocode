@@ -1,4 +1,6 @@
 import { Effect, Schema } from "effect"
+import type { EventV2 } from "@opencode-ai/core/event"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, SessionID } from "@/session/schema"
@@ -7,6 +9,32 @@ import { KiloPartLifecycle } from "./part-lifecycle"
 
 const task = "task"
 type Ops = Pick<Session.Interface, "get" | "messages" | "create" | "updateMessage" | "updatePart">
+
+export function forkWriter(events: EventV2.Interface, ops: Pick<Ops, "get" | "messages" | "create">) {
+  const pending: Parameters<EventV2.Interface["publishAll"]>[0][number][] = []
+  const flush = Effect.suspend(() => {
+    if (!pending.length) return Effect.void
+    return events.publishAll(pending.splice(0), { metadata: { fork: true } })
+  })
+  return {
+    ...ops,
+    flush,
+    messages: (input: Parameters<Ops["messages"]>[0]) => flush.pipe(Effect.andThen(ops.messages(input))),
+    updateMessage: <T extends MessageV2.Info>(info: T): Effect.Effect<T> =>
+      Effect.sync(() => {
+        pending.push({ definition: SessionV1.Event.MessageUpdated, data: { sessionID: info.sessionID, info } })
+        return info
+      }),
+    updatePart: <T extends MessageV2.Part>(part: T): Effect.Effect<T> =>
+      Effect.sync(() => {
+        pending.push({
+          definition: SessionV1.Event.PartUpdated,
+          data: { sessionID: part.sessionID, part, time: Date.now() },
+        })
+        return part
+      }),
+  }
+}
 
 // Keep terminal task references so the fork can give them private child sessions.
 // In-flight jobs cannot be copied safely, so those remain historical errors.

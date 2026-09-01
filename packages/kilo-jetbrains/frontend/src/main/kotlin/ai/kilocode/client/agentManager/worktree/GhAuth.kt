@@ -7,6 +7,12 @@ import com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 
+/**
+ * GitHub's own explanation of the API budget, for the banner and the notification that report a spent
+ * one. Nothing in the IDE can lift the limit, so pointing at the rules is the only honest action.
+ */
+internal const val GH_LIMIT_DOCS = "https://docs.github.com/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+
 @RequiresEdt
 internal fun runGhAuthLogin(project: Project) {
     val tab = TerminalToolWindowTabsManager.getInstance(project)

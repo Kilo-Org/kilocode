@@ -520,7 +520,7 @@
 }
 
 .chat-view .prompt-input-container {
-  margin-block: var(--prompt-gutter);
+  margin-block: var(--prompt-gutter) var(--prompt-min-gutter);
 }
 
 .chat-view .chat-input > .startup-error-banner,

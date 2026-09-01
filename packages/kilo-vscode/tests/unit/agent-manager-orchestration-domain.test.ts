@@ -176,7 +176,7 @@ describe("Agent Manager orchestration domain", () => {
     expect(dirs.size).toBe(4)
   })
 
-  it("delivers only to an idle managed session in its authoritative directory", async () => {
+  it("delivers to a managed session in its authoritative directory", async () => {
     const managed = state.addWorktree({ branch: "fix/prompt", path: worktree, parentBranch: "main" })
     state.addSession("ses_target", managed.id)
     const get = mock(async () => ({
@@ -302,32 +302,92 @@ describe("Agent Manager orchestration domain", () => {
     expect(delivered).toHaveBeenCalledWith(expect.objectContaining({ directory: worktree }), { throwOnError: true })
   })
 
-  it("waits for a busy managed session to become idle before prompting", async () => {
-    const managed = state.addWorktree({ branch: "fix/wait", path: worktree, parentBranch: "main" })
-    state.addSession("ses_wait", managed.id)
-    let calls = 0
-    const promptAsync = mock(async () => ({ data: undefined }))
+  it.each(["busy", "retry"] as const)("submits prompts to a %s session without waiting for idle", async (activity) => {
+    const managed = state.addWorktree({ branch: "fix/queue", path: worktree, parentBranch: "main" })
+    state.addSession("ses_queue", managed.id)
+    const delivered = mock(async () => ({ data: undefined }))
     const client = {
       session: {
-        get: mock(async () => ({ data: { id: "ses_wait", directory: worktree, title: "Wait" } as Session })),
-        status: mock(async () => ({ data: calls++ === 0 ? { ses_wait: { type: "busy" } } : {} })),
-        promptAsync,
+        get: mock(async () => ({ data: { id: "ses_queue", directory: worktree, title: "Queue" } as Session })),
+        status: mock(async () => ({ data: { ses_queue: { type: activity } } })),
+        promptAsync: delivered,
+        abort: mock(async () => ({ data: true })),
       },
-      permission: {
-        list: mock(async () => ({ data: [] })),
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: noQuestions })) },
+    } as unknown as KiloClient
+
+    await prompt({ client, root, state, sessionID: "ses_queue", text: "Continue", messageID: "amr_queue" })
+
+    expect(client.session.status).not.toHaveBeenCalled()
+    expect(client.session.abort).not.toHaveBeenCalled()
+    expect(delivered).toHaveBeenCalledTimes(1)
+    expect(delivered).toHaveBeenCalledWith(
+      {
+        sessionID: "ses_queue",
+        directory: worktree,
+        messageID: "msg_agent_manager_amr_queue",
+        parts: [{ type: "text", text: "Continue" }],
+        snapshotInitialization: "wait",
       },
+      { throwOnError: true },
+    )
+  })
+
+  it("rejects prompts to a busy session with a pending permission", async () => {
+    state.addSession("ses_blocked", null)
+    const delivered = mock(async () => ({ data: undefined }))
+    const client = {
+      session: {
+        get: mock(async () => ({ data: { id: "ses_blocked", directory: root, title: "Blocked" } as Session })),
+        status: mock(async () => ({ data: { ses_blocked: { type: "busy" } } })),
+        promptAsync: delivered,
+      },
+      permission: { list: mock(async () => ({ data: [{ id: "perm_1", sessionID: "ses_blocked" }] })) },
+      question: { list: mock(async () => ({ data: noQuestions })) },
+    } as unknown as KiloClient
+
+    await expect(
+      prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue", messageID: "amr_permission" }),
+    ).rejects.toMatchObject({
+      code: "unavailable_session",
+      message: expect.stringContaining("pending permission request"),
+    })
+    expect(delivered).not.toHaveBeenCalled()
+  })
+
+  it("does not submit a prompt cancelled during validation", async () => {
+    state.addSession("ses_cancelled", null)
+    const controller = new AbortController()
+    const delivered = mock(async () => ({ data: undefined }))
+    const client = {
+      session: {
+        get: mock(async () => ({ data: { id: "ses_cancelled", directory: root, title: "Cancelled" } as Session })),
+        promptAsync: delivered,
+      },
+      permission: { list: mock(async () => ({ data: [] })) },
       question: {
-        list: mock(async () => ({ data: noQuestions })),
+        list: mock(async () => {
+          controller.abort()
+          return { data: noQuestions }
+        }),
       },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_wait", text: "Continue", messageID: "amr_wait" })
+    await prompt({
+      client,
+      root,
+      state,
+      sessionID: "ses_cancelled",
+      text: "Continue",
+      messageID: "amr_cancelled",
+      signal: controller.signal,
+    })
 
-    expect(client.session.status).toHaveBeenCalledTimes(2)
-    expect(promptAsync).toHaveBeenCalledTimes(1)
+    expect(delivered).not.toHaveBeenCalled()
   })
 
-  it("fails fast with the pending question named instead of waiting out the idle timeout", async () => {
+  it("rejects prompts with the pending question and answer options named", async () => {
     const managed = state.addWorktree({ branch: "fix/blocked", path: worktree, parentBranch: "main" })
     state.addSession("ses_blocked", managed.id)
     const promptAsync = mock(async () => ({ data: undefined }))
@@ -420,7 +480,7 @@ describe("Agent Manager orchestration domain", () => {
     } satisfies Partial<OrchestrationError>)
   })
 
-  it("rejects unknown, stale, cross-workspace, and busy targets", async () => {
+  it("rejects unknown, stale, and cross-workspace targets", async () => {
     const managed = state.addWorktree({ branch: "fix/errors", path: worktree, parentBranch: "main" })
     state.addSession("ses_target", managed.id)
     const promptAsync = mock(async () => ({ data: undefined }))
@@ -430,7 +490,6 @@ describe("Agent Manager orchestration domain", () => {
         status: mock(async () => ({ data: {} })),
         promptAsync,
       },
-      // Permission replies remain out of scope. This empty read keeps the test focused on question/idle handling.
       permission: {
         list: mock(async () => ({ data: [] })),
       },
@@ -470,25 +529,6 @@ describe("Agent Manager orchestration domain", () => {
       prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_cross" }),
     ).rejects.toMatchObject({
       code: "cross_workspace",
-    } satisfies Partial<OrchestrationError>)
-    ;(client.session.get as ReturnType<typeof mock>).mockImplementation(async () => ({
-      data: { id: "ses_target", directory: worktree, title: "Target" } as Session,
-    }))
-    ;(client.session.status as ReturnType<typeof mock>).mockImplementation(async () => ({
-      data: { ses_target: { type: "busy" } },
-    }))
-    await expect(
-      prompt({
-        client,
-        root,
-        state,
-        sessionID: "ses_target",
-        text: "Continue",
-        messageID: "amr_busy",
-        idleTimeoutMs: 0,
-      }),
-    ).rejects.toMatchObject({
-      code: "unavailable_session",
     } satisfies Partial<OrchestrationError>)
 
     fs.rmSync(worktree, { recursive: true, force: true })

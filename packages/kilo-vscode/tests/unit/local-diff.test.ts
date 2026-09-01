@@ -10,7 +10,7 @@ import {
   resolveBase,
   MAX_DETAIL_BYTES,
 } from "../../src/agent-manager/local-diff"
-import { GitOps } from "../../src/agent-manager/GitOps"
+import { GitOps, type ExecBufferResult, type ExecResult } from "../../src/agent-manager/GitOps"
 import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
 import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
 
@@ -66,6 +66,89 @@ async function withRepo(run: (dir: string, base: string) => Promise<void>): Prom
   } finally {
     await fs.rm(dir, { recursive: true, force: true })
   }
+}
+
+function turn(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve))
+}
+
+function inspect(args: string[]): boolean {
+  return args[0] === "cat-file" && args[1] === "--batch-check"
+}
+
+function blobs(args: string[]): boolean {
+  return args[0] === "cat-file" && args[1] === "--batch"
+}
+
+function diff(args: string[]): boolean {
+  return args.includes("diff") && args.includes("--no-ext-diff")
+}
+
+function size(args: string[]): boolean {
+  return args[0] === "cat-file" && args[1] === "-s"
+}
+
+function show(args: string[]): boolean {
+  return args[0] === "show"
+}
+
+function count(ops: RecordingGitOps, test: (args: string[]) => boolean): number {
+  return ops.calls.filter((call) => test(call.args)).length
+}
+
+class RecordingGitOps extends GitOps {
+  readonly calls: Array<{ kind: "text" | "buffer"; args: string[]; cwd: string }> = []
+  fail = false
+  private wait: Promise<void> | undefined
+  private begin: (() => void) | undefined
+  private test: ((args: string[]) => boolean) | undefined
+  private held = false
+
+  constructor() {
+    super({ log: () => undefined })
+  }
+
+  block(test: (args: string[]) => boolean, wait: Promise<void>, begin: () => void): void {
+    this.test = test
+    this.wait = wait
+    this.begin = begin
+    this.held = true
+  }
+
+  private async pause(args: string[]): Promise<void> {
+    const test = this.test
+    const wait = this.wait
+    if (!this.held || !test || !wait || !test(args)) return
+    this.held = false
+    this.begin?.()
+    await wait
+  }
+
+  override async execGit(args: string[], cwd: string, options?: Parameters<GitOps["execGit"]>[2]): Promise<ExecResult> {
+    this.calls.push({ kind: "text", args, cwd })
+    await this.pause(args)
+    if (this.fail && inspect(args)) return { code: 1, stdout: "", stderr: "batch inspection failed" }
+    return super.execGit(args, cwd, options)
+  }
+
+  override async execGitBuffer(
+    args: string[],
+    cwd: string,
+    options?: Parameters<GitOps["execGitBuffer"]>[2],
+  ): Promise<ExecBufferResult> {
+    this.calls.push({ kind: "buffer", args, cwd })
+    await this.pause(args)
+    return super.execGitBuffer(args, cwd, options)
+  }
+}
+
+async function setup(dir: string, base: string): Promise<void> {
+  await fs.mkdir(path.join(dir, "folder"))
+  await fs.writeFile(path.join(dir, "folder", "space file.txt"), "space base\n")
+  await fs.writeFile(path.join(dir, "third file.txt"), "third base\n")
+  runSync(dir, ["add", "."])
+  runSync(dir, ["commit", "-m", "add tracked files"])
+  runSync(dir, ["branch", "-f", base])
 }
 
 describe("generatedLike", () => {
@@ -174,6 +257,25 @@ describe("diffSummary", () => {
       expect(byFile.get("new.txt")?.additions).toBe(2)
       expect(byFile.get("new.txt")?.tracked).toBe(true)
       expect(byFile.get("seed.txt")?.status).toBe("deleted")
+    })
+  })
+
+  it("preserves tracked and untracked order across parallel metadata batches", async () => {
+    await withRepo(async (dir, base) => {
+      const tracked = Array.from({ length: 40 }, (_, index) => `tracked-${String(index).padStart(2, "0")}.txt`)
+      await Promise.all(tracked.map((file) => fs.writeFile(path.join(dir, file), "before\n")))
+      runSync(dir, ["add", "."])
+      runSync(dir, ["commit", "-m", "add tracked files"])
+      runSync(dir, ["branch", "-f", base])
+      await Promise.all(tracked.map((file) => fs.writeFile(path.join(dir, file), "before\nafter\n")))
+      const untracked = Array.from({ length: 40 }, (_, index) => `untracked-${String(index).padStart(2, "0")}.txt`)
+      await Promise.all(untracked.map((file) => fs.writeFile(path.join(dir, file), "new\n")))
+
+      const result = await diffSummary(git(), dir, base)
+      expect(result.map((item) => item.file)).toEqual([...tracked, ...untracked])
+      expect(result.slice(0, tracked.length).every((item) => item.tracked && item.additions === 1)).toBe(true)
+      expect(result.slice(tracked.length).every((item) => !item.tracked && item.additions === 1)).toBe(true)
+      expect(result.every((item) => typeof item.stamp === "string" && item.stamp.length > 0)).toBe(true)
     })
   })
 
@@ -365,6 +467,26 @@ describe("diffFile", () => {
     })
   })
 
+  it("keeps empty and named base cache identities separate", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncommitted\n")
+      runSync(dir, ["commit", "-am", "change seed"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncommitted\nworking\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, "")
+      await local.summary(dir, base)
+
+      const current = await local.file(dir, "", "seed.txt")
+      const ancestor = await local.file(dir, base, "seed.txt")
+      expect(current?.before).toBe("seed\ncommitted\n")
+      expect(ancestor?.before).toBe("seed\n")
+      expect(current?.after).toBe("seed\ncommitted\nworking\n")
+      expect(ancestor?.after).toBe(current?.after)
+      expect(await local.file(dir, "", "seed.txt")).toBe(current)
+      expect(await local.file(dir, base, "seed.txt")).toBe(ancestor)
+    })
+  })
+
   it("does not cache detail that is aborted before Git completes", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
@@ -489,6 +611,476 @@ describe("diffFile", () => {
       expect(result?.summarized).toBe(false)
       expect((result?.after ?? "").length).toBeGreaterThan(0)
       expect((result?.patch ?? "").length).toBeGreaterThan(0)
+    })
+  })
+})
+
+describe("createLocalDiff concurrent details", () => {
+  it("coalesces tracked, spaced, and untracked text details", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nupdated\n")
+      await fs.writeFile(path.join(dir, "folder", "space file.txt"), "space base\nupdated\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\ndiff --git a/fake.txt b/fake.txt\nupdated\n")
+      await fs.writeFile(path.join(dir, "new file.txt"), "new\ntext\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+
+      const files = ["seed.txt", "folder/space file.txt", "third file.txt", "new file.txt"]
+      const result = await Promise.all(files.map((file) => local.file(dir, base, file)))
+      const [seed, space, third, fresh] = result
+
+      expect(seed?.before).toBe("seed\n")
+      expect(seed?.after).toBe("seed\nupdated\n")
+      expect(seed?.patch).toContain("+updated")
+      expect(space?.before).toBe("space base\n")
+      expect(space?.after).toBe("space base\nupdated\n")
+      expect(space?.patch).toContain(`diff --git a/folder/space file.txt b/folder/space file.txt`)
+      expect(third?.before).toBe("third base\n")
+      expect(third?.after).toBe("third base\ndiff --git a/fake.txt b/fake.txt\nupdated\n")
+      expect(third?.patch).toContain("+updated")
+      expect(third?.patch).toContain("+diff --git a/fake.txt b/fake.txt")
+      expect(fresh?.before).toBe("")
+      expect(fresh?.after).toBe("new\ntext\n")
+      expect(fresh?.patch).toContain("+new")
+      expect(await local.file(dir, base, "seed.txt")).toBe(seed)
+      expect(await local.file(dir, base, "folder/space file.txt")).toBe(space)
+      expect(await local.file(dir, base, "third file.txt")).toBe(third)
+      expect(await local.file(dir, base, "new file.txt")).toBe(fresh)
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+      const patch = ops.calls.find((call) => diff(call.args))
+      expect(patch?.args).toContain("seed.txt")
+      expect(patch?.args).toContain("folder/space file.txt")
+      expect(patch?.args).toContain("third file.txt")
+      expect(seed?.patch).not.toContain("folder/space file.txt")
+      expect(space?.patch).not.toContain("third file.txt")
+    })
+  })
+
+  it("coalesces requests delivered by separate source-controller timers", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ntimer\n")
+      await fs.writeFile(path.join(dir, "folder", "space file.txt"), "space base\ntimer\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\ntimer\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+
+      const files = ["seed.txt", "folder/space file.txt", "third file.txt"]
+      const result = await Promise.all(
+        files.map(
+          (file) =>
+            new Promise<Awaited<ReturnType<typeof local.file>>>((resolve, reject) => {
+              setTimeout(() => void local.file(dir, base, file).then(resolve, reject), 0)
+            }),
+        ),
+      )
+
+      expect(result.every((item) => item?.after.includes("timer"))).toBe(true)
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("does not delay untracked previews behind a tracked Git batch", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ntracked\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\ntracked\n")
+      await fs.writeFile(path.join(dir, "fresh.txt"), "available immediately\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+
+      const first = local.file(dir, base, "seed.txt")
+      const second = local.file(dir, base, "third file.txt")
+      const fresh = local.file(dir, base, "fresh.txt")
+      await ready.promise
+      const result = await Promise.race([
+        fresh.then((value) => ({ ready: true, value })),
+        new Promise<{ ready: false; value: undefined }>((resolve) => {
+          setTimeout(() => resolve({ ready: false, value: undefined }), 100)
+        }),
+      ])
+      gate.resolve()
+      await Promise.all([first, second])
+
+      expect(result.ready).toBe(true)
+      expect(result.value?.after).toBe("available immediately\n")
+    })
+  })
+
+  it("keeps a singleton on the existing single-file Git commands", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nsingle\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+
+      const result = await local.file(dir, base, "seed.txt")
+
+      expect(result?.after).toBe("seed\nsingle\n")
+      expect(count(ops, inspect)).toBe(0)
+      expect(count(ops, blobs)).toBe(0)
+      expect(count(ops, size)).toBe(1)
+      expect(count(ops, show)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("does not return stale singleton details after a newer summary arrives", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nold\n")
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(show, gate.promise, ready.resolve)
+      const pending = local.file(dir, base, "seed.txt")
+      await ready.promise
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nnewer contents\n")
+      const summary = await local.summary(dir, base)
+      gate.resolve()
+
+      const value = await pending
+      expect(value?.after).toBe("seed\nnewer contents\n")
+      expect(value?.stamp).toBe(summary.find((entry) => entry.file === "seed.txt")?.stamp)
+      expect(await local.file(dir, base, "seed.txt")).toBe(value)
+    })
+  })
+
+  it("shares one result for duplicate concurrent callers in a batch", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nduplicate\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nduplicate\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+
+      const [first, second, sibling] = await Promise.all([
+        local.file(dir, base, "seed.txt"),
+        local.file(dir, base, "seed.txt"),
+        local.file(dir, base, "third file.txt"),
+      ])
+
+      expect(first).toBe(second)
+      expect(first?.after).toBe("seed\nduplicate\n")
+      expect(sibling?.after).toBe("third base\nduplicate\n")
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("aborts one subscriber without canceling a sibling", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nsecond\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+      const ctl = new AbortController()
+      const first = local.file(dir, base, "seed.txt", ctl.signal)
+      const sibling = local.file(dir, base, "third file.txt")
+      await ready.promise
+      ctl.abort()
+
+      await expect(first).rejects.toThrow()
+      gate.resolve()
+      expect((await sibling)?.after).toBe("third base\nsecond\n")
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("aborts one subscriber without canceling another subscriber of the same identity", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nshared\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nother\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+      const one = new AbortController()
+      const two = new AbortController()
+      const first = local.file(dir, base, "seed.txt", one.signal)
+      const second = local.file(dir, base, "seed.txt", two.signal)
+      const sibling = local.file(dir, base, "third file.txt")
+      await ready.promise
+      one.abort()
+
+      await expect(first).rejects.toThrow()
+      gate.resolve()
+      expect((await second)?.after).toBe("seed\nshared\n")
+      expect((await sibling)?.after).toBe("third base\nother\n")
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("does not spawn detail Git when every queued caller aborts before flush", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nqueued\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nqueued\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const firstCtl = new AbortController()
+      const secondCtl = new AbortController()
+      const first = local.file(dir, base, "seed.txt", firstCtl.signal)
+      const second = local.file(dir, base, "third file.txt", secondCtl.signal)
+      firstCtl.abort()
+      secondCtl.abort()
+
+      await expect(first).rejects.toThrow()
+      await expect(second).rejects.toThrow()
+      await turn()
+      expect(ops.calls).toHaveLength(0)
+    })
+  })
+
+  it("keeps a started singleton cache-owned across a worktree switch", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nretained\n")
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(size, gate.promise, ready.resolve)
+      const controller = new AbortController()
+      const first = local.file(dir, base, "seed.txt", controller.signal)
+      await ready.promise
+      controller.abort()
+      await expect(first).rejects.toThrow()
+      const second = local.file(dir, base, "seed.txt")
+      gate.resolve()
+      const value = await second
+      expect(value?.after).toBe("seed\nretained\n")
+      expect(count(ops, size)).toBe(1)
+      expect(count(ops, show)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+      const calls = ops.calls.length
+      expect(await local.file(dir, base, "seed.txt")).toBe(value)
+      expect(ops.calls).toHaveLength(calls)
+    })
+  })
+
+  it("keeps a started batch cache-owned across aborts and resubscription", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nowned\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nowned\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+      const one = new AbortController()
+      const two = new AbortController()
+      const first = local.file(dir, base, "seed.txt", one.signal)
+      const second = local.file(dir, base, "third file.txt", two.signal)
+      await ready.promise
+      one.abort()
+      two.abort()
+      await expect(first).rejects.toThrow()
+      await expect(second).rejects.toThrow()
+
+      const resub = local.file(dir, base, "seed.txt", new AbortController().signal)
+      gate.resolve()
+      const result = await resub
+      expect(result?.after).toBe("seed\nowned\n")
+      const before = ops.calls.length
+      expect(await local.file(dir, base, "seed.txt")).toBe(result)
+      expect(ops.calls.length).toBe(before)
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("preserves a started batch through an unchanged summary refresh", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nrefresh\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nrefresh\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+      const first = local.file(dir, base, "seed.txt")
+      const second = local.file(dir, base, "third file.txt")
+      await ready.promise
+      await local.summary(dir, base)
+      gate.resolve()
+      const [one, two] = await Promise.all([first, second])
+
+      expect(one?.after).toBe("seed\nrefresh\n")
+      expect(two?.after).toBe("third base\nrefresh\n")
+      const before = ops.calls.length
+      expect(await local.file(dir, base, "seed.txt")).toBe(one)
+      expect(await local.file(dir, base, "third file.txt")).toBe(two)
+      expect(ops.calls.length).toBe(before)
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(1)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("refreshes a changed sibling without corrupting an unchanged sibling", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nfirst\n")
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
+      ops.block(inspect, gate.promise, ready.resolve)
+      const first = local.file(dir, base, "seed.txt")
+      const second = local.file(dir, base, "third file.txt")
+      await ready.promise
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nchanged while loading\n")
+      await local.summary(dir, base)
+      gate.resolve()
+      const stable = await second
+      await first.catch(() => null)
+
+      expect(stable?.after).toBe("third base\nfirst\n")
+      const current = await local.file(dir, base, "seed.txt")
+      expect(current?.after).toBe("seed\nchanged while loading\n")
+      expect(current).not.toBe(stable)
+    })
+  })
+
+  it("falls back independently when shared batch inspection fails", async () => {
+    await withRepo(async (dir, base) => {
+      await setup(dir, base)
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfallback\n")
+      await fs.writeFile(path.join(dir, "folder", "space file.txt"), "space base\nfallback\n")
+      await fs.writeFile(path.join(dir, "third file.txt"), "third base\nfallback\n")
+
+      const ops = new RecordingGitOps()
+      ops.fail = true
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const files = ["seed.txt", "folder/space file.txt", "third file.txt"]
+      const result = await Promise.all(files.map((file) => local.file(dir, base, file)))
+
+      expect(result.map((item) => item?.summarized)).toEqual([false, false, false])
+      expect(result[0]?.after).toBe("seed\nfallback\n")
+      expect(result[1]?.after).toBe("space base\nfallback\n")
+      expect(result[2]?.after).toBe("third base\nfallback\n")
+      expect(count(ops, inspect)).toBe(1)
+      expect(count(ops, blobs)).toBe(0)
+      expect(count(ops, size)).toBe(3)
+      expect(count(ops, show)).toBe(3)
+      expect(count(ops, diff)).toBe(3)
+      const before = ops.calls.length
+      expect(await local.file(dir, base, "seed.txt")).toBe(result[0])
+      expect(ops.calls.length).toBe(before)
+    })
+  })
+
+  it("keeps images and non-image binaries on their existing detail paths", async () => {
+    await withRepo(async (dir, base) => {
+      const before = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01])
+      const after = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff])
+      const bytes = Buffer.from([0x00, 0x01, 0x02, 0x03])
+      await fs.writeFile(path.join(dir, "banner.png"), before)
+      await fs.writeFile(path.join(dir, "tone.bin"), bytes)
+      runSync(dir, ["add", "banner.png", "tone.bin"])
+      runSync(dir, ["commit", "-m", "add binary files"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ntext\n")
+      await fs.writeFile(path.join(dir, "banner.png"), after)
+      await fs.writeFile(path.join(dir, "tone.bin"), Buffer.concat([bytes, Buffer.from([0xff])]))
+
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      ops.calls.splice(0)
+      const [text, image, binary] = await Promise.all([
+        local.file(dir, base, "seed.txt"),
+        local.file(dir, base, "banner.png"),
+        local.file(dir, base, "tone.bin"),
+      ])
+
+      expect(text?.after).toBe("seed\ntext\n")
+      expect(image?.image?.before?.data).toBe(before.toString("base64"))
+      expect(image?.image?.after?.data).toBe(after.toString("base64"))
+      expect(binary?.summarized).toBe(false)
+      expect(binary?.before).toBe("")
+      expect(binary?.after).toBe("")
+      expect(binary?.patch).toBe("")
+      expect(count(ops, inspect)).toBe(0)
+      expect(count(ops, blobs)).toBe(0)
+      expect(count(ops, size)).toBe(2)
+      expect(count(ops, show)).toBe(2)
+      expect(count(ops, diff)).toBe(1)
+    })
+  })
+
+  it("preserves summarized results for oversized and unsafe paths", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "a".repeat(MAX_DETAIL_BYTES + 1))
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+
+      const result = await local.file(dir, base, "seed.txt")
+      expect(result?.summarized).toBe(true)
+      expect(result?.before).toBe("")
+      expect(result?.after).toBe("")
+      expect(result?.patch).toBe("")
+      expect(await local.file(dir, base, "../outside.txt")).toBeNull()
     })
   })
 })

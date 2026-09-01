@@ -3,9 +3,6 @@
 /**
  * MessageList component
  * Scrollable turn-based message list with virtualization.
- * Each user message is rendered as a VscodeSessionTurn — a custom component that
- * renders all assistant parts as a flat, verbose list with no context grouping,
- * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
@@ -23,6 +20,7 @@ import {
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -88,12 +86,15 @@ interface MessageListProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onEditMessage?: (sessionID: string, messageID: string) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  queuedDisabled?: boolean
+  editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
@@ -114,21 +115,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // back to kilo-ui's default hideDetails renderer, which never shows a
   // task's result text — indexing it there would produce a phantom match.
   const inAgentManager = !!useWorktreeMode()
-
-  // Mirrors message-part.tsx's own (unexported) relativizeProjectPath/
-  // getDirectory exactly, so the directory text indexed here matches what
-  // ToolMetaLine/ToolFileAccordion actually put on screen.
-  function relativizeProjectPath(path: string, directory?: string) {
-    if (!path) return ""
-    if (!directory) return path
-    if (directory === "/") return path
-    if (directory === "\\") return path
-    if (path === directory) return ""
-    const separator = directory.includes("\\") ? "\\" : "/"
-    const prefix = directory.endsWith(separator) ? directory : directory + separator
-    if (!path.startsWith(prefix)) return path
-    return path.slice(directory.length)
-  }
 
   function getDirectory(path: string | undefined) {
     return relativizeProjectPath(getRawDirectory(path), data.directory)
@@ -1330,6 +1316,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         row={row}
                         index={index()}
                         onForkMessage={props.onForkMessage}
+                        onEditMessage={props.onEditMessage}
+                        queuedDisabled={props.queuedDisabled}
+                        editDisabled={props.editDisabled}
                         highlight={highlight}
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
@@ -1344,6 +1333,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     <TranscriptRowView
                       row={lookup().get(key)!}
                       onForkMessage={props.onForkMessage}
+                      onEditMessage={props.onEditMessage}
+                      queuedDisabled={props.queuedDisabled}
+                      editDisabled={props.editDisabled}
                       highlight={highlight}
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
@@ -1361,6 +1353,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onEditMessage={props.onEditMessage}
+                  queuedDisabled={props.queuedDisabled}
+                  editDisabled={props.editDisabled}
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}

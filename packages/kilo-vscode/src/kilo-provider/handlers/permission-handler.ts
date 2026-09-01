@@ -6,6 +6,7 @@
  */
 
 import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+import { isNotFoundError } from "./not-found"
 
 export type RecoverablePermission = PermissionRequest
 
@@ -33,19 +34,6 @@ export function recoverablePermissions(perms: RecoverablePermission[], tracked: 
     seen.add(perm.id)
     return tracked.has(perm.sessionID)
   })
-}
-
-function isNotFoundError(error: unknown): boolean {
-  const record = (value: unknown) =>
-    value && typeof value === "object" ? (value as Record<string, unknown>) : undefined
-  const obj = record(error)
-  if (!obj) return false
-
-  const cause = record(obj.cause)
-  const body = record(cause?.body)
-  return [obj, record(obj.data), cause, body, record(body?.data)].some(
-    (value) => value?.name === "NotFoundError" || value?.status === 404,
-  )
 }
 
 /**

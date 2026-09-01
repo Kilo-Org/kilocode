@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "ターミナル",
   "agentManager.tab.openTerminal": "ターミナルを開く",
   "agentManager.tab.newOptions": "新しいタブのその他のオプション",
-  "agentManager.tabsMenu.status.waiting": "待機",
-  "agentManager.tabsMenu.status.retry": "再試行",
   "agentManager.sidebarSearch.label": "Worktreeとセッションを検索",
   "agentManager.sidebarSearch.scope":
     "ローカルワークスペース、ローカルセッション、Worktree、および各Worktreeのセッションを検索",
@@ -248,6 +246,21 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ブランチが見つかりません。",
   "agentManager.import.noBranchesHint": "上にPR URLを貼り付けるか、新しいWorktreeを作成してください。",
   "agentManager.import.failed": "インポートに失敗しました",
+  "agentManager.browser.title": "ブラウザー",
+  "agentManager.browser.url": "ローカルアプリケーション URL",
+  "agentManager.browser.urlPlaceholder": "http://localhost:3000",
+  "agentManager.browser.open": "開く",
+  "agentManager.browser.refresh": "ブラウザーを更新",
+  "agentManager.browser.close": "ブラウザーを閉じる",
+  "agentManager.browser.inspect": "要素を選択",
+  "agentManager.browser.devtoolsTitle": "開発者ツール",
+  "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
+  "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
+  "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
+  "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
+  "agentManager.browser.diagnostics": "ブラウザー診断",
+  "agentManager.browser.diagnosticsHint":
+    "自動操作用ブラウザーの最近のイベントです。セキュリティによるブロックはコンソールエラーではありません。",
 
   "agentManager.pr.error.gh_auth.title": "GitHub認証が必要です",
   "agentManager.pr.error.gh_auth.description":

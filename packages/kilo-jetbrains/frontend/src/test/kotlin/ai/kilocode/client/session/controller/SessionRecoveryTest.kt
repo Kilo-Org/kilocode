@@ -152,6 +152,9 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
     fun `test busy status is seeded from statuses map`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+        // recoverPending() reads the service's status map once, and that map arrives through a flow, so
+        // the seed has to be observable before the controller loads or recovery races it to Idle.
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "busy" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
@@ -173,6 +176,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             attempt = 3,
             next = 5000L,
         ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "retry" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
@@ -196,6 +200,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             message = "No network",
             requestID = "req_xyz",
         ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "offline" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
@@ -209,6 +214,195 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             m, show = true,
         )
         assertEquals("req_xyz", (m.model.state as SessionState.Offline).requestId)
+    }
+
+    /**
+     * A session reopened after a failed turn is idle on the server, so recovery has to fall back to the
+     * transcript. Without it the reopened UI shows the failure with no way to act on it, while the UI
+     * that was open when it failed still offers Retry.
+     */
+    fun `test failed tail recovers into error even when the server reports idle`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(msg("msg1", "ses_test", "user"), emptyList()))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg2", "ses_test", "assistant").copy(
+                parentID = "msg1",
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue("Recovery must not drop the failure", state is SessionState.Error)
+        assertEquals("missing credentials", (state as SessionState.Error).message)
+        edt { assertTrue("The reopened session must offer Retry too", m.canRetry()) }
+    }
+
+    fun `test aborted tail recovers as interrupted even when the server reports idle`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                error = MessageErrorDto(type = MessageErrorDto.ABORTED, message = "aborted"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.TurnEnded)
+        assertEquals(
+            ai.kilocode.client.session.model.Outcome.INTERRUPTED,
+            (state as SessionState.TurnEnded).outcome,
+        )
+    }
+
+    fun `test incomplete tail recovers even when the server reports idle`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(finish = "unknown"),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.TurnEnded)
+        assertEquals(
+            ai.kilocode.client.session.model.Outcome.INCOMPLETE,
+            (state as SessionState.TurnEnded).outcome,
+        )
+        assertEquals("unknown", state.finish)
+    }
+
+    fun `test normal finish does not recover an outcome`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(finish = "stop"),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    fun `test tail error wins over incomplete finish during recovery`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                finish = "unknown",
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.Error)
+        assertEquals("missing credentials", (state as SessionState.Error).message)
+    }
+
+    /** An unrecognised status carries no live work either, so the transcript still decides. */
+    fun `test unknown status falls through to the failed tail`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("something-new"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.Error)
+        assertEquals("missing credentials", (state as SessionState.Error).message)
+    }
+
+    /** A tail that failed does not outrank a question the server is still waiting on. */
+    fun `test pending question wins over a failed tail`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.pendingQuestionList.add(
+            QuestionRequestDto(
+                id = "q_pending",
+                sessionID = "ses_test",
+                questions = listOf(QuestionInfoDto("Proceed?", "Q")),
+            )
+        )
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+    }
+
+    fun `test retry status wins over a failed tail`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("retry", "Rate limited", attempt = 2, next = 1000L))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "retry" })
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue("The CLI is still retrying, so that outranks the tail", state is SessionState.Retry)
+        assertEquals(2, (state as SessionState.Retry).attempt)
+    }
+
+    /** Live work still wins: a busy server must not be overridden by an older failed turn. */
+    fun `test busy status wins over a failed tail`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "busy" })
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertTrue(m.model.state is SessionState.Busy)
     }
 
     fun `test idle status in map leaves controller in Idle`() {

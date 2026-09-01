@@ -151,6 +151,53 @@ html[data-theme="kilo-vscode"]
   color: var(--text-weak);
 }
 
+.am-local-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+:is(
+  .am-tab-icon,
+  .am-wt-icon,
+  .am-local-status,
+  .am-sidebar-search-icon,
+  .am-sidebar-search-status
+)[data-activity="waiting"] {
+  --am-activity-color: var(--icon-warning-base, var(--vscode-notificationsWarningIcon-foreground, #d9a13a));
+  color: var(--am-activity-color);
+}
+
+:is(
+  .am-tab-icon,
+  .am-wt-icon,
+  .am-local-status,
+  .am-sidebar-search-icon,
+  .am-sidebar-search-status
+)[data-activity="error"] {
+  --am-activity-color: var(--icon-critical-base, var(--vscode-errorForeground, #f14c4c));
+  color: var(--am-activity-color);
+}
+
+:is(
+  .am-tab-icon,
+  .am-wt-icon,
+  .am-local-status,
+  .am-sidebar-search-icon,
+  .am-sidebar-search-status
+)[data-activity="done"] {
+  --am-activity-color: var(--icon-success-base, var(--vscode-testing-iconPassed, #73c991));
+  color: var(--am-activity-color);
+}
+
+:is(.am-tab-icon, .am-wt-icon, .am-local-status, .am-sidebar-search-icon)[data-activity]:not([data-activity="idle"])
+  [data-component="icon"] {
+  color: var(--am-activity-color);
+}
+
 .am-local-text {
   display: flex;
   flex-direction: column;
@@ -1858,6 +1905,7 @@ body.am-wt-dragging-active * {
   min-width: 0;
   min-height: 0;
   opacity: 0;
+  content-visibility: hidden;
   pointer-events: none;
   z-index: 0;
   background: var(--surface-base);
@@ -1865,6 +1913,7 @@ body.am-wt-dragging-active * {
 
 .am-diff-panel-cache-active {
   opacity: 1;
+  content-visibility: visible;
   pointer-events: auto;
   z-index: 2;
 }
@@ -4305,11 +4354,6 @@ body.am-wt-dragging-active * {
   padding: 4px 6px;
 }
 
-.am-file-tree-group {
-  display: flex;
-  flex-direction: column;
-}
-
 /* Shared row base for files and directories */
 .am-file-tree-dir,
 .am-file-tree-file {
@@ -4482,6 +4526,40 @@ body.am-wt-dragging-active * {
   padding: 1px 5px;
   border-radius: 4px;
   background: color-mix(in lab, var(--syntax-diff-delete, #da3319) 15%, transparent);
+  color: var(--syntax-diff-delete, #da3319);
+}
+
+.am-file-tree-file-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.am-file-tree-revert-btn {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-file-tree-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
+.am-diff-revert-btn {
+  color: var(--text-weaker);
+}
+
+.am-diff-revert-btn:not(:disabled):hover {
   color: var(--syntax-diff-delete, #da3319);
 }
 
@@ -4733,35 +4811,6 @@ body.vscode-high-contrast-light {
 
   .am-terminal-host:focus-within {
     box-shadow: inset 0 0 0 1px var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
-  }
-}
-
-/* Context menu — restyle to match dropdown-menu visuals.
-   The kilo-ui ContextMenu component hardcodes its own data-component / data-slot
-   attributes after the prop spread, so we can't override them via props.
-   Instead we apply a class and re-declare the styles here. */
-
-.am-ctx-menu {
-  min-width: 210px;
-  border: 1px solid color-mix(in oklch, var(--border-base) 50%, transparent) !important;
-  box-shadow: var(--shadow-md) !important;
-
-  [data-slot="context-menu-item"],
-  [data-slot="context-menu-checkbox-item"],
-  [data-slot="context-menu-radio-item"],
-  [data-slot="context-menu-sub-trigger"] {
-    padding: 6px 10px;
-    font-size: var(--font-size-small);
-    transition: none;
-
-    &:hover,
-    &[data-highlighted] {
-      background: var(--surface-raised-base-hover);
-    }
-  }
-
-  [data-slot="context-menu-separator"] {
-    margin: 4px 0;
   }
 }
 
