@@ -33,7 +33,7 @@ export function updateSetup(
     store.setBusy((prev) => {
       const next = new Map(prev)
       if (done) next.delete(id)
-      if (!done) next.set(id, { reason: "setting-up", message: msg.message, branch: msg.branch })
+      else next.set(id, { reason: "setting-up", message: msg.message, branch: msg.branch })
       return next
     })
   }
