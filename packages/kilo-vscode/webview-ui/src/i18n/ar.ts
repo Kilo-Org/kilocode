@@ -1193,6 +1193,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
+  "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",

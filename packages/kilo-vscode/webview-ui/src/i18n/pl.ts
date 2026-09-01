@@ -1227,6 +1227,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
   "task.backgroundAgents.more": "+{{count}} więcej",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
+  "task.backgroundAgents.openAll": "Otwórz wszystkich agentów w tle",
   "task.backgroundAgents.cancel": "Zatrzymaj",
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",
   "task.backgroundAgents.waiting": "Agent w tle potrzebuje danych wejściowych",
