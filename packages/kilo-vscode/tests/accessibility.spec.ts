@@ -128,8 +128,11 @@ test.describe("webview accessibility ratchet", () => {
       expect(await spinner!.evaluate((node) => node.isConnected)).toBe(true)
     }
 
+    await row.locator('[data-slot="task-header-agent-main"]').focus()
     await page.clock.runFor(1000)
     await expect(toggle).toHaveAttribute("aria-expanded", "false")
+    await expect(toggle).toBeFocused()
+    await expect(toggle).toHaveAccessibleName("1 background agent (Done)")
     await expect(list).toBeHidden()
     await expect(preview).toHaveAttribute("data-status", "completed")
     await expect(preview).toHaveAttribute("aria-hidden", "false")
@@ -154,6 +157,7 @@ test.describe("webview accessibility ratchet", () => {
     const summary = agents.locator('[data-slot="task-header-agents-summary"]')
     await expect(summary).toHaveAttribute("aria-hidden", "false")
     await expect(summary).toHaveText("1 background agent")
+    await expect(summary).toHaveAccessibleName("1 background agent (Done)")
     await expect(summary.locator('[data-component="icon"]')).toBeVisible()
     await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
     await expect(preview).toHaveAttribute("aria-hidden", "true")
@@ -220,6 +224,10 @@ test.describe("webview accessibility ratchet", () => {
     const summary = agents.locator('[data-slot="task-header-agents-summary"]')
     await expect(summary).toHaveAttribute("aria-hidden", "false")
     await expect(summary).toHaveText("3 background agents")
+    await expect(summary).toHaveAccessibleName("3 background agents (Error)")
+    await expect(agents.locator('[data-slot="task-header-agents-toggle"]')).toHaveAccessibleName(
+      "3 background agents (Error)",
+    )
     await expect(summary.locator('[data-component="icon"]')).toBeVisible()
     await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-warning")
     await expect(agents.locator('[data-slot="task-header-agents-item"][aria-hidden="false"]')).toHaveCount(0)

@@ -39,6 +39,8 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const [loaded, setLoaded] = createSignal(false)
   const [mounted, setMounted] = createSignal(false)
   let pending: string | undefined
+  let list: HTMLDivElement | undefined
+  let toggle: HTMLButtonElement | undefined
   let revision = 0
 
   createEffect(
@@ -123,7 +125,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     on(
       () => active().length > 0,
       (running, previous) => {
-        if (previous && !running) setOpen(false)
+        if (!previous || running) return
+        if (list?.contains(document.activeElement)) toggle?.focus({ preventScroll: true })
+        setOpen(false)
       },
     ),
   )
@@ -144,6 +148,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const count = createMemo(() => (open() ? 0 : Math.min(layout().count, visible().length)))
   const remaining = createMemo(() => visible().length - count())
   const caption = createMemo(() => (waiting() > 0 ? language.t("task.backgroundAgents.waiting") : summary()))
+  const accessible = createMemo(() =>
+    state() === "running" ? caption() : `${caption()} (${language.t(`task.backgroundAgents.status.${state()}`)})`,
+  )
   const more = (count: number) => language.t("task.backgroundAgents.more", { count: String(count) })
 
   createEffect(() => {
@@ -220,6 +227,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
             <Button
               data-slot="task-header-agents-summary"
               data-status={waiting() > 0 ? "waiting" : state()}
+              aria-label={accessible()}
               variant="ghost"
               size="small"
               aria-hidden={count() > 0}
@@ -281,8 +289,8 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               aria-hidden={count() === 0 || remaining() === 0}
               tabIndex={count() > 0 && remaining() > 0 ? 0 : -1}
               aria-expanded={open()}
-              aria-label={`${more(remaining())}: ${caption()}`}
-              title={caption()}
+              aria-label={`${more(remaining())}: ${accessible()}`}
+              title={accessible()}
               onClick={() => setOpen((value) => !value)}
             >
               <span data-slot="task-header-agents-overflow-label">
@@ -293,11 +301,12 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
           </div>
           <Button
             data-slot="task-header-agents-toggle"
+            ref={toggle}
             variant="ghost"
             size="small"
             icon={waiting() > 0 ? "warning" : undefined}
-            aria-label={caption()}
-            title={caption()}
+            aria-label={accessible()}
+            title={accessible()}
             aria-expanded={open()}
             onClick={() => setOpen((value) => !value)}
           >
@@ -327,7 +336,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
           </Show>
         </div>
         <Show when={open()}>
-          <div data-slot="task-header-todos-list">
+          <div data-slot="task-header-todos-list" ref={list}>
             <Show when={visible().some((agent) => agent.permission || agent.question)}>
               <div data-slot="task-header-agent-attention">
                 <Icon name="warning" size="small" />
