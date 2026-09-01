@@ -12,6 +12,7 @@ import {
   getPastChatsMentionResult,
   isCursorAtMentionEnd,
   findMentionRange,
+  mentionSettled,
   sessionMentionFilename,
   sessionMentionText,
   sessionMentionToken,
@@ -669,6 +670,39 @@ describe("session mentions", () => {
       expect(result[0]).toEqual(TERMINAL_RESULT)
       expect(result).toContainEqual(PAST_CHATS_RESULT)
       expect(result[result.length - 1]).toEqual(FILE_PICKER_RESULT)
+    })
+  })
+
+  describe("mentionSettled", () => {
+    const tokens = new Set(["my file.txt", "src/a.ts"])
+
+    it("reports a completed mention followed by prose", () => {
+      expect(mentionSettled("my file.txt and then", tokens)).toBe(true)
+    })
+
+    it("reports a completed mention followed by a single space", () => {
+      expect(mentionSettled("src/a.ts ", tokens)).toBe(true)
+    })
+
+    it("treats a prefix of a known path as an edit in progress", () => {
+      expect(mentionSettled("my file", tokens)).toBe(false)
+    })
+
+    it("treats the exact token as an edit in progress", () => {
+      expect(mentionSettled("my file.txt", tokens)).toBe(false)
+    })
+
+    it("does not report a longer path that merely starts like a known one", () => {
+      expect(mentionSettled("src/a.tsx", tokens)).toBe(false)
+    })
+
+    it("reports builtin mentions", () => {
+      expect(mentionSettled("terminal what failed", new Set())).toBe(true)
+      expect(mentionSettled("git-changes review", new Set())).toBe(true)
+    })
+
+    it("reports nothing for an unrelated query", () => {
+      expect(mentionSettled("some other thing", tokens)).toBe(false)
     })
   })
 

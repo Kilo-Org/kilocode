@@ -18,6 +18,7 @@ import {
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  mentionSettled,
   sessionMentionText,
   sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
@@ -494,6 +495,12 @@ export function useFileMention(
     }
     const query = match[1] ?? ""
     at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
+    // The query already covers a finished mention plus more text, so the rest
+    // is prose being written after it, not a longer filename being typed.
+    if (mentionSettled(query, mentionTokens())) {
+      closeMention()
+      return
+    }
     if (dead && dead.at === at && query.startsWith(dead.query)) {
       closeMention()
       return

@@ -146,6 +146,23 @@ export function sessionMentionFilename(title: string, id: string) {
   return `${slug || id}.md`
 }
 
+/**
+ * Whether an in-progress query already holds a complete mention followed by
+ * more text, meaning the user moved on to writing prose rather than typing a
+ * longer filename. Because a query may contain spaces, `@notes.md and then`
+ * still matches the mention trigger; this is what tells the two apart. A query
+ * that is only a prefix of (or exactly) a known token is still an edit of that
+ * mention, so it stays open.
+ */
+export function mentionSettled(query: string, tokens: Set<string>): boolean {
+  for (const token of [...tokens, TERMINAL_MENTION, GIT_CHANGES_MENTION]) {
+    if (query.length <= token.length) continue
+    if (!query.startsWith(token)) continue
+    if (/\s/.test(query[token.length] ?? "")) return true
+  }
+  return false
+}
+
 export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
   const value = query.toLowerCase()
   if (!value) return items

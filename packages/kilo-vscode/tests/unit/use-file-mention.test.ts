@@ -192,6 +192,74 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("keeps the dropdown closed while typing after a selected mention", () => {
+    const posted: WebviewMessage[] = []
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const path = "packages/sdk/js/src/gen/types.gen.ts"
+    mention.addPaths([path], "/repo")
+
+    // Typing straight after the inserted mention must not reopen the dropdown,
+    // no matter what the pending file search would answer.
+    mention.onInput(`@${path} d`, path.length + 3)
+    expect(mention.showMention()).toBe(false)
+    mention.onInput(`@${path} dsj`, path.length + 5)
+    expect(mention.showMention()).toBe(false)
+
+    // Deleting back into the mention itself is an edit of that mention.
+    mention.onInput(`@${path}`, path.length + 1)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("keeps the dropdown closed while typing after a builtin mention", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@terminal what failed", 21)
+    expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("opens a fresh query for a second mention typed after a completed one", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.addPaths(["src/a.ts"], "/repo")
+    mention.onInput("@src/a.ts and @b", 16)
+
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("closes the dropdown and stays closed while prose is typed after a mention", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()
