@@ -21,6 +21,18 @@ fun activateIde(project: Project) {
         .applicationActivated(StubIdeFrame(project))
 }
 
+/**
+ * Publishes IDE frame deactivation, the way the platform does when focus leaves the application.
+ * Listeners time the absence from here, so a test that wants [activateIde] to read as a return rather
+ * than as the first focus of the session has to call this first and advance the clock past
+ * `Away.REAL`.
+ */
+fun deactivateIde(project: Project) {
+    ApplicationManager.getApplication().messageBus
+        .syncPublisher(ApplicationActivationListener.TOPIC)
+        .applicationDeactivated(StubIdeFrame(project))
+}
+
 private class StubIdeFrame(private val project: Project) : IdeFrame {
     override fun getStatusBar(): StatusBar? = null
     override fun suggestChildFrameBounds(): Rectangle = Rectangle()

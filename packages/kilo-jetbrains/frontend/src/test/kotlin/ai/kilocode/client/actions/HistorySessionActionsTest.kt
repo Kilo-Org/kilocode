@@ -372,8 +372,11 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Worktree.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyPrRef\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.OpenDiff\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.OpenLocalDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchName\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchPath\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RunSetupScript\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
@@ -387,14 +390,18 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyPrRef\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenDiff\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenLocalDiff\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchName\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchPath\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
 
-        // Row menu order: rename, (separator), open pr, open diff, open local diff, (separator),
-        // open/create setup script, run setup script, (separator), delete.
+        // Row menu order: rename, (separator), open pr, copy pr ref, open diff, open local diff,
+        // (separator), copy branch name, copy branch path, (separator), open/create setup script,
+        // run setup script, (separator), delete.
         val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
         val rowMenuEnd = xml.indexOf("</group>", rowMenuStart)
         val rowMenu = xml.substring(rowMenuStart, rowMenuEnd)
@@ -403,14 +410,18 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
         val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
         val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
+        val copyPrRef = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyPrRef\"")
         val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
         val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
+        val copyName = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchName\"")
+        val copyPath = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchPath\"")
         val openSetup = rowMenu.indexOf("ref=\"Kilo.OpenSetupScript\"")
         val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
         val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
         assertTrue(
-            rename in 0 until openPr && openPr < openDiff && openDiff < openLocalDiff &&
-                openLocalDiff < openSetup && openSetup < runSetup && runSetup < delete,
+            rename in 0 until openPr && openPr < copyPrRef && copyPrRef < openDiff && openDiff < openLocalDiff &&
+                openLocalDiff < copyName && copyName < copyPath && copyPath < openSetup &&
+                openSetup < runSetup && runSetup < delete,
         )
     }
 

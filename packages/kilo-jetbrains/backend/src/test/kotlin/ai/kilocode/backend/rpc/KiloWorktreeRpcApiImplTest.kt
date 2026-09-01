@@ -3,9 +3,14 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDto
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.util.SystemInfo
@@ -50,6 +55,54 @@ class KiloWorktreeRpcApiImplTest {
     @Test
     fun `prStatus does not report git missing for a removed directory`() = runBlocking {
         assertEquals(GhAvailability.OK, api.prStatus(repo.resolve("missing").toString()).availability)
+    }
+
+    @Test
+    fun `a cache entry is usable only within both the ttl and the caller ceiling`() {
+        assertTrue(usable(time = 0, now = 89_999, ttl = 90_000, maxAge = null))
+        assertFalse(usable(time = 0, now = 90_000, ttl = 90_000, maxAge = null))
+
+        // A ceiling tightens: an entry the TTL alone would have served can be rejected, which is the
+        // only way a caller returning to the IDE can get past a cache filled before it left.
+        assertTrue(usable(time = 0, now = 9_999, ttl = 90_000, maxAge = 10_000))
+        assertFalse(usable(time = 0, now = 10_000, ttl = 90_000, maxAge = 10_000))
+
+        // ...and never extends, so no caller can pin stale data beyond the TTL.
+        assertFalse(usable(time = 0, now = 120_000, ttl = 90_000, maxAge = Long.MAX_VALUE))
+
+        // Zero forces the work to run, and a negative value is clamped to that rather than inverting
+        // the comparison into "always fresh".
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `branch status serves its cache until a caller demands a fresher answer`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("cached")
+        git(repo, "worktree", "add", "-b", "feature/cached", dir.toString())
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/moved")
+
+        // The default ceiling accepts the entry written above, so a change made meanwhile is invisible
+        // for as long as it lives — the staleness a returning caller has to be able to reject.
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+        assertEquals("feature/moved", api.branchStatus(dir.toString(), maxAge = 0).branch)
+    }
+
+    @Test
+    fun `branch status keeps serving the cache for a ceiling wider than the entry age`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("wide")
+        git(repo, "worktree", "add", "-b", "feature/wide", dir.toString())
+        assertEquals("feature/wide", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/other")
+
+        // A returning caller passes the length of its absence, not zero: work that happened while it
+        // was away is still current, so a ceiling the entry fits inside must reuse it.
+        assertEquals("feature/wide", api.branchStatus(dir.toString(), maxAge = 60_000).branch)
     }
 
     @Test
@@ -277,6 +330,17 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhAvailability.MISSING, classifyGhError("Cannot run program \"gh\": No such file or directory"))
         assertEquals(GhAvailability.MISSING, classifyGhError("gh: command not found"))
         assertEquals(GhAvailability.OK, classifyGhError("temporary network failure"))
+    }
+
+    @Test
+    fun `classifyGhError detects a spent api budget without calling it an auth problem`() {
+        // `gh auth status` validates the token against the API, so it is usually the first to be told.
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 403: API rate limit exceeded for user ID 1."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("You have exceeded a secondary rate limit."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 429: Too Many Requests"))
+        // A revoked token also mentions authentication; that reading has to win, because the answer is
+        // "log in again" rather than "wait".
+        assertEquals(GhAvailability.UNAUTH, classifyGhError("authentication failed, and rate limit remaining is 0"))
     }
 
     @Test
@@ -987,6 +1051,89 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("https://example.test/pr/12", pull.url)
         assertEquals("Fix login bug", pull.title)
     }
+
+    @Test
+    fun `parsePr defaults review and checks when gh did not report them`() {
+        val pull = assertNotNull(parsePr("/repo", """{"number":1,"state":"OPEN","url":"https://pr/1"}"""))
+
+        // The scalar fallback and repositories with no review or CI land here, so "nothing to show"
+        // has to be the default rather than an optimistic pass.
+        assertEquals(GhReview.NONE, pull.review)
+        assertEquals(GhChecks.NONE, pull.checks.state)
+        assertEquals(GhChecksDto(), pull.checks)
+    }
+
+    @Test
+    fun `parseReview maps every github review decision`() {
+        assertEquals(GhReview.APPROVED, parseReview(obj("""{"reviewDecision":"APPROVED"}""")))
+        assertEquals(GhReview.CHANGES_REQUESTED, parseReview(obj("""{"reviewDecision":"CHANGES_REQUESTED"}""")))
+        assertEquals(GhReview.PENDING, parseReview(obj("""{"reviewDecision":"REVIEW_REQUIRED"}""")))
+        // A repository that requires no review reports an empty decision rather than omitting it.
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":""}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":null}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("{}")))
+    }
+
+    @Test
+    fun `parseChecks counts a mixed rollup and lets failure win`() {
+        val checks = parseChecks(
+            obj(
+                """
+                {"statusCheckRollup":[
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"FAILURE"},
+                  {"conclusion":"","status":"IN_PROGRESS"},
+                  {"conclusion":"SKIPPED"}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        // A red build stays red however many jobs are still queued behind it.
+        assertEquals(GhChecks.FAILED, checks.state)
+        assertEquals(4, checks.total, "skipped checks are excluded, matching GitHub's own count")
+        assertEquals(2, checks.passed)
+        assertEquals(1, checks.failed)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a running check from status when conclusion is still empty`() {
+        val checks = parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"","status":"IN_PROGRESS"}]}"""))
+
+        assertEquals(GhChecks.PENDING, checks.state)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a legacy commit status from state`() {
+        // Commit statuses carry `state` and never `conclusion`, unlike check runs.
+        assertEquals(GhChecks.PASSED, parseChecks(obj("""{"statusCheckRollup":[{"state":"SUCCESS"}]}""")).state)
+        assertEquals(GhChecks.FAILED, parseChecks(obj("""{"statusCheckRollup":[{"state":"ERROR"}]}""")).state)
+    }
+
+    @Test
+    fun `parseChecks reports none for an absent or empty rollup`() {
+        assertEquals(GhChecks.NONE, parseChecks(obj("{}")).state)
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[]}""")).state)
+        // Every check skipped is still nothing to report, not a pass.
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"SKIPPED"}]}""")).state)
+    }
+
+    @Test
+    fun `checkState treats an unrecognised verdict as pending`() {
+        assertEquals(CheckState.PASSED, checkState("NEUTRAL"))
+        assertEquals(CheckState.FAILED, checkState("TIMED_OUT"))
+        assertEquals(CheckState.FAILED, checkState("CANCELLED"))
+        assertEquals(CheckState.SKIPPED, checkState("SKIPPED"))
+        // A name nobody recognises has not reported success; calling it a failure would paint rows red
+        // the next time GitHub adds a status.
+        assertEquals(CheckState.PENDING, checkState("SOMETHING_NEW"))
+        assertEquals(CheckState.PENDING, checkState(null))
+    }
+
+    private fun obj(raw: String) = Json.parseToJsonElement(raw) as JsonObject
 
     @Test
     fun `branchStatus reports plain checkout and linked worktree`() = runBlocking {

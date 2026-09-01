@@ -90,6 +90,7 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
+import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 
 // @ts-ignore
@@ -2194,71 +2195,30 @@ export const layer = Layer.effect(
         return yield* Effect.fail(error)
       }
 
-      // Map transcript to messages
-      const { messages: mapped } = SessionResume.mapTranscript(transcript, {
-        sessionID: input.cmdInput.sessionID,
-        agent: agent.name,
-        providerID: model.providerID,
-        modelID: model.modelID,
-        directory: ctx.directory,
-        worktree: ctx.worktree,
-        sourceModel: transcript.sourceModel,
-      })
-
-      // Reject every assistant before a real user parent before any write
-      if (mapped.length > 0 && mapped[0].info.role !== "user") {
-        const error = new NamedError.Unknown({
-          message: "Transcript starts with an assistant message. The first message must be from a user.",
-        })
-        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        return yield* Effect.fail(error)
-      }
-
-      // Write messages and parts in order with ascending IDs
-      const idMap = new Map<string, string>()
-
-      for (const item of mapped) {
-        const newID = MessageID.ascending()
-        idMap.set(item.info.id as string, newID)
-
-        const parentID =
-          item.info.role === "assistant"
-            ? typeof item.info.parentID === "string"
-              ? idMap.get(item.info.parentID)
-              : undefined
-            : undefined
-
-        const info = {
-          ...item.info,
-          id: newID,
+      // kilocode_change start - delegate map + write to the shared import path
+      // Map + write the transcript through the shared import path so the slash
+      // command and the HTTP endpoint stay in lockstep. Surface structural
+      // failures (assistant-first, empty result) as session error events.
+      const writeExit = yield* Effect.exit(
+        SessionResumeImport.write({
           sessionID: input.cmdInput.sessionID,
-          ...(parentID && { parentID }),
-        } as SessionV1.Info
-
-        yield* sessions.updateMessage(info)
-
-        for (const part of item.parts) {
-          const partID = PartID.ascending()
-          const p = {
-            ...part,
-            id: partID,
-            messageID: newID,
-            sessionID: input.cmdInput.sessionID,
-          } as SessionV1.Part
-          yield* sessions.updatePart(p)
+          transcript,
+          agent: agent.name,
+          providerID: model.providerID,
+          modelID: model.modelID,
+          directory: ctx.directory,
+          worktree: ctx.worktree,
+        }).pipe(Effect.provideService(Session.Service, sessions)),
+      )
+      if (Exit.isFailure(writeExit)) {
+        const err = Cause.squash(writeExit.cause)
+        if (err instanceof NamedError.Unknown) {
+          yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: err.toObject() })
         }
+        return yield* Effect.failCause(writeExit.cause)
       }
-
-      yield* sessions.touch(input.cmdInput.sessionID)
-
-      // Build result from the final assistant
-      const resultMsgs = yield* sessions.messages({ sessionID: input.cmdInput.sessionID }).pipe(Effect.orDie)
-      const last = resultMsgs.findLast((m) => m.info.role === "assistant")
-      if (!last) {
-        const error = new NamedError.Unknown({ message: "No assistant message found after resume import" })
-        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        return yield* Effect.fail(error)
-      }
+      const last = writeExit.value.last
+      // kilocode_change end
 
       yield* events.publish(Command.Event.Executed, {
         name: input.cmdInput.command,

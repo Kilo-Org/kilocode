@@ -11,10 +11,10 @@ import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.diff.KiloInlineDiffStore
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
-import ai.kilocode.client.migration.KiloMigrationService
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
-import ai.kilocode.client.migration.ui.MigrationWizardPanel
+import ai.kilocode.client.onboarding.KiloOnboardingService
+import ai.kilocode.client.onboarding.OnboardingController
+import ai.kilocode.client.onboarding.OnboardingStep
+import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.FileAttachment
@@ -57,6 +57,7 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.held
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -142,7 +143,7 @@ class SessionUi(
     displayMs: Long = SessionController.DISPLAY_DELAY_MS,
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
-    private val migration: MigrationUiController = service<KiloMigrationService>(),
+    private val onboarding: OnboardingController = service<KiloOnboardingService>(),
     private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
@@ -222,7 +223,7 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var completion: KiloPromptCompletionProvider
     private lateinit var load: LoadingPanel
-    private lateinit var migrationWizard: MigrationWizardPanel
+    private lateinit var onboardingCard: OnboardingListCard
     private var empty: EmptySessionPanel? = null
 
     /**
@@ -256,7 +257,7 @@ class SessionUi(
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
-        bindMigration()
+        bindOnboarding()
         onStateChanged(controller.model.state)
         dock?.let {
             syncDock()
@@ -419,12 +420,10 @@ class SessionUi(
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
-        migrationWizard = MigrationWizardPanel().apply {
-            onSkip = { migration.skip() }
-            onLater = { migration.later() }
-            onDone = { migration.finish() }
-            onContinueFromError = { migration.finish() }
-            onStart = { sel -> migration.start(sel) }
+        onboardingCard = OnboardingListCard().apply {
+            onLater = { onboarding.later() }
+            onSkipAll = { onboarding.skipAll() }
+            onStart = { onboarding.start() }
         }
 
         account = SessionAccountOverlay(
@@ -758,34 +757,34 @@ class SessionUi(
         hide.restart()
     }
 
-    private fun bindMigration() {
+    private fun bindOnboarding() {
         cs.launch {
-            migration.state.collect { state ->
+            onboarding.steps.collect { steps ->
                 withContext(Dispatchers.Main) {
-                    applyMigrationState(state)
+                    applyOnboardingSteps(steps)
                 }
             }
         }
     }
 
     @RequiresEdt
-    private fun applyMigrationState(state: MigrationUiState) {
-        when (state) {
-            is MigrationUiState.Hidden -> {
-                if (root.blocker.isVisible) LOG.info("Migration wizard: overlay hidden session=${id ?: cacheKey ?: "new"}")
-                setModalContent(null)
-            }
-            is MigrationUiState.Needed -> {
-                if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
-                migrationWizard.update(state)
-                setModalContent(
-                    migrationWizard,
-                    maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
-                ) { migrationWizard.preferredFocusComponent() }
-                migrationWizard.revalidate()
-                migrationWizard.repaint()
-            }
+    private fun applyOnboardingSteps(steps: List<OnboardingStep>) {
+        // Only a blocking step keeps the session dead behind a modal card today — the session
+        // stays interactive while only non-blocking steps are pending. There is currently only one
+        // provider (v5 migration) and it is always blocking, so this always shows when non-empty.
+        if (steps.isEmpty() || steps.none { it.blocking }) {
+            if (root.blocker.isVisible) LOG.info("Onboarding: overlay hidden session=${id ?: cacheKey ?: "new"}")
+            setModalContent(null)
+            return
         }
+        if (!root.blocker.isVisible) LOG.info("Onboarding: overlay shown session=${id ?: cacheKey ?: "new"} steps=${steps.size}")
+        onboardingCard.update(steps)
+        setModalContent(
+            onboardingCard,
+            maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
+        ) { onboardingCard.preferredFocusComponent() }
+        onboardingCard.revalidate()
+        onboardingCard.repaint()
     }
 
     private fun bindStyle() {
@@ -1120,9 +1119,10 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                branch = status
-                dock?.setBranch(status)
-                empty?.setBranch(status)
+                val next = held(status, branch)
+                branch = next
+                dock?.setBranch(next)
+                empty?.setBranch(next)
             }
         }
     }

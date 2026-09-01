@@ -4,9 +4,9 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.KiloMigrationService
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
