@@ -1,7 +1,7 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import path from "node:path"
 import type { TerminalFont } from "./terminal-font"
-import type { RunHandle } from "./run/manager"
+import { message, type RunHandle } from "./run/manager"
 import { block } from "./pty-cleanup"
 
 export type ScriptTerminalKind = "run" | "setup"
@@ -68,11 +68,6 @@ interface TerminalMessage {
   terminalId?: unknown
   cols?: unknown
   rows?: unknown
-}
-
-function message(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return String(error)
 }
 
 function missing(error: unknown): boolean {
