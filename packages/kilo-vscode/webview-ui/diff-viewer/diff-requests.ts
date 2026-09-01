@@ -69,6 +69,8 @@ export function createDiffViewport(root: Accessor<Element | undefined>) {
   return { ref: (node: Element) => setElement(node), visible, intersects }
 }
 
+export type DiffViewport = ReturnType<typeof createDiffViewport>
+
 export function createDiffRequests(opts: DiffRequestOptions) {
   const requested = new Map<string, string>()
   let active = false

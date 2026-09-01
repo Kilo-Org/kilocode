@@ -24,6 +24,21 @@ async function settle(page: Page, frames = 2) {
   )
 }
 
+async function open(page: Page) {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  await expect(list).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  await settle(page, 10)
+
+  await list.hover()
+  await page.mouse.wheel(0, -2 * (await list.evaluate((el) => el.clientHeight)))
+  const bottom = page.getByRole("button", { name: "Scroll to bottom" })
+  await expect(bottom).toBeVisible()
+  await settle(page, 10)
+  await bottom.click()
+}
+
 async function distance(page: Page) {
   return page.locator(".message-list").evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)
 }
@@ -37,7 +52,7 @@ async function state(page: Page) {
 }
 
 test("keeps following after a stable-height layout correction", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -61,7 +76,7 @@ test("keeps following after a stable-height layout correction", async ({ page })
 })
 
 test("keeps the reading position when the prompt rail scrolls upward", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -81,7 +96,7 @@ test("keeps the reading position when the prompt rail scrolls upward", async ({ 
 })
 
 test("pauses on a native scrollbar drag and resumes at the bottom", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -152,7 +167,7 @@ test("pauses on a native scrollbar drag and resumes at the bottom", async ({ pag
 })
 
 test("keeps a long native scrollbar drag user-controlled", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -194,7 +209,7 @@ test("keeps a long native scrollbar drag user-controlled", async ({ page }) => {
 })
 
 test("pauses on an upward wheel over the Copy response button", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   await expect(list).toBeVisible()
@@ -210,7 +225,7 @@ test("pauses on an upward wheel over the Copy response button", async ({ page })
 })
 
 test("keeps a one-pixel upward wheel pause through delayed streaming", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   await expect(list).toBeVisible()
@@ -235,7 +250,7 @@ test("keeps a one-pixel upward wheel pause through delayed streaming", async ({ 
 })
 
 test("keeps the pause after a pending bottom scroll event", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   const bottom = page.getByRole("button", { name: "Scroll to bottom" })
@@ -267,7 +282,7 @@ test("keeps the pause after a pending bottom scroll event", async ({ page }) => 
 
 for (const input of ["wheel", "keyboard"] as const) {
   test(`keeps new upward ${input} input before a pending return-to-bottom scroll`, async ({ page }) => {
-    await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+    await open(page)
     const list = page.locator(".message-list")
     const bottom = page.getByRole("button", { name: "Scroll to bottom" })
     await expect(list).toBeVisible()
@@ -316,7 +331,7 @@ for (const input of ["wheel", "keyboard"] as const) {
 }
 
 test("preserves the pause across working status changes", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const bottom = page.getByRole("button", { name: "Scroll to bottom" })
   await expect(list).toBeVisible()

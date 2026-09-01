@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, beforeAll, describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { Cause, Deferred, Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import fs from "fs/promises"
 import path from "path"
@@ -207,6 +207,9 @@ function run(input: {
   client?: string
   variant?: string
   config?: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
+  enabled?: boolean
+  selection?: { model?: string | null; provider?: string | null; variant?: string | null }
+  resume?: Session.Info["model"]
 }) {
   return provideTmpdirInstance(
     () =>
@@ -215,28 +218,41 @@ function run(input: {
         if (input.state) yield* writeState(input.state)
 
         const { chat, assistant } = yield* seed(input.agent, input.variant)
+        const sessions = yield* Session.Service
+        const child = input.resume ? yield* sessions.create({ parentID: chat.id, model: input.resume }) : undefined
         const tool = yield* TaskTool
         const def = yield* tool.init()
         let seen: SessionPrompt.PromptInput | undefined
         const promptOps = stubOps({ onPrompt: (value) => (seen = value) })
 
-        const result = yield* def.execute(
-          {
-            description: `run ${input.agent}`,
-            prompt: "inspect resolution",
-            subagent_type: input.agent,
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps, bypassAgentCheck: true },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
+        const result = yield* def
+          .execute(
+            {
+              description: `run ${input.agent}`,
+              prompt: "inspect resolution",
+              subagent_type: input.agent,
+              task_id: child?.id,
+              ...input.selection,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps, bypassAgentCheck: true },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+          .pipe(
+            Effect.onError(() =>
+              Effect.gen(function* () {
+                expect(seen).toBeUndefined()
+                expect(yield* sessions.children(chat.id)).toHaveLength(child ? 1 : 0)
+              }),
+            ),
+          )
 
         return {
           prompt: seen?.model,
@@ -249,6 +265,7 @@ function run(input: {
       config: {
         ...catalog,
         ...input.config,
+        experimental: { task_model_selection: input.enabled ?? false },
         agent: {
           worker: { mode: "subagent" },
           pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
@@ -259,6 +276,202 @@ function run(input: {
 }
 
 describe("tool.task model resolution", () => {
+  for (const example of [
+    { selection: { model: "sub-provider/sub-model", variant: subVariant }, model: sub, variant: subVariant },
+    { selection: { model: "SUB model", provider: "sub-provider" }, model: sub, variant: undefined },
+    { selection: { variant: overrideVariant }, model: cfg, variant: overrideVariant },
+    { selection: {}, model: cfg, variant: cfgVariant },
+    { selection: { model: null, provider: null, variant: null }, model: cfg, variant: cfgVariant },
+    { selection: { model: "sub-model", provider: null, variant: null }, model: sub, variant: undefined },
+    { selection: { model: null, provider: null, variant: overrideVariant }, model: cfg, variant: overrideVariant },
+  ]) {
+    it.live(`selects ${JSON.stringify(example.selection)} when enabled`, () =>
+      run({ agent: "pinned", enabled: true, selection: example.selection, variant: inherited }).pipe(
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            expect(result.prompt).toEqual(example.model)
+            expect(result.variant).toEqual(example.variant)
+            expect(result.model).toEqual(example.model)
+            expect(result.metadataVariant).toEqual(example.variant)
+          }),
+        ),
+      ),
+    )
+  }
+
+  for (const example of [
+    { enabled: false, selection: { model: "sub-model" }, error: "experimental.task_model_selection=true" },
+    { enabled: false, selection: { variant: "full" }, error: "experimental.task_model_selection=true" },
+    { enabled: true, selection: { provider: "sub-provider" }, error: "provider requires a model" },
+    { enabled: true, selection: { model: "missing" }, error: "model is not available" },
+    { enabled: true, selection: { model: "model" }, error: "is ambiguous" },
+    { enabled: true, selection: { model: "sub-model", provider: "missing" }, error: "provider is not available" },
+    { enabled: true, selection: { model: "sub-model", variant: "missing" }, error: "Available variants:" },
+    { enabled: true, selection: { variant: "missing" }, error: "Available variants:" },
+    { enabled: true, selection: { model: " " }, error: "must not be empty" },
+    { enabled: true, selection: { variant: "__proto__" }, error: "Available variants:" },
+  ]) {
+    it.live(`rejects ${JSON.stringify(example.selection)} with selection ${example.enabled}`, () =>
+      run({ agent: "worker", enabled: example.enabled, selection: example.selection }).pipe(
+        Effect.exit,
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            expect(Exit.isFailure(result)).toBe(true)
+            if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain(example.error)
+          }),
+        ),
+      ),
+    )
+  }
+
+  for (const enabled of [false, true]) {
+    for (const selection of [undefined, { model: null, provider: null, variant: null }]) {
+      it.live(
+        `inherits parent model and reasoning with selection ${JSON.stringify(selection)} and enabled ${enabled}`,
+        () =>
+          run({ agent: "worker", enabled, selection, variant: inherited }).pipe(
+            Effect.tap((result) =>
+              Effect.sync(() => {
+                expect(result.prompt).toEqual(parent)
+                expect(result.variant).toEqual(inherited)
+                expect(result.model).toEqual(parent)
+                expect(result.metadataVariant).toEqual(inherited)
+              }),
+            ),
+          ),
+      )
+
+      it.live(
+        `uses ${enabled ? "persisted" : "normal"} defaults on resume with selection ${JSON.stringify(selection)}`,
+        () =>
+          run({
+            agent: "pinned",
+            enabled,
+            selection,
+            resume: { id: sub.modelID, providerID: sub.providerID, variant: subVariant },
+          }).pipe(
+            Effect.tap((result) =>
+              Effect.sync(() => {
+                expect(result.prompt).toEqual(enabled ? sub : cfg)
+                expect(result.variant).toEqual(enabled ? subVariant : cfgVariant)
+              }),
+            ),
+          ),
+      )
+    }
+  }
+
+  it.live("allows a reasoning override on a resumed model", () =>
+    run({
+      agent: "pinned",
+      enabled: true,
+      resume: { id: sub.modelID, providerID: sub.providerID, variant: subVariant },
+      selection: { variant: overrideVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toEqual(overrideVariant)
+        }),
+      ),
+    ),
+  )
+
+  for (const enabled of [undefined, false, true]) {
+    for (const background of [false, true]) {
+      it.live(`advertises selection ${enabled} independently of background ${background}`, () =>
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              const tool = yield* TaskTool.pipe(
+                Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: background })),
+              )
+              const def = yield* tool.init()
+              const fields = def.jsonSchema?.properties ?? {}
+              for (const field of ["model", "provider", "variant"]) {
+                expect(field in fields).toBe(enabled === true)
+                expect(def.jsonSchema?.required).not.toContain(field)
+                if (enabled) expect(fields[field]).toMatchObject({ anyOf: [{ type: "string" }, { type: "null" }] })
+              }
+              expect("background" in fields).toBe(background)
+              expect(def.description.includes("Experimental subagent model selection is enabled")).toBe(
+                enabled === true,
+              )
+              if (enabled) {
+                expect(def.description).toContain(
+                  "Only override model, provider, or variant when the user explicitly requests it",
+                )
+                expect(def.description).toContain("Omit these fields, or send null")
+              }
+            }),
+          { config: { experimental: { task_model_selection: enabled } } },
+        ),
+      )
+    }
+  }
+
+  it.live("keeps the latest parent model and reasoning when a background override completes", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed("background", inherited)
+          const sessions = yield* Session.Service
+          const notified = yield* Deferred.make<SessionPrompt.PromptInput>()
+          const calls: SessionPrompt.PromptInput[] = []
+          const tool = yield* TaskTool.pipe(
+            Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: true })),
+          )
+          const def = yield* tool.init()
+          const promptOps: TaskPromptOps = {
+            ...stubOps(),
+            prompt: (input) =>
+              Effect.gen(function* () {
+                calls.push(input)
+                if (input.sessionID === chat.id) yield* Deferred.succeed(notified, input)
+                if (input.sessionID !== chat.id) {
+                  yield* sessions.setAgentModel({
+                    sessionID: chat.id,
+                    agent: "build",
+                    model: { id: cfg.modelID, providerID: cfg.providerID, variant: cfgVariant },
+                    time: Date.now(),
+                  })
+                }
+                return reply(input, "done")
+              }),
+          }
+          const result = yield* def.execute(
+            {
+              description: "background selection",
+              prompt: "inspect selection",
+              subagent_type: "general",
+              background: true,
+              model: "sub-model",
+              provider: "sub-provider",
+              variant: subVariant,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps, bypassAgentCheck: true },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+          const notice = yield* Deferred.await(notified).pipe(Effect.timeout("5 seconds"))
+          expect(result.metadata.model).toEqual(sub)
+          expect(result.metadata.variant).toEqual(subVariant)
+          expect(calls.at(0)?.model).toEqual(sub)
+          expect(calls.at(0)?.variant).toEqual(subVariant)
+          expect(notice.model).toEqual(cfg)
+          expect(notice.variant).toEqual(cfgVariant)
+        }),
+      { config: { ...catalog, experimental: { task_model_selection: true } } },
+    ),
+  )
+
   it.live("saved model beats agent config for pinned", () =>
     run({
       agent: "pinned",

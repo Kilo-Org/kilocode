@@ -131,6 +131,7 @@ export interface Host {
 
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
+  browserAutomation(): boolean
 
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown

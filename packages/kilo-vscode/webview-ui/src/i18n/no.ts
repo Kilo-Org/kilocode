@@ -854,6 +854,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
+  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
+  "settings.experimental.taskModelSelection.description":
+    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1165,58 +1168,16 @@ export const dict = {
   "question.summary": "{{n}} av {{total}} spørsmål",
   "common.review": "Gjennomgå",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrer fra eldre versjon",
-  "settings.aboutKiloCode.legacyMigration.title": "Migrering fra eldre versjon",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer innstillinger fra en tidligere installasjon av Kilo Code, inkludert API-nøkler for leverandører og standardmodell.",
   "settings.aboutKiloCode.rooImport.description": "Importer samtalehistorikk fra en installasjon av Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importer økter fra Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Hva er nytt i Kilo Code",
-  "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
-  "migration.whatsNew.features.performance.title": "Raskere agentytelse",
-  "migration.whatsNew.features.performance.detail":
-    "Parallelle verktøykall og underagenter lar agenten din håndtere mer samtidig — slik at du bruker mindre tid på å vente og mer tid på å levere.",
-  "migration.whatsNew.features.interface.title": "Strømlinjeformet grensesnitt",
-  "migration.whatsNew.features.interface.detail": "Færre forstyrrelser, enklere og raskere å lese.",
-  "migration.whatsNew.features.agentManager.title": "Agentbehandling",
-  "migration.whatsNew.features.agentManager.detail":
-    "Et samlet grensesnitt for å kjøre flere agenter parallelt, hver på sitt eget worktree — overvåk fremdrift, bytt kontekst og gjennomgå endringer på ett sted.",
-  "migration.whatsNew.features.foundation.title": "Delt grunnlag",
-  "migration.whatsNew.features.foundation.detail":
-    "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
-  "migration.whatsNew.blogLink": "Les hele kunngjøringen",
-  "migration.whatsNew.docsLink": "Nyheter og ofte stilte spørsmål",
-  "migration.whatsNew.continue": "Fortsett",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrer innstillingene dine",
-  "migration.migrate.subtitle": "Vi fant innstillinger fra din tidligere installasjon. Her er hva vi kan ta med over.",
+  "migration.roo.button": "Importer økter",
+  "migration.roo.empty": "Ingen Roo Code-økter funnet.",
   "migration.migrate.selectLabel": "Velg hva som skal migreres",
   "migration.migrate.chatHistory": "Chatøkter og historikk",
-  "migration.migrate.button": "Migrer innstillinger",
-  "migration.migrate.skip": "Hopp over",
-  "migration.migrate.keysDetected": "{{count}} nøkler oppdaget",
-  "migration.migrate.serversConfigured": "{{count}} server(e) konfigurert",
-  "migration.migrate.modesFound": "{{count}} modus(er) funnet",
-  "migration.migrate.nothingToMigrate": "Ingenting å migrere ble funnet i de eldre innstillingene.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "API-nøkler for leverandører",
-  "migration.select.mcpServers": "MCP-servere",
-  "migration.select.customModes": "Egendefinerte moduser / Agenter",
-  "migration.select.defaultModel": "Standardmodell",
-  "migration.select.autoApproval": "Automatisk godkjenning",
-  "migration.select.language": "UI-språk",
-  "migration.select.autocomplete": "Innstillinger for autofullføring",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} av {{total}} elementer ble migrert.",
-  "migration.complete.cleanup": "Fjern eldre innstillingsdata",
-  "migration.complete.cleanupDescription":
-    "Dette fjerner de gamle innstillingene fra VS Code-lagringen. Du vil ikke kunne kjøre denne migreringen på nytt.",
   "migration.complete.done": "Ferdig",
   "migration.migrate.sessionsDetected": "{{count}} økter oppdaget",
   "migration.error.continue": "Fortsett",
@@ -1250,7 +1211,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Ukjent dato",
   "migration.sessionFormat.unknown": "Ukjent",
   "migration.sessionFormat.unknownError": "Ukjent feil",
-  // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",

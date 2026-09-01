@@ -49,51 +49,35 @@ export namespace SessionImportService {
               partID: input.revert.partID ? PartID.make(input.revert.partID) : undefined,
             }
           : undefined
+        const data = {
+          project_id: ProjectV2.ID.make(input.projectID),
+          workspace_id: input.workspaceID ? WorkspaceV2.ID.make(input.workspaceID) : undefined,
+          parent_id: input.parentID ? SessionID.make(input.parentID) : undefined,
+          slug: input.slug,
+          directory: input.directory,
+          title: input.title,
+          version: input.version,
+          share_url: input.shareURL,
+          summary_additions: input.summary?.additions,
+          summary_deletions: input.summary?.deletions,
+          summary_files: input.summary?.files,
+          summary_diffs: input.summary?.diffs as never,
+          revert,
+          permission: input.permission as never,
+          time_created: input.timeCreated,
+          time_updated: input.timeUpdated,
+          time_compacting: input.timeCompacting,
+          time_archived: input.timeArchived,
+        }
         yield* db
           .insert(SessionTable)
           .values({
             id: SessionID.make(input.id),
-            project_id: ProjectV2.ID.make(input.projectID),
-            workspace_id: input.workspaceID ? WorkspaceV2.ID.make(input.workspaceID) : undefined,
-            parent_id: input.parentID ? SessionID.make(input.parentID) : undefined,
-            slug: input.slug,
-            directory: input.directory,
-            title: input.title,
-            version: input.version,
-            share_url: input.shareURL,
-            summary_additions: input.summary?.additions,
-            summary_deletions: input.summary?.deletions,
-            summary_files: input.summary?.files,
-            summary_diffs: input.summary?.diffs as never,
-            revert,
-            permission: input.permission as never,
-            time_created: input.timeCreated,
-            time_updated: input.timeUpdated,
-            time_compacting: input.timeCompacting,
-            time_archived: input.timeArchived,
+            ...data,
           })
           .onConflictDoUpdate({
             target: key(SessionTable.id),
-            set: {
-              project_id: ProjectV2.ID.make(input.projectID),
-              workspace_id: input.workspaceID ? WorkspaceV2.ID.make(input.workspaceID) : undefined,
-              parent_id: input.parentID ? SessionID.make(input.parentID) : undefined,
-              slug: input.slug,
-              directory: input.directory,
-              title: input.title,
-              version: input.version,
-              share_url: input.shareURL,
-              summary_additions: input.summary?.additions,
-              summary_deletions: input.summary?.deletions,
-              summary_files: input.summary?.files,
-              summary_diffs: input.summary?.diffs as never,
-              revert,
-              permission: input.permission as never,
-              time_created: input.timeCreated,
-              time_updated: input.timeUpdated,
-              time_compacting: input.timeCompacting,
-              time_archived: input.timeArchived,
-            },
+            set: data,
           })
           .run()
         return { ok: true, id: input.id }
