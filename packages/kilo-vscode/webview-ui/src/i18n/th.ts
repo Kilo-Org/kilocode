@@ -1210,6 +1210,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "ยกเลิกแล้ว",
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
+  "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",

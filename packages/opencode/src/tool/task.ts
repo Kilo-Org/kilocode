@@ -243,7 +243,7 @@ export const TaskTool = Tool.define(
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
         model,
-        variant, // kilocode_change
+        ...(variant === undefined ? {} : { variant }), // kilocode_change
         ...(runInBackground ? { background: true } : {}),
       }
 
@@ -318,6 +318,7 @@ export const TaskTool = Tool.define(
             {
               type: "text",
               synthetic: true,
+              metadata: { background: true },
               text: renderOutput({
                 sessionID: nextSession.id,
                 state,
@@ -334,9 +335,12 @@ export const TaskTool = Tool.define(
       // kilocode_change end
 
       // kilocode_change start - background tasks propagate only cost accrued by this invocation
+      let notified = false
       const notify = Effect.fn("TaskTool.notifyBackgroundResult")((jobID: string) =>
         Effect.uninterruptible(
           Effect.gen(function* () {
+            if (notified) return
+            notified = true
             const owner = yield* Scope.fork(scope, "parallel")
             const release = yield* drain.hold(ctx.sessionID)
             yield* Scope.addFinalizer(owner, Effect.sync(release))
@@ -408,16 +412,23 @@ export const TaskTool = Tool.define(
       const foregroundCost = runInBackground
         ? undefined
         : yield* KiloCostPropagation.childCost(sessions, nextSession.id) // kilocode_change - snapshot before the foreground job starts
-      const info = yield* background.start({
+      // kilocode_change start
+      const start = KiloTask.start(background, (id) => ops.cancel(id), runInBackground ? notify : undefined)
+      const info = yield* start({
+        // kilocode_change end
         id: nextSession.id,
         type: id,
         title: params.description,
         metadata,
         // kilocode_change start
-        onPromote: ctx.metadata({
-          title: params.description,
-          metadata: { ...metadata, background: true, jobId: nextSession.id },
-        }),
+        onPromote: notify(nextSession.id).pipe(
+          Effect.andThen(
+            ctx.metadata({
+              title: params.description,
+              metadata: { ...metadata, background: true, jobId: nextSession.id },
+            }),
+          ),
+        ),
         // kilocode_change end
         // kilocode_change - only the initial-background start needs its own cost bracket; the
         // foreground/promoted path below is already wrapped by the acquireUseRelease at the bottom of run()
@@ -441,13 +452,10 @@ export const TaskTool = Tool.define(
         }
       }
 
-      if (runInBackground) {
-        yield* notify(info.id)
-        return backgroundResult()
-      }
+      if (runInBackground) return backgroundResult() // kilocode_change
 
       const runCancel = yield* EffectBridge.make()
-      const cancel = ops.cancel(nextSession.id)
+      const cancel = KiloTask.cancelForeground(background, nextSession.id, ops.cancel(nextSession.id)) // kilocode_change
 
       function onAbort() {
         runCancel.fork(cancel)
@@ -484,7 +492,11 @@ export const TaskTool = Tool.define(
         (costBefore, exit) =>
           Effect.gen(function* () {
             if (Exit.hasInterrupts(exit))
-              yield* Effect.all([cancel, background.cancel(nextSession.id)], { discard: true })
+              yield* KiloTask.cancelForeground(
+                background,
+                nextSession.id,
+                Effect.all([cancel, background.cancel(nextSession.id)], { discard: true }),
+              )
           }).pipe(
             Effect.ensuring(
               Effect.gen(function* () {
@@ -528,7 +540,7 @@ export const TaskTool = Tool.define(
             }),
           ),
           execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-            drain.track(ctx.sessionID, run(params, ctx)).pipe(Effect.orDie),
+            drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped)).pipe(Effect.orDie),
         }
       })
     // kilocode_change end

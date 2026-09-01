@@ -64,63 +64,6 @@
     },
     {
       "files": [
-        "packages/kilo-console/src/routes/config/CliNotificationsRoute.tsx",
-        "packages/kilo-console/src/routes/config/CliUiRoute.tsx"
-      ],
-      "fingerprint": "3d8c2a788d682c4e",
-      "maxMatches": 1,
-      "maxTokens": 143,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-console/src/routes/config/state/agents.ts",
-        "packages/kilo-console/src/routes/config/state/models.ts"
-      ],
-      "fingerprint": "1da5f78ab9ff1975",
-      "maxMatches": 1,
-      "maxTokens": 164,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-console/src/routes/config/state/agents.ts",
-        "packages/kilo-console/src/routes/config/state/models.ts"
-      ],
-      "fingerprint": "f0f56e89b4d2ff59",
-      "maxMatches": 1,
-      "maxTokens": 171,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-console/src/routes/config/state/mcp.ts",
-        "packages/kilo-console/src/routes/config/state/mcp.ts"
-      ],
-      "fingerprint": "64494aa992cccc8d",
-      "maxMatches": 1,
-      "maxTokens": 129,
-      "kind": "legacy",
-      "owner": "kilo-console",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": ["packages/kilo-gateway/src/auth/device-auth-tui.ts", "packages/kilo-gateway/src/auth/device-auth.ts"],
-      "fingerprint": "e6ac9a2221c1deb4",
-      "maxMatches": 1,
-      "maxTokens": 194,
-      "kind": "legacy",
-      "owner": "kilo-gateway",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
         "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
       ],
@@ -169,36 +112,12 @@
     },
     {
       "files": [
-        "packages/kilo-ui/src/components/message-part.tsx",
-        "packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx"
-      ],
-      "fingerprint": "16e0edc3d99b9858",
-      "maxMatches": 1,
-      "maxTokens": 111,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
         "packages/kilo-vscode/src/services/notebook/bridge.ts"
       ],
       "fingerprint": "17677ff47d3bf883",
       "maxMatches": 1,
       "maxTokens": 134,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/src/agent-manager/ScriptTerminalManager.ts",
-        "packages/kilo-vscode/src/agent-manager/terminal-manager.ts"
-      ],
-      "fingerprint": "83aaa96c32fb3894",
-      "maxMatches": 1,
-      "maxTokens": 127,
       "kind": "legacy",
       "owner": "kilo-vscode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
@@ -235,60 +154,12 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/kilo-provider/handlers/permission-handler.ts",
-        "packages/kilo-vscode/src/kilo-provider/handlers/question.ts"
-      ],
-      "fingerprint": "edde84a63bcdb8a0",
-      "maxMatches": 1,
-      "maxTokens": 108,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
-        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
-      ],
-      "fingerprint": "73d7672dd2e6cd26",
-      "maxMatches": 1,
-      "maxTokens": 155,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
         "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
       ],
       "fingerprint": "9020d3c20123ef72",
       "maxMatches": 1,
       "maxTokens": 104,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/NewWorktreeDialog.tsx",
-        "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx"
-      ],
-      "fingerprint": "0772e382c935aa93",
-      "maxMatches": 1,
-      "maxTokens": 122,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/ProjectSidebarBody.tsx",
-        "packages/kilo-vscode/webview-ui/agent-manager/SidebarBody.tsx"
-      ],
-      "fingerprint": "94761ffc9ac99167",
-      "maxMatches": 1,
-      "maxTokens": 155,
       "kind": "legacy",
       "owner": "kilo-vscode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
@@ -303,27 +174,6 @@
       "maxTokens": 143,
       "kind": "legacy",
       "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/src/hooks/useGitChangesContext.ts",
-        "packages/kilo-vscode/webview-ui/src/hooks/useTerminalContext.ts"
-      ],
-      "fingerprint": "3474d577ea4814b0",
-      "maxMatches": 1,
-      "maxTokens": 105,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": ["packages/opencode/src/kilocode/agent/index.ts", "packages/opencode/src/kilocode/agent/index.ts"],
-      "fingerprint": "9044b540f896a694",
-      "maxMatches": 1,
-      "maxTokens": 113,
-      "kind": "legacy",
-      "owner": "opencode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
@@ -346,18 +196,6 @@
       "fingerprint": "89ef84cc3499824c",
       "maxMatches": 1,
       "maxTokens": 100,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts",
-        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts"
-      ],
-      "fingerprint": "ec31254ab83e4a2a",
-      "maxMatches": 1,
-      "maxTokens": 133,
       "kind": "legacy",
       "owner": "opencode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."

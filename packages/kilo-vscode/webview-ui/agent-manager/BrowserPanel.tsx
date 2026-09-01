@@ -25,7 +25,7 @@ export function createBrowserPanel(
     (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
   )
   const visible = () => current() === SidePanel.Browser
-  const close = () => panel(null)
+  const close = () => panel((current) => (current === SidePanel.Browser ? null : current))
   const open = () => {
     history(false)
     review(false)

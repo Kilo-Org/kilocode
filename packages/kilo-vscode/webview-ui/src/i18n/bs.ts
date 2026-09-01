@@ -1239,6 +1239,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Otkazano",
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
+  "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",

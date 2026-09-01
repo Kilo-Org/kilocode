@@ -517,6 +517,7 @@ class AgentManagerPanel(
                     controller.kind(item.path),
                     stats[key],
                     pull,
+                    dirty[key],
                 )
             },
             ActiveListSelection.Preserve,
@@ -566,11 +567,23 @@ class AgentManagerPanel(
         popup.show(key, this) { request(item) }
     }
 
+    /**
+     * The hover detail for one row, or null when the row has nothing to detail. A pull request is not the
+     * bar: a worktree that has no pull request yet is exactly the one whose changes are still uncommitted,
+     * and this popup is the only place that breaks those out. What it will not do is follow the pointer
+     * down a list of untouched worktrees as an empty balloon.
+     */
     @RequiresEdt
     private fun request(row: WorktreeRow): SidePopupRequest? {
-        val target = project ?: return null
-        val pull = row.pr ?: return null
+        if (project == null || row.progress != null) return null
         val key = normalizeWorktreePath(row.dto.path)
+        val pull = row.pr
+        val base = stats[key]
+        val local = dirty[key]
+        val any = pull != null ||
+            (local != null && local.files > 0) ||
+            (base != null && (base.files > 0 || base.ahead > 0 || base.behind > 0))
+        if (!any) return null
         return SidePopupRequest(
             build = {
                 val disposable = Disposer.newDisposable("Worktree row popup")
@@ -578,7 +591,7 @@ class AgentManagerPanel(
                     openDiff = { openDiff(row.dto) },
                     onLocal = { openLocalDiff(row.dto) },
                 )
-                body.update(stats[key], pull, WorktreeTitle.fallback(row.dto.path), dirty[key])
+                body.update(base, pull, WorktreeTitle.fallback(row.dto.path), local)
                 // A PR title is as long as its author made it, and the popup exists to show the whole
                 // thing: past the width cap it scrolls sideways rather than losing the end of the line.
                 HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
@@ -634,9 +647,9 @@ class AgentManagerPanel(
             this,
             onStats = { value -> stats = value; sync() },
             onPr = { value -> prs = value; sync() },
-            // Uncommitted counts only appear in the row popup, so they do not rebuild rows: sync() would
-            // churn every row on each poll for a number nothing on the row itself shows.
-            onDirty = { value -> dirty = value },
+            // Rows carry the uncommitted counts too, as the summary a worktree with no commits yet shows,
+            // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
+            onDirty = { value -> dirty = value; sync() },
         )
     }
 
@@ -704,6 +717,7 @@ class AgentManagerPanel(
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
+        val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
@@ -765,16 +779,25 @@ class AgentManagerPanel(
                     ),
                 )
             }
+        /**
+         * Committed counts against the base branch, with the uncommitted ones behind them so a worktree
+         * whose agent has not committed yet still says what it changed. A row that showed nothing until
+         * the first commit reads as "no changes here", which is the state this summary exists to deny.
+         */
         override val metrics: ActiveListMetrics?
             get() {
                 if (progress != null) return null
-                val s = stats?.takeIf { it.files > 0 } ?: return null
+                if ((stats?.files ?: 0) == 0 && (dirty?.files ?: 0) == 0) return null
                 return ActiveListMetrics(
-                    files = s.files,
-                    additions = s.additions,
-                    deletions = s.deletions,
-                    base = s.base,
+                    files = stats?.files ?: 0,
+                    additions = stats?.additions ?: 0,
+                    deletions = stats?.deletions ?: 0,
+                    base = stats?.base.orEmpty(),
                     onChanges = { openDiff(dto) },
+                    localFiles = dirty?.files ?: 0,
+                    localAdditions = dirty?.additions ?: 0,
+                    localDeletions = dirty?.deletions ?: 0,
+                    onLocal = { openLocalDiff(dto) },
                 )
             }
 
@@ -785,6 +808,7 @@ class AgentManagerPanel(
                 kind == row.kind &&
                 stats == row.stats &&
                 pr == row.pr &&
+                dirty == row.dirty &&
                 current == row.current
         }
 
@@ -794,6 +818,7 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
+            result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
             return result
         }

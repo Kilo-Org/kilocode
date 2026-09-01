@@ -186,7 +186,7 @@ function probe(home: string, mode: "foreground" | "busy" | "idle" | "intake") {
 function scenario(
   { home, llm, opencode }: CliFixture,
   mode: "foreground" | "busy" | "idle",
-  opts: { attach?: boolean; resume?: boolean; daemon?: boolean; abort?: boolean } = {},
+  opts: { attach?: boolean; resume?: boolean; daemon?: boolean; abort?: boolean; scope?: "session" } = {},
 ) {
   return Effect.gen(function* () {
     const directory = opts.resume ? path.join(home, "session") : home
@@ -304,9 +304,16 @@ function scenario(
       }).pipe(Effect.forkChild)
       yield* ready.wait("Cancellation event stream did not connect")
       const aborted = yield* Effect.promise(() =>
-        client.session.abort({ sessionID: session.data.id }, { throwOnError: true }),
+        client.session.abort({ sessionID: session.data.id, scope: opts.scope }, { throwOnError: true }),
       )
       expect(aborted.data).toBe(true)
+      if (opts.scope === "session") {
+        const result = yield* awaitWithTimeout(run.result, "CLI did not report the stopped parent", "45 seconds")
+        expect(result.exitCode).not.toBe(0)
+        const status = yield* Effect.promise(() => client.session.status({}, { throwOnError: true }))
+        expect(Object.values(status.data).some((entry) => entry.type === "busy")).toBe(true)
+        child.open()
+      }
       yield* Effect.promise(() =>
         client.kilocode.drainSession({ sessionID: session.data.id, token }, { throwOnError: true }),
       )
@@ -348,6 +355,11 @@ for (const [name, mode, opts] of [
     "attached run fails when the idle parent is aborted with a child still running",
     "idle",
     { attach: true, abort: true },
+  ],
+  [
+    "attached run fails when only the idle parent is stopped and its child continues",
+    "idle",
+    { attach: true, abort: true, scope: "session" },
   ],
   ["local run resumes and drains a session from another directory", "busy", { resume: true }],
   ["attached run resumes and drains a session from another directory", "idle", { attach: true, resume: true }],

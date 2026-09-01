@@ -1173,6 +1173,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "已取消",
   "task.backgroundAgents.status.error": "錯誤",
   "task.backgroundAgents.untitled": "背景 Agent",
+  "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未儲存的變更",
   "settings.saveBar.discard": "捨棄",
   "settings.saveBar.save": "儲存",

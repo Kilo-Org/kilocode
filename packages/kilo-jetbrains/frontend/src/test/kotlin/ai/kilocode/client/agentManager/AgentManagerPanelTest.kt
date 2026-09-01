@@ -664,18 +664,22 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("origin/main", metrics.base)
     }
 
-    fun `test worktree rows show only base files and ignore local changes and commit counters`() {
+    fun `test worktree rows prefer base files and fall back to uncommitted ones`() {
         val committed = worktree("committed")
         val local = worktree("local")
         val both = worktree("both")
         val renamed = worktree("renamed")
-        rpc.listed += listOf(committed, local, both, renamed)
+        val counters = worktree("counters")
+        val clean = worktree("clean")
+        rpc.listed += listOf(committed, local, both, renamed, counters, clean)
         rpc.statsResult = WorktreeStatsListDto(
             listOf(
                 WorktreeStatsDto(committed.path, additions = 5, deletions = 1, files = 2),
                 WorktreeStatsDto(local.path, ahead = 3, behind = 2),
                 WorktreeStatsDto(both.path, additions = 3, files = 1),
                 WorktreeStatsDto(renamed.path, files = 1),
+                WorktreeStatsDto(counters.path, ahead = 3, behind = 2),
+                WorktreeStatsDto(clean.path),
             ),
         )
         rpc.dirtyResult = WorktreeDirtyListDto(
@@ -695,25 +699,119 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val first = row(panel, 0).metrics ?: error("expected committed changes")
         assertEquals(5, first.additions)
         assertEquals(2, first.files)
-        assertNull(row(panel, 1).metrics)
-        val mixed = row(panel, 2).metrics ?: error("expected base changes only")
+        assertFalse(first.local)
+        // Nothing committed, so the uncommitted set is the only thing the row can report.
+        val uncommitted = row(panel, 1).metrics ?: error("expected uncommitted changes")
+        assertTrue(uncommitted.local)
+        assertEquals(0, uncommitted.files)
+        assertEquals(1, uncommitted.localFiles)
+        assertEquals(2, uncommitted.localAdditions)
+        val mixed = row(panel, 2).metrics ?: error("expected base changes to win")
         assertEquals(3, mixed.additions)
         assertEquals(1, mixed.files)
+        assertFalse(mixed.local)
         val move = row(panel, 3).metrics ?: error("expected file-only changes")
         assertEquals(1, move.files)
         assertEquals(0, move.additions)
         assertEquals(0, move.deletions)
+        // A compact summary has no ahead/behind counters, and a clean worktree has nothing at all.
+        assertNull(row(panel, 4).metrics)
+        assertNull(row(panel, 5).metrics)
 
         edt {
             val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            view.list.setSize(480, 400)
+            view.list.setSize(480, 600)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
-            for (index in listOf(0, 2, 3)) {
+            for (index in listOf(0, 1, 2, 3)) {
                 assertTrue(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
             }
-            assertFalse(activeListCellBounds(view.list, 1, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+            for (index in listOf(4, 5)) {
+                assertFalse(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+            }
         }
+    }
+
+    fun `test the changes badge opens whichever comparison it is showing`() {
+        val committed = worktree("committed")
+        val local = worktree("local")
+        rpc.listed += listOf(committed, local)
+        rpc.statsResult = WorktreeStatsListDto(
+            listOf(
+                WorktreeStatsDto(committed.path, additions = 5, files = 2, base = "origin/main"),
+                WorktreeStatsDto(local.path),
+            ),
+        )
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(local.path, additions = 2, files = 1)))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt { row(panel, 0).metrics!!.action!!() }
+        waitUntil { opened().isNotEmpty() }
+        assertEquals("branch", opened().single().path.params["source"])
+        edt { FileEditorManager.getInstance(project).openFiles.forEach { FileEditorManager.getInstance(project).closeFile(it) } }
+
+        edt { row(panel, 1).metrics!!.action!!() }
+        // The local comparison passes no branch, so the tab waits on a branch-name lookup for its title.
+        waitUntil { opened().isNotEmpty() }
+        assertEquals("local", opened().single().path.params["source"])
+    }
+
+    fun `test the uncommitted badge says so and reaches its own comparison through the list`() {
+        val local = worktree("local")
+        rpc.listed += local
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(local.path, additions = 2, deletions = 1, files = 3)))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            list.clearSelection()
+            val renderer = list.cellRenderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, true)
+            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
+            assertEquals(
+                listOf("3 files", "-1", "+2"),
+                components(renderer).filterIsInstance<JBLabel>().filter { it.isVisible && !it.text.isNullOrEmpty() && it.text != row(panel, 0).description }
+                    .map { it.text },
+            )
+
+            val point = center(activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL))
+            val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
+            list.mouseMotionListeners.forEach { it.mouseMoved(hover) }
+            assertEquals(Cursor.HAND_CURSOR, list.cursor.type)
+            assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), list.getToolTipText(hover))
+            for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                fire(list, MouseEvent(
+                    list,
+                    id,
+                    System.currentTimeMillis(),
+                    if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1,
+                ))
+            }
+        }
+        waitUntil { opened().isNotEmpty() }
+
+        assertEquals("local", opened().single().path.params["source"])
     }
 
     fun `test open diff opens the branch diff editor`() {
@@ -1365,6 +1463,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
+
+    private fun opened(): List<KiloVirtualFile> =
+        edt { FileEditorManager.getInstance(project).openFiles.filterIsInstance<KiloVirtualFile>() }
 
     private fun pump() = pumpEdt()
 }

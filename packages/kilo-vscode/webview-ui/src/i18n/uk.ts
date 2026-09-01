@@ -1205,6 +1205,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Скасовано",
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
+  "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

@@ -43,7 +43,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     reason: "disk-backed instance integration test cleanup",
   },
   "kilocode/kilo-sessions.test.ts": {
-    count: 31,
+    count: 36,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -53,7 +53,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "Permission.Service, so a test can only assert it by raising and replying to " +
       "real requests through that same runtime. Scoped layers cannot express this — " +
       "the global-runtime coupling is exactly what is under test. " +
-      "PR-link advertise tests extend this with session creation through the same global AppRuntime.",
+      "PR-link advertise tests extend this with session creation through the same global AppRuntime. " +
+      "Instance metadata tests control the global Vcs.Service read by the production heartbeat " +
+      "to verify refresh, reconnect, bounds, and failure, and create a session through the same " +
+      "Session.Service to verify that instance bounds leave the full session branch unchanged.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },

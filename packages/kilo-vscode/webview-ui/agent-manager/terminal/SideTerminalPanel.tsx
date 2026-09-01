@@ -87,6 +87,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
               label={props.state.title(term.id) ?? term.title}
               tooltip={props.state.title(term.id) ?? term.title}
               status={props.state.scriptStatus(term.id)}
+              state={props.state.activity(term.id)}
               showKeybind={false}
               keybind={active() === term.id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
