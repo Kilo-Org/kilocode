@@ -371,10 +371,9 @@ jobs:
       - version
       - build-cli
     if: false
-    uses: ./.github/workflows/smoke-test.yml
-    with:
-      cli_version: ${{ needs.version.outputs.version }}
-    secrets: inherit
+    runs-on: ubuntu-24.04
+    steps:
+      - run: exit 0
   # kilocode_change end
 
   publish:
