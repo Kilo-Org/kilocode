@@ -850,6 +850,9 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
+  "settings.experimental.sharedAgentBoard.title": "برد مشترک عامل‌ها",
+  "settings.experimental.sharedAgentBoard.description":
+    "به عامل اصلی و عامل‌های فرعی آن اجازه می‌دهد یافته‌ها را در یک جلسه به اشتراک بگذارند.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",

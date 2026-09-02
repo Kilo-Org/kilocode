@@ -40,13 +40,13 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.ActionGroup
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -593,7 +593,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         manager.onListChanged = null
     }
 
-    private inner class NewAction : AnAction(
+    private inner class NewAction : DumbAwareAction(
         KiloBundle.message("worktree.session.new.action"),
         null,
         AllIcons.General.Add,
@@ -605,7 +605,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
     }
 
-    private inner class DeleteAction : AnAction(
+    private inner class DeleteAction : DumbAwareAction(
         KiloBundle.message("worktree.session.delete.action"),
         null,
         AllIcons.Actions.GC,
@@ -622,7 +622,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
     }
 
-    private inner class RenameAction : AnAction(
+    private inner class RenameAction : DumbAwareAction(
         KiloBundle.message("worktree.session.rename.action"),
         null,
         AllIcons.Actions.Edit,

@@ -856,6 +856,9 @@ export const dict = {
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
+  "settings.experimental.sharedAgentBoard.title": "Paylaşılan ajan panosu",
+  "settings.experimental.sharedAgentBoard.description":
+    "Ana ajanın ve alt ajanlarının keşifleri aynı oturum içinde paylaşmasını sağlar.",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
   "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
   "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
