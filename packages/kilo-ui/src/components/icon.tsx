@@ -74,6 +74,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
   },
+  battery: {
+    viewBox: "0 0 24 24",
+    path: `<rect x="3" y="7" width="17" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M21 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 10h7v4H6z" fill="currentColor"/>`,
+  },
 }
 
 type Name = keyof typeof icons

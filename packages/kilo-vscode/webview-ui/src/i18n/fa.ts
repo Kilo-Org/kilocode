@@ -629,6 +629,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "جستجوی وب را برای مدل‌های همه ارائه‌دهندگان در دسترس قرار دهید.",
   "settings.checkpoints.title": "نقاط بازیابی",
   "settings.display.title": "نمایش",
+  "settings.sleep.title": "انرژی",
+  "settings.sleep.enable.title": "جلوگیری از خواب سیستم هنگام اجرای وظایف",
+  "settings.sleep.enable.description": "رایانه را هنگام کار Kilo Code بیدار نگه دارید. قفل صفحه تغییری نمی‌کند.",
+  "settings.sleep.timeout.title": "محدودیت هر وظیفه (دقیقه)",
+  "settings.sleep.timeout.description":
+    "فقط زمان اجرای فعال محاسبه می‌شود، نه زمان انتظار برای پاسخ شما. برای نبود محدودیت از سوی افزونه، ۰ را وارد کنید. پیش‌فرض: ۳۰ دقیقه.",
   "settings.autocomplete.title": "تکمیل خودکار",
   "settings.notifications.title": "اعلان‌ها",
   "settings.context.title": "زمینه",

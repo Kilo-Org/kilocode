@@ -729,6 +729,13 @@ export const dict = {
     "Rendez la recherche web disponible pour les modèles de tous les fournisseurs.",
   "settings.checkpoints.title": "Points de contrôle",
   "settings.display.title": "Affichage",
+  "settings.sleep.title": "Alimentation",
+  "settings.sleep.enable.title": "Empêcher la mise en veille pendant les tâches",
+  "settings.sleep.enable.description":
+    "Garder l’ordinateur éveillé pendant le travail de Kilo Code. Le verrouillage de l’écran n’est pas affecté.",
+  "settings.sleep.timeout.title": "Limite par tâche (minutes)",
+  "settings.sleep.timeout.description":
+    "Seul le temps d’exécution actif est compté, pas l’attente de votre réponse. Utilisez 0 pour ne fixer aucune limite dans l’extension. Par défaut : 30 minutes.",
   "settings.autocomplete.title": "Autocomplétion",
   "settings.autocomplete.model.title": "Modèle d'autocomplétion",
   "settings.autocomplete.model.description": "Sélectionnez le modèle utilisé pour les complétions de code en ligne",

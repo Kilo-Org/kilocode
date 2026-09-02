@@ -202,6 +202,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.allowSystemSleep",
+        "title": "Allow System Sleep",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.toggleMemory",
         "title": "Toggle Project Memory",
         "category": "Kilo Code"
@@ -1123,6 +1128,18 @@
           "type": "boolean",
           "default": true,
           "description": "Use system-installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed."
+        },
+        "kilo-code.new.preventSleepDuringTasks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prevent automatic system sleep while Kilo Code tasks run. Screen locking and display sleep are not affected."
+        },
+        "kilo-code.new.preventSleepDuringTasksTimeoutMinutes": {
+          "type": "number",
+          "default": 30,
+          "minimum": 0,
+          "maximum": 1440,
+          "description": "Release system sleep prevention after this much active execution time per task. Time waiting for user input is excluded. Set to 0 for no extension-imposed limit; operating-system power rules still apply."
         },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",

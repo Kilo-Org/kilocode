@@ -18,6 +18,7 @@ import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-bac
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
 import { BrowserBroker } from "./services/browser-automation"
+import { SleepInhibitorService } from "./services/sleep-inhibitor"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -215,6 +216,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const attention = new AttentionService(connectionService, {
     approve: (event, directory) => autoApprove.approve(event, directory),
   })
+  const sleep = new SleepInhibitorService(connectionService)
 
   // Prewarm only after all global event consumers are ready.
   ensureBackendForAutocomplete(connectionService)
@@ -638,6 +640,7 @@ export async function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       shuttingDown = true
       unsubscribeStateChange()
+      sleep.dispose()
       attention.dispose()
       browserBroker.dispose()
       provider.dispose()

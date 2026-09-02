@@ -554,6 +554,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Rendi disponibile la ricerca web ai modelli di tutti i provider.",
   "settings.checkpoints.title": "Checkpoint",
   "settings.display.title": "Visualizzazione",
+  "settings.sleep.title": "Alimentazione",
+  "settings.sleep.enable.title": "Impedisci la sospensione del sistema durante le attività",
+  "settings.sleep.enable.description":
+    "Mantieni il computer attivo mentre Kilo Code lavora. Il blocco dello schermo non cambia.",
+  "settings.sleep.timeout.title": "Limite per attività (minuti)",
+  "settings.sleep.timeout.description":
+    "Conta solo il tempo di esecuzione attivo, non l’attesa della tua risposta. Usa 0 per non imporre limiti dall’estensione. Predefinito: 30 minuti.",
   "settings.autocomplete.title": "Autocompletamento",
   "settings.notifications.title": "Notifiche",
   "settings.context.title": "Contesto",

@@ -670,6 +670,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "모든 제공업체의 모델에서 웹 검색을 사용할 수 있도록 합니다.",
   "settings.checkpoints.title": "체크포인트",
   "settings.display.title": "디스플레이",
+  "settings.sleep.title": "전원",
+  "settings.sleep.enable.title": "작업 중 시스템 절전 방지",
+  "settings.sleep.enable.description":
+    "Kilo Code가 작업하는 동안 컴퓨터를 절전 모드로 전환하지 않습니다. 화면 잠금에는 영향을 주지 않습니다.",
+  "settings.sleep.timeout.title": "작업당 제한(분)",
+  "settings.sleep.timeout.description":
+    "활성 실행 시간만 계산하며 답변 대기 시간은 제외합니다. 확장 프로그램 제한을 없애려면 0을 사용하세요. 기본값: 30분.",
   "settings.autocomplete.title": "자동 완성",
   "settings.autocomplete.model.title": "자동 완성 모델",
   "settings.autocomplete.model.description": "인라인 코드 완성에 사용되는 모델 선택",

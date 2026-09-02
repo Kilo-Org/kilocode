@@ -691,6 +691,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "让所有提供商的模型都可使用网页搜索。",
   "settings.checkpoints.title": "检查点",
   "settings.display.title": "显示",
+  "settings.sleep.title": "电源",
+  "settings.sleep.enable.title": "执行任务时阻止系统休眠",
+  "settings.sleep.enable.description": "Kilo Code 工作时让计算机保持唤醒。屏幕锁定不受影响。",
+  "settings.sleep.timeout.title": "每个任务的限制（分钟）",
+  "settings.sleep.timeout.description":
+    "仅计算任务的活跃运行时间，不计算等待你回答的时间。设为 0 表示扩展不施加限制。默认值：30 分钟。",
   "settings.autocomplete.title": "自动补全",
   "settings.autocomplete.model.title": "自动补全模型",
   "settings.autocomplete.model.description": "选择用于内联代码补全的模型",

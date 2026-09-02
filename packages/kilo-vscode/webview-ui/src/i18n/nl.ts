@@ -669,6 +669,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Maak zoeken op internet beschikbaar voor modellen van alle providers.",
   "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
+  "settings.sleep.title": "Energiebeheer",
+  "settings.sleep.enable.title": "Systeemstand-by voorkomen tijdens taken",
+  "settings.sleep.enable.description":
+    "Houd de computer actief terwijl Kilo Code werkt. Schermvergrendeling blijft ongewijzigd.",
+  "settings.sleep.timeout.title": "Limiet per taak (minuten)",
+  "settings.sleep.timeout.description":
+    "Alleen actieve uitvoeringstijd telt; wachten op uw antwoord niet. Gebruik 0 voor geen limiet vanuit de extensie. Standaard: 30 minuten.",
   "settings.autocomplete.title": "Automatisch Aanvullen",
   "settings.autocomplete.model.title": "Autocomplete-model",
   "settings.autocomplete.model.description": "Selecteer het model dat wordt gebruikt voor inline code-aanvullingen",

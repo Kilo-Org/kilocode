@@ -667,6 +667,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Зробіть вебпошук доступним для моделей усіх постачальників.",
   "settings.checkpoints.title": "Контрольні точки",
   "settings.display.title": "Відображення",
+  "settings.sleep.title": "Живлення",
+  "settings.sleep.enable.title": "Запобігати переходу системи в режим сну під час завдань",
+  "settings.sleep.enable.description":
+    "Не переводити комп’ютер у режим сну під час роботи Kilo Code. Блокування екрана не змінюється.",
+  "settings.sleep.timeout.title": "Ліміт на завдання (хвилини)",
+  "settings.sleep.timeout.description":
+    "Враховується лише час активного виконання, без очікування вашої відповіді. Укажіть 0, щоб розширення не встановлювало ліміт. Типове значення: 30 хвилин.",
   "settings.autocomplete.title": "Автодоповнення",
   "settings.autocomplete.model.title": "Модель автодоповнення",
   "settings.autocomplete.model.description": "Виберіть модель для вбудованого (inline) автодоповнення коду",

@@ -767,6 +767,12 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface SleepSettingsLoadedMessage {
+  type: "sleepSettingsLoaded"
+  enabled: boolean
+  timeout: number
+}
+
 export interface AutoApprovalReasonSettingLoadedMessage {
   type: "autoApprovalReasonSettingLoaded"
   visible: boolean
@@ -1489,6 +1495,7 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | SleepSettingsLoadedMessage
   | DocumentResultMessage
   | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage

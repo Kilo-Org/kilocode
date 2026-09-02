@@ -717,6 +717,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "Omogućite web pretragu modelima svih pružalaca.",
   "settings.checkpoints.title": "Kontrolne tačke",
   "settings.display.title": "Prikaz",
+  "settings.sleep.title": "Napajanje",
+  "settings.sleep.enable.title": "Spriječi mirovanje sistema tokom zadataka",
+  "settings.sleep.enable.description": "Držite računar budnim dok Kilo Code radi. Zaključavanje ekrana nije pogođeno.",
+  "settings.sleep.timeout.title": "Ograničenje po zadatku (minute)",
+  "settings.sleep.timeout.description":
+    "Računa se samo vrijeme aktivnog izvršavanja, bez čekanja na vaš odgovor. Koristite 0 bez ograničenja proširenja. Zadano: 30 minuta.",
   "settings.autocomplete.title": "Automatsko dovršavanje",
   "settings.autocomplete.model.title": "Model za automatsko dovršavanje",
   "settings.autocomplete.model.description": "Odaberite model koji se koristi za inline dovršavanje koda",

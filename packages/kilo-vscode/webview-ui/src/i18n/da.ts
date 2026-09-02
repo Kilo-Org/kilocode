@@ -715,6 +715,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "Gør websøgning tilgængelig for modeller fra alle udbydere.",
   "settings.checkpoints.title": "Kontrolpunkter",
   "settings.display.title": "Visning",
+  "settings.sleep.title": "Strøm",
+  "settings.sleep.enable.title": "Forhindr systemslumring under opgaver",
+  "settings.sleep.enable.description": "Hold computeren vågen, mens Kilo Code arbejder. Skærmlås påvirkes ikke.",
+  "settings.sleep.timeout.title": "Grænse pr. opgave (minutter)",
+  "settings.sleep.timeout.description":
+    "Kun aktiv opgavetid tæller; ventetid på dit svar gør ikke. Brug 0 for ingen grænse fra udvidelsen. Standard: 30 minutter.",
   "settings.autocomplete.title": "Autofuldførelse",
   "settings.autocomplete.model.title": "Autocomplete-model",
   "settings.autocomplete.model.description": "Vælg den model, der bruges til inline kodefuldførelse",
