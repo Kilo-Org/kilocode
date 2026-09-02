@@ -59,6 +59,7 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
 - Python is not included in the base image, but `apt` is available so you can install it or other packages as needed.
 - All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
+- A worktree can also host **multiple chats** that share the same checkout. In the web interface, each chat opens as its own tab in the worktree group — you can rename tabs, close and reopen them, and delete a whole worktree with all of its chats.
 - When a session begins:
   1. Your repo is cloned
   2. A unique branch is created
@@ -192,6 +193,15 @@ Triggers do not support manual env var or setup command overrides at this time.
 Scheduled triggers fire on a recurring schedule using cron expressions. You can configure them with a simple frequency picker (every 10 minutes, hourly, daily, weekly) or enter a raw cron expression for full control. Each trigger has a configurable timezone (default: UTC) and handles daylight saving time transitions automatically.
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
+
+### Invoking a Scheduled Trigger On Demand
+
+Run an active scheduled trigger immediately without waiting for its next scheduled occurrence:
+
+- Click the **Play** action on a scheduled trigger's row and confirm in the dialog. Paused triggers cannot be invoked, and webhook triggers have no invoke action.
+- When editing a scheduled trigger, use **Save and invoke now** to validate and save the form first, then invoke the trigger only after the save succeeds.
+
+A manual invocation goes through the same queue and in-flight limits as a scheduled run. It does not change the trigger's cron schedule, timezone, or next scheduled occurrence.
 
 ### Trigger Limits and Guidance
 

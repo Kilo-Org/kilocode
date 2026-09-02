@@ -64,7 +64,6 @@ Several models are available at no cost, subject to rate limits:
 | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 |
 | `poolside/laguna-xs-2.1:free` | Poolside Laguna XS 2.1 |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra |
-| `tencent/hy3:free` | Tencent Hy3 |
 | `openrouter/free` | Best available free model |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.

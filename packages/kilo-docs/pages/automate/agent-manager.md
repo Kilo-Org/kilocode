@@ -307,6 +307,16 @@ The Branch scope also has a base-branch picker next to it for overriding the com
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
+## Browser previews (experimental)
+
+Agent Manager can show a live preview of a local application next to the chat, so frontend feedback is based on the rendered page instead of a hand-written description. The browser is session-scoped and experimental: enable **Browser Automation** under **Settings → Experimental** (the `kilo-code.new.experimental.browserAutomation` setting, off by default), then toggle the Browser panel from the session tab bar.
+
+- **Preview with developer tools** — open a local URL in the panel and expand the embedded DevTools frontend. Console diagnostics are grouped below the preview.
+- **Element feedback** — use the inspect control to click an element on the page. Kilo captures a unique selector, a bounded DOM breadcrumb, sanitized HTML, and relevant colors, and attaches them to your next message as a reference card. The agent receives that context alongside your instruction, so it can find the right source even when a page has several similar elements.
+- **Source hints** — when the page provides one and the file can be verified inside the session workspace, a captured element includes its source file and location.
+
+The browser runs headlessly; the page preview stays inside Agent Manager. By default it uses your installed Google Chrome; disable **Use System Chrome** in the same settings section to use a compatible Playwright Chromium instead.
+
 ## Documents inspector
 
 The Documents inspector previews Markdown file references from Agent Manager chat without leaving the panel. Open a file reference to add it as a document tab, then use the tab strip to switch, reorder, or close open documents. The inspector keeps one tab per file in the active project and worktree context.
@@ -332,10 +342,10 @@ When you use `@terminal` in an Agent Manager prompt, Kilo captures the focused t
 
 The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
 
-- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal at the bottom of the window
-- **Agent Manager panel** — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+- **Agent Manager panel** (default) — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+- **VS Code terminal** — opens or focuses the VS Code integrated terminal at the bottom of the window
 
-The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`vscode` or `agentManager`). The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
+The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`agentManager` or `vscode`); the setting defaults to `agentManager` when you have not chosen a destination. The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
 
 With the **Agent Manager panel** destination, the terminal works like the diff panel: press `Cmd+/` to reveal and focus it, press it while the panel is visible but another control has focus to move focus into the terminal, and press it again from the terminal to hide it. Hiding never stops the terminal — scrollback and running processes continue in the background, and focus returns to the chat input. A terminal stops only when you click its close button or type `exit` in the shell.
 

@@ -186,6 +186,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Task subagent model selection** - let the orchestrating agent pick a model, provider, and reasoning effort for each `task` subagent call. See [Model Selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection-experimental)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:

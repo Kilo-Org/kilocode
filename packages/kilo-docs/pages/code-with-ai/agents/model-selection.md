@@ -153,6 +153,28 @@ The Settings UI writes the same `agent.<name>.model` entry, so either method pro
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
 
+### Per-Task Model Selection (Experimental)
+
+Subagent model overrides are normally fixed in config. The experimental **Task Subagent Model Selection** setting instead lets the orchestrating agent choose a model, provider, and reasoning effort for each individual `task` call.
+
+Enable it in **Settings → Experimental → Task Subagent Model Selection**, or set it in `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "task_model_selection": true
+  }
+}
+```
+
+The setting is off by default. When enabled:
+
+- The `task` tool accepts optional `model`, `provider`, and `variant` overrides. An invalid selection fails instead of silently falling back to another model.
+- The agent can call the `agent_manager_models` tool to discover available models, providers, and reasoning variants on demand. This does not create Agent Manager sessions.
+- Resumed tasks keep their last model and reasoning variant unless overridden. A model override does not inherit the parent's reasoning effort.
+
+When the setting is off, subagents keep using the configured defaults described above.
+
 ## Selecting a Model or Agent via a Link (VS Code)
 
 The VS Code extension supports a `vscode://` protocol handler that lets you open VS Code and automatically select a model, an agent, or both — no manual picker interaction required. This is useful for sharing model recommendations, launching a specific model tier from a web page, or switching quickly to a preferred agent.

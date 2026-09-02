@@ -31,6 +31,17 @@ On first launch, the app asks for your consent before enabling optional telemetr
 
 You can review or change your decision at any time in **Settings**. Declining optional telemetry keeps you signed in, and optional telemetry state stored on the device is stopped and discarded when you revoke consent or sign out.
 
+## App lock
+
+The **Unlock with biometrics** preference in **Settings** protects the app on this device with your device's biometrics. When enabled, the app asks you to unlock:
+
+- Every time you launch it
+- After it has been in the background for five minutes
+
+If biometrics are unavailable or fail, your device passcode works as a fallback. While the app is locked, your sessions, open sheets, and drafts stay exactly as you left them — nothing is discarded.
+
+The setting is per device, so you can protect a shared phone without affecting your other devices.
+
 ## Kilo Pass and Billing
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
