@@ -1,6 +1,33 @@
 import { describe, expect, test } from "bun:test"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
+describe("KiloConnectionService permission routing", () => {
+  test("invalidates recovery when permission events arrive or routes are cleared", () => {
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const handler = service as unknown as {
+      handlePermissionEvent(event: unknown, directory?: string): void
+    }
+
+    handler.handlePermissionEvent(
+      { type: "permission.asked", properties: { id: "per_test", sessionID: "ses_child" } },
+      "/tmp/worktree",
+    )
+    expect(service.getPermissionDirectory("per_test")).toBe("/tmp/worktree")
+    expect(service.getPermissionRevision()).toBe(1)
+
+    handler.handlePermissionEvent({ type: "permission.replied", properties: { requestID: "per_test" } })
+    expect(service.getPermissionDirectory("per_test")).toBeUndefined()
+    expect(service.getPermissionRevision()).toBe(2)
+
+    service.clearPermissionDirectory("per_test")
+    expect(service.getPermissionRevision()).toBe(3)
+    service.recordPermissionDirectory("per_stale", "/tmp/worktree")
+    service.prunePermissionDirectories(new Set(), new Set(["/tmp/worktree"]))
+    expect(service.getPermissionDirectory("per_stale")).toBeUndefined()
+    expect(service.getPermissionRevision()).toBe(4)
+  })
+})
+
 describe("KiloConnectionService question routing", () => {
   test.each([undefined, { _tag: "NotFound" }])("invalidates recovery after draining (%j)", async (error) => {
     const service = new KiloConnectionService({} as any)
