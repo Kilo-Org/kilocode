@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Fiber } from "effect"
 import { sql } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
@@ -18,7 +18,7 @@ import { BoardContext } from "../../src/kilocode/board/context"
 import { BoardNotice } from "../../src/kilocode/board/notice"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, testEffect } from "../lib/effect"
 
 const it = testEffect(
   LayerNode.compile(
@@ -134,6 +134,67 @@ describe("shared board notifications", () => {
           expect(output.metadata).toEqual({ original: true })
           yield* post(child.id, "third")
           expect((yield* notify("read", output)).metadata).toMatchObject({ [BoardNotice.key]: 3 })
+        }),
+      options,
+    ),
+  )
+
+  it.live("keeps byte-limited pages and concurrent read notices separate", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Concurrent reader" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Read peer findings")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          const read = (since?: string) =>
+            BoardStore.read({ sessionID: root.id, since, limit: 50 }).pipe(
+              Effect.map((page) => ({
+                title: "Board",
+                output: JSON.stringify(page),
+                metadata: { since, cursor: page.cursor, hasMore: page.hasMore, truncated: false },
+              })),
+            )
+          for (let index = 0; index < 12; index++) yield* post(child.id, `page-${index}`, "x".repeat(3000))
+          const page = yield* read()
+          expect(page.metadata.hasMore).toBe(true)
+          expect((yield* notify("board_read", page)).metadata).toHaveProperty(BoardNotice.key, 12)
+
+          yield* post(child.id, "overlap")
+          const ready = Promise.withResolvers<void>()
+          const release = Promise.withResolvers<void>()
+          const activity = BoardStore.activity
+          const probe = spyOn(BoardStore, "activity").mockImplementation((input) =>
+            Effect.gen(function* () {
+              const result = yield* activity(input)
+              if (input.read) return result
+              ready.resolve()
+              yield* Effect.promise(() => release.promise)
+              return result
+            }),
+          )
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              release.resolve()
+              probe.mockRestore()
+            }),
+          )
+          const pending = yield* notify("read", output).pipe(Effect.forkChild)
+          yield* awaitWithTimeout(
+            Effect.promise(() => ready.promise),
+            "Activity check did not reach the barrier",
+          )
+          const rest = yield* read(page.metadata.cursor)
+          expect(rest.metadata.hasMore).toBe(false)
+          expect(yield* notify("board_read", rest)).toBe(rest)
+          expect(cache.cursor).toBe(13)
+          yield* post(child.id, "after-read")
+          release.resolve()
+          expect(yield* Fiber.join(pending)).toBe(output)
+          probe.mockRestore()
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 14)
         }),
       options,
     ),
