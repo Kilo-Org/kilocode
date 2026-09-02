@@ -33,6 +33,7 @@ export interface SessionContextValue {
 
   // All sessions (sorted most recent first)
   sessions: Accessor<SessionInfo[]>
+  sessionInfo: (id: string) => Pick<SessionInfo, "title" | "parentID"> | undefined
 
   // Session status
   status: Accessor<SessionStatus>

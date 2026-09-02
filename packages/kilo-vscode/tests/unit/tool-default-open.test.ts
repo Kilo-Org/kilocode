@@ -31,6 +31,11 @@ describe("toolDefaultOpen", () => {
     expect(toolDefaultOpen(tool(name), true, true)).toBeUndefined()
   })
 
+  it.each(["board_read", "board_post"])("keeps %s independent of the MCP expansion preference", (name) => {
+    expect(toolDefaultOpen(tool(name), true, true, true)).toBeUndefined()
+    expect(toolDefaultOpen(tool(name), false, false, false)).toBeUndefined()
+  })
+
   it("leaves unrelated parts unchanged", () => {
     expect(toolDefaultOpen(tool("read"), true, true, true)).toBeUndefined()
     expect(toolDefaultOpen(tool("glob"), true, true, true)).toBeUndefined()

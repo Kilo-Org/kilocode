@@ -11,6 +11,7 @@ import { createMemo, For, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { ToolRegistry, type ToolProps } from "@kilocode/kilo-ui/message-part"
+import { BoardTool } from "./BoardTool"
 
 /** Tools that should be open by default in the VS Code sidebar. */
 const DEFAULT_OPEN_TOOLS = ["bash"]
@@ -152,6 +153,12 @@ function BackgroundProcessTool(props: ToolProps) {
 }
 
 export function registerVscodeToolOverrides() {
+  for (const name of ["board_read", "board_post"]) {
+    if (registered.has(name)) continue
+    ToolRegistry.register({ name, render: BoardTool })
+    registered.add(name)
+  }
+
   if (!registered.has("background_process")) {
     ToolRegistry.register({
       name: "background_process",

@@ -1,5 +1,5 @@
 import { reconcile } from "solid-js/store"
-import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import type { FileAttachment, Message, MessageLoadMode, Part, SessionInfo, ToolPart } from "../types/messages"
 import { Identifier } from "../utils/id"
 import {
   feedbackMetadata,
@@ -165,6 +165,21 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+export function info(
+  id: string,
+  sessions: Record<string, SessionInfo>,
+  parents: ReadonlyMap<string, string>,
+  tools: Record<string, readonly TaskPart[]>,
+): Pick<SessionInfo, "title" | "parentID"> | undefined {
+  const session = sessions[id]
+  if (session) return { title: session.title, parentID: session.parentID }
+  const parentID = parents.get(id)
+  if (!parentID) return undefined
+  const part = tools[parentID]?.findLast((part) => childID(part) === id)
+  const title = stringField(part?.state?.input?.description)?.trim()
+  return { parentID, ...(title ? { title } : {}) }
 }
 
 export function inUse(

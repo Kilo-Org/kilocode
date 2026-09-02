@@ -74,6 +74,87 @@ html[data-theme="kilo-vscode"]
   overflow-wrap: anywhere;
 }
 
+[data-component="board-tool"] {
+  padding: 8px 0;
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--line-height-large);
+
+  [data-slot="board-messages"] {
+    max-height: 320px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  [data-slot="board-message"] + [data-slot="board-message"] {
+    margin-top: 12px;
+  }
+
+  [data-slot="board-message-meta"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-bottom: 4px;
+    color: var(--text-weak);
+
+    > span {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  [data-slot="board-body"] {
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border-weak-base);
+    border-radius: var(--radius-md);
+    background: var(--surface-tool-output-base);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="board-status"] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 6px;
+    color: var(--text-weak);
+    font-size: var(--kilo-font-size-11);
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="board-empty"],
+  [data-slot="board-more"] {
+    margin: 0;
+    color: var(--text-weak);
+  }
+
+  [data-slot="board-more"] {
+    margin-top: 8px;
+  }
+
+  [data-slot="board-actions"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+}
+
+[data-slot="board-inspection"] {
+  margin: 0;
+  padding: 12px 16px;
+  max-height: 60vh;
+  overflow: auto;
+  font-family: var(--font-family-mono);
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--line-height-large);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* ============================================
    Generic / MCP Tool
    ============================================ */

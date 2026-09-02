@@ -193,6 +193,7 @@ export function mockSessionValue(overrides?: {
     }),
     setCurrentSessionID: noop,
     sessions: () => [],
+    sessionInfo: () => undefined,
     status: () => status,
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,

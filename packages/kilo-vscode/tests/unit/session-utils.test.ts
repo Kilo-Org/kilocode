@@ -19,6 +19,8 @@ import {
   buildSessionToolParts,
   collapseCostBreakdown,
   childID,
+  ancestry,
+  info,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
@@ -26,7 +28,7 @@ import {
   optimistic,
   revertPromptState,
 } from "../../webview-ui/src/context/session-utils"
-import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
+import type { Message, Part, SessionInfo, ToolPart } from "../../webview-ui/src/types/messages"
 import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 const t = (key: string) => key
@@ -265,6 +267,53 @@ describe("childID", () => {
 
   it("ignores non-task tool parts", () => {
     expect(childID({ type: "tool", tool: "read", state: { metadata: { sessionId: "child3" } } })).toBeUndefined()
+  })
+})
+
+describe("session info", () => {
+  const tools = {
+    root: [
+      toolPart("task", "child", { description: "Initial review" }),
+      {
+        ...toolPart("task", "child", { subagent_type: "swarm-probe", description: " Review cancellation " }),
+        id: "latest",
+      },
+      toolPart("task", "other", { description: "Other review" }),
+      toolPart("read", "child", { description: "Not a task" }),
+    ],
+  }
+  const parents = ancestry({}, tools, {}).parents
+
+  it("uses the latest matching cached task description without child session metadata", () => {
+    expect(info("child", {}, parents, tools)).toEqual({ title: "Review cancellation", parentID: "root" })
+  })
+
+  it("prefers a renamed cached session and its actual parent over task metadata", () => {
+    const sessions: Record<string, SessionInfo> = {
+      child: {
+        id: "child",
+        title: "Renamed cancellation review",
+        parentID: "actual-parent",
+        createdAt: "2026-09-02T00:00:00.000Z",
+        updatedAt: "2026-09-02T01:00:00.000Z",
+      },
+    }
+    expect(info("child", sessions, parents, tools)).toEqual({
+      title: "Renamed cancellation review",
+      parentID: "actual-parent",
+    })
+  })
+
+  it("keeps only known parent metadata when task data is absent or has no nonempty description", () => {
+    expect(info("child", {}, new Map(), tools)).toBeUndefined()
+    expect(info("child", {}, parents, {})).toEqual({ parentID: "root" })
+    expect(info("missing", {}, new Map([["missing", "root"]]), tools)).toEqual({ parentID: "root" })
+    for (const description of [undefined, "", " \t ", 42]) {
+      const parts = [
+        { type: "tool", tool: "task", metadata: { sessionId: "child" }, state: { input: { description } } },
+      ]
+      expect(info("child", {}, parents, { root: parts })).toEqual({ parentID: "root" })
+    }
   })
 })
 

@@ -57,6 +57,7 @@ import {
 } from "../../context/session-queue"
 import { childID } from "../../context/session-utils"
 import { taskResult } from "./task-tool-state"
+import { board, presentation, transcript } from "./board-tool"
 import { activeQuestionTab, tr } from "./question-dock-utils"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { getDirectory as getRawDirectory, getFilename } from "@opencode-ai/core/util/path"
@@ -389,6 +390,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     // below, or an in-progress task/question would index nothing at all.
     if (part.tool === "task") return taskText(part, state)
     if (part.tool === "question") return questionText(part, state)
+    if (part.tool === "board_read" || part.tool === "board_post") return boardText(part, state)
     if (state.status !== "completed") return "title" in state && state.title ? [state.title] : []
     if (CONTEXT_GROUP_TOOLS.has(part.tool)) return state.title ? [state.title] : []
     if (part.tool === "bash") return bashText(state)
@@ -401,6 +403,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
     collectStrings(state.metadata, chunks)
     if (typeof state.output === "string" && state.output) chunks.push(mcpOutputText(state.output))
     return chunks
+  }
+
+  function boardText(part: Part & { type: "tool" }, state: ToolState): string[] {
+    const data = board(part.tool, state.input, "output" in state ? state.output : undefined)
+    return transcript(presentation(part.tool, data, state.status === "completed", i18n.t, session.sessionInfo))
   }
 
   // transcript-search-highlight.ts's scanScope() walks the whole [data-part-
@@ -853,6 +860,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
     // when several occurrences share one message.
     const rect = range.getClientRects()[0]
     if (!rect) return
+    const container = range.startContainer
+    const target = container instanceof Element ? container : container?.parentElement
+    const pane = target?.closest<HTMLElement>('[data-slot="board-messages"]')
+    if (pane) {
+      const bounds = pane.getBoundingClientRect()
+      if (rect.top < bounds.top || rect.bottom > bounds.bottom) {
+        pane.scrollTop += rect.top - bounds.top - (bounds.height - rect.height) / 2
+      }
+      pane.scrollIntoView({ block: "nearest", inline: "nearest" })
+      return
+    }
     const box = el.getBoundingClientRect()
     const fullyVisible = rect.top >= box.top && rect.bottom <= box.bottom
     // Comfort band covers the middle 70% of the viewport (15% margin top
@@ -862,8 +880,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
-    const container = range.startContainer
-    const target = container instanceof Element ? container : container?.parentElement
     target?.scrollIntoView({ block: "center", inline: "nearest" })
   }
 

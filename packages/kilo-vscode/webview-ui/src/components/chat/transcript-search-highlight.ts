@@ -26,9 +26,25 @@ function highlightApi(): { registry: HighlightRegistry; ctor: HighlightCtor } | 
 
 /** Builds a flat text + node-offset map for a scope so matches can span across inline elements. */
 export function scanScope(scope: HTMLElement, pattern: RegExp): Range[] {
-  const text = scope.textContent
-  if (!text) return []
+  const nodes: Text[] = []
+  const ends: number[] = []
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement?.closest("[data-search-ignore]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  })
+  let node = walker.nextNode()
+  let pos = 0
+  while (node) {
+    if (node instanceof Text) {
+      pos += node.data.length
+      nodes.push(node)
+      ends.push(pos)
+    }
+    node = walker.nextNode()
+  }
+  if (nodes.length === 0) return []
 
+  const text = nodes.map((node) => node.data).join("")
   pattern.lastIndex = 0
   const spans: { start: number; end: number }[] = []
   let match = pattern.exec(text)
@@ -42,21 +58,6 @@ export function scanScope(scope: HTMLElement, pattern: RegExp): Range[] {
     match = pattern.exec(text)
   }
   if (spans.length === 0) return []
-
-  const nodes: Text[] = []
-  const ends: number[] = []
-  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
-  let node = walker.nextNode()
-  let pos = 0
-  while (node) {
-    if (node instanceof Text) {
-      pos += node.data.length
-      nodes.push(node)
-      ends.push(pos)
-    }
-    node = walker.nextNode()
-  }
-  if (nodes.length === 0) return []
 
   const locate = (at: number) => {
     let lo = 0

@@ -729,6 +729,88 @@ export const TitleOnlyReasoning: Story = {
   },
 }
 
+const boardNotes = [
+  {
+    from: "ses_research",
+    to: "main",
+    type: "RESULT",
+    body: "The shared service already handles cancellation.\nKeep that behavior and add a focused regression test.",
+  },
+  { from: "main", to: "ALL", type: "INFO", body: "Keep the changes local while the checks run." },
+  {
+    from: "ses_tests",
+    to: "main",
+    type: "HOLD",
+    body: "One regression test still fails. Do not mark the task complete.",
+  },
+  { from: "ses_tests", to: "main", type: "RESULT", body: "The focused tests now pass." },
+]
+
+const boardPage = {
+  agent: "main",
+  participants: [
+    { id: "main", label: "main" },
+    { id: "ses_research", label: "Research" },
+    { id: "ses_tests", label: "Tests" },
+  ],
+  messages: boardNotes,
+  hasMore: true,
+}
+
+function board(tool: "board_read" | "board_post", output: Record<string, unknown>) {
+  const part: ToolPart = {
+    ...readCompleted,
+    id: `part-${tool}`,
+    callID: `call-${tool}`,
+    tool,
+    state: {
+      status: "completed",
+      input: tool === "board_read" ? { limit: 20 } : { to: output.to, type: output.type, body: output.body },
+      output: JSON.stringify(output),
+      title: "Kilo Swarm",
+      metadata: {},
+      time: { start: now - 2000, end: now - 1000 },
+    },
+  }
+  return (
+    <StoryProviders data={dataWith([part])} sessionID={SESSION_ID}>
+      <Part part={part} message={baseAssistantMessage} defaultOpen />
+    </StoryProviders>
+  )
+}
+
+export const BoardRead: Story = {
+  name: "Kilo Swarm - messages",
+  render: () => board("board_read", boardPage),
+}
+
+export const BoardRead200: Story = {
+  name: "Kilo Swarm - messages at 200px",
+  render: () => board("board_read", boardPage),
+}
+
+export const BoardPost: Story = {
+  name: "Kilo Swarm - stored-only post",
+  render: () =>
+    board("board_post", {
+      from: "main",
+      to: "ses_tests",
+      type: "INFO",
+      body: "Record the final test result for the next session.",
+      warning: "Stored only; resume the task to request work.",
+    }),
+}
+
+export const BoardEmpty: Story = {
+  name: "Kilo Swarm - no messages",
+  render: () => board("board_read", { messages: [], hasMore: false }),
+}
+
+export const BoardMalformed: Story = {
+  name: "Kilo Swarm - unavailable message data",
+  render: () => board("board_read", { messages: [null] }),
+}
+
 export const BackgroundProcessToolCards: Story = {
   name: "Tool Cards — background process",
   render: () => {

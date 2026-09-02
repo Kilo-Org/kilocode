@@ -18,6 +18,8 @@ const BUILTIN_NON_MCP_TOOLS = new Set([
   "question",
   "suggest",
   "skill",
+  "board_read",
+  "board_post",
   "plan_enter",
   "plan_exit",
 ])
