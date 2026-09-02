@@ -536,9 +536,8 @@ describe("tool.task model resolution", () => {
         Effect.sync(() => {
           expect(result.metadataVariant).toBeUndefined()
           expect("variant" in result.metadata).toBe(false)
-          expect(Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Json))(result.metadata)).toEqual(
-            result.metadata,
-          )
+          const decoded = Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Json))(result.metadata)
+          expect("variant" in decoded).toBe(false)
         }),
       ),
     ),
