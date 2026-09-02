@@ -29,7 +29,9 @@ import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.PrIcons
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListBadgeCell
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListView
@@ -45,6 +47,7 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.SetupScriptTargetDto
@@ -1115,22 +1118,25 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(edt { panel.canOpenPr(main) })
     }
 
-    fun `test review and checks glyphs sit on the title line in review then run order`() {
+    fun `test review checks and conversation glyphs sit on the title line in that order`() {
         val item = worktree("feature-x")
         rpc.listed += item
         rpc.prResult = prs(
             item,
             review = GhReview.APPROVED,
             checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+            comments = GhCommentsDto(total = 8, unresolved = 3),
         )
         val panel = panelWithPr()
 
         val row = row(panel, 0)
-        assertEquals(listOf("pr-review", "pr-checks"), row.badges.map { it.id })
-        // Glyphs, not worded pills: the icon carries the state and the text would only repeat it.
-        assertTrue(row.badges.all { it.text.isBlank() })
+        assertEquals(listOf("pr-review", "pr-checks", "pr-comments"), row.badges.map { it.id })
+        // Glyphs, not worded pills: the icon carries the state and the text would only repeat it. The
+        // conversation count is the exception, because a glyph alone cannot say how much is outstanding.
+        assertEquals(listOf("", "", "3"), row.badges.map { it.text })
         assertEquals(PrIcons.reviewApproved, row.badges[0].icon)
         assertEquals(PrIcons.checksFailed, row.badges[1].icon)
+        assertEquals(PrIcons.comments, row.badges[2].icon)
         // The changes cell and PR number stay where they were, on the description line.
         assertEquals("pull-request", row.secondaryBadges.single().id)
 
@@ -1144,9 +1150,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val areas = activeListCellBounds(list, 0, selected = false)
             val review = areas.getValue("pr-review")
             val checks = areas.getValue("pr-checks")
+            val comments = areas.getValue("pr-comments")
             val badge = areas.getValue("pull-request")
             assertTrue("review must sit left of the run status", review.x + review.width <= checks.x)
+            assertTrue("the run status must sit left of the conversations", checks.x + checks.width <= comments.x)
             assertTrue(kotlin.math.abs(center(review).y - center(checks).y) <= 1)
+            assertTrue(kotlin.math.abs(center(checks).y - center(comments).y) <= 1)
 
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
@@ -1156,13 +1165,73 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val bounds = list.getCellBounds(0, 0)
             // Line one, clear of the title, and above the PR number on line two.
             assertTrue(review.x >= bounds.x + header.x + title.width)
-            // A column, not a ragged edge: the run glyph ends where the PR pill under it ends, so the
+            // A column, not a ragged edge: the last glyph ends where the PR pill under it ends, so the
             // verdicts line up down the list instead of following each title's own width.
-            assertEquals(badge.x + badge.width, checks.x + checks.width)
+            assertEquals(badge.x + badge.width, comments.x + comments.width)
             assertTrue(kotlin.math.abs(center(review).y - (bounds.y + header.y + title.height / 2)) <= 2)
-            assertTrue(checks.y + checks.height <= badge.y)
+            assertTrue(comments.y + comments.height <= badge.y)
             assertTrue(bounds.contains(review))
             assertTrue(bounds.contains(checks))
+            assertTrue(bounds.contains(comments))
+        }
+    }
+
+    fun `test the conversation glyph carries its count in the tooltip and opens the pull request`() {
+        val browser = installBrowser()
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item, comments = GhCommentsDto(total = 8, unresolved = 3))
+        val panel = panelWithPr()
+
+        val badge = row(panel, 0).badges.single()
+        assertEquals("pr-comments", badge.id)
+        assertEquals("3", badge.text)
+        assertEquals(
+            "<html>3 of 8 review conversations unresolved<br>" +
+                "Click to open the pull request conversation in your browser.</html>",
+            badge.tooltip,
+        )
+
+        edt { badge.action?.invoke() }
+
+        // The threads themselves are listed on the conversation tab, not under Checks or Files changed.
+        assertEquals(listOf("https://example.test/pr/7"), browser.urls)
+    }
+
+    fun `test a pull request whose conversations are all resolved gets no glyph`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item, comments = GhCommentsDto(total = 8, unresolved = 0))
+        val panel = panelWithPr()
+
+        // Most reviewed PRs end up here, so a glyph would sit on nearly every row saying only that
+        // somebody once commented.
+        assertTrue(row(panel, 0).badges.isEmpty())
+        assertEquals("pull-request", row(panel, 0).secondaryBadges.single().id)
+    }
+
+    fun `test the conversation count renders as label text beside the glyph`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item, comments = GhCommentsDto(total = 8, unresolved = 3))
+        val panel = panelWithPr()
+        val row = row(panel, 0)
+
+        edt {
+            val list = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
+            val cell = components(renderer)
+                .filterIsInstance<ActiveListBadgeCell>()
+                .single { it.cellId == "pr-comments" }
+
+            // A pill paints its text inside the icon; this one keeps the figure as real label text so the
+            // glyph and the number sit side by side.
+            assertEquals("3", cell.text)
+            assertEquals(PrIcons.comments, cell.icon)
+            assertEquals(UiStyle.Colors.weak(), cell.foreground)
         }
     }
 
@@ -1217,7 +1286,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test no glyphs when github reports neither review nor checks`() {
+    fun `test no glyphs when github reports no review, checks, or conversations`() {
         val item = worktree("feature-x")
         rpc.listed += item
         rpc.prResult = prs(item)
@@ -1497,9 +1566,21 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         item: WorktreeDto,
         review: GhReview = GhReview.NONE,
         checks: GhChecksDto = GhChecksDto(),
+        comments: GhCommentsDto = GhCommentsDto(),
     ) = WorktreePrListDto(
         GhAvailability.OK,
-        listOf(WorktreePrDto(item.path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks)),
+        listOf(
+            WorktreePrDto(
+                item.path,
+                7,
+                GhState.OPEN,
+                "https://example.test/pr/7",
+                "Feature title",
+                review,
+                checks,
+                comments,
+            ),
+        ),
     )
 
     /** Panel wired to a status service with a controllable clock, reloaded past the stats debounce. */

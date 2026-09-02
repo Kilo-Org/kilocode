@@ -85,6 +85,23 @@ data class GhChecksDto(
     val pending: Int = 0,
 )
 
+/**
+ * Review conversations on a pull request, from GitHub's `reviewThreads`.
+ *
+ * Counts only, for the same reason as [GhChecksDto]. [total] counts conversations, not individual
+ * comments — a thread with a dozen replies is one. [unresolved] counts the threads nobody has marked
+ * resolved, outdated ones included, which is what GitHub's own "unresolved conversations" number says.
+ *
+ * Both are read from the first 100 threads, so a pull request with more under-reports. That bound is
+ * GitHub's page size rather than a limit worth paginating for: no reviewer scans a hundredth thread from
+ * a worktree row.
+ */
+@Serializable
+data class GhCommentsDto(
+    val total: Int = 0,
+    val unresolved: Int = 0,
+)
+
 @Serializable
 data class WorktreePrDto(
     val path: String,
@@ -94,6 +111,7 @@ data class WorktreePrDto(
     val title: String = "",
     val review: GhReview = GhReview.NONE,
     val checks: GhChecksDto = GhChecksDto(),
+    val comments: GhCommentsDto = GhCommentsDto(),
 )
 
 /**

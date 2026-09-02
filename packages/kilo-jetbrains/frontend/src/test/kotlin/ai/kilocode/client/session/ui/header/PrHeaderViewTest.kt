@@ -11,6 +11,7 @@ import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -73,18 +74,28 @@ class PrHeaderViewTest : BasePlatformTestCase() {
             val badge = badge(view)
             val review = glyph(view, PrIcons.reviewApproved)
             val checks = glyph(view, PrIcons.checksFailed)
-            // State, review, run, then the title: the same reading order the worktree rows use.
+            val comments = glyph(view, PrIcons.comments)
+            // State, review, run, conversations, then the title: the same reading order the rows use.
             assertTrue(right(view, badge) <= left(view, review))
             assertTrue(right(view, review) <= left(view, checks))
-            assertTrue(right(view, checks) <= left(view, title(view)))
+            assertTrue(right(view, checks) <= left(view, comments))
+            assertTrue(right(view, comments) <= left(view, title(view)))
             assertEquals("<html>Review approved</html>", review.toolTipText)
             // The glyph cannot say how many failed, so the tooltip has to.
             assertEquals(
                 "<html>2 of 5 checks failed<br>Click to open the checks in your browser.</html>",
                 checks.toolTipText,
             )
+            // The conversation glyph is the one that carries its own number.
+            assertEquals("3", comments.text)
+            assertEquals(
+                "<html>3 of 8 review conversations unresolved<br>" +
+                    "Click to open the pull request conversation in your browser.</html>",
+                comments.toolTipText,
+            )
             assertEquals(Cursor.HAND_CURSOR, review.cursor.type)
             assertEquals(Cursor.HAND_CURSOR, checks.cursor.type)
+            assertEquals(Cursor.HAND_CURSOR, comments.cursor.type)
         }
     }
 
@@ -95,10 +106,16 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt { click(glyph(view, PrIcons.reviewApproved)) }
         edt { click(glyph(view, PrIcons.checksFailed)) }
+        edt { click(glyph(view, PrIcons.comments)) }
 
-        // Someone clicking a red build wants the log, not the conversation.
+        // Someone clicking a red build wants the log, not the conversation. The threads themselves are
+        // listed on the conversation tab, so the comment glyph goes back there.
         assertEquals(
-            listOf("https://github.com/kilo/test/pull/123", "https://github.com/kilo/test/pull/123/checks"),
+            listOf(
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123/checks",
+                "https://github.com/kilo/test/pull/123",
+            ),
             browser.urls,
         )
     }
@@ -108,15 +125,31 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
 
-        // No CI on the head and a review nobody has given yet: both would leave a gap after the pill.
+        // No CI on the head, a review nobody has given yet, and no unresolved conversation: each would
+        // leave a gap after the pill.
         assertTrue(edt { glyphs(view).isEmpty() })
 
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
-        assertEquals(2, edt { glyphs(view).size })
+        assertEquals(3, edt { glyphs(view).size })
 
         // A PR that goes away takes its verdicts with it.
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = null, name = "feature-x") }
         assertTrue(edt { glyphs(view).isEmpty() })
+    }
+
+    fun `test a settled conversation drops the comment glyph and its count`() {
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+        val comments = edt { glyph(view, PrIcons.comments) }
+
+        val settled = verdicts().copy(comments = GhCommentsDto(total = 8, unresolved = 0))
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = settled, name = "feature-x") }
+
+        // Retained rendering: the same label stays attached, hidden and blank, rather than being rebuilt.
+        assertTrue(edt { components(view).contains(comments) })
+        assertFalse(edt { comments.isVisible })
+        assertEquals("", edt { comments.text })
+        assertEquals(2, edt { glyphs(view).size })
     }
 
     fun `test changes default to compact aggregate presentation`() {
@@ -213,6 +246,7 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     private fun verdicts() = pull(GhState.OPEN).copy(
         review = GhReview.APPROVED,
         checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+        comments = GhCommentsDto(total = 8, unresolved = 3),
     )
 
     @RequiresEdt

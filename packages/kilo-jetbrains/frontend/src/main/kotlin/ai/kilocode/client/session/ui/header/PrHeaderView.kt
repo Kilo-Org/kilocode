@@ -13,6 +13,8 @@ import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
+import ai.kilocode.client.ui.commentsCount
+import ai.kilocode.client.ui.commentsTooltip
 import ai.kilocode.client.ui.prTooltip
 import ai.kilocode.client.ui.reviewTooltip
 import ai.kilocode.client.ui.stateLabel
@@ -51,14 +53,17 @@ internal class PrHeaderView @RequiresEdt constructor(
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
     private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
-    // Review then CI verdict, between the state pill and the title: the same order and the same glyphs
-    // the worktree rows show, so a header and its row do not disagree about what a PR is waiting on.
+    // Review verdict, CI verdict, then unresolved review conversations, between the state pill and the
+    // title: the same order and the same glyphs the worktree rows show, so a header and its row do not
+    // disagree about what a PR is waiting on.
     private val review = JBLabel()
     private val checks = JBLabel()
+    private val comments = JBLabel()
     private val statusPane = Stack.horizontal(UiStyle.Gap.xs())
         .next(status.align(HAlign.LEFT, VAlign.CENTER))
         .next(review)
         .next(checks)
+        .next(comments)
     // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
     // just the changes summary, so an always-visible separator would dangle with nothing after it.
     private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
@@ -92,6 +97,7 @@ internal class PrHeaderView @RequiresEdt constructor(
         status.isVisible = false
         review.isVisible = false
         checks.isVisible = false
+        comments.isVisible = false
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         title.isVisible = false
@@ -118,6 +124,8 @@ internal class PrHeaderView @RequiresEdt constructor(
         status.addMouseListener(listener)
         title.addMouseListener(listener)
         review.addMouseListener(listener)
+        // The conversation tab, which is where GitHub lists the review threads themselves.
+        comments.addMouseListener(listener)
         // The checks tab rather than the conversation: someone clicking a red build wants the log.
         checks.addMouseListener(object : MouseAdapter() {
             @RequiresEdt
@@ -128,6 +136,14 @@ internal class PrHeaderView @RequiresEdt constructor(
         })
         changes.font = style.smallFont
         changes.foreground = SessionUiStyle.Text.Secondary.foreground()
+        syncCommentsStyle()
+    }
+
+    /** The conversation count is the one glyph carrying text, styled like the changes summary beside it. */
+    @RequiresEdt
+    private fun syncCommentsStyle() {
+        comments.font = style.smallFont
+        comments.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     @RequiresEdt
@@ -190,20 +206,35 @@ internal class PrHeaderView @RequiresEdt constructor(
         runs = pull?.let(::checksUrl)
         val verdict = glyph(review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, url)
         val build = glyph(checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, runs)
-        if (verdict || build) changed()
+        val talk = glyph(
+            comments,
+            pull?.let { PrIcons.comments(it.comments) },
+            pull?.let { commentsTooltip(it.comments) },
+            url,
+            pull?.let { commentsCount(it.comments) }.orEmpty(),
+        )
+        if (verdict || build || talk) changed()
     }
 
     /**
      * Applies one verdict glyph, answering whether the header has to lay out again. A verdict with no
      * glyph — no CI on the head, a review nobody has given yet — hides the label rather than leaving a
      * gap after the state pill.
+     *
+     * [text] labels the glyph for a verdict that is a quantity rather than a state. Its own changes count
+     * toward the return: a count that grew needs the row measured again even though nothing appeared.
      */
     @RequiresEdt
-    private fun glyph(label: JBLabel, icon: Icon?, tip: String?, link: String?): Boolean {
+    private fun glyph(label: JBLabel, icon: Icon?, tip: String?, link: String?, text: String = ""): Boolean {
         val show = icon != null && !tip.isNullOrBlank()
-        val moved = label.isVisible != show
+        var moved = label.isVisible != show
         if (moved) label.isVisible = show
         if (label.icon !== icon) label.icon = icon
+        val next = if (show) text else ""
+        if (label.text != next) {
+            label.text = next
+            moved = true
+        }
         if (label.toolTipText != tip) label.toolTipText = tip
         val cursor = if (show && link != null) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
         if (label.cursor != cursor) label.cursor = cursor
@@ -283,6 +314,7 @@ internal class PrHeaderView @RequiresEdt constructor(
         this.style = style
         changes.font = style.smallFont
         changes.foreground = SessionUiStyle.Text.Secondary.foreground()
+        syncCommentsStyle()
         syncText()
         changed()
     }

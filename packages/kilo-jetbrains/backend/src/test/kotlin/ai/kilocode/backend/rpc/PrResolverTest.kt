@@ -24,8 +24,9 @@ class PrResolverTest {
         assertEquals(7, pull.number)
         assertEquals(path, pull.path)
         assertEquals(GhState.OPEN, pull.state)
-        // The config-driven form answered, so the branch selector and the search never run.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+        // The config-driven form answered, so the branch selector and the search never run. The review
+        // conversations follow, which no `--json` field can answer.
+        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -44,7 +45,7 @@ class PrResolverTest {
         assertEquals(7, assertNotNull(lookup.pr, "the scalar retry must still resolve the PR").number)
         assertEquals(GhAvailability.OK, lookup.availability)
         assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS)),
+            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
             calls,
         )
     }
@@ -106,7 +107,7 @@ class PrResolverTest {
         resolver.resolve(path, "feature/x", base = "main")
 
         assertEquals(
-            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS)),
+            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS), graphql()),
             calls,
         )
     }
@@ -126,7 +127,7 @@ class PrResolverTest {
 
         // The downgrade latches, so the fallback costs one extra call in total rather than one per
         // checkout on every poll.
-        assertEquals(listOf(listOf("pr", "view", "--json", PR_FIELDS)), calls)
+        assertEquals(listOf(listOf("pr", "view", "--json", PR_FIELDS), graphql()), calls)
     }
 
     @Test
@@ -147,7 +148,11 @@ class PrResolverTest {
 
         assertEquals(8, assertNotNull(lookup.pr).number)
         assertEquals(GhState.DRAFT, lookup.pr?.state)
-        assertEquals(2, calls.size, "the head search should not run once the branch selector answered")
+        assertEquals(
+            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "feature/x", "--json", PR_RICH_FIELDS), graphql()),
+            calls,
+            "the head search should not run once the branch selector answered",
+        )
     }
 
     @Test
@@ -156,7 +161,7 @@ class PrResolverTest {
             view = {
                 ok(
                     """
-                    {"number":12,"state":"OPEN","isDraft":false,"url":"https://pr/12","title":"Work",
+                    {"id":"$NODE","number":12,"state":"OPEN","isDraft":false,"url":"https://pr/12","title":"Work",
                      "reviewDecision":"APPROVED",
                      "statusCheckRollup":[{"conclusion":"SUCCESS"},{"conclusion":"FAILURE"},{"conclusion":"SKIPPED"}]}
                     """.trimIndent(),
@@ -175,7 +180,7 @@ class PrResolverTest {
     fun `falls back to searching the head commit`() {
         val resolver = resolver(
             view = { missing() },
-            list = { ok("""[{"number":9,"state":"MERGED","isDraft":false,"url":"https://pr/9","title":"Fork work","headRefOid":"$SHA"}]""") },
+            list = { ok("""[{"id":"$NODE","number":9,"state":"MERGED","isDraft":false,"url":"https://pr/9","title":"Fork work","headRefOid":"$SHA"}]""") },
         )
 
         val lookup = resolver.resolve(path, "renamed-locally", base = "main")
@@ -249,6 +254,86 @@ class PrResolverTest {
     }
 
     @Test
+    fun `carries the unresolved review conversation count through to the resolved pull request`() {
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { threads(unresolved = 3, resolved = 5) })
+
+        val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
+
+        assertEquals(3, pull.comments.unresolved)
+        assertEquals(8, pull.comments.total, "the total counts every conversation, settled or not")
+    }
+
+    @Test
+    fun `skips the review conversation lookup for a merged or closed pull request`() {
+        // Unresolved feedback on something already merged is not work anyone is waiting on, and the
+        // lookup is a process spawn per row on every poll.
+        for (state in listOf("MERGED", "CLOSED")) {
+            calls.clear()
+            val resolver = resolver(
+                view = { pr(7, state) },
+                api = { throw IllegalStateException("must not ask about review threads for $state") },
+            )
+
+            val pull = assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr)
+
+            assertEquals(0, pull.comments.unresolved, "for: $state")
+            assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls, "for: $state")
+        }
+    }
+
+    @Test
+    fun `asks about review conversations for a draft pull request`() {
+        // A draft is still being worked on, which is exactly when review feedback is outstanding.
+        val resolver = resolver(view = { pr(7, "DRAFT") }, api = { threads(unresolved = 1) })
+
+        assertEquals(1, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).comments.unresolved)
+    }
+
+    @Test
+    fun `reports a spent budget from the review conversation lookup while keeping the pull request`() {
+        // The count is unknown, but the PR is not: the availability holds every badge this poll would
+        // otherwise blank, and dropping the PR here would report a change that never happened.
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(1, "", "API rate limit exceeded") })
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.RATE_LIMITED, lookup.availability)
+        assertEquals(7, assertNotNull(lookup.pr, "a spent budget must not cost the row its PR").number)
+        assertEquals(0, lookup.pr?.comments?.unresolved)
+    }
+
+    @Test
+    fun `keeps the pull request and latches when review conversations are refused`() {
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = { CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository.pullRequest)") },
+        )
+
+        val first = resolver.resolve(path, "feature/x", base = "main")
+        calls.clear()
+        val second = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(first.pr, "a refused count must not cost the row its PR").number)
+        assertEquals(GhAvailability.OK, first.availability, "a refusal is not a reason to hold every badge")
+        assertEquals(7, assertNotNull(second.pr).number)
+        // Latched, so a token that cannot read threads costs one call in total rather than one per poll.
+        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
+    fun `skips the review conversation lookup when gh answered no node id`() {
+        // Nothing addresses the query without one, and the alternative — parsing owner and repo out of the
+        // PR url — silently skips GitHub Enterprise, whose urls are not github.com.
+        val resolver = resolver(
+            view = { ok("""{"number":7,"state":"OPEN","isDraft":false,"url":"https://pr/7","title":"Work"}""") },
+            api = { throw IllegalStateException("must not ask about review threads without a node id") },
+        )
+
+        assertEquals(7, assertNotNull(resolver.resolve(path, "feature/x", base = "main").pr).number)
+        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
     fun `treats a missing pull request as a clean result`() {
         val resolver = resolver(view = { missing() }, list = { ok("[]") })
 
@@ -261,10 +346,15 @@ class PrResolverTest {
     private fun resolver(
         view: (List<String>) -> CmdOut,
         list: (List<String>) -> CmdOut = { ok("[]") },
+        api: (List<String>) -> CmdOut = { threads() },
     ): PrResolver = PrResolver(
         gh = { _, args ->
             calls.add(args)
-            if (args.getOrNull(1) == "list") list(args) else view(args)
+            when {
+                args.firstOrNull() == "api" -> api(args)
+                args.getOrNull(1) == "list" -> list(args)
+                else -> view(args)
+            }
         },
         git = { _, args ->
             calls.add(args)
@@ -273,8 +363,21 @@ class PrResolverTest {
         },
     )
 
-    private fun pr(number: Int, state: String): CmdOut =
-        ok("""{"number":$number,"state":"$state","isDraft":${state == "DRAFT"},"url":"https://pr/$number","title":"Work"}""")
+    private fun pr(number: Int, state: String): CmdOut = ok(
+        """{"id":"$NODE","number":$number,"state":"$state","isDraft":${state == "DRAFT"},""" +
+            """"url":"https://pr/$number","title":"Work"}""",
+    )
+
+    /** A `reviewThreads` response with [unresolved] open conversations and [resolved] settled ones. */
+    private fun threads(unresolved: Int = 0, resolved: Int = 0): CmdOut {
+        val nodes = List(unresolved) { """{"isResolved":false}""" } + List(resolved) { """{"isResolved":true}""" }
+        return ok(
+            """{"data":{"node":{"reviewThreads":{"totalCount":${nodes.size},"nodes":[${nodes.joinToString(",")}]}}}}""",
+        )
+    }
+
+    /** The review-thread lookup, as it lands in [calls]. */
+    private fun graphql() = listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=$NODE")
 
     private fun ok(stdout: String) = CmdOut(0, stdout, "")
 
@@ -282,5 +385,6 @@ class PrResolverTest {
 
     private companion object {
         const val SHA = "1111111111111111111111111111111111111111"
+        const val NODE = "PR_kwDOAbCdEf"
     }
 }

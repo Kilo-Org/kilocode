@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
@@ -1119,6 +1120,71 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[]}""")).state)
         // Every check skipped is still nothing to report, not a pass.
         assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"SKIPPED"}]}""")).state)
+    }
+
+    @Test
+    fun `parsePrNodeId reads the node id and tolerates gh answering without one`() {
+        assertEquals("PR_kwDOAbCdEf", parsePrNodeId("""{"id":"  PR_kwDOAbCdEf  ","number":1}"""))
+        assertEquals("", parsePrNodeId("""{"number":1}"""))
+        assertEquals("", parsePrNodeId("""{"id":null}"""))
+        assertEquals("", parsePrNodeId("not json"))
+    }
+
+    @Test
+    fun `parseThreads counts unresolved conversations`() {
+        val comments = parseThreads(
+            """
+            {"data":{"node":{"reviewThreads":{"totalCount":4,"nodes":[
+              {"isResolved":false},
+              {"isResolved":true},
+              {"isResolved":false},
+              {"isResolved":true}
+            ]}}}}
+            """.trimIndent(),
+        )
+
+        assertEquals(2, comments.unresolved)
+        assertEquals(4, comments.total)
+    }
+
+    @Test
+    fun `parseThreads counts an outdated conversation nobody resolved`() {
+        // GitHub's own unresolved-conversation number includes threads whose lines have moved on, and a
+        // reviewer still expects a reply to one.
+        val comments = parseThreads(
+            """{"data":{"node":{"reviewThreads":{"totalCount":1,"nodes":[{"isResolved":false,"isOutdated":true}]}}}}""",
+        )
+
+        assertEquals(1, comments.unresolved)
+    }
+
+    @Test
+    fun `parseThreads treats a missing flag as unresolved`() {
+        // The flag is only absent when GitHub omitted it, which is not evidence anyone resolved the thread.
+        val comments = parseThreads("""{"data":{"node":{"reviewThreads":{"nodes":[{},{"isResolved":true}]}}}}""")
+
+        assertEquals(1, comments.unresolved)
+        assertEquals(2, comments.total, "the node count stands in for an absent totalCount")
+    }
+
+    @Test
+    fun `parseThreads reports nothing for an absent, empty, or malformed payload`() {
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{"node":{"reviewThreads":{"totalCount":0,"nodes":[]}}}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{"node":null}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("{}"))
+        assertEquals(GhCommentsDto(), parseThreads(""))
+        assertEquals(GhCommentsDto(), parseThreads("not json"))
+    }
+
+    @Test
+    fun `parseThreads keeps a total past the query page while the unresolved count cannot`() {
+        // The query asks for the first 100 threads, so `totalCount` is the only honest total past that.
+        val nodes = List(100) { """{"isResolved":false}""" }.joinToString(",")
+        val comments = parseThreads("""{"data":{"node":{"reviewThreads":{"totalCount":137,"nodes":[$nodes]}}}}""")
+
+        assertEquals(100, comments.unresolved)
+        assertEquals(137, comments.total)
     }
 
     @Test

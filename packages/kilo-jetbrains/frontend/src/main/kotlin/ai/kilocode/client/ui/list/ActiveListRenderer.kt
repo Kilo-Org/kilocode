@@ -19,12 +19,14 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -275,7 +277,9 @@ internal class ActiveListRenderer(
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
-        syncBadges(value)
+        // The same muted color the description line and the trailing text use, so a labelled glyph reads
+        // as secondary next to the title it trails, on a selected row as much as an unselected one.
+        syncBadges(value, weak)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
@@ -413,22 +417,22 @@ internal class ActiveListRenderer(
         return image to Point(wrap.x, wrap.y)
     }
 
-    private fun syncBadges(item: ActiveListItem) {
+    private fun syncBadges(item: ActiveListItem, color: Color) {
         val hidden = item.progress != null
         val gap = activeListIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
-        syncBadges(leading, if (hidden) emptyList() else item.leading)
-        syncBadges(badges, if (hidden) emptyList() else item.badges)
-        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color)
     }
 
-    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>) {
+    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>, color: Color) {
         while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
         while (stack.componentCount < items.size) stack.add(ActiveListBadgeCell())
         stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i])
+            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i], color)
         }
     }
 
@@ -526,13 +530,28 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override var cellId: String = ""
         private set
 
-    fun update(badge: ActiveListBadge) {
+    /**
+     * [color] is the row's muted foreground, applied only to a labelled glyph. A pill paints its own text
+     * inside [FilledBadgeIcon], and a bare glyph has no text to color; a labelled glyph does, and a
+     * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
+     * in, so a count would otherwise be unreadable on a selected row.
+     */
+    fun update(badge: ActiveListBadge, color: Color? = null) {
         this.badge = badge
         cellId = badge.id.orEmpty()
         val next = badge.icon ?: pill(badge)
         // Both branches answer with the instance already installed when nothing changed, so a repaint
         // of an unchanged row does not churn the label's icon.
         if (icon !== next) icon = next
+        val label = if (badge.icon != null) badge.text else ""
+        if (text != label) text = label
+        if (label.isNotBlank()) {
+            // Matched to the pill's own text size. Re-read rather than assigned once, because updateUI
+            // puts the LaF default back on an IDE zoom; the comparison makes that the only time it writes.
+            val small = JBFont.small()
+            if (font != small) font = small
+            if (color != null && foreground != color) foreground = color
+        }
         toolTipText = cellTooltip()
     }
 

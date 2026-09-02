@@ -5,6 +5,7 @@ import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.checksLabel
+import ai.kilocode.client.ui.commentsLabel
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.reviewLabel
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -18,7 +19,8 @@ import javax.swing.Icon
 /**
  * Everything known about one worktree's pull request, for the row hover popup, one thing per line: state,
  * verdict glyphs and title, then the full changes summary under a rule, then a line each for the review
- * and CI verdicts whose row glyphs have no room to say more than their color.
+ * verdict, the CI verdict, and the unresolved review conversations — whose row glyphs have no room to say
+ * more than their color and their count.
  *
  * Only a row that has a pull request gets one, which is why [update] takes a non-null one: without that
  * chrome the popup is a restatement of the counts already on the row.
@@ -35,6 +37,7 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
     private val header = PrHeaderView(mode = ChangesPanel.Mode.FULL, onLocal = onLocal, stacked = true, openDiff = openDiff)
     private val review = JBLabel()
     private val checks = JBLabel()
+    private val comments = JBLabel()
 
     init {
         isOpaque = false
@@ -42,7 +45,8 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
             Stack.vertical(UiStyle.Gap.sm())
                 .next(header)
                 .next(review)
-                .next(checks),
+                .next(checks)
+                .next(comments),
         )
     }
 
@@ -63,6 +67,7 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
         )
         line(review, PrIcons.review(pull.review), reviewLabel(pull.review))
         line(checks, PrIcons.checks(pull.checks), checksLabel(pull.checks))
+        line(comments, PrIcons.comments(pull.comments), commentsLabel(pull.comments))
     }
 
     /** Hidden when there is no glyph, so a PR with no CI does not leave an empty row behind. */

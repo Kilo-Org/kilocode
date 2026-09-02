@@ -28,6 +28,8 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
+import ai.kilocode.client.ui.commentsCount
+import ai.kilocode.client.ui.commentsTooltip
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupFit
@@ -727,15 +729,17 @@ class AgentManagerPanel(
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
 
         /**
-         * Review then CI verdict, on the title line so they stay readable without hovering the row.
-         * Both are glyphs rather than pills: they are the states a reviewer scans a worktree list for,
-         * and GitHub's own icons say it faster than words at this size.
+         * Review verdict, CI verdict, then unresolved review conversations, on the title line so they stay
+         * readable without hovering the row. All three are glyphs rather than pills: they are the states a
+         * reviewer scans a worktree list for, and GitHub's own icons say it faster than words at this size.
+         * The conversation glyph is the one that carries a number, because "someone is waiting on a reply"
+         * is not worth acting on until you know whether that is one comment or twelve.
          */
         override val badges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
-                return listOfNotNull(reviewBadge(p), checksBadge(p))
+                return listOfNotNull(reviewBadge(p), checksBadge(p), commentsBadge(p))
             }
 
         private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
@@ -757,6 +761,18 @@ class AgentManagerPanel(
                 tooltip = checksTooltip(p.checks),
                 // The checks tab rather than the conversation: someone clicking a red build wants the log.
                 action = { BrowserUtil.browse(checksUrl(p)) },
+                icon = glyph,
+            )
+        }
+
+        private fun commentsBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = PrIcons.comments(p.comments) ?: return null
+            return ActiveListBadge(
+                commentsCount(p.comments),
+                id = "pr-comments",
+                tooltip = commentsTooltip(p.comments),
+                // The conversation tab, which is where GitHub lists the threads themselves.
+                action = { BrowserUtil.browse(p.url) },
                 icon = glyph,
             )
         }

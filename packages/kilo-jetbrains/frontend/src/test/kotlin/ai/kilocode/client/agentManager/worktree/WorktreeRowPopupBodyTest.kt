@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -65,14 +66,46 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         assertTrue("expected the check counts, got $lines", lines.contains("4 checks passed"))
     }
 
+    fun `test the popup names what the conversation count is counting`() {
+        val body = body()
+
+        edt {
+            body.update(
+                stats = null,
+                pull = pr(GhReview.APPROVED, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)),
+                name = "feature-x",
+                dirty = null,
+            )
+        }
+
+        // The row shows a bare number beside a glyph; this is where it becomes a sentence.
+        val lines = labels(body)
+        assertTrue("expected the conversation counts, got $lines", lines.contains("3 of 8 review conversations unresolved"))
+    }
+
+    fun `test a settled conversation drops its line`() {
+        val body = body()
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)), "feature-x", null) }
+        assertTrue(labels(body).contains("3 of 8 review conversations unresolved"))
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 0)), "feature-x", null) }
+
+        // Every thread resolved is nothing outstanding, not "0 unresolved".
+        val lines = labels(body)
+        assertTrue("the stale conversation line must be gone, got $lines", lines.none { it.contains("conversations") })
+    }
+
     fun `test verdict lines are hidden when github reports neither`() {
         val body = body()
 
         edt { body.update(null, pr(GhReview.NONE, GhChecksDto()), "feature-x", null) }
 
-        // A PR with no reviewers and no CI must not leave two empty rows in the popup.
+        // A PR with no reviewers, no CI, and nothing unresolved must not leave three empty rows.
         val lines = labels(body)
-        assertTrue("expected no verdict lines, got $lines", lines.none { it.contains("Review") || it.contains("check") })
+        assertTrue(
+            "expected no verdict lines, got $lines",
+            lines.none { it.contains("Review") || it.contains("check") || it.contains("conversations") },
+        )
     }
 
     fun `test a required but ungiven review is not stated`() {
@@ -102,7 +135,11 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         edt {
             body.update(
                 stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, ahead = 2, base = "origin/main"),
-                pull = pr(GhReview.APPROVED, GhChecksDto(GhChecks.PASSED, total = 4, passed = 4)),
+                pull = pr(
+                    GhReview.APPROVED,
+                    GhChecksDto(GhChecks.PASSED, total = 4, passed = 4),
+                    GhCommentsDto(total = 8, unresolved = 3),
+                ),
                 name = "feature-x",
                 dirty = WorktreeDirtyDto(path, additions = 2, files = 1),
             )
@@ -116,6 +153,9 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
             val rule = components(body).filterIsInstance<JSeparator>().single { it.orientation == SwingConstants.HORIZONTAL }
             val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
             val checks = components(body).filterIsInstance<JBLabel>().single { it.text == "4 checks passed" }
+            val comments = components(body)
+                .filterIsInstance<JBLabel>()
+                .single { it.text == "3 of 8 review conversations unresolved" }
 
             // The state pill and the title share the first line; everything else gets its own.
             assertTrue(kotlin.math.abs(middle(body, badge) - middle(body, title)) <= 2)
@@ -123,6 +163,7 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
             assertTrue(bottom(body, rule) <= top(body, changes))
             assertTrue(bottom(body, changes) <= top(body, review))
             assertTrue(bottom(body, review) <= top(body, checks))
+            assertTrue(bottom(body, checks) <= top(body, comments))
             // One row for every counter, committed and uncommitted alike.
             val counters = components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }
             assertEquals(listOf("1 file", "+2", "2", "3 files", "-4", "+9"), counters.map { it.text })
@@ -239,8 +280,8 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun middle(body: WorktreeRowPopupBody, child: Component): Int = top(body, child) + child.height / 2
 
-    private fun pr(review: GhReview, checks: GhChecksDto) =
-        WorktreePrDto(path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks)
+    private fun pr(review: GhReview, checks: GhChecksDto, comments: GhCommentsDto = GhCommentsDto()) =
+        WorktreePrDto(path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks, comments)
 
     /** Text of every visible label in the body, which is what a reader actually sees. */
     private fun labels(body: WorktreeRowPopupBody): List<String> = edt {

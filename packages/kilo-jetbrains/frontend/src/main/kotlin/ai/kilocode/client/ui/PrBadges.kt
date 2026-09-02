@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -63,6 +64,26 @@ internal fun checksTooltip(checks: GhChecksDto): String {
         GhChecks.NONE -> return ""
     }
     val lines = listOf(head, KiloBundle.message("worktree.pr.checks.tooltip.open")).map(XmlStringUtil::escapeString)
+    return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
+}
+
+/** Plain-text review-conversation summary, for a popup row and as the head of the badge tooltip. */
+internal fun commentsLabel(value: GhCommentsDto): String {
+    if (value.unresolved <= 0) return ""
+    return KiloBundle.message("worktree.pr.comments.unresolved", value.unresolved, value.total)
+}
+
+/** The count a comment glyph is shown with. Blank when nothing is unresolved, which gets no glyph either. */
+internal fun commentsCount(value: GhCommentsDto): String =
+    if (value.unresolved > 0) value.unresolved.toString() else ""
+
+/**
+ * Tooltip for the review-conversation badge. The glyph already shows the unresolved count, so the tooltip's
+ * job is to name what is being counted and how many conversations there are in total.
+ */
+internal fun commentsTooltip(value: GhCommentsDto): String {
+    val head = commentsLabel(value).takeIf { it.isNotBlank() } ?: return ""
+    val lines = listOf(head, KiloBundle.message("worktree.pr.comments.tooltip.open")).map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 

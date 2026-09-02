@@ -2,6 +2,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -15,10 +16,18 @@ internal data class CmdOut(val exit: Int, val stdout: String, val stderr: String
 }
 
 /** PR for one checkout, plus the gh availability observed while resolving it. */
-internal data class PrLookup(val pr: WorktreePrDto? = null, val availability: GhAvailability = GhAvailability.OK)
+internal data class PrLookup(
+    val pr: WorktreePrDto? = null,
+    val availability: GhAvailability = GhAvailability.OK,
+    /**
+     * The pull request's GraphQL node id, which addresses the follow-up review-thread query. Empty when
+     * no PR was found or when `gh` answered without one.
+     */
+    val node: String = "",
+)
 
 /** Scalar fields every supported `gh` release and token can answer. */
-internal const val PR_FIELDS = "number,state,isDraft,url,title"
+internal const val PR_FIELDS = "id,number,state,isDraft,url,title"
 
 /**
  * [PR_FIELDS] plus the review verdict and CI rollup. Both are GraphQL sub-queries rather than scalars,
@@ -26,6 +35,22 @@ internal const val PR_FIELDS = "number,state,isDraft,url,title"
  * [richRefusal] for how that is detected and [PrResolver] for the fallback.
  */
 internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup"
+
+/**
+ * Review-conversation resolution flags for one pull request, addressed by node id.
+ *
+ * `reviewThreads` is GraphQL only — `gh pr view --json reviewThreads` answers `Unknown JSON field` on
+ * every release — so the unresolved count costs a second `gh` invocation whatever this asks for.
+ *
+ * Addressed by node id rather than owner/repo/number so it works on GitHub Enterprise, whose pull request
+ * urls do not match github.com and so cannot be parsed for a repository. `gh api` takes the host from the
+ * checkout it runs in, so the same command serves both.
+ *
+ * Only the flags are requested. Comment bodies, authors, and diff hunks would multiply the payload and the
+ * query's point cost to say nothing a badge shows.
+ */
+internal const val THREADS_QUERY =
+    "query(\$id: ID!) { node(id: \$id) { ... on PullRequest { reviewThreads(first: 100) { totalCount nodes { isResolved } } } } }"
 
 /** Why a `gh pr` command refused [PR_RICH_FIELDS], which decides whether the downgrade may latch. */
 internal enum class RichRefusal {
@@ -78,16 +103,49 @@ internal class PrResolver(
     @Volatile
     private var rich = true
 
+    // Same reasoning as [rich], for the review-thread query.
+    @Volatile
+    private var threads = true
+
     /**
      * Resolves the PR for the checkout at [path] on [branch]. [base] is the repository's base
      * branch; a PR headed by it is not worth a search query, so strategy 3 is skipped there.
      */
     fun resolve(path: String, branch: String, base: String?): PrLookup {
         val dir = Path.of(path).normalize()
+        return comments(dir, find(dir, path, branch, base))
+    }
+
+    /** The strategy ladder, answering with the PR alone — no review conversations yet. */
+    private fun find(dir: Path, path: String, branch: String, base: String?): PrLookup {
         view(dir, path, null)?.let { return it }
         view(dir, path, branch)?.let { return it }
         if (branch == base) return PrLookup()
         return search(dir, path) ?: PrLookup()
+    }
+
+    /**
+     * [found], with the pull request's unresolved review-conversation count filled in.
+     *
+     * Only live pull requests pay for it. The query is a process spawn per row per poll, and unresolved
+     * feedback on something already merged or closed is not work anyone is waiting on.
+     *
+     * A refusal must not cost the PR the row already shows, so only a spent budget is reported — that one
+     * means "ask again later", and reporting it holds every badge this poll would otherwise blank. Anything
+     * else latches the query off for the process, exactly as [RichRefusal.FIELD] does for review and CI
+     * fields, so a `gh` or token that cannot answer threads costs one call in total rather than one per
+     * checkout on every poll.
+     */
+    private fun comments(dir: Path, found: PrLookup): PrLookup {
+        val pr = found.pr ?: return found
+        if (pr.state != GhState.OPEN && pr.state != GhState.DRAFT) return found
+        if (!threads || found.node.isEmpty()) return found
+        val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"))
+        if (out.ok) return found.copy(pr = pr.copy(comments = parseThreads(out.stdout)))
+        if (rateLimited(out.stderr.lowercase())) return found.copy(availability = GhAvailability.RATE_LIMITED)
+        threads = false
+        LOG.info("gh cannot answer review threads, dropping the comment count: ${out.stderr.trim()}")
+        return found
     }
 
     /** Null means "no PR here, keep looking"; a value is terminal (a PR, or gh being unusable). */
@@ -102,7 +160,7 @@ internal class PrResolver(
             }
         }
         if (!out.ok) return unusable(out.stderr)
-        return parsePr(path, out.stdout)?.let { PrLookup(it) }
+        return parsePr(path, out.stdout)?.let { PrLookup(it, node = parsePrNodeId(out.stdout)) }
     }
 
     /**
@@ -141,7 +199,8 @@ internal class PrResolver(
             val obj = item as? JsonObject ?: continue
             // The search matches commit mentions too, so only an exact head match is our PR.
             if (obj["headRefOid"]?.jsonPrimitive?.content != head) continue
-            parsePr(path, obj.toString())?.let { return PrLookup(it) }
+            val raw = obj.toString()
+            parsePr(path, raw)?.let { return PrLookup(it, node = parsePrNodeId(raw)) }
         }
         return null
     }

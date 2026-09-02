@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
@@ -844,6 +845,34 @@ internal fun parseChecks(obj: JsonObject): GhChecksDto {
         else -> GhChecks.PASSED
     }
     return GhChecksDto(state, total, passed, failed, pending)
+}
+
+/**
+ * Reads the pull request's GraphQL node id out of a `gh pr view --json` payload, or an empty string when
+ * this `gh` did not answer one. The id is what addresses the review-thread query, which has no
+ * `--json` field of its own.
+ */
+internal fun parsePrNodeId(raw: String): String {
+    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return ""
+    return obj["id"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+}
+
+/**
+ * Counts the review conversations in a `reviewThreads` GraphQL response.
+ *
+ * A thread with no `isResolved` at all counts as unresolved: the flag is only absent when GitHub omitted
+ * it, and an omission is not evidence that someone resolved the thread. [GhCommentsDto.total] prefers
+ * `totalCount` over the node count so it stays honest past the query's 100-thread page, even though the
+ * unresolved figure cannot.
+ */
+internal fun parseThreads(raw: String): GhCommentsDto {
+    val root = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return GhCommentsDto()
+    val data = root["data"] as? JsonObject ?: return GhCommentsDto()
+    val threads = (data["node"] as? JsonObject)?.get("reviewThreads") as? JsonObject ?: return GhCommentsDto()
+    val items = threads["nodes"] as? JsonArray ?: JsonArray(emptyList())
+    val unresolved = items.count { (it as? JsonObject)?.get("isResolved")?.jsonPrimitive?.booleanOrNull != true }
+    val total = threads["totalCount"]?.jsonPrimitive?.intOrNull ?: items.size
+    return GhCommentsDto(total = total, unresolved = unresolved)
 }
 
 /** One rollup entry's verdict. [SKIPPED] is tracked only so it can be left out of the totals. */
