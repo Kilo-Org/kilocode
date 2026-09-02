@@ -211,6 +211,7 @@ export const dict = {
   "ui.patch.action.created": "تم الإنشاء",
   "ui.patch.action.moved": "منقول",
   "ui.patch.action.patched": "تم تطبيق رقعة",
+  "ui.patch.action.plan": "خطة", // kilocode_change
 
   "ui.question.subtitle.answered": "تمت الإجابة عن {{count}}",
   "ui.question.answer.none": "(لا توجد إجابة)",
@@ -250,6 +251,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "تم التغيير",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · تم الاحتفاظ بـ {{kept}} من {{total}} سطرًا",
   // kilocode_change end
 }

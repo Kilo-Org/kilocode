@@ -37,6 +37,7 @@ import { spawn } from "node:child_process"
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
+const temp = tmpdir().trimEnd()
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -102,7 +103,7 @@ const base =
     ? expand(opts["state-dir"])
     : isolated
       ? join(dev, "vscode")
-      : join(tmpdir(), `kilo-vscode-dev-${hash}`)
+      : join(temp, `kilo-vscode-dev-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
 const kilo =
@@ -235,11 +236,13 @@ function newest(paths: string[]) {
 // ---------------------------------------------------------------------------
 
 async function compile() {
-  if (!shouldBuild) {
+  if (!shouldBuild && existsSync(join(root, "dist", "extension.js"))) {
     console.log("[launch] Skipping build (--no-build)")
     return
   }
 
+  if (!shouldBuild) console.log("[launch] dist/extension.js is missing in this worktree, building first...")
+  await ensureDependencies()
   console.log("[launch] Building extension...")
   await $`bun run build:launch`.cwd(root).env(cleanEnv(process.env))
   console.log("[launch] Build complete")
@@ -252,6 +255,26 @@ function cleanEnv(input: NodeJS.ProcessEnv) {
     if (value !== undefined) env[key] = value.trim()
   }
   return env
+}
+
+async function ensureDependencies() {
+  const required = [
+    { name: "esbuild", dir: root },
+    { name: "@opencode-ai/core/npm", dir: join(repo, "packages", "opencode") },
+    { name: "@hey-api/openapi-ts", dir: join(repo, "packages", "sdk", "js") },
+  ]
+  const ready = required.every((item) => {
+    try {
+      Bun.resolveSync(item.name, item.dir)
+      return true
+    } catch {
+      return false
+    }
+  })
+  if (ready) return
+
+  console.log("[launch] Worktree dependencies are missing, installing...")
+  await $`bun install --frozen-lockfile`.cwd(repo).env(cleanEnv(process.env))
 }
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ data class MessageDto(
     val parentID: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val finish: String? = null,
     val error: MessageErrorDto? = null,
     val summary: MessageSummaryDto? = null,
 )
@@ -49,7 +50,13 @@ data class MessageErrorDto(
     val responseBody: String? = null,
     val dataKeys: List<String> = emptyList(),
     val ref: String? = null,
-)
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(
@@ -72,6 +79,7 @@ data class PartDto(
     val title: String? = null,
     val input: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val approval: ToolApprovalDto? = null,
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
@@ -85,6 +93,17 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class ToolApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
 )
 
 @Serializable
@@ -297,6 +316,25 @@ sealed class ChatEventDto {
         val sessionID: String,
         val todos: List<TodoDto> = emptyList(),
     ) : ChatEventDto()
+
+    /**
+     * The CLI cancelled this session's turn on its own, for [reason].
+     *
+     * Synthesized by the backend, never parsed from a CLI event. The CLI reports a server-side
+     * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
+     * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
+     */
+    @Serializable
+    @SerialName("session.interrupted")
+    data class SessionInterrupted(
+        val sessionID: String,
+        val reason: String,
+    ) : ChatEventDto() {
+        companion object {
+            /** The CLI disposed its instances — a config, provider, or organization change — and cancelled every running turn. */
+            const val RELOAD = "reload"
+        }
+    }
 }
 
 // --- Permission DTOs ---
@@ -423,13 +461,4 @@ data class DiffFileDto(
     val status: String? = null,
     val before: String? = null,
     val after: String? = null,
-)
-
-// --- Config Update ---
-
-@Serializable
-data class ConfigUpdateDto(
-    val model: String? = null,
-    val agent: String? = null,
-    val temperature: Double? = null,
 )

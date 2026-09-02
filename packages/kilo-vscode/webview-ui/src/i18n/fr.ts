@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Connecter un fournisseur",
 
+  "session.activity.waiting": "En attente d’une réponse ou d’une approbation.",
+  "session.activity.error": "Erreur ou connexion perdue.",
+  "session.activity.retry": "Nouvelle tentative automatique.",
+  "session.activity.busy": "En cours.",
+  "session.activity.done": "Tour terminé.",
+  "session.activity.idle": "Inactif.",
+
   "command.session.new": "Nouvelle session",
   "command.session.show.changes": "Afficher les modifications",
   "command.review.toggle": "Basculer la revue",
@@ -77,30 +84,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.export": "Exporter la transcription de la session",
-
-  "agentRequirements.skill.installed": "Installée",
-  "agentRequirements.skill.checkFailed": "La vérification de la compétence a échoué",
-  "agentRequirements.skill.missing": "Non installée",
-  "agentRequirements.mcp.connected": "Connecté",
-  "agentRequirements.mcp.checkFailed": "La vérification MCP a échoué",
-  "agentRequirements.mcp.missing": "Non connecté",
-  "agentRequirements.extension.installed": "Installée",
-  "agentRequirements.extension.checkFailed": "La vérification de l’extension VS Code a échoué",
-  "agentRequirements.extension.missing": "Non installée",
-  "agentRequirements.extension.description": "Installez les extensions manquantes dans VS Code.",
-  "agentRequirements.group.skills": "Compétences",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Extensions VS Code",
-  "agentRequirements.blocked.title": "Prérequis de l’agent {{agent}}",
-  "agentRequirements.blocked.description": "Cet agent a besoin des outils suivants avant de pouvoir s’exécuter.",
-  "agentRequirements.prompt.blocked": "Terminez d’abord les vérifications requises pour utiliser cet agent",
-  "agentRequirements.action.openMarketplace": "Ouvrir Marketplace",
-  "agentRequirements.error.unknownAgent": "L’agent sélectionné est introuvable.",
-  "agentRequirements.error.malformedDeclaration": "Cet agent a une déclaration de prérequis invalide.",
-  "agentRequirements.error.discoveryFailed": "Kilo n’a pas pu vérifier les compétences disponibles.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo n’a pas pu vérifier l’état du serveur MCP.",
-  "agentRequirements.error.scopeMismatch": "Cette vérification des prérequis de l’agent n’est plus active.",
-  "agentRequirements.error.requestFailed": "Kilo n’a pas pu vérifier les prérequis de l’agent.",
 
   "dialog.provider.search.placeholder": "Rechercher des fournisseurs",
   "dialog.provider.empty": "Aucun fournisseur trouvé",
@@ -199,8 +182,11 @@ export const dict = {
   "common.saving": "Enregistrement...",
   "common.default": "Défaut",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Rechercher des Worktrees",
   "prompt.thinking.tooltip": "Effort de raisonnement",
   "prompt.action.send": "Envoyer",
+  "prompt.action.continue": "Continuer",
   "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
@@ -211,7 +197,6 @@ export const dict = {
     "L'approbation automatique est activée. Les demandes d'autorisation seront approuvées automatiquement.",
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
-  "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
@@ -275,6 +260,7 @@ export const dict = {
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
+  "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
@@ -691,10 +677,49 @@ export const dict = {
   "profile.action.login": "Se connecter avec Kilo Code",
   "profile.balance.title": "Solde",
   "profile.balance.refresh": "Actualiser le solde",
+  "profile.usage.title": "Forfaits et utilisation",
+  "profile.usage.description": "Quota et soldes du forfait actuel",
+  "profile.usage.refresh": "Actualiser l'utilisation du fournisseur",
+  "profile.usage.empty": "Aucune source d'utilisation de fournisseur détectée.",
+  "profile.usage.source.direct": "Direct",
+  "profile.usage.state.stale": "Affichage des dernières données d'utilisation mises à jour.",
+  "profile.usage.state.unavailable": "Données d'utilisation indisponibles.",
+  "profile.usage.plan.pastDue": "Forfait : paiement en retard",
+  "profile.usage.plan.canceling": "Forfait : résiliation à la fin de la période",
+  "profile.usage.plan.unknown": "Forfait : statut inconnu",
+  "profile.usage.action.manage": "Gérer",
+  "profile.usage.action.managePlan": "Gérer {{plan}}",
+  "profile.usage.routing": "La facturation du forfait est active. Le routage via Kilo Gateway est {{state}}.",
+  "profile.usage.routingState.disabled": "désactivé",
+  "profile.usage.routingState.missing": "manquant",
+  "profile.usage.routingState.replaced": "remplacé",
+  "profile.usage.routingState.unknown": "inconnu",
+  "profile.usage.window.used": "{{value}} utilisé",
+  "profile.usage.window.remaining": "{{value}} restant",
+  "profile.usage.window.remainingOf": "{{value}} sur {{limit}} restants",
+  "profile.usage.window.usedOf": "{{value}} sur {{limit}} utilisés",
+  "profile.usage.window.quota": "Quota",
+  "profile.usage.window.daily": "Quota quotidien",
+  "profile.usage.window.weekly": "Quota hebdomadaire",
+  "profile.usage.window.monthly": "Quota mensuel",
+  "profile.usage.window.hours": "Quota de {{count}} heures",
+  "profile.usage.window.days": "Quota de {{count}} jours",
+  "profile.usage.window.weeks": "Quota de {{count}} semaines",
+  "profile.usage.window.months": "Quota de {{count}} mois",
+  "profile.usage.window.shared": "Partagé",
+  "profile.usage.window.scoped": "{{resource}} · {{period}}",
+  "profile.usage.reset": "Réinitialisation le {{date}}",
+  "profile.usage.status.unknown": "Inconnu",
+  "profile.usage.status.unlimited": "Illimité",
+  "profile.usage.status.notInPlan": "Non inclus dans le forfait",
+  "profile.usage.status.exhausted": "Épuisé",
   "profile.action.dashboard": "Tableau de bord",
   "profile.action.topUp": "Recharger",
   "profile.pass.subscribe": "Obtenez Kilo Pass pour ajouter des crédits et gagner des bonus",
   "profile.pass.bonus": "Bonus",
+  "profile.pass.usage": "Consommation de ce mois-ci",
+  "profile.pass.paid": "Payé",
+  "profile.pass.meter": "Consommation mensuelle du Kilo Pass",
   "profile.pass.renews": "Renouvelle",
   "profile.action.logout": "Déconnexion",
 
@@ -866,6 +891,9 @@ export const dict = {
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
+  "settings.experimental.sharedAgentBoard.title": "Tableau d'agents partagé",
+  "settings.experimental.sharedAgentBoard.description":
+    "Permet à l'agent principal et à ses sous-agents de partager leurs découvertes au sein d'une même session.",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
   "settings.experimental.imageGenerationModel.description": "Modèle de génération d'images",
   "settings.experimental.imageGenerationModel.placeholder": "Par défaut (Auto Router)",
@@ -892,15 +920,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Activer SWE-Pruner : élagage des sorties volumineuses des outils de lecture, de recherche et de shell, tenant compte de la tâche et guidé par une question de focalisation fournie par l’agent",
-  "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
+  "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1087,6 +1112,10 @@ export const dict = {
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",
   "settings.context.compaction.title": "Compactage",
+  "settings.context.compactionModel.title": "Modèle de compactage",
+  "settings.context.compactionModel.description":
+    "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
+  "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
@@ -1148,10 +1177,15 @@ export const dict = {
     "Choisissez si les blocs de modification du code et de différences sont initialement développés ou réduits.",
   "settings.display.codeEdit.expanded": "Développés",
   "settings.display.codeEdit.collapsed": "Réduits",
+  "settings.display.mcpTool.title": "Blocs d'outils MCP et génériques",
+  "settings.display.mcpTool.description":
+    "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
+  "settings.display.mcpTool.expanded": "Développés",
+  "settings.display.mcpTool.collapsed": "Réduits",
 
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Affiche le taux de génération de texte (tokens/s) sur le dernier message de l'assistant et dans l'en-tête de la tâche. Masqué par défaut pour garder le chat épuré.",
+    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Affiche une ligne sur les appels d'outils expliquant pourquoi ils ont été approuvés automatiquement (règle correspondante, agent par défaut, mode YOLO, etc.).",
@@ -1177,60 +1211,17 @@ export const dict = {
   "question.summary": "{{n}} sur {{total}} questions",
   "common.review": "Réviser",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrer depuis l'ancienne version",
-  "settings.aboutKiloCode.legacyMigration.title": "Migration de l'ancienne version",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer les paramètres d'une précédente installation de Kilo Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
   "settings.aboutKiloCode.rooImport.description":
     "Importer l'historique des conversations depuis une installation de Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importer les sessions depuis Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Nouveautés de Kilo Code",
-  "migration.whatsNew.subtitle": "Nous avons reconstruit l'extension sur une base plus rapide et plus efficace.",
-  "migration.whatsNew.features.performance.title": "Performance accélérée de l'agent",
-  "migration.whatsNew.features.performance.detail":
-    "Les appels d'outils en parallèle et les sous-agents permettent à votre agent de traiter plus de tâches simultanément — vous passez moins de temps à attendre et plus de temps à livrer.",
-  "migration.whatsNew.features.interface.title": "Interface simplifiée",
-  "migration.whatsNew.features.interface.detail": "Moins de distractions, plus facile et plus rapide à lire.",
-  "migration.whatsNew.features.agentManager.title": "Gestionnaire d'agents",
-  "migration.whatsNew.features.agentManager.detail":
-    "Une interface unifiée pour exécuter plusieurs agents en parallèle, chacun sur son propre arbre de travail — surveillez la progression, changez de contexte et examinez les modifications depuis un seul endroit.",
-  "migration.whatsNew.features.foundation.title": "Base partagée",
-  "migration.whatsNew.features.foundation.detail":
-    "Un noyau petit et efficace partagé par tous les produits Kilo. Une expérience familière quelle que soit votre façon de travailler.",
-  "migration.whatsNew.blogLink": "Lire l'annonce complète",
-  "migration.whatsNew.docsLink": "Nouveautés & questions fréquentes",
-  "migration.whatsNew.continue": "Continuer",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrer vos paramètres",
-  "migration.migrate.subtitle":
-    "Nous avons trouvé des paramètres de votre précédente installation. Voici ce que nous pouvons récupérer.",
+  "migration.roo.button": "Importer les sessions",
+  "migration.roo.empty": "Aucune session Roo Code trouvée.",
   "migration.migrate.selectLabel": "Sélectionnez ce que vous souhaitez migrer",
   "migration.migrate.chatHistory": "Sessions de discussion et historique",
-  "migration.migrate.button": "Migrer les paramètres",
-  "migration.migrate.skip": "Ignorer",
-  "migration.migrate.keysDetected": "{{count}} clés détectées",
-  "migration.migrate.serversConfigured": "{{count}} serveur(s) configuré(s)",
-  "migration.migrate.modesFound": "{{count}} mode(s) trouvé(s)",
-  "migration.migrate.nothingToMigrate": "Rien à migrer n'a été trouvé dans les anciens paramètres.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Clés d'API des fournisseurs",
-  "migration.select.mcpServers": "Serveurs MCP",
-  "migration.select.customModes": "Modes personnalisés / Agents",
-  "migration.select.defaultModel": "Modèle par défaut",
-  "migration.select.autoApproval": "Approbation automatique",
-  "migration.select.language": "Langue de l'interface",
-  "migration.select.autocomplete": "Paramètres de saisie semi-automatique",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} éléments sur {{total}} migrés avec succès.",
-  "migration.complete.cleanup": "Supprimer les données des anciens paramètres",
-  "migration.complete.cleanupDescription":
-    "Cela supprime les anciens paramètres du stockage de VS Code. Vous ne pourrez pas réexécuter cette migration.",
   "migration.complete.done": "Terminé",
   "migration.migrate.sessionsDetected": "{{count}} sessions détectées",
   "migration.error.continue": "Continuer",
@@ -1266,12 +1257,29 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Date inconnue",
   "migration.sessionFormat.unknown": "Inconnu",
   "migration.sessionFormat.unknownError": "Erreur inconnue",
-  // legacy-migration end
 
   "error.details.show": "Détails",
 
   "task.todos.progress": "{{done}}/{{total}} tâches terminées",
   "task.todos.allDone": "{{count}} tâches terminées",
+  "task.backgroundAgents.running.one": "1 agent en arrière-plan",
+  "task.backgroundAgents.running.many": "{{count}} agents en arrière-plan",
+  "task.backgroundAgents.more": "+{{count}} de plus",
+  "task.backgroundAgents.open": "Ouvrir l'agent en arrière-plan",
+  "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
+  "task.backgroundAgents.cancel": "Arrêter",
+  "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
+  "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
+  "task.backgroundAgents.needsInput": "Saisie requise",
+  "task.backgroundAgents.dismiss": "Ignorer",
+  "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
+  "task.backgroundAgents.summary": "{{running}} agent(s) en arrière-plan sur {{total}} en cours",
+  "task.backgroundAgents.status.running": "En cours",
+  "task.backgroundAgents.status.completed": "Terminé",
+  "task.backgroundAgents.status.cancelled": "Annulé",
+  "task.backgroundAgents.status.error": "Erreur",
+  "task.backgroundAgents.untitled": "Agent en arrière-plan",
+  "task.backgroundAgents.stopAll": "Tout arrêter ({{count}})",
   "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
   "settings.saveBar.discard": "Ignorer",
   "settings.saveBar.save": "Enregistrer",

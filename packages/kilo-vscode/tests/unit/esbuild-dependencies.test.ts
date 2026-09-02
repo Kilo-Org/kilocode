@@ -2,6 +2,10 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { builtinModules } from "node:module"
+import os from "node:os"
+import { build } from "esbuild"
+import { listFiles, PackageManager } from "@vscode/vsce"
+import playwright from "../../script/playwright-runtime"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const PKG_FILE = path.join(ROOT, "package.json")
@@ -59,4 +63,66 @@ describe("Build Script Dependency Declarations", () => {
 
     expect(undeclared).toEqual([])
   })
+
+  it("loads the packaged browser broker outside the repository", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-browser-runtime-"))
+    const staging = path.join(dir, "staging")
+    const installed = path.join(dir, "installed")
+    try {
+      await build({
+        entryPoints: [path.join(ROOT, "src/services/browser-automation/browser-broker.ts")],
+        outfile: path.join(staging, "dist/extension.js"),
+        bundle: true,
+        format: "cjs",
+        platform: "node",
+        minify: true,
+        logLevel: "silent",
+        plugins: [playwright],
+      })
+      for (const file of ["package.json", ".vscodeignore"]) {
+        fs.copyFileSync(path.join(ROOT, file), path.join(staging, file))
+      }
+      const files = await listFiles({ cwd: staging, packageManager: PackageManager.None })
+      for (const file of [
+        "dist/node_modules/playwright-core/browsers.json",
+        "dist/node_modules/playwright-core/lib/generated/utilityScriptSource.js",
+        "dist/node_modules/chromium-bidi/node_modules/zod/package.json",
+      ]) {
+        expect(files).toContain(file)
+      }
+      for (const file of files) {
+        const target = path.join(installed, file)
+        fs.mkdirSync(path.dirname(target), { recursive: true })
+        fs.copyFileSync(path.join(staging, file), target)
+      }
+      const child = Bun.spawnSync(
+        [
+          "node",
+          "--no-global-search-paths",
+          "-e",
+          `
+          const assert = require("node:assert/strict")
+          const fs = require("node:fs")
+          const path = require("node:path")
+          const entry = process.argv[1]
+          const load = require("node:module").createRequire(entry)
+          assert.equal(typeof load(entry).BrowserBroker, "function")
+          assert.equal(load("playwright-core").chromium.name(), "chromium")
+          const manifest = fs.realpathSync(load.resolve("playwright-core/package.json"))
+          assert.ok(manifest.startsWith(fs.realpathSync(path.dirname(entry)) + path.sep))
+        `,
+          path.join(installed, "dist/extension.js"),
+        ],
+        {
+          cwd: installed,
+          env: { ...process.env, NODE_PATH: "", NODE_OPTIONS: "" },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      )
+      expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  }, 15_000)
 })

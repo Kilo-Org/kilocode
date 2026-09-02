@@ -4,6 +4,8 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
@@ -74,6 +76,12 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
+
+    /** Apply frontend-managed diagnostic log settings in the backend process. */
+    suspend fun applyLogConfig(config: LogConfigDto)
+
+    /** Read the backend diagnostic log file for download in split mode. Null when absent. */
+    suspend fun backendLogFile(): LogFileDto?
 
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
@@ -12,6 +11,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
+import type { SessionDrain } from "@/kilocode/session/drain"
+import type { EventV2 } from "@opencode-ai/core/event"
+import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
@@ -26,7 +28,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
-import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import ASK_CODE_SWITCH from "./ask-code-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
@@ -155,32 +157,50 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
-  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
-    sessionID: SessionID
-    sessions: Pick<Session.Interface, "children">
-    cancel: (sessionID: SessionID) => Effect.Effect<void>
-  }) {
-    function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
-      return Effect.gen(function* () {
-        const children = yield* input.sessions.children(sessionID)
-        const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
-        return [...children.map((child) => child.id), ...nested.flat()]
-      })
-    }
+  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(
+    function* (input: {
+      sessionID: SessionID
+      sessions: Pick<Session.Interface, "children">
+      drain: Pick<SessionDrain.Interface, "track">
+      events: Pick<EventV2.Interface, "publish">
+      cancel: (sessionID: SessionID, opts?: { background?: boolean }) => Effect.Effect<void>
+      stop: (sessionID: SessionID, work: Effect.Effect<void>) => Effect.Effect<void>
+      scope?: "session" | "tree"
+    }) {
+      function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
+        return Effect.gen(function* () {
+          const children = yield* input.sessions.children(sessionID)
+          const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
+          return [...children.map((child) => child.id), ...nested.flat()]
+        })
+      }
 
-    const children = yield* descendants(input.sessionID)
-    yield* Effect.forEach(
-      [input.sessionID, ...children],
-      (sessionID) =>
+      const cancel = (sessionID: SessionID) =>
         Effect.gen(function* () {
           yield* KiloSessionPromptQueue.cancel(sessionID)
           PlanFollowup.abort(sessionID)
           yield* abortIntakes(sessionID)
-          yield* input.cancel(sessionID)
+          yield* input.cancel(sessionID, { background: input.scope !== "session" })
+        })
+
+      yield* input.stop(
+        input.sessionID,
+        Effect.gen(function* () {
+          const children = input.scope === "session" ? [] : yield* descendants(input.sessionID)
+          yield* Effect.forEach(
+            [input.sessionID, ...children],
+            (id) => (id === input.sessionID ? cancel(id) : input.stop(id, cancel(id))),
+            { concurrency: "unbounded", discard: true },
+          )
         }),
-      { concurrency: "unbounded", discard: true },
-    )
-  })
+      )
+    },
+    (work, input) =>
+      input.drain.track(
+        input.sessionID,
+        work.pipe(Effect.ensuring(input.events.publish(Interrupted, { sessionID: input.sessionID }))),
+      ),
+  )
 
   export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
     sessionID: SessionID
@@ -225,6 +245,41 @@ export namespace KiloSessionPrompt {
     },
   )
 
+  /**
+   * Removes a failed assistant tail that produced nothing the user can see, so the next prompt does not
+   * append after an "An error occurred" shell. The error itself has already been surfaced to clients via
+   * `session.error` and the outcome card.
+   *
+   * Distinct from [recoverProviderFinishError], which handles a `finish === "error"` tail carrying no
+   * `info.error`. This one is the inverse: `info.error` is set.
+   *
+   * The parts guard is an allowlist of turn scaffolding on purpose. A turn that emitted text or
+   * reasoning, or ran a tool, keeps its message: that record is what explains file changes which are
+   * still applied on disk. Any part type not listed here blocks removal, so a new part type fails safe.
+   */
+  export const recoverFailedAssistant = Effect.fn("KiloSessionPrompt.recoverFailedAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (!tail.info.error) return
+    // A user Stop is not a failure. Its record is what clients read back to show "Stopped", so it stays.
+    if (MessageV2.AbortedError.isInstance(tail.info.error)) return
+    if (!tail.parts.every((part) => part.type === "step-start" || part.type === "step-finish")) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
     session: Pick<Session.Info, "permission">
@@ -248,6 +303,53 @@ export namespace KiloSessionPrompt {
     return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
   }
 
+  /**
+   * Collapse duplicate rules keeping the last occurrence of each distinct one.
+   *
+   * `guardPermissions` re-appends agent rules for ask/plan/architect modes and the plan
+   * agent definition itself merges its edit guard several times, so the assembled ruleset
+   * can carry the same rule block multiple times. Evaluation (`findLast`) and provenance
+   * (the tagged last copy wins) are unchanged by collapsing, but denial messages and
+   * pending-permission payloads stop showing stacked copies of the same block.
+   */
+  export function dedupeRuleset(rules: Permission.Ruleset): Permission.Ruleset {
+    const seen = new Set<string>()
+    const kept: Permission.Rule[] = []
+    for (let i = rules.length - 1; i >= 0; i--) {
+      const rule = rules[i] as PermissionProvenance.SourcedRule
+      const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}\u0000${rule.source ?? ""}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      kept.push(rule)
+    }
+    return kept.reverse()
+  }
+
+  /** Assemble the ruleset and hard ruleset for a permission ask, deduped. */
+  export function buildAskRuleset(input: {
+    agent: Pick<Agent.Info, "name" | "permission">
+    session: Pick<Session.Info, "permission">
+    origins?: PermissionProvenance.Origins
+  }): { ruleset: Permission.Ruleset; hardRuleset?: Permission.Ruleset } {
+    // Tag every rule with its true origin before merging, so the winning rule (chosen by
+    // findLast) reports the correct source instead of classify() having to guess.
+    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
+    // session.permission, so tag those inputs up front rather than the outer copy alone.
+    const taggedAgent = PermissionProvenance.tagAgent(input.agent.permission, input.origins)
+    const taggedSession = PermissionProvenance.tagSession(input.session.permission ?? [])
+    const ruleset = dedupeRuleset(
+      Permission.merge(
+        taggedAgent,
+        guardPermissions({
+          agent: { name: input.agent.name, permission: taggedAgent },
+          session: { permission: taggedSession },
+        }),
+      ),
+    )
+    const hardRuleset = hardPermissions({ agent: { name: input.agent.name, permission: input.agent.permission } })
+    return { ruleset, hardRuleset: hardRuleset ? dedupeRuleset(hardRuleset) : undefined }
+  }
+
   export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
@@ -262,29 +364,20 @@ export namespace KiloSessionPrompt {
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
 
-    // kilocode_change start - tag every rule with its true origin before merging, so the winning
-    // rule (chosen by findLast) reports the correct source instead of classify() having to guess.
-    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
-    // session.permission, so tag those inputs up front rather than the outer copy alone.
-    const taggedAgent = PermissionProvenance.tagAgent(agent.permission, input.origins)
-    const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
-    const ruleset = Permission.merge(
-      taggedAgent,
-      guardPermissions({ agent: { name: agent.name, permission: taggedAgent }, session: { permission: taggedSession } }),
-    )
-    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
+    const { ruleset, hardRuleset } = buildAskRuleset({
+      agent,
+      session,
+      origins: input.origins,
+    })
+    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
+
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
-    // kilocode_change end
   })
 
-  /**
-   * Mutable cache for environment details, keyed by user message ID
-   * so it recomputes when a new user message arrives.
-   */
+  /** Mutable per-turn cache for deterministic environment detail blocks. */
   export interface EnvCache {
-    block?: string
-    user?: string
+    blocks?: Map<string, string>
   }
 
   export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
@@ -356,46 +449,54 @@ export namespace KiloSessionPrompt {
   }
 
   /**
-   * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
-   * into the last user message. Caches the result per user message ID so repeated
-   * loop iterations produce byte-identical messages (prompt caching).
+   * Reconstructs dynamic editor context on every user message without
+   * persisting synthetic prompt scaffolding. Using each message's creation
+   * time keeps historical blocks byte-identical, so later turns only append
+   * instead of moving the block and discarding the provider prompt cache.
    */
   export function injectEditorContext(input: {
     msgs: MessageV2.WithParts[]
-    lastUser: MessageV2.User
+    session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache
   }) {
-    if (input.cache.user !== input.lastUser.id) {
-      const ctx = (() => {
-        try {
-          return Instance.current
-        } catch {
-          return undefined
-        }
-      })()
-      input.cache.block = environmentDetails({
-        ...input.lastUser.editorContext,
-        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
-      })
-      input.cache.user = input.lastUser.id
+    const route = {
+      directory: input.session.directory,
+      worktree: path.resolve(
+        input.session.directory,
+        ...(input.session.path
+          ?.split("/")
+          .filter(Boolean)
+          .map(() => "..") ?? []),
+      ),
     }
-    if (!input.cache.block) return
-    const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
-    if (idx === -1) return
-    input.msgs[idx] = {
-      ...input.msgs[idx],
-      parts: [
-        ...input.msgs[idx].parts,
-        {
-          id: PartID.make(Identifier.ascending("part")),
-          sessionID: input.sessionID,
-          messageID: input.msgs[idx].info.id,
-          type: "text",
-          text: input.cache.block,
-          synthetic: true,
-        } satisfies MessageV2.TextPart,
-      ],
+    input.cache.blocks ??= new Map()
+    for (const msg of input.msgs) {
+      if (msg.info.role !== "user") continue
+      if (
+        msg.parts.some(
+          (part) => part.type === "text" && part.synthetic && part.text.trimStart().startsWith("<environment_details>"),
+        )
+      )
+        continue
+      const block =
+        input.cache.blocks.get(msg.info.id) ??
+        environmentDetails(
+          {
+            ...route,
+            ...msg.info.editorContext,
+          },
+          new Date(msg.info.time.created),
+        )
+      input.cache.blocks.set(msg.info.id, block)
+      msg.parts.push({
+        id: PartID.make(Identifier.ascending("part")),
+        sessionID: input.sessionID,
+        messageID: msg.info.id,
+        type: "text",
+        text: block,
+        synthetic: true,
+      } satisfies MessageV2.TextPart)
     }
   }
 
@@ -434,7 +535,7 @@ export namespace KiloSessionPrompt {
     const ctx = Instance.bind(() => Instance.current)()
     const plan = Session.plan(input.session, ctx)
 
-    if (mode(input.agent.name) === "plan") add(NATIVE_PLAN_PROMPT)
+    if (mode(input.agent.name) === "plan") add(`\n\n${NATIVE_PLAN_PROMPT}`)
 
     const file = input.messages ? PlanFile.latest(input.messages) : undefined
     const saved = PlanFile.resolve(file, ctx)
@@ -451,11 +552,31 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      "In the visible final response, cite the saved plan path as an inline code span so the client can open it as a document. Cite other user-facing files you create the same way instead of pasting the full file into chat.",
       supportsPlanFollowup()
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
-    add(`<system-reminder>\n${body}\n</system-reminder>`)
+    add(`\n\n<system-reminder>\n${body}\n</system-reminder>`)
+  }
+
+  export function insertAgentSwitchReminder(input: {
+    agent: { name: string }
+    userMessage: MessageV2.WithParts
+    messages: MessageV2.WithParts[]
+  }) {
+    if (mode(input.agent.name) !== "code") return
+    const prior = input.messages.findLast((msg) => msg.info.id !== input.userMessage.info.id)
+    if (!prior || mode(prior.info.agent) !== "ask") return
+    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)) return
+    return {
+      id: PartID.ascending(),
+      messageID: input.userMessage.info.id,
+      sessionID: input.userMessage.info.sessionID,
+      type: "text" as const,
+      text: ASK_CODE_SWITCH,
+      synthetic: true,
+    }
   }
 
   /**

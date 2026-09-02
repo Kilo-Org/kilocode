@@ -8,6 +8,7 @@ import { checksum } from "@opencode-ai/core/util/encode"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Auth } from "@/auth" // kilocode_change - source Kilo bearer for Kilo-REST transport
+import { Env } from "@/env" // kilocode_change - config via Env.Service instead of process.env reads
 
 const MAX_RESULTS = 10 // kilocode_change - cap numResults across all transports
 
@@ -31,8 +32,13 @@ export const Parameters = Schema.Struct({
 const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa"]) // kilocode_change - kilo-exa env override
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
-export function selectWebSearchProvider(sessionID: string, flags = { exa: false, parallel: false }): WebSearchProvider {
-  const override = process.env.KILO_WEBSEARCH_PROVIDER
+// kilocode_change start - signature reflowed by the added override parameter (KILO_WEBSEARCH_PROVIDER resolved via Env.Service by the caller)
+export function selectWebSearchProvider(
+  sessionID: string,
+  flags = { exa: false, parallel: false },
+  override?: string,
+): WebSearchProvider {
+  // kilocode_change end
   if (override === "exa" || override === "parallel" || override === "kilo-exa") return override // kilocode_change - kilo-exa env override
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
@@ -55,17 +61,20 @@ export function webSearchModelName(extra: Tool.Context["extra"]) {
   return (apiID ?? id)?.slice(0, 100)
 }
 
-function parallelAuthHeaders() {
+// kilocode_change start - API keys are resolved via Env.Service in the tool and passed down
+function parallelAuthHeaders(apiKey: string | undefined) {
   const headers = { "User-Agent": `opencode/${InstallationVersion}` }
-  if (!process.env.PARALLEL_API_KEY) return headers
-  return { ...headers, Authorization: `Bearer ${process.env.PARALLEL_API_KEY}` }
+  if (!apiKey) return headers
+  return { ...headers, Authorization: `Bearer ${apiKey}` }
 }
+// kilocode_change end
 
 function callProvider(
   http: HttpClient.HttpClient,
   provider: WebSearchProvider,
   params: Schema.Schema.Type<typeof Parameters>,
   ctx: Tool.Context,
+  keys: { exa: string | undefined; parallel: string | undefined }, // kilocode_change
 ) {
   if (provider === "parallel") {
     return McpWebSearch.call(
@@ -80,13 +89,13 @@ function callProvider(
         model_name: webSearchModelName(ctx.extra),
       },
       "25 seconds",
-      parallelAuthHeaders(),
+      parallelAuthHeaders(keys.parallel), // kilocode_change
     )
   }
 
   return McpWebSearch.call(
     http,
-    McpWebSearch.EXA_URL,
+    McpWebSearch.exaUrl(keys.exa), // kilocode_change
     "web_search_exa",
     McpWebSearch.SearchArgs,
     {
@@ -106,6 +115,7 @@ export const WebSearchTool = Tool.define(
     const http = yield* HttpClient.HttpClient
     const flags = yield* RuntimeFlags.Service
     const authSvc = yield* Auth.Service // kilocode_change - source Kilo bearer for Kilo-REST transport
+    const env = yield* Env.Service // kilocode_change - config via Env.Service instead of process.env reads
 
     return {
       get description() {
@@ -114,10 +124,21 @@ export const WebSearchTool = Tool.define(
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
-          const provider = selectWebSearchProvider(ctx.sessionID, {
-            exa: flags.enableExa,
-            parallel: flags.enableParallel,
-          })
+          // kilocode_change start - config via Env.Service instead of process.env reads
+          const [override, exaKey, parallelKey] = yield* Effect.all([
+            env.get("KILO_WEBSEARCH_PROVIDER"),
+            env.get("EXA_API_KEY"),
+            env.get("PARALLEL_API_KEY"),
+          ])
+          const provider = selectWebSearchProvider(
+            ctx.sessionID,
+            {
+              exa: flags.enableExa,
+              parallel: flags.enableParallel,
+            },
+            override,
+          )
+          // kilocode_change end
           const title = webSearchProviderLabel(provider)
           // kilocode_change start - Kilo-REST Exa transport
           // Precedence:
@@ -137,7 +158,7 @@ export const WebSearchTool = Tool.define(
               ? "kilo-rest"
               : provider === "parallel"
                 ? "mcp-parallel"
-                : provider === "exa" && process.env.EXA_API_KEY
+                : provider === "exa" && exaKey
                   ? "mcp-exa-byok"
                   : provider === "exa" && kiloToken
                     ? "kilo-rest"
@@ -177,7 +198,7 @@ export const WebSearchTool = Tool.define(
                   kiloToken,
                 )
               : Effect.die(new Error("KILO_WEBSEARCH_PROVIDER=kilo-exa requires Kilo auth; run `kilo auth login`"))
-            : callProvider(http, provider, params, ctx)
+            : callProvider(http, provider, params, ctx, { exa: exaKey, parallel: parallelKey }) // kilocode_change
           // kilocode_change end
 
           return {

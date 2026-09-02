@@ -1,13 +1,16 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <plugin id="org.jetbrains.plugins.terminal"/>
+        <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
 
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
 
@@ -22,6 +25,12 @@
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
 
         <fileEditorProvider id="KiloVfsEditor" implementation="ai.kilocode.client.vfs.KiloFileEditorProvider"/>
+        <fileEditorProvider id="KiloVfsSourceEditor"
+                            order="after KiloVfsEditor"
+                            implementation="ai.kilocode.client.vfs.KiloSourceEditorProvider"/>
+        <fileType name="KILO_WORKTREE_SESSION"
+                  implementationClass="ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType"
+                  fieldName="INSTANCE"/>
 
         <applicationConfigurable
                 parentId="tools"
@@ -79,6 +88,22 @@
                 key="settings.autoApprove.displayName"/>
 
         <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.integrations"
+                groupWeight="-2"
+                instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.integrations.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-3"
+                instance="ai.kilocode.client.settings.AdvancedConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.advanced.displayName"/>
+
+        <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
                 instance="ai.kilocode.client.settings.agents.AgentsConfigurable"
@@ -98,6 +123,13 @@
                 instance="ai.kilocode.client.settings.agents.SkillsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.skills.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.workflows"
+                instance="ai.kilocode.client.settings.agents.WorkflowsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.workflows.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
@@ -122,7 +154,12 @@
                      restartRequired="false"
                      overrides="false"/>
         <registryKey key="kilo.session.validateRoots"
-                     description="Treat settled (non-streaming) transcript turns as Swing validate roots so their internal repaints do not relayout the whole transcript."
+                      description="Treat settled (non-streaming) transcript turns as Swing validate roots so their internal repaints do not relayout the whole transcript."
+                      defaultValue="true"
+                      restartRequired="false"
+                      overrides="false"/>
+        <registryKey key="kilo.diagram.inline.enabled"
+                     description="Render Mermaid diagram fences inline in markdown session views."
                      defaultValue="true"
                      restartRequired="false"
                      overrides="false"/>
@@ -144,7 +181,8 @@
                 class="ai.kilocode.client.actions.CoreInfoAction"/>
 
         <action id="Kilo.OpenSettings"
-                class="ai.kilocode.client.actions.OpenSettingsAction"/>
+                class="ai.kilocode.client.actions.OpenSettingsAction"
+                icon="AllIcons.General.GearPlain"/>
 
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
@@ -154,6 +192,9 @@
 
         <action id="Kilo.ForceMigration"
                 class="ai.kilocode.client.actions.ForceMigrationAction"/>
+
+        <action id="Kilo.OpenSetupScript"
+                class="ai.kilocode.client.actions.OpenSetupScriptAction"/>
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
@@ -184,12 +225,26 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
+        <action id="Kilo.NewWorktree"
+                class="ai.kilocode.client.actions.NewWorktreeAction"/>
+
+        <action id="Kilo.Chat.NewWorktree"
+                class="ai.kilocode.client.actions.ChatNewWorktreeAction"
+                text="New Worktree"
+                description="Create a new git worktree with its own branch and session"/>
+
+        <action id="Kilo.Chat.MoveToWorktree"
+                class="ai.kilocode.client.actions.ChatMoveToWorktreeAction"
+                text="Move to Worktree"
+                description="Move this session into a new git worktree"/>
+
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
         <!-- Declarative toolbar group for the Kilo tool window title bar -->
         <group id="Kilo.ToolWindowToolbar">
             <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.NewWorktree"/>
             <reference ref="Kilo.History"/>
             <reference ref="Kilo.Settings"/>
         </group>
@@ -227,6 +282,61 @@
                 class="ai.kilocode.client.actions.DeleteSessionAction"
                 use-shortcut-of="$Delete"/>
 
+        <action id="Kilo.Worktree.Rename"
+                class="ai.kilocode.client.actions.RenameWorktreeAction"/>
+
+        <action id="Kilo.Worktree.Delete"
+                class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
+
+        <action id="Kilo.Worktree.OpenPr"
+                class="ai.kilocode.client.actions.OpenWorktreePrAction"/>
+
+        <action id="Kilo.Worktree.CopyPrRef"
+                class="ai.kilocode.client.actions.CopyWorktreePrRefAction"/>
+
+        <action id="Kilo.Worktree.OpenDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeDiffAction"/>
+
+        <action id="Kilo.Worktree.OpenLocalDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
+
+        <action id="Kilo.Worktree.CopyBranchName"
+                class="ai.kilocode.client.actions.CopyBranchNameAction"/>
+
+        <action id="Kilo.Worktree.CopyBranchPath"
+                class="ai.kilocode.client.actions.CopyBranchPathAction"/>
+
+        <action id="Kilo.Worktree.RunSetupScript"
+                class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
+
+        <action id="Kilo.WorktreeSession.Rename"
+                class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
+
+        <action id="Kilo.WorktreeSession.Delete"
+                class="ai.kilocode.client.actions.DeleteWorktreeSessionAction"/>
+
+        <group id="Kilo.Worktree.RowMenu">
+            <reference ref="Kilo.Worktree.Rename"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.Worktree.CopyPrRef"/>
+            <reference ref="Kilo.Worktree.OpenDiff"/>
+            <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.CopyBranchName"/>
+            <reference ref="Kilo.Worktree.CopyBranchPath"/>
+            <separator/>
+            <reference ref="Kilo.OpenSetupScript"/>
+            <reference ref="Kilo.Worktree.RunSetupScript"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.Delete"/>
+        </group>
+
+        <group id="Kilo.WorktreeSession.RowMenu">
+            <reference ref="Kilo.WorktreeSession.Rename"/>
+            <reference ref="Kilo.WorktreeSession.Delete"/>
+        </group>
+
         <group id="Kilo.History.ContextMenu">
             <reference ref="Kilo.Session.Open"/>
             <separator/>
@@ -234,8 +344,67 @@
             <reference ref="Kilo.Session.Delete"/>
         </group>
 
+        <!-- Text and descriptions come from KiloBundle via action.<id>.text / .description. -->
+        <action id="Kilo.Session.AutoApprove"
+                class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
+
+        <action id="Kilo.Session.CompareToBase"
+                class="ai.kilocode.client.actions.CompareToBaseAction"/>
+
+        <action id="Kilo.Session.OpenPr"
+                class="ai.kilocode.client.actions.OpenSessionPrAction"/>
+
+        <action id="Kilo.Session.CopyPrRef"
+                class="ai.kilocode.client.actions.CopySessionPrRefAction"/>
+
+        <action id="Kilo.Session.CopyId"
+                class="ai.kilocode.client.actions.CopySessionIdAction"/>
+
+        <action id="Kilo.Session.Share"
+                class="ai.kilocode.client.actions.ShareSessionAction"/>
+
+        <action id="Kilo.Session.CopyShareLink"
+                class="ai.kilocode.client.actions.CopyShareLinkAction"/>
+
+        <!--
+          Right-click menu inside a chat session. Every item resolves its context from
+          SessionActionsKeys.ACTIONS (or PromptDataKeys.SEND) which SessionUi publishes, so the menu
+          works from any point in the session. Items hide rather than disable when they do not apply,
+          which keeps the menu short in the common case. New Worktree / Move to Worktree live only on
+          the branch dock toolbar, not here.
+        -->
         <group id="Kilo.Session.ContextMenu">
+            <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.CompareToBase"/>
+            <reference ref="Kilo.Session.OpenPr"/>
+            <reference ref="Kilo.Session.CopyPrRef"/>
+            <separator/>
             <reference ref="$Copy"/>
+            <separator/>
+            <reference ref="Kilo.Session.CopyId"/>
+            <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.Session.Share"/>
+            <separator/>
+            <reference ref="Kilo.StopSession"/>
+        </group>
+
+        <!--
+          Popup shown from the "more" icon in the prompt bar. Same SessionActionsKeys.ACTIONS context
+          as the context menu, with Copy and Stop reserved for the right-click menu.
+        -->
+        <group id="Kilo.Session.PromptMenu">
+            <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.CompareToBase"/>
+            <reference ref="Kilo.Session.OpenPr"/>
+            <reference ref="Kilo.Session.CopyPrRef"/>
+            <separator/>
+            <reference ref="Kilo.Session.CopyId"/>
+            <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.Session.Share"/>
         </group>
     </actions>
 </idea-plugin>

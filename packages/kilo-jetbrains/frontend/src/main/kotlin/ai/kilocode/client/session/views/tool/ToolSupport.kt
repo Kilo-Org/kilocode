@@ -7,6 +7,7 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.ui.SessionCodeScroll
 import ai.kilocode.client.session.ui.fileLinkHtml
 import ai.kilocode.client.session.ui.fileLinkText
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -125,7 +126,7 @@ class FileLinkLabel(
     init {
         isVisible = false
         isFocusable = false
-        foreground = UiStyle.Colors.fg()
+        foreground = SessionUiStyle.Colors.foreground()
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         setRequestFocusEnabled(false)
         addMouseListener(object : MouseAdapter() {
@@ -191,7 +192,7 @@ class ToolBody private constructor(
 
     var foreground: Color
         @RequiresEdt
-        get() = area?.foreground ?: ed?.foreground ?: UiStyle.Colors.fg()
+        get() = area?.foreground ?: ed?.foreground ?: SessionUiStyle.Colors.foreground()
         @RequiresEdt
         set(value) {
             area?.foreground = value
@@ -306,29 +307,24 @@ class ToolBody private constructor(
             caret.isSelectionVisible = true
             lineWrap = wrap
             wrapStyleWord = wrap
-            foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
-            background = SessionUiStyle.View.Surface.bgColor()
+            foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
+            background = SessionUiStyle.Colors.codeBlockBackground()
             border = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             )
         }
 
-        private fun pane(view: JComponent, scrolls: Boolean) = JBScrollPane(view).apply {
-            border = JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            )
+        private fun pane(view: JComponent, scrolls: Boolean) = SessionCodeScroll(view).apply {
+            // No separator line: the card's transparent header-to-content gap already sets the body
+            // apart, so the body is a raised, rounded code surface matching the header block arc.
+            border = JBUI.Borders.empty()
             viewportBorder = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             ).takeIf { scrolls }
-            isOpaque = true
-            background = SessionUiStyle.View.Surface.bgColor()
-            viewport.background = SessionUiStyle.View.Surface.bgColor()
+            viewport.isOpaque = true
+            viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             horizontalScrollBarPolicy = if (scrolls) {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             } else {
@@ -370,9 +366,9 @@ private class ToolField(value: String, private var style: SessionEditorStyle, pr
             ed.setBorder(JBUI.Borders.empty())
             ed.scrollPane.border = JBUI.Borders.empty()
             ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ed.backgroundColor = SessionUiStyle.View.Surface.bgColor()
-            ed.scrollPane.background = SessionUiStyle.View.Surface.bgColor()
-            ed.scrollPane.viewport.background = SessionUiStyle.View.Surface.bgColor()
+            ed.backgroundColor = SessionUiStyle.Colors.codeBlockBackground()
+            ed.scrollPane.background = SessionUiStyle.Colors.codeBlockBackground()
+            ed.scrollPane.viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             ed.settings.isUseSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -404,14 +400,14 @@ internal fun toolParts(
 ): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val link = clip(FileLinkLabel(openFile))
     val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
@@ -426,10 +422,10 @@ internal fun toolParts(
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val targets = List(count) {
         clip(JBLabel()).apply {
-            foreground = UiStyle.Colors.fg()
+            foreground = SessionUiStyle.Colors.foreground()
         }
     }
     val link = clip(FileLinkLabel())
@@ -438,7 +434,7 @@ internal fun searchParts(count: Int): ToolParts {
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val target = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         targets.forEach { next(it) }
@@ -568,7 +564,7 @@ internal fun color(tool: Tool) = when (tool.state) {
 internal fun titleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
-    UiStyle.Colors.fg()
+    SessionUiStyle.Colors.foreground()
 }
 
 internal fun stateText(tool: Tool) = when (tool.state) {
@@ -650,6 +646,19 @@ internal fun output(tool: Tool): String =
 internal fun preview(tool: Tool): String = if (tool.name == "bash") shellPreview(tool) else plainPreview(tool)
 
 internal fun body(tool: Tool): String = if (tool.name == "bash") shellBody(tool) else plainBody(tool)
+
+/** Fenced markdown of a tool's body text for the collapsed hover popup; empty when nothing to show. */
+internal fun toolBodyMarkdown(tool: Tool): String {
+    val text = body(tool)
+    if (text.isBlank()) return ""
+    val fence = fence(text)
+    return buildString {
+        append(fence).append('\n')
+        append(text)
+        if (!text.endsWith('\n')) append('\n')
+        append(fence)
+    }
+}
 
 private fun shellPreview(tool: Tool): String {
     val cmd = command(tool)

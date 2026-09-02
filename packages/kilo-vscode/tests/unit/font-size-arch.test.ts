@@ -102,6 +102,15 @@ describe("webview font-size architecture", () => {
     ).toEqual([])
   })
 
+  it("scales answered questions with the tool output font", () => {
+    const css = fs.readFileSync(path.join(REPO, "packages/kilo-ui/src/components/message-part.css"), "utf-8")
+    const block = css.slice(css.indexOf('[data-component="question-answers"]'))
+    expect(block.slice(0, block.indexOf('[data-slot="question-answer-item"]'))).toContain(
+      "font-size: var(--kilo-font-size-12)",
+    )
+    expect(block.match(/\[data-slot="question-answer-item"\]\s*\{([^}]+)\}/)?.[1]).toContain("font-size: inherit")
+  })
+
   it("uses scalable line heights in polished tool previews", () => {
     const files = [
       path.join(REPO, "packages/kilo-ui/src/components/basic-tool.css"),

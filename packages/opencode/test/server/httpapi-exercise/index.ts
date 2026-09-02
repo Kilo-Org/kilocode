@@ -37,6 +37,7 @@ import { disposeApps } from "./backend"
 import { publicApi, runtime } from "./runtime" // kilocode_change
 import { type Scenario, type Result } from "./types"
 import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
+import { sessionAfterDefaultAgent } from "../../kilocode/server/httpapi-exercise-ready" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -183,6 +184,11 @@ const scenarios: Scenario[] = [
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
+    // kilocode_change start - isolated git project: a non-git directory resolves to the
+    // shared global project (worktree "/"), and this scenario PATCHes the row — without
+    // isolation the mutation would leak into every later non-git scenario in the same pass.
+    .inProject({ git: true })
+    // kilocode_change end
     .seeded((ctx) => ctx.project())
     .at((ctx) => ({
       path: route("/project/{projectID}", { projectID: ctx.state.id }),
@@ -585,7 +591,7 @@ const scenarios: Scenario[] = [
     }))
     .json(200, array, "status"),
   http.protected.get("/experimental/tool/ids", "tool.ids").json(200, array),
-  http.protected.get("/experimental/worktree", "worktree.list").json(200, array),
+  http.protected.get("/experimental/worktree", "worktree.list").inProject({ git: true }).json(200, array), // kilocode_change
   http.protected
     .post("/experimental/worktree", "worktree.create")
     .mutating()
@@ -635,8 +641,12 @@ const scenarios: Scenario[] = [
     .at((ctx) => ({ path: "/experimental/session?roots=false&archived=false", headers: ctx.headers() }))
     .json(200, array),
   http.protected.get("/experimental/capabilities", "experimental.capabilities.get").json(200, (body) => {
-    check(typeof body === "object" && body !== null, "capabilities should be an object")
-    check("backgroundSubagents" in body, "capabilities should report background subagents")
+    // kilocode_change start - background subagents are always available
+    check(
+      typeof body === "object" && body !== null && "backgroundSubagents" in body && body.backgroundSubagents === true,
+      "capabilities should report background subagents as available",
+    )
+    // kilocode_change end
   }),
   http.protected
     .post("/experimental/session/{sessionID}/background", "experimental.session.background")
@@ -872,7 +882,7 @@ const scenarios: Scenario[] = [
   }),
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
-    .seeded((ctx) => ctx.session({ title: "Permission create owner" }))
+    .seeded((ctx) => sessionAfterDefaultAgent(ctx, "Permission create owner")) // kilocode_change
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
       headers: ctx.headers(),
@@ -885,7 +895,7 @@ const scenarios: Scenario[] = [
       object(body)
       object(body.data)
       check(typeof body.data.id === "string", "permission create should return an ID")
-      check(body.data.effect === "ask", "permission create should create a pending request")
+      check(body.data.effect === "ask", `permission create should create a pending request, got ${JSON.stringify(body.data.effect)}`) // kilocode_change
     }),
   http.protected
     .get("/api/session/{sessionID}/permission", "v2.session.permission.list")
@@ -1854,7 +1864,33 @@ const main = Effect.gen(function* () {
     (scenario) =>
       Effect.gen(function* () {
         if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
-        return yield* runScenario(options)(scenario)
+        // kilocode_change start - retry a failed scenario before failing the pass, mirroring
+        // the unit runner's pass-after-retry policy: contention flakes recover while real
+        // regressions still fail every attempt. Retries stay visible in output.
+        const result = yield* runScenario(options)(scenario)
+        if (result.status !== "fail") return result
+        // preserveDatabase scenarios skip resetState between attempts; retrying them
+        // would run against state the failed attempt already mutated and can mask a
+        // real regression as FLAKY. Everything else resets, so retrying is sound.
+        if (scenario.kind !== "active" || !scenario.reset) return result
+        // Back off before retrying: the observed failure mode is a readiness race (agent
+        // projections still warming when the request lands). Sharded child processes run
+        // fewer scenarios each, so early scenarios land in a colder process where one
+        // second is not always enough.
+        let last: Result = result
+        for (const backoff of ["1 second", "3 seconds"] as const) {
+          console.log(
+            `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
+          )
+          yield* Effect.sleep(backoff)
+          last = yield* runScenario(options)(scenario)
+          if (last.status !== "fail") {
+            console.log(`${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`)
+            break
+          }
+        }
+        return last
+        // kilocode_change end
       }),
     { concurrency: 1 },
   )

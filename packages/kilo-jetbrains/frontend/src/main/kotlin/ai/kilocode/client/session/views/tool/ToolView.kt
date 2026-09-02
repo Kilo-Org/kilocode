@@ -3,10 +3,11 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -21,7 +22,8 @@ class ToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
-) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }), UiDataProvider {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -31,7 +33,6 @@ class ToolView(
     private var disposed = false
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot)
         applyStyle(style)
         sync()
     }
@@ -55,7 +56,7 @@ class ToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight() + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -68,7 +69,16 @@ class ToolView(
         if (was != content.name || !canExpand(content)) changed = collapse() || changed
         changed = sync() || changed
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        val md = toolBodyMarkdown(item)
+        return popup("tool", item.name, md.isNotBlank()) {
+            markdownPopupBody(style, md, options = POPUP_OPTS, foreground = bodyColor())
+        }
     }
 
     @RequiresEdt
@@ -124,7 +134,15 @@ class ToolView(
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = applyBodyStyle() || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -138,6 +156,7 @@ class ToolView(
             body.foreground = bodyColor()
             changed = true
         }
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 
@@ -181,7 +200,7 @@ class ToolView(
         return body.applyStyle(style)
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
 
     private fun bodyMaxHeight(): Int {
         val body = parts.content ?: return 0

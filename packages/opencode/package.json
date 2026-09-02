@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.4.21",
+  "version": "7.5.9",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -8,7 +8,7 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun run script/test-runner.ts",
-    "test:httpapi": "bun run script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode auth --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode effect --fail-on-missing --fail-on-skip",
+    "test:httpapi": "bun run script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode auth --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode effect --fail-on-missing --fail-on-skip --shards 4",
     "bench:test": "bun run script/bench-test-suite.ts",
     "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
@@ -62,7 +62,7 @@
     "why-is-node-running": "3.2.2",
     "@types/npmcli__arborist": "6.3.3",
     "@opencode-ai/http-recorder": "workspace:*",
-    "@babel/core": "7.28.4",
+    "@babel/core": "7.29.6",
     "@standard-schema/spec": "1.0.0",
     "@types/babel__core": "7.20.5"
   },
@@ -156,7 +156,7 @@
     "jsonc-parser": "3.3.1",
     "mammoth": "1.12.0",
     "mime-types": "3.0.2",
-    "minimatch": "10.0.3",
+    "minimatch": "10.2.6",
     "npm-package-arg": "13.0.2",
     "open": "10.1.2",
     "opencode-gitlab-auth": "2.1.0",

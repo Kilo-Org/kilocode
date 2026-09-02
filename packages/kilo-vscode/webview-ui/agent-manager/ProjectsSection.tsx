@@ -13,8 +13,8 @@ interface ProjectsSectionProps {
   onAdd: () => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
-  onTrust: (id: string) => void
   onExpand: (id: string, expanded: boolean) => void
+  onHistory: (id: string) => void
   count: (id: string) => number | undefined
   tools?: JSX.Element
   body: (project: AgentProjectSnapshot) => JSX.Element
@@ -67,37 +67,42 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                     <Show when={project().missing}>
                       <Icon name="warning" size="small" />
                     </Show>
-                    <Show when={!project().trusted && !project().missing}>
-                      <span class="am-project-trust">
-                        <Icon name="lock" size="small" />
-                        {props.t("agentManager.project.trust")}
-                      </span>
-                    </Show>
                   </>
                 }
                 actions={
-                  <Show when={!project().pinned}>
+                  <div class="am-project-actions-row">
                     <IconButton
-                      icon="close-small"
+                      icon="history"
                       size="small"
                       variant="ghost"
-                      label={props.t("agentManager.project.remove")}
+                      aria-label={props.t("session.showHistory")}
                       onClick={(event) => {
                         event.stopPropagation()
-                        props.onRemove(project().id)
+                        props.onHistory(project().id)
                       }}
                     />
-                  </Show>
+                    <Show when={!project().pinned}>
+                      <IconButton
+                        icon="close-small"
+                        size="small"
+                        variant="ghost"
+                        label={props.t("agentManager.project.remove")}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          props.onRemove(project().id)
+                        }}
+                      />
+                    </Show>
+                  </div>
                 }
                 onToggle={() => {
                   if (project().missing) return
-                  if (!project().trusted) {
-                    props.onTrust(project().id)
-                    return
-                  }
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                  if (!project().active && project().trusted) props.onSelect(project().id)
+                }}
+                onClick={() => {
+                  if (project().missing) return
+                  if (!project().active) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>

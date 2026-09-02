@@ -197,6 +197,7 @@ export const dict = {
   "ui.patch.action.created": "已建立",
   "ui.patch.action.moved": "已移動",
   "ui.patch.action.patched": "已套用修補",
+  "ui.patch.action.plan": "計畫", // kilocode_change
 
   "ui.question.subtitle.answered": "已回答 {{count}} 題",
   "ui.question.answer.none": "（無答案）",
@@ -231,7 +232,6 @@ export const dict = {
   "ui.mermaid.copyPng": "複製 PNG",
   "ui.mermaid.downloadSvg": "下載 SVG",
   "ui.mermaid.downloadPng": "下載 PNG",
-  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行",
   "ui.message.deleteQueued": "刪除排隊中的訊息",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

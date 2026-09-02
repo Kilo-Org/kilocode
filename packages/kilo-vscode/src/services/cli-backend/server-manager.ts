@@ -6,7 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
-import { parseServerPort } from "./server-utils"
+import { scanServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -15,6 +15,7 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+const STARTUP_OUTPUT_LIMIT = 1024
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null, signal: NodeJS.Signals | null) => void
@@ -44,6 +45,7 @@ export class ServerManager {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly onExit?: ServerExitListener,
+    private readonly env?: () => Promise<Record<string, string>>,
   ) {}
 
   /**
@@ -89,6 +91,7 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[Kilo New] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
+    const extraEnv = await this.env?.()
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
@@ -155,6 +158,7 @@ export class ServerManager {
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
           ...bwrapEnv,
+          ...extraEnv,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
@@ -162,13 +166,16 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      let output = ""
       const stderrLines: string[] = []
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
-        const output = data.toString()
-        console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
+        const chunk = data.toString()
+        console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", chunk)
 
-        const port = parseServerPort(output)
+        const state = scanServerPort(output, chunk, STARTUP_OUTPUT_LIMIT)
+        output = state.output
+        const port = state.port
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)

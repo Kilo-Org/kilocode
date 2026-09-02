@@ -166,6 +166,83 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(view.html().contains("https://example.com"))
     }
 
+    fun `test inline code urls become underlined link colored links`() {
+        view.set("Release PR: `https://github.com/Kilo-Org/kilocode/pull/13524`")
+        val code = MdCommon.hex(MdCommon.defaults(SessionEditorStyle.current()).inlineCodeFg)
+        val link = MdCommon.hex(MdCommon.defaults(SessionEditorStyle.current()).linkColor)
+        val html = view.html()
+        val sheet = view.overrideSheet()
+
+        assertTrue(
+            html.contains(
+                "<code style=\"color: $code\">" +
+                    "<a class=\"kilo-url-ref\" href=\"https://github.com/Kilo-Org/kilocode/pull/13524\">" +
+                    "https://github.com/Kilo-Org/kilocode/pull/13524</a></code>",
+            ),
+        )
+        assertTrue(sheet.contains("a.kilo-url-ref, code a.kilo-url-ref { color: $link; font-family:"))
+        assertTrue(sheet.contains("monospace; text-decoration: underline"))
+    }
+
+    fun `test inline code urls keep query separators in href`() {
+        view.set("Open `https://example.com/a?b=1&c=2` now")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a?b=1&amp;c=2\">https://example.com/a?b=1&amp;c=2</a>"))
+    }
+
+    fun `test inline code urls exclude trailing punctuation and unbalanced brackets`() {
+        view.set("See `https://example.com/a.` and `(https://example.com/b)`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>."))
+        assertTrue(html.contains("(<a class=\"kilo-url-ref\" href=\"https://example.com/b\">https://example.com/b</a>)"))
+    }
+
+    fun `test inline code urls keep balanced brackets inside link`() {
+        view.set("See `https://example.com/a_(b)`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a_(b)\">https://example.com/a_(b)</a>"))
+    }
+
+    fun `test autolinked urls are not wrapped again`() {
+        view.set("Visit https://example.com/a for details")
+        val html = view.html()
+
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test markdown link urls are not wrapped again`() {
+        view.set("[docs](https://example.com/a)")
+        val html = view.html()
+
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test fenced code urls are not links`() {
+        view.set("```text\nhttps://example.com/a\n```")
+        val html = view.html()
+
+        assertTrue(html.contains("https://example.com/a"))
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test inline code urls do not swallow following file refs`() {
+        view.set("`https://example.com/a` then packages/opencode/src/session/prompt.ts")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>"))
+        assertTrue(html.contains("<a class=\"kilo-file-ref\" href=\"packages/opencode/src/session/prompt.ts\">"))
+    }
+
+    fun `test inline code urls stop at characters that cannot appear in a url`() {
+        view.set("See `https://example.com/a<b>`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>&lt;b&gt;"))
+    }
+
     // ---- append ----
 
     fun `test append accumulates source`() {
@@ -311,9 +388,17 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(pre.contains("border-color:"))
     }
 
+    fun `test override sheet disables html code block borders`() {
+        val sheet = view.overrideSheet()
+        val pre = sheet.substringAfter("pre {").substringBefore("} pre code")
+
+        assertTrue(pre.contains("border-width: 0"))
+    }
+
     fun `test applyStyle derives markdown colors from editor scheme`() {
         val style = customStyle()
         val color = MdCommon.hex(SessionUiStyle.View.Markdown.string())
+        val pre = MdCommon.hex(style.editorBackground)
         val quote = "#445566"
 
         view.applyStyle(style)
@@ -325,7 +410,7 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(html.contains("<code style=\"color: $color\">inline</code>"))
         assertFalse(html.contains("background: #112233"))
         assertFalse(html.contains("#cc8866"))
-        assertTrue(sheet.contains("pre { background: #445566; color: #ddeeff; border-color: #223344"))
+        assertTrue(sheet.contains("pre { background: $pre; color: #ddeeff; border-color: #223344"))
         assertTrue(sheet.contains("blockquote { background:"))
         assertTrue(sheet.contains("border-left-color: #223344; color: $quote"))
         assertTrue(sheet.contains("blockquote p { color: $quote"))
@@ -353,6 +438,13 @@ class MdViewTest : BasePlatformTestCase() {
         assertFalse(view.html().contains("#102030"))
     }
 
+    fun `test inline code rule disables borders`() {
+        val sheet = view.overrideSheet()
+        val code = sheet.substringAfter("tt, code, samp, pre, pre code {").substringBefore("}")
+
+        assertTrue(code.contains("border-width: 0"))
+    }
+
     fun `test pre bg and fg overrides appear in override sheet`() {
         view.preBg = Color(0x0A, 0x0B, 0x0C)
         view.preFg = Color(0xD0, 0xE0, 0xF0)
@@ -368,7 +460,7 @@ class MdViewTest : BasePlatformTestCase() {
         view.set("`x`")
         val sheet = view.overrideSheet()
 
-        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Fira Code', monospace"))
+        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Fira Code', monospace; border-width: 0"))
         assertTrue(sheet.contains("a.kilo-file-ref, code a.kilo-file-ref { color:"))
         assertTrue(sheet.contains("font-family: 'Fira Code', monospace; text-decoration: underline"))
     }
@@ -382,7 +474,7 @@ class MdViewTest : BasePlatformTestCase() {
 
         assertTrue(sheet.contains("body { color:"))
         assertTrue(sheet.contains("font-family: '${style.transcriptFont.name}', sans-serif"))
-        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Courier New', monospace"))
+        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Courier New', monospace; border-width: 0"))
     }
 
     fun `test blockquote color overrides appear in override sheet`() {

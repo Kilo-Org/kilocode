@@ -58,7 +58,7 @@ export namespace KiloSession {
       }
     })
     if (!ctx) return
-    Bus.publish(ctx, Event.QueueChanged, input).catch(err => log.warn("queue changed publish failed", { err }))
+    Bus.publish(ctx, Event.QueueChanged, input).catch((err) => log.warn("queue changed publish failed", { err }))
   }
 
   // ---------------------------------------------------------------------------
@@ -137,16 +137,29 @@ export namespace KiloSession {
     rows: Array<Pick<typeof ProjectTable.$inferSelect, "id" | "worktree" | "sandboxes">>,
     directories: string[] = [],
   ): string[] {
+    const resolve = (dir: string) => {
+      try {
+        return Filesystem.resolve(dir)
+      } catch (err) {
+        const code = typeof err === "object" && err !== null && "code" in err ? err.code : undefined
+        if (code !== "EPERM" && code !== "EACCES") throw err
+        log.warn("Ignoring inaccessible saved project directory", { dir, code })
+        return undefined
+      }
+    }
     const current = rows.find((row) => row.id === id)
-    const root = current?.worktree ? Filesystem.resolve(current.worktree) : undefined
+    const root = current?.worktree ? resolve(current.worktree) : undefined
     // Combine the stored root with Git's current sibling worktrees.
     const roots = new Set([...(root && root !== "/" ? [root] : []), ...directories.map(Filesystem.resolve)])
     if (roots.size === 0) return [id]
 
     // Match both each project's recorded root and its saved worktrees.
     const ids = rows.flatMap((row) => {
-      const dirs = [row.worktree, ...row.sandboxes].map(Filesystem.resolve)
-      return dirs.some((dir) => roots.has(dir)) ? [row.id] : []
+      const match = [row.worktree, ...row.sandboxes].some((dir) => {
+        const value = resolve(dir)
+        return value !== undefined && roots.has(value)
+      })
+      return match ? [row.id] : []
     })
     // Always keep the requested ID and remove duplicates.
     return [...new Set([id, ...ids])]

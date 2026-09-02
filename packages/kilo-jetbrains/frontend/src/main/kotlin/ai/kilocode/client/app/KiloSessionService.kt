@@ -5,9 +5,9 @@ package ai.kilocode.client.app
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -18,6 +18,8 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -32,10 +34,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -59,12 +63,35 @@ class KiloSessionService internal constructor(
         private val LOG = KiloLog.create(KiloSessionService::class.java)
     }
 
+    // Reflects the sessions from the most recent tracking [list]/[renameSession] call, which is
+    // scoped to a single directory. It is NOT a per-workspace source of truth: a caller listing a
+    // different directory (e.g. an Agent Manager worktree tab) overwrites it. Directory-scoped
+    // callers must consume the return value of [list]/[sessionsFor], never this flow.
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
-    /** Live session status map from SSE events. */
+    // Sessions deleted this run. The backend does not always emit a status/activity clear for a
+    // session left in a waiting or failed state, so a deleted question/error entry would otherwise
+    // linger and keep its badge on the session list, worktree list, and tab attention dot. Pruning
+    // it locally forces every derived status to re-evaluate the moment the delete resolves.
+    private val removed = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Live session status map from SSE events, minus sessions deleted this run. */
     val statuses: StateFlow<Map<String, SessionStatusDto>> =
-        stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+        combine(stream { statuses() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /** Live session activity map from backend global events, minus sessions deleted this run. */
+    val activity: StateFlow<Map<String, SessionActivityDto>> =
+        combine(stream { activity() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * Session create/update/delete across every directory the CLI serves, including sessions
+     * started in another project frame. Consumers filter by directory and must coalesce: a single
+     * turn produces many `session.updated` events as the title and summary stream in.
+     */
+    val changes: Flow<SessionChangeDto> = stream { changes() }
 
     // ------ RPC helpers ------
 
@@ -92,10 +119,19 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activity(): Map<String, SessionActivityKind> =
-        statuses.value
-            .filterValues { it.type == "busy" }
-            .mapValues { SessionActivityKind.RUNNING }
+    /**
+     * Per-session activity for history and session lists. [activity] is the richer source — it also
+     * carries waiting and failed sessions, and it covers sessions that are not open — but it drops
+     * sessions whose directory the backend cannot resolve, so the busy statuses stay as a fallback.
+     *
+     * [statuses] and [activity] prune [removed] through separate collectors, so one can still carry
+     * a deleted session while the other has already dropped it. Subtracting [removed] here keeps the
+     * merged snapshot consistent instead of briefly badging a deleted session as running.
+     */
+    internal fun activitySnapshot(): Map<String, SessionActivityKind> {
+        val busy = statuses.value.filterValues { it.type == "busy" }.mapValues { SessionActivityKind.RUNNING }
+        return (busy + activity.value.mapValues { it.value.kind.toKind() }) - removed.value
+    }
 
     suspend fun list(dir: String): SessionListDto {
         val result = call { list(dir) }
@@ -103,7 +139,14 @@ class KiloSessionService internal constructor(
         return result
     }
 
-    /** Load recent sessions for the current worktree family. */
+    /**
+     * List sessions for [dir] without touching the shared [sessions] flow. Use this for
+     * directory-scoped views (e.g. Agent Manager worktree tabs) that maintain their own model, so a
+     * background refresh does not clobber the primary workspace's [sessions] snapshot.
+     */
+    suspend fun sessionsFor(dir: String): SessionListDto = call { list(dir) }
+
+    /** Load recent sessions for the worktree containing [dir]; sibling worktrees are excluded. */
     suspend fun recent(dir: String, limit: Int): List<SessionDto> =
         call { recent(dir, limit) }.sessions
 
@@ -113,9 +156,9 @@ class KiloSessionService internal constructor(
 
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
-        log.info("create: dir=$dir")
+        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")
         val session = call { create(dir) }
-        log.info("create: id=${session.id}")
+        log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
         return session
     }
@@ -132,12 +175,31 @@ class KiloSessionService internal constructor(
     }
 
     suspend fun deleteSession(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
+        removed.update { it + id }
         list(dir)
     }
 
     suspend fun renameSession(id: String, dir: String, newTitle: String): ai.kilocode.rpc.dto.SessionDto {
         val session = call { rename(id, dir, newTitle) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
+    /** Create a public share link. Throws when the CLI refuses (no credentials, sharing disabled). */
+    suspend fun shareSession(id: String, dir: String): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session share=true dir=${ChatLogSummary.dir(dir)}")
+        val session = call { share(id, dir) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
+    /** Revoke a public share link. */
+    suspend fun unshareSession(id: String, dir: String): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session unshare=true dir=${ChatLogSummary.dir(dir)}")
+        val session = call { unshare(id, dir) }
         _sessions.value = _sessions.value.map { if (it.id == id) session else it }
         return session
     }
@@ -252,11 +314,6 @@ class KiloSessionService internal constructor(
                 }
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=client-events stop=true failed message=${cause.message}", cause)
             }
-    }
-
-    /** Update config (model, agent/mode, temperature). */
-    suspend fun updateConfig(dir: String, config: ConfigUpdateDto) {
-        call { updateConfig(dir, config) }
     }
 
     // ------ permission / question resolution ------

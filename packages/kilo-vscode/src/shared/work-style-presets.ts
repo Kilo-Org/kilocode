@@ -67,7 +67,6 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
       terminal_command_display: "expanded",
       auto_collapse_reasoning: false,
       permission: {
-        "*": "ask",
         read: {
           "*": "allow",
           "*.env": "ask",

@@ -5,6 +5,8 @@ description: "Browse and switch models from the Control UI chat"
 
 # Changing Models
 
+{% partial file="kiloclaw-eol.md" /%}
+
 The Control UI Chat tab doubles as a command line for model management. KiloClaw exposes 335+ models through the `kilocode` provider and you can browse and switch between them without leaving the chat.
 
 | Command | Description |

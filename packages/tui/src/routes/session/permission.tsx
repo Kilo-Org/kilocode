@@ -334,6 +334,27 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               }
             }
 
+            // kilocode_change start - show sandbox escalation details and keep approval one-shot
+            if (permission === "sandbox_escalation") {
+              const meta = props.request.metadata ?? {}
+              const command = normalizeUrls(
+                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
+              )
+              return {
+                icon: "!",
+                title: "Allow Git operation outside the sandbox?",
+                body: (
+                  <box paddingLeft={1} flexDirection="column">
+                    <Show when={command}>
+                      <text fg={theme.text}>{"$ " + command}</text>
+                    </Show>
+                    <text fg={theme.textMuted}>This approval applies to this command only.</text>
+                  </box>
+                ),
+              }
+            }
+            // kilocode_change end
+
             if (permission === "task") {
               const type = typeof data.subagent_type === "string" ? data.subagent_type : "Unknown"
               const desc = typeof data.description === "string" ? data.description : ""
@@ -463,11 +484,12 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
           )
 
           // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
-          const options: Record<string, string> = props.request.metadata?.["skillShell"]
-            ? { once: "Allow", reject: "Reject" }
-            : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-              ? { once: "Allow once", reject: "Reject" }
-              : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          const options: Record<string, string> =
+            props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
+              ? { once: "Allow", reject: "Reject" }
+              : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+                ? { once: "Allow once", reject: "Reject" }
+                : { once: "Allow once", always: "Allow always", reject: "Reject" }
           // kilocode_change end
 
           const body = (

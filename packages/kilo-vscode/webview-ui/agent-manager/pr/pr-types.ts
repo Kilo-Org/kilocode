@@ -13,6 +13,11 @@ export interface PRCheck {
   duration?: string
 }
 
+export interface PRCommentReply {
+  author: string
+  body: string
+}
+
 export interface PRComment {
   id: string
   threadId: string
@@ -23,8 +28,12 @@ export interface PRComment {
   line?: number
   url?: string
   resolved: boolean
+  outdated: boolean
   createdAt?: number
   diffHunk?: string
+  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  after?: string[]
+  replies?: PRCommentReply[]
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"

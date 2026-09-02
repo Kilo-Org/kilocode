@@ -1,7 +1,9 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
@@ -180,19 +182,149 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         )
     }
 
+    fun `test TurnClose interrupted shows interrupted outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [interrupted]
+            """,
+            m,
+        )
+    }
+
+    fun `test TurnClose error without provider error shows failed outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.TurnClose("ses_test", "error"))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [failed]
+            """,
+            m,
+        )
+    }
+
+    fun `test TurnClose completed with unknown finish shows incomplete outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "unknown")))
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
+        assertSession(
+            """
+            assistant#msg_assistant
+
+            [code] [kilo/gpt-5] [incomplete]
+            """,
+            m,
+        )
+        assertTrue(appRpc.telemetry.any {
+            it.event == "Task Completed" && it.properties["finish"] == "unknown"
+        })
+    }
+
+    fun `test TurnClose completed with length finish stays idle`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "length")))
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
+        assertSession(
+            """
+            assistant#msg_assistant
+
+            [code] [kilo/gpt-5] [idle]
+            """,
+            m,
+        )
+    }
+
+    fun `test abort error waits for interrupted outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        edt { m.abort() }
+        flush()
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "MessageAbortedError", message = "aborted")))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+
+        assertTrue(appRpc.telemetry.none { it.event == "Session Error" && it.properties["errorClass"] == "MessageAbortedError" })
+        assertTrue(notifications.isEmpty())
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [interrupted]
+            """,
+            m,
+        )
+    }
+
+    fun `test provider error wins over interrupted close`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "APIError", message = "OpenRouter balance is too low")))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [error] [OpenRouter balance is too low]
+            """,
+            m,
+        )
+    }
+
     fun `test TurnClose completed clobbers Error state`() {
         val (m, _, _) = prompted()
 
         emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "timeout", message = "Timed out")))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "unknown")))
         emit(ChatEventDto.TurnClose("ses_test", "completed"))
 
         // "completed" always wins over error
+        assertSession(
+            """
+            assistant#msg_assistant
+
+            [code] [kilo/gpt-5] [idle]
+            """,
+            m,
+        )
+    }
+
+    fun `test TurnClose completed clobbers outcome state`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
         assertSession(
             """
             [code] [kilo/gpt-5] [idle]
             """,
             m,
         )
+    }
+
+    fun `test turn outcome classifier`() {
+        assertEquals(Outcome.INCOMPLETE, TurnOutcome.classify("completed", "unknown"))
+        assertEquals(Outcome.INCOMPLETE, TurnOutcome.classify("completed", "other"))
+        assertNull(TurnOutcome.classify("completed", "stop"))
+        assertNull(TurnOutcome.classify("completed", "length"))
+        assertNull(TurnOutcome.classify("completed", "tool-calls"))
+        assertNull(TurnOutcome.classify("completed"))
+        assertNull(TurnOutcome.classify("superseded", "unknown"))
+        assertEquals(Outcome.INTERRUPTED, TurnOutcome.classify("interrupted"))
+        assertEquals(Outcome.INTERRUPTED, TurnOutcome.classify("interrupted", "unknown"))
+        assertEquals(Outcome.FAILED, TurnOutcome.classify("error"))
+        assertEquals(Outcome.FAILED, TurnOutcome.classify("error", "unknown"))
     }
 
     fun `test TurnClose completed preserves AwaitingQuestion state`() {
@@ -286,6 +418,51 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         assertSession(
             """
             [code] [kilo/gpt-5] [error] [Timed out]
+            """,
+            m,
+        )
+    }
+
+    fun `test SessionStatus idle does not clobber Error state`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "timeout", message = "Timed out")))
+        emit(ChatEventDto.SessionStatusChanged("ses_test", SessionStatusDto("idle")))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [error] [Timed out]
+            """,
+            m,
+        )
+    }
+
+    fun `test idle signals do not clobber turn outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+        emit(ChatEventDto.SessionIdle("ses_test"))
+        emit(ChatEventDto.SessionStatusChanged("ses_test", SessionStatusDto("idle")))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [interrupted]
+            """,
+            m,
+        )
+    }
+
+    fun `test busy status clears turn outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.TurnClose("ses_test", "interrupted"))
+        emit(ChatEventDto.SessionStatusChanged("ses_test", SessionStatusDto("busy")))
+
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [busy] [considering next steps]
             """,
             m,
         )

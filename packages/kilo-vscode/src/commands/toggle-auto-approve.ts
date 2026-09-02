@@ -73,6 +73,7 @@ export function registerToggleAutoApprove(
         const { data: pending } = await client.permission.list({ directory: dir }, { throwOnError: true })
         for (const req of pending) {
           if (generation !== snapshot) break
+          if (req.metadata?.["sandboxEscalation"] === true) continue
           await client.permission
             .reply({ requestID: req.id, directory: dir, reply: "once" }, { throwOnError: true })
             .catch((err) => {
@@ -91,6 +92,7 @@ export function registerToggleAutoApprove(
     if (!active) return false
     const client = tryGetClient(connectionService)
     if (!client) return false
+    if (event.properties.metadata?.["sandboxEscalation"] === true) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     return client.permission

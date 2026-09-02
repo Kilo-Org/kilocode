@@ -17,8 +17,11 @@ internal class DiffStatBadge(
     additions: Int,
     deletions: Int,
     private val variant: Variant = Variant.REGULAR,
+    /** Extra trailing padding, as an unscaled [UiStyle.Gap] step. */
     private val inset: Int = 0,
-) : JPanel(GridBagLayout()) {
+    // When false the badge paints only its text, without the rounded background pill or padding.
+    private val fill: Boolean = true,
+) : JPanel(GridBagLayout()), DiffBadge {
     constructor(additions: Int, deletions: Int) : this(additions, deletions, Variant.REGULAR, 0)
 
     internal enum class Variant {
@@ -35,12 +38,11 @@ internal class DiffStatBadge(
             COMPACT -> UiStyle.Gap.xs()
         }
 
-        fun pad() = when (this) {
-            REGULAR -> UiStyle.Gap.sm()
-            COMPACT -> UiStyle.Gap.sm()
-        }
+        /** Unscaled horizontal padding step; [JBUI.Borders] scales what it is handed. */
+        fun pad() = UiStyle.Gap.SM
     }
 
+    // JBFont rescales itself when the IDE font changes, so assigning it once is enough for the text.
     private val removed = JBLabel().apply {
         foreground = UiStyle.Colors.removedForeground()
         font = JBFont.small()
@@ -49,16 +51,26 @@ internal class DiffStatBadge(
         foreground = UiStyle.Colors.addedForeground()
         font = JBFont.small()
     }
+    private lateinit var row: Stack
 
     init {
         isOpaque = false
-        border = JBUI.Borders.empty(0, variant.pad(), 0, variant.pad() + inset)
-        add(
-            Stack.horizontal(variant.gap())
-                .next(removed)
-                .next(added),
-        )
+        row = Stack.horizontal(variant.gap()).next(removed).next(added)
+        add(row)
+        syncScale()
         update(additions, deletions)
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        // JPanel's constructor runs updateUI() before the fields above exist.
+        if (this::row.isInitialized) syncScale()
+    }
+
+    /** A layout manager captures its gap once, so re-derive the spacing for the current scale. */
+    private fun syncScale() {
+        border = if (fill) JBUI.Borders.empty(0, variant.pad(), 0, variant.pad() + inset) else JBUI.Borders.empty()
+        row.space = variant.gap()
     }
 
     override fun getPreferredSize(): Dimension {
@@ -66,7 +78,7 @@ internal class DiffStatBadge(
         return Dimension(dim.width, variant.height())
     }
 
-    fun update(additions: Int, deletions: Int) {
+    override fun update(additions: Int, deletions: Int) {
         removed.isVisible = deletions > 0
         added.isVisible = additions > 0
         if (removed.isVisible) removed.text = "-$deletions"
@@ -74,9 +86,13 @@ internal class DiffStatBadge(
     }
 
     override fun paintComponent(g: Graphics) {
+        if (!fill) {
+            super.paintComponent(g)
+            return
+        }
         val g2 = g.create() as Graphics2D
         try {
-            val w = maxOf(0, width - inset)
+            val w = maxOf(0, width - JBUI.scale(inset))
             val h = minOf(height, variant.height())
             val y = (height - h) / 2
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)

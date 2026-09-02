@@ -18,6 +18,10 @@
 - `packages/kilo-jetbrains/gradle.properties` `kilo.cli.pinned` ↔ Gradle and release-script gates
 - `.kilo/skills/release-jetbrains/script/check-pin.ts` / `set-pin.ts` ↔ release skill and CLI pin documentation
 
+### PR Hygiene
+
+- Do not include `.kilo/plans/**` files in JetBrains commits or PRs unless the user explicitly asks to publish plan files.
+
 ## IntelliJ Platform Source Lookup
 
 When looking for IntelliJ Platform API usage, implementation examples, extension points, services, actions, inspections, PSI/VFS/editor behavior, or plugin patterns, prefer real IntelliJ source code over Gradle caches, downloaded jars, generated parser artifacts, or decompiled classes.
@@ -231,7 +235,14 @@ For the full release process (resolve version, pin verification, prepare, change
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
 - **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
 - **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Corrupt IDE extraction**: if `runIdeBackend` or `runIdeSplitMode` fails before startup with `coroutinesJavaAgentFile` / `Collection contains no element matching the predicate`, the extracted IDE under `.intellijPlatform/ides/` is likely incomplete. Health check: `ls .intellijPlatform/ides/*/lib/*.jar | wc -l` should be in the hundreds. Repair by removing `.intellijPlatform/ides`, `.intellijPlatform/localPlatformArtifacts`, `.intellijPlatform/layoutIndex`, and `.intellijPlatform/coroutines-javaagent.jar`, then rerun the Gradle task.
 - **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
+
+### Stopping a Sandbox Run
+
+Quit the sandbox IDE from inside it (File → Exit) instead of pressing Stop on the Gradle run tab. Stop on an external-system configuration only calls `CancellationTokenSource.cancel()` through the Gradle tooling API — the IDE never learns the forked JVM's pid, sends it no signal, and `ExternalSystemProcessHandler` does not implement `KillableProcess`, so there is no force-kill escalation either. Quitting the sandbox IDE lets it run its real shutdown sequence and the `JavaExec` task then completes on its own. Cancelling the build instead is what leaves the orphaned Java processes noted above.
+
+Do not start a second `runIde*` task for a checkout while a sandbox IDE launched from that same checkout is still running. All `runIde*` tasks share one sandbox container per checkout (`.intellijPlatform/sandbox/kilo.jetbrains/<ide>/plugins_runIde*`), and `prepareSandbox` rewrites the running IDE's own plugin jars. The IDE then attempts a hot reload that cannot succeed and reports `Failed to unload modified plugins: Kilo Code`.
 
 ### CLI/SDK Change Awareness
 
@@ -291,6 +302,28 @@ Rules:
 - Put user-visible strings in `*.properties` files.
 - Do not add decorative helper functions, wrappers, or defensive UI code unless they materially improve clarity or correctness.
 
+### Session UI Background Strategy
+
+The chat session UI intentionally uses a single-backdrop model. Do not make every
+container paint `SessionUiStyle.Colors.sessionBackground()` just because it sits
+inside the session. This avoids fragile component-hierarchy coupling and prevents
+theme-specific artifacts in transparent/rounded Swing painting.
+
+- `SessionRootPanel` is the primary opaque backdrop. It overrides `getBackground()` and returns `SessionUiStyle.Colors.sessionBackground()`.
+- `sessionBackground()` follows the panel background, but when that equals the raised editor surface (`codeBlockBackground()`) — e.g. Islands Dark/Darcula, where panel and editor backgrounds are identical — it shifts by `SESSION_DELTA` via `UiStyle.Colors.contrast` (lighter in dark themes, darker in light) so the prompt bubble/input and other raised surfaces stay visible. This is a universal fallback, not a per-theme override.
+- `SessionRootPanel.Blocker` is the only other session-background opaque panel. It also overrides `getBackground()` with `sessionBackground()` for modal blocking.
+- Scroll panes, viewports, transcript layout panels, message lists, turn containers, wrapper panels, and card bodies should be non-opaque unless they intentionally paint a distinct surface.
+- `applyStyle(style)` must not assign session-background colors. It may update fonts, foregrounds, editor colors, and other non-background styling. Background colors that must be dynamic should come from `getBackground()` or custom painting.
+- Transcript card header hover is `getBackground()`-driven: keep an `isHovered` flag on the hover row/header, set or clear it from mouse enter/exit, and repaint only that row/header. Do not assign `row.background` or `header.background` on hover.
+- Primary/secondary transcript card bodies are transparent by default. The actual content inside a body (code blocks, todo list, shell/tool output) is the raised surface: make that content component opaque and paint `SessionUiStyle.Colors.codeBlockBackground()` (the editor background), using its own insets so the fill covers the whole content. For `MdView`-backed bodies set `md.opaque = false` so the prose/body stays transparent while the code/output panes remain the opaque editor surface — do not make the whole body opaque.
+- Rounded cards that paint their own surface (for example `RoundedContentPanel`-based question/login cards) should do that in custom painting or a `contentColor()` override, not by making every nested panel opaque.
+- Standard platform buttons placed on custom-painted session cards should not force the card background. If a button sits on a rounded/custom-painted card, make it non-opaque when needed so Swing does not fill its rectangular bounds behind `DarculaButtonUI`'s rounded paint (notably visible in Islands Light).
+
+When adding a new session view, start with transparent containers and add opaque
+painting only for components that are actual visual surfaces. If a component's
+background must react to hover/theme state, prefer an override such as
+`getBackground()` over writing `background = ...` during setup or `applyStyle`.
+
 ### Swing Component Lifecycle
 
 Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, transcript parts, hover rows, and collapsible panels, build a stable component tree once and then mutate existing components in response to model or interaction changes.
@@ -303,6 +336,7 @@ Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, tra
 - Derive expanded state from containment (e.g. `scroll.parent === root`) rather than maintaining an `open` boolean.
 - Derive hover state from the current header background or other component property rather than maintaining a `hover` boolean.
 - Expand/collapse should attach or detach the existing body component and update controls only if attachment changed.
+- Expandable session cards extend `AbstractSessionPartView`, which binds click-to-toggle and hover across the whole header subtree automatically (including children added later). Do not re-bind header parts per view. A header control that must not toggle the card (file link, copy button, toolbar action) simply owns its own mouse listener and is skipped automatically.
 - Hover should update only the affected component (usually the header background) and repaint only that component when the effective color changed.
 - Lazy-create expensive bodies such as `JBTextArea`, `JBScrollPane`, markdown panes, and HTML panes on first expansion or first direct access.
 - Parent containers should refresh for add/remove/reorder operations, not automatically after every delegated child update or streaming delta.

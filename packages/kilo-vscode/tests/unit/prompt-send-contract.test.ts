@@ -1,8 +1,8 @@
 /**
  * Source contract tests for prompt send paths.
  *
- * Static analysis — reads session.tsx source and verifies that sendMessage and
- * sendCommand still dismiss suggestions and reject questions before dispatching.
+ * Static analysis — reads the session context source and verifies that sendMessage
+ * and sendCommand still dismiss suggestions and reject questions before dispatching.
  * Also reads ChatView.tsx and asserts the prompt-block predicate is fed only
  * permission counts, never question counts — guarantees that a pending question
  * cannot re-block the prompt input.
@@ -17,7 +17,9 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
+const SESSION_TYPES_FILE = path.join(ROOT, "webview-ui/src/context/session-types.ts")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -89,6 +91,16 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 })
 
+describe("confirmed queued prompts retain optimistic parts", () => {
+  const source = readFile(SESSION_FILE)
+  const body = extractFunctionBody(source, "handleMessageCreated")
+
+  it("does not clear optimistic parts before canonical part events arrive", () => {
+    expect(body).toContain("Keep placeholder parts until their canonical part.updated events arrive")
+    expect(body).not.toContain("delete p[message.id]")
+  })
+})
+
 describe("static command completion contract", () => {
   const source = readFile(SESSION_FILE)
 
@@ -135,6 +147,26 @@ describe("ChatView prompt-block contract", () => {
 
   it("does not reference q.blocking when building the blocked state", () => {
     expect(source).not.toMatch(/q\.blocking/)
+  })
+})
+
+describe("review worktree visibility contract", () => {
+  it("passes the worktree prop from ChatView to PromptInput", () => {
+    const source = readFile(CHATVIEW_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/<PromptInput[\s\S]*worktree=\{props\.worktree\}/)
+  })
+
+  it("hides review worktree unless PromptInput is explicitly in a worktree", () => {
+    const source = readFile(PROMPT_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/if \(props\.worktree !== true\) hidden\.add\("review worktree"\)/)
+  })
+
+  it("uses registered worktree membership for Agent Manager visibility", () => {
+    const source = readFile(AGENT_MANAGER_FILE)
+    expect(source).toMatch(/worktree=\{worktrees\(\)\.some\(\(wt\) => wt\.id === selection\(\)\)\}/)
+    expect(source).not.toMatch(/worktree=\{selection\(\(\)\) !== LOCAL\}/)
   })
 })
 
@@ -199,6 +231,18 @@ describe("handleSessionDeleted draft cleanup contract", () => {
     const body = extractFunctionBody(source, "handleSessionDeleted")
     expect(body).toContain("setRespondingPermissions")
   })
+
+  it("prevents late status and attention events from reviving a deleted session", () => {
+    expect(extractFunctionBody(source, "handleSessionDeleted")).toContain("removedSessions.add(sessionID)")
+    expect(extractFunctionBody(source, "handleSessionStatus")).toContain("removedSessions.has(sessionID)")
+    expect(extractFunctionBody(source, "handlePermissionRequest")).toContain(
+      "removedSessions.has(permission.sessionID)",
+    )
+    expect(extractFunctionBody(source, "handleQuestionRequest")).toContain("removedSessions.has(question.sessionID)")
+    expect(extractFunctionBody(source, "handleSuggestionRequest")).toContain(
+      "removedSessions.has(suggestion.sessionID)",
+    )
+  })
 })
 
 describe("KiloProvider pruneDeletedSession contract", () => {
@@ -212,7 +256,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
     // warning for the new current session.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
+    expect(match![1]).toContain("this.removedSessionIds.add(sessionID)")
     expect(match![1]).toContain("this.sessionStatusMap.delete(sessionID)")
+    expect(source).toContain("if (this.removedSessionIds.has(sid)) return")
   })
 
   it("clears currentSession and contextSessionID when the deleted id matches", () => {
@@ -276,6 +322,19 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+  })
+
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {
     const body = extractFunctionBody(source, "handleSessionCreated")
     const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)
@@ -335,16 +394,17 @@ describe("PromptInput send origin contract", () => {
 
   it("captures the real or pending tab before asynchronous attachment resolution", () => {
     expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
-    expect(source.indexOf("beginPendingSend(pendingId)")).toBeLessThan(
-      source.indexOf("await terminal.resolveAttachment"),
+    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
+      source.indexOf("const terminalFile = await terminal"),
     )
-    expect(source).toMatch(/await terminal\.resolveAttachment\(message, id\)/)
+    expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
     expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
   })
 
   it("passes the captured origin to message and command sends", () => {
-    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null\)/)
-    expect(source).toMatch(/session\.sendCommand\([\s\S]*origin \?\? null\)/)
+    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null[\s\S]*browserData[\s\S]*\)/)
+    const command = source.slice(source.indexOf("session.sendCommand("))
+    expect(command).toMatch(/origin \?\? null[\s\S]*\{[\s\S]*agent: matched\.agent/)
   })
 
   it("records sent prompts before a pending session key change can return", () => {
@@ -369,7 +429,7 @@ describe("SessionContext userClearedSession contract", () => {
     // restoreFailed uses session.userClearedSession() to decide whether :new
     // is a legitimate restore target after the user clicks New Task or
     // deletes their current/draft session. The accessor must be exposed.
-    expect(source).toMatch(/userClearedSession:\s*Accessor<boolean>/)
+    expect(readFile(SESSION_TYPES_FILE)).toMatch(/userClearedSession:\s*Accessor<boolean>/)
   })
 
   it("clearCurrentSession sets the flag", () => {
@@ -586,6 +646,70 @@ describe("Cloud import parts cleanup contract", () => {
       "pending",
     )
     expect(cleared).toBe(1)
+  })
+})
+
+describe("Optimistic parts preservation and smooth status contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("handleMessageCreated preserves optimistic parts instead of deleting them", () => {
+    const created = extractFunctionBody(source, "handleMessageCreated")
+    expect(created).not.toMatch(/delete\s+p\[message\.id\]/)
+    expect(created).toContain("pendingOptimistic.get(message.sessionID)")
+  })
+
+  it("handlePartUpdated replaces matching optimistic parts in place", () => {
+    const updated = extractFunctionBody(source, "handlePartUpdated")
+    expect(updated).toContain("optimisticParts.get(effectiveMessageID)")
+    expect(updated).toContain("mergeOptimisticPart")
+  })
+
+  it("statusText derives status from the active turn instead of queued follow-ups", () => {
+    const match = source.match(/const statusText = createMemo<string \| undefined>\(\(\) => \{([\s\S]*?)\n  \}\)/)
+    expect(match).not.toBeNull()
+    expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
+    expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
+  })
+})
+
+describe("browser element reference contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("keeps selected browser elements as visible attachments instead of inserting them into the draft", () => {
+    expect(source).toContain('data-component="browser-references"')
+    expect(source).toMatch(/const reference = message\.browser[\s\S]*?textareaRef\?\.focus\(\)[\s\S]*?return/)
+  })
+
+  it("includes browser reference content only when the user sends the prompt", () => {
+    expect(source).toContain("browserFeedbackData(browsers())")
+    expect(source).toContain("formatBrowserFeedback(browserData.references)")
+    expect(source).toContain('const message = [review, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain("references.delete(key)")
+  })
+
+  it("uses the tested failed-send parser before restoring text and references", () => {
+    expect(source).toContain("const restored = failedPrompt(failed)")
+    expect(source).toContain("const draft = restored.text")
+    expect(source).toContain("const browser = restored.browsers")
+    expect(source).not.toContain("partFeedback({ review: failed.review")
+  })
+
+  it("restores browser attachments for the correct session and allows attachment-only sends", () => {
+    expect(source).toContain("setBrowsers(references.get(key) ?? [])")
+    expect(source).toContain("if (reference.sessionId !== sid()) return")
+    expect(source).toContain("mergeBrowserReferences(browsers(), reference)")
+    expect(source).toContain("browsers().length > 0")
+  })
+})
+
+describe("sent browser feedback rendering contract", () => {
+  const message = readFile(path.join(ROOT, "webview-ui/src/components/chat/VscodeUserMessage.tsx"))
+
+  it("renders validated browser metadata as cards and exposes only the instruction body", () => {
+    expect(message).toContain("partFeedback")
+    expect(message).toContain("BrowserReferences")
+    expect(message).toContain("feedback()?.body")
+    expect(message).not.toContain("item.content")
   })
 })
 

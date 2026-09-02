@@ -15,7 +15,7 @@ describe("work style presets", () => {
     const bash = cfg.permission?.bash as Record<string, string>
     expect(cfg.terminal_command_display).toBe("expanded")
     expect(cfg.auto_collapse_reasoning).toBe(false)
-    expect(cfg.permission?.["*"]).toBe("ask")
+    expect(cfg.permission?.["*"]).toBeUndefined()
     expect(cfg.permission?.edit).toBe("ask")
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
     expect(Object.keys(bash).at(-1)).toBe("*>*")
@@ -48,6 +48,12 @@ describe("work style presets", () => {
     expect(WORK_STYLE_PRESETS.autonomous.settings).toEqual({
       showTaskTimeline: false,
     })
+  })
+
+  it("never defines a top-level permission choice in onboarding presets", () => {
+    for (const preset of Object.values(WORK_STYLE_PRESETS)) {
+      expect(["ask", "allow", "deny"]).not.toContain(preset.config.permission?.["*"])
+    }
   })
 
   it("does not overwrite existing new-user settings", () => {
