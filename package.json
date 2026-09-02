@@ -11,6 +11,7 @@
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "check:architecture": "bun run script/check-architecture.ts",
+    "check:duplication": "bun run script/check-kilocode-duplication.ts",
     "typecheck": "bun turbo typecheck",
     "upgrade-opentui": "bun run script/upgrade-opentui.ts",
     "postinstall": "bun run --cwd packages/core fix-node-pty && bun run script/setup-git.ts",
@@ -177,6 +178,6 @@
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch"
   },
-  "version": "7.5.6",
+  "version": "7.5.8",
   "peerDependencies": {}
 }

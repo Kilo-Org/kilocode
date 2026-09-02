@@ -11,6 +11,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.project.DumbAwareAction
 import javax.swing.Icon
 
 /**
@@ -69,13 +70,25 @@ internal object WorktreeRunPopup {
         return group
     }
 
+    /**
+     * Dumb-aware, matching how the platform treats its own run actions: `ExecutorAction`,
+     * `RunConfigurationsComboBoxAction`, and `BaseRunConfigurationAction` are all `DumbAware` so the
+     * run UI stays live during indexing, and the decision about whether a given configuration may
+     * actually start is made separately, against `ConfigurationType.isDumbAware`.
+     *
+     * We keep the first half and cannot express the second: these items carry `RunConfigDto`s fetched
+     * over RPC rather than local `RunnerAndConfigurationSettings`, so there is no `ConfigurationType`
+     * to consult, and the host project's dumb state describes the wrong project anyway — the run
+     * happens in the worktree. So readiness is the backend's call, surfaced through the existing
+     * `worktree.run.failed` notification rather than a dead menu item.
+     */
     private fun action(
         text: String,
         icon: Icon?,
         description: String? = null,
         enabled: Boolean = true,
         handler: () -> Unit,
-    ): AnAction = object : AnAction(text, description, icon) {
+    ): AnAction = object : DumbAwareAction(text, description, icon) {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {

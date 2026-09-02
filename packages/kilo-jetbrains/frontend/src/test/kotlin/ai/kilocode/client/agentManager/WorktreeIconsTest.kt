@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SpinnerIcon
+import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.AnimatedIcon
@@ -85,6 +86,16 @@ class WorktreeIconsTest : BasePlatformTestCase() {
         assertSame(error, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR, locked = true))
         // An operation on the row still outranks it.
         assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.ERROR))
+    }
+
+    fun `test pull request verdict glyphs are never tinted to the row text color`() {
+        // neutral() drives tinting, which would flatten these to the label foreground and lose the
+        // red/green/amber the whole indicator depends on.
+        assertFalse(WorktreeIcons.neutral(PrIcons.reviewApproved))
+        assertFalse(WorktreeIcons.neutral(PrIcons.reviewChanges))
+        assertFalse(WorktreeIcons.neutral(PrIcons.checksPassed))
+        assertFalse(WorktreeIcons.neutral(PrIcons.checksFailed))
+        assertFalse(WorktreeIcons.neutral(PrIcons.checksRunning))
     }
 
     fun `test activity outranks the resting glyph on the local row`() {

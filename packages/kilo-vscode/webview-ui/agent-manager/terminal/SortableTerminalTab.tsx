@@ -13,6 +13,8 @@ import { useLanguage } from "../../src/context/language"
 import { SortableClosableTab, type ClosableTabProps } from "../ClosableTab"
 import { terminalChrome, terminalClosable, terminalStoppable } from "./chrome"
 import type { ScriptTerminalStatus } from "./state"
+import { ActivityIcon } from "../../src/components/shared/ActivityIcon"
+import { label } from "../../src/utils/session-activity"
 
 interface Props extends Omit<ClosableTabProps, "icon" | "onClose" | "trailing"> {
   label: string
@@ -71,29 +73,40 @@ export const SortableTerminalTab: Component<
     id: string
     onCloseOthers: () => void
   }
-> = (props) => (
-  <SortableClosableTab
-    id={props.id}
-    label={props.label}
-    tooltip={terminalChrome(props.tooltip, props.status).tooltip}
-    icon={() => icon(props.status)}
-    iconStatus={() => iconStatus(props.status)}
-    class="am-tab-terminal"
-    focused={props.focused}
-    active={props.active}
-    closeable={terminalClosable(props.status)}
-    keybind={props.keybind}
-    closeKeybind={props.closeKeybind}
-    role={props.role}
-    selected={props.selected}
-    tabIndex={props.tabIndex}
-    onKeyDown={props.onKeyDown}
-    onSelect={props.onSelect}
-    onMiddleClick={props.onMiddleClick}
-    onClose={props.onClose}
-    onCloseOthers={props.onCloseOthers}
-    trailing={
-      <StopButton active={terminalStoppable(props.status)} tabIndex={props.active ? 0 : -1} onStop={props.onStop} />
-    }
-  />
-)
+> = (props) => {
+  const { t } = useLanguage()
+  const state = () => (props.status ? undefined : props.state)
+  const title = () => {
+    const current = state()
+    return current && current !== "idle" ? t(label(current)) : undefined
+  }
+  return (
+    <SortableClosableTab
+      id={props.id}
+      label={props.label}
+      tooltip={title() ? `${props.tooltip} (${title()})` : terminalChrome(props.tooltip, props.status).tooltip}
+      icon={() => icon(props.status)}
+      iconNode={state() && state() !== "idle" ? <ActivityIcon state={state()!} spinner="am-tab-spinner" /> : undefined}
+      iconStatus={() => iconStatus(props.status)}
+      state={state()}
+      stateLabel={title()}
+      class="am-tab-terminal"
+      focused={props.focused}
+      active={props.active}
+      closeable={terminalClosable(props.status)}
+      keybind={props.keybind}
+      closeKeybind={props.closeKeybind}
+      role={props.role}
+      selected={props.selected}
+      tabIndex={props.tabIndex}
+      onKeyDown={props.onKeyDown}
+      onSelect={props.onSelect}
+      onMiddleClick={props.onMiddleClick}
+      onClose={props.onClose}
+      onCloseOthers={props.onCloseOthers}
+      trailing={
+        <StopButton active={terminalStoppable(props.status)} tabIndex={props.active ? 0 : -1} onStop={props.onStop} />
+      }
+    />
+  )
+}

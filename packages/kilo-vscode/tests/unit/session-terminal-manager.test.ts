@@ -189,6 +189,7 @@ describe("SessionTerminalManager command restoration", () => {
 describe("SessionTerminalManager worktree terminals", () => {
   function scene(opts: { worktreePath?: string; repoPath?: string } = {}) {
     const created: Array<{ cwd: string; name: string }> = []
+    const disposed: string[] = []
     const warnings: string[] = []
     let shown = 0
     const host: TerminalHost = {
@@ -196,7 +197,7 @@ describe("SessionTerminalManager worktree terminals", () => {
         created.push(o)
         return {
           show: () => shown++,
-          dispose() {},
+          dispose: () => disposed.push(o.cwd),
           exitStatus: undefined,
         }
       },
@@ -210,11 +211,13 @@ describe("SessionTerminalManager worktree terminals", () => {
       executeCommand: () => Promise.resolve(),
     }
     const state = {
+      directoryFor: () => opts.worktreePath,
+      getSession: (id: string) => (opts.worktreePath ? { id, worktreeId: "wt-1" } : undefined),
       getWorktree: (id: string) =>
         opts.worktreePath ? { id, path: opts.worktreePath, branch: "feature/x" } : undefined,
     } as unknown as WorktreeStateManager
     const manager = new SessionTerminalManager(() => {}, host)
-    return { manager, state, created, warnings, shown: () => shown }
+    return { manager, state, created, disposed, warnings, shown: () => shown }
   }
 
   it("creates a terminal rooted at the worktree path", () => {
@@ -254,5 +257,30 @@ describe("SessionTerminalManager worktree terminals", () => {
     s.manager.showWorktreeTerminal("gone", s.state)
     expect(s.created).toHaveLength(0)
     expect(s.warnings).toHaveLength(1)
+  })
+
+  it("closes session and worktree terminals without closing local terminals", () => {
+    const s = scene({ worktreePath: "/repo/.kilo/worktrees/wt-1", repoPath: "/repo" })
+    s.manager.showLocalTerminal()
+    s.manager.showTerminal("session-1", s.state)
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+
+    s.manager.closeDirectory("/repo/.kilo/worktrees/wt-1/")
+
+    expect(s.disposed).toEqual(["/repo/.kilo/worktrees/wt-1", "/repo/.kilo/worktrees/wt-1"])
+    expect(s.manager.showExisting("session-1")).toBe(false)
+    expect(s.manager.showExistingLocal()).toBe(true)
+
+    s.manager.closeDirectory("/repo/.kilo/worktrees/wt-1")
+    expect(s.disposed).toHaveLength(2)
+  })
+
+  it("matches Windows worktree directories without case or separator differences", () => {
+    const s = scene({ worktreePath: "C:\\Repo\\.kilo\\worktrees\\Feature", repoPath: "C:\\Repo" })
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+
+    s.manager.closeDirectory("c:/repo/.KILO/worktrees/feature/")
+
+    expect(s.disposed).toEqual(["C:\\Repo\\.kilo\\worktrees\\Feature"])
   })
 })

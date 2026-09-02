@@ -47,6 +47,9 @@ internal object WorktreeIcons {
         }
     }
 
-    /** The monochrome at-rest glyphs that follow the row text color; status icons are excluded. */
+    /**
+     * The monochrome at-rest glyphs that follow the row text color. The pull request verdict glyphs in
+     * [ai.kilocode.client.ui.PrIcons] are excluded so their palette survives.
+     */
     fun neutral(icon: Icon?): Boolean = icon === local || icon === locked || icon === branch
 }

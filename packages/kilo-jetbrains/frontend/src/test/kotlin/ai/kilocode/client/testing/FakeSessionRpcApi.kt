@@ -4,7 +4,6 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -117,7 +116,6 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val messageDeletes = mutableListOf<MessageDeleteCall>()
     var messageDeleteResult = true
     val unreverts = mutableListOf<Pair<String, String>>()
-    val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
@@ -331,11 +329,6 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> {
         assertNotEdt("events")
         return eventFlow?.invoke(id, directory) ?: events
-    }
-
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) {
-        assertNotEdt("updateConfig")
-        configs.add(directory to config)
     }
 
     var replyPermissionThrows: Exception? = null

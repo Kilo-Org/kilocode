@@ -83,6 +83,12 @@ describe("KiloBtw fork permissions", () => {
     expect(last(rules, "*")?.action).toBe("deny")
     expect(rules.filter((rule) => rule.permission === "*").every((rule) => rule.action === "deny")).toBe(true)
   })
+
+  test("locked-down parent (wildcard deny) suppresses blanket allows", () => {
+    const rules = KiloBtw.forkPermission([{ permission: "*", action: "deny", pattern: "*" }])
+    expect(rules.find((rule) => rule.permission === "read")).toBeUndefined()
+    expect(rules.every((rule) => rule.action === "deny")).toBe(true)
+  })
 })
 
 describe("KiloBtw store", () => {

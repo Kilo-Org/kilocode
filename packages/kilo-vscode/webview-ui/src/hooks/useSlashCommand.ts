@@ -76,7 +76,7 @@ export function useSlashCommand(
       hints: ["clear"],
       action: () => {
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        window.postMessage({ type: "navigate", view: "newTask" }, "*")
+        window.postMessage({ type: "navigate", view: "newTask" }, window.origin)
       },
     },
     {
@@ -84,7 +84,7 @@ export function useSlashCommand(
       description: "Switch to another session",
       hints: ["resume", "continue", "history"],
       action: () => {
-        window.postMessage({ type: "navigate", view: "history" }, "*")
+        window.postMessage({ type: "navigate", view: "history" }, window.origin)
       },
     },
     {

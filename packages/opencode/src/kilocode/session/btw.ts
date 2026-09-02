@@ -142,17 +142,24 @@ export namespace KiloBtw {
   // those tools. A tool the parent explicitly restricted (deny/ask rules)
   // keeps the parent's own rules instead of the blanket allow — a side
   // question can never grant access the parent did not have. Parent "ask"
-  // rules are downgraded to "deny" (the fork cannot surface prompts).
+  // rules are downgraded to "deny" (the fork cannot surface prompts). A
+  // locked-down parent (a "*" deny rule) suppresses the blanket allows
+  // entirely: the fork can then use only tools the parent explicitly
+  // re-enabled by name.
   export function forkPermission(parentRules: PermissionV1.Ruleset | undefined): PermissionV1.Ruleset {
     const rules = parentRules ?? []
     const restricted = (tool: string) => rules.some((rule) => rule.permission === tool)
+    const lockedDown = rules.some((rule) => rule.permission === "*" && rule.action === "deny")
     return [
       { permission: "*", action: "deny", pattern: "*" },
       ...ALLOWED_TOOLS.flatMap((tool) => {
-        if (!restricted(tool)) return [{ permission: tool, action: "allow" as const, pattern: "*" }]
-        return rules
-          .filter((rule) => rule.permission === tool)
-          .map((rule) => ({ ...rule, action: rule.action === "allow" ? ("allow" as const) : ("deny" as const) }))
+        if (restricted(tool)) {
+          return rules
+            .filter((rule) => rule.permission === tool)
+            .map((rule) => ({ ...rule, action: rule.action === "allow" ? ("allow" as const) : ("deny" as const) }))
+        }
+        if (lockedDown) return []
+        return [{ permission: tool, action: "allow" as const, pattern: "*" }]
       }),
     ]
   }

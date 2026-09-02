@@ -15,25 +15,28 @@ function client(calls: unknown[], fail = false) {
 }
 
 describe("SessionAbort", () => {
-  it("stops the active owner and current mapped directory", async () => {
-    const calls: unknown[] = []
-    const aborts = new SessionAbort()
-    aborts.observe("session_1", "busy", "/repo")
+  it.each([undefined, "session", "tree"] as const)(
+    "stops the active owner and current mapped directory with %s scope",
+    async (scope) => {
+      const calls: unknown[] = []
+      const aborts = new SessionAbort()
+      aborts.observe("session_1", "busy", "/repo")
 
-    expect(await aborts.stop(client(calls), "session_1", "/repo/worktree")).toBe(true)
-    expect(calls).toEqual([
-      {
-        type: "abort",
-        params: { sessionID: "session_1", directory: "/repo" },
-        opts: { throwOnError: true },
-      },
-      {
-        type: "abort",
-        params: { sessionID: "session_1", directory: "/repo/worktree" },
-        opts: { throwOnError: true },
-      },
-    ])
-  })
+      expect(await aborts.stop(client(calls), "session_1", "/repo/worktree", undefined, scope)).toBe(true)
+      expect(calls).toEqual([
+        {
+          type: "abort",
+          params: { sessionID: "session_1", directory: "/repo", scope },
+          opts: { throwOnError: true },
+        },
+        {
+          type: "abort",
+          params: { sessionID: "session_1", directory: "/repo/worktree", scope },
+          opts: { throwOnError: true },
+        },
+      ])
+    },
+  )
 
   it("forgets an owner when its instance becomes idle", async () => {
     const calls: unknown[] = []

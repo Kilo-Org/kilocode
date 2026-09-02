@@ -110,7 +110,12 @@ function createConnection() {
 describe("KiloProvider indexing refresh", () => {
   it("shares snapshot payloads across load, SSE refresh, and post-save refresh", async () => {
     const conn = createConnection()
-    const settings = () => ({ maxCost: 0, languageCommitMessage: "sync", multiProject: false })
+    const settings = () => ({
+      maxCost: 0,
+      languageCommitMessage: "sync",
+      multiProject: false,
+      browserAutomation: false,
+    })
     const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
