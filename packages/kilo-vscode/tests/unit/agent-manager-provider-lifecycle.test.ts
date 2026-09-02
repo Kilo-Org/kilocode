@@ -18,6 +18,8 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     session: { status: ReturnType<typeof mock>; delete: ReturnType<typeof mock> }
     permission: { list: ReturnType<typeof mock> }
     question: { list: ReturnType<typeof mock> }
+    backgroundProcess: { stopSession: ReturnType<typeof mock> }
+    instance: { dispose: ReturnType<typeof mock> }
     experimental: { session: { list: ReturnType<typeof mock> }; controlPlane: { moveSession: ReturnType<typeof mock> } }
     kilocode: { removeSnapshot: ReturnType<typeof mock> }
   }
@@ -47,6 +49,16 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       },
       permission: { list: mock(async () => ({ data: [] })) },
       question: { list: mock(async () => ({ data: [] })) },
+      backgroundProcess: {
+        stopSession: mock(async ({ sessionID }: { sessionID: string }) => {
+          calls.push(`process:${sessionID}`)
+        }),
+      },
+      instance: {
+        dispose: mock(async () => {
+          calls.push("instance")
+        }),
+      },
       experimental: {
         session: {
           list: mock(async () => ({
@@ -78,7 +90,9 @@ describe("Agent Manager worktree deletion lifecycle", () => {
         registerSessionRoute: (ref, directory, generation) =>
           routes.push({ sessionID: ref.sessionId, projectID: ref.projectId, directory, generation }),
         directories: () => new Map(),
-        abort: async () => undefined,
+        abort: async (ids) => {
+          calls.push(`abort:${ids.join(",")}`)
+        },
         forget: () => undefined,
       },
       push: () => calls.push("push"),
@@ -178,6 +192,30 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     },
   )
 
+  it("preserves state and releases deletion progress when the directory remains locked", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    const post = mock(host.post)
+    host.post = post
+    ctx.worktreeManager().removeWorktree = mock(async () => {
+      calls.push("disk")
+      throw new Error("directory busy")
+    })
+
+    await deleteWorktree()
+
+    expect(post).toHaveBeenCalledWith({
+      type: "error",
+      code: "agentManager.worktreeDeleteFailed",
+      projectId: ctx.id,
+      worktreeId: id,
+      message: "Failed to delete worktree: directory busy",
+    })
+    expect(calls).toContain("stats:unskip")
+    expect(calls.at(-1)).toBe("pty:release")
+    expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
+    expect(state.getWorktrees()).toHaveLength(1)
+  })
+
   it("reports checkpoint cleanup failures while preserving and retargeting sessions", async () => {
     const session = state.addSession("retained", state.getWorktrees()[0]!.id)
     const notify = mock(host.notify)
@@ -233,6 +271,31 @@ describe("Agent Manager worktree deletion lifecycle", () => {
 
     await deleteWorktree()
 
+    expect(calls).toEqual([
+      "stats:skip",
+      "diff",
+      "run:remove",
+      "run:clear",
+      `abort:${first.id},${second.id}`,
+      `process:${first.id}`,
+      `process:${second.id}`,
+      "pty",
+      "instance",
+      "disk",
+      `move:${first.id}`,
+      `move:${second.id}`,
+      "snapshots",
+      "pr",
+      "name",
+      `directory:${first.id}:${ctx.root}`,
+      `directory:${second.id}:${ctx.root}`,
+      "push",
+      "pty:release",
+    ])
+    expect(client.instance.dispose).toHaveBeenCalledWith({ directory: worktree }, { throwOnError: true })
+    for (const session of [first, second]) {
+      expect(client.backgroundProcess.stopSession).toHaveBeenCalledWith({ sessionID: session.id, directory: worktree })
+    }
     expect(routes).toEqual([
       { sessionID: first.id, projectID: ctx.id, directory: ctx.root, generation: ctx.generation },
       { sessionID: second.id, projectID: ctx.id, directory: ctx.root, generation: ctx.generation },

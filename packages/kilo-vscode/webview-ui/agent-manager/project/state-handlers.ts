@@ -19,6 +19,10 @@ export function createProjectStateHandlers(opts: {
   setPending: (value: boolean) => void
   rename: (id: string) => void
   font: (font: AgentManagerStateMessage["terminalFont"]) => void
+  browser: (enabled: boolean) => void
+  current: () => string | undefined
+  closeBrowser: () => void
+  openBrowser: () => void
 }) {
   const projects = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.projects") return
@@ -32,6 +36,8 @@ export function createProjectStateHandlers(opts: {
 
   const state = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.state") return
+    if (msg.browserAutomation !== undefined) opts.browser(msg.browserAutomation)
+    if (msg.browserAutomation === false) opts.closeBrowser()
     if (msg.terminalFont) opts.font(msg.terminalFont)
     if (msg.projectId) opts.setStates((prev) => ({ ...prev, [msg.projectId!]: msg }))
     const store = msg.projectId ? opts.ensure(msg.projectId) : opts.active()
@@ -45,5 +51,11 @@ export function createProjectStateHandlers(opts: {
     opts.routeState(msg)
   }
 
-  return { projects, state }
+  const browser = (msg: ExtensionMessage) => {
+    if (msg.type !== "agentManager.browserState" || (msg.status !== "starting" && msg.status !== "loading")) return
+    if (!opts.isActive(msg.projectId) || msg.sessionId !== opts.current()) return
+    opts.openBrowser()
+  }
+
+  return { projects, state, browser }
 }

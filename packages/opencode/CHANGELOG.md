@@ -1,5 +1,60 @@
 # @kilocode/cli
 
+## 7.5.9
+
+### Patch Changes
+
+- [#13684](https://github.com/Kilo-Org/kilocode/pull/13684) [`68cceca`](https://github.com/Kilo-Org/kilocode/commit/68cceca66c7d02cff73c539c00cfe32c2735b44e) - Prevent question prompts from rendering as narrow stacks of text when a model inserts carriage returns.
+
+## 7.5.8
+
+### Minor Changes
+
+- [#13501](https://github.com/Kilo-Org/kilocode/pull/13501) [`9231c25`](https://github.com/Kilo-Org/kilocode/commit/9231c25548060bb7b3b1de413802b65ff61d32a5) - Preview local applications in Agent Manager with embedded developer tools, grouped diagnostics, and review-style element feedback for precise frontend changes.
+
+- [#13294](https://github.com/Kilo-Org/kilocode/pull/13294) [`b59ebd7`](https://github.com/Kilo-Org/kilocode/commit/b59ebd7bbd8d6b01f24efaa2bb7a3f328e2c98a0) - Migrate Claude Code and OpenAI Codex sessions into Kilo through the CLI server. `POST /kilocode/migrate/sessions` finds the Claude Code / Codex transcripts for a directory and migrates each one into its own Kilo session, remembering what it already migrated so calling it again does nothing. `POST /kilocode/migrate/sessions/discover` previews what is available (title, format, message count, model) and marks sessions that have already been migrated, so clients can show a picker first. The existing `/resume-claude` and `/resume-codex` slash commands share the same import path.
+
+- [#13257](https://github.com/Kilo-Org/kilocode/pull/13257) [`d638418`](https://github.com/Kilo-Org/kilocode/commit/d6384186c61a458f3823936979821e8d10809e90) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Add a "last commit" option to the diff viewer that shows changes from the most recent git commit (HEAD vs HEAD~1), independent of working tree state.
+
+- [#13557](https://github.com/Kilo-Org/kilocode/pull/13557) [`6624c1a`](https://github.com/Kilo-Org/kilocode/commit/6624c1a2b07c0a7871532b0b5175d01a03c6e61e) - Allow the orchestrating agent to choose a model, provider, and reasoning effort for each subagent task behind an experimental setting.
+
+- [#13645](https://github.com/Kilo-Org/kilocode/pull/13645) [`cd366ce`](https://github.com/Kilo-Org/kilocode/commit/cd366ceff2e5521e83bcc75475f9ebc0df4ad023) - Show CLI activity in Agent Manager terminal tabs and worktree indicators, including working, waiting for input, retrying, errors, and completed tasks.
+
+- [#12466](https://github.com/Kilo-Org/kilocode/pull/12466) [`d8a35ff`](https://github.com/Kilo-Org/kilocode/commit/d8a35ff6f1dc3454524c1a505c75264b514ecfdf) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Add an About dialog in the TUI accessible from the command palette (under "Kilo") or via the `/about` slash command. Shows version, channel, runtime/platform, config path, project root, connected providers, and default model, with helpful links (docs, GitHub, issues, Discord) and a `c` shortcut to copy diagnostics to the clipboard.
+
+### Patch Changes
+
+- [#13608](https://github.com/Kilo-Org/kilocode/pull/13608) [`02df769`](https://github.com/Kilo-Org/kilocode/commit/02df769764e8189633bca44756aa6436e2090ae8) - Allow Agent Manager to start sessions when a model returns the task list as a JSON-encoded array.
+
+- [#13556](https://github.com/Kilo-Org/kilocode/pull/13556) [`52d4247`](https://github.com/Kilo-Org/kilocode/commit/52d4247d9c0d2201fb4f3431d1930293489604eb) - Edit queued messages in VS Code before they are sent, while preserving their text and attachments.
+
+- [#13190](https://github.com/Kilo-Org/kilocode/pull/13190) [`3fc9cb4`](https://github.com/Kilo-Org/kilocode/commit/3fc9cb41f389787215d8614775df29aa988a71db) Thanks [@maphew](https://github.com/maphew)! - Separate system-generated context blocks (the `<environment_details>` block, plan-to-code switch reminders, and plan-file reminders) from the user's prompt with blank lines so models don't mistake them for user content and copy them into file edits.
+
+- [#13666](https://github.com/Kilo-Org/kilocode/pull/13666) [`2e76572`](https://github.com/Kilo-Org/kilocode/commit/2e76572ec99c94d275a19b5726649a3166d6e308) - Speed up forking long sessions while preserving conversation history and independent child sessions.
+
+- [#13606](https://github.com/Kilo-Org/kilocode/pull/13606) [`95404e9`](https://github.com/Kilo-Org/kilocode/commit/95404e99f1077b43df09a2b8bd86b0d2b5805a3a) - Keep normal subagent model and reasoning defaults when selection fields are omitted or null, and only select overrides on explicit request.
+
+- [#13623](https://github.com/Kilo-Org/kilocode/pull/13623) [`7c845aa`](https://github.com/Kilo-Org/kilocode/commit/7c845aa0ec8a0ff46f25cff26545260c0126c3f7) - Wait for background subagents and their parent continuations before completing headless runs, including sessions resumed from another directory. Report cancelled headless runs as failures.
+
+- [#13601](https://github.com/Kilo-Org/kilocode/pull/13601) [`438dbe7`](https://github.com/Kilo-Org/kilocode/commit/438dbe7c252a246f5b953832c7d220cdc7361683) - Show deliberately stopped agent sessions as idle instead of finished.
+
+- [#13641](https://github.com/Kilo-Org/kilocode/pull/13641) [`dd390c1`](https://github.com/Kilo-Org/kilocode/commit/dd390c1930d0cc548fe997ed20c0f2be7967fd30) - Support stopping the main agent without cancelling background agents, and add Stop all to the VS Code background-agent bar.
+
+- [#13446](https://github.com/Kilo-Org/kilocode/pull/13446) [`f1330ac`](https://github.com/Kilo-Org/kilocode/commit/f1330aceb56b76790aabff41a17104ef6ab19c95) Thanks [@maphew](https://github.com/maphew)! - Surface the actual tool name when the model calls an unavailable tool, instead of a confusing "unavailable tool 'invalid'" error. Malformed tool calls that cannot be repaired now report the real tool name and available tools, so the model can self-correct.
+
+- [#12642](https://github.com/Kilo-Org/kilocode/pull/12642) [`95c731e`](https://github.com/Kilo-Org/kilocode/commit/95c731e9d97bfb7046f04159188cc2b5e6e04f0a) Thanks [@noobezlol](https://github.com/noobezlol)! - Respect deleted bash permission overrides after upgrading.
+
+- Updated dependencies [[`7c845aa`](https://github.com/Kilo-Org/kilocode/commit/7c845aa0ec8a0ff46f25cff26545260c0126c3f7), [`dd390c1`](https://github.com/Kilo-Org/kilocode/commit/dd390c1930d0cc548fe997ed20c0f2be7967fd30), [`6624c1a`](https://github.com/Kilo-Org/kilocode/commit/6624c1a2b07c0a7871532b0b5175d01a03c6e61e)]:
+  - @kilocode/sdk@7.6.0
+  - @kilocode/plugin@7.5.7
+  - @opencode-ai/tui@7.5.7
+  - @opencode-ai/ui@7.5.7
+  - @kilocode/kilo-gateway@7.5.7
+  - @kilocode/kilo-indexing@7.5.7
+  - @kilocode/plugin-atomic-chat@7.5.7
+  - @opencode-ai/server@7.5.7
+  - @kilocode/kilo-telemetry@7.5.7
+
 ## 7.5.6
 
 ### Minor Changes

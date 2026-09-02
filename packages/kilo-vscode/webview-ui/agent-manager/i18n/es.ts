@@ -248,6 +248,21 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No se encontraron branches.",
   "agentManager.import.noBranchesHint": "Pega una URL de PR arriba o crea un nuevo Worktree.",
   "agentManager.import.failed": "Error en la importación",
+  "agentManager.browser.title": "Navegador",
+  "agentManager.browser.url": "URL de la aplicación local",
+  "agentManager.browser.urlPlaceholder": "http://localhost:3000",
+  "agentManager.browser.open": "Abrir",
+  "agentManager.browser.inspect": "Seleccionar elemento",
+  "agentManager.browser.devtoolsTitle": "Herramientas de desarrollo",
+  "agentManager.browser.refresh": "Actualizar navegador",
+  "agentManager.browser.close": "Cerrar navegador",
+  "agentManager.browser.empty": "Abre una aplicación local para previsualizarla aquí.",
+  "agentManager.browser.noSession": "Selecciona primero una sesión de Agent Manager.",
+  "agentManager.browser.screenshotAlt": "Página actual del navegador",
+  "agentManager.browser.errors": "Problemas del navegador: {{count}}",
+  "agentManager.browser.diagnostics": "Diagnóstico del navegador",
+  "agentManager.browser.diagnosticsHint":
+    "Eventos recientes del navegador de automatización. Los bloqueos de seguridad no son errores de consola.",
 
   "agentManager.pr.error.gh_auth.title": "Se requiere autenticación de GitHub",
   "agentManager.pr.error.gh_auth.description":

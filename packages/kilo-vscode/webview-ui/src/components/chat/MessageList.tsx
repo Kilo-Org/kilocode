@@ -20,6 +20,7 @@ import {
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -114,21 +115,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // back to kilo-ui's default hideDetails renderer, which never shows a
   // task's result text — indexing it there would produce a phantom match.
   const inAgentManager = !!useWorktreeMode()
-
-  // Mirrors message-part.tsx's own (unexported) relativizeProjectPath/
-  // getDirectory exactly, so the directory text indexed here matches what
-  // ToolMetaLine/ToolFileAccordion actually put on screen.
-  function relativizeProjectPath(path: string, directory?: string) {
-    if (!path) return ""
-    if (!directory) return path
-    if (directory === "/") return path
-    if (directory === "\\") return path
-    if (path === directory) return ""
-    const separator = directory.includes("\\") ? "\\" : "/"
-    const prefix = directory.endsWith(separator) ? directory : directory + separator
-    if (!path.startsWith(prefix)) return path
-    return path.slice(directory.length)
-  }
 
   function getDirectory(path: string | undefined) {
     return relativizeProjectPath(getRawDirectory(path), data.directory)
