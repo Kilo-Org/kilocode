@@ -51,6 +51,7 @@ import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
+import { createDialogModels } from "./new-worktree-models"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -88,16 +89,6 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
   if (!value) return base
   if (list.length === 0) return value
   return list.some((item) => item.name === value) ? value : base
-}
-
-function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
-  if (!value) return undefined
-  if (Object.keys(providers).length === 0) return value
-  return valid(value) ? value : undefined
-}
-
-function fallback<T>(value: T | undefined, get: () => T): T {
-  return value === undefined ? get() : value
 }
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -168,14 +159,17 @@ export const NewWorktreeDialog: Component<{
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const initialModel = fallback(
-    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
-    () => session.modelForAgent(initialAgent),
-  )
-  const [model, setModel] = createSignal<Model | null>(initialModel)
+  const [agent, setAgent] = createSignal(initialAgent)
+  const selection = createDialogModels({
+    saved: saved.model,
+    fallback: () => session.modelForAgent(agent()),
+    ready: provider.ready,
+    valid: provider.isModelValid,
+    variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+  })
+  const model = selection.model
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -207,8 +201,7 @@ export const NewWorktreeDialog: Component<{
 
   const selectAgent = (name: string) => {
     setAgent(name)
-    const sel = session.modelForAgent(name)
-    setModel(sel)
+    selection.select(undefined)
     setVariant(undefined)
   }
 
@@ -329,7 +322,7 @@ export const NewWorktreeDialog: Component<{
       ...state,
       advancedDialogSelections: {
         agent: agent(),
-        model: model(),
+        model: selection.choice(),
         variant: variant(),
         sandbox: sandbox(),
       },
@@ -417,8 +410,7 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
-    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
-    return true
+    return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
@@ -850,7 +842,7 @@ export const NewWorktreeDialog: Component<{
                         const current = effectiveVariant()
                         const next = { providerID: pid, modelID: mid }
                         const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        setModel(next)
+                        selection.select(next)
                         setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
                       }}
                       onPick={restorePrompt}

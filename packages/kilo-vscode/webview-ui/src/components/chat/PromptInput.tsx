@@ -1341,7 +1341,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched && !data && !browserData) {
       const args = draft.slice(cmdMatch![0].length).trim()
-      session.sendCommand(
+      const accepted = session.sendCommand(
         matched.name,
         args,
         sel?.providerID,
@@ -1356,8 +1356,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           variant: matched.variant,
         },
       )
+      if (!accepted) return
     } else {
-      session.sendMessage(
+      const accepted = session.sendMessage(
         message,
         sel?.providerID,
         sel?.modelID,
@@ -1368,6 +1369,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         origin ?? null,
         browserData,
       )
+      if (!accepted) return
     }
 
     drafts.delete(key)
