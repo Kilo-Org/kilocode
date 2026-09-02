@@ -869,6 +869,9 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.experimental.sharedAgentBoard.title": "Общая доска агентов",
+  "settings.experimental.sharedAgentBoard.description":
+    "Позволяет главному агенту и его подагентам делиться находками в рамках одного сеанса.",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",

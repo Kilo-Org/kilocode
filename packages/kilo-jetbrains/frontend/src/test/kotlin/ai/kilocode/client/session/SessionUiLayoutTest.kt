@@ -1237,6 +1237,12 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         worktree = fake
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, fake), testRootDisposable)
+        // The UI built in setUp launched its own branch lookup before this fake existed, and it
+        // resolves the service inside the coroutine — so it lands on the fake whenever the shared
+        // dispatcher gets to it after the swap. Drain it here and drop what it recorded so the
+        // assertions below only see the lookup made by the UI under test.
+        settle()
+        fake.branchCalls.clear()
         ui = newUi(manager = object : SessionManager {
             override fun newSession() {}
             override fun showHistory(back: (() -> Unit)?) {}
