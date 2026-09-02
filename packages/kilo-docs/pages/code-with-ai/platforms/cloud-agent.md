@@ -59,6 +59,7 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
 - Python is not included in the base image, but `apt` is available so you can install it or other packages as needed.
 - All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
+- A worktree can also host **multiple chats** that share the same checkout. In the web interface, each chat opens as its own tab in the worktree group — you can rename tabs, close and reopen them, and delete a whole worktree with all of its chats.
 - When a session begins:
   1. Your repo is cloned
   2. A unique branch is created

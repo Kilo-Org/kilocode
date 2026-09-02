@@ -342,10 +342,10 @@ When you use `@terminal` in an Agent Manager prompt, Kilo captures the focused t
 
 The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
 
-- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal at the bottom of the window
-- **Agent Manager panel** — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+- **Agent Manager panel** (default) — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+- **VS Code terminal** — opens or focuses the VS Code integrated terminal at the bottom of the window
 
-The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`vscode` or `agentManager`). The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
+The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`agentManager` or `vscode`); the setting defaults to `agentManager` when you have not chosen a destination. The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
 
 With the **Agent Manager panel** destination, the terminal works like the diff panel: press `Cmd+/` to reveal and focus it, press it while the panel is visible but another control has focus to move focus into the terminal, and press it again from the terminal to hide it. Hiding never stops the terminal — scrollback and running processes continue in the background, and focus returns to the chat input. A terminal stops only when you click its close button or type `exit` in the shell.
 

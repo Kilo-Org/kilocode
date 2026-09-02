@@ -57,6 +57,10 @@ Use these controls in the expanded strip:
 - **Clear finished** hides all agents that are no longer running.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
+While background agents are running, the strip also shows a **Stop all (N)** button that cancels every running background agent for the current session without stopping the main session.
+
+Stopping the main session with `Esc` or the chat's **Stop** button ends the current response but keeps background agents running. Completed background results are retained and delivered when you send the next message or use **Continue**.
+
 ## Follow-up Messages
 
 The prompt input stays editable while the agent is working. Send a message while a response is running to add it to the session's queue; queued messages are processed in order.

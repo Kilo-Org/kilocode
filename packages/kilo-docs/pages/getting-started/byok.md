@@ -67,7 +67,9 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 
 ### AWS Bedrock configuration
 
-AWS Bedrock requires credentials in a different format than other providers. Instead of a single API key, you must provide your AWS credentials as a JSON object:
+AWS Bedrock requires credentials in a different format than other providers. Instead of a single API key field, you provide your AWS credentials as a JSON object. Two authentication methods are supported — use only one per key.
+
+**IAM credentials:**
 
 ```json
 {
@@ -87,6 +89,22 @@ Your IAM user or role must have the following permissions:
 
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
+
+**Bedrock API key:**
+
+```json
+{
+  "apiKey": "...",
+  "region": "us-east-1"
+}
+```
+
+| Field | Description |
+|---|---|
+| `apiKey` | A Bedrock API key created in the AWS Console |
+| `region` | The AWS region where Bedrock is enabled (e.g., `us-east-1`, `eu-west-1`) |
+
+Bedrock API keys expire after a period you choose when creating them. When a key expires, generate a new one in the AWS Console and update the BYOK entry.
 
 ## How Bring Your Own Key works
 
