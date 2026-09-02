@@ -845,6 +845,9 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
+  "settings.experimental.sharedAgentBoard.title": "Shared agent board",
+  "settings.experimental.sharedAgentBoard.description":
+    "Let the main agent and its subagents share discoveries within one session.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",

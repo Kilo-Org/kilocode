@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -142,14 +143,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID, scope?: KiloSessionControl.AbortScope) => Effect.Effect<void> // kilocode_change
-  readonly prompt: (
-    input: PromptInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (
-    input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -1512,6 +1509,7 @@ export const layer = Layer.effect(
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
       const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
+      const board = BoardContext.cache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1659,7 +1657,13 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true, overflow: false }) // kilocode_change
+          yield* compaction.create({
+            sessionID,
+            agent: lastUser.agent,
+            model: lastUser.model,
+            auto: true,
+            overflow: false,
+          }) // kilocode_change
           continue
         }
 
@@ -1719,6 +1723,16 @@ export const layer = Layer.effect(
           const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
           const promptOps = yield* ops()
 
+          // kilocode_change start
+          const notify = BoardContext.allowed({ session, agent, user: lastUser })
+            ? yield* BoardContext.notifier({ cache: board, session, agent, user: lastUser }).pipe(
+                Effect.provideService(Config.Service, config),
+                Effect.provideService(Database.Service, database),
+                Effect.provideService(Agent.Service, agents),
+                Effect.provideService(Session.Service, sessions),
+              )
+            : undefined
+          // kilocode_change end
           const tools = yield* SessionTools.resolve({
             agent,
             session,
@@ -1728,6 +1742,7 @@ export const layer = Layer.effect(
             messages: msgs,
             promptOps,
             memoryCache, // kilocode_change
+            notify, // kilocode_change
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1798,6 +1813,7 @@ export const layer = Layer.effect(
           const system = [
             ...env,
             ...mem, // kilocode_change
+            ...(tools.board_read && notify ? [BoardContext.instructions] : []), // kilocode_change
             ...instructions,
             ...(mcpInstructions ? [mcpInstructions] : []),
             ...(skills ? [skills] : []),

@@ -2530,6 +2530,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
+  private invalidateProviders(): void {
+    this.providersGeneration++
+    this.cachedProvidersMessage = null
+    this.postMessage({ type: "providersLoading" })
+  }
+
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
   private async fetchAndSendProviders(): Promise<void> {
     const next = ++this.providersGeneration
@@ -2549,7 +2555,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
         try {
-          const { response, authMethods, authStates, storedKeys } = await fetchProviderData(
+          const { response, authMethods, authStates, storedKeys, organizationId, ready } = await fetchProviderData(
             client,
             this.getWorkspaceDirectory(),
           )
@@ -2565,6 +2571,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             providers: indexProvidersById(response.all),
             connected: response.connected,
             defaults: response.default,
+            organizationId,
+            ready,
             defaultSelection: computeDefaultSelection(
               this.cachedConfigMessage as { config?: { model?: string } } | null,
               settings.get<string>("providerID", ""),
@@ -4384,6 +4392,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       getWorkspaceDirectory: () => this.getWorkspaceDirectory(),
       disposeGlobal: () => this.disposeGlobal(),
       invalidateProviderUsage: () => this.invalidateProviderUsage(),
+      invalidateProviders: () => this.invalidateProviders(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
       fetchAndSendSpeechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
@@ -4537,14 +4546,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
     this.invalidateProviderUsage()
-    await this.fetchAndSendConfig()
+    this.invalidateProviders()
     await Promise.all([
       this.fetchAndSendProviders(),
-      this.fetchAndSendAgents(),
-      this.fetchAndSendSkills(),
-      this.fetchAndSendCommands(),
-      this.fetchAndSendIndexingStatus(),
-      this.fetchAndSendNotifications(),
+      this.fetchAndSendConfig().then(() =>
+        Promise.all([
+          this.fetchAndSendAgents(),
+          this.fetchAndSendSkills(),
+          this.fetchAndSendCommands(),
+          this.fetchAndSendIndexingStatus(),
+          this.fetchAndSendNotifications(),
+        ]),
+      ),
     ])
   }
 

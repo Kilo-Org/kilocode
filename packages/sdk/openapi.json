@@ -13536,6 +13536,9 @@
                     "type": {
                       "type": "string",
                       "enum": ["api", "oauth"]
+                    },
+                    "organizationId": {
+                      "type": "string"
                     }
                   },
                   "required": ["authenticated"],
@@ -36247,6 +36250,9 @@
                 "type": "string"
               },
               "openTelemetry": {
+                "type": "boolean"
+              },
+              "shared_agent_board": {
                 "type": "boolean"
               },
               "primary_tools": {

@@ -214,6 +214,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(auth).toEqual({
       authenticated: { type: "boolean" },
       type: { type: "string", enum: ["api", "oauth"] },
+      organizationId: { type: "string" },
     })
 
     const sessions = response(KiloGatewayPaths.cloudSessions)?.properties

@@ -414,67 +414,97 @@ describe("tool.task model resolution", () => {
     }
   }
 
-  it.live("keeps the latest parent model and reasoning when a background override completes", () =>
-    provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          const { chat, assistant } = yield* seed("background", inherited)
-          const sessions = yield* Session.Service
-          const notified = yield* Deferred.make<SessionPrompt.PromptInput>()
-          const calls: SessionPrompt.PromptInput[] = []
-          const tool = yield* TaskTool.pipe(
-            Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: true })),
-          )
-          const def = yield* tool.init()
-          const promptOps: TaskPromptOps = {
-            ...stubOps(),
-            prompt: (input) =>
+  for (const enabled of [false, true]) {
+    for (const example of [
+      { state: "completed", model: { ...cfg, variant: cfgVariant } },
+      { state: "error", model: { ...cfg, variant: cfgVariant } },
+      { state: "completed", model: { ...cfg, variant: undefined } },
+      { state: "completed", model: undefined },
+    ]) {
+      it.live(
+        `keeps parent selection ${JSON.stringify(example.model)} on background ${example.state} with selection ${enabled}`,
+        () =>
+          provideTmpdirInstance(
+            () =>
               Effect.gen(function* () {
-                calls.push(input)
-                if (input.sessionID === chat.id) yield* Deferred.succeed(notified, input)
-                if (input.sessionID !== chat.id) {
-                  yield* sessions.setAgentModel({
-                    sessionID: chat.id,
-                    agent: "build",
-                    model: { id: cfg.modelID, providerID: cfg.providerID, variant: cfgVariant },
-                    time: Date.now(),
-                  })
+                const { chat, assistant } = yield* seed("background", inherited)
+                const sessions = yield* Session.Service
+                const notified = yield* Deferred.make<SessionPrompt.PromptInput>()
+                const calls: SessionPrompt.PromptInput[] = []
+                const tool = yield* TaskTool.pipe(
+                  Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: true })),
+                )
+                const def = yield* tool.init()
+                const promptOps: TaskPromptOps = {
+                  ...stubOps(),
+                  prompt: (input) =>
+                    Effect.gen(function* () {
+                      calls.push(input)
+                      if (input.sessionID === chat.id) {
+                        yield* Deferred.succeed(notified, input)
+                        return reply(input, "done")
+                      }
+                      if (example.model) {
+                        yield* sessions.setAgentModel({
+                          sessionID: chat.id,
+                          agent: "build",
+                          model: {
+                            id: example.model.modelID,
+                            providerID: example.model.providerID,
+                            variant: example.model.variant,
+                          },
+                          time: Date.now(),
+                        })
+                      }
+                      if (example.state === "error") return yield* Effect.die(new Error("task failed"))
+                      return reply(input, "done")
+                    }),
                 }
-                return reply(input, "done")
+                const result = yield* def.execute(
+                  {
+                    description: "background selection",
+                    prompt: "inspect selection",
+                    subagent_type: "general",
+                    background: true,
+                    ...(enabled ? { model: "sub-model", provider: "sub-provider", variant: subVariant } : {}),
+                  },
+                  {
+                    sessionID: chat.id,
+                    messageID: assistant.id,
+                    agent: "build",
+                    abort: new AbortController().signal,
+                    extra: { promptOps, bypassAgentCheck: true },
+                    messages: [],
+                    metadata: () => Effect.void,
+                    ask: () => Effect.void,
+                  },
+                )
+                const notice = yield* Deferred.await(notified).pipe(Effect.timeout("5 seconds"))
+                expect(result.metadata.model).toEqual(sub)
+                expect(result.metadata.variant).toEqual(subVariant)
+                expect(calls.at(0)?.model).toEqual(sub)
+                expect(calls.at(0)?.variant).toEqual(subVariant)
+                expect(notice.model).toEqual(example.model ? cfg : parent)
+                expect(notice.variant).toEqual(example.model ? example.model.variant : inherited)
+                expect(notice.parts).toEqual([
+                  expect.objectContaining({
+                    type: "text",
+                    synthetic: true,
+                    text: expect.stringContaining(`state="${example.state}"`),
+                  }),
+                ])
               }),
-          }
-          const result = yield* def.execute(
             {
-              description: "background selection",
-              prompt: "inspect selection",
-              subagent_type: "general",
-              background: true,
-              model: "sub-model",
-              provider: "sub-provider",
-              variant: subVariant,
+              config: {
+                ...catalog,
+                ...(!enabled ? { subagent_model: "sub-provider/sub-model", subagent_variant: subVariant } : {}),
+                experimental: { task_model_selection: enabled },
+              },
             },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              extra: { promptOps, bypassAgentCheck: true },
-              messages: [],
-              metadata: () => Effect.void,
-              ask: () => Effect.void,
-            },
-          )
-          const notice = yield* Deferred.await(notified).pipe(Effect.timeout("5 seconds"))
-          expect(result.metadata.model).toEqual(sub)
-          expect(result.metadata.variant).toEqual(subVariant)
-          expect(calls.at(0)?.model).toEqual(sub)
-          expect(calls.at(0)?.variant).toEqual(subVariant)
-          expect(notice.model).toEqual(cfg)
-          expect(notice.variant).toEqual(cfgVariant)
-        }),
-      { config: { ...catalog, experimental: { task_model_selection: true } } },
-    ),
-  )
+          ),
+      )
+    }
+  }
 
   it.live("saved model beats agent config for pinned", () =>
     run({
