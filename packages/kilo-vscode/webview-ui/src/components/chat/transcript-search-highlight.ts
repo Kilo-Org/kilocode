@@ -6,6 +6,8 @@
  * not by this highlighter.
  */
 
+import type { SearchMatch } from "../../context/transcript-search"
+
 const MATCH_NAME = "kilo-transcript-search-match"
 const ACTIVE_NAME = "kilo-transcript-search-match-active"
 
@@ -107,7 +109,7 @@ export function scanScope(scope: HTMLElement, pattern: RegExp): Range[] {
 export function applyTranscriptHighlights(
   root: HTMLElement,
   pattern: RegExp | undefined,
-  active: { key: string; occurrence: number } | undefined,
+  active: SearchMatch | undefined,
   matchedParts?: Map<string, Set<string>>,
 ): Range | undefined {
   const api = highlightApi()
@@ -121,23 +123,24 @@ export function applyTranscriptHighlights(
   const current: Range[] = []
   let currentRange: Range | undefined
   for (const scope of scopes) {
-    // Every search scope within a row contributes to ONE combined range
-    // list before the active-occurrence index is resolved — clamping it
-    // per search-scope instead would treat `active.occurrence` as local to
-    // whichever part happened to be scanned first, misattributing which
-    // occurrence is "current" for any row with more than one contributing
-    // part (e.g. a reasoning block followed by a tool call).
-    const ranges = resolveSearchScopes(scope, matchedParts).flatMap((searchScope) => scanScope(searchScope, pattern))
+    const match = active?.key === scope.dataset.rowKey ? active : undefined
+    let selected: Range | undefined
+    const ranges = resolveSearchScopes(scope, matchedParts).flatMap((part) => {
+      const ranges = scanScope(part, pattern)
+      if (match?.partId && part.dataset.partId === match.partId && match.partOccurrence !== undefined) {
+        selected = ranges.at(Math.min(match.partOccurrence, ranges.length - 1))
+      }
+      return ranges
+    })
     if (ranges.length === 0) continue
-    const isActiveRow = !!active && scope.dataset.rowKey === active.key
-    const activeIdx = isActiveRow ? Math.min(active!.occurrence, ranges.length - 1) : -1
-    for (let i = 0; i < ranges.length; i += 1) {
-      if (i === activeIdx) {
-        current.push(ranges[i]!)
-        currentRange = ranges[i]!
+    if (!selected && match) selected = ranges.at(Math.min(match.occurrence, ranges.length - 1))
+    for (const range of ranges) {
+      if (range === selected) {
+        current.push(range)
+        currentRange = range
         continue
       }
-      rest.push(ranges[i]!)
+      rest.push(range)
     }
   }
   if (rest.length > 0) api.registry.set(MATCH_NAME, new api.ctor(...rest))

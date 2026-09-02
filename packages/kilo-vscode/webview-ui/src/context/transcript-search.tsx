@@ -8,6 +8,7 @@ export interface SearchMatch {
    * within, if it could be attributed to one — lets navigation force a
    * collapsed part open instead of just scrolling to the row. */
   partId?: string
+  partOccurrence?: number
   /** For a multi-file apply_patch part, the specific file path this
    * occurrence falls within — lets navigation open just that file's nested
    * accordion instead of every file in the patch. */

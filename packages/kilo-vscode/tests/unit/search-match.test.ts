@@ -1,4 +1,6 @@
-import { describe, it, expect } from "bun:test"
+import { afterAll, afterEach, beforeEach, describe, it, expect } from "bun:test"
+import { Window } from "happy-dom"
+import { applyTranscriptHighlights } from "../../webview-ui/src/components/chat/transcript-search-highlight"
 import { acronymMatch, searchMatch } from "../../webview-ui/src/utils/search-match"
 
 // ---------------------------------------------------------------------------
@@ -196,5 +198,85 @@ describe("searchMatch", () => {
     it("matches mode selector options by label+value", () => {
       expect(searchMatch("cod", "Code code Write code")).toBe(true)
     })
+  })
+})
+
+describe("transcript search highlights", () => {
+  const window = new Window()
+  const registry = new Map<string, Set<Range>>()
+  const saved = {
+    document: globalThis.document,
+    Text: globalThis.Text,
+    NodeFilter: globalThis.NodeFilter,
+    CSS: globalThis.CSS,
+    Highlight: Reflect.get(globalThis, "Highlight"),
+  }
+
+  beforeEach(() => {
+    Object.assign(globalThis, {
+      document: window.document,
+      Text: window.Text,
+      NodeFilter: window.NodeFilter,
+      CSS: { escape: window.CSS.escape, highlights: registry },
+      Highlight: class extends Set<Range> {
+        constructor(...ranges: Range[]) {
+          super(ranges)
+        }
+      },
+    })
+  })
+  afterEach(() => Object.assign(globalThis, saved))
+  afterAll(() => window.happyDOM.close())
+
+  it("keeps forward and previous matches exact when an earlier board card shrinks", () => {
+    const root = window.document.createElement("div")
+    root.innerHTML = `<div data-row-key="row">${["a", "b"]
+      .map(
+        (id) =>
+          `<div data-part-id="${id}" data-tool="board_read"><div data-slot="board-messages">${[0, 1, 2, 3]
+            .map((index) => `<p id="${id}${index}">Message needle ${id}${index}</p>`)
+            .join("")}</div></div>`,
+      )
+      .join("")}</div>`
+    expect(root.textContent.match(/needle/g)).toHaveLength(8)
+    const a = root.querySelector("#a3")!
+    const b = root.querySelector("#b3")!
+    const parents = [a.parentElement!, b.parentElement!]
+    const parts = new Map([["row", new Set(["a", "b"])]])
+    const select = (part: string, occurrence: number, offset: number) => {
+      const range = applyTranscriptHighlights(
+        root as unknown as HTMLElement,
+        /needle/g,
+        { key: "row", occurrence, partId: part, partOccurrence: offset },
+        parts,
+      )
+      expect(range?.startContainer.parentElement?.id).toBe(`${part}${offset}`)
+      expect(registry.get("kilo-transcript-search-match-active")?.has(range!)).toBe(true)
+      expect(registry.get("kilo-transcript-search-match")?.size).toBe(6)
+    }
+
+    b.remove()
+    select("a", 3, 3)
+    a.remove()
+    parents.at(1)!.append(b)
+    for (const offset of [0, 1, 2, 3, 2, 1, 0]) select("b", 4 + offset, offset)
+    b.remove()
+    parents.at(0)!.append(a)
+    select("a", 3, 3)
+  })
+
+  it("preserves row offsets when active text has no part marker", () => {
+    const root = window.document.createElement("div")
+    root.innerHTML = '<div data-row-key="row"><p>First needle</p><p id="last">Last needle</p></div>'
+    for (const partId of [undefined, "missing"]) {
+      const range = applyTranscriptHighlights(
+        root as unknown as HTMLElement,
+        /needle/g,
+        { key: "row", occurrence: 1, partId, partOccurrence: 0 },
+        new Map([["row", new Set(partId ? [partId] : [])]]),
+      )
+      expect(range?.startContainer.parentElement?.id).toBe("last")
+      expect(registry.get("kilo-transcript-search-match")?.size).toBe(1)
+    }
   })
 })

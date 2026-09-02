@@ -14,6 +14,7 @@ type Board = {
   more: boolean
   valid: boolean
   warning?: string
+  root?: string
   recipients?: "active" | "inactive" | "unknown"
   raw?: string
 }
@@ -60,16 +61,16 @@ function parse(tool: string, output: string): Board {
   if (!rows) return fallback
   const messages = rows.map(message)
   if (messages.some((item) => !item)) return fallback
-  if (Array.isArray(value.participants)) {
-    for (const item of value.participants) {
-      if (object(item) && typeof item.id === "string" && typeof item.label === "string") {
-        const name = item.id === "main" ? "main" : text(item.description)?.trim() || item.label
-        names.set(item.id, name)
-        const id = text(item.sessionID)
-        if (id) names.set(id, name)
-      }
+  const participants = Array.isArray(value.participants) ? value.participants : []
+  for (const item of participants) {
+    if (object(item) && typeof item.id === "string" && typeof item.label === "string") {
+      const name = item.id === "main" ? "main" : text(item.description)?.trim() || item.label
+      names.set(item.id, name)
+      const id = text(item.sessionID)
+      if (id) names.set(id, name)
     }
   }
+  const root = participants.find((item) => object(item) && item.id === "main")
   const state = object(value.recipients) ? value.recipients.state : undefined
   return {
     messages: messages as Message[],
@@ -77,6 +78,7 @@ function parse(tool: string, output: string): Board {
     more: value.hasMore === true,
     valid: true,
     warning: text(value.warning),
+    root: object(root) ? text(root.sessionID) : undefined,
     recipients: state === "active" || state === "inactive" || state === "unknown" ? state : undefined,
   }
 }
@@ -86,8 +88,9 @@ export function recipient(
   names: Map<string, string>,
   labels: { main: string; all: string; agent: (id: string) => string },
   cached?: string,
+  root?: string,
 ) {
-  if (id === "main" || names.get(id) === "main") return labels.main
+  if (id === "main" || id === root) return labels.main
   if (id === "ALL") return labels.all
   const name = cached || names.get(id)
   if (name) return name.replace(/ \(@[^()]+ subagent\)$/, "")
@@ -121,6 +124,7 @@ export function presentation(
         agent: (id) => t("tool.board.agent", { id }),
       },
       cached,
+      data.root,
     )
   }
   const status = (() => {

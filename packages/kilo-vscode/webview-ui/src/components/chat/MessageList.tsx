@@ -738,6 +738,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const result: SearchMatch[] = []
     for (const row of list) {
       const { text, ranges } = rowText(row)
+      const counts = new Map<string | undefined, number>()
       p.lastIndex = 0
       let occurrence = 0
       let hit = p.exec(text)
@@ -748,7 +749,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
           continue
         }
         const range = rangeAt(ranges, hit.index)
-        result.push({ key: row.key, occurrence, partId: range?.partId, partFile: range?.file })
+        const part = range?.partId
+        const offset = counts.get(part) ?? 0
+        counts.set(part, offset + 1)
+        result.push({ key: row.key, occurrence, partId: part, partOccurrence: offset, partFile: range?.file })
         occurrence += 1
         hit = p.exec(text)
       }
@@ -845,12 +849,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       return
     }
     const active = activeMatch()
-    const range = applyTranscriptHighlights(
-      el,
-      pattern(),
-      active && { key: active.key, occurrence: active.occurrence },
-      matchedPartsByRow(),
-    )
+    const range = applyTranscriptHighlights(el, pattern(), active, matchedPartsByRow())
     if (!pendingCenter) return
     pendingCenter = false
     if (!range) return

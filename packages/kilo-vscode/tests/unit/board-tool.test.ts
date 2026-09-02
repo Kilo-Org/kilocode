@@ -55,6 +55,23 @@ describe("board communication", () => {
     expect(data.names.get(note.from)).toBe(title)
   })
 
+  it("does not identify a child named main as the board root", () => {
+    const data = board(
+      "board_read",
+      {},
+      JSON.stringify({
+        ...read,
+        participants: [{ id: "ses_research", label: "main" }],
+      }),
+    )
+    const lookup = (id: string) =>
+      id === "ses_research" ? { title: "Review cancellation", parentID: "ses_root" } : undefined
+    expect(presentation("board_read", data, true, t, lookup).from("ses_research")).toBe(
+      "tool.board.from:Review cancellation",
+    )
+    expect(presentation("board_read", data, true, t).from("ses_research")).toBe("tool.board.from:main")
+  })
+
   it("recognizes a cached root session without inventing identities for missing sessions", () => {
     const lookup = (id: string) => (id === "ses_root" ? { title: "Current task" } : undefined)
     const view = presentation(
@@ -273,7 +290,8 @@ describe("board tool presentation", () => {
     expect(recipient("main", names, labels)).toBe("Main")
     expect(recipient("ALL", names, labels)).toBe("All agents")
     expect(recipient("ses_research", names, labels)).toBe("Research")
-    expect(recipient("ses_root", names, labels)).toBe("Main")
+    expect(recipient("ses_root", names, labels)).toBe("main")
+    expect(recipient("ses_root", names, labels, undefined, "ses_root")).toBe("Main")
     expect(recipient("ses_abcdefgh1234", names, labels)).toBe("Agent abcd…1234")
   })
 })
