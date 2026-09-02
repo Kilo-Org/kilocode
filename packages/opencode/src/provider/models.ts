@@ -6,6 +6,7 @@ import * as Core from "@opencode-ai/core/models-dev"
 import { Context, Effect, Layer } from "effect"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
 import { overlay } from "@/kilocode/anaconda-desktop/provider"
+import { overlay as withLLMTech } from "@/kilocode/provider/llmtech"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
@@ -43,7 +44,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
       const cache = yield* ModelCache.Service
 
       const get = Effect.fn("ModelsDev.get")(function* () {
-        const providers = overlay(yield* core.get())
+        const providers = withLLMTech(overlay(yield* core.get()))
         const fallback = providers.kilo
         delete providers.kilo
 
