@@ -857,9 +857,9 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
-  "settings.experimental.sharedAgentBoard.title": "Спільна дошка агентів",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
   "settings.experimental.sharedAgentBoard.description":
-    "Дозволяє головному агенту та його підлеглим агентам ділитися відкриттями в межах одного сеансу.",
+    "Надайте спільну дошку головному сеансу та його субагентам, які виконують завдання, включно з вкладеними субагентами. Використовуйте її для паралельних спроб знайти розв'язання або взаємодоповнювальної роботи, а не для кожного завдання.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",

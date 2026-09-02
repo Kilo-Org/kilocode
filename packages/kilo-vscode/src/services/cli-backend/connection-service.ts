@@ -109,6 +109,7 @@ export class KiloConnectionService {
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   private currentDirectory: string | undefined
   private readonly permissionDirectories: Map<string, string> = new Map()
+  private permissionRevision = 0
   private readonly questionDirectories: Map<string, string> = new Map()
   private questionRevision = 0
 
@@ -362,9 +363,15 @@ export class KiloConnectionService {
 
   clearPermissionDirectory(requestID: string): void {
     this.permissionDirectories.delete(requestID)
+    this.permissionRevision += 1
+  }
+
+  getPermissionRevision(): number {
+    return this.permissionRevision
   }
 
   prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    const size = this.permissionDirectories.size
     for (const [id, dir] of this.permissionDirectories) {
       if (active.has(id)) {
         continue
@@ -374,6 +381,7 @@ export class KiloConnectionService {
       }
       this.permissionDirectories.delete(id)
     }
+    if (this.permissionDirectories.size !== size) this.permissionRevision += 1
   }
 
   recordQuestionDirectory(requestID: string, directory: string): void {
@@ -691,6 +699,7 @@ export class KiloConnectionService {
     this.currentDirectory = undefined
     this.messageSessionIdsByMessageId.clear()
     this.permissionDirectories.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
     if (this.client?.session?.viewed) {
@@ -786,6 +795,7 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.permissionDirectories.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
   }
@@ -915,6 +925,7 @@ export class KiloConnectionService {
 
   private handlePermissionEvent(event: SSEPayload, directory?: string): void {
     if (event.type === "permission.asked" && directory) {
+      this.permissionRevision += 1
       this.recordPermissionDirectory(event.properties.id, directory)
       return
     }
