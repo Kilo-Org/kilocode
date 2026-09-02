@@ -1,6 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
-import { registerDisposer } from "@/effect/instance-registry"
+import { registerDisposer } from "@/effect/instance-registry" // kilocode_change
 import { SessionID } from "./schema"
 import { Effect, Layer, Context } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -38,13 +38,14 @@ const stores = new Map<string, Map<SessionID, Info>>()
 const byDirectory = new Map<string, Map<SessionID, string>>()
 // kilocode_change end
 
-// kilocode_change - project-scoped read for the remote heartbeat gather. Kept off
+// kilocode_change start - project-scoped read for the remote heartbeat gather. Kept off
 // the upstream SessionStatus.Interface so the shared interface stays
 // upstream-identical.
 export const listAll = Effect.fn("SessionStatus.listAll")(function* () {
   const ctx = yield* InstanceState.context
   return new Map(stores.get(String(ctx.project.id)) ?? [])
 })
+// kilocode_change end
 
 export const layer = Layer.effect(
   Service,
