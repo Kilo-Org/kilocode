@@ -39,7 +39,7 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
-import { convertToMentionPath } from "../../utils/path-mentions"
+import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
@@ -224,17 +224,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
-    const val = ref.value
-    const cursor = ref.selectionStart ?? val.length
-    const before = val.substring(0, cursor)
-    const after = val.substring(cursor)
-    const inserted = resolved.map((p) => `@${p}`).join(" ")
-    const result = before + inserted + " " + after
-    ref.value = result
-    setText(result)
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
+    setText(result.text)
     mention.addPaths(resolved, cwd)
-    const pos = cursor + inserted.length + 1
-    ref.setSelectionRange(pos, pos)
+    ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()
   })

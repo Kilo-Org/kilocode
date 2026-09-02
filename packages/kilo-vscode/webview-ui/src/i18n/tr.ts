@@ -1194,6 +1194,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
+  "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
@@ -1206,6 +1207,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "İptal edildi",
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
+  "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",

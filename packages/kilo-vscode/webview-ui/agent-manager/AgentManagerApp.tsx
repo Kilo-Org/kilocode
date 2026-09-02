@@ -101,7 +101,14 @@ import {
   setReviewOpen,
 } from "./project/review-state"
 import { applyRunStatus } from "./project/run-status"
-import { clearFailedDelete, clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
+import {
+  clearFailedDelete,
+  clearMultiVersionBusy,
+  markMultiVersionBusy,
+  setupVisible,
+  updateSetup,
+  type SetupState,
+} from "./project/progress"
 import {
   createSessionRestore,
   createTabMemory,
@@ -193,6 +200,7 @@ import { initialMessage, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
+import { createSidePanel } from "./side-panel-state"
 import { SubagentPanel } from "./SubagentPanel"
 import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { createDocumentInspector } from "../documents/state"
@@ -200,7 +208,7 @@ import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
 import {
   createAgentManagerEditPreview,
-  createEditPreviewContextGuard,
+  previewMatchesContext,
   sessionTreeContains,
   sessionWorktree,
 } from "./edit-preview"
@@ -215,17 +223,8 @@ import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
 import { createSidebarScrollPreserver } from "./sidebar-scroll"
 const REVIEW_TAB_ID = "review"
-interface SetupState {
-  active: boolean
-  message: string
-  branch?: string
-  error?: boolean
-  worktreeId?: string
-  errorCode?: string
-}
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-export type SidePanelState = SidePanel | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 import { parseBindingTokens } from "./keybind-tokens"
 import { defaultBindings } from "./keybind-defaults"
@@ -321,7 +320,26 @@ const AgentManagerContent: Component = () => {
       } as never)
     }
   }
-  const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
+  const [reviewActive, setReviewActive] = createSignal(false)
+  const panels = createSidePanel({
+    project: currentProjectId,
+    selection,
+    current: session.currentSessionID,
+    visible: (panel) => {
+      if (history() || reviewActive()) return false
+      if (panel === SidePanel.Diff)
+        return (
+          !setupVisible(setup(), currentProjectId(), selection()) &&
+          busyWorktrees().get(selection() ?? "")?.reason !== "setting-up"
+        )
+      if (panel === SidePanel.PR) return !!activePR()
+      if (panel === SidePanel.Browser) return browser.tabs.browserAutomation()
+      if (panel === SidePanel.Subagents) return subagents.tabs().length > 0
+      if (panel === SidePanel.EditPreview) return !!editPreview.preview()
+      return true
+    },
+  })
+  const sidePanel = panels.panel
   const [diffMounted, setDiffMounted] = createSignal(false)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
@@ -343,7 +361,7 @@ const AgentManagerContent: Component = () => {
   const showSideTerminal = () => {
     closeHistory()
     setReviewActive(false)
-    setSidePanel(SidePanel.Terminal)
+    panels.open(SidePanel.Terminal)
   }
   const composers = createReviewComposers(currentProjectId)
   createEffect(on(activeProjectId, (_next, previous) => previous && composers.clearProject(previous), { defer: true }))
@@ -352,8 +370,19 @@ const AgentManagerContent: Component = () => {
   const setReviewOpenByContext = reviewState.setOpen
   const reviewCommentsByContext = reviewState.comments
   const setReviewCommentsByContext = reviewState.setComments
-  const [reviewActive, setReviewActive] = createSignal(false)
-  const browser = createBrowserPanel(sidePanel, setSidePanel, setHistory, setReviewActive)
+  const browser = createBrowserPanel(
+    sidePanel,
+    (value) => {
+      const current = panels.selected()
+      const next = typeof value === "function" ? value(current) : value
+      if (next === current) return next
+      if (next) panels.open(next)
+      else panels.close(SidePanel.Browser)
+      return next
+    },
+    setHistory,
+    setReviewActive,
+  )
   const diffStyle = useDiffStyle()!
   const setSharedDiffStyle = (style: "unified" | "split") => {
     if (diffStyle.style() === style) return
@@ -368,9 +397,9 @@ const AgentManagerContent: Component = () => {
     () => {
       closeHistory()
       setReviewActive(false)
-      setSidePanel(SidePanel.Documents)
+      panels.open(SidePanel.Documents)
     },
-    () => setSidePanel(null),
+    () => panels.close(SidePanel.Documents),
   )
   const subagentCtl = createSubagentController({
     project: currentProjectId,
@@ -383,27 +412,30 @@ const AgentManagerContent: Component = () => {
     show: () => {
       closeHistory()
       setReviewActive(false)
-      setSidePanel(SidePanel.Subagents)
+      panels.open(SidePanel.Subagents)
     },
-    hide: () => setSidePanel(null),
+    hide: () => panels.close(SidePanel.Subagents),
   })
   const subagents = subagentCtl.tabs
-  const editPreview = createAgentManagerEditPreview(
-    setHistory,
-    setReviewActive,
-    () => setSidePanel(SidePanel.EditPreview),
-    () => setSidePanel((prev) => (prev === SidePanel.EditPreview ? null : prev)),
-    diffStyle.style,
-    setSharedDiffStyle,
-  )
-  createEditPreviewContextGuard(
-    editPreview.preview,
-    () => session.currentSessionID() ?? undefined,
-    () => selection() ?? null,
-    (id: string) => sessionWorktree(id, session.sessions(), managedSessions()),
-    editPreview.close,
-    (child, parent) => sessionTreeContains(child, parent, session.sessions()),
-  )
+  const editPreview = createAgentManagerEditPreview({
+    context: panels.session,
+    matches: (id) =>
+      previewMatchesContext(
+        id,
+        session.currentSessionID(),
+        selection(),
+        id ? sessionWorktree(id, session.sessions(), managedSessions()) : undefined,
+        (child, parent) => sessionTreeContains(child, parent, session.sessions()),
+      ),
+    show: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.EditPreview)
+    },
+    hide: () => panels.close(SidePanel.EditPreview),
+    style: diffStyle.style,
+    onStyleChange: setSharedDiffStyle,
+  })
   const markdown = createMarkdownRender(vscode)
   const worktreeStats = () => registry.active().worktreeStats()
   const prStatuses = () => registry.active().prStatuses()
@@ -530,8 +562,8 @@ const AgentManagerContent: Component = () => {
       const sel = selection()
       return sel === null ? null : nsKey(sel)
     },
-    sidePanel,
-    setSidePanel,
+    sidePanel: panels.selected,
+    close: () => panels.close(SidePanel.Terminal),
   })
   const cancelAmbientSetup = ambientSetup.cancel
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
@@ -541,15 +573,6 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
-  createEffect(
-    on(
-      selection,
-      () => {
-        if (!activePR()) setSidePanel((p) => (p === SidePanel.PR ? null : p))
-      },
-      { defer: true },
-    ),
-  )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
   const tabMemory = () => registry.active().tabMemory.all()
   const reviewOpen = createMemo(() => {
@@ -584,10 +607,10 @@ const AgentManagerContent: Component = () => {
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
   const togglePRPanel = () => {
+    const opening = sidePanel() !== SidePanel.PR
+    panels.toggle(SidePanel.PR)
     closeHistory()
     if (reviewActive()) closeReviewTab()
-    const opening = sidePanel() !== SidePanel.PR
-    setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
     // Trigger an immediate refresh when opening so the panel shows fresh data
     // rather than waiting for the next poll cycle
     if (opening) {
@@ -820,7 +843,7 @@ const AgentManagerContent: Component = () => {
     // A live Setup script terminal shows progress and failures on its own
     // tab; never cover it with the blocking overlay.
     if (typeof sel === "string" && sel !== LOCAL && hasSetupTerminal(nsKey(sel), terms.sides())) return null
-    if (state.active && (!state.worktreeId || sel === state.worktreeId)) return state
+    if (setupVisible(state, currentProjectId(), sel)) return state
     if (typeof sel !== "string" || sel === LOCAL) return null
     const busy = busyWorktrees().get(sel)
     if (busy?.reason !== "setting-up") return null
@@ -889,6 +912,7 @@ const AgentManagerContent: Component = () => {
     active: activeProjectId,
     activityFor: session.activityFor,
     inUseFor: session.inUseFor,
+    terminal: (id, project) => terms.activityFor(`${project ?? currentProjectId() ?? "single"}:${id ?? LOCAL}`),
     worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
     subscribe: vscode.onMessage,
   })
@@ -1141,12 +1165,10 @@ const AgentManagerContent: Component = () => {
       set: setCurrentProjectId,
       first: () => undefined,
       close: () => setReviewActive(false),
-      hide: () => setSidePanel(null),
       history: () =>
         state.projectId && historySwitches().includes(state.projectId)
           ? setHistorySwitches((prev) => prev.filter((id) => id !== state.projectId))
           : closeHistory(),
-      reset: subagents.reset,
     })
   }
   createTargetRememberer({
@@ -1178,10 +1200,9 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "showTerminal") {
         if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
-        if (reviewActive()) {
-          closeReviewTab()
-          setSidePanel(SidePanel.Diff)
-        } else setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
+        panels.toggle(SidePanel.Diff)
+        closeHistory()
+        if (reviewActive()) closeReviewTab()
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
@@ -1384,21 +1405,19 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeSetupMessage
         creation.setup(ev)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
-        const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
+        const previous = setup()
+        const next = updateSetup(store, previous, ev, currentProjectId(), selection())
+        if (next !== previous) {
+          setSetup(next)
+          if (next.active && next.error)
+            globalThis.setTimeout(
+              () => setSetup((current) => (current === next ? { active: false, message: "" } : current)),
+              3000,
+            )
+        }
+        if (!isActivePayload(ev.projectId)) return
         if (ev.status === "ready" || ev.status === "error") {
-          const error = ev.status === "error"
-          if (ev.worktreeId) updateBusy((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
-          if (!isActivePayload(ev.projectId)) return
-          setSetup({
-            active: true,
-            message: ev.message,
-            branch: ev.branch,
-            error,
-            worktreeId: ev.worktreeId,
-            errorCode: ev.errorCode,
-          })
-          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)
-          if (!error && ev.sessionId) {
+          if (ev.status === "ready" && ev.sessionId) {
             session.selectSession(ev.sessionId)
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
@@ -1406,21 +1425,8 @@ const AgentManagerContent: Component = () => {
             requestChatFocus(true)
           }
         } else {
-          // Track this worktree as setting up and auto-select it in the sidebar
-          if (ev.worktreeId) {
-            updateBusy(
-              (prev) =>
-                new Map([...prev, [ev.worktreeId!, { reason: "setting-up", message: ev.message, branch: ev.branch }]]),
-            )
-            if (!isActivePayload(ev.projectId)) return
-            setSelection(ev.worktreeId)
-          }
-          if (!isActivePayload(ev.projectId)) return
-          // Close diff/review panels — nothing to show during setup.
-          // Terminal panels keep live setup output, so they stay open.
-          if (sidePanel() === SidePanel.Diff) setSidePanel(null)
+          if (ev.worktreeId) setSelection(ev.worktreeId)
           setReviewActive(false)
-          setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
 
@@ -1675,7 +1681,6 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel === null) return
     terms.setActiveId(undefined)
-    setSidePanel(null)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
   }
@@ -2027,7 +2032,7 @@ const AgentManagerContent: Component = () => {
     isScript: terms.isScript,
     hide: () => {
       cancelAmbientSetup()
-      setSidePanel(null)
+      panels.close(SidePanel.Terminal)
     },
     refocus: requestChatFocus,
     postMessage: (msg) => vscode.postMessage(msg as never),
@@ -2200,12 +2205,9 @@ const AgentManagerContent: Component = () => {
     metrics.track("side_review", "tab_toolbar", {
       action: diffOpen() && !reviewActive() ? "close" : "open",
     })
-    if (reviewActive()) {
-      closeReviewTab()
-      setSidePanel(SidePanel.Diff)
-      return
-    }
-    setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
+    panels.toggle(SidePanel.Diff)
+    closeHistory()
+    if (reviewActive()) closeReviewTab()
   }
 
   const renderTabById = (id: string) =>
@@ -2618,7 +2620,7 @@ const AgentManagerContent: Component = () => {
                       markdownRender={markdown.render()}
                       onMarkdownRenderChange={markdown.update}
                       onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                      onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
+                      onClose={metrics.click("side_review_close", "side_review", () => panels.close(SidePanel.Diff))}
                       onExpand={
                         selection() !== null
                           ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
@@ -2646,7 +2648,7 @@ const AgentManagerContent: Component = () => {
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
                         sessionId={diffCtx()}
-                        onClose={() => setSidePanel(null)}
+                        onClose={() => panels.close(SidePanel.PR)}
                       />
                     </Show>
                     {browser.render(session.currentSessionID, activeProjectId)}
@@ -2661,7 +2663,7 @@ const AgentManagerContent: Component = () => {
                         onClose={subagents.close}
                         onCloseOthers={subagents.closeOthers}
                         onReorder={subagents.reorder}
-                        onClosePanel={() => setSidePanel(null)}
+                        onClosePanel={() => panels.close(SidePanel.Subagents)}
                       />
                     </Show>
                     <Show when={editPreview.preview()}>
@@ -2669,7 +2671,7 @@ const AgentManagerContent: Component = () => {
                     </Show>
                     <DocumentPanelHost
                       inspector={documentInspector}
-                      onClosePanel={() => setSidePanel(null)}
+                      onClosePanel={() => panels.close(SidePanel.Documents)}
                       onSendAll={focusCtl.focus}
                       activeTerminalId={terms.activeId()}
                       visible={documentInspector.isOpen}

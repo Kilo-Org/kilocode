@@ -1207,6 +1207,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
   "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
+  "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
@@ -1219,6 +1220,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Geannuleerd",
   "task.backgroundAgents.status.error": "Fout",
   "task.backgroundAgents.untitled": "Achtergrondagent",
+  "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",

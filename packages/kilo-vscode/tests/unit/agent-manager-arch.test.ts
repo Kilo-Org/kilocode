@@ -79,6 +79,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
 const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -145,7 +146,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -162,7 +163,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -1198,12 +1199,10 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("retains the guarded setup error delay", () => {
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

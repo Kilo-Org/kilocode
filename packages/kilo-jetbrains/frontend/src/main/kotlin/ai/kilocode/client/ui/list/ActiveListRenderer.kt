@@ -19,6 +19,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.AlphaComposite
@@ -38,6 +39,15 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 
+/**
+ * Unscaled gap around a row's badge columns.
+ *
+ * Read from the same theme key as [JBUI.CurrentTheme.ActionsList.elementIconGap] but left unscaled, so
+ * one value can feed both the layout gaps (which need pixels) and [JBUI.Borders] (which scales what it
+ * is handed).
+ */
+private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
@@ -51,12 +61,6 @@ internal class ActiveListRenderer(
         if (menu == null) return
         glyph.update(activeListMenuCell())
         glyph.isVisible = false
-        // Mirror the flush leading icon: drop the row's trailing inset and let the empty-icon spacer
-        // hold a dedicated menu column at the content edge. The overlay glyph then floats over that
-        // same slot, revealed on hover.
-        row.border = JBUI.Borders.empty(UiStyle.Gap.md(), 0, UiStyle.Gap.md(), 0)
-        (row.layout as BorderLayout).hgap = 0
-        mark.border = JBUI.Borders.emptyRight(UiStyle.Gap.md())
         val tail = JPanel(BorderLayout())
         UiStyle.Components.transparent(tail)
         tail.add(endPane, BorderLayout.CENTER)
@@ -70,6 +74,9 @@ internal class ActiveListRenderer(
             val width = child.preferredSize.width.coerceAtMost(host.width)
             Rectangle((host.width - width).coerceAtLeast(0), 0, width, host.height)
         }
+        // The menu column changes the row's own padding, so re-derive the scaled geometry now that
+        // [menu] is known.
+        syncScale()
     }
 
     private var menu: ActiveListMenu<*>? = null
@@ -84,8 +91,8 @@ internal class ActiveListRenderer(
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
-    private val leading = Stack.horizontal(JBUI.CurrentTheme.ActionsList.elementIconGap())
-    private val badges = Stack.horizontal(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
+    private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val secondary = Stack.horizontal(UiStyle.Gap.md())
     // Title in CENTER clips when the group is narrow; tags in WEST/EAST keep their full preferred
     // width. A squeezed row sacrifices the title text but never drops the tags.
@@ -117,7 +124,6 @@ internal class ActiveListRenderer(
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val pill = JPanel(BorderLayout()).apply {
-        border = JBUI.Borders.empty(UiStyle.Gap.sm())
         add(cellPane, BorderLayout.CENTER)
     }
     // The dropdown button keeps the overlay approach: a real empty-icon [spacer] holds the trailing
@@ -126,8 +132,6 @@ internal class ActiveListRenderer(
     // the icon sits flush against the content edge, mirroring the flush leading icon.
     private val glyph = ActiveListActionCell()
     private val spacer = JBLabel(EmptyIcon.create(AllIcons.Actions.More))
-    // Width of the dropdown column, used to offset the action pill when a list opts into both.
-    private val reserve: Int by lazy { glyph.preferredSize.width }
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
@@ -139,6 +143,8 @@ internal class ActiveListRenderer(
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
     private var gap = false
+    // JPanel's constructor calls updateUI() before any field below exists, so guard the refresh.
+    private var wired = false
 
     init {
         isOpaque = true
@@ -170,15 +176,10 @@ internal class ActiveListRenderer(
             glyph,
             spacer,
         )
-        row.border = JBUI.Borders.empty(
-            UiStyle.Gap.md(),
-            0,
-            UiStyle.Gap.md(),
-            UiStyle.Gap.pad(),
-        )
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
-            val gap = if (menu != null) reserve else 0
+            // The dropdown column, so the pill clears it when a list opts into both.
+            val gap = if (menu != null) glyph.preferredSize.width else 0
             Rectangle(
                 (host.width - size.width - UiStyle.Gap.pad() - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),
@@ -189,6 +190,49 @@ internal class ActiveListRenderer(
         wrap.setContent(layers)
         add(top, BorderLayout.NORTH)
         add(wrap, BorderLayout.CENTER)
+        wired = true
+        syncScale()
+    }
+
+    /**
+     * Re-derives every scale-dependent value in the stamp.
+     *
+     * The renderer is one long-lived component reused for every row, and both a layout manager's gap
+     * and an assigned border capture their pixel width when they are created. An IDE zoom moves the
+     * JBUI user scale without touching row data, so anything captured in a constructor would keep its
+     * pre-zoom size while the fonts and icons around it grow. Everything DPI-derived therefore lives
+     * here and is re-applied from [updateUI].
+     */
+    private fun syncScale() {
+        // Shared with [sep], which holds this exact instance, so one update covers the header band too.
+        (insets as? JBInsets)?.update()
+        // [sep]'s own font is left alone on purpose: GroupHeaderSeparator builds it from JBFont, and a
+        // JBFont re-derives its size from "Label.font" on read, so it already follows an IDE zoom.
+        val iconGap = JBUI.scale(activeListIconGap())
+        leading.space = iconGap
+        badges.space = iconGap
+        secondary.space = UiStyle.Gap.md()
+        details.space = UiStyle.Gap.md()
+        cells.space = activeListCellGap()
+        (titleGroup.layout as BorderLayout).hgap = UiStyle.Gap.xs()
+        (descLine.layout as BorderLayout).hgap = UiStyle.Gap.md()
+        pill.border = JBUI.Borders.empty(UiStyle.Gap.SM)
+        // Mirror the flush leading icon when a menu column is present: drop the row's trailing inset
+        // and let the empty-icon spacer hold a dedicated column at the content edge. The overlay glyph
+        // then floats over that same slot, revealed on hover.
+        (row.layout as BorderLayout).hgap = if (menu == null) UiStyle.Gap.md() else 0
+        row.border = if (menu == null) {
+            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, UiStyle.Gap.PAD)
+        } else {
+            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, 0)
+        }
+        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.MD)
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        if (!wired) return
+        syncScale()
     }
 
     @RequiresEdt
@@ -241,7 +285,7 @@ internal class ActiveListRenderer(
         desc.text = note
         desc.isVisible = note.isNotBlank()
         desc.border = if (cfg.descriptionIndent && desc.isVisible) {
-            JBUI.Borders.emptyLeft(UiStyle.Gap.sm())
+            JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
         } else {
             JBUI.Borders.empty()
         }
@@ -371,7 +415,7 @@ internal class ActiveListRenderer(
 
     private fun syncBadges(item: ActiveListItem) {
         val hidden = item.progress != null
-        val gap = JBUI.CurrentTheme.ActionsList.elementIconGap()
+        val gap = activeListIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
         syncBadges(leading, if (hidden) emptyList() else item.leading)
@@ -419,21 +463,29 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
     @RequiresEdt
     fun update(data: ActiveListMetrics?) {
         this.data = data
-        panel.update(data?.files ?: 0, data?.additions ?: 0, data?.deletions ?: 0, base = data?.base.orEmpty())
-        panel.setActions(data?.onChanges.takeIf { isEnabled })
+        panel.update(
+            data?.files ?: 0,
+            data?.additions ?: 0,
+            data?.deletions ?: 0,
+            localFiles = data?.localFiles ?: 0,
+            localAdditions = data?.localAdditions ?: 0,
+            localDeletions = data?.localDeletions ?: 0,
+            base = data?.base.orEmpty(),
+        )
+        panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
         toolTipText = panel.toolTipText
     }
 
     @RequiresEdt
-    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.onChanges != null
+    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.action != null
 
     override fun cellCursor(): Int = Cursor.HAND_CURSOR
 
     @RequiresEdt
     override fun cellTooltip(): String? = toolTipText
 
-    override fun cellAction(): (() -> Unit)? = data?.onChanges
+    override fun cellAction(): (() -> Unit)? = data?.action
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {

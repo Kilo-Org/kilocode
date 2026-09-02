@@ -33,6 +33,7 @@ import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
@@ -516,6 +517,7 @@ export const node = LayerNode.suspend(() =>
       Skill.node,
       Session.node,
       BackgroundJob.node,
+      SessionDrain.node,
       Provider.node,
       LSP.node,
       Instruction.node,

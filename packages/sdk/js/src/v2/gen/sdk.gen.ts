@@ -191,6 +191,8 @@ import type {
   KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
+  KilocodeDrainSessionErrors,
+  KilocodeDrainSessionResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeMigrateDiscoverErrors,
@@ -4800,6 +4802,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      scope?: "session" | "tree"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4811,6 +4814,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
           ],
         },
       ],
@@ -8459,6 +8463,49 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session/{sessionID}/resume",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Wait for session completion
+   *
+   * Wait for active session work and background result delivery, then publish the matching drain acknowledgment.
+   */
+  public drainSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      token: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "token" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeDrainSessionResponses,
+      KilocodeDrainSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/drain",
       ...options,
       ...params,
       headers: {
