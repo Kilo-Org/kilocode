@@ -25,6 +25,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
+import { KiloTask } from "../../src/kilocode/tool/task"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -278,6 +279,22 @@ function run(input: {
     },
   )
 }
+
+describe("tool.task collaboration guidance", () => {
+  for (const enabled of [false, true]) {
+    it.live(`includes the short policy only when the board experiment is ${enabled}`, () =>
+      provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            const def = yield* (yield* TaskTool).init()
+            expect(def.description.includes(KiloTask.collaboration)).toBe(enabled)
+            expect(KiloTask.collaboration.length).toBeLessThan(900)
+          }),
+        { config: { ...catalog, experimental: { shared_agent_board: enabled } } },
+      ),
+    )
+  }
+})
 
 describe("tool.task assignment identity", () => {
   it.live("updates the same child title when a resumed invocation starts", () =>

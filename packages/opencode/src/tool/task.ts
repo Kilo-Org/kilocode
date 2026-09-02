@@ -535,6 +535,7 @@ export const TaskTool = Tool.define(
             DESCRIPTION,
             ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
             ...(selection ? [KiloTask.modelDescription] : []),
+            ...(cfg.experimental?.shared_agent_board === true ? [KiloTask.collaboration] : []),
           ].join("\n\n"),
           parameters: Parameters,
           jsonSchema: ToolJsonSchema.fromSchema(
