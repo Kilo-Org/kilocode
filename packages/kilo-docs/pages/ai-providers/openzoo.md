@@ -23,6 +23,9 @@ endpoint.
 
 ## Configure Kilo Code
 
+{% tabs %}
+{% tab label="VSCode" %}
+
 1. Open **Settings** in the Kilo Code extension.
 2. Go to the **Providers** tab, choose **Add a custom provider**, and pick the
    **OpenAI Compatible** type.
@@ -30,12 +33,38 @@ endpoint.
 4. Enter any non-empty API key value, e.g. `sk-openzoo` — the proxy ignores it.
 5. Enter a model id from `/v1/models`.
 
-## CLI
+{% /tab %}
+{% tab label="CLI" %}
 
-For the Kilo CLI, add a custom OpenAI-compatible provider to
-`~/.config/kilo/kilo.json` pointing at `http://localhost:8402/v1` with any
-non-empty API key value, then select one of its models in the CLI's model
-picker.
+OpenZoo is a custom OpenAI-compatible gateway, not a built-in provider. Add it
+in `~/.config/kilo/kilo.json` or `./kilo.json`:
+
+```jsonc
+{
+  "provider": {
+    "openzoo": {
+      "npm": "@ai-sdk/openai-compatible",
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash",
+        },
+      },
+      "options": {
+        "apiKey": "sk-openzoo",
+        "baseURL": "http://localhost:8402/v1",
+      },
+    },
+  },
+  "model": "openzoo/z-ai/glm-5.3-flash",
+}
+```
+
+Replace the model id with any id from `http://localhost:8402/v1/models`. The
+proxy ignores the API key, so any non-empty value works. Then select the
+model in the CLI model picker, or keep the `model` field as the default.
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 
