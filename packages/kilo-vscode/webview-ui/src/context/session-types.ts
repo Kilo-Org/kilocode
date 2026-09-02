@@ -173,7 +173,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
-  ) => void
+  ) => boolean
   sendCommand: (
     command: string,
     args: string,
@@ -184,7 +184,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string },
-  ) => void
+  ) => boolean
   abort: () => void
   compact: () => void
   respondToPermission: (

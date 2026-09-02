@@ -99,7 +99,11 @@ export const getKiloBalance = fetchBalance
  * When token is provided, returns the authenticated user's default model
  * When no token is provided, returns the default free model for anonymous usage
  */
-export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
+export async function fetchDefaultModel(
+  token?: string,
+  organizationId?: string,
+  fallback = token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL,
+): Promise<string> {
   const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
   const url = `${KILO_API_BASE}${path}`
 
@@ -114,16 +118,16 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
     const response = await fetch(url, { headers })
 
     if (!response.ok) {
-      return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+      return fallback
     }
 
     const data = (await response.json()) as { defaultModel?: string; defaultFreeModel?: string }
     if (token) {
-      return data.defaultModel || DEFAULT_MODEL
+      return data.defaultModel || fallback
     }
-    return data.defaultFreeModel || DEFAULT_FREE_MODEL
+    return data.defaultFreeModel || fallback
   } catch {
-    return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+    return fallback
   }
 }
 
