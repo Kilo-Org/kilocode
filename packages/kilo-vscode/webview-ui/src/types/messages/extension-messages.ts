@@ -708,6 +708,8 @@ export interface SettingsConfigBinding {
 
 export interface ConfigLoadedMessage {
   type: "configLoaded"
+  /** Workspace directory the effective and project configs were resolved in. */
+  directory?: string
   config: Config
   globalConfig?: Config
   projectConfig?: Config
@@ -719,6 +721,7 @@ export interface ConfigLoadedMessage {
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
+  directory?: string
   config: Config
   globalConfig?: Config
   projectConfig?: Config
@@ -1044,7 +1047,21 @@ export interface ModelEndpointsLoadedMessage {
   providerID: string
   modelID: string
   requestID: number
+  /** Workspace directory whose configuration resolved the catalog. */
+  directory?: string
   endpoints: ModelEndpoint[]
+  error?: boolean
+}
+
+// Effective config of a session's workspace and its project-level file
+// (extension → webview), for controls that must reflect a worktree rather
+// than the config context's directory. `error: true` marks a failed lookup.
+export interface WorkspaceConfigLoadedMessage {
+  type: "workspaceConfigLoaded"
+  requestID: number
+  directory: string
+  config: Config
+  projectConfig?: Config
   error?: boolean
 }
 
@@ -1621,6 +1638,7 @@ export type ExtensionMessage =
   | TriggerTaskMessage
   | VariantsLoadedMessage
   | ModelEndpointsLoadedMessage
+  | WorkspaceConfigLoadedMessage
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage

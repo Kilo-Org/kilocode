@@ -1055,6 +1055,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           updateConfig: (partial, unset) => this.writeGlobalConfig(partial, unset),
+          directory: (sessionID) => (sessionID ? this.getWorkspaceDirectory(sessionID) : this.settingsDirectory()),
           activity: (state) => {
             if (!isActivity(state)) return
             this.activity = state
@@ -3468,6 +3469,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
       this.cachedConfigMessage = {
         type: "configLoaded",
+        directory: dir,
         config: snapshot.effective,
         globalConfig: global,
         projectConfig,
@@ -3477,6 +3479,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.postMessage({
         type: "configUpdated",
+        directory: dir,
         config: snapshot.effective,
         globalConfig: global,
         projectConfig,
@@ -3548,6 +3551,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedGlobalConfig = globalConfig ?? null
     this.cachedConfigMessage = {
       type: "configLoaded",
+      directory: dir,
       config: snapshot.config,
       globalConfig,
       projectConfig,
@@ -3558,6 +3562,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.postMessage({
       type,
+      directory: dir,
       config: snapshot.config,
       globalConfig,
       projectConfig,

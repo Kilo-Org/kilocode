@@ -22,6 +22,8 @@ type Ctx = {
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
+  /** Workspace directory of a session; the settings scope without one. */
+  directory: (sessionID?: string) => string
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
@@ -128,7 +130,14 @@ export async function routeEarlyMessage(
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
-  if (await routeModelRoutingMessage(message, { client: ctx.client, post: ctx.post, updateConfig: ctx.updateConfig }))
+  if (
+    await routeModelRoutingMessage(message, {
+      client: ctx.client,
+      post: ctx.post,
+      updateConfig: ctx.updateConfig,
+      directory: ctx.directory,
+    })
+  )
     return true
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }

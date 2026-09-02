@@ -12,12 +12,14 @@ import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
+import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { routable, routingPreview } from "./model-selector-utils"
 import { fmtPrice } from "./model-preview-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
+import { requestWorkspaceConfig, workspaceConfigEntry } from "../../context/workspace-config"
 import { useRoutingPick } from "../../hooks/useRoutingPick"
 import { routingOverriddenByProject } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
@@ -26,13 +28,21 @@ import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 // Endpoint access (shared store in ../../context/routing-endpoints)
 // ---------------------------------------------------------------------------
 
-export function useModelEndpoints(model: Accessor<ModelSelection | undefined>) {
+/**
+ * `scope` names the workspace whose configuration resolves the catalog — the
+ * session's directory in chat (an Agent Manager worktree may differ from the
+ * settings scope) — and the session the extension resolves it from.
+ */
+export function useModelEndpoints(
+  model: Accessor<ModelSelection | undefined>,
+  scope: Accessor<{ directory: string; sessionID?: string }>,
+) {
   const vscode = useVSCode()
 
   function load() {
     const selection = model()
     if (!selection) return
-    requestEndpoints(selection.providerID, selection.modelID, vscode.postMessage)
+    requestEndpoints({ ...scope(), providerID: selection.providerID, modelID: selection.modelID }, vscode.postMessage)
   }
 
   // undefined while unrequested/loading; [] for a failed request (the base
@@ -40,7 +50,11 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>) {
   function endpoints() {
     const selection = model()
     if (!selection) return undefined
-    const entry = endpointsEntry(selection.providerID, selection.modelID)
+    const entry = endpointsEntry({
+      directory: scope().directory,
+      providerID: selection.providerID,
+      modelID: selection.modelID,
+    })
     if (!entry) return undefined
     return entry.status === "ok" ? entry.endpoints : []
   }
@@ -349,8 +363,9 @@ interface RoutingSelectorProps {
 
 export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const session = useSession()
+  const server = useServer()
   const vscode = useVSCode()
-  const { config, projectConfig } = useConfig()
+  const config = useConfig()
   const id = () => props.sessionID?.()
 
   const routed = () => {
@@ -358,8 +373,21 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
     if (!model || !routable(model.providerID, model.modelID)) return undefined
     return model
   }
-  const endpoints = useModelEndpoints(routed)
-  const routing = useRoutingPick(config, vscode)
+
+  // The chip must reflect the session's workspace. The config context covers
+  // the settings directory only; a session in an Agent Manager worktree reads
+  // that worktree's effective config, which may carry a project-level pin.
+  const directory = () => server.workspaceDirectory()
+  const scoped = () => directory() !== "" && directory() !== config.directory()
+  const workspace = () => (scoped() ? workspaceConfigEntry(directory()) : undefined)
+  createEffect(() => {
+    if (scoped() && !workspace()) requestWorkspaceConfig(directory(), id(), vscode.postMessage)
+  })
+  const effective = () => (scoped() ? (workspace()?.config ?? config.config()) : config.config())
+  const project = () => (scoped() ? workspace()?.projectConfig : config.projectConfig())
+
+  const endpoints = useModelEndpoints(routed, () => ({ directory: directory(), sessionID: id() }))
+  const routing = useRoutingPick(effective, vscode)
 
   return (
     <Show when={routed()}>
@@ -370,7 +398,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
           onSelect={(provider) => routing.pick(model(), provider)}
           onClear={() => routing.pick(model(), null)}
           onOpen={endpoints.load}
-          overridden={routingOverriddenByProject(projectConfig(), model().providerID, model().modelID)}
+          overridden={routingOverriddenByProject(project(), model().providerID, model().modelID)}
         />
       )}
     </Show>

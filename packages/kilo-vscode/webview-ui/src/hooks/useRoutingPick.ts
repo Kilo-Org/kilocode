@@ -66,7 +66,12 @@ export function useRoutingPick(config: Accessor<unknown>, vscode: VSCode) {
     },
     pick(model: ModelSelection, provider: string | null): void {
       setPending({ providerID: model.providerID, modelID: model.modelID, provider })
-      vscode.postMessage({ type: "persistModelRouting", providerID: model.providerID, modelID: model.modelID, provider })
+      vscode.postMessage({
+        type: "persistModelRouting",
+        providerID: model.providerID,
+        modelID: model.modelID,
+        provider,
+      })
     },
   }
 }

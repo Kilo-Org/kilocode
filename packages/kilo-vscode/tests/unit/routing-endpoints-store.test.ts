@@ -8,6 +8,7 @@ import {
 import type { WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const endpoint = { provider: "gmicloud/fp8", name: "GMICloud" }
+const scope = (providerID: string, modelID: string, directory = "/root") => ({ directory, providerID, modelID })
 
 function collect() {
   const sent: WebviewMessage[] = []
@@ -28,8 +29,8 @@ describe("routing endpoints store", () => {
   it("requests once while in flight and caches successful results", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual({
       type: "requestModelEndpoints",
@@ -45,20 +46,20 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 0),
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),
     })
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     expect(sent).toHaveLength(1)
   })
 
   it("does not cache failures: a failed request is retried and can succeed", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -67,9 +68,9 @@ describe("routing endpoints store", () => {
       endpoints: [],
       error: true,
     })
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({ status: "error" })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({ status: "error" })
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     expect(sent).toHaveLength(2)
 
     handleEndpointsMessage({
@@ -79,7 +80,7 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 1),
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),
@@ -89,8 +90,8 @@ describe("routing endpoints store", () => {
   it("keys results by provider and model so identical model IDs do not share lists", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
-    requestEndpoints("openrouter", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
+    requestEndpoints(scope("openrouter", "z-ai/glm-4.6"), post)
 
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
@@ -107,21 +108,76 @@ describe("routing endpoints store", () => {
       endpoints: [],
     })
 
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),
     })
-    expect(endpointsEntry("openrouter", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("openrouter", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [],
       at: expect.any(Number),
     })
   })
 
+  it("keys results by workspace directory and forwards the session that resolves it", () => {
+    const { sent, post } = collect()
+
+    requestEndpoints({ ...scope("kilo", "z-ai/glm-4.6", "/root"), sessionID: "ses_root" }, post)
+    requestEndpoints({ ...scope("kilo", "z-ai/glm-4.6", "/worktree"), sessionID: "ses_tree" }, post)
+    expect(sent).toEqual([
+      {
+        type: "requestModelEndpoints",
+        providerID: "kilo",
+        modelID: "z-ai/glm-4.6",
+        requestID: 1,
+        sessionID: "ses_root",
+      },
+      {
+        type: "requestModelEndpoints",
+        providerID: "kilo",
+        modelID: "z-ai/glm-4.6",
+        requestID: 2,
+        sessionID: "ses_tree",
+      },
+    ])
+
+    const tree = { provider: "baseten/fp8", name: "Worktree organization" }
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "z-ai/glm-4.6",
+      requestID: id(sent, 1),
+      directory: "/worktree",
+      endpoints: [tree],
+    })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6", "/worktree"))).toMatchObject({
+      status: "ok",
+      endpoints: [tree],
+    })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6", "/root"))).toBeUndefined()
+
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "z-ai/glm-4.6",
+      requestID: id(sent, 0),
+      directory: "/root",
+      endpoints: [endpoint],
+    })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6", "/root"))).toMatchObject({
+      status: "ok",
+      endpoints: [endpoint],
+    })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6", "/worktree"))).toMatchObject({
+      status: "ok",
+      endpoints: [tree],
+    })
+  })
+
   it("ignores unrelated messages", () => {
     expect(handleEndpointsMessage({ type: "variantsLoaded", variants: {} })).toBe(false)
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toBeUndefined()
   })
 
   it("ignores responses that were not requested", () => {
@@ -132,13 +188,13 @@ describe("routing endpoints store", () => {
       requestID: 1,
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toBeUndefined()
   })
 
   it("keeps cached lists visible and restarts in-flight requests when providers reload", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -146,7 +202,7 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 0),
       endpoints: [endpoint],
     })
-    requestEndpoints("kilo", "other/model", post)
+    requestEndpoints(scope("kilo", "other/model"), post)
     expect(sent).toHaveLength(2)
 
     expect(
@@ -161,7 +217,7 @@ describe("routing endpoints store", () => {
       }),
     ).toBe(false)
 
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),
@@ -179,7 +235,7 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 1),
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "other/model")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "other/model"))).toBeUndefined()
 
     const current = { provider: "fast/fp8", name: "Current organization" }
     handleEndpointsMessage({
@@ -189,7 +245,7 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 2),
       endpoints: [current],
     })
-    expect(endpointsEntry("kilo", "other/model")).toEqual({
+    expect(endpointsEntry(scope("kilo", "other/model"))).toEqual({
       status: "ok",
       endpoints: [current],
       at: expect.any(Number),
@@ -197,9 +253,9 @@ describe("routing endpoints store", () => {
 
     // Opening a stale cached model refreshes in the background without hiding
     // the cached endpoint list behind a loading state.
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     expect(sent).toHaveLength(4)
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),
@@ -213,7 +269,7 @@ describe("routing endpoints store", () => {
     let t = 1_000_000
     Date.now = () => t
     try {
-      requestEndpoints("kilo", "z-ai/glm-4.6", post)
+      requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
       handleEndpointsMessage({
         type: "modelEndpointsLoaded",
         providerID: "kilo",
@@ -223,14 +279,14 @@ describe("routing endpoints store", () => {
       })
 
       // Fresh cache — no refetch.
-      requestEndpoints("kilo", "z-ai/glm-4.6", post)
+      requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
       expect(sent).toHaveLength(1)
 
       // Expired cache — background refresh while the list stays visible.
       t += 6 * 60 * 1000
-      requestEndpoints("kilo", "z-ai/glm-4.6", post)
+      requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
       expect(sent).toHaveLength(2)
-      expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+      expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
         status: "ok",
         endpoints: [endpoint],
         at: 1_000_000,
@@ -248,7 +304,7 @@ describe("routing endpoints store", () => {
     })
 
     expect(handleEndpointsMessage(profile("me@example.com", "org-a"))).toBe(false)
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -256,18 +312,18 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 0),
       endpoints: [endpoint],
     })
-    requestEndpoints("kilo", "other/model", post)
+    requestEndpoints(scope("kilo", "other/model"), post)
     expect(sent).toHaveLength(2)
 
     // Same identity again (profile refresh): nothing changes.
     handleEndpointsMessage(profile("me@example.com", "org-a"))
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toMatchObject({ status: "ok", endpoints: [endpoint] })
     expect(sent).toHaveLength(2)
 
     // Organization switch: cached data is gone, not merely stale, and the
     // in-flight request is re-issued so its old response is ignored.
     handleEndpointsMessage(profile("me@example.com", "org-b"))
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toBeUndefined()
     expect(sent).toHaveLength(3)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
@@ -276,7 +332,7 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 1),
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "other/model")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "other/model"))).toBeUndefined()
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -284,10 +340,10 @@ describe("routing endpoints store", () => {
       requestID: id(sent, 2),
       endpoints: [endpoint],
     })
-    expect(endpointsEntry("kilo", "other/model")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+    expect(endpointsEntry(scope("kilo", "other/model"))).toMatchObject({ status: "ok", endpoints: [endpoint] })
 
     // A failed refresh after the switch must not resurrect the old account's list.
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -296,19 +352,19 @@ describe("routing endpoints store", () => {
       endpoints: [],
       error: true,
     })
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({ status: "error" })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({ status: "error" })
 
     // Logout is an identity change too.
     handleEndpointsMessage(profile("me@example.com", "org-b"))
-    expect(endpointsEntry("kilo", "other/model")).toMatchObject({ status: "ok" })
+    expect(endpointsEntry(scope("kilo", "other/model"))).toMatchObject({ status: "ok" })
     handleEndpointsMessage({ type: "profileData", data: null })
-    expect(endpointsEntry("kilo", "other/model")).toBeUndefined()
+    expect(endpointsEntry(scope("kilo", "other/model"))).toBeUndefined()
   })
 
   it("keeps catalogs requested before the first profile arrives", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -321,14 +377,14 @@ describe("routing endpoints store", () => {
       data: { profile: { email: "me@example.com" }, balance: null, kiloPass: null, currentOrgId: null },
     })
 
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toMatchObject({ status: "ok", endpoints: [endpoint] })
     expect(sent).toHaveLength(1)
   })
 
   it("keeps stale cached data when a background refresh fails", () => {
     const { sent, post } = collect()
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -346,7 +402,7 @@ describe("routing endpoints store", () => {
       authStates: {},
     })
 
-    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6"), post)
     handleEndpointsMessage({
       type: "modelEndpointsLoaded",
       providerID: "kilo",
@@ -356,7 +412,7 @@ describe("routing endpoints store", () => {
       error: true,
     })
 
-    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({
+    expect(endpointsEntry(scope("kilo", "z-ai/glm-4.6"))).toEqual({
       status: "ok",
       endpoints: [endpoint],
       at: expect.any(Number),

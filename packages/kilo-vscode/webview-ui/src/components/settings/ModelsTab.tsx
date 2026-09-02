@@ -27,7 +27,7 @@ import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autoco
 import { preserveVariant } from "../../context/session-variant-store"
 
 const ModelsTab: Component = () => {
-  const { config, projectConfig, settings, updateConfig, updateSetting } = useConfig()
+  const { config, directory, projectConfig, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
@@ -96,7 +96,10 @@ const ModelsTab: Component = () => {
     if (!model || !routable(model.providerID, model.modelID)) return null
     return model
   })
-  const routingEndpoints = useModelEndpoints(() => routed() ?? undefined)
+  const routingEndpoints = useModelEndpoints(
+    () => routed() ?? undefined,
+    () => ({ directory: directory() ?? "" }),
+  )
 
   function updateRouting(provider: string | null) {
     const model = routed()

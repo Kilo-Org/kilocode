@@ -1143,6 +1143,15 @@ export interface RequestModelEndpointsMessage {
   providerID: string
   modelID: string
   requestID: number
+  /** Session whose workspace configuration resolves the catalog; the settings scope when absent. */
+  sessionID?: string
+}
+
+// Request the effective config of a session's workspace (webview → extension)
+export interface RequestWorkspaceConfigMessage {
+  type: "requestWorkspaceConfig"
+  requestID: number
+  sessionID?: string
 }
 
 // Persist per-model provider routing preference into the global config (webview → extension).
@@ -1693,6 +1702,7 @@ export type WebviewMessage =
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestModelEndpointsMessage
+  | RequestWorkspaceConfigMessage
   | PersistModelRoutingMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage

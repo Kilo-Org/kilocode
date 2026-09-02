@@ -9,26 +9,52 @@ import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 const pid = KILO_PROVIDER_ID
 const mid = "z-ai/glm-4.6"
 
-type EndpointsCall = { model: string; catalog: string }
+type EndpointsCall = { model: string; catalog: string; directory: string }
 type ConfigCall = { partial: Partial<Config>; unset: string[][] | undefined }
+type WorkspaceCall = { kind: "get" | "overlay"; directory: string; scope?: string }
 
-function harness(endpoints?: (call: EndpointsCall) => Promise<{ data: unknown[] }>) {
+// Sessions resolve to their own workspace directory; without one the settings
+// scope applies — the shape KiloProvider hands to the router.
+const directories: Record<string, string> = { ses_tree: "/worktree" }
+const settingsDir = "/root"
+
+function harness(
+  endpoints?: (call: EndpointsCall) => Promise<{ data: unknown[] }>,
+  workspace?: (call: WorkspaceCall) => Promise<{ data: unknown }>,
+) {
   const posted: Record<string, unknown>[] = []
   const configCalls: ConfigCall[] = []
   const endpointCalls: EndpointsCall[] = []
+  const workspaceCalls: WorkspaceCall[] = []
 
-  const client = endpoints
-    ? ({
-        kilo: {
-          models: {
-            endpoints: (params: EndpointsCall) => {
-              endpointCalls.push(params)
-              return endpoints(params)
+  const client =
+    endpoints || workspace
+      ? ({
+          kilo: {
+            models: {
+              endpoints: (params: EndpointsCall) => {
+                endpointCalls.push(params)
+                if (!endpoints) throw new Error("unexpected endpoints call")
+                return endpoints(params)
+              },
             },
           },
-        },
-      } as unknown as KiloClient)
-    : null
+          config: {
+            get: (params: { directory: string }) => {
+              const call = { kind: "get" as const, directory: params.directory }
+              workspaceCalls.push(call)
+              if (!workspace) throw new Error("unexpected config call")
+              return workspace(call)
+            },
+            overlay: (params: { directory: string; scope: string }) => {
+              const call = { kind: "overlay" as const, directory: params.directory, scope: params.scope }
+              workspaceCalls.push(call)
+              if (!workspace) throw new Error("unexpected config call")
+              return workspace(call)
+            },
+          },
+        } as unknown as KiloClient)
+      : null
 
   const ctx: ModelRoutingContext = {
     client,
@@ -36,8 +62,9 @@ function harness(endpoints?: (call: EndpointsCall) => Promise<{ data: unknown[] 
     updateConfig: async (partial, unset) => {
       configCalls.push({ partial, unset })
     },
+    directory: (sessionID) => (sessionID ? (directories[sessionID] ?? settingsDir) : settingsDir),
   }
-  return { ctx, posted, configCalls, endpointCalls }
+  return { ctx, posted, configCalls, endpointCalls, workspaceCalls }
 }
 
 // The endpoint request is fire-and-forget, so let its promise chain drain.
@@ -69,8 +96,8 @@ describe("provider routing message router", () => {
     await drain()
 
     expect(endpointCalls).toEqual([
-      { model: mid, catalog: "kilo" },
-      { model: mid, catalog: "public" },
+      { model: mid, catalog: "kilo", directory: settingsDir },
+      { model: mid, catalog: "public", directory: settingsDir },
     ])
     expect(posted).toEqual([
       {
@@ -78,6 +105,7 @@ describe("provider routing message router", () => {
         providerID: pid,
         modelID: mid,
         requestID: 1,
+        directory: settingsDir,
         endpoints: [{ provider: "gmicloud/fp8" }],
       },
       {
@@ -85,8 +113,69 @@ describe("provider routing message router", () => {
         providerID: "openrouter",
         modelID: mid,
         requestID: 2,
+        directory: settingsDir,
         endpoints: [{ provider: "gmicloud/fp8" }],
       },
+    ])
+  })
+
+  it("resolves the catalog in the originating session's workspace", async () => {
+    const { ctx, posted, endpointCalls } = harness(async () => ({ data: [] }))
+
+    await routeModelRoutingMessage(
+      { type: "requestModelEndpoints", providerID: pid, modelID: mid, requestID: 4, sessionID: "ses_tree" },
+      ctx,
+    )
+    await drain()
+
+    expect(endpointCalls).toEqual([{ model: mid, catalog: "kilo", directory: "/worktree" }])
+    expect(posted).toEqual([
+      {
+        type: "modelEndpointsLoaded",
+        providerID: pid,
+        modelID: mid,
+        requestID: 4,
+        directory: "/worktree",
+        endpoints: [],
+      },
+    ])
+  })
+
+  it("loads a session workspace's effective config and its project file", async () => {
+    const config = { model: "kilo/z-ai/glm-4.6" }
+    const project = { provider: { [pid]: { models: { [mid]: { options: { provider: { only: ["baseten/fp8"] } } } } } } }
+    const { ctx, posted, workspaceCalls } = harness(undefined, async (call) =>
+      call.kind === "get" ? { data: config } : { data: { targets: { project: { raw: project } } } },
+    )
+
+    expect(
+      await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 5, sessionID: "ses_tree" }, ctx),
+    ).toBe(true)
+    await drain()
+
+    expect(workspaceCalls).toEqual([
+      { kind: "get", directory: "/worktree" },
+      { kind: "overlay", directory: "/worktree", scope: "project" },
+    ])
+    expect(posted).toEqual([
+      { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", config, projectConfig: project },
+    ])
+  })
+
+  it("reports a failed workspace config lookup", async () => {
+    const offline = harness()
+    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 6 }, offline.ctx)
+    expect(offline.posted).toEqual([
+      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, config: {}, error: true },
+    ])
+
+    const failing = harness(undefined, async () => {
+      throw new Error("boom")
+    })
+    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 7, sessionID: "ses_tree" }, failing.ctx)
+    await drain()
+    expect(failing.posted).toEqual([
+      { type: "workspaceConfigLoaded", requestID: 7, directory: "/worktree", config: {}, error: true },
     ])
   })
 
@@ -105,7 +194,15 @@ describe("provider routing message router", () => {
     await routeModelRoutingMessage({ type: "requestModelEndpoints", providerID: pid, modelID: mid, requestID: 3 }, ctx)
     await drain()
     expect(posted).toEqual([
-      { type: "modelEndpointsLoaded", providerID: pid, modelID: mid, requestID: 3, endpoints: [], error: true },
+      {
+        type: "modelEndpointsLoaded",
+        providerID: pid,
+        modelID: mid,
+        requestID: 3,
+        directory: settingsDir,
+        endpoints: [],
+        error: true,
+      },
     ])
   })
 
@@ -139,6 +236,7 @@ describe("provider routing message router", () => {
     expect(await routeModelRoutingMessage({ type: "requestModelEndpoints", providerID: pid, modelID: mid }, ctx)).toBe(
       true,
     )
+    expect(await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: "7" }, ctx)).toBe(true)
     expect(configCalls).toEqual([])
     expect(posted).toEqual([])
   })
