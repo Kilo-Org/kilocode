@@ -16,7 +16,7 @@ const events = Layer.succeed(
   } as unknown as EventV2.Interface),
 )
 
-// One memoized runtime mirrors production's AppRuntime: the InstanceState
+// One memoized runtime mirrors the production app runtime: the InstanceState
 // ScopedCache is built once and shared across run calls, keyed per directory.
 const runtime = ManagedRuntime.make(SessionStatus.layer.pipe(Layer.provide(events)))
 
