@@ -8,6 +8,7 @@ import type {
   QuestionV2Request,
   SessionNetworkWait,
   SessionStatus,
+  SuggestionRequest,
 } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./cli-backend/connection-service"
 import type { SSEPayload } from "./cli-backend/sdk-sse-adapter"
@@ -124,30 +125,40 @@ function network(pending: Pending, waits?: SessionNetworkWait[]): void {
   }
 }
 
+function suggestions(pending: Pending, requests?: SuggestionRequest[]): void {
+  for (const request of requests ?? []) {
+    if (request.blocking !== false) add(pending, request.sessionID, `suggestion:${request.id}`)
+  }
+}
+
 async function requests(client: KiloClient, directory: string): Promise<Requests> {
-  const [legacyQuestions, legacyPermissions, networkWaits, modernQuestions, modernPermissions] =
+  const [legacyQuestions, legacyPermissions, networkWaits, modernQuestions, modernPermissions, suggestion] =
     await Promise.allSettled([
       client.question.list({ directory }),
       client.permission.list({ directory }),
       client.network.list({ directory }),
       client.v2.question.request.list({ location: { directory } }),
       client.v2.permission.request.list({ location: { directory } }),
+      client.suggestion.list({ directory }),
     ])
   const q = read(legacyQuestions)
   const p = read(legacyPermissions)
   const n = read(networkWaits)
   const q2 = read(modernQuestions)
   const p2 = read(modernPermissions)
+  const s = read(suggestion)
   const pending: Pending = new Map()
   const tools = new Map<string, QuestionTool>()
   const prefixes = new Set<string>()
-  const errors = [q.error, p.error, n.error, q2.error, p2.error].filter((error) => error !== undefined)
+  const errors = [q.error, p.error, n.error, q2.error, p2.error, s.error].filter((error) => error !== undefined)
   questions(pending, tools, q.data, q2.data?.data)
   permissions(pending, p.data, p2.data?.data)
   network(pending, n.data)
+  suggestions(pending, s.data)
   if (q.ok && q2.ok) prefixes.add("question:")
   if (p.ok && p2.ok) prefixes.add("permission:")
   if (n.ok) prefixes.add("network:")
+  if (s.ok) prefixes.add("suggestion:")
   return { pending, tools, prefixes, errors }
 }
 
@@ -893,30 +904,21 @@ export class SleepInhibitorService implements vscode.Disposable {
 
   private async restore(snapshot: Snapshot, dirs: string[]): Promise<void> {
     const client = this.connection.getClient()
-    const [results, waits, suggestions] = await Promise.all([
+    const [results, waits] = await Promise.all([
       Promise.allSettled(dirs.map((directory) => client.session.status({ directory }))),
       Promise.allSettled(dirs.map((directory) => requests(client, directory))),
-      Promise.allSettled([client.suggestion.list({ directory: dirs.at(0) })]),
     ])
     if (this.disposed || this.snapshot !== snapshot) return
 
     const restored = this.collect(results, dirs)
     const pending = this.collectWaits(waits, dirs)
-    const global: Pending = new Map()
-    const suggestion = suggestions.at(0)
-    const error = suggestion?.status === "rejected" ? suggestion.reason : suggestion?.value.error
-    if (error) this.log(`Could not restore pending suggestions: ${String(error)}`)
-    const data = suggestion?.status === "fulfilled" ? suggestion.value.data : undefined
-    for (const request of data ?? []) {
-      if (request.blocking !== false) add(global, request.sessionID, `suggestion:${request.id}`)
-    }
     const entries = [...restored.active]
     const infos = await Promise.allSettled(
       entries.map(([sessionID, item]) => client.session.get({ sessionID, directory: item.directory })),
     )
     if (this.disposed || this.snapshot !== snapshot) return
     this.names(snapshot, entries, infos)
-    this.reconcile(snapshot, restored, pending, global, suggestion?.status === "fulfilled" && !error, dirs.length)
+    this.reconcile(snapshot, restored, pending, dirs.length)
     if (this.snapshot === snapshot) this.snapshot = undefined
   }
 
@@ -980,16 +982,9 @@ export class SleepInhibitorService implements vscode.Disposable {
     }
   }
 
-  private reconcile(
-    snapshot: Snapshot,
-    restored: Restored,
-    pending: Map<string, Requests>,
-    global: Pending,
-    suggestions: boolean,
-    total: number,
-  ): void {
+  private reconcile(snapshot: Snapshot, restored: Restored, pending: Map<string, Requests>, total: number): void {
     for (const [sessionID, item] of restored.active) {
-      this.syncPending(snapshot, sessionID, item.directory, pending, global, suggestions)
+      this.syncPending(snapshot, sessionID, item.directory, pending)
       if (snapshot.changed.has(sessionID)) continue
       this.sessions.status(sessionID, item.status, this.titles.get(sessionID), item.directory)
     }
@@ -1003,25 +998,14 @@ export class SleepInhibitorService implements vscode.Disposable {
     }
   }
 
-  private syncPending(
-    snapshot: Snapshot,
-    sessionID: string,
-    directory: string,
-    pending: Map<string, Requests>,
-    global: Pending,
-    suggestions: boolean,
-  ): void {
+  private syncPending(snapshot: Snapshot, sessionID: string, directory: string, pending: Map<string, Requests>): void {
     if (snapshot.waits.has(sessionID)) return
     const local = pending.get(directory)
-    if (!local && !suggestions) return
-    const waits = new Set(local?.pending.get(sessionID) ?? [])
-    const prefixes = new Set(local?.prefixes ?? [])
-    if (suggestions) {
-      prefixes.add("suggestion:")
-      for (const requestID of global.get(sessionID) ?? []) waits.add(requestID)
-    }
+    if (!local) return
+    const waits = new Set(local.pending.get(sessionID) ?? [])
+    const prefixes = new Set(local.prefixes)
     if (prefixes.size > 0) this.sessions.syncWaits(sessionID, waits, prefixes)
-    if (local?.prefixes.has("question:")) this.syncQuestions(sessionID, local.tools)
+    if (local.prefixes.has("question:")) this.syncQuestions(sessionID, local.tools)
   }
 
   private dirty(sessionID: string): void {

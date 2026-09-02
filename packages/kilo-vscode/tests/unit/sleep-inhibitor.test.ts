@@ -111,7 +111,8 @@ function backend(
     questions?: object[]
     permissions?: object[]
     network?: object[]
-    suggestions?: object[]
+    suggestions?: object[] | Record<string, object[]>
+    queries?: string[]
     q2?: object[]
     p2?: object[]
     fail?: string[]
@@ -123,8 +124,12 @@ function backend(
     permission: { list: async () => ({ data: prompts.permissions ?? [] }) },
     network: { list: async () => ({ data: prompts.network ?? [] }) },
     suggestion: {
-      list: async () =>
-        prompts.fail?.includes("suggestion") ? { error: "suggestion failed" } : { data: prompts.suggestions ?? [] },
+      list: async (input: { directory?: string } = {}) => {
+        const directory = input.directory ?? ""
+        prompts.queries?.push(directory)
+        const data = Array.isArray(prompts.suggestions) ? prompts.suggestions : (prompts.suggestions?.[directory] ?? [])
+        return prompts.fail?.includes("suggestion") ? { error: "suggestion failed" } : { data }
+      },
     },
     v2: {
       question: {
@@ -656,6 +661,42 @@ describe("sleep prevention settings", () => {
 })
 
 describe("SleepInhibitorService reconnect", () => {
+  it("restores blocking suggestions from every known directory", async () => {
+    const queries: string[] = []
+    let state: ((state: "connected") => void) | undefined
+    const connection = {
+      onEvent: () => () => undefined,
+      onStateChange: (handler: (state: "connected") => void) => {
+        state = handler
+        return () => undefined
+      },
+      getKnownDirectories: () => ["/workspace", "/worktree"],
+      getClient: () =>
+        backend(
+          {
+            status: async ({ directory }: { directory: string }) => ({
+              data: directory === "/worktree" ? { one: { type: "busy" } } : {},
+            }),
+            get: async () => ({ data: { title: "Worktree task" } }),
+          },
+          {
+            suggestions: {
+              "/worktree": [{ id: "s1", sessionID: "one", text: "Choose", actions: [], blocking: true }],
+            },
+            queries,
+          },
+        ),
+    } as unknown as KiloConnectionService
+    const service = new SleepInhibitorService(connection)
+
+    state?.("connected")
+    await Bun.sleep(0)
+
+    expect(queries).toEqual(["/workspace", "/worktree"])
+    expect(blocked(service, "one")).toEqual(["suggestion:s1"])
+    service.dispose()
+  })
+
   it("restores pending input after a newer status event", async () => {
     const pending = Promise.withResolvers<{ data: { one: { type: "busy" } } }>()
     let event: ((event: SSEPayload, directory?: string) => void) | undefined
