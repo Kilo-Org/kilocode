@@ -36,6 +36,9 @@ describe("NewWorktreeDialog base branch", () => {
   })
 })
 
+// Evaluates each scenario with shared fixtures and the real model helpers in a fresh Bun process.
+// Isolated module loading forces Solid's browser build instead of its non-reactive SSR build.
+// The child's exit code propagates scenario assertion failures to the calling test.
 function check(code: string) {
   const cwd = join(__dirname, "..", "..", "webview-ui")
   const script = `
