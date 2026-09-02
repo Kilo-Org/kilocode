@@ -1,5 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
+import { registerDisposer } from "@/effect/instance-registry"
 import { SessionID } from "./schema"
 import { Effect, Layer, Context } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -13,9 +14,6 @@ export const Event = SessionStatusEvent
 export interface Interface {
   readonly get: (sessionID: SessionID) => Effect.Effect<Info>
   readonly list: () => Effect.Effect<Map<SessionID, Info>>
-  // kilocode_change start - project-scoped read for the remote heartbeat gather
-  readonly listAll: () => Effect.Effect<Map<SessionID, Info>>
-  // kilocode_change end
   readonly set: (sessionID: SessionID, status: Info) => Effect.Effect<void>
 }
 
@@ -32,7 +30,21 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Se
 // instance status endpoint. Session ids are globally unique and idle deletes its
 // entry, so each project's store stays self-cleaning.
 const stores = new Map<string, Map<SessionID, Info>>()
+
+// kilocode_change - directory -> session id -> project id, recorded at write
+// time. Instance dispose drops only the disposed directory's sessions from the
+// shared project stores, so disposing one worktree does not drop a sibling
+// worktree's busy sessions.
+const byDirectory = new Map<string, Map<SessionID, string>>()
 // kilocode_change end
+
+// kilocode_change - project-scoped read for the remote heartbeat gather. Kept off
+// the upstream SessionStatus.Interface so the shared interface stays
+// upstream-identical.
+export const listAll = Effect.fn("SessionStatus.listAll")(function* () {
+  const ctx = yield* InstanceState.context
+  return new Map(stores.get(String(ctx.project.id)) ?? [])
+})
 
 export const layer = Layer.effect(
   Service,
@@ -52,13 +64,6 @@ export const layer = Layer.effect(
       return new Map(yield* InstanceState.get(state))
     })
 
-    // kilocode_change start - project-scoped read for the heartbeat gather
-    const listAll = Effect.fn("SessionStatus.listAll")(function* () {
-      const ctx = yield* InstanceState.context
-      return new Map(stores.get(String(ctx.project.id)) ?? [])
-    })
-    // kilocode_change end
-
     const set = Effect.fn("SessionStatus.set")(function* (sessionID: SessionID, status: Info) {
       const data = yield* InstanceState.get(state)
       // kilocode_change start - mirror writes into the project-scoped store
@@ -73,6 +78,7 @@ export const layer = Layer.effect(
         const store = stores.get(projectID)
         store?.delete(sessionID)
         if (store && store.size === 0) stores.delete(projectID)
+        byDirectory.get(ctx.directory)?.delete(sessionID)
         // kilocode_change end
         return
       }
@@ -84,10 +90,31 @@ export const layer = Layer.effect(
         stores.set(projectID, store)
       }
       store.set(sessionID, status)
+      let dir = byDirectory.get(ctx.directory)
+      if (!dir) {
+        dir = new Map()
+        byDirectory.set(ctx.directory, dir)
+      }
+      dir.set(sessionID, projectID)
       // kilocode_change end
     })
 
-    return Service.of({ get, list, listAll, set }) // kilocode_change - listAll
+    // kilocode_change start - drop this instance's sessions from the project store
+    // on dispose, so a busy status set here does not outlive the instance.
+    const off = registerDisposer(async (directory) => {
+      const dir = byDirectory.get(directory)
+      if (!dir) return
+      for (const [sessionID, projectID] of dir) {
+        const store = stores.get(projectID)
+        store?.delete(sessionID)
+        if (store && store.size === 0) stores.delete(projectID)
+      }
+      byDirectory.delete(directory)
+    })
+    yield* Effect.addFinalizer(() => Effect.sync(off))
+    // kilocode_change end
+
+    return Service.of({ get, list, set })
   }),
 )
 
