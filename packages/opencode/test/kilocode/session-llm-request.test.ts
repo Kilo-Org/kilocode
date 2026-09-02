@@ -12,6 +12,8 @@ import type { Provider } from "@/provider/provider"
 import { LLMRequestPrep } from "@/session/llm/request"
 import { MessageID, SessionID } from "@/session/schema"
 import { SystemPrompt } from "@/session/system"
+import { HEADER_PROVIDER_ROUTING } from "@kilocode/kilo-gateway"
+import { InstanceRef } from "@/effect/instance-ref"
 
 const model: Provider.Model = {
   id: ModelV2.ID.make("test-model"),
@@ -123,5 +125,97 @@ describe("Kilo persona in generated metadata requests", () => {
 
     expect(result.system[0]).toContain(SystemPrompt.soul())
     expect(oauth.params.options.instructions).toContain(SystemPrompt.soul())
+  })
+})
+
+describe("Kilo provider routing header", () => {
+  const routing = { order: ["gmicloud/fp8"], only: ["gmicloud/fp8"], allow_fallbacks: false }
+
+  function decode(result: { headers: object }): unknown {
+    const raw = (result.headers as Record<string, string>)[HEADER_PROVIDER_ROUTING]
+    return raw === undefined ? undefined : JSON.parse(decodeURIComponent(raw))
+  }
+
+  async function prepareKilo(input: {
+    npm?: string
+    model?: Record<string, unknown>
+    agent?: Record<string, unknown>
+    variants?: Record<string, Record<string, unknown>>
+    variant?: string
+  }) {
+    const kilo: Provider.Model = {
+      ...model,
+      providerID: ProviderV2.ID.make("kilo"),
+      api: { ...model.api, npm: input.npm ?? "@kilocode/kilo-gateway" },
+      options: input.model ?? {},
+      variants: input.variants,
+    }
+    const provider: Provider.Info = {
+      id: kilo.providerID,
+      name: "Kilo Gateway",
+      source: "config",
+      env: [],
+      options: {},
+      models: {},
+    }
+    const flags = await Effect.runPromise(
+      RuntimeFlags.Service.pipe(Effect.provide(RuntimeFlags.layer({ client: "test" }))),
+    )
+    // Kilo requests attach the project id, which is read from the instance context.
+    const instance = {
+      directory: "/tmp/kilo",
+      worktree: "/tmp/kilo",
+      project: { id: "project", worktree: "/tmp/kilo", vcs: "git", sandboxes: [] },
+    } as never
+    return Effect.runPromise(
+      LLMRequestPrep.prepare({
+        user: {
+          ...user("code"),
+          model: { providerID: kilo.providerID, modelID: kilo.id, variant: input.variant },
+        },
+        sessionID: "ses_test",
+        model: kilo,
+        agent: { ...agent("code"), options: input.agent ?? {} },
+        system: [],
+        messages: [{ role: "user", content: "hi" }] satisfies ModelMessage[],
+        tools: {},
+        provider,
+        auth: undefined,
+        plugin,
+        flags,
+        isWorkflow: false,
+      }).pipe(Effect.provideService(InstanceRef, instance)),
+    )
+  }
+
+  test("carries the model-level pin", async () => {
+    const result = await prepareKilo({ model: { provider: routing } })
+
+    expect(decode(result)).toEqual(routing)
+  })
+
+  test("agent options and the selected variant override the model-level pin", async () => {
+    const result = await prepareKilo({
+      model: { provider: routing },
+      agent: { provider: { order: ["baseten/fp8"], only: ["baseten/fp8"] } },
+      variants: { fast: { provider: { sort: "throughput" } } },
+      variant: "fast",
+    })
+
+    expect(decode(result)).toEqual({
+      order: ["baseten/fp8"],
+      only: ["baseten/fp8"],
+      allow_fallbacks: false,
+      sort: "throughput",
+    })
+    expect(result.params.options.provider).toEqual(decode(result))
+  })
+
+  test("is omitted without routing and for other providers", async () => {
+    const plain = await prepareKilo({})
+    const other = await prepareKilo({ npm: "@ai-sdk/openai", model: { provider: routing } })
+
+    expect(decode(plain)).toBeUndefined()
+    expect(decode(other)).toBeUndefined()
   })
 })

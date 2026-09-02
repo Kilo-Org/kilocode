@@ -10,6 +10,7 @@ export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
 export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
+export { providerRoutingHeaders, takeProviderRouting } from "./provider-routing.js"
 
 // ============================================================================
 // Auth
@@ -125,7 +126,6 @@ export type {
   PollOptions,
   PollResult,
   // Provider types
-  KiloModelOptions,
   KiloProvider,
   KiloProviderOptions,
   KiloMetadata,
@@ -161,6 +161,7 @@ export {
   HEADER_EDITORNAME,
   HEADER_MACHINEID,
   HEADER_FEATURE,
+  HEADER_PROVIDER_ROUTING,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
   ENV_VERSION,

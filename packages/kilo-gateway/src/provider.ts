@@ -2,12 +2,13 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import type { KiloModelOptions, KiloProvider, KiloProviderOptions } from "./types.js"
+import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { transformRequestBody } from "./responses.js"
+import { takeProviderRouting } from "./provider-routing.js"
 import * as GatewayMetadata from "./gateway-metadata.js"
 
 export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
@@ -51,49 +52,41 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   }
 
   const originalFetch = options.fetch ?? fetch
+  // Fetch wrapper adding the dynamic headers and authorization. The routing
+  // header carries the request's provider preferences (see provider-routing.ts);
+  // it is consumed here and merged into the body so routing behaves the same
+  // on every transport.
+  const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
+    const headers = buildRequestHeaders(customHeaders, init?.headers)
+    const routing = takeProviderRouting(headers)
+    const body = transformRequestBody(input, init?.body, options.dataCollection, routing)
 
-  // Routing preferences are per model, so each transport instance is created
-  // with a fetch wrapper bound to the model it serves; the wrapper also adds
-  // the dynamic headers and authorization.
-  function sdkOptions(model?: KiloModelOptions) {
-    const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
-      const headers = buildRequestHeaders(customHeaders, init?.headers)
-      const body = transformRequestBody(input, init?.body, options.dataCollection, model?.provider)
-
-      if (apiKey) {
-        headers.set("Authorization", `Bearer ${apiKey}`)
-      }
-
-      return originalFetch(input, {
-        ...init,
-        headers,
-        body,
-      })
+    if (apiKey) {
+      headers.set("Authorization", `Bearer ${apiKey}`)
     }
 
-    return {
-      baseURL: openRouterUrl,
-      apiKey: apiKey ?? ANONYMOUS_API_KEY,
-      headers: customHeaders,
-      fetch: wrappedFetch as typeof fetch,
-    }
+    return originalFetch(input, {
+      ...init,
+      headers,
+      body,
+    })
   }
 
-  // Models without routing share the base instances; a pinned model needs its
-  // own, because the preferences live in that instance's fetch wrapper.
-  function routed(model: KiloModelOptions | undefined): boolean {
-    return !!model?.provider && Object.keys(model.provider).length > 0
+  const sdkOptions = {
+    baseURL: openRouterUrl,
+    apiKey: apiKey ?? ANONYMOUS_API_KEY,
+    headers: customHeaders,
+    fetch: wrappedFetch as typeof fetch,
   }
 
-  const base = sdkOptions()
-  const openrouter = createOpenRouter(base)
-  const anthropic = createAnthropic(base)
-  const openai = createOpenAI(base)
-  const openaiCompatible = createOpenAICompatible({ ...base, name: "openaiCompatible" })
+  const openrouter = createOpenRouter(sdkOptions)
+  const anthropic = createAnthropic(sdkOptions)
+  const openai = createOpenAI(sdkOptions)
+  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
 
   return {
-    languageModel(modelId: string, model?: KiloModelOptions) {
-      return routed(model) ? createOpenRouter(sdkOptions(model))(modelId) : openrouter(modelId)
+    languageModel(modelId) {
+      return openrouter(modelId)
     },
     embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
@@ -104,19 +97,14 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     imageModel(modelId) {
       return openrouter.imageModel(modelId)
     },
-    anthropic(modelId: string, model?: KiloModelOptions) {
-      const sdk = routed(model) ? createAnthropic(sdkOptions(model)) : anthropic
-      return GatewayMetadata.wrap(sdk(modelId))
+    anthropic(modelId) {
+      return GatewayMetadata.wrap(anthropic(modelId))
     },
-    openai(modelId: string, model?: KiloModelOptions) {
-      const sdk = routed(model) ? createOpenAI(sdkOptions(model)) : openai
-      return GatewayMetadata.wrap(sdk(modelId))
+    openai(modelId) {
+      return GatewayMetadata.wrap(openai(modelId))
     },
-    openaiCompatible(modelId: string, model?: KiloModelOptions) {
-      const sdk = routed(model)
-        ? createOpenAICompatible({ ...sdkOptions(model), name: "openaiCompatible" })
-        : openaiCompatible
-      return sdk(modelId)
+    openaiCompatible(modelId) {
+      return openaiCompatible(modelId)
     },
   }
 }
