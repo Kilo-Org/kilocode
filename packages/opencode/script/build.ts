@@ -469,7 +469,7 @@ if (Script.release) {
       // kilocode_change end
     }
   }
-  await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
+  console.log("Validation only: release upload disabled") // kilocode_change
 }
 
 export { binaries }

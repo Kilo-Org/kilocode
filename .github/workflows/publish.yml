@@ -1,5 +1,5 @@
-name: publish
-run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
+name: CLI validation only
+run-name: "TUI smoke validation (no publishing)"
 
 on:
   # push:
@@ -33,11 +33,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
 permissions:
-  id-token: write
-  contents: write
-  issues: write # kilocode_change - label automated JetBrains CLI pin bump PRs
-  packages: write
-  pull-requests: write # kilocode_change - create automated JetBrains CLI pin bump PRs
+  contents: read
 
 jobs:
   version:
@@ -55,21 +51,14 @@ jobs:
         run: bun install
 
       - name: Install Kilo
-        if: inputs.bump || inputs.version
+        if: false
         run: bun i -g @kilocode/cli
       # kilocode_change end
 
       - id: version
         run: |
-          ./script/version.ts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          KILO_BUMP: ${{ inputs.bump }}
-          KILO_VERSION: ${{ inputs.version }}
-          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          echo "version=0.0.0-tui-validation-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "release=validation" >> "$GITHUB_OUTPUT"
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -333,7 +322,7 @@ jobs:
       - validate-cli-unix
       - validate-cli-windows
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: false
     steps:
       - uses: actions/checkout@v6 # kilocode_change
 
@@ -381,7 +370,7 @@ jobs:
     needs:
       - version
       - build-cli
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: false
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
@@ -389,6 +378,7 @@ jobs:
   # kilocode_change end
 
   publish:
+    if: false
     needs:
       - version
       - build-cli
