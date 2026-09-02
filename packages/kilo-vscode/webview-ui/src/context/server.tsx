@@ -68,29 +68,27 @@ export const ServerProvider: ParentComponent = (props) => {
     if (m.type === "fontSizeChanged") applyFontSize(m.fontSize)
   })
 
+  const clear = () => {
+    setProviderUsage(undefined)
+    setProviderUsageError(undefined)
+    setProviderUsageLoading(false)
+  }
+
+  const relocate = (directory: string) => {
+    if (directory !== workspaceDirectory()) clear()
+    setWorkspaceDirectory(directory)
+  }
+
   const usageSub = vscode.onMessage((m: ExtensionMessage) => {
     if (m.type !== "providerUsageLoaded") return
     if (m.reset) {
-      setProviderUsage(undefined)
-      setProviderUsageError(undefined)
-      // The reset itself means previous account/project usage was invalidated:
-      // never show it again, and reload once via the cache-aware endpoint.
-      setProviderUsageLoading(true)
-      vscode.postMessage({ type: "requestProviderUsage" })
+      clear()
       return
     }
     if (m.data) setProviderUsage(m.data)
     setProviderUsageError(m.error)
     setProviderUsageLoading(false)
   })
-
-  const resetProviderUsageForDirectory = () => {
-    if (providerUsage() === undefined && !providerUsageLoading()) return
-    setProviderUsage(undefined)
-    setProviderUsageError(undefined)
-    setProviderUsageLoading(true)
-    vscode.postMessage({ type: "requestProviderUsage" })
-  }
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -114,8 +112,7 @@ export const ServerProvider: ParentComponent = (props) => {
           break
 
         case "workspaceDirectoryChanged":
-          setWorkspaceDirectory(message.directory)
-          resetProviderUsageForDirectory()
+          relocate(message.directory)
           break
 
         case "languageChanged":
@@ -209,16 +206,10 @@ export const ServerProvider: ParentComponent = (props) => {
     startLogin()
   }
 
-  const requestProviderUsage = () => {
+  const request = (type: "requestProviderUsage" | "refreshProviderUsage") => {
     setProviderUsageLoading(true)
     setProviderUsageError(undefined)
-    vscode.postMessage({ type: "requestProviderUsage" })
-  }
-
-  const refreshProviderUsage = () => {
-    setProviderUsageLoading(true)
-    setProviderUsageError(undefined)
-    vscode.postMessage({ type: "refreshProviderUsage" })
+    vscode.postMessage({ type })
   }
 
   const value: ServerContextValue = {
@@ -232,8 +223,8 @@ export const ServerProvider: ParentComponent = (props) => {
     providerUsage,
     providerUsageLoading,
     providerUsageError,
-    requestProviderUsage,
-    refreshProviderUsage,
+    requestProviderUsage: () => request("requestProviderUsage"),
+    refreshProviderUsage: () => request("refreshProviderUsage"),
     deviceAuth,
     startLogin,
     goToLogin,

@@ -69,7 +69,7 @@ const legacyMethod = (integration: Integration.ID, type: "oauth" | "api") =>
     type === "api" ? "api-key" : integration === Integration.ID.make("openai") ? "chatgpt-browser" : "oauth",
   )
 
-const legacyValue = (integration: Integration.ID, credential: Schema.Schema.Type<typeof LegacyValue>): Value =>
+export const legacyValue = (integration: Integration.ID, credential: Schema.Schema.Type<typeof LegacyValue>): Value =>
   credential.type === "api"
     ? Key.make({ type: "key", key: credential.key, metadata: credential.metadata })
     : OAuth.make({

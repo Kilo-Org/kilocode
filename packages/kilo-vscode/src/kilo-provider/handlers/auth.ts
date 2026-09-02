@@ -14,6 +14,7 @@ export interface AuthContext {
   getWorkspaceDirectory(): string
   disposeGlobal(): Promise<void>
   invalidateProviderUsage(): void
+  fetchAndSendProviderUsage(): Promise<void>
   fetchAndSendProviders(): Promise<void>
   fetchAndSendAgents(): Promise<void>
   fetchAndSendSpeechToTextModels(): Promise<void>
@@ -68,6 +69,7 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
     const { data: profile } = await ctx.client.kilo.profile(undefined, { throwOnError: true })
     ctx.postMessage({ type: "profileData", data: profile })
     ctx.postMessage({ type: "deviceAuthComplete" })
+    await ctx.fetchAndSendProviderUsage()
   } catch (error) {
     if (attempt !== getAttempt()) return
     ctx.postMessage({
@@ -91,6 +93,7 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
     await ctx.disposeGlobal()
 
     await ctx.fetchAndSendProviders()
+    await ctx.fetchAndSendProviderUsage()
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
     ctx.postMessage({
@@ -147,6 +150,7 @@ export async function handleSetOrganization(ctx: AuthContext, organizationId: st
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh speech-to-text models after org switch:", error)
   }
+  await ctx.fetchAndSendProviderUsage()
 }
 
 /** Handle profile refresh request. */

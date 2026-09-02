@@ -99,39 +99,35 @@ export async function managed(
     : subscription.status === "past_due"
       ? "past_due"
       : "active"
-  const id = `kilo-managed:${subscription.id}`
-  const managementUrl = `${base()}/subscriptions/coding-plans/${subscription.id}`
+  const snapshot = {
+    id: `kilo-managed:${subscription.id}`,
+    sourceKind: "kilo_managed",
+    sourceLabel: "via Kilo",
+    planState,
+    routingState: "active",
+    managementUrl: `${base()}/subscriptions/coding-plans/${subscription.id}`,
+  } as const
 
   return usage(token, subscription.id)
     .then((usage) => {
       const windows = usage.subscription.windows.map((item) => window(usage.subscription.id, item))
       return {
-        id,
+        ...snapshot,
         providerID: usage.subscription.providerId,
-        sourceKind: "kilo_managed",
         providerLabel: usage.subscription.providerName,
         planLabel: usage.subscription.planName,
-        sourceLabel: "via Kilo",
         fetchState: "ready",
-        planState,
-        routingState: "active",
         fetchedAt: usage.fetchedAt,
-        managementUrl,
         windows,
       } satisfies ProviderUsage.UsageSnapshot
     })
     .catch(() => ({
-      id,
+      ...snapshot,
       providerID: subscription.providerId,
-      sourceKind: "kilo_managed",
       providerLabel: subscription.providerName,
       planLabel: subscription.planName,
-      sourceLabel: "via Kilo",
       fetchState: "unavailable",
-      planState,
-      routingState: "active",
       fetchedAt,
-      managementUrl,
       windows: [],
       error: error("managed_subscription_unavailable", "Usage unavailable."),
     }))
