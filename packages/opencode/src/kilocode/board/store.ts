@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import { Effect, Result, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "@/session/schema"
@@ -54,6 +54,19 @@ const WHITESPACE =
 export namespace BoardStore {
   export const Kind = Schema.Literals(["INFO", "ASK", "RESULT", "HOLD", "VETO"])
   export type Kind = typeof Kind.Type
+  export type State = "busy" | "retry" | "offline" | "running" | "completed" | "error" | "cancelled" | "unknown"
+  export type Participant = {
+    id: string
+    sessionID: string
+    label: string
+    agent?: string
+    description: string
+    state: State
+  }
+
+  export function active(state: State) {
+    return state === "busy" || state === "retry" || state === "offline" || state === "running"
+  }
 
   export type Message = {
     id: string
@@ -90,6 +103,7 @@ export namespace BoardStore {
     sessionID: SessionID
     since?: string
     limit?: number
+    states?: Record<string, State>
   }) {
     const { db } = yield* Database.Service
     const limit = yield* checkLimit(input.limit)
@@ -133,7 +147,7 @@ export namespace BoardStore {
       )
       .pipe(Effect.mapError((error) => mapError(error)))
     const messages = rows.map((row) => message(row, current.root))
-    const members = yield* participants(db, current.root)
+    const members = yield* participants({ sessionID: input.sessionID, states: input.states })
     return yield* pack({
       agent: current.agent,
       participants: members.rows,
@@ -369,7 +383,7 @@ export namespace BoardStore {
       .pipe(Effect.mapError((error) => mapError(error)))
   }
 
-  function walk(tx: DB | TX, id: string) {
+  function walk(tx: DB | TX, id: string, limit = Infinity) {
     return Effect.gen(function* () {
       const current = yield* row(tx, id)
       if (!current) return yield* fail(`Session not found: ${id}`)
@@ -379,6 +393,7 @@ export namespace BoardStore {
         if (seen.has(next.id)) return yield* fail(`Session lineage is cyclic: ${id}`)
         seen.add(next.id)
         if (!next.parent_id) return { root: next.id, current }
+        if (seen.size >= limit) return yield* fail("Session lineage exceeds the participant discovery limit")
         const parent = yield* row(tx, next.parent_id)
         if (!parent) return yield* fail(`Session lineage parent is missing: ${next.parent_id}`)
         if (parent.project_id !== next.project_id || parent.directory !== next.directory)
@@ -502,13 +517,45 @@ export namespace BoardStore {
     })
   }
 
-  function participants(db: DB, root: string) {
-    return db
+  export const participants = Effect.fn("BoardStore.participants")(function* (input: {
+    sessionID: SessionID
+    states?: Record<string, State>
+  }) {
+    const { db } = yield* Database.Service
+    const current = yield* walk(db, input.sessionID)
+    const root = current.root
+    const states = input.states ?? {}
+    return yield* db
       .transaction((tx) =>
         Effect.gen(function* () {
-          const current = yield* row(tx, root)
-          const rows = current ? [current] : []
+          const first = yield* row(tx, root)
+          if (!first) return yield* fail(`Session not found: ${root}`)
+          const rows = [first]
+          if (input.sessionID !== root) rows.push(current.current)
           const seen = new Set(rows.map((row) => row.id))
+          const live = Object.keys(states).filter((id) => active(states[id] ?? "unknown"))
+          const priority = live.length
+            ? yield* tx.all<{ id: string }>(sql`
+                SELECT id FROM session
+                WHERE parent_id IS NOT NULL
+                  AND project_id = ${first.project_id} AND directory = ${first.directory}
+                  AND id IN (SELECT value FROM json_each(${JSON.stringify(live)}))
+                ORDER BY CASE WHEN parent_id = ${root} THEN 0 ELSE 1 END, time_updated DESC, id DESC
+                LIMIT ${MAX_ROSTER}
+              `)
+            : []
+          let incomplete = false
+          for (const { id } of priority) {
+            if (seen.has(id)) continue
+            const member = yield* walk(tx, id, MAX_ROSTER).pipe(Effect.result)
+            if (Result.isFailure(member) || member.success.root !== root) continue
+            if (rows.length >= MAX_ROSTER) {
+              incomplete = true
+              break
+            }
+            seen.add(id)
+            rows.push(member.success.current)
+          }
           let budget = MAX_ROSTER
           for (const parent of rows) {
             if (!budget) break
@@ -516,7 +563,7 @@ export namespace BoardStore {
               SELECT id, project_id, parent_id, directory, agent, title, time_created
               FROM session INDEXED BY session_parent_idx
               WHERE parent_id = ${parent.id}
-              ORDER BY rowid ASC
+              ORDER BY rowid DESC
               LIMIT ${budget}
             `)
             budget -= children.length
@@ -527,18 +574,23 @@ export namespace BoardStore {
               rows.push(child)
             }
           }
-          rows.sort((a, b) => a.time_created - b.time_created || Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)))
           return {
-            rows: rows.slice(0, MAX_ROSTER).map((row) => ({
-              id: row.id === root ? "main" : row.id,
-              label: excerpt(row.id === root ? "main" : (row.agent ?? row.title), MAX_LABEL),
-            })),
-            truncated: budget === 0,
+            rows: rows.slice(0, MAX_ROSTER).map(
+              (row): Participant => ({
+                id: row.id === root ? "main" : row.id,
+                sessionID: row.id,
+                label: excerpt(row.id === root ? "main" : row.title || row.agent || row.id, MAX_LABEL),
+                ...(row.agent ? { agent: excerpt(row.agent, MAX_LABEL) } : {}),
+                description: excerpt(row.title.replace(/ \(@.* subagent\)$/, ""), MAX_LABEL),
+                state: states[row.id] ?? "unknown",
+              }),
+            ),
+            truncated: incomplete || budget === 0 || rows.length > MAX_ROSTER,
           }
         }),
       )
       .pipe(Effect.mapError((error) => mapError(error)))
-  }
+  })
   function message(row: MessageRow, root: string): Message {
     if (!Schema.is(Kind)(row.type)) throw new globalThis.Error(`Invalid board message type in ${root}`)
     return {
@@ -554,7 +606,7 @@ export namespace BoardStore {
 
   function pack(input: {
     agent: "main" | SessionID
-    participants: Array<{ id: string; label: string }>
+    participants: Participant[]
     participantsTruncated: boolean
     messages: Message[]
     limit: number
@@ -562,7 +614,8 @@ export namespace BoardStore {
   }): Effect.Effect<
     {
       agent: string
-      participants: Array<{ id: string; label: string }>
+      observedAt: number
+      participants: Participant[]
       messages: Message[]
       cursor?: string
       hasMore: boolean
@@ -571,11 +624,13 @@ export namespace BoardStore {
     Error
   > {
     const all = input.participants
-    const chosen: Array<{ id: string; label: string }> = []
+    const chosen: Participant[] = []
+    const timestamp = Date.now()
     const base = (messages: Message[], more: boolean, truncated: boolean) => {
       const cursor = messages.at(-1)?.id ?? input.since
       return {
         agent: input.agent,
+        observedAt: timestamp,
         participants: chosen,
         messages,
         hasMore: more,

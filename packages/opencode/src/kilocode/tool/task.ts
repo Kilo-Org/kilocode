@@ -53,6 +53,18 @@ export namespace KiloTask {
   export const modelDescription =
     "Experimental subagent model selection is enabled. Omit these fields, or send null, to keep the normal subagent model and reasoning defaults. Only override model, provider, or variant when the user explicitly requests it. Do not choose overrides on your own based on task complexity, cost, or latency. Use agent_manager_models only when an override is requested to find available models, providers, and variants; do not guess names or use model knowledge from training. This does not create Agent Manager sessions. Resumed tasks keep their last model and variant unless overridden. A variant-only override keeps the resolved model. A model override does not inherit the parent's reasoning effort."
 
+  export const assignment = Effect.fn("KiloTask.assignment")(function* (input: {
+    sessions: Pick<Session.Interface, "get" | "setTitle">
+    id: SessionID
+    description: string
+    agent: string
+  }) {
+    const session = yield* input.sessions.get(input.id)
+    const title = `${input.description} (@${input.agent} subagent)`
+    if (session.title === title) return
+    yield* input.sessions.setTitle({ sessionID: input.id, title })
+  })
+
   export const cancelForeground = Effect.fn("KiloTask.cancelForeground")(function* (
     jobs: Pick<BackgroundJob.Interface, "get">,
     id: SessionID,

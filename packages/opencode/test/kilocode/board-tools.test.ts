@@ -250,7 +250,7 @@ describe("shared board tools", () => {
     ),
   )
 
-  it.live("warns only for known inactive task recipients without resuming them", () =>
+  it.live("reports invocation and recipient snapshots without resuming tasks", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -263,11 +263,35 @@ describe("shared board tools", () => {
           const post = yield* Tool.init(yield* BoardPostTool)
           const send = (to: string, call: string) =>
             post.execute({ to, type: "INFO", body: "Follow-up work" }, { ...ctx, callID: call })
+          const read = yield* Tool.init(yield* BoardReadTool)
+          const current = () =>
+            read
+              .execute({}, ctx)
+              .pipe(
+                Effect.map(
+                  (result) =>
+                    JSON.parse(result.output).participants.find(
+                      (member: BoardStore.Participant) => member.sessionID === child.id,
+                    )?.state,
+                ),
+              )
 
-          expect(JSON.parse((yield* send(child.id, "unknown")).output)).not.toHaveProperty("warning")
-          expect(JSON.parse((yield* send("main", "main")).output)).not.toHaveProperty("warning")
+          expect(JSON.parse((yield* send(child.id, "unknown")).output)).toMatchObject({
+            delivery: "stored",
+            recipients: { state: "unknown" },
+          })
+          expect(yield* current()).toBe("unknown")
+          expect((yield* send("ALL", "unknown-broadcast")).metadata.recipients.state).toBe("unknown")
+          yield* status.set(root.session.id, { type: "busy" })
+          const self = yield* send("main", "main")
+          expect(self.metadata.recipients.state).toBe("inactive")
+          expect(JSON.parse(self.output).warning).toContain("no other recipients")
+          expect((yield* status.get(root.session.id)).type).toBe("busy")
+          yield* status.set(root.session.id, { type: "idle" })
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
+          expect(yield* current()).toBe("running")
           expect(JSON.parse((yield* send(child.id, "running")).output)).not.toHaveProperty("warning")
+          expect((yield* send("ALL", "active-broadcast")).metadata.recipients.state).toBe("active")
           yield* jobs.cancel(child.id)
 
           for (const state of ["cancelled", "error", "completed"] as const) {
@@ -280,11 +304,15 @@ describe("shared board tools", () => {
             }
             const before = (yield* jobs.wait({ id: child.id, timeout: 1_000 })).info
             expect(before?.status).toBe(state)
+            expect(yield* current()).toBe(state)
             const result = yield* send(child.id, state)
             expect(JSON.parse(result.output)).toMatchObject({
               to: child.id,
               body: "Follow-up work",
-              warning: "Stored only; resume the task to request work.",
+              delivery: "stored",
+              recipients: { state: "inactive", observedAt: expect.any(Number) },
+              warning:
+                "Stored only; no other recipients were active when this post was checked. Use Task controls to request work.",
             })
             expect((yield* send(child.id, state)).metadata.id).toBe(result.metadata.id)
             expect(yield* jobs.get(child.id)).toEqual(before)
@@ -293,7 +321,10 @@ describe("shared board tools", () => {
             expect(history.messages.filter((message) => message.id === result.metadata.id)).toHaveLength(1)
             expect(history.messages.some((message) => Object.hasOwn(message, "warning"))).toBe(false)
           }
-          expect(JSON.parse((yield* send("ALL", "broadcast")).output)).not.toHaveProperty("warning")
+          const broadcast = yield* send("ALL", "broadcast")
+          expect(broadcast.metadata.recipients.state).toBe("inactive")
+          expect(broadcast.metadata.recipients.observedAt).toBeLessThanOrEqual(Date.now())
+          expect(JSON.parse(broadcast.output).warning).toContain("when this post was checked")
 
           for (const value of [
             { type: "busy" },
@@ -302,14 +333,33 @@ describe("shared board tools", () => {
           ]) {
             const state = Schema.decodeUnknownSync(SessionStatus.Info)(value)
             yield* status.set(child.id, state)
+            expect(yield* current()).toBe(state.type)
             expect(JSON.parse((yield* send(child.id, state.type)).output)).not.toHaveProperty("warning")
             expect(yield* status.get(child.id)).toEqual(state)
           }
           yield* status.set(child.id, { type: "idle" })
+          yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
+          expect(yield* current()).toBe("running")
+          expect((yield* send(child.id, "resumed")).metadata.recipients.state).toBe("active")
+          yield* jobs.cancel(child.id)
           yield* jobs.start({ id: child.id, type: "other", run: Effect.succeed("Done") })
           yield* jobs.wait({ id: child.id, timeout: 1_000 })
-          expect(JSON.parse((yield* send(child.id, "other")).output)).not.toHaveProperty("warning")
+          expect(yield* current()).toBe("unknown")
+          expect((yield* send(child.id, "other")).metadata.recipients.state).toBe("unknown")
           expect(yield* sessions.messages({ sessionID: child.id })).toEqual([])
+
+          yield* jobs.start({ id: child.id, type: "task", run: Effect.succeed("Done") })
+          yield* jobs.wait({ id: child.id, timeout: 1000 })
+          for (let index = 0; index < 60; index++) {
+            const peer = yield* sessions.create({ parentID: root.session.id, title: `History ${index}` })
+            yield* jobs.start({ id: peer.id, type: "task", run: Effect.succeed("Done") })
+            yield* jobs.wait({ id: peer.id, timeout: 1000 })
+          }
+          expect((yield* send("ALL", "truncated-broadcast")).metadata.recipients.state).toBe("unknown")
+          yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
+          expect((yield* send("ALL", "truncated-active-broadcast")).metadata.recipients.state).toBe("active")
+          expect(yield* current()).toBe("running")
+          yield* jobs.cancel(child.id)
         }),
       options,
     ),

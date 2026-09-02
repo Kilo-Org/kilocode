@@ -260,6 +260,13 @@ export const TaskTool = Tool.define(
           const parts = yield* ops.resolvePromptParts(params.prompt)
           KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
           // kilocode_change start
+          if (cfg.experimental?.shared_agent_board === true)
+            yield* KiloTask.assignment({
+              sessions,
+              id: nextSession.id,
+              description: params.description,
+              agent: next.name,
+            })
           const initial = yield* ops.prompt({
             messageID: MessageID.ascending(),
             sessionID: nextSession.id,

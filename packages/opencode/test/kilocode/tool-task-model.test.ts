@@ -20,7 +20,7 @@ import { Instance } from "../../src/kilocode/instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
-import { MessageID, PartID } from "../../src/session/schema"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
@@ -278,6 +278,71 @@ function run(input: {
     },
   )
 }
+
+describe("tool.task assignment identity", () => {
+  it.live("updates the same child title when a resumed invocation starts", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const root = yield* seed()
+          const sessions = yield* Session.Service
+          const def = yield* (yield* TaskTool).init()
+          const ctx = {
+            sessionID: root.chat.id,
+            messageID: root.assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps(), bypassAgentCheck: true },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          }
+          const first = yield* def.execute(
+            {
+              description: "Inspect parser",
+              prompt: "Inspect the parser",
+              subagent_type: "worker",
+            },
+            ctx,
+          )
+          const id = SessionID.make(first.metadata.sessionId)
+          expect((yield* sessions.get(id)).title).toBe("Inspect parser (@worker subagent)")
+          for (const description of ["Verify parser fix", "Inspect parser"]) {
+            const next = yield* def.execute(
+              {
+                description,
+                prompt: "Continue the assigned check",
+                subagent_type: "worker",
+                task_id: id,
+              },
+              ctx,
+            )
+            expect(next.metadata.sessionId).toBe(id)
+            expect((yield* sessions.get(id)).title).toBe(`${description} (@worker subagent)`)
+          }
+          const jobs = yield* BackgroundJob.Service
+          const gate = yield* Deferred.make<string>()
+          yield* jobs.start({ id, type: "task", run: Deferred.await(gate) })
+          const queued = yield* def.execute(
+            {
+              description: "Check queued change",
+              prompt: "Check the next change",
+              subagent_type: "worker",
+              task_id: id,
+            },
+            ctx,
+          )
+          expect(queued.metadata.background).toBe(true)
+          expect((yield* sessions.get(id)).title).toBe("Inspect parser (@worker subagent)")
+          yield* Deferred.succeed(gate, "Current invocation done")
+          expect((yield* jobs.wait({ id, timeout: 1000 })).info?.status).toBe("completed")
+          expect((yield* sessions.get(id)).title).toBe("Check queued change (@worker subagent)")
+          expect(yield* sessions.children(root.chat.id)).toHaveLength(1)
+        }),
+      { config: { ...catalog, experimental: { shared_agent_board: true }, agent: { worker: { mode: "subagent" } } } },
+    ),
+  )
+})
 
 describe("tool.task model resolution", () => {
   for (const example of [

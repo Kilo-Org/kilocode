@@ -236,7 +236,72 @@ describe("BoardStore", () => {
     expect(result.empty.hasMore).toBe(false)
   })
 
-  test("returns messages when the roster is larger than the result budget", async () => {
+  test("uses distinct task titles and preserves unknown invocation state", async () => {
+    const result = await setup((db) =>
+      Effect.gen(function* () {
+        yield* db.run(
+          sql`UPDATE session SET agent = 'general', title = 'Inspect parser (@general subagent)' WHERE id = 'ses_child'`,
+        )
+        yield* db.run(
+          sql`UPDATE session SET agent = 'general', title = 'Inspect serializer (@general subagent)' WHERE id = 'ses_sibling'`,
+        )
+        return yield* BoardStore.read({ sessionID: id("root") })
+      }),
+    )
+    expect(result.participants).toContainEqual({
+      id: "main",
+      sessionID: id("root"),
+      label: "main",
+      description: "Root",
+      state: "unknown",
+    })
+    expect(result.participants).toContainEqual({
+      id: id("child"),
+      sessionID: id("child"),
+      label: "Inspect parser (@general subagent)",
+      agent: "general",
+      description: "Inspect parser",
+      state: "unknown",
+    })
+    expect(result.participants).toContainEqual({
+      id: id("sibling"),
+      sessionID: id("sibling"),
+      label: "Inspect serializer (@general subagent)",
+      agent: "general",
+      description: "Inspect serializer",
+      state: "unknown",
+    })
+    expect(result.observedAt).toBeLessThanOrEqual(Date.now())
+    expect(JSON.stringify(result.participants)).not.toContain("Build the shared board")
+  })
+
+  test("ignores unrelated active roots and deleted state when the local roster is complete", async () => {
+    const result = await setup((db) =>
+      Effect.gen(function* () {
+        const states: Record<string, BoardStore.State> = { [id("child")]: "completed", [id("sibling")]: "completed" }
+        for (let index = 0; index < 150; index++) {
+          const root = id(`unrelated_${index}`)
+          const child = id(`foreign_${index}`)
+          yield* db.run(sql`
+          INSERT INTO session (id, project_id, parent_id, slug, directory, title, version, time_created, time_updated)
+          VALUES (${root}, 'p', NULL, ${root}, '/', 'Other root', 'test', ${index + 10}, ${index + 10}),
+            (${child}, 'p', ${root}, ${child}, '/', 'Other task', 'test', ${index + 10}, ${index + 10})
+        `)
+          states[root] = "busy"
+          states[child] = "running"
+          states[id(`deleted_${index}`)] = "running"
+        }
+        return yield* BoardStore.participants({ sessionID: id("root"), states })
+      }),
+    )
+    expect(result.rows.map((member) => member.id)).toEqual(["main", id("sibling"), id("child")])
+    expect(result.rows.filter((member) => member.id !== "main").every((member) => member.state === "completed")).toBe(
+      true,
+    )
+    expect(result.truncated).toBe(false)
+  })
+
+  test("keeps active members and messages when the roster exceeds its budget", async () => {
     const result = await setup((db) =>
       Effect.gen(function* () {
         for (let index = 0; index < 80; index++) {
@@ -250,6 +315,10 @@ describe("BoardStore", () => {
             expect(complete.participantsTruncated).toBeUndefined()
           }
         }
+        yield* db.run(sql`
+          INSERT INTO session (id, project_id, parent_id, slug, directory, title, version, time_created, time_updated)
+          VALUES ('ses_nested', 'p', 'ses_extra_0', 'nested', '/', 'New nested task', 'test', 1000, 1000)
+        `)
         yield* BoardStore.post({
           sessionID: id("root"),
           messageID: "msg_roster",
@@ -257,9 +326,20 @@ describe("BoardStore", () => {
           type: "INFO",
           body: "message survives roster truncation",
         })
-        return yield* BoardStore.read({ sessionID: id("child") })
+        return yield* BoardStore.read({
+          sessionID: id("child"),
+          states: { [id("sibling")]: "busy", [id("nested")]: "running" },
+        })
       }),
     )
+    expect(result.participants.slice(0, 4).map((member) => member.id)).toEqual([
+      "main",
+      id("child"),
+      id("sibling"),
+      id("nested"),
+    ])
+    expect(result.participants.find((member) => member.id === id("nested"))?.state).toBe("running")
+    expect(result.participants.find((member) => member.id === id("sibling"))?.state).toBe("busy")
     expect(result.messages).toHaveLength(1)
     expect(result.messages.at(0)).toMatchObject({ body: "message survives roster truncation" })
     expect(result.participants).toHaveLength(50)
@@ -281,17 +361,17 @@ describe("BoardStore", () => {
           VALUES ('ses_late', 'p', 'ses_root', 'late', '/', 'Late', 'test', 5, 5)
         `)
         const bounded = yield* BoardStore.read({ sessionID: id("root") })
-        expect(bounded.participants.map((item) => item.id)).toEqual(["main", id("child"), id("sibling")])
+        expect(bounded.participants.map((item) => item.id)).toEqual(["main", id("late")])
         expect(bounded.participantsTruncated).toBe(true)
         yield* db.run(sql`DELETE FROM session WHERE directory = '/other'`)
         const complete = yield* BoardStore.read({ sessionID: id("root") })
-        expect(complete.participants.map((item) => item.id)).toEqual(["main", id("child"), id("sibling"), id("late")])
+        expect(complete.participants.map((item) => item.id)).toEqual(["main", id("late"), id("sibling"), id("child")])
         expect(complete.participantsTruncated).toBeUndefined()
       }),
     )
   })
 
-  test("keeps timestamp and binary ID order for discovered participants", async () => {
+  test("keeps the reader and recent children discoverable before older descendants", async () => {
     const result = await setup((db) =>
       Effect.gen(function* () {
         yield* db.run(sql`
@@ -305,12 +385,12 @@ describe("BoardStore", () => {
       }),
     )
     expect(result.participants.map((item) => item.id)).toEqual([
-      id("nested"),
       "main",
-      id("child"),
-      id("sibling"),
       id("Z"),
       id("a"),
+      id("sibling"),
+      id("child"),
+      id("nested"),
     ])
     expect(result.participantsTruncated).toBeUndefined()
   })
@@ -393,6 +473,7 @@ describe("BoardStore", () => {
     )
     const second = await use(BoardStore.read({ sessionID: id("child") }), file)
     expect(second.messages).toEqual([first])
+    expect(second.participants.every((member) => member.state === "unknown")).toBe(true)
   })
 
   test("isolates roots, rejects invalid ancestry and cursors, and retains child history", async () => {
@@ -494,7 +575,7 @@ describe("BoardStore", () => {
     for (const denied of result.denied) expect(denied._tag).toBe("Failure")
     expect(result.nested.root).toBe(id("root"))
     expect(result.board.messages).toEqual([])
-    expect(result.board.participants.map((item) => item.id)).toEqual(["main", id("child"), id("sibling"), id("nested")])
+    expect(result.board.participants.map((item) => item.id)).toEqual(["main", id("sibling"), id("child"), id("nested")])
   })
 
   test("coalesces concurrent activity without returning bodies or replaying irrelevant history", async () => {
