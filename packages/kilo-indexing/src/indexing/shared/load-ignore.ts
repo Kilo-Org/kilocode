@@ -106,8 +106,6 @@ function rules(dir: string, txt: string): string[] {
 // fall back to ignores() rather than risk drift or an inverted (negation) prune.
 const GLOB_META = /[*?![\]{}()]/
 
-type PruneCandidate = { segment: string; glob: string; scoped: boolean }
-
 // Derive best-effort directory-prune globs for the native watcher from the same
 // .gitignore/.kilocodeignore lines. Only non-negated, non-glob directory patterns
 // are emitted, and any candidate a re-include (!) could reach is dropped: parcel's
@@ -118,67 +116,46 @@ type PruneCandidate = { segment: string; glob: string; scoped: boolean }
 // subscribed root and resolves plain entries to absolute paths, so both the
 // `**/name` / `dir/**/name` globs and the anchored plain forms prune correctly.
 function pruneGlobs(entries: Entry[]): string[] {
-  const negated: string[] = []
-  const candidates: PruneCandidate[] = []
+  const result = new Set<string>()
 
   for (const entry of entries) {
     // The ignore file's own directory is interpolated raw into the emitted globs.
     // If it contains glob metacharacters (e.g. a Next.js `[slug]` route), that glob
     // would prune the wrong tree — skip emitting for it (shouldIndex() still filters
-    // those paths). Negations are still collected below for shadow-safety.
+    // those paths).
     const dirHasMeta = !!entry.dir && GLOB_META.test(entry.dir)
     for (const line of (entry.txt ?? "").split(/\r?\n/)) {
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith("#")) {
         continue
       }
+      if (trimmed.startsWith("!")) {
+        return []
+      }
 
-      const isNegated = trimmed.startsWith("!")
-      const raw = isNegated ? trimmed.slice(1) : trimmed
-      const anchored = raw.startsWith("/")
-      const withoutAnchor = anchored ? raw.slice(1) : raw
+      const anchored = trimmed.startsWith("/")
+      const withoutAnchor = anchored ? trimmed.slice(1) : trimmed
       const body = withoutAnchor.endsWith("/") ? withoutAnchor.slice(0, -1) : withoutAnchor
       if (!body) {
         continue
       }
 
       const scoped = entry.dir ? `${entry.dir}/${body}` : body
-      if (isNegated) {
-        negated.push(scoped)
-        continue
-      }
       if (GLOB_META.test(body) || dirHasMeta) {
         continue
       }
 
       if (anchored || body.includes("/")) {
         // Anchored/pathful: a specific subtree, matched relative to root.
-        candidates.push({ segment: scoped, glob: scoped, scoped: true })
+        result.add(scoped)
       } else {
         // Bare name: prune that directory at any depth under its ignore file.
-        candidates.push({ segment: body, glob: entry.dir ? `${entry.dir}/**/${body}` : `**/${body}`, scoped: false })
+        result.add(entry.dir ? `${entry.dir}/**/${body}` : `**/${body}`)
       }
     }
   }
 
-  const result = new Set<string>()
-  for (const candidate of candidates) {
-    if (!negated.some((neg) => shadowed(candidate, neg))) {
-      result.add(candidate.glob)
-    }
-  }
   return [...result]
-}
-
-// True when pruning candidate's directory would hide a re-included (negated) path.
-function shadowed(candidate: PruneCandidate, negated: string): boolean {
-  if (candidate.scoped) {
-    return negated === candidate.segment || negated.startsWith(`${candidate.segment}/`)
-  }
-  // Bare-name prunes match that segment at any depth, so any negation whose path
-  // crosses a same-named directory could be re-including something beneath it.
-  const seg = candidate.segment
-  return negated === seg || negated.startsWith(`${seg}/`) || negated.endsWith(`/${seg}`) || negated.includes(`/${seg}/`)
 }
 
 class WorkspaceIgnore implements IgnoreMatcher {

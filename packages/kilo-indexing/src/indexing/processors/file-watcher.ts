@@ -4,6 +4,7 @@ import { createWrapper } from "@parcel/watcher/wrapper"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
+import { glob } from "glob"
 import { v5 as uuidv5 } from "uuid"
 import { Emitter } from "../runtime"
 import {
@@ -176,7 +177,7 @@ export class FileWatcher implements IFileWatcher {
     for (const event of events) {
       const type: "create" | "change" | "delete" =
         event.type === "create" ? "create" : event.type === "delete" ? "delete" : "change"
-      this.handleFileEvent(event.path, type)
+      this.handleFileEvent(event.path, type, true)
     }
   }
 
@@ -348,8 +349,8 @@ export class FileWatcher implements IFileWatcher {
   /**
    * Handles a file event reported by the watcher by accumulating it and scheduling batch processing.
    */
-  private handleFileEvent(filePath: string, type: "create" | "change" | "delete"): void {
-    if (!this.shouldIndex(filePath)) return
+  private handleFileEvent(filePath: string, type: "create" | "change" | "delete", directory = false): void {
+    if (!this.shouldIndex(filePath) && !(directory && this.shouldIndex(filePath, true))) return
     this.overlay?.block(filePath)
     this.accumulatedEvents.set(filePath, { path: filePath, type })
     if (!this.collecting) return
@@ -396,8 +397,12 @@ export class FileWatcher implements IFileWatcher {
       while (this.collecting && this.accumulatedEvents.size > 0) {
         const eventsToProcess = new Map(this.accumulatedEvents)
         this.accumulatedEvents.clear()
+        await this.expand(eventsToProcess)
+        if (!this.collecting) return
+        if (eventsToProcess.size === 0) continue
 
         const filePathsInBatch = Array.from(eventsToProcess.keys())
+        for (const file of filePathsInBatch) this.overlay?.block(file)
         this.onDidStartBatchProcessing.fire(filePathsInBatch)
         await this.processBatch(eventsToProcess)
       }
@@ -408,13 +413,53 @@ export class FileWatcher implements IFileWatcher {
     }
   }
 
-  private shouldIndex(filePath: string) {
+  private async expand(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void> {
+    const known = [...new Set([...Object.keys(this.cacheManager.getAllHashes()), ...events.keys()])]
+    for (const event of [...events.values()]) {
+      if (!this.collecting) return
+      if (event.type === "delete") {
+        const children = known.filter((file) => file.startsWith(event.path + path.sep))
+        for (const file of children) events.set(file, { path: file, type: "delete" })
+        if (children.length || !this.shouldIndex(event.path)) events.delete(event.path)
+        continue
+      }
+      const info = await stat(event.path).catch((err: NodeJS.ErrnoException) => {
+        if (err.code === "ENOENT" || err.code === "ENOTDIR") return
+        throw err
+      })
+      if (!info?.isDirectory()) {
+        if (!this.shouldIndex(event.path)) events.delete(event.path)
+        continue
+      }
+      events.delete(event.path)
+      if (!this.shouldIndex(event.path, true)) continue
+      const files = await glob("**/*", {
+        cwd: event.path,
+        absolute: true,
+        nodir: true,
+        dot: true,
+        ignore: {
+          ignored: (entry) => !this.shouldIndex(entry.fullpath(), entry.isDirectory()),
+          childrenIgnored: (entry) => !this.shouldIndex(entry.fullpath(), true),
+        },
+      })
+      const current = new Set(files)
+      for (const file of known) {
+        if (file.startsWith(event.path + path.sep) && !current.has(file)) {
+          events.set(file, { path: file, type: "delete" })
+        }
+      }
+      for (const file of files) events.set(file, { path: file, type: "create" })
+    }
+  }
+
+  private shouldIndex(filePath: string, directory = false) {
     const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
-    if (!relativeFilePath) return false
+    if (!relativeFilePath) return directory && path.resolve(filePath) === path.resolve(this.workspacePath)
     const ext = path.extname(filePath).toLowerCase()
     if (FileIgnore.match(relativeFilePath)) return false
-    if (this.ignoreInstance?.ignores(relativeFilePath)) return false
-    return this.extensions.has(ext)
+    if (this.ignoreInstance?.ignores(relativeFilePath + (directory ? "/" : ""))) return false
+    return directory || this.extensions.has(ext)
   }
 
   /**
@@ -704,7 +749,7 @@ export class FileWatcher implements IFileWatcher {
 
       filesToUpsertDetails.push({
         path: event.path,
-        originalType: event.type,
+        originalType: cached ? "change" : event.type,
       })
     }
 

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rm, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rename, rm, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -40,6 +40,7 @@ function createEmbedder(): IEmbedder {
 
 class RetryStore implements IVectorStore {
   public readonly points: PointStruct[] = []
+  public readonly deletions: string[][] = []
 
   constructor(private readonly fail: number) {}
 
@@ -67,7 +68,9 @@ class RetryStore implements IVectorStore {
   }
 
   async deletePointsByFilePath(_filePath: string): Promise<void> {}
-  async deletePointsByMultipleFilePaths(_filePaths: string[]): Promise<void> {}
+  async deletePointsByMultipleFilePaths(files: string[]): Promise<void> {
+    this.deletions.push(files)
+  }
   async clearCollection(): Promise<void> {}
   async deleteCollection(): Promise<void> {}
   async collectionExists(): Promise<boolean> {
@@ -436,11 +439,12 @@ describe("FileWatcher subscription", () => {
     await mkdir(cacheDir, { recursive: true })
     const cache = new CacheManager(cacheDir, root)
     await cache.initialize()
+    const store = new RetryStore(0)
     const watcher = new FileWatcher(
       root,
       cache,
       createEmbedder(),
-      new RetryStore(0),
+      store,
       ignoreInstance,
       undefined,
       undefined,
@@ -452,8 +456,13 @@ describe("FileWatcher subscription", () => {
     )
     const internals = watcher as unknown as {
       accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }>
+      triggerBatchProcessing(): Promise<void>
     }
-    return { root, watcher, accumulated: internals.accumulatedEvents }
+    const drain = async () => {
+      watcher.setCollecting(true)
+      await internals.triggerBatchProcessing().finally(() => watcher.setCollecting(false))
+    }
+    return { root, watcher, cache, store, drain, accumulated: internals.accumulatedEvents }
   }
 
   test("initialize subscribes once and maps parcel events (update -> change)", async () => {
@@ -479,7 +488,7 @@ describe("FileWatcher subscription", () => {
 
   test("events for ignored or unsupported files are dropped", async () => {
     const backend = createFakeBackend()
-    const { root, watcher, accumulated } = await makeWatcher(backend.subscribe)
+    const { root, watcher, accumulated, drain, store } = await makeWatcher(backend.subscribe)
     await watcher.initialize()
 
     backend.emit([
@@ -487,8 +496,91 @@ describe("FileWatcher subscription", () => {
       { path: path.join(root, "image.png"), type: "create" }, // unsupported extension
     ])
 
+    await drain()
     expect(accumulated.size).toBe(0)
+    expect(store.points).toEqual([])
+    expect(store.deletions).toEqual([])
     await watcher.shutdown()
+  })
+
+  test("clears old chunks when an atomic save is reported as create", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, cache, store, drain } = await makeWatcher(backend.subscribe)
+    const file = path.join(root, "note.md")
+    try {
+      await watcher.initialize()
+      await writeFile(file, "original content ".repeat(30))
+      backend.emit([{ path: file, type: "create" }])
+      await drain()
+      const hash = cache.getHash(file)
+      expect(hash).toBeDefined()
+      expect(store.deletions).toEqual([])
+
+      await writeFile(file + ".tmp", "replacement content ".repeat(30))
+      await rename(file + ".tmp", file)
+      backend.emit([{ path: file, type: "create" }])
+      await drain()
+      expect(store.deletions).toEqual([[file]])
+      expect(cache.getHash(file)).not.toBe(hash)
+    } finally {
+      await watcher.shutdown()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("expands directory moves and deletes without touching sibling paths", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, cache, store, drain } = await makeWatcher(backend.subscribe)
+    const dir = path.join(root, "old")
+    const next = path.join(root, "renamed.md")
+    const file = path.join(dir, ".note.md")
+    const moved = path.join(next, ".note.md")
+    const sibling = path.join(root, "old-peer", "note.md")
+    try {
+      await mkdir(path.join(dir, "node_modules"), { recursive: true })
+      await mkdir(path.dirname(sibling))
+      await writeFile(file, "source content ".repeat(30))
+      await writeFile(sibling, "sibling content ".repeat(30))
+      await writeFile(path.join(dir, "image.png"), "unsupported")
+      await writeFile(path.join(dir, "node_modules", "dep.md"), "ignored content ".repeat(30))
+      await watcher.initialize()
+      backend.emit([
+        { path: dir, type: "create" },
+        { path: sibling, type: "create" },
+      ])
+      await drain()
+      expect(Object.keys(cache.getAllHashes()).sort()).toEqual([file, sibling].sort())
+
+      await rename(dir, next)
+      backend.emit([
+        { path: dir, type: "delete" },
+        { path: next, type: "create" },
+      ])
+      await drain()
+      expect(Object.keys(cache.getAllHashes()).sort()).toEqual([moved, sibling].sort())
+      expect(store.deletions).toEqual([[file]])
+
+      await rm(next, { recursive: true })
+      await mkdir(next)
+      const replacement = path.join(next, "replacement.md")
+      await writeFile(replacement, "replacement content ".repeat(30))
+      backend.emit([
+        { path: next, type: "delete" },
+        { path: next, type: "create" },
+      ])
+      await drain()
+      expect(Object.keys(cache.getAllHashes()).sort()).toEqual([replacement, sibling].sort())
+      expect(store.deletions).toEqual([[file], [moved]])
+
+      await rm(next, { recursive: true })
+      backend.emit([{ path: next, type: "delete" }])
+      await drain()
+      expect(Object.keys(cache.getAllHashes())).toEqual([sibling])
+      expect(store.deletions).toEqual([[file], [moved], [replacement]])
+    } finally {
+      await watcher.shutdown()
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   test("a failed subscribe degrades: initialize resolves without a subscription", async () => {
@@ -535,18 +627,15 @@ describe("FileWatcher subscription", () => {
     const backend = createFakeBackend()
     const root = await mkdtemp(path.join(tmpdir(), "file-watcher-neg-"))
     try {
-      // data/ is ignored but data/keep is re-included, so data must NOT be pruned
-      // from the native watch (data is not a Kilo infra dir); .venv has no
-      // exception and stays pruned.
-      await writeFile(path.join(root, ".gitignore"), ".venv/\ndata/\n!data/keep\n")
+      await writeFile(path.join(root, ".gitignore"), ".venv/\n/pkg/data/\n!data/\n")
       const ignore = await loadIgnore(root)
-      const globs = ignore.watchIgnoreGlobs?.() ?? []
-      expect(globs).toContain("**/.venv")
-      expect(globs).not.toContain("**/data")
+      expect(ignore.ignores("pkg/data/file.ts")).toBe(false)
+      expect(ignore.watchIgnoreGlobs?.()).toEqual([])
 
       const { watcher } = await makeWatcher(backend.subscribe, ignore, root)
       await watcher.initialize()
-      expect(backend.lastIgnore).not.toContain("**/data")
+      expect(backend.lastIgnore).not.toContain("pkg/data")
+      expect(backend.lastIgnore).toContain("**/node_modules")
       await watcher.shutdown()
     } finally {
       await rm(root, { recursive: true, force: true })
