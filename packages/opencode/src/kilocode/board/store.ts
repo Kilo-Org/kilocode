@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { Effect, Result, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "@/session/schema"
@@ -383,7 +383,7 @@ export namespace BoardStore {
       .pipe(Effect.mapError((error) => mapError(error)))
   }
 
-  function walk(tx: DB | TX, id: string, limit = Infinity) {
+  function walk(tx: DB | TX, id: string) {
     return Effect.gen(function* () {
       const current = yield* row(tx, id)
       if (!current) return yield* fail(`Session not found: ${id}`)
@@ -393,7 +393,6 @@ export namespace BoardStore {
         if (seen.has(next.id)) return yield* fail(`Session lineage is cyclic: ${id}`)
         seen.add(next.id)
         if (!next.parent_id) return { root: next.id, current }
-        if (seen.size >= limit) return yield* fail("Session lineage exceeds the participant discovery limit")
         const parent = yield* row(tx, next.parent_id)
         if (!parent) return yield* fail(`Session lineage parent is missing: ${next.parent_id}`)
         if (parent.project_id !== next.project_id || parent.directory !== next.directory)
@@ -535,26 +534,33 @@ export namespace BoardStore {
           const seen = new Set(rows.map((row) => row.id))
           const live = Object.keys(states).filter((id) => active(states[id] ?? "unknown"))
           const priority = live.length
-            ? yield* tx.all<{ id: string }>(sql`
-                SELECT id FROM session
-                WHERE parent_id IS NOT NULL
-                  AND project_id = ${first.project_id} AND directory = ${first.directory}
-                  AND id IN (SELECT value FROM json_each(${JSON.stringify(live)}))
+            ? yield* tx.all<Row>(sql`
+                WITH RECURSIVE ancestry(id, parent_id, depth) AS (
+                  SELECT id, parent_id, 1 FROM session
+                  WHERE parent_id IS NOT NULL
+                    AND project_id = ${first.project_id} AND directory = ${first.directory}
+                    AND id IN (SELECT value FROM json_each(${JSON.stringify(live)}))
+                  UNION ALL
+                  SELECT ancestry.id, parent.parent_id, ancestry.depth + 1
+                  FROM ancestry JOIN session AS parent ON parent.id = ancestry.parent_id
+                  WHERE ancestry.parent_id <> ${root} AND ancestry.depth < ${MAX_ROSTER}
+                    AND parent.project_id = ${first.project_id} AND parent.directory = ${first.directory}
+                )
+                SELECT id, project_id, parent_id, directory, agent, title, time_created FROM session
+                WHERE id IN (SELECT id FROM ancestry WHERE parent_id = ${root})
                 ORDER BY CASE WHEN parent_id = ${root} THEN 0 ELSE 1 END, time_updated DESC, id DESC
                 LIMIT ${MAX_ROSTER}
               `)
             : []
           let incomplete = false
-          for (const { id } of priority) {
-            if (seen.has(id)) continue
-            const member = yield* walk(tx, id, MAX_ROSTER).pipe(Effect.result)
-            if (Result.isFailure(member) || member.success.root !== root) continue
+          for (const member of priority) {
+            if (seen.has(member.id)) continue
             if (rows.length >= MAX_ROSTER) {
               incomplete = true
               break
             }
-            seen.add(id)
-            rows.push(member.success.current)
+            seen.add(member.id)
+            rows.push(member)
           }
           let budget = MAX_ROSTER
           for (const parent of rows) {

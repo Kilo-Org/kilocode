@@ -326,10 +326,18 @@ describe("BoardStore", () => {
           type: "INFO",
           body: "message survives roster truncation",
         })
-        return yield* BoardStore.read({
-          sessionID: id("child"),
-          states: { [id("sibling")]: "busy", [id("nested")]: "running" },
-        })
+        const states: Record<string, BoardStore.State> = { [id("sibling")]: "busy", [id("nested")]: "running" }
+        for (let index = 0; index < 55; index++) {
+          const root = id(`busy_root_${index}`)
+          const child = id(`busy_child_${index}`)
+          yield* db.run(sql`
+            INSERT INTO session (id, project_id, parent_id, slug, directory, title, version, time_created, time_updated)
+            VALUES (${root}, 'p', NULL, ${root}, '/', 'Other root', 'test', ${index + 2000}, ${index + 2000}),
+              (${child}, 'p', ${root}, ${child}, '/', 'Other active task', 'test', ${index + 2000}, ${index + 2000})
+          `)
+          states[child] = "busy"
+        }
+        return yield* BoardStore.read({ sessionID: id("child"), states })
       }),
     )
     expect(result.participants.slice(0, 4).map((member) => member.id)).toEqual([
