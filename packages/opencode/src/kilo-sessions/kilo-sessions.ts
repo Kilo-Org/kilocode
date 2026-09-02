@@ -724,7 +724,7 @@ export namespace KiloSessions {
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
         const [statusMap, permissions, questions] = await Promise.all([
-          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.listAll())),
           AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
           AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
         ])

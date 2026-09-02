@@ -29,6 +29,7 @@ const status = Layer.succeed(
   SessionStatus.Service.of({
     get: () => Effect.succeed({ type: "idle" }),
     list: () => Effect.succeed(new Map()),
+    listAll: () => Effect.succeed(new Map()),
     set: (sessionID, value) => Effect.sync(() => statuses.push([sessionID, value])),
   }),
 )
