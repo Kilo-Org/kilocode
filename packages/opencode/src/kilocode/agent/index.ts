@@ -18,6 +18,8 @@ import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 
+const mermaidClients = new Set(["vscode", "jetbrains"])
+
 const readable: Record<string, "allow"> = {
   "cat *": "allow",
   "head *": "allow",
@@ -610,7 +612,12 @@ export function patchAgents(
   agents.ask = {
     name: "ask",
     description: "Get answers and explanations without making changes to the codebase.",
-    prompt: PROMPT_ASK,
+    prompt: mermaidClients.has(Flag.KILO_CLIENT)
+      ? PROMPT_ASK
+      : PROMPT_ASK.replace(
+          "- Use Mermaid diagrams when they help clarify your response",
+          "- Use plain-text or ASCII diagrams when they help clarify your response. The CLI cannot render Mermaid diagrams. Only provide Mermaid source when the user explicitly requests it",
+        ),
     options: {},
     permission: Permission.merge(
       defaults,
