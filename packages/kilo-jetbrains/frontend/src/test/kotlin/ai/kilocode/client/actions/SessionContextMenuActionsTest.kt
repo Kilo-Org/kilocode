@@ -10,6 +10,7 @@ import ai.kilocode.client.session.SessionUiTestBase
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
+import ai.kilocode.client.testing.PluginDescriptor
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -23,13 +24,11 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Toggleable
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.DumbAware
 import com.intellij.testFramework.replaceService
 import ai.kilocode.client.session.model.SessionState
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.awt.Component
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Covers the two session action menus — the right-click context menu and the prompt bar's "more"
@@ -140,21 +139,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         }
     }
 
-    fun `test every owned menu action works during indexing`() {
-        val ids = (menuChildren("Kilo.Session.ContextMenu") + menuChildren("Kilo.Session.PromptMenu"))
-            .filter { it.startsWith("Kilo.") }
-            .distinct()
-        val actions = descriptor().getElementsByTagName("action").let { nodes ->
-            (0 until nodes.length).map { nodes.item(it) as Element }
-        }.filter { it.getAttribute("id") in ids }
-
-        val blocked = actions.mapNotNull { action ->
-            val cls = Class.forName(action.getAttribute("class"))
-            action.getAttribute("id").takeUnless { DumbAware::class.java.isAssignableFrom(cls) }
-        }
-
-        assertEquals("menu actions blocked during indexing", emptyList<String>(), blocked)
-    }
+    // Dumb-awareness of these actions is covered for every declared action, not just the session
+    // menus, by DeclaredActionsDumbAwareTest.
 
     // ---- context resolution from the transcript ----
 
@@ -329,18 +315,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         HeadlessDataManager.fallbackToProductionDataManager(testRootDisposable)
     }
 
-    /**
-     * The plugin's declared actions are not registered with `ActionManager` in the test fixture (which
-     * is why `BranchDock` null-guards its own lookups), so the menu's shape is asserted against the
-     * module descriptor instead of a live `ActionGroup`.
-     */
-    private fun descriptor(): Document {
-        val stream = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
-            ?: error("kilo.jetbrains.frontend.xml missing from the test classpath")
-        return stream.use {
-            DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder().parse(it)
-        }
-    }
+    private fun descriptor(): Document = PluginDescriptor.frontend()
 
     private fun menuChildren(groupId: String): List<String> {
         val groups = descriptor().getElementsByTagName("group")

@@ -344,6 +344,60 @@
 
 ## [Unreleased]
 
+## [7.1.5] - 2026-09-01
+
+### Fixed
+
+- Keep Agent Manager run/action buttons available while the IDE is indexing, instead of disabling them and showing "waits for analysis" tooltips.
+
+## [7.1.4] - 2026-09-01
+
+### Added
+- feat: keep background agents running when the main agent stops by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13641
+- feat(remote): advertise instance kind and process identity by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13565
+- feat(agent-manager): show CLI activity in terminal tabs and worktrees by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13645
+- feat(vscode): open all background agents from the toolbar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13665
+
+### Fixed
+- fix(vscode): preserve packaged Playwright runtime by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13637
+- fix(vscode): default Agent Manager terminals to the side panel by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13630
+- fix(agent-manager): preserve side panels across context switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13610
+- fix(vscode): show background agents collapse icon by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13646
+- fix(agent-manager): keep inspectors open on browser state updates by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13650
+- fix(cli): surface real tool name when tool call repair fails by @maphew in https://github.com/Kilo-Org/kilocode/pull/13446
+- fix(vscode): keep finished background agents compact by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13663
+- fix(jetbrains): show a changes badge for uncommitted worktree work by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13636
+- fix(agent-manager): speed up long-session forks by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13666
+- fix(cli): wait for background continuations before headless exit by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/13623
+- fix(jetbrains): rescale Agent Manager list rows on IDE zoom by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13635
+- fix(cli): remember bash permission migration by @noobezlol in https://github.com/Kilo-Org/kilocode/pull/12642
+- fix(vscode): align answered question font with tool output by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13667
+- fix(jetbrains): open the worktree row popup only for pull requests by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13676
+- fix(cli): separate environment details from user prompt text by @maphew in https://github.com/Kilo-Org/kilocode/pull/13190
+
+### Changed
+- release(jetbrains): v7.1.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13634
+- Undefined or null by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13639
+- refactor(gateway): share device authorization HTTP requests by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13642
+- refactor(vscode): share terminal directory blocking by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13644
+- refactor(vscode): share context request bookkeeping by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13643
+- refactor(vscode): share not-found error detection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13647
+- refactor(ui): share project-relative path formatting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13649
+- refactor(cli): share common bash permission entries by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13648
+- refactor(vscode): share local activity indicator by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13651
+- refactor(kilo-console): remove duplicate remote MCP normalization by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13653
+- refactor(vscode): reuse Git directory resolver by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13652
+- refactor(vscode): share autocomplete FIM model selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13655
+- refactor(cli): reuse config overlay reader after updates by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13654
+- refactor(vscode): reuse Markdown fence formatting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13657
+- refactor(vscode): share dropped mention text insertion by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13656
+- refactor(kilo-console): share CLI settings toggle by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13658
+- refactor(vscode): reuse metadata leaf validators by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13660
+- refactor(vscode): share context menu styles by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13659
+- refactor(kilo-console): share model picker choices by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13661
+- refactor(vscode): reuse script error formatting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13662
+- refactor(kilo-console): share available provider selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13664
+
 ## [7.1.3] - 2026-08-31
 
 ### Added
