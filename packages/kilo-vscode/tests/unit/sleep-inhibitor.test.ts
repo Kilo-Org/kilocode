@@ -284,6 +284,23 @@ describe("SleepInhibitor", () => {
     expect(item(test.calls, 1).cmd).toBe("systemd-inhibit")
   })
 
+  it("starts a replacement after a closing helper fails to spawn", () => {
+    const test = setup()
+    const first = test.inhibitor.acquire("first")
+    const call = item(test.calls)
+
+    test.inhibitor.release(first)
+    call.child.emit("error", new Error("ENOENT"))
+    const second = test.inhibitor.acquire("second")
+    expect(test.calls).toHaveLength(1)
+
+    call.child.emit("close", null, null)
+
+    expect(test.calls).toHaveLength(2)
+    expect(item(test.calls, 1).cmd).toBe("systemd-inhibit")
+    test.inhibitor.release(second)
+  })
+
   it("falls back on Linux before scheduling a retry", () => {
     jest.useFakeTimers()
     const test = setup({ retry: () => 100 })

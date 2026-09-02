@@ -354,6 +354,15 @@ export class SleepInhibitor implements vscode.Disposable {
       if (token !== this.token) return
       next(`${item.cmd} exited unexpectedly (${signal ? `signal ${signal}` : `code ${code ?? "unknown"}`})`)
     })
+    child.once("close", (code, signal) => {
+      if (this.child !== child) return
+      if (this.closing) {
+        this.finish(child)
+        return
+      }
+      if (token !== this.token) return
+      next(`${item.cmd} closed unexpectedly (${signal ? `signal ${signal}` : `code ${code ?? "unknown"}`})`)
+    })
 
     if (item.ready) {
       const output = child.stdout
