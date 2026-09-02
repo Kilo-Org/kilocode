@@ -61,6 +61,7 @@ export class VtScreen {
   private state: "ground" | "esc" | "csi" | "osc" | "osc-esc" = "ground"
   private params = ""
   private intermediate = ""
+  private bell = false
 
   constructor(cols = 80, rows = 24) {
     this.cols = Math.max(1, cols)
@@ -229,8 +230,9 @@ export class VtScreen {
       this.intermediate = ""
       return
     }
-    if (ch === "]") {
+    if ("]PX^_".includes(ch)) {
       this.state = "osc"
+      this.bell = ch === "]"
       return
     }
     if (ch === "7") {
@@ -271,7 +273,7 @@ export class VtScreen {
   }
 
   private osc(ch: string, code: number) {
-    if (code === 0x07) {
+    if ((this.bell && code === 0x07) || code === 0x18 || code === 0x1a || code === 0x9c) {
       this.state = "ground"
       return
     }
