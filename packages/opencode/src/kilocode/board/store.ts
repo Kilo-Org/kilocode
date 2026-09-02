@@ -245,11 +245,31 @@ export namespace BoardStore {
       .pipe(Effect.mapError((error) => mapError(error)))
   })
 
-  export const activity = Effect.fn("BoardStore.activity")(function* (input: { sessionID: SessionID; after: number }) {
+  export const activity = Effect.fn("BoardStore.activity")(function* (input: {
+    sessionID: SessionID
+    after: number
+    read?: { since?: string; cursor: string }
+  }) {
     if (!Number.isSafeInteger(input.after) || input.after < 0)
       return yield* fail("Board activity sequence must be a non-negative integer")
     const { db } = yield* Database.Service
     const current = yield* scope(input.sessionID)
+    const read = input.read
+      ? yield* db
+          .get<{ start: number | null; finish: number }>(
+            sql`
+            SELECT seq AS finish, ${
+              input.read.since
+                ? sql`(SELECT seq FROM kilo_board_message
+                    WHERE board_root_session_id = ${current.root} AND id = ${input.read.since})`
+                : sql`0`
+            } AS start
+            FROM kilo_board_message
+            WHERE board_root_session_id = ${current.root} AND id = ${input.read.cursor}
+          `,
+          )
+          .pipe(Effect.mapError((error) => mapError(error)))
+      : undefined
     const latest = yield* db
       .get<{ cursor: number; message: number | null }>(
         sql`
@@ -258,6 +278,7 @@ export namespace BoardStore {
           FROM kilo_board_message
           WHERE board_root_session_id = board.root_session_id
             AND seq > ${input.after} AND seq < board.next_seq
+            ${read?.start != null ? sql`AND (seq <= ${read.start} OR seq > ${read.finish})` : sql``}
             AND sender_session_id <> ${input.sessionID}
             AND (recipient = ${input.sessionID} OR recipient = ${ALL})
         ) AS message

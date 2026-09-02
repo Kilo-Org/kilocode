@@ -18,6 +18,8 @@ import { Tool } from "../../src/tool/tool"
 import { ToolRegistry } from "../../src/tool/registry"
 import { BoardReadTool, BoardPostTool } from "../../src/kilocode/tool/board"
 import { BoardStore } from "../../src/kilocode/board/store"
+import { BoardContext } from "../../src/kilocode/board/context"
+import { BoardNotice } from "../../src/kilocode/board/notice"
 import { KiloTask } from "../../src/kilocode/tool/task"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -173,6 +175,76 @@ describe("shared board tools", () => {
           expect(Exit.isFailure(cursor)).toBe(true)
           if (Exit.isFailure(cursor)) expect(Cause.pretty(cursor.cause)).toContain("Board cursor is not valid")
           expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(2)
+        }),
+      options,
+    ),
+  )
+
+  it.live("suppresses only activity included in a successful board read", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const agents = yield* Agent.Service
+          const root = yield* seed("Read progress")
+          const child = yield* sessions.create({ parentID: root.session.id, title: "Peer" })
+          const ctx = yield* context(root.session.id, root.message)
+          const agent = yield* agents.get(ctx.agent)
+          const user = ctx.messages.find((message) => message.info.role === "user")?.info
+          if (!agent || user?.role !== "user") throw new Error("Missing reader context")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root.session, agent, user })
+          const read = yield* Tool.init(yield* BoardReadTool)
+          const output = { title: "Read file", output: "File contents", metadata: {} }
+          const post = (callID: string, body = callID) =>
+            BoardStore.post({ sessionID: child.id, messageID: root.message, callID, to: "main", type: "INFO", body })
+
+          const first = yield* post("first")
+          const page = yield* read.execute({}, ctx)
+          expect(yield* notify("board_read", page)).toBe(page)
+          expect(yield* notify("read", output)).toBe(output)
+          expect(cache.cursor).toBe(1)
+
+          yield* post("second")
+          const partial = yield* read.execute({ limit: 1 }, ctx)
+          expect(partial.metadata.cursor).toBe(first.id)
+          expect(partial.metadata.hasMore).toBe(true)
+          expect((yield* notify("board_read", partial)).metadata).toHaveProperty(BoardNotice.key, 2)
+          const rest = yield* read.execute({ since: partial.metadata.cursor }, ctx)
+          expect(yield* notify("board_read", rest)).toBe(rest)
+
+          const before = yield* read.execute({ since: rest.metadata.cursor }, ctx)
+          expect(JSON.parse(before.output).messages).toEqual([])
+          yield* post("concurrent")
+          expect((yield* notify("board_read", before)).metadata).toHaveProperty(BoardNotice.key, 3)
+
+          yield* post("failed")
+          expect(Exit.isFailure(yield* Effect.exit(read.execute({ since: "missing" }, ctx)))).toBe(true)
+          expect(cache.cursor).toBe(3)
+          const controller = new AbortController()
+          controller.abort()
+          const cancelled = yield* read.execute({}, ctx)
+          expect(yield* notify("board_read", cancelled, controller.signal)).toBe(cancelled)
+          expect(cache.cursor).toBe(3)
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 4)
+
+          const resumed = yield* BoardContext.notifier({
+            cache: BoardContext.cache(),
+            session: root.session,
+            agent,
+            user,
+          })
+          const latest = yield* read.execute({}, ctx)
+          expect(yield* resumed("board_read", latest)).toBe(latest)
+          expect(yield* resumed("read", output)).toBe(output)
+          const skipped = yield* BoardContext.notifier({
+            cache: BoardContext.cache(),
+            session: root.session,
+            agent,
+            user,
+          })
+          const suffix = yield* read.execute({ since: first.id }, ctx)
+          expect((yield* skipped("board_read", suffix)).metadata).toHaveProperty(BoardNotice.key, 1)
         }),
       options,
     ),

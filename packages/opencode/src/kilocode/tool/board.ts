@@ -25,7 +25,7 @@ const Post = Schema.Struct({
   }),
 })
 
-type ReadMeta = { cursor?: string; hasMore: boolean; truncated: boolean }
+type ReadMeta = { since?: string; cursor?: string; hasMore: boolean; truncated: boolean }
 type PostMeta = { id: string; to: string; type: BoardStore.Kind; truncated: boolean }
 
 export const BoardReadTool = Tool.define<typeof Read, ReadMeta, Config.Service | Database.Service, "board_read">(
@@ -50,15 +50,16 @@ export const BoardReadTool = Tool.define<typeof Read, ReadMeta, Config.Service |
             )
           }
           yield* ctx.ask({ permission: "board_read", patterns: ["*"], always: ["*"], metadata: {} })
+          const since = params.since?.trim() || undefined
           const result = yield* BoardStore.read({
             sessionID: ctx.sessionID,
-            since: params.since?.trim() || undefined,
+            since,
             limit: params.limit ?? undefined,
           }).pipe(Effect.provideService(Database.Service, database))
           return {
             title: "Shared agent board",
             output: JSON.stringify(result),
-            metadata: { cursor: result.cursor, hasMore: result.hasMore, truncated: false },
+            metadata: { since, cursor: result.cursor, hasMore: result.hasMore, truncated: false },
           }
         }).pipe(Effect.orDie),
     }

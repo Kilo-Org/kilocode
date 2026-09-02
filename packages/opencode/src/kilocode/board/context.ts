@@ -47,7 +47,7 @@ export namespace BoardContext {
     const agents = yield* Agent.Service
     const database = yield* Database.Service
 
-    return <T extends Tool.ExecuteResult>(_tool: string, output: T, signal?: AbortSignal): Effect.Effect<T> =>
+    return <T extends Tool.ExecuteResult>(tool: string, output: T, signal?: AbortSignal): Effect.Effect<T> =>
       Effect.gen(function* () {
         if (signal?.aborted) return output
         const cfg = yield* config.get()
@@ -55,7 +55,14 @@ export namespace BoardContext {
         const session = yield* sessions.get(input.session.id)
         const agent = yield* agents.get(input.agent.name, cfg)
         if (!agent || !allowed({ session, agent, user: input.user })) return output
-        const activity = yield* BoardStore.activity({ sessionID: session.id, after: input.cache.cursor }).pipe(
+        const read =
+          tool === "board_read" && output.metadata.truncated === false && typeof output.metadata.cursor === "string"
+            ? {
+                cursor: output.metadata.cursor,
+                since: typeof output.metadata.since === "string" ? output.metadata.since : undefined,
+              }
+            : undefined
+        const activity = yield* BoardStore.activity({ sessionID: session.id, after: input.cache.cursor, read }).pipe(
           Effect.provideService(Database.Service, database),
         )
         if (signal?.aborted) return output
