@@ -157,6 +157,15 @@
     }
   }
 
+  [data-slot="task-header-agents-toggle"][data-component="button"],
+  [data-slot="task-header-agents-open-all"][data-component="button"] {
+    width: auto;
+    min-width: 24px;
+    height: 24px;
+    padding: 3px;
+    margin: 0;
+  }
+
   [data-slot="task-header-agents-content"] {
     position: relative;
     flex: 1;

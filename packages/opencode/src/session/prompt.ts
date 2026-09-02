@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -76,6 +77,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { assertExternalDirectoryEffect } from "@/tool/external-directory" // kilocode_change
 import { SessionRunState } from "./run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Database } from "@opencode-ai/core/database/database"
@@ -141,14 +143,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID, scope?: KiloSessionControl.AbortScope) => Effect.Effect<void> // kilocode_change
-  readonly prompt: (
-    input: PromptInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (
-    input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -178,6 +176,7 @@ export const layer = Layer.effect(
     const scope = yield* Scope.Scope
     const instruction = yield* Instruction.Service
     const state = yield* SessionRunState.Service
+    const drain = yield* SessionDrain.Service // kilocode_change
     const revert = yield* SessionRevert.Service
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
@@ -202,7 +201,15 @@ export const layer = Layer.effect(
       scope: KiloSessionControl.AbortScope = "tree",
     ) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, scope, cancel: state.cancel, stop: control.stop })
+      yield* KiloSessionPrompt.cancelTree({
+        sessionID,
+        sessions,
+        scope,
+        drain,
+        events,
+        cancel: state.cancel,
+        stop: control.stop,
+      })
     })
     // kilocode_change end
 
@@ -1474,6 +1481,7 @@ export const layer = Layer.effect(
         // kilocode_change end
       },
       Effect.catchTag("NotFoundError", Effect.die),
+      (work, input) => drain.track(input.sessionID, work), // kilocode_change
     )
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
@@ -1501,6 +1509,7 @@ export const layer = Layer.effect(
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
       const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
+      const board = BoardContext.cache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1648,7 +1657,13 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true, overflow: false }) // kilocode_change
+          yield* compaction.create({
+            sessionID,
+            agent: lastUser.agent,
+            model: lastUser.model,
+            auto: true,
+            overflow: false,
+          }) // kilocode_change
           continue
         }
 
@@ -1708,6 +1723,16 @@ export const layer = Layer.effect(
           const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
           const promptOps = yield* ops()
 
+          // kilocode_change start
+          const notify = BoardContext.allowed({ session, agent, user: lastUser })
+            ? yield* BoardContext.notifier({ cache: board, session, agent, user: lastUser }).pipe(
+                Effect.provideService(Config.Service, config),
+                Effect.provideService(Database.Service, database),
+                Effect.provideService(Agent.Service, agents),
+                Effect.provideService(Session.Service, sessions),
+              )
+            : undefined
+          // kilocode_change end
           const tools = yield* SessionTools.resolve({
             agent,
             session,
@@ -1717,6 +1742,7 @@ export const layer = Layer.effect(
             messages: msgs,
             promptOps,
             memoryCache, // kilocode_change
+            notify, // kilocode_change
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1787,6 +1813,7 @@ export const layer = Layer.effect(
           const system = [
             ...env,
             ...mem, // kilocode_change
+            ...(tools.board_read && notify ? [BoardContext.instructions] : []), // kilocode_change
             ...instructions,
             ...(mcpInstructions ? [mcpInstructions] : []),
             ...(skills ? [skills] : []),
@@ -2660,6 +2687,7 @@ export const node = LayerNode.make({
     CrossSpawnSpawner.node,
     Instruction.node,
     SessionRunState.node,
+    SessionDrain.node, // kilocode_change
     SessionRevert.node,
     SessionSummary.node,
     SystemPrompt.node,

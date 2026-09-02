@@ -883,6 +883,9 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.sharedAgentBoard.title": "Zajednička ploča agenata",
+  "settings.experimental.sharedAgentBoard.description":
+    "Omogućite glavnom agentu i njegovim podagentima da dijele otkrića unutar iste sesije.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
@@ -1243,6 +1246,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
   "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
+  "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",

@@ -890,6 +890,9 @@ export const dict = {
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
   "settings.experimental.imageGeneration.title": "Generación de imágenes",
   "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
+  "settings.experimental.sharedAgentBoard.title": "Tablero de agentes compartido",
+  "settings.experimental.sharedAgentBoard.description":
+    "Permite que el agente principal y sus subagentes compartan descubrimientos dentro de una misma sesión.",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
   "settings.experimental.imageGenerationModel.description": "Modelo de generación de imágenes",
   "settings.experimental.imageGenerationModel.placeholder": "Predeterminado (Auto Router)",
@@ -1253,6 +1256,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
   "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
+  "task.backgroundAgents.openAll": "Abrir todos los agentes en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",
   "task.backgroundAgents.waiting": "Un agente en segundo plano necesita tu entrada",

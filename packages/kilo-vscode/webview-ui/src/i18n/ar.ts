@@ -860,6 +860,9 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
+  "settings.experimental.sharedAgentBoard.title": "لوحة الوكلاء المشتركة",
+  "settings.experimental.sharedAgentBoard.description":
+    "السماح للوكيل الرئيسي ووكلائه الفرعيين بمشاركة الاكتشافات ضمن جلسة واحدة.",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
   "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
   "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
@@ -1209,6 +1212,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
+  "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",

@@ -878,6 +878,9 @@ export const dict = {
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.sharedAgentBoard.title": "Gedeeld agentenbord",
+  "settings.experimental.sharedAgentBoard.description":
+    "Laat de hoofdagent en subagenten ontdekkingen delen binnen één sessie.",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
@@ -1224,6 +1227,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
   "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
+  "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",

@@ -900,6 +900,9 @@ export const dict = {
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
   "settings.experimental.imageGeneration.title": "Bildgenerierung",
   "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
+  "settings.experimental.sharedAgentBoard.title": "Gemeinsames Agent-Board",
+  "settings.experimental.sharedAgentBoard.description":
+    "Ermöglicht dem Hauptagenten und seinen Unteragenten, Erkenntnisse innerhalb einer Sitzung zu teilen.",
   "settings.experimental.imageGenerationModel.title": "Bildmodell",
   "settings.experimental.imageGenerationModel.description": "Bildgenerierungsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
@@ -1265,6 +1268,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
   "task.backgroundAgents.more": "+{{count}} weitere",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
+  "task.backgroundAgents.openAll": "Alle Hintergrund-Agenten öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
   "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",

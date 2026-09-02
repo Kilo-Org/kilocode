@@ -8,6 +8,7 @@ import { Effect, Latch, Layer, Scope, Context } from "effect"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 
 export interface Interface {
   readonly assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError>
@@ -33,6 +34,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const background = yield* BackgroundJob.Service
     const status = yield* SessionStatus.Service
+    const drain = yield* SessionDrain.Service // kilocode_change
 
     const state = yield* InstanceState.make(
       Effect.fn("SessionRunState.state")(function* () {
@@ -65,6 +67,7 @@ export const layer = Layer.effect(
         }),
         onBusy: status.set(sessionID, { type: "busy" }),
         onInterrupt,
+        lease: drain.hold(sessionID), // kilocode_change
       })
       data.runners.set(sessionID, next)
       return next
@@ -92,13 +95,19 @@ export const layer = Layer.effect(
       yield* existing.cancel
     })
 
+    // kilocode_change start
     const ensureRunning = Effect.fn("SessionRunState.ensureRunning")(function* (
       sessionID: SessionID,
       onInterrupt: Effect.Effect<SessionV1.WithParts>,
       work: Effect.Effect<SessionV1.WithParts>,
       valid?: () => boolean, // kilocode_change
     ) {
-      return yield* (yield* runner(sessionID, onInterrupt)).ensureRunning(work, valid) // kilocode_change
+      return yield* drain.track(
+        sessionID,
+        Effect.gen(function* () {
+          return yield* (yield* runner(sessionID, onInterrupt)).ensureRunning(work, valid)
+        }),
+      ) // kilocode_change
     })
 
     const startShell = Effect.fn("SessionRunState.startShell")(function* (
@@ -107,10 +116,16 @@ export const layer = Layer.effect(
       work: Effect.Effect<SessionV1.WithParts>,
       ready?: Latch.Latch,
     ) {
-      return yield* (yield* runner(sessionID, onInterrupt))
-        .startShell(work, ready)
-        .pipe(Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))))
+      return yield* drain.track(
+        sessionID,
+        Effect.gen(function* () {
+          return yield* (yield* runner(sessionID, onInterrupt))
+            .startShell(work, ready)
+            .pipe(Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))))
+        }),
+      )
     })
+    // kilocode_change end
 
     return Service.of({ assertNotBusy, cancel, ensureRunning, startShell })
   }),
@@ -156,6 +171,12 @@ function busyError(sessionID: SessionID) {
   return new Session.BusyError({ sessionID })
 }
 
-export const node = LayerNode.make({ service: Service, layer: layer, deps: [BackgroundJob.node, SessionStatus.node] })
+// kilocode_change start
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [BackgroundJob.node, SessionStatus.node, SessionDrain.node],
+})
+// kilocode_change end
 
 export * as SessionRunState from "./run-state"

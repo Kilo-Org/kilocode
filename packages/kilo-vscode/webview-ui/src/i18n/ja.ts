@@ -876,6 +876,9 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.experimental.sharedAgentBoard.title": "共有エージェントボード",
+  "settings.experimental.sharedAgentBoard.description":
+    "メインエージェントとサブエージェントが同じセッション内で発見を共有できるようにします。",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
@@ -1230,6 +1233,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
   "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
+  "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",

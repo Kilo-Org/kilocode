@@ -755,6 +755,9 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
+  "settings.experimental.sharedAgentBoard.title": "Board condivisa degli agenti",
+  "settings.experimental.sharedAgentBoard.description":
+    "Consente all'agente principale e ai suoi sotto-agenti di condividere le scoperte all'interno della stessa sessione.",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
   "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
   "settings.experimental.imageGenerationModel.placeholder": "Predefinito (Auto Router)",
@@ -1113,6 +1116,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agenti in background",
   "task.backgroundAgents.more": "+{{count}} altri",
   "task.backgroundAgents.open": "Apri agente in background",
+  "task.backgroundAgents.openAll": "Apri tutti gli agenti in background",
   "task.backgroundAgents.cancel": "Arresta",
   "task.backgroundAgents.continueInBackground": "Continua in background",
   "task.backgroundAgents.waiting": "Un agente in background richiede il tuo input",

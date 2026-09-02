@@ -873,6 +873,9 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
+  "settings.experimental.sharedAgentBoard.title": "공유 에이전트 보드",
+  "settings.experimental.sharedAgentBoard.description":
+    "한 세션 안에서 주 에이전트와 하위 에이전트가 발견한 내용을 공유하도록 합니다.",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",
@@ -1217,6 +1220,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
   "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
+  "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",

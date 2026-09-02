@@ -565,6 +565,24 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(400),
   http.protected
+    .post("/kilocode/session/{sessionID}/drain", "kilocode.drainSession")
+    .seeded((ctx) => ctx.session({ title: "Empty drain" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "httpapi-drain" },
+    }))
+    .json(200, (body) => check(body === true, "an empty session should drain")),
+  http.protected
+    .post("/kilocode/session/{sessionID}/drain", "kilocode.drainSession.invalid")
+    .seeded((ctx) => ctx.session({ title: "Invalid drain token" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "" },
+    }))
+    .status(400),
+  http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))
     .at((ctx) => ({
