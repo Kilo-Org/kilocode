@@ -97,8 +97,8 @@ export const layer = Layer.effect(
         byDirectory.set(ctx.directory, dir)
       }
       dir.set(sessionID, projectID)
-      // kilocode_change end
     })
+    // kilocode_change end
 
     // kilocode_change start - drop this instance's sessions from the project store
     // on dispose, so a busy status set here does not outlive the instance.
