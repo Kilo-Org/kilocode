@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolveModelSelection } from "../../webview-ui/src/context/model-selection"
+import { kiloDefault, resolveModelSelection } from "../../webview-ui/src/context/model-selection"
 import { KILO_AUTO, parseModelString } from "../../src/shared/provider-model"
 import type { Provider } from "../../webview-ui/src/types/messages"
 
@@ -102,5 +102,17 @@ describe("resolveModelSelection", () => {
       fallback: KILO_AUTO,
     })
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
+  })
+})
+
+describe("kiloDefault", () => {
+  it("uses the kilo gateway default mode when present", () => {
+    const result = kiloDefault({ kilo: "kilo-auto/efficient" }, KILO_AUTO)
+    expect(result).toEqual({ providerID: "kilo", modelID: "kilo-auto/efficient" })
+  })
+
+  it("falls back to the provided fallback when the kilo default is missing", () => {
+    const result = kiloDefault({}, KILO_AUTO)
+    expect(result).toEqual(KILO_AUTO)
   })
 })

@@ -63,11 +63,21 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     .authStatus({ directory: dir }, { throwOnError: true })
     .then((r) => (r.data?.authenticated ? (r.data.type ?? null) : null))
     .catch(() => null)
+  // The config/providers endpoint overlays the Kilo API default model (the
+  // user's or organization's default mode) onto the kilo provider's default.
+  const defaultRequest =
+    typeof client.config?.providers === "function"
+      ? client.config
+          .providers({ directory: dir }, { throwOnError: true })
+          .then((r) => r.data?.default)
+          .catch(() => undefined)
+      : Promise.resolve(undefined)
 
-  const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
+  const [{ data: response }, authMethods, kiloAuth, kiloDefault] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
     authRequest,
     kiloRequest,
+    defaultRequest,
   ])
   const authStates: Record<string, AuthState> = {}
   const storedKeys: Record<string, StoredProviderKey> = {}
@@ -90,7 +100,12 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
   })
   delete authStates[KILO_PROVIDER_ID]
   if (kiloAuth) authStates[KILO_PROVIDER_ID] = kiloAuth
-  return { response: { ...response, all }, authMethods, authStates, storedKeys }
+  return {
+    response: { ...response, all, default: kiloDefault ?? response.default },
+    authMethods,
+    authStates,
+    storedKeys,
+  }
 }
 
 /**
