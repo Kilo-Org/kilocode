@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { EventV2 } from "@opencode-ai/core/event"

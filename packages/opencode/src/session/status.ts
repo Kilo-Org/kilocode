@@ -13,14 +13,15 @@ export const Event = SessionStatusEvent
 export interface Interface {
   readonly get: (sessionID: SessionID) => Effect.Effect<Info>
   readonly list: () => Effect.Effect<Map<SessionID, Info>>
-  // kilocode_change - project-scoped read for the remote heartbeat gather.
+  // kilocode_change start - project-scoped read for the remote heartbeat gather
   readonly listAll: () => Effect.Effect<Map<SessionID, Info>>
+  // kilocode_change end
   readonly set: (sessionID: SessionID, status: Info) => Effect.Effect<void>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionStatus") {}
 
-// kilocode_change - process-global status store keyed by project id. InstanceState
+// kilocode_change start - process-global status store keyed by project id. InstanceState
 // keys its map by directory, so the session prompt loop (session worktree
 // directory) and the heartbeat gather (a different captured directory in kilo run)
 // used two separate maps and the heartbeat sent sessions:[]. A project id is
@@ -31,6 +32,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Se
 // instance status endpoint. Session ids are globally unique and idle deletes its
 // entry, so each project's store stays self-cleaning.
 const stores = new Map<string, Map<SessionID, Info>>()
+// kilocode_change end
 
 export const layer = Layer.effect(
   Service,
@@ -50,34 +52,42 @@ export const layer = Layer.effect(
       return new Map(yield* InstanceState.get(state))
     })
 
+    // kilocode_change start - project-scoped read for the heartbeat gather
     const listAll = Effect.fn("SessionStatus.listAll")(function* () {
       const ctx = yield* InstanceState.context
       return new Map(stores.get(String(ctx.project.id)) ?? [])
     })
+    // kilocode_change end
 
     const set = Effect.fn("SessionStatus.set")(function* (sessionID: SessionID, status: Info) {
       const data = yield* InstanceState.get(state)
+      // kilocode_change start - mirror writes into the project-scoped store
       const ctx = yield* InstanceState.context
       const projectID = String(ctx.project.id)
+      // kilocode_change end
       yield* events.publish(Event.Status, { sessionID, status })
       if (status.type === "idle") {
         yield* events.publish(Event.Idle, { sessionID })
         data.delete(sessionID)
+        // kilocode_change start
         const store = stores.get(projectID)
         store?.delete(sessionID)
         if (store && store.size === 0) stores.delete(projectID)
+        // kilocode_change end
         return
       }
       data.set(sessionID, status)
+      // kilocode_change start
       let store = stores.get(projectID)
       if (!store) {
         store = new Map()
         stores.set(projectID, store)
       }
       store.set(sessionID, status)
+      // kilocode_change end
     })
 
-    return Service.of({ get, list, listAll, set })
+    return Service.of({ get, list, listAll, set }) // kilocode_change - listAll
   }),
 )
 
