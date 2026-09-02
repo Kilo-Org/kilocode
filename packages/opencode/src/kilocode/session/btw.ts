@@ -3,6 +3,7 @@ import { Storage } from "@/storage/storage"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
 import { SessionStatus } from "@/session/status"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import type { EventV2 } from "@opencode-ai/core/event"
 import { InstanceState } from "@/effect/instance-state"
 import { Command } from "@/command"
@@ -14,6 +15,8 @@ import type { ProviderV2 } from "@opencode-ai/core/provider"
 import type { ModelV2 } from "@opencode-ai/core/model"
 import { setPromptCacheKey, clearPromptCacheKey } from "./cache-key"
 import { isInterrupted } from "@/kilocode/effect/cause"
+import { AbortedError } from "@opencode-ai/core/v1/session"
+import { errorMessage } from "@/util/error"
 
 export namespace KiloBtw {
   export const MAX_ENTRIES = 20
@@ -114,32 +117,44 @@ export namespace KiloBtw {
     agent: string
     model: { providerID: ProviderV2.ID; modelID: ModelV2.ID; variant?: string }
     variant?: string
-    tools: Record<string, boolean>
     parts: Array<{ type: "text"; text: string }>
   }
 
   export interface Ops {
-    sessions: Pick<Session.Interface, "fork" | "remove" | "get" | "touch" | "updateMessage" | "updatePart">
-    agents: Pick<Agent.Interface, "list" | "defaultInfo">
+    sessions: Pick<
+      Session.Interface,
+      "fork" | "remove" | "get" | "touch" | "updateMessage" | "updatePart" | "setPermission"
+    >
+    agents: Pick<Agent.Interface, "defaultInfo">
     events: Pick<EventV2.Interface, "publish">
-    status: Pick<SessionStatus.Interface, "get">
+    status: Pick<SessionStatus.Interface, "get" | "set">
     currentModel: (sessionID: SessionID) => Effect.Effect<ModelRef>
     runFork: (input: ForkInput) => Effect.Effect<Exit.Exit<MessageV2.WithParts, unknown>>
   }
 
-  // Explicit allowlist: deny every tool (including MCP servers like Gmail)
-  // first, then re-allow only read/research tools. evaluate() takes the last
-  // matching rule, so the allows after the "*" deny win for those tools.
-  const FORK_TOOLS: Record<string, boolean> = {
-    "*": false,
-    read: true,
-    grep: true,
-    glob: true,
-    list: true,
-    skill: true,
-    webfetch: true,
-    websearch: true,
-    semantic_search: true,
+  // Tools a side question may use. Everything else — including all MCP
+  // servers — is denied, and nothing resolves to "ask", so the fork can
+  // never stall on a permission prompt the client cannot see.
+  const ALLOWED_TOOLS = ["read", "grep", "glob", "list", "skill", "webfetch", "websearch", "semantic_search"]
+
+  // Deny every tool first, then re-allow read/research tools. Permission
+  // evaluation is last-match-wins, so the allows after the "*" deny win for
+  // those tools. A tool the parent explicitly restricted (deny/ask rules)
+  // keeps the parent's own rules instead of the blanket allow — a side
+  // question can never grant access the parent did not have. Parent "ask"
+  // rules are downgraded to "deny" (the fork cannot surface prompts).
+  export function forkPermission(parentRules: PermissionV1.Ruleset | undefined): PermissionV1.Ruleset {
+    const rules = parentRules ?? []
+    const restricted = (tool: string) => rules.some((rule) => rule.permission === tool)
+    return [
+      { permission: "*", action: "deny", pattern: "*" },
+      ...ALLOWED_TOOLS.flatMap((tool) => {
+        if (!restricted(tool)) return [{ permission: tool, action: "allow" as const, pattern: "*" }]
+        return rules
+          .filter((rule) => rule.permission === tool)
+          .map((rule) => ({ ...rule, action: rule.action === "allow" ? ("allow" as const) : ("deny" as const) }))
+      }),
+    ]
   }
 
   const waitForIdle = Effect.fn("KiloBtw.waitForIdle")(function* (status: Ops["status"], sessionID: SessionID) {
@@ -190,7 +205,8 @@ export namespace KiloBtw {
         : {}),
     })
     // ignored: true keeps the side Q&A out of every future model request while
-    // still rendering in the transcript.
+    // still rendering in the transcript. time.end is required by the CLI's
+    // `run --command` text output path.
     const part: SessionV1.TextPart = yield* input.ops.sessions.updatePart({
       id: PartID.ascending(),
       messageID: info.id,
@@ -198,6 +214,7 @@ export namespace KiloBtw {
       type: "text",
       text: input.text,
       ignored: true,
+      time: { start: now, end: now },
     })
     yield* input.ops.sessions.touch(parent)
     yield* input.ops.events.publish(Command.Event.Executed, {
@@ -246,68 +263,80 @@ export namespace KiloBtw {
     const agent = session.agent ?? fallback?.name ?? "build"
     const model = yield* ops.currentModel(parent)
 
-    if (!question) {
-      const entries = yield* list(parent)
-      const body = entries.length > 0 ? formatEntry(entries[0]) : formatUsage()
-      const text = entries.length > 0 ? `**BTW** — last side question\n\n${body}` : body
+    // Show the parent as busy while the side question runs so clients that
+    // key off session status see the activity. Only claim an idle parent,
+    // and only restore idle if we were the ones who set busy.
+    const parentStatus = yield* ops.status.get(parent)
+    const claimBusy = parentStatus.type === "idle"
+
+    const runQuestion = Effect.fn("KiloBtw.runQuestion")(function* (question: string) {
+      if (claimBusy) yield* ops.status.set(parent, { type: "busy" })
+
+      if (!question) {
+        const entries = yield* list(parent)
+        const body = entries.length > 0 ? formatEntry(entries[0]) : formatUsage()
+        const text = entries.length > 0 ? `**BTW** — last side question\n\n${body}` : body
+        const user = yield* userMessage({
+          ops,
+          sessionID: parent,
+          messageID: cmdInput.messageID,
+          agent,
+          model,
+          text: "/btw",
+        })
+        return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
+      }
+
       const user = yield* userMessage({
         ops,
         sessionID: parent,
         messageID: cmdInput.messageID,
         agent,
         model,
-        text: "/btw",
+        text: `/btw ${question}`,
       })
-      return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
-    }
 
-    const user = yield* userMessage({
-      ops,
-      sessionID: parent,
-      messageID: cmdInput.messageID,
-      agent,
-      model,
-      text: `/btw ${question}`,
-    })
+      // Run the fork with the session's agent: guardPermissions re-appends
+      // session deny rules after agent rules for ask/plan/architect agents,
+      // which would replay the allowlist's "*" deny last and disable every
+      // tool. Primary-mode agents evaluate the fork's ruleset as-is
+      // (findLast: rules after the "*" deny win), so only the read/research
+      // tools — restricted by the parent's own rules where present — can
+      // ever execute. No MCP tools, no permission stalls.
+      const guarded = ["ask", "plan", "architect"]
+      const forkAgent = guarded.includes(agent.toLowerCase()) ? fallback?.name ?? "build" : agent
+      const variant = model.variant ?? cmdInput.variant
 
-    // Run the fork with the session's agent: guardPermissions re-appends
-    // session deny rules after agent rules for ask/plan/architect agents,
-    // which would replay the allowlist's "*" deny last and disable every
-    // tool. Primary-mode agents evaluate the session allowlist as-is
-    // (findLast: allows after the "*" deny win), so only the read/research
-    // tools below can ever execute — no MCP tools, no permission stalls.
-    const guarded = ["ask", "plan", "architect"]
-    const forkAgent = guarded.includes(agent.toLowerCase()) ? fallback?.name ?? "build" : agent
-    const variant = model.variant ?? cmdInput.variant
-
-    // acquireUseRelease guarantees the fork is removed even if this fiber is
-    // interrupted between fork creation and the prompt, or mid-prompt.
-    // parentID registers the fork as a child session so stopping the parent
-    // cancels the side question through the existing cancel tree; children:
-    // false skips cloning the parent's task-subagent subtree for a side question.
-    const exit = yield* Effect.acquireUseRelease(
-      Effect.gen(function* () {
-        const fork = yield* ops.sessions
-          .fork({ sessionID: parent, parentID: parent, children: false })
-          .pipe(Effect.orDie)
-        setPromptCacheKey(fork.id, parent)
-        return fork
-      }),
-      (fork) =>
-        ops.runFork({
-          sessionID: fork.id,
-          agent: forkAgent,
-          model: { providerID: model.providerID, modelID: model.modelID, variant },
-          variant,
-          tools: { ...FORK_TOOLS },
-          parts: [
-            {
-              type: "text",
-              text: `Side question — answer it concisely. Your tools are read-only; do not attempt to modify anything.\n\n${question}`,
-            },
-          ],
+      // acquireUseRelease guarantees the fork is removed even if this fiber is
+      // interrupted between fork creation and the prompt, or mid-prompt.
+      // parentID registers the fork as a child session so stopping the parent
+      // cancels the side question through the existing cancel tree; children:
+      // false skips cloning the parent's task-subagent subtree for a side question.
+      const exit = yield* Effect.acquireUseRelease(
+        Effect.gen(function* () {
+          const fork = yield* ops.sessions
+            .fork({ sessionID: parent, parentID: parent, children: false })
+            .pipe(Effect.orDie)
+          setPromptCacheKey(fork.id, parent)
+          yield* ops.sessions
+            .setPermission({ sessionID: fork.id, permission: forkPermission(session.permission) })
+            .pipe(Effect.orDie)
+          return fork
         }),
-      (fork) =>
+        (fork) =>
+          ops.runFork({
+            sessionID: fork.id,
+            agent: forkAgent,
+            model: { providerID: model.providerID, modelID: model.modelID, variant },
+            variant,
+            parts: [
+              {
+                type: "text",
+                text: `Side question — answer it concisely. Your tools are read-only; do not attempt to modify anything.\n\n${question}`,
+              },
+            ],
+          }),
+        (fork) =>
         Effect.gen(function* () {
           clearPromptCacheKey(fork.id)
           yield* waitForIdle(ops.status, fork.id)
@@ -317,56 +346,80 @@ export namespace KiloBtw {
         }),
     )
 
-    const fail = (message: string) =>
-      Effect.gen(function* () {
-        yield* ops.events.publish(Session.Event.Error, {
-          sessionID: parent,
-          error: new NamedError.Unknown({ message: `btw: ${message}` }).toObject(),
+      const fail = (message: string) =>
+        Effect.gen(function* () {
+          yield* ops.events.publish(Session.Event.Error, {
+            sessionID: parent,
+            error: new NamedError.Unknown({ message: `btw: ${message}` }).toObject(),
+          })
+          return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text: `BTW failed: ${message}`, errorText: `btw: ${message}` })
         })
-        return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text: `BTW failed: ${message}`, errorText: `btw: ${message}` })
+
+      if (Exit.isFailure(exit)) {
+        if (isInterrupted(exit.cause)) {
+          return yield* emit({
+            ops,
+            cmdInput,
+            userID: user.id,
+            agent,
+            model,
+            text: "Side question cancelled.",
+            errorText: "btw cancelled",
+          })
+        }
+        const err = Cause.squash(exit.cause)
+        return yield* fail(err instanceof Error ? err.message : String(err))
+      }
+
+      // An aborted turn returns successfully but carries an error on the
+      // assistant message with whatever partial text the model produced.
+      // Surface it as cancelled/failed instead of saving a partial answer.
+      const result = exit.value
+      if (result.info.role === "assistant" && result.info.error) {
+        if (AbortedError.isInstance(result.info.error)) {
+          return yield* emit({
+            ops,
+            cmdInput,
+            userID: user.id,
+            agent,
+            model,
+            text: "Side question cancelled.",
+            errorText: "btw cancelled",
+          })
+        }
+        return yield* fail(errorMessage(result.info.error))
+      }
+
+      const answer = result.parts
+        .filter((p): p is MessageV2.TextPart => p.type === "text" && !p.ignored)
+        .map((p) => p.text)
+        .join("\n\n")
+        .trim()
+
+      if (!answer) {
+        return yield* fail("the model returned no text")
+      }
+
+      yield* add({
+        parentID: parent,
+        question,
+        answer,
+        model: { providerID: model.providerID, modelID: model.modelID },
       })
 
-    if (Exit.isFailure(exit)) {
-      if (isInterrupted(exit.cause)) {
-        return yield* emit({
-          ops,
-          cmdInput,
-          userID: user.id,
-          agent,
-          model,
-          text: "Side question cancelled.",
-          errorText: "btw cancelled",
-        })
-      }
-      const err = Cause.squash(exit.cause)
-      return yield* fail(err instanceof Error ? err.message : String(err))
-    }
+      const text = [
+        `**BTW** — side question (read-only, not added to the conversation)`,
+        ``,
+        `**Q:** ${question}`,
+        ``,
+        answer,
+      ].join("\n")
 
-    const answer = exit.value.parts
-      .filter((p): p is MessageV2.TextPart => p.type === "text" && !p.ignored)
-      .map((p) => p.text)
-      .join("\n\n")
-      .trim()
-
-    if (!answer) {
-      return yield* fail("the model returned no text")
-    }
-
-    yield* add({
-      parentID: parent,
-      question,
-      answer,
-      model: { providerID: model.providerID, modelID: model.modelID },
+      return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
     })
 
-    const text = [
-      `**BTW** — side question (read-only, not added to the conversation)`,
-      ``,
-      `**Q:** ${question}`,
-      ``,
-      answer,
-    ].join("\n")
-
-    return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
+    return yield* runQuestion(question).pipe(
+      Effect.ensuring(claimBusy ? ops.status.set(parent, { type: "idle" }) : Effect.void),
+    )
   })
 }

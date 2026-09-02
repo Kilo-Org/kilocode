@@ -453,6 +453,10 @@ export namespace KiloSessionPrompt {
     input.cache.blocks ??= new Map()
     for (const msg of input.msgs) {
       if (msg.info.role !== "user") continue
+      // kilocode_change - ignored user rows (e.g. /btw side questions) are
+      // excluded from model history; injecting environment text into them
+      // would leak an extra environment-only turn into later requests.
+      if (msg.parts.some((part) => part.type === "text" && part.ignored)) continue
       if (
         msg.parts.some(
           (part) => part.type === "text" && part.synthetic && part.text.startsWith("<environment_details>"),

@@ -46,6 +46,45 @@ describe("prompt cache key override", () => {
   })
 })
 
+describe("KiloBtw fork permissions", () => {
+  const last = (rules: ReturnType<typeof KiloBtw.forkPermission>, permission: string, pattern = "*") =>
+    [...rules].reverse().find((rule) => rule.permission === permission && rule.pattern === pattern)
+
+  test("allows read tools when the parent has no restrictions", () => {
+    const rules = KiloBtw.forkPermission([])
+    expect(last(rules, "read")?.action).toBe("allow")
+    // Non-allowlist tools (MCP servers, shell, edits) are only matched by
+    // the deny-all rule.
+    expect(rules.find((rule) => rule.permission === "*")?.action).toBe("deny")
+    expect(rules.filter((rule) => rule.permission === "bash").length).toBe(0)
+    expect(rules.filter((rule) => rule.permission === "edit").length).toBe(0)
+  })
+
+  test("keeps parent read denies instead of granting access", () => {
+    const rules = KiloBtw.forkPermission([
+      { permission: "read", action: "deny", pattern: "*" },
+    ])
+    expect(last(rules, "read")?.action).toBe("deny")
+    expect(rules.filter((rule) => rule.permission === "read").every((rule) => rule.action === "deny")).toBe(true)
+  })
+
+  test("downgrades parent read ask rules to deny (fork cannot prompt)", () => {
+    const rules = KiloBtw.forkPermission([
+      { permission: "read", action: "allow", pattern: "*" },
+      { permission: "read", action: "ask", pattern: "*.env" },
+    ])
+    expect(last(rules, "read", "*")?.action).toBe("allow")
+    expect(last(rules, "read", "*.env")?.action).toBe("deny")
+    expect(rules.some((rule) => rule.action === "ask")).toBe(false)
+  })
+
+  test("replaces parent wildcard allows with the deny baseline", () => {
+    const rules = KiloBtw.forkPermission([{ permission: "*", action: "allow", pattern: "*" }])
+    expect(last(rules, "*")?.action).toBe("deny")
+    expect(rules.filter((rule) => rule.permission === "*").every((rule) => rule.action === "deny")).toBe(true)
+  })
+})
+
 describe("KiloBtw store", () => {
   test("add/list roundtrip with newest first and cap", async () => {
     const parent = "ses_store"
