@@ -613,6 +613,34 @@ try {
     )
   }
 
+  // A completed session shows "done" while another tab is focused, and the
+  // check clears only when the user switches TO that tab (the focus transition).
+  await emit({ type: "sessionStatus", sessionID: "background", status: "idle" })
+  await emit({ type: "sessionTurnClosed", sessionID: "background", reason: "completed" })
+  await check("background", "done")
+  assert.equal(value.currentSessionID(), "root")
+  value.setCurrentSessionID("background")
+  await check("background", "idle")
+  // Guardrail: switching to a tab does NOT clear an unresolved attention state;
+  // only "done" is acknowledged on focus, never "waiting" or "error".
+  await emit({
+    type: "questionRequest",
+    question: {
+      id: "attention",
+      sessionID: "background",
+      questions: [{ question: "Continue?", header: "Confirm", options: [] }],
+    },
+  })
+  await check("background", "waiting")
+  value.setCurrentSessionID("root")
+  await settle()
+  value.setCurrentSessionID("background")
+  await check("background", "waiting")
+  await emit({ type: "questionResolved", requestID: "attention" })
+  await check("background", "idle")
+  value.setCurrentSessionID("root")
+  await settle()
+
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await emit({

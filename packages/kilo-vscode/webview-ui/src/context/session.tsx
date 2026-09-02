@@ -1830,6 +1830,17 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   })
   const activityFor = (id: string | undefined): Activity => (id ? (activityMap[id] ?? "idle") : "idle")
+  // Clear the completed (done) indicator when the user switches TO that session's
+  // tab — opening a finished result counts as acknowledging it. Keyed on the
+  // focus transition via `on(currentSessionID, ...)`, so a session that completes
+  // while it is already the focused tab still shows its check (only clears once
+  // you navigate away and back). Only "done" is cleared here; "waiting" (needs
+  // input/permission) and "error" must persist until the user actually acts.
+  createEffect(
+    on(currentSessionID, (id) => {
+      if (id && activityMap[id] === "done") clearClose(id)
+    }),
+  )
   const inUseFor = (id: string) => inUse(sessionFamily(id), statusMap, [...permissions(), ...questions()])
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
