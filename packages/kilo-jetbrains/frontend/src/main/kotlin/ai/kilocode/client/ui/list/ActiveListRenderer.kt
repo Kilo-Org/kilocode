@@ -546,10 +546,14 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
         val label = if (badge.icon != null) badge.text else ""
         if (text != label) text = label
         if (label.isNotBlank()) {
-            // Matched to the pill's own text size. Re-read rather than assigned once, because updateUI
-            // puts the LaF default back on an IDE zoom; the comparison makes that the only time it writes.
+            // Font, foreground, and gap all match the ahead/behind counters in ChangesPanel: a glyph with a
+            // figure beside it reads as one token, and a default label gap pulls the two apart into an icon
+            // with a caption. Re-read rather than assigned once, because updateUI puts the LaF defaults
+            // back on an IDE zoom; the comparisons make that the only time this writes.
             val small = JBFont.small()
             if (font != small) font = small
+            val gap = UiStyle.Gap.xs()
+            if (iconTextGap != gap) iconTextGap = gap
             if (color != null && foreground != color) foreground = color
         }
         toolTipText = cellTooltip()

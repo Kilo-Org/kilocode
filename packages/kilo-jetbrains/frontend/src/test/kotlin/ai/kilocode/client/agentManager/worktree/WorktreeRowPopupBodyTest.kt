@@ -1,8 +1,11 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
@@ -22,6 +25,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
+import java.awt.event.MouseEvent
 import javax.swing.JScrollPane
 import javax.swing.JSeparator
 import javax.swing.ScrollPaneConstants
@@ -93,6 +98,51 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         // Every thread resolved is nothing outstanding, not "0 unresolved".
         val lines = labels(body)
         assertTrue("the stale conversation line must be gone, got $lines", lines.none { it.contains("conversations") })
+    }
+
+    fun `test each verdict line is a hoverable click target`() {
+        val browser = installBrowser()
+        val body = body()
+
+        edt {
+            body.update(
+                stats = null,
+                pull = pr(
+                    GhReview.APPROVED,
+                    GhChecksDto(GhChecks.FAILED, total = 5, failed = 2),
+                    GhCommentsDto(total = 8, unresolved = 3),
+                ),
+                name = "feature-x",
+                dirty = null,
+            )
+        }
+
+        val lines = edt { hovers(body) }
+        assertEquals(3, lines.size)
+        assertTrue("every line must read as clickable, got $lines", edt { lines.all { it.cursor.type == Cursor.HAND_CURSOR } })
+
+        edt { lines.forEach { click(it) } }
+
+        // The popup is the one surface that says "2 of 5 checks failed" in words, so that line goes to the
+        // log rather than the conversation the other two open.
+        assertEquals(
+            listOf(
+                "https://example.test/pr/7",
+                "https://example.test/pr/7/checks",
+                "https://example.test/pr/7",
+            ),
+            browser.urls,
+        )
+    }
+
+    fun `test a hidden verdict line is not a click target`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto()), "feature-x", null) }
+
+        // The lines are retained and only hidden, so a stale action behind an invisible row would still be
+        // reachable by the keyboard if the slot were left in the column.
+        assertTrue(edt { hovers(body).isEmpty() })
     }
 
     fun `test verdict lines are hidden when github reports neither`() {
@@ -243,6 +293,27 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     }
 
     private fun body(): WorktreeRowPopupBody = edt { WorktreeRowPopupBody(openDiff = {}, onLocal = {}) }
+
+    /**
+     * The verdict lines' hover areas, in popup order. Areas inside the embedded [PrHeaderView] are left out
+     * — that widget has its own five and its own tests — and so is any line that is currently hidden, since
+     * a reader cannot reach it.
+     */
+    @RequiresEdt
+    private fun hovers(body: WorktreeRowPopupBody): List<HoverArea> {
+        val header = components(body).filterIsInstance<PrHeaderView>().single()
+        return components(body)
+            .filterIsInstance<HoverArea>()
+            .filter { !SwingUtilities.isDescendingFrom(it, header) }
+            .filter { area -> generateSequence<Component>(area) { it.parent }.all { it.isVisible } }
+    }
+
+    @RequiresEdt
+    private fun click(target: Component) {
+        target.dispatchEvent(
+            MouseEvent(target, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false, MouseEvent.BUTTON1),
+        )
+    }
 
     /** The title's styled fragments, which is where the full text lives once the line is too long. */
     @RequiresEdt

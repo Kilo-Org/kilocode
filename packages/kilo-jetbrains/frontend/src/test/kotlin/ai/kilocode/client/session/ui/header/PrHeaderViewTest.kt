@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.stateLabel
@@ -137,6 +138,72 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertTrue(edt { glyphs(view).isEmpty() })
     }
 
+    fun `test every element of the header is a hoverable click target`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+
+        // The state pill, the title, and all three verdicts. Anything short of this leaves part of a
+        // header that is entirely clickable looking like static text.
+        val areas = edt { hovers(view) }
+        assertEquals(5, areas.size)
+        assertTrue("every area must carry an action, got $areas", edt { areas.all { it.cursor.type == Cursor.HAND_CURSOR } })
+        assertTrue(edt { areas.all { it.isFocusable } })
+
+        edt { areas.forEach { click(it) } }
+
+        // Four open the conversation and one opens the checks tab, in header order.
+        assertEquals(
+            listOf(
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123/checks",
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123",
+            ),
+            browser.urls,
+        )
+    }
+
+    fun `test the title opens the pull request`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+
+        edt { click(title(view)) }
+
+        assertEquals(listOf("https://github.com/kilo/test/pull/123"), browser.urls)
+    }
+
+    fun `test the title hover pill hugs the title instead of the whole header`() {
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+        val snug = edt {
+            layoutAt(view, view.preferredSize.width)
+            hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }.width
+        }
+
+        edt { layoutAt(view, view.preferredSize.width * 3) }
+
+        edt {
+            // The centre slot is everything left over between the verdicts and the toolbar, so a stretched
+            // header hands the title far more room than its text needs. A pill that took it would highlight
+            // most of the header for a title a few words long.
+            val area = hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }
+            assertEquals("extra header width must not grow the pill", snug, area.width)
+            assertTrue("the pill spans the header: ${area.width} of ${view.width}", area.width < view.width / 2)
+            assertTrue("the pill is narrower than its title: ${area.width} vs ${title(view).width}", area.width >= title(view).width)
+        }
+    }
+
+    fun `test a header with no pull request has nothing to hover`() {
+        val view = edt { PrHeaderView {} }
+
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = null, name = "feature-x") }
+
+        assertTrue(edt { hovers(view).isEmpty() })
+    }
+
     fun `test a settled conversation drops the comment glyph and its count`() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
@@ -258,6 +325,11 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     private fun glyphs(view: PrHeaderView): List<JBLabel> =
         components(view).filterIsInstance<JBLabel>().filter { it.isVisible && it.icon != null && it.icon !is FilledBadgeIcon }
 
+    /** The visible hover areas, in header order. */
+    @RequiresEdt
+    private fun hovers(view: PrHeaderView): List<HoverArea> =
+        components(view).filterIsInstance<HoverArea>().filter { it.isVisible }
+
     @RequiresEdt
     private fun glyph(view: PrHeaderView, icon: Icon): JBLabel = glyphs(view).single { it.icon === icon }
 
@@ -311,6 +383,13 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun layout(view: PrHeaderView) {
         view.setSize(view.preferredSize)
+        components(view).forEach { if (it is Container) it.doLayout() }
+    }
+
+    /** Laid out at a chosen width, for the cases that ask what a header does with room to spare. */
+    @RequiresEdt
+    private fun layoutAt(view: PrHeaderView, width: Int) {
+        view.setSize(width, view.preferredSize.height)
         components(view).forEach { if (it is Container) it.doLayout() }
     }
 

@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
 import javax.swing.Icon
 
 class ActiveListBadgeCellTest : BasePlatformTestCase() {
@@ -75,6 +76,10 @@ class ActiveListBadgeCellTest : BasePlatformTestCase() {
         assertSame(glyph, cell.icon)
         assertEquals("3", cell.text)
         assertEquals(UiStyle.Colors.weak(), cell.foreground)
+        // Font and gap match the ahead/behind counters in ChangesPanel: glyph and figure are one token, and
+        // the default label gap pulls them apart into an icon with a caption.
+        assertEquals(JBFont.small(), cell.font)
+        assertEquals(UiStyle.Gap.xs(), cell.iconTextGap)
     }
 
     fun `test a bare glyph carries no label text`() {
