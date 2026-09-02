@@ -15,6 +15,8 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -34,6 +36,8 @@ import kotlinx.coroutines.runBlocking
 import java.awt.BorderLayout
 import java.awt.Cursor
 import javax.swing.JButton
+import javax.swing.JEditorPane
+import javax.swing.event.HyperlinkEvent
 
 @Suppress("UnstableApiUsage")
 class EmptySessionPanelTest : BasePlatformTestCase() {
@@ -130,6 +134,26 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(5, panel.recentCount())
     }
 
+    fun `test minimal mode shows only logo and feedback`() {
+        val panel = panel(recents = listOf(session("ses_1")), minimal = true)
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertFalse(panel.historyVisible())
+        assertFalse(panel.descriptionVisible())
+        assertFalse(panel.recentVisible())
+    }
+
+    fun `test full mode shows logo feedback history description and recents`() {
+        val panel = panel(recents = listOf(session("ses_1")))
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertTrue(panel.historyVisible())
+        assertTrue(panel.descriptionVisible())
+        assertTrue(panel.recentVisible())
+    }
+
     fun `test explanation uses welcome message`() {
         val panel = panel()
 
@@ -137,6 +161,135 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
             "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
             panel.explanationText(),
         )
+    }
+
+    // ---- branch/worktree tip under the logo ----
+
+    fun `test no tip until branch status arrives`() {
+        val panel = panel(newWorktree = {})
+
+        assertNull(panel.tipText())
+        assertFalse(panel.worktreeLinked())
+        assertEquals(panel.explanationText(), panel.descriptionText())
+    }
+
+    fun `test branch promotes running the task in a worktree`() {
+        val panel = panel(newWorktree = {})
+
+        panel.setBranch(BranchStatusDto(branch = "main", worktree = false))
+
+        assertEquals(
+            "You're working directly on main. Start a task, or run it in a worktree to keep changes isolated.",
+            panel.tipText(),
+        )
+        assertTrue(panel.worktreeLinked())
+    }
+
+    fun `test worktree hints isolation and links nothing`() {
+        val panel = panel(newWorktree = {})
+
+        panel.setBranch(BranchStatusDto(branch = "feature/x", worktree = true))
+
+        assertEquals(
+            "You're in an isolated worktree on feature/x. Work freely — your main checkout stays untouched.",
+            panel.tipText(),
+        )
+        assertFalse(panel.worktreeLinked())
+    }
+
+    fun `test worktree without a branch name falls back to the generic worktree tip`() {
+        val panel = panel()
+
+        panel.setBranch(BranchStatusDto(branch = "(detached)", worktree = true))
+
+        assertEquals(
+            "You're in an isolated worktree. Work freely — your main checkout stays untouched.",
+            panel.tipText(),
+        )
+    }
+
+    fun `test detached plain checkout keeps the generic welcome`() {
+        val panel = panel(newWorktree = {})
+
+        panel.setBranch(BranchStatusDto(branch = "(detached)", worktree = false))
+
+        assertNull(panel.tipText())
+        assertFalse(panel.worktreeLinked())
+        assertEquals(panel.explanationText(), panel.descriptionText())
+    }
+
+    fun `test missing git keeps the generic welcome`() {
+        val panel = panel(newWorktree = {})
+
+        panel.setBranch(
+            BranchStatusDto(branch = "main", worktree = false, availability = GhAvailability.GIT_MISSING),
+        )
+
+        assertNull(panel.tipText())
+        assertFalse(panel.worktreeLinked())
+    }
+
+    fun `test long branch name is shortened`() {
+        val panel = panel()
+
+        panel.setBranch(BranchStatusDto(branch = "feature/a-very-long-branch-name-that-keeps-going"))
+
+        val tip = panel.tipText().orEmpty()
+        assertTrue(tip, tip.contains("…"))
+        assertFalse(tip, tip.contains("keeps-going"))
+    }
+
+    fun `test minimal surface shows a worktree tip but no generic welcome`() {
+        val panel = panel(minimal = true)
+
+        assertFalse(panel.descriptionVisible())
+
+        panel.setBranch(BranchStatusDto(branch = "feature/x", worktree = true))
+
+        assertTrue(panel.descriptionVisible())
+    }
+
+    fun `test phrase stays plain text without a callback`() {
+        val panel = panel()
+
+        panel.setBranch(BranchStatusDto(branch = "main", worktree = false))
+
+        assertEquals(
+            "You're working directly on main. Start a task, or run it in a worktree to keep changes isolated.",
+            panel.tipText(),
+        )
+        assertFalse(panel.worktreeLinked())
+    }
+
+    fun `test activating the inline link invokes the callback`() {
+        var fired = 0
+        val panel = panel(newWorktree = { fired++ })
+        panel.setBranch(BranchStatusDto(branch = "main", worktree = false))
+
+        activateLink(panel)
+
+        assertEquals(1, fired)
+    }
+
+    fun `test activating the inline link ignores other hrefs`() {
+        var fired = 0
+        val panel = panel(newWorktree = { fired++ })
+        panel.setBranch(BranchStatusDto(branch = "main", worktree = false))
+
+        activateLink(panel, href = "https://example.test")
+
+        assertEquals(0, fired)
+    }
+
+    /**
+     * Fires the activation through the editor pane that `setCopyable(true)` installs, so the real
+     * listener wiring is exercised rather than a stand-in.
+     */
+    private fun activateLink(panel: EmptySessionPanel, href: String = panel.worktreeHref()) {
+        val pane = UIUtil.uiTraverser(panel).filter(JEditorPane::class.java).first()
+        assertNotNull(pane)
+        val event = HyperlinkEvent(pane, HyperlinkEvent.EventType.ACTIVATED, null, href)
+        pane!!.hyperlinkListeners.forEach { it.hyperlinkUpdate(event) }
     }
 
     fun `test selecting recent session does not open it`() {
@@ -286,7 +439,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     fun `test renderer shows overlay badge for active recent session`() {
         val panel = panel(
             recents = listOf(session("ses_1")),
-            activity = { sessions.activity() + mapOf("ses_1" to SessionActivityKind.QUESTION) },
+            activity = { sessions.activitySnapshot() + mapOf("ses_1" to SessionActivityKind.QUESTION) },
         )
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()
@@ -301,7 +454,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         var kind: SessionActivityKind? = null
         val panel = panel(
             recents = listOf(session("ses_1")),
-            activity = { sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty() },
+            activity = { sessions.activitySnapshot() + kind?.let { mapOf("ses_1" to it) }.orEmpty() },
         )
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()
@@ -350,9 +503,20 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     private fun panel(
         recents: List<SessionDto> = emptyList(),
         history: () -> Unit = {},
-        activity: () -> Map<String, SessionActivityKind> = { sessions.activity() },
+        activity: () -> Map<String, SessionActivityKind> = { sessions.activitySnapshot() },
         titles: () -> Map<String, String> = { emptyMap() },
-    ) = EmptySessionPanel(testRootDisposable, controller, recents, history, activity, titles)
+        minimal: Boolean = false,
+        newWorktree: (() -> Unit)? = null,
+    ) = EmptySessionPanel(
+        testRootDisposable,
+        controller,
+        recents,
+        history,
+        activity,
+        titles,
+        minimal = minimal,
+        newWorktree = newWorktree,
+    )
 
     private fun flush() = runBlocking {
         delay(100)

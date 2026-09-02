@@ -3,12 +3,9 @@ import { UI } from "@/cli/ui"
 import type { NetworkOptions } from "@/cli/network"
 import { ServerAuth } from "@/server/auth"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { errorMessage } from "@/util/error"
-import { TuiConfig } from "@/config/tui"
-import { validateSession } from "@/cli/tui/validate-session"
-import { importCloudSession } from "@/kilocode/cloud-session"
+import { errorMessage } from "@opencode-ai/tui/util/error"
+import { validate as validateSession } from "@/kilocode/cli/cmd/tui"
 import { DaemonClient } from "@/kilocode/daemon/client"
-import { createKiloClient } from "@kilocode/sdk/v2"
 
 type TuiInput = import("@opencode-ai/tui").TuiInput
 export type StartInput = Omit<TuiInput, "pluginHost">
@@ -33,18 +30,24 @@ type Input = {
 async function session(input: Input, daemon: DaemonClient.Connection) {
   if (!input.args.cloudFork || !input.args.session) return { ok: true as const, id: input.args.session }
 
+  const [{ createKiloClient }, { importCloudSession, reportCloudImportError }] = await Promise.all([
+    import("@kilocode/sdk/v2"),
+    import("@/kilocode/cloud-session"),
+  ])
   UI.println("Importing session from cloud...")
   const client = createKiloClient({
     baseUrl: daemon.url,
     directory: input.cwd,
     headers: daemon.headers,
   })
-  const id = await importCloudSession(client, input.args.session).catch(() => undefined)
-  if (id) return { ok: true as const, id }
-
-  UI.error("Failed to import session from cloud")
-  process.exitCode = 1
-  return { ok: false as const }
+  try {
+    const id = await importCloudSession(client, input.args.session)
+    return { ok: true as const, id }
+  } catch (err) {
+    reportCloudImportError(err)
+    process.exitCode = 1
+    return { ok: false as const }
+  }
 }
 
 export namespace KiloTuiThreadDaemon {
@@ -65,6 +68,7 @@ export namespace KiloTuiThreadDaemon {
     if (!daemon) return false
 
     const prompt = await input.input()
+    const { TuiConfig } = await import("@/config/tui")
     const config = await TuiConfig.get()
 
     const fork = await session(input, daemon)

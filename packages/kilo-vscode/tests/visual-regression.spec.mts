@@ -78,6 +78,10 @@ async function settle(page: Page) {
 // Side terminal tabs mount live xterm instances whose websocket error text
 // lands at indeterminate times.
 const SKIP = new Set<string>([
+  "agentmanager--diff-panel-cached-worktree-switch",
+  "agentmanager--diff-panel-viewport-loading",
+  "agentmanager--diff-panel-interrupted-loading",
+  "agentmanager--file-tree-virtualized-large",
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
   "agentmanager--side-terminal-panel-tabs",

@@ -1,12 +1,19 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
-import type { FileAttachment, SessionSearchItem, WebviewMessage, ExtensionMessage } from "../types/messages"
+import type {
+  FileAttachment,
+  FileSearchItem,
+  SessionSearchItem,
+  WebviewMessage,
+  ExtensionMessage,
+} from "../types/messages"
 import {
   AT_PATTERN,
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
   buildSessionAttachments,
+  buildWorktreeAttachments,
   filterMentionResults,
   isCursorAtMentionEnd,
   getMentionRemovalRange,
@@ -16,9 +23,25 @@ import {
   syncMentionedSessions as _syncMentionedSessions,
   FILE_PICKER_RESULT,
   type MentionResult,
+  type WorktreeReference,
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
+const FILE_SEARCH_CACHE_MS = 5000
+const FILE_SEARCH_CACHE_LIMIT = 8
+
+type FileSearchCache = {
+  items: Array<FileSearchItem | string>
+  updated: number
+  revision: number
+}
+
+type FileSearchRequest = {
+  id: string
+  query: string
+  scope: string
+  revision: number
+}
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -33,6 +56,14 @@ export interface FileMention {
   sessionPicker: Accessor<boolean>
   /** Directory-scoped past chats shown in the session picker. */
   sessionCandidates: Accessor<SessionSearchItem[]>
+  worktreePicker: Accessor<boolean>
+  worktreeCandidates: Accessor<WorktreeReference[]>
+  selectWorktree: (
+    worktree: WorktreeReference,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => void
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
@@ -103,6 +134,7 @@ export function useFileMention(
   vscode: VSCodeContext,
   sessionID?: Accessor<string | undefined>,
   git?: Accessor<boolean>,
+  worktrees?: Accessor<WorktreeReference[]>,
 ): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
@@ -111,16 +143,35 @@ export function useFileMention(
   const [mentionIndex, setMentionIndex] = createSignal(0)
   const [sessionPicker, setSessionPicker] = createSignal(false)
   const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
+  const [worktreePicker, setWorktreePicker] = createSignal(false)
+  const worktreeCandidates = () => worktrees?.().filter((worktree) => !worktree.disabled) ?? []
   let workspaceDir = ""
+  const cache = new Map<string, FileSearchCache>()
+  const dirs = new Map<string, string>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
   // Same accumulation for past-chat mentions, keyed by their exact visible
   // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
   const knownSessions = new Map<string, SessionSearchItem>()
+  const knownWorktrees = new Map<string, WorktreeReference>()
+  const references = () => {
+    for (const worktree of worktrees?.() ?? []) {
+      knownWorktrees.set(worktree.path, worktree)
+      knownPaths.add(worktree.path)
+    }
+    return [...knownWorktrees.values()]
+  }
+  const results = (query: string, items: Array<FileSearchItem | string>) => {
+    references()
+    return buildMentionResults(query, items, git?.() ?? true, worktrees !== undefined)
+  }
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let fileSearchRevision = 0
+  let fileSearchRequest: FileSearchRequest | undefined
+  let prewarmRequest: FileSearchRequest | undefined
   let filePickerCounter = 0
   let sessionSearchCounter = 0
   let pickerState: {
@@ -134,9 +185,88 @@ export function useFileMention(
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
+  const scope = () => sessionID?.() ?? ""
+  let activeScope = scope()
+
+  const syncScope = () => {
+    const value = scope()
+    if (value === activeScope) return value
+    activeScope = value
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
+    prewarmRequest = undefined
+    workspaceDir = dirs.get(value) ?? ""
+    setWorktreePicker(false)
+    setMentionResults([])
+    setMentionIndex(0)
+    return value
+  }
+
+  const readCache = (dir: string): Array<FileSearchItem | string> => {
+    if (!dir) return []
+    const entry = cache.get(dir)
+    if (!entry) return []
+    if (Date.now() - entry.updated <= FILE_SEARCH_CACHE_MS) return entry.items
+    cache.delete(dir)
+    return []
+  }
+
+  const writeCache = (dir: string, items: Array<FileSearchItem | string>, revision: number) => {
+    if (!dir) return
+    const entry = cache.get(dir)
+    if (entry && entry.revision > revision) return
+    cache.delete(dir)
+    cache.set(dir, { items, updated: Date.now(), revision })
+    while (cache.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = cache.keys().next().value
+      if (!oldest) return
+      cache.delete(oldest)
+    }
+  }
+
+  const writeDir = (id: string, dir: string) => {
+    dirs.delete(id)
+    dirs.set(id, dir)
+    while (dirs.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = dirs.keys().next().value
+      if (oldest === undefined) return
+      dirs.delete(oldest)
+    }
+  }
+
+  const replaceResults = (items: MentionResult[]) => {
+    const index = mentionIndex()
+    const selected = mentionResults()[index]
+    setMentionResults(items)
+    if (!selected) {
+      setMentionIndex(0)
+      return
+    }
+    const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
+    setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
+  }
 
   createEffect(() => {
     if (!showMention()) setMentionIndex(0)
+  })
+
+  createEffect(() => {
+    const id = syncScope()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRequest = undefined
+    setMentionQuery(null)
+    setMentionResults([])
+    setMentionIndex(0)
+    const revision = ++fileSearchRevision
+    const requestId = `file-search-prewarm-${revision}`
+    prewarmRequest = { id: requestId, query: "", scope: id, revision }
+    vscode.postMessage({
+      type: "requestFileSearch",
+      query: "",
+      requestId,
+      ...(id ? { sessionID: id } : {}),
+    })
   })
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -152,12 +282,25 @@ export function useFileMention(
       return
     }
     if (message.type !== "fileSearchResult") return
-    if (message.requestId === `file-search-${fileSearchCounter}`) {
-      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    const request =
+      message.requestId === fileSearchRequest?.id
+        ? fileSearchRequest
+        : message.requestId === prewarmRequest?.id
+          ? prewarmRequest
+          : undefined
+    if (!request || request.scope !== scope()) return
+    if (request === fileSearchRequest) fileSearchRequest = undefined
+    if (request === prewarmRequest) prewarmRequest = undefined
+    if (request.revision < fileSearchRevision) return
+
+    const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    if (message.dir) {
+      writeDir(request.scope, message.dir)
       workspaceDir = message.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
-      setMentionIndex(0)
     }
+    if (!request.query) writeCache(message.dir, items, request.revision)
+    if (!showMention() || request.query !== mentionQuery()) return
+    replaceResults(results(request.query, items))
   })
 
   onCleanup(() => {
@@ -168,22 +311,37 @@ export function useFileMention(
 
   const requestFileSearch = (query: string) => {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
-    fileSearchTimer = setTimeout(() => {
-      fileSearchCounter++
-      const id = sessionID?.()
+    const revision = ++fileSearchRevision
+    const request = {
+      id: `file-search-${++fileSearchCounter}`,
+      query,
+      scope: syncScope(),
+      revision,
+    }
+    fileSearchRequest = request
+    const send = () => {
       vscode.postMessage({
         type: "requestFileSearch",
         query,
-        requestId: `file-search-${fileSearchCounter}`,
-        ...(id ? { sessionID: id } : {}),
+        requestId: request.id,
+        ...(request.scope ? { sessionID: request.scope } : {}),
       })
-    }, FILE_SEARCH_DEBOUNCE_MS)
+    }
+    if (!query) {
+      send()
+      return
+    }
+    fileSearchTimer = setTimeout(send, FILE_SEARCH_DEBOUNCE_MS)
   }
 
   const closeMention = () => {
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
     setMentionQuery(null)
     setMentionResults([])
     setSessionPicker(false)
+    setWorktreePicker(false)
   }
 
   const closeSessionPicker = () => {
@@ -191,6 +349,7 @@ export function useFileMention(
   }
 
   const syncMentionedPaths = (text: string) => {
+    references()
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
     setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
   }
@@ -229,6 +388,12 @@ export function useFileMention(
       pickerState = { requestId, textarea, atStart: atPos, atEnd: cursor, setText: _setText, onSelect }
       closeMention()
       vscode.postMessage({ type: "requestFilePicker", requestId })
+      return
+    }
+
+    if (result.type === "worktrees") {
+      references()
+      setWorktreePicker(true)
       return
     }
 
@@ -273,6 +438,17 @@ export function useFileMention(
     onSelect?.()
   }
 
+  const selectWorktree = (
+    worktree: WorktreeReference,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => {
+    if (worktree.disabled) return
+    knownWorktrees.set(worktree.path, worktree)
+    selectMention({ type: "file", value: worktree.path }, textarea, setText, onSelect)
+  }
+
   const selectSession = (
     session: SessionSearchItem,
     textarea: HTMLTextAreaElement,
@@ -290,18 +466,31 @@ export function useFileMention(
   let suppress = false
 
   const onInput = (val: string, cursor: number) => {
+    syncScope()
     syncMentionedPaths(val)
     if (suppress) return
     closeSessionPicker()
+    setWorktreePicker(false)
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
+      const items = readCache(workspaceDir)
+      if (!query) {
+        setMentionResults(results("", items))
+        setMentionIndex(0)
+        requestFileSearch("")
+        return
+      }
       setMentionResults((prev) => {
-        const next = filterMentionResults(query, prev)
-        if (next.length) return next
-        return buildMentionResults(query, [], git?.() ?? true)
+        const base = prev.length ? prev : results("", items)
+        const files = filterMentionResults(query, base).flatMap((item) =>
+          item.type === "file" || item.type === "folder" || item.type === "opened-file"
+            ? [{ path: item.value, type: item.type }]
+            : [],
+        )
+        return results(query, files)
       })
       setMentionIndex(0)
       requestFileSearch(query)
@@ -360,10 +549,15 @@ export function useFileMention(
   // and selection snapping: file paths plus past-chat title tokens.
   const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys()])
 
-  const parseFileAttachments = (text: string): FileAttachment[] => [
-    ...buildFileAttachments(text, mentionedPaths(), workspaceDir),
-    ...buildSessionAttachments(text, mentionedSessions()),
-  ]
+  const parseFileAttachments = (text: string): FileAttachment[] => {
+    const worktrees = references()
+    const paths = new Set([..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path)))
+    return [
+      ...buildFileAttachments(text, paths, workspaceDir),
+      ...buildSessionAttachments(text, mentionedSessions()),
+      ...buildWorktreeAttachments(text, worktrees),
+    ]
+  }
 
   const handleBackspace = (
     e: KeyboardEvent,
@@ -556,6 +750,9 @@ export function useFileMention(
     mentionedSessions,
     sessionPicker,
     sessionCandidates,
+    worktreePicker,
+    worktreeCandidates,
+    selectWorktree,
     mentionResults,
     mentionIndex,
     showMention,

@@ -1,43 +1,38 @@
 import type { ModelSelection, Provider } from "../types/messages"
 import { isModelValid } from "./provider-utils"
 
-function validate(
-  providers: Record<string, Provider>,
-  connected: string[],
-  selection: ModelSelection | null | undefined,
-): ModelSelection | null {
-  if (!selection) return null
-  if (Object.keys(providers).length === 0) return selection
-  return isModelValid(providers, connected, selection) ? selection : null
-}
-
-function recent(
-  providers: Record<string, Provider>,
-  connected: string[],
-  selections: ModelSelection[] | undefined,
-): ModelSelection | null {
-  for (const item of selections ?? []) {
-    const selection = validate(providers, connected, item)
-    if (selection) return selection
-  }
-  return null
-}
-
 export function resolveModelSelection(input: {
   providers: Record<string, Provider>
   connected: string[]
+  ready?: boolean
+  organizationId?: string | null
+  defaults?: Record<string, string>
+  session?: ModelSelection | null
   override?: ModelSelection | null
   mode?: ModelSelection | null
   global?: ModelSelection | null
   recent?: ModelSelection[]
   fallback?: ModelSelection | null
 }): ModelSelection | null {
-  return (
-    validate(input.providers, input.connected, input.override) ??
-    validate(input.providers, input.connected, input.mode) ??
-    validate(input.providers, input.connected, input.global) ??
-    recent(input.providers, input.connected, input.recent) ??
-    input.fallback ??
-    null
-  )
+  const pending = input.ready === false || (input.ready !== undefined && input.organizationId === undefined)
+  const validate = (selection: ModelSelection | null | undefined) => {
+    if (!selection || (pending && selection.providerID === "kilo")) return null
+    return isModelValid(input.providers, input.connected, selection) ? selection : null
+  }
+  const preference =
+    validate(input.session) ?? validate(input.override) ?? validate(input.mode) ?? validate(input.global)
+  if (preference) return preference
+  if (pending) return null
+  if (input.organizationId) {
+    const recommendation = input.defaults?.kilo
+    const selection = recommendation ? validate({ providerID: "kilo", modelID: recommendation }) : null
+    if (selection) return selection
+    const first = Object.keys(input.providers.kilo?.models ?? {}).at(0)
+    return first ? validate({ providerID: "kilo", modelID: first }) : null
+  }
+  for (const selection of input.recent ?? []) {
+    const model = validate(selection)
+    if (model) return model
+  }
+  return validate(input.fallback)
 }

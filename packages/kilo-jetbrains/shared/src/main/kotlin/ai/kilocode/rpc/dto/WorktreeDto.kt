@@ -1,0 +1,174 @@
+package ai.kilocode.rpc.dto
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class WorktreeDto(
+    val id: String,      // stable key = absolute path
+    val name: String,    // display name (last path segment)
+    val branch: String,  // "feature/x" or "(detached)"
+    val path: String,    // absolute worktree path
+    val main: Boolean = false,     // primary working tree — not deletable
+    val locked: Boolean = false,   // git worktree lock — blocks a plain remove
+    val lockReason: String? = null, // optional reason recorded when the tree was locked
+    val prunable: Boolean = false, // git marks metadata stale because the directory is gone
+)
+
+@Serializable
+data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
+
+@Serializable
+data class WorktreeStatsDto(
+    val path: String,
+    /** Committed additions vs `merge-base(base, HEAD)` — GitHub's "Files changed" number. */
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val ahead: Int = 0,
+    val behind: Int = 0,
+    val files: Int = 0,
+    /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
+    val base: String = "",
+)
+
+@Serializable
+data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+
+/**
+ * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
+ * together. Deliberately separate from [WorktreeStatsDto], which is measured against the base branch.
+ */
+@Serializable
+data class WorktreeDirtyDto(
+    val path: String,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val files: Int = 0,
+    /** How many of [files] are untracked. Their additions are line counts; deletions are always 0. */
+    val untracked: Int = 0,
+    /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
+    val unpushed: Int = 0,
+)
+
+@Serializable
+data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
+
+@Serializable
+enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
+
+/**
+ * Aggregate review verdict for a pull request, from GitHub's `reviewDecision`. Orthogonal to
+ * [GhState]: a draft PR can be approved, and an open one can be waiting on review.
+ *
+ * [PENDING] means a review is required but not yet given; [NONE] means the repository asks for none.
+ */
+@Serializable
+enum class GhReview { NONE, PENDING, APPROVED, CHANGES_REQUESTED }
+
+/** Rolled-up CI verdict for a pull request head. [NONE] means the head reports no checks at all. */
+@Serializable
+enum class GhChecks { NONE, PENDING, PASSED, FAILED }
+
+/**
+ * Rolled-up CI state for a pull request head, from GitHub's `statusCheckRollup`.
+ *
+ * Counts only, deliberately: per-check names, URLs, and timestamps would make every poll produce a
+ * DTO that compares unequal to the last one, and both `WorktreeRow.equals` and `WorktreeNameCache`
+ * gate listener/row refreshes on whole-DTO equality. Aggregates stay stable between polls that found
+ * nothing new. [total] excludes skipped checks, matching what GitHub's own PR page counts.
+ */
+@Serializable
+data class GhChecksDto(
+    val state: GhChecks = GhChecks.NONE,
+    val total: Int = 0,
+    val passed: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+)
+
+@Serializable
+data class WorktreePrDto(
+    val path: String,
+    val number: Int,
+    val state: GhState,
+    val url: String,
+    val title: String = "",
+    val review: GhReview = GhReview.NONE,
+    val checks: GhChecksDto = GhChecksDto(),
+)
+
+/**
+ * Why gh cannot answer, or [OK] when it can.
+ *
+ * [RATE_LIMITED] is temporary and fixes itself, unlike the others: GitHub refused the query because the
+ * token's hourly budget is spent. It still has to be a state of its own, because the alternative is
+ * reading a refusal as "this checkout has no pull request" — which blanks every badge with no reason
+ * given, and costs the most calls doing it, since a lookup that stops at the first answer instead walks
+ * its whole strategy ladder.
+ */
+@Serializable
+enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
+
+@Serializable
+data class WorktreePrListDto(
+    val availability: GhAvailability = GhAvailability.OK,
+    val items: List<WorktreePrDto> = emptyList(),
+)
+
+/**
+ * Single-directory branch status for the chat branch/PR dock: the current branch, whether the
+ * directory is a linked worktree, gh availability, and the PR for the branch (if any).
+ */
+@Serializable
+data class BranchStatusDto(
+    val branch: String = "",
+    val worktree: Boolean = false,
+    val availability: GhAvailability = GhAvailability.OK,
+    val pr: WorktreePrDto? = null,
+)
+
+/** Stages of the "Move to Worktree" flow. Mirrors VS Code's ContinueInWorktreeStatus minus setup. */
+@Serializable
+enum class MoveStage { CAPTURING, CREATING, TRANSFERRING, FORKING, DONE, ERROR }
+
+/** Progress event streamed while moving a session into a new worktree. */
+@Serializable
+data class MoveProgressDto(
+    val stage: MoveStage,
+    val error: String? = null,
+    val worktree: WorktreeDto? = null,
+    val session: String? = null,
+)
+
+@Serializable
+data class WorktreeBranchesDto(
+    val branches: List<String> = emptyList(),
+    val current: String? = null,
+)
+
+@Serializable
+data class CreateWorktreeRequestDto(
+    val branch: String,
+    val baseBranch: String? = null,
+    // When true, check out an existing branch (`git worktree add <dir> <branch>`) instead of creating
+    // a new one (`-b`). Used by the Import tab to adopt an existing local/remote branch.
+    val existingBranch: Boolean = false,
+)
+
+@Serializable
+data class CreateWorktreeResultDto(
+    val worktree: WorktreeDto? = null,
+    val error: String? = null,
+)
+
+@Serializable
+data class RemoveWorktreeResultDto(
+    val ok: Boolean = false,
+    val error: String? = null,
+    val locked: Boolean = false, // removal was blocked by a worktree lock; retry with force
+)
+
+@Serializable
+data class RenameWorktreeResultDto(
+    val worktree: WorktreeDto? = null,
+    val error: String? = null,
+)

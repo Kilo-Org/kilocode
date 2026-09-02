@@ -1,6 +1,8 @@
 import { describe, it, expect, spyOn } from "bun:test"
+import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
+import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
@@ -65,9 +67,12 @@ function createClient(options?: {
   revertDeferred?: Deferred<{ data?: unknown; error?: unknown }>
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
+  status?: (params: { directory?: string }) => Promise<{ data: Record<string, SessionStatus> | null }>
   createDeferred?: Deferred<{ data: ReturnType<typeof mkCreatedSession> }>
   abortFailures?: string[]
   abortDeferred?: Deferred<void>
+  deleteResult?: unknown
+  deleteError?: boolean
   supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
   sandboxDeferred?: Deferred<{ data: unknown }>
   sandboxStarted?: Deferred<void>
@@ -75,8 +80,14 @@ function createClient(options?: {
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
-  const aborted: { sessionID: string; directory?: string }[] = []
+  const aborted: { sessionID: string; directory?: string; scope?: "session" | "tree" }[] = []
   const deleted: { sessionID: string; directory?: string }[] = []
+  const deletedMessages: Array<{
+    sessionID: string
+    messageID: string
+    directory?: string
+    queued?: boolean
+  }> = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
   const created: Array<Record<string, unknown>> = []
@@ -88,6 +99,7 @@ function createClient(options?: {
     stopped,
     aborted,
     deleted,
+    deletedMessages,
     prompted,
     reverted,
     created,
@@ -105,7 +117,7 @@ function createClient(options?: {
         if (options?.sessionGet) return options.sessionGet(params)
         return { data: options?.sessionData ?? null }
       },
-      status: async () => ({ data: {} }),
+      status: async (params: { directory?: string }) => options?.status?.(params) ?? { data: {} },
       revert: async (params: Record<string, unknown>) => {
         reverted.push(params)
         if (options?.revertDeferred) return options.revertDeferred.promise
@@ -115,7 +127,7 @@ function createClient(options?: {
         prompted.push(params)
         return { data: undefined }
       },
-      abort: async (params: { sessionID: string; directory?: string }) => {
+      abort: async (params: { sessionID: string; directory?: string; scope?: "session" | "tree" }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
         await options?.abortDeferred?.promise
@@ -130,6 +142,11 @@ function createClient(options?: {
         deleted.push(params)
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
+      },
+      deleteMessage: async (params: { sessionID: string; messageID: string; directory?: string; queued?: boolean }) => {
+        deletedMessages.push(params)
+        if (options?.deleteError) throw new Error("delete failed")
+        return { data: options?.deleteResult }
       },
     },
     sandbox: {
@@ -169,7 +186,7 @@ function createClient(options?: {
   }
 }
 
-function createConnection(client: ReturnType<typeof createClient>) {
+function createConnection(client: ReturnType<typeof createClient> | null) {
   const state = { value: undefined as boolean | undefined, revision: 0, pending: Promise.resolve() }
   return {
     sandboxPreference: {
@@ -191,12 +208,12 @@ function createConnection(client: ReturnType<typeof createClient>) {
     },
     connect: async () => {},
     getClient: () => client,
+    runExplicitAbort: async (_sid: string, _dir: string, action: () => Promise<void>) => action(),
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
@@ -221,7 +238,9 @@ type ProviderInternals = {
   currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
+  sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
+  removedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
@@ -230,9 +249,11 @@ type ProviderInternals = {
   checkpoint: (sid: string, run: () => Promise<void>) => void
   gatherEditorContext: () => Promise<Record<string, never>>
   refreshSessionDetails: (sid: string, dir: string) => void
+  seedSessionStatusMap: (reconcile?: boolean) => Promise<void>
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
-  handleAbort: (sid?: string) => Promise<void>
+  setupWebviewMessageHandler: (webview: unknown) => void
+  handleAbort: (sid?: string, scope?: "session" | "tree") => Promise<void>
   resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
@@ -242,15 +263,17 @@ type ProviderInternals = {
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
   handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
+  refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
+  handleDeleteMessage: (sid: string, mid: string, rid?: string) => Promise<void>
 }
 
-function makeProvider(client: ReturnType<typeof createClient>) {
+function makeProvider(client: ReturnType<typeof createClient> | null) {
   const connection = createConnection(client)
   const provider = new KiloProvider({} as never, connection as never)
   const internal = provider as unknown as ProviderInternals
-  internal.connectionState = "connected"
+  internal.connectionState = client ? "connected" : "disconnected"
   const sent: unknown[] = []
   internal.webview = {
     postMessage: async (message: unknown) => {
@@ -260,11 +283,53 @@ function makeProvider(client: ReturnType<typeof createClient>) {
   return { provider, internal, sent }
 }
 
+function status(internal: ProviderInternals, type: "busy" | "idle", directory = "/repo", sessionID = "s1") {
+  internal.handleEvent({ type: "session.status", properties: { sessionID, status: { type } } }, directory)
+}
+
 function mockMaxCost(internal: ProviderInternals, value: number) {
   internal.setMaxCost(value)
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it.each([undefined, "session", "tree"] as const)(
+    "forwards %s abort scope without extra child or process stops",
+    async (scope) => {
+      const client = createClient()
+      const { provider, internal } = makeProvider(client)
+      const listener = Promise.withResolvers<(message: AbortRequest) => Promise<void>>()
+      internal.setupWebviewMessageHandler({
+        onDidReceiveMessage: (handler: (message: AbortRequest) => Promise<void>) => {
+          listener.resolve(handler)
+          return { dispose: () => {} }
+        },
+      })
+      const receive = await listener.promise
+      status(internal, "busy")
+      status(internal, "busy", "/repo", "child")
+
+      await receive({ type: "abort", sessionID: "s1", scope })
+
+      expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo", scope }])
+      expect(client.stopped).toEqual([])
+      expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+      expect(internal.sessionStatusMap.get("child")).toBe("busy")
+      provider.dispose()
+    },
+  )
+
+  it("aborts a session whose busy status was seeded without an SSE event", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.sessionStatusMap.set("s1", "busy")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo" }])
+    expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+  })
+
   it("aborts the original owner after a running session moves to a worktree", async () => {
     const client = createClient()
     const { provider, internal, sent } = makeProvider(client)
@@ -284,6 +349,7 @@ describe("KiloProvider.handleAbort", () => {
       { sessionID: "s1", directory: "/repo/worktree" },
     ])
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
   })
 
   it("preserves the original owner when the status event lacks a directory", async () => {
@@ -406,6 +472,110 @@ describe("KiloProvider.handleAbort", () => {
     await provider.abortSessions(["pending:1"])
 
     expect(client.aborted).toEqual([])
+  })
+})
+
+describe("KiloProvider session status reconciliation", () => {
+  it("rejects a stale busy snapshot after a newer idle event", async () => {
+    const pending = defer<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({ status: async () => pending.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy")
+
+    internal.refreshSessionDetails("s1", "/repo")
+    status(internal, "idle")
+    pending.resolve({ data: { s1: { type: "busy" } } })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+  })
+
+  it("preserves newer busy status when a stale snapshot omits the session", async () => {
+    const pending = defer<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({ status: async () => pending.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    internal.refreshSessionDetails("s1", "/repo")
+    status(internal, "busy")
+    pending.resolve({ data: {} })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("recovers missing idle after a completed assistant response", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy")
+
+    internal.handleEvent(
+      {
+        type: "message.updated",
+        properties: {
+          sessionID: "s1",
+          info: { id: "m1", sessionID: "s1", role: "assistant", finish: "stop", time: { created: 1, completed: 2 } },
+        },
+      },
+      "/repo",
+    )
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+  })
+
+  it("accepts the latest overlapping directory snapshot", async () => {
+    const first = defer<{ data: Record<string, SessionStatus> }>()
+    const second = defer<{ data: Record<string, SessionStatus> }>()
+    const pending = [first, second]
+    const client = createClient({ status: async () => pending.shift()!.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    internal.trackedSessionIds.add("s2")
+    status(internal, "busy", "/repo", "s1")
+    status(internal, "busy", "/repo", "s2")
+
+    internal.refreshSessionDetails("s1", "/repo")
+    internal.refreshSessionDetails("s2", "/repo")
+    second.resolve({ data: { s2: { type: "busy" } } })
+    await Bun.sleep(0)
+    first.resolve({ data: { s1: { type: "busy" }, s2: { type: "busy" } } })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+    expect(internal.sessionStatusMap.get("s2")).toBe("busy")
+  })
+
+  it("accepts the latest overlapping seeded snapshot", async () => {
+    const first = defer<{ data: Record<string, SessionStatus> }>()
+    const second = defer<{ data: Record<string, SessionStatus> }>()
+    const pending = [first, second]
+    const client = createClient({ status: async () => pending.shift()!.promise })
+    const { internal } = makeProvider(client)
+    status(internal, "busy")
+
+    const older = internal.seedSessionStatusMap()
+    const newer = internal.seedSessionStatusMap()
+    first.resolve({ data: { s1: { type: "busy" } } })
+    await older
+    second.resolve({ data: {} })
+    await newer
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+  })
+
+  it("does not idle a worktree session from a root snapshot", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+    provider.setSessionDirectory("s1", "/repo/worktree")
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy", "/repo/worktree")
+
+    await internal.seedSessionStatusMap()
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
   })
 })
 
@@ -811,6 +981,39 @@ describe("KiloProvider revert ordering", () => {
 })
 
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
+  it("recovers the session Git directory from loaded tool history", async () => {
+    const client = createClient({
+      messagesData: [
+        {
+          ...mkMessage("m1", "assistant", 1),
+          parts: [
+            {
+              type: "tool",
+              tool: "edit",
+              state: {
+                status: "completed",
+                input: { filePath: "/repo/frontend/src/app.ts" },
+                metadata: { filediff: { file: "/repo/frontend/src/app.ts" } },
+              },
+            },
+          ],
+        },
+      ],
+    })
+    const { internal } = makeProvider(client)
+    const calls: Array<{ directory?: string; sessionID?: string }> = []
+    const recovered = defer<void>()
+    internal.refreshGitStatus = async (directory, sessionID) => {
+      calls.push({ directory, sessionID })
+      if (directory === "/repo/frontend/src") recovered.resolve()
+    }
+
+    await internal.handleLoadMessages("s1")
+    await recovered.promise
+
+    expect(calls).toContainEqual({ directory: "/repo/frontend/src", sessionID: "s1" })
+  })
+
   it("stops background processes for the previous session when switching sessions", async () => {
     const client = createClient({
       sessionData: { id: "s2", directory: "/repo/worktree", time: { created: 1, updated: 1 } },
@@ -975,6 +1178,51 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
     await internal.handleDeleteSession("s1")
 
     expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
+  })
+
+  it("ignores late activity updates after a session is deleted", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const event = {
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "busy" } },
+    }
+
+    internal.handleEvent(event, "/repo")
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+    await internal.handleDeleteSession("s1")
+    const count = sent.length
+
+    internal.handleEvent(event, "/repo")
+
+    expect(internal.removedSessionIds.has("s1")).toBe(true)
+    expect(internal.sessionStatusMap.has("s1")).toBe(false)
+    expect(sent).toHaveLength(count)
+  })
+})
+
+describe("KiloProvider.handleDeleteMessage", () => {
+  const ids = { sessionID: "s1", messageID: "m1", requestID: "r1" }
+
+  it.each([true, false, undefined, "true"])("confirms only a true queued deletion result: %p", async (result) => {
+    const client = createClient({ deleteResult: result })
+    const { internal, sent } = makeProvider(client)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(client.deletedMessages).toEqual([{ sessionID: "s1", messageID: "m1", directory: "/repo", queued: true }])
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: result === true })
+  })
+
+  it.each([true, false])("confirms removal failures when connected=%p", async (connected) => {
+    const error = spyOn(console, "error").mockImplementation(() => {})
+    const { internal, sent } = makeProvider(connected ? createClient({ deleteError: true }) : null)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(sent).toContainEqual({
+      type: "error",
+      message: connected ? "delete failed" : "Not connected to CLI backend",
+      sessionID: ids.sessionID,
+    })
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: false })
+    error.mockRestore()
   })
 })
 
@@ -1204,7 +1452,7 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
 
     expect(client.aborted).toContainEqual({ sessionID: "s1", directory: "/repo" })
     expect(sent).toContainEqual({ type: "sessionCostAlertResolved", sessionID: "s1", limit: 1 })
-    expect(sent).toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
   })
 
   it("strips transcript-only metadata before posting messages to the webview", async () => {

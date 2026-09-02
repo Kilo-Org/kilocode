@@ -47,6 +47,11 @@ export function convertToMentionPath(path: string, cwd: string): string {
   return cleaned
 }
 
+export function insertPathMentions(text: string, cursor: number, paths: string[]) {
+  const inserted = paths.map((path) => `@${path}`).join(" ") + " "
+  return { text: text.substring(0, cursor) + inserted + text.substring(cursor), pos: cursor + inserted.length }
+}
+
 /** Returns true when the line looks like a file URI or absolute path. */
 function isFilePath(line: string): boolean {
   if (line.startsWith("file://") || line.startsWith("vscode-remote://")) return true

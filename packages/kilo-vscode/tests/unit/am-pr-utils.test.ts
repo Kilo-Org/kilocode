@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test"
 import {
   parsePRResult,
   checkStatus,
+  commentsSig,
   formatCheckDuration,
+  ghErrorReason,
   parseComments,
   parseReviewers,
-} from "../../src/agent-manager/am-pr-utils"
-import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/am-pr-types"
+} from "../../src/agent-manager/pr/am-pr-utils"
+import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/pr/am-pr-types"
+import type { PRComment } from "../../src/agent-manager/types"
 
 // --- parsePRResult ---
 
@@ -158,6 +161,92 @@ describe("parsePRResult", () => {
     expect(result).toEqual(
       expect.objectContaining({ title: "", body: "", url: "", additions: 0, deletions: 0, files: 0 }),
     )
+    expect(result).not.toHaveProperty("checks")
+    expect(result).not.toHaveProperty("reviewers")
+  })
+
+  it("parses check runs and status contexts from the pull request response", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 7,
+        statusCheckRollup: [
+          {
+            name: "build",
+            status: "COMPLETED",
+            conclusion: "SUCCESS",
+            detailsUrl: "https://example.com/build",
+            startedAt: "2024-01-01T00:00:00Z",
+            completedAt: "2024-01-01T00:01:00Z",
+          },
+          { context: "lint", state: "PENDING", targetUrl: "https://example.com/lint" },
+          { name: "tests", conclusion: "FAILURE" },
+          { name: "docs", conclusion: "SKIPPED" },
+        ],
+      }),
+    )
+
+    expect(result?.checks).toEqual({
+      status: "failure",
+      total: 3,
+      passed: 1,
+      failed: 1,
+      pending: 1,
+      checks: [
+        { name: "build", status: "success", url: "https://example.com/build", duration: "1m 0s" },
+        { name: "lint", status: "pending", url: "https://example.com/lint", duration: undefined },
+        { name: "tests", status: "failure", url: undefined, duration: undefined },
+        { name: "docs", status: "skipped", url: undefined, duration: undefined },
+      ],
+    })
+  })
+
+  it("does not mark cancelled checks as successful", () => {
+    const result = parsePRResult(
+      JSON.stringify({ number: 10, statusCheckRollup: [{ name: "build", conclusion: "CANCELLED" }] }),
+    )
+    expect(result?.checks?.status).toBe("failure")
+    expect(result?.checks?.failed).toBe(1)
+  })
+
+  it("keeps CI running when cancelled checks coexist with pending checks", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 11,
+        statusCheckRollup: [
+          { name: "cancelled", conclusion: "CANCELLED" },
+          { name: "running", status: "IN_PROGRESS" },
+        ],
+      }),
+    )
+    expect(result?.checks?.status).toBe("pending")
+    expect(result?.checks?.failed).toBe(1)
+    expect(result?.checks?.pending).toBe(1)
+  })
+
+  it("preserves reviewer history and ignores dismissed reviews", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 8,
+        reviewRequests: [{ login: "alice", avatarUrl: "https://example.com/alice" }],
+        reviews: [
+          { author: { login: "bob" }, state: "APPROVED" },
+          { author: { login: "bob" }, state: "COMMENTED" },
+          { author: { login: "dismissed" }, state: "DISMISSED" },
+        ],
+      }),
+    )
+
+    expect(result?.reviewers).toEqual([
+      { login: "alice", avatar: "https://example.com/alice", state: "pending" },
+      { login: "bob", avatar: undefined, state: "approved" },
+    ])
+  })
+
+  it("keeps empty rich fields so legacy follow-up requests are unnecessary", () => {
+    const result = parsePRResult(JSON.stringify({ number: 9, statusCheckRollup: [], reviewRequests: [], reviews: [] }))
+
+    expect(result?.checks).toEqual({ status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] })
+    expect(result?.reviewers).toEqual([])
   })
 })
 
@@ -192,6 +281,15 @@ describe("formatCheckDuration", () => {
     expect(formatCheckDuration("2024-01-01T00:00:00Z", undefined)).toBeUndefined()
   })
 
+  it("returns undefined for invalid timestamps", () => {
+    expect(formatCheckDuration("not a date", "2024-01-01T00:01:00Z")).toBeUndefined()
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", "not a date")).toBeUndefined()
+  })
+
+  it("returns undefined when completedAt is before startedAt", () => {
+    expect(formatCheckDuration("2024-01-01T00:01:00Z", "2024-01-01T00:00:00Z")).toBeUndefined()
+  })
+
   it("formats sub-minute durations in seconds", () => {
     expect(formatCheckDuration("2024-01-01T00:00:00Z", "2024-01-01T00:00:45Z")).toBe("45s")
   })
@@ -220,6 +318,7 @@ describe("parseComments", () => {
   it("parses a resolved thread", () => {
     const threads: GhThread[] = [
       {
+        id: "PRT_thread1",
         isResolved: true,
         comments: {
           nodes: [
@@ -239,6 +338,7 @@ describe("parseComments", () => {
     expect(parseComments(threads)).toEqual([
       {
         id: "c1",
+        threadId: "PRT_thread1",
         author: "alice",
         avatar: "https://avatar",
         body: "looks good",
@@ -246,9 +346,31 @@ describe("parseComments", () => {
         line: 10,
         url: "https://url",
         resolved: true,
+        outdated: false,
         createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
+        diffHunk: undefined,
+        replies: undefined,
       },
     ])
+  })
+
+  it("uses comment id as threadId fallback when thread has no id", () => {
+    const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } }]
+    const result = parseComments(threads)
+    expect(result[0]?.threadId).toBe("c2")
+  })
+
+  it("parses diffHunk when present", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_t1",
+        isResolved: false,
+        comments: {
+          nodes: [{ id: "c3", body: "fix this", diffHunk: "@@ -1,3 +1,4 @@\n context\n+new line" }],
+        },
+      },
+    ]
+    expect(parseComments(threads)[0]?.diffHunk).toBe("@@ -1,3 +1,4 @@\n context\n+new line")
   })
 
   it("defaults missing author to 'unknown'", () => {
@@ -256,14 +378,15 @@ describe("parseComments", () => {
     expect(parseComments(threads)[0]?.author).toBe("unknown")
   })
 
-  it("only uses the first comment of each thread", () => {
+  it("keeps later thread comments as replies of the first one", () => {
     const threads: GhThread[] = [
       {
+        id: "PRT_t2",
         isResolved: false,
         comments: {
           nodes: [
-            { id: "first", body: "first comment" },
-            { id: "second", body: "second comment" },
+            { id: "first", body: "first comment", author: { login: "alice" } },
+            { id: "second", body: "second comment", author: { login: "bob" } },
           ],
         },
       },
@@ -271,6 +394,82 @@ describe("parseComments", () => {
     const result = parseComments(threads)
     expect(result).toHaveLength(1)
     expect(result[0]?.id).toBe("first")
+    expect(result[0]?.replies).toEqual([{ author: "bob", body: "second comment" }])
+  })
+
+  it("marks an outdated thread", () => {
+    const threads: GhThread[] = [
+      { id: "PRT_t3", isResolved: false, isOutdated: true, comments: { nodes: [{ id: "c4", body: "stale" }] } },
+    ]
+    expect(parseComments(threads)[0]?.outdated).toBe(true)
+  })
+
+  it("falls back to the original line when the thread has no current line", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_t4",
+        isResolved: false,
+        isOutdated: true,
+        comments: { nodes: [{ id: "c5", body: "moved", path: "src/foo.ts", originalLine: 42 }] },
+      },
+    ]
+    expect(parseComments(threads)[0]?.line).toBe(42)
+  })
+})
+
+// --- commentsSig ---
+
+describe("commentsSig", () => {
+  const thread = (overrides: Partial<PRComment> = {}): PRComment => ({
+    id: "c1",
+    threadId: "PRRT_1",
+    author: "alice",
+    body: "looks good",
+    resolved: false,
+    outdated: false,
+    ...overrides,
+  })
+
+  it("returns an empty signature when there are no comments", () => {
+    expect(commentsSig()).toBe("")
+  })
+
+  it("changes when a reply is added, which thread counts alone cannot detect", () => {
+    const before = commentsSig([thread()])
+    const after = commentsSig([thread({ replies: [{ author: "bob", body: "guard it" }] })])
+    expect(after).not.toBe(before)
+  })
+
+  it("changes when a body is edited, even when the length stays the same", () => {
+    expect(commentsSig([thread({ body: "looks fine" })])).not.toBe(commentsSig([thread()]))
+    expect(commentsSig([thread({ replies: [{ author: "bob", body: "guard it" }] })])).not.toBe(
+      commentsSig([thread({ replies: [{ author: "bob", body: "guard me" }] })]),
+    )
+  })
+
+  it("changes when a thread moves line", () => {
+    expect(commentsSig([thread({ line: 5 })])).not.toBe(commentsSig([thread()]))
+  })
+
+  it("stays stable for unchanged comments", () => {
+    expect(commentsSig([thread()])).toBe(commentsSig([thread()]))
+  })
+})
+
+// --- ghErrorReason ---
+
+describe("ghErrorReason", () => {
+  it("keeps the last meaningful line and strips the gh prefix", () => {
+    const message = "Command failed: gh api graphql -f query=mutation...\ngh: Resource not accessible by integration"
+    expect(ghErrorReason(message)).toBe("Resource not accessible by integration")
+  })
+
+  it("falls back to the raw message when there is nothing else", () => {
+    expect(ghErrorReason("  boom  ")).toBe("boom")
+  })
+
+  it("truncates very long output", () => {
+    expect(ghErrorReason("x".repeat(500)).length).toBe(200)
   })
 })
 

@@ -36,7 +36,6 @@ Once connected, return here to configure the Review Agent.
    - **Review Style** — Strict, Balanced, or Lenient
    - **Repository Selection** — All repositories or select specific ones
    - **Focus Areas** — Security, performance, bugs, style, testing, documentation
-   - **Max Review Time** — 5 to 30 minutes
    - **Use REVIEW.md** — Load repository-specific review guidance, including sub-agent usage, from the base branch
 4. Click **Save Configuration**
 
@@ -120,7 +119,7 @@ You need **Maintainer role** on the GitLab project. Both webhook creation and bo
 
 - Check the Code Reviews page for error details
 - Ensure you have sufficient Kilo Code credits
-- Large MRs may time out — increase the max review time setting
+- Large MRs may time out — consider splitting the change into smaller MRs
 
 ### No projects listed after connecting
 

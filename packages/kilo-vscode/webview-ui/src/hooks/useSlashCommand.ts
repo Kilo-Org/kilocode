@@ -64,6 +64,7 @@ export function useSlashCommand(
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+  const [slashEnd, setSlashEnd] = createSignal<number | null>(null)
   const open = (name: string) => {
     window.dispatchEvent(new CustomEvent(name, { detail: { source: scope } }))
   }
@@ -75,7 +76,7 @@ export function useSlashCommand(
       hints: ["clear"],
       action: () => {
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        window.postMessage({ type: "navigate", view: "newTask" }, "*")
+        window.postMessage({ type: "navigate", view: "newTask" }, window.origin)
       },
     },
     {
@@ -83,7 +84,7 @@ export function useSlashCommand(
       description: "Switch to another session",
       hints: ["resume", "continue", "history"],
       action: () => {
-        window.postMessage({ type: "navigate", view: "history" }, "*")
+        window.postMessage({ type: "navigate", view: "history" }, window.origin)
       },
     },
     {
@@ -154,6 +155,11 @@ export function useSlashCommand(
     { name: "review staged", description: "Review staged changes only", hints: [] },
     { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
     { name: "review branch", description: "Review current branch against base branch", hints: [] },
+    {
+      name: "review worktree",
+      description: "Review committed and uncommitted worktree changes against its base",
+      hints: [],
+    },
     {
       name: "review quick",
       description: "Fast single-pass review with minimal token usage",
@@ -242,7 +248,7 @@ export function useSlashCommand(
     vscode.postMessage({ type: "requestCommands" })
   }
 
-  const results = () => {
+  const matched = () => {
     const q = query()
     if (q === null) return []
     const list = commands()
@@ -276,6 +282,12 @@ export function useSlashCommand(
     return sortByScore(matches, lower)
   }
 
+  const results = () => {
+    const list = matched()
+    // PromptInput renders contiguous Actions and Commands groups, so keyboard indexes must use the same order.
+    return [...list.filter((cmd) => cmd.action), ...list.filter((cmd) => !cmd.action)]
+  }
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "commandsLoaded") return
     setServer(message.commands)
@@ -287,6 +299,7 @@ export function useSlashCommand(
 
   const close = () => {
     setQuery(null)
+    setSlashEnd(null)
   }
 
   const onInput = (val: string, cursor: number) => {
@@ -296,6 +309,7 @@ export function useSlashCommand(
       request()
       setQuery(match[1])
       setIndex(0)
+      setSlashEnd(cursor)
       return
     }
     const memory = before.match(/^\/(?:memory|mem)\s+([^\n]*)$/i)
@@ -305,6 +319,7 @@ export function useSlashCommand(
       request()
       setQuery(value)
       setIndex(0)
+      setSlashEnd(cursor)
       return
     }
     const review = before.match(/^\/review\s+([^\n]*)$/i)
@@ -314,6 +329,7 @@ export function useSlashCommand(
       request()
       setQuery(value)
       setIndex(0)
+      setSlashEnd(cursor)
       return
     }
     return close()
@@ -325,24 +341,31 @@ export function useSlashCommand(
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => {
+    const cursor = slashEnd() ?? textarea.selectionStart ?? 0
+    // trailingText holds text after the slash command.
+    // slashEnd is the cursor position from onInput when the slash pattern was matched.
+    const trailingText = textarea.value.substring(cursor)
+
     if (cmd.action) {
       if (cmd.enabled && !cmd.enabled()) return
-      textarea.value = ""
-      setText("")
+      textarea.value = trailingText
+      setText(trailingText)
+      textarea.setSelectionRange(0, 0)
       close()
       onSelect?.()
       cmd.action()
       return
     }
-    const text = `/${cmd.name} `
-    textarea.value = text
-    setText(text)
-    const pos = text.length
-    textarea.setSelectionRange(pos, pos)
+    const commandText = `/${cmd.name} `
+    const updatedText = commandText + trailingText
+    textarea.value = updatedText
+    setText(updatedText)
+    textarea.setSelectionRange(commandText.length, commandText.length)
     textarea.focus()
     if (cmd.nested) {
       setQuery(`${cmd.name} `)
       setIndex(0)
+      setSlashEnd(commandText.length)
     }
     if (!cmd.nested) close()
     onSelect?.()

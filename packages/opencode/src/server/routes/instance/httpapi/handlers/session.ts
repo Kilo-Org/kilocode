@@ -1,7 +1,6 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
@@ -29,7 +28,9 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import {
+  AbortQuery, // kilocode_change
   CommandPayload,
+  DeleteMessageQuery, // kilocode_change
   DiffQuery,
   ForkPayload,
   InitPayload,
@@ -232,10 +233,15 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
 
-    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* promptSvc.cancel(ctx.params.sessionID)
+    // kilocode_change start
+    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: {
+      params: { sessionID: SessionID }
+      query: typeof AbortQuery.Type
+    }) {
+      yield* promptSvc.cancel(ctx.params.sessionID, ctx.query.scope)
       return true
     })
+    // kilocode_change end
 
     const init = Effect.fn("SessionHttpApi.init")(function* (ctx: {
       params: { sessionID: SessionID }
@@ -342,9 +348,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               // kilocode_change end
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: AgentRequirementError.isInstance(error)
-                  ? error.toObject()
-                  : busy // kilocode_change
+                error: busy // kilocode_change
                     ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
                     : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })
@@ -406,15 +410,18 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const deleteMessage = Effect.fn("SessionHttpApi.deleteMessage")(function* (ctx: {
       params: { sessionID: SessionID; messageID: MessageID }
+      query: typeof DeleteMessageQuery.Type // kilocode_change
     }) {
       yield* requireSession(ctx.params.sessionID)
       // kilocode_change start - allow deleting prompts that are queued behind the active turn
-      const remove = yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
-        Effect.as(true),
-        Effect.catchTag("SessionBusyError", () =>
-          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
-        ),
-      )
+      const remove = yield* ctx.query.queued === true
+        ? KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID)
+        : runState.assertNotBusy(ctx.params.sessionID).pipe(
+            Effect.as(true),
+            Effect.catchTag("SessionBusyError", () =>
+              KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
+            ),
+          )
       // A false result means the message is not in the waiting list. It may have
       // already started, or the ID may be stale. Leave the message untouched.
       if (!remove) return false

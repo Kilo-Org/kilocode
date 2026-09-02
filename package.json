@@ -11,6 +11,7 @@
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "check:architecture": "bun run script/check-architecture.ts",
+    "check:duplication": "bun run script/check-kilocode-duplication.ts",
     "typecheck": "bun turbo typecheck",
     "upgrade-opentui": "bun run script/upgrade-opentui.ts",
     "postinstall": "bun run --cwd packages/core fix-node-pty && bun run script/setup-git.ts",
@@ -53,7 +54,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.4.2",
+      "dompurify": "3.4.13",
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.83",
@@ -152,7 +153,7 @@
     "fastify": ">=5.8.3",
     "vite": "7.3.5",
     "diff": "8.0.4",
-    "dompurify": "3.4.2",
+    "dompurify": "3.4.13",
     "happy-dom": ">=20.8.9",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
@@ -177,6 +178,6 @@
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch"
   },
-  "version": "7.4.21",
+  "version": "7.5.9",
   "peerDependencies": {}
 }

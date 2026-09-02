@@ -14,6 +14,8 @@ type Internals = {
   handleLoadMessages: (sessionID: string) => Promise<void>
   handleEvent: (event: Event, directory?: string) => void
   refreshGitStatus: (directory?: string) => Promise<void>
+  refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
+  resolveGitRoot: (directory: string) => Promise<string | undefined>
   initializeConnection: () => Promise<void>
   syncWebviewState: () => Promise<void>
   flushPendingSessionRefresh: () => Promise<void>
@@ -26,6 +28,7 @@ type Internals = {
   seedSessionStatusMap: () => Promise<void>
   sendNotificationSettings: () => void
   startStatsPolling: () => void
+  statsPoller: { stop: () => void } | null
 }
 
 function created(input: { id: string; directory: string; parentID?: string }): Event {
@@ -81,10 +84,11 @@ function connection() {
     onClearPendingPrompts: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
+    unregisterVisible: () => undefined,
+    unregisterAttached: () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
     getConnectionState: () => "connected" as const,
@@ -93,6 +97,12 @@ function connection() {
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
   }
+}
+
+function git() {
+  const service = connection()
+  const client = { project: { current: async () => ({ data: { vcs: "git" } }) } }
+  return { ...service, getClient: () => client as never }
 }
 
 describe("KiloProvider follow-up sessions", () => {
@@ -159,7 +169,7 @@ describe("KiloProvider follow-up sessions", () => {
     })
   })
 
-  it("refreshes Git from the file path in a completed edit tool part", () => {
+  it("refreshes Git from the file path in a completed edit tool part", async () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never, undefined, {
       rootDirectory: () => "/workspace",
@@ -167,11 +177,13 @@ describe("KiloProvider follow-up sessions", () => {
     })
     const internal = provider as unknown as Internals
     const dirs: string[] = []
+    const refreshed = Promise.withResolvers<void>()
     const sessionID = "ses-edit"
     internal.currentSession = info({ id: sessionID, projectID: "backend-workspace", directory: "/workspace" })
     internal.trackedSessionIds.add(sessionID)
     internal.refreshGitStatus = async (directory) => {
       if (directory) dirs.push(directory)
+      refreshed.resolve()
     }
 
     internal.handleEvent(
@@ -181,18 +193,55 @@ describe("KiloProvider follow-up sessions", () => {
           sessionID,
           part: {
             type: "tool",
-            state: { status: "completed" },
-            metadata: { filepath: "/workspace/frontend/src/app.ts" },
+            tool: "edit",
+            state: {
+              status: "completed",
+              metadata: { filediff: { file: "/workspace/frontend/src/app.ts" } },
+            },
           },
         },
       } as Event,
       "/workspace",
     )
 
+    await refreshed.promise
     expect(dirs).toEqual(["/workspace/frontend/src"])
   })
 
-  it("ignores completed tool paths outside the active project", () => {
+  it("starts standalone stats polling and skips it for embedded providers", async () => {
+    const standalone = new KiloProvider({} as never, connection() as never)
+    const normal = standalone as unknown as Internals
+    normal.startStatsPolling()
+    expect(normal.statsPoller).not.toBeNull()
+    standalone.dispose()
+
+    const embedded = new KiloProvider({} as never, git() as never, undefined, {
+      disableStatsPolling: true,
+    })
+    const internal = embedded as unknown as Internals
+    const sent: unknown[] = []
+    let active = "a"
+    internal.webview = {
+      postMessage: async (message: unknown) => {
+        sent.push(message)
+        return true
+      },
+    }
+    internal.resolveGitRoot = async () => undefined
+
+    await internal.refreshGitStatus(`/repo/${active}`)
+    active = "b"
+    await internal.refreshGitStatus(`/repo/${active}`)
+
+    expect(internal.statsPoller).toBeNull()
+    expect(sent).toEqual([
+      { type: "gitStatus", repo: true },
+      { type: "gitStatus", repo: true },
+    ])
+    embedded.dispose()
+  })
+
+  it("ignores completed tool paths outside the active project", async () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never, undefined, {
       rootDirectory: () => "/workspace",
@@ -207,21 +256,21 @@ describe("KiloProvider follow-up sessions", () => {
       if (directory) dirs.push(directory)
     }
 
-    internal.handleEvent(
-      {
-        type: "message.part.updated",
-        properties: {
-          sessionID,
-          part: {
-            type: "tool",
-            state: { status: "completed" },
-            metadata: { filepath: "/other-repo/src/app.ts" },
+    const found = await internal.refreshGitStatusFromParts(
+      [
+        {
+          type: "tool",
+          tool: "edit",
+          state: {
+            status: "completed",
+            metadata: { filediff: { file: "/other-repo/src/app.ts" } },
           },
         },
-      } as Event,
-      "/workspace",
+      ],
+      sessionID,
     )
 
+    expect(found).toBe(false)
     expect(dirs).toEqual([])
   })
 

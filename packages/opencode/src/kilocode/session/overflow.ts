@@ -8,6 +8,8 @@ import type { ModelMessage } from "ai"
 const FACTOR = 1.3
 const MEDIA = "[encoded media]"
 const MEDIA_TOKENS = Token.estimate(MEDIA)
+const OPAQUE = "[opaque reasoning state]"
+const OPAQUE_TOKENS = Token.estimate(OPAQUE)
 
 type Payload = {
   messages: ModelMessage[]
@@ -46,6 +48,13 @@ export namespace KiloSessionOverflow {
   export function measure(input: Payload) {
     let extra = 0
     const normalized = JSON.stringify(input.messages, function (this: unknown, key, value: unknown) {
+      // Providers replay encrypted reasoning state as an opaque continuation value.
+      // Its encoded byte length is not a token count and can be several times larger
+      // than the context the provider reports for the same request.
+      if (key === "reasoningEncryptedContent" && typeof value === "string") {
+        extra += Math.max(0, Token.estimate(value) - OPAQUE_TOKENS)
+        return OPAQUE
+      }
       if (!["data", "url", "image"].includes(key)) return value
       if (!this || typeof this !== "object" || !("type" in this)) return value
       if (!["file", "image", "media"].includes(String(this.type))) return value
