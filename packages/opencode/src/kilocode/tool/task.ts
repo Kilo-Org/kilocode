@@ -130,6 +130,12 @@ export namespace KiloTask {
       if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
+    const scoped = rules.filter((rule) => rule.permission !== "*")
+    for (const permission of ["board_read", "board_post"]) {
+      if (Permission.evaluate(permission, "*", scoped).action !== "deny") continue
+      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      inherited.push({ permission, pattern: "*", action: "deny" })
+    }
     return merge(inherited)
   }
 

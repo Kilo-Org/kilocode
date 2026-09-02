@@ -867,6 +867,9 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.sharedAgentBoard.title": "Zajednička ploča agenata",
+  "settings.experimental.sharedAgentBoard.description":
+    "Omogućite glavnom agentu i njegovim podagentima da dijele otkrića unutar iste sesije.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",

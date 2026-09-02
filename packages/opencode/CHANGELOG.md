@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.5.9
+
+### Patch Changes
+
+- [#13684](https://github.com/Kilo-Org/kilocode/pull/13684) [`68cceca`](https://github.com/Kilo-Org/kilocode/commit/68cceca66c7d02cff73c539c00cfe32c2735b44e) - Prevent question prompts from rendering as narrow stacks of text when a model inserts carriage returns.
+
 ## 7.5.8
 
 ### Minor Changes
