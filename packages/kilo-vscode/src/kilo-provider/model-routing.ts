@@ -1,13 +1,16 @@
 /**
  * Provider-routing webview messages: upstream endpoint discovery for a model,
- * the effective config of a session's workspace, and the per-model routing
- * preference written into the global config.
+ * the project-level config of a session's workspace, and the per-model
+ * routing preference written into the global config.
  *
- * Discovery and the effective config are resolved in the originating session's
- * directory: an Agent Manager worktree can carry its own project config (a
- * different gateway URL or organization, a project-level pin), so the root
- * workspace's configuration must not stand in for it. Persistence stays global
- * by design; the project scope is only ever edited by hand.
+ * Discovery and the project config are resolved in the workspace directory
+ * the request names — the one the extension advertised for the session via
+ * workspaceDirectoryChanged. An Agent Manager worktree can carry its own
+ * project config (a different gateway URL or organization, a project-level
+ * pin), so the settings scope must not stand in for it; it is only the
+ * fallback for requests without a directory (the Settings editor).
+ * Persistence stays global by design; the project scope is only ever edited
+ * by hand.
  *
  * Kept out of the KiloProvider message switch so the routing write path stays
  * independently testable — the config shapes themselves live in
@@ -23,8 +26,12 @@ export type ModelRoutingContext = {
   post: (message: unknown) => void
   /** Global-config write path; `unset` clears exactly the listed paths. */
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
-  /** Workspace directory of a session; the settings scope without one. */
-  directory: (sessionID?: string) => string
+  /** The settings scope: the directory for requests that name none. */
+  directory: () => string
+}
+
+function resolveDirectory(ctx: ModelRoutingContext, requested: unknown): string {
+  return typeof requested === "string" && requested !== "" ? requested : ctx.directory()
 }
 
 function requestEndpoints(
@@ -32,14 +39,13 @@ function requestEndpoints(
   providerID: string,
   modelID: string,
   requestID: number,
-  sessionID: string | undefined,
+  directory: string,
 ): void {
   const client = ctx.client
   if (!client) {
-    ctx.post({ type: "modelEndpointsLoaded", providerID, modelID, requestID, endpoints: [], error: true })
+    ctx.post({ type: "modelEndpointsLoaded", providerID, modelID, requestID, directory, endpoints: [], error: true })
     return
   }
-  const directory = ctx.directory(sessionID)
   // Kilo Gateway models may expose gateway-specific endpoints; models configured
   // against OpenRouter directly must only see the public catalog.
   const catalog = providerID === KILO_PROVIDER_ID ? "kilo" : "public"
@@ -55,34 +61,24 @@ function requestEndpoints(
 }
 
 /**
- * The effective config of a session's workspace plus its project-level file,
- * so the routing chip can show what applies to that session and flag a
- * project-level pin that shadows the global selection.
+ * The project-level config file of a workspace, so the routing chip can lay a
+ * project pin over the global selection and flag it.
  */
-function requestWorkspaceConfig(ctx: ModelRoutingContext, requestID: number, sessionID: string | undefined): void {
+function requestWorkspaceConfig(ctx: ModelRoutingContext, requestID: number, directory: string): void {
   const client = ctx.client
-  const directory = ctx.directory(sessionID)
   if (!client) {
-    ctx.post({ type: "workspaceConfigLoaded", requestID, directory, config: {}, error: true })
+    ctx.post({ type: "workspaceConfigLoaded", requestID, directory, error: true })
     return
   }
-  void Promise.all([
-    client.config.get({ directory }, { throwOnError: true }),
-    client.config.overlay({ directory, scope: "project" }, { throwOnError: true }),
-  ])
-    .then(([{ data: config }, { data: overlay }]) => {
+  void client.config
+    .overlay({ directory, scope: "project" }, { throwOnError: true })
+    .then(({ data: overlay }) => {
       const targets = overlay?.targets as { project?: { raw?: Config } } | undefined
-      ctx.post({
-        type: "workspaceConfigLoaded",
-        requestID,
-        directory,
-        config,
-        projectConfig: targets?.project?.raw,
-      })
+      ctx.post({ type: "workspaceConfigLoaded", requestID, directory, projectConfig: targets?.project?.raw })
     })
     .catch((err: unknown) => {
       console.error("[Kilo New] KiloProvider: Failed to fetch workspace config:", err)
-      ctx.post({ type: "workspaceConfigLoaded", requestID, directory, config: {}, error: true })
+      ctx.post({ type: "workspaceConfigLoaded", requestID, directory, error: true })
     })
 }
 
@@ -111,28 +107,24 @@ async function persistRouting(
   })
 }
 
-function optionalString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined
-}
-
 /**
  * Handle a provider-routing webview message. Returns true if handled.
  */
 export async function routeModelRoutingMessage(message: { type: string }, ctx: ModelRoutingContext): Promise<boolean> {
   if (message.type === "requestModelEndpoints") {
-    const input = message as { providerID?: unknown; modelID?: unknown; requestID?: unknown; sessionID?: unknown }
+    const input = message as { providerID?: unknown; modelID?: unknown; requestID?: unknown; directory?: unknown }
     if (
       typeof input.providerID === "string" &&
       typeof input.modelID === "string" &&
       typeof input.requestID === "number"
     )
-      requestEndpoints(ctx, input.providerID, input.modelID, input.requestID, optionalString(input.sessionID))
+      requestEndpoints(ctx, input.providerID, input.modelID, input.requestID, resolveDirectory(ctx, input.directory))
     return true
   }
   if (message.type === "requestWorkspaceConfig") {
-    const input = message as { requestID?: unknown; sessionID?: unknown }
+    const input = message as { requestID?: unknown; directory?: unknown }
     if (typeof input.requestID === "number")
-      requestWorkspaceConfig(ctx, input.requestID, optionalString(input.sessionID))
+      requestWorkspaceConfig(ctx, input.requestID, resolveDirectory(ctx, input.directory))
     return true
   }
   if (message.type === "persistModelRouting") {

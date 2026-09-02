@@ -98,7 +98,7 @@ const ModelsTab: Component = () => {
   })
   const routingEndpoints = useModelEndpoints(
     () => routed() ?? undefined,
-    () => ({ directory: directory() ?? "" }),
+    () => directory() ?? "",
   )
 
   function updateRouting(provider: string | null) {

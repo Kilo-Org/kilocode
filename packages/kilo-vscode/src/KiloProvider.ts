@@ -1055,7 +1055,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           updateConfig: (partial, unset) => this.writeGlobalConfig(partial, unset),
-          directory: (sessionID) => (sessionID ? this.getWorkspaceDirectory(sessionID) : this.settingsDirectory()),
+          directory: () => this.settingsDirectory(),
           activity: (state) => {
             if (!isActivity(state)) return
             this.activity = state

@@ -21,7 +21,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
 import { requestWorkspaceConfig, workspaceConfigEntry } from "../../context/workspace-config"
 import { useRoutingPick } from "../../hooks/useRoutingPick"
-import { routingOverriddenByProject } from "../../../../src/shared/provider-routing"
+import { modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -29,20 +29,20 @@ import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 // ---------------------------------------------------------------------------
 
 /**
- * `scope` names the workspace whose configuration resolves the catalog — the
- * session's directory in chat (an Agent Manager worktree may differ from the
- * settings scope) — and the session the extension resolves it from.
+ * `directory` names the workspace whose configuration resolves the catalog —
+ * the session's directory in chat (an Agent Manager worktree may differ from
+ * the settings scope); an empty string is the settings scope.
  */
-export function useModelEndpoints(
-  model: Accessor<ModelSelection | undefined>,
-  scope: Accessor<{ directory: string; sessionID?: string }>,
-) {
+export function useModelEndpoints(model: Accessor<ModelSelection | undefined>, directory: Accessor<string>) {
   const vscode = useVSCode()
+
+  function scope(selection: ModelSelection) {
+    return { directory: directory(), providerID: selection.providerID, modelID: selection.modelID }
+  }
 
   function load() {
     const selection = model()
-    if (!selection) return
-    requestEndpoints({ ...scope(), providerID: selection.providerID, modelID: selection.modelID }, vscode.postMessage)
+    if (selection) requestEndpoints(scope(selection), vscode.postMessage)
   }
 
   // undefined while unrequested/loading; [] for a failed request (the base
@@ -50,11 +50,7 @@ export function useModelEndpoints(
   function endpoints() {
     const selection = model()
     if (!selection) return undefined
-    const entry = endpointsEntry({
-      directory: scope().directory,
-      providerID: selection.providerID,
-      modelID: selection.modelID,
-    })
+    const entry = endpointsEntry(scope(selection))
     if (!entry) return undefined
     return entry.status === "ok" ? entry.endpoints : []
   }
@@ -375,19 +371,31 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   }
 
   // The chip must reflect the session's workspace. The config context covers
-  // the settings directory only; a session in an Agent Manager worktree reads
-  // that worktree's effective config, which may carry a project-level pin.
+  // the settings directory only; a session in an Agent Manager worktree lays
+  // that worktree's project config — which may pin routing on its own — over
+  // the global config, which is shared and always current in the context.
+  // The directory is the one the extension advertised for the session; it is
+  // used as-is so the answer can never be resolved for another session.
   const directory = () => server.workspaceDirectory()
   const scoped = () => directory() !== "" && directory() !== config.directory()
   const workspace = () => (scoped() ? workspaceConfigEntry(directory()) : undefined)
+  const refreshWorkspace = () => {
+    if (scoped()) requestWorkspaceConfig(directory(), vscode.postMessage)
+  }
   createEffect(() => {
-    if (scoped() && !workspace()) requestWorkspaceConfig(directory(), id(), vscode.postMessage)
+    // Reading the entry re-runs this when it turns stale after a config message.
+    workspace()
+    refreshWorkspace()
   })
-  const effective = () => (scoped() ? (workspace()?.config ?? config.config()) : config.config())
   const project = () => (scoped() ? workspace()?.projectConfig : config.projectConfig())
+  const current = (model: ModelSelection) =>
+    scoped()
+      ? (modelRouting(project(), model.providerID, model.modelID) ??
+        modelRouting(config.globalConfig(), model.providerID, model.modelID))
+      : modelRouting(config.config(), model.providerID, model.modelID)
 
-  const endpoints = useModelEndpoints(routed, () => ({ directory: directory(), sessionID: id() }))
-  const routing = useRoutingPick(effective, vscode)
+  const endpoints = useModelEndpoints(routed, directory)
+  const routing = useRoutingPick(current, vscode)
 
   return (
     <Show when={routed()}>
@@ -397,7 +405,11 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
           value={routing.value(model())}
           onSelect={(provider) => routing.pick(model(), provider)}
           onClear={() => routing.pick(model(), null)}
-          onOpen={endpoints.load}
+          onOpen={() => {
+            endpoints.load()
+            // A failed project-config refresh is retried here rather than looping.
+            refreshWorkspace()
+          }}
           overridden={routingOverriddenByProject(project(), model().providerID, model().modelID)}
         />
       )}

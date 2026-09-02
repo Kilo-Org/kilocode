@@ -11,11 +11,10 @@ const mid = "z-ai/glm-4.6"
 
 type EndpointsCall = { model: string; catalog: string; directory: string }
 type ConfigCall = { partial: Partial<Config>; unset: string[][] | undefined }
-type WorkspaceCall = { kind: "get" | "overlay"; directory: string; scope?: string }
+type WorkspaceCall = { directory: string; scope: string }
 
-// Sessions resolve to their own workspace directory; without one the settings
-// scope applies — the shape KiloProvider hands to the router.
-const directories: Record<string, string> = { ses_tree: "/worktree" }
+// Requests name the workspace directory the webview keys them by; without one
+// the settings scope applies — the fallback KiloProvider hands to the router.
 const settingsDir = "/root"
 
 function harness(
@@ -40,17 +39,10 @@ function harness(
             },
           },
           config: {
-            get: (params: { directory: string }) => {
-              const call = { kind: "get" as const, directory: params.directory }
-              workspaceCalls.push(call)
+            overlay: (params: WorkspaceCall) => {
+              workspaceCalls.push(params)
               if (!workspace) throw new Error("unexpected config call")
-              return workspace(call)
-            },
-            overlay: (params: { directory: string; scope: string }) => {
-              const call = { kind: "overlay" as const, directory: params.directory, scope: params.scope }
-              workspaceCalls.push(call)
-              if (!workspace) throw new Error("unexpected config call")
-              return workspace(call)
+              return workspace(params)
             },
           },
         } as unknown as KiloClient)
@@ -62,7 +54,7 @@ function harness(
     updateConfig: async (partial, unset) => {
       configCalls.push({ partial, unset })
     },
-    directory: (sessionID) => (sessionID ? (directories[sessionID] ?? settingsDir) : settingsDir),
+    directory: () => settingsDir,
   }
   return { ctx, posted, configCalls, endpointCalls, workspaceCalls }
 }
@@ -119,11 +111,11 @@ describe("provider routing message router", () => {
     ])
   })
 
-  it("resolves the catalog in the originating session's workspace", async () => {
+  it("resolves the catalog in the workspace the request names", async () => {
     const { ctx, posted, endpointCalls } = harness(async () => ({ data: [] }))
 
     await routeModelRoutingMessage(
-      { type: "requestModelEndpoints", providerID: pid, modelID: mid, requestID: 4, sessionID: "ses_tree" },
+      { type: "requestModelEndpoints", providerID: pid, modelID: mid, requestID: 4, directory: "/worktree" },
       ctx,
     )
     await drain()
@@ -141,24 +133,25 @@ describe("provider routing message router", () => {
     ])
   })
 
-  it("loads a session workspace's effective config and its project file", async () => {
-    const config = { model: "kilo/z-ai/glm-4.6" }
+  it("loads a workspace's project config file", async () => {
     const project = { provider: { [pid]: { models: { [mid]: { options: { provider: { only: ["baseten/fp8"] } } } } } } }
-    const { ctx, posted, workspaceCalls } = harness(undefined, async (call) =>
-      call.kind === "get" ? { data: config } : { data: { targets: { project: { raw: project } } } },
-    )
+    const { ctx, posted, workspaceCalls } = harness(undefined, async () => ({
+      data: { targets: { project: { raw: project } } },
+    }))
 
     expect(
-      await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 5, sessionID: "ses_tree" }, ctx),
+      await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 5, directory: "/worktree" }, ctx),
     ).toBe(true)
+    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 6 }, ctx)
     await drain()
 
     expect(workspaceCalls).toEqual([
-      { kind: "get", directory: "/worktree" },
-      { kind: "overlay", directory: "/worktree", scope: "project" },
+      { directory: "/worktree", scope: "project" },
+      { directory: settingsDir, scope: "project" },
     ])
     expect(posted).toEqual([
-      { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", config, projectConfig: project },
+      { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", projectConfig: project },
+      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, projectConfig: project },
     ])
   })
 
@@ -166,16 +159,19 @@ describe("provider routing message router", () => {
     const offline = harness()
     await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 6 }, offline.ctx)
     expect(offline.posted).toEqual([
-      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, config: {}, error: true },
+      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, error: true },
     ])
 
     const failing = harness(undefined, async () => {
       throw new Error("boom")
     })
-    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 7, sessionID: "ses_tree" }, failing.ctx)
+    await routeModelRoutingMessage(
+      { type: "requestWorkspaceConfig", requestID: 7, directory: "/worktree" },
+      failing.ctx,
+    )
     await drain()
     expect(failing.posted).toEqual([
-      { type: "workspaceConfigLoaded", requestID: 7, directory: "/worktree", config: {}, error: true },
+      { type: "workspaceConfigLoaded", requestID: 7, directory: "/worktree", error: true },
     ])
   })
 
@@ -183,7 +179,15 @@ describe("provider routing message router", () => {
     const { ctx, posted } = harness()
     await routeModelRoutingMessage({ type: "requestModelEndpoints", providerID: pid, modelID: mid, requestID: 7 }, ctx)
     expect(posted).toEqual([
-      { type: "modelEndpointsLoaded", providerID: pid, modelID: mid, requestID: 7, endpoints: [], error: true },
+      {
+        type: "modelEndpointsLoaded",
+        providerID: pid,
+        modelID: mid,
+        requestID: 7,
+        directory: settingsDir,
+        endpoints: [],
+        error: true,
+      },
     ])
   })
 

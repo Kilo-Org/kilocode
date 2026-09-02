@@ -8,7 +8,7 @@
  * reload after the write — leave it alone.
  */
 
-import { createSignal, onCleanup, type Accessor } from "solid-js"
+import { createSignal, onCleanup } from "solid-js"
 import type { ExtensionMessage, ModelSelection, WebviewMessage } from "../types/messages"
 import { modelRouting } from "../../../src/shared/provider-routing"
 
@@ -39,7 +39,8 @@ function writtenConfig(message: ExtensionMessage): unknown {
   }
 }
 
-export function useRoutingPick(config: Accessor<unknown>, vscode: VSCode) {
+/** `current` resolves the routing that applies to a model when no pick is pending. */
+export function useRoutingPick(current: (model: ModelSelection) => string | undefined, vscode: VSCode) {
   const [pending, setPending] = createSignal<RoutingPick>()
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -62,7 +63,7 @@ export function useRoutingPick(config: Accessor<unknown>, vscode: VSCode) {
       if (next && next.providerID === model.providerID && next.modelID === model.modelID) {
         return next.provider ?? undefined
       }
-      return modelRouting(config(), model.providerID, model.modelID)
+      return current(model)
     },
     pick(model: ModelSelection, provider: string | null): void {
       setPending({ providerID: model.providerID, modelID: model.modelID, provider })

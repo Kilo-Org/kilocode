@@ -4,9 +4,10 @@
  * Results are cached per workspace directory, provider and model for the
  * webview lifetime: the catalog is resolved with that workspace's
  * configuration (gateway URL, organization), so an Agent Manager worktree
- * with its own project config gets its own list. Failures are recorded but
- * never treated as cached results, so the next popover open retries — one
- * request per open, no retry loops.
+ * with its own project config gets its own list. The request names the
+ * directory it is keyed by, so a reply can never land under another one.
+ * Failures are recorded but never treated as cached results, so the next
+ * popover open retries — one request per open, no retry loops.
  */
 
 import { createSignal } from "solid-js"
@@ -28,8 +29,6 @@ const TTL = 5 * 60 * 1000
 
 interface PendingRequest {
   scope: EndpointsScope
-  /** Session that resolves the directory on the extension side; the settings scope when absent. */
-  sessionID: string | undefined
   requestID: number
   post: (message: WebviewMessage) => void
 }
@@ -54,7 +53,8 @@ function send(request: PendingRequest): void {
     providerID: request.scope.providerID,
     modelID: request.scope.modelID,
     requestID: request.requestID,
-    ...(request.sessionID !== undefined ? { sessionID: request.sessionID } : {}),
+    // An empty directory is the settings scope, which the extension resolves itself.
+    ...(request.scope.directory !== "" ? { directory: request.scope.directory } : {}),
   })
 }
 
@@ -122,21 +122,13 @@ export function endpointsEntry(scope: EndpointsScope): EndpointsEntry | undefine
  * Request the endpoint list unless a request is in flight or a successful
  * result is already cached. Error entries are re-requested.
  */
-export function requestEndpoints(
-  scope: EndpointsScope & { sessionID?: string },
-  post: (message: WebviewMessage) => void,
-): void {
+export function requestEndpoints(scope: EndpointsScope, post: (message: WebviewMessage) => void): void {
   const id = key(scope)
   if (pending.has(id)) return
   const entry = entries()[id]
   // Expired entries stay visible; the re-request refreshes them in the background.
   if (entry?.status === "ok" && !entry.stale && Date.now() - entry.at < TTL) return
-  const request: PendingRequest = {
-    scope: { directory: scope.directory, providerID: scope.providerID, modelID: scope.modelID },
-    sessionID: scope.sessionID,
-    requestID: ++counter,
-    post,
-  }
+  const request: PendingRequest = { scope, requestID: ++counter, post }
   pending.set(id, request)
   send(request)
 }

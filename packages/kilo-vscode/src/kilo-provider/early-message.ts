@@ -22,8 +22,8 @@ type Ctx = {
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
-  /** Workspace directory of a session; the settings scope without one. */
-  directory: (sessionID?: string) => string
+  /** The settings scope: the directory for routing requests that name none. */
+  directory: () => string
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>

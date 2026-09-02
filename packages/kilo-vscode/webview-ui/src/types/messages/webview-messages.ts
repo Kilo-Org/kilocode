@@ -1143,15 +1143,16 @@ export interface RequestModelEndpointsMessage {
   providerID: string
   modelID: string
   requestID: number
-  /** Session whose workspace configuration resolves the catalog; the settings scope when absent. */
-  sessionID?: string
+  /** Workspace directory whose configuration resolves the catalog; the settings scope when absent. */
+  directory?: string
 }
 
-// Request the effective config of a session's workspace (webview → extension)
+// Request the project-level config of a workspace (webview → extension)
 export interface RequestWorkspaceConfigMessage {
   type: "requestWorkspaceConfig"
   requestID: number
-  sessionID?: string
+  /** The settings scope when absent. */
+  directory?: string
 }
 
 // Persist per-model provider routing preference into the global config (webview → extension).

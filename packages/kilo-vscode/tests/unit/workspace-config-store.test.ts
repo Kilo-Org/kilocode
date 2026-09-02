@@ -8,10 +8,10 @@ import {
 import type { WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const features = { indexing: false, sandboxControls: false, backgroundSubagents: false }
-const config = { model: "kilo/z-ai/glm-4.6" }
 const project = {
   provider: { kilo: { models: { "z-ai/glm-4.6": { options: { provider: { only: ["baseten/fp8"] } } } } } },
 }
+const other = { provider: { kilo: { models: { "z-ai/glm-4.6": { options: { provider: { only: ["fast/fp8"] } } } } } } }
 
 function collect() {
   const sent: WebviewMessage[] = []
@@ -24,104 +24,123 @@ function id(sent: WebviewMessage[], index: number): number {
   return message.requestID
 }
 
+function loaded(sent: WebviewMessage[], index: number, directory: string, projectConfig?: unknown) {
+  return handleWorkspaceConfigMessage({
+    type: "workspaceConfigLoaded",
+    requestID: id(sent, index),
+    directory,
+    projectConfig,
+  })
+}
+
 afterEach(() => {
   resetWorkspaceConfigStore()
 })
 
 describe("workspace config store", () => {
-  it("requests once per directory, forwards the session, and caches the reply", () => {
+  it("requests once per directory, names it on the request, and caches the reply", () => {
     const { sent, post } = collect()
 
-    requestWorkspaceConfig("/worktree", "ses_tree", post)
-    requestWorkspaceConfig("/worktree", "ses_tree", post)
-    expect(sent).toEqual([{ type: "requestWorkspaceConfig", requestID: id(sent, 0), sessionID: "ses_tree" }])
+    requestWorkspaceConfig("/worktree", post)
+    requestWorkspaceConfig("/worktree", post)
+    expect(sent).toEqual([{ type: "requestWorkspaceConfig", requestID: id(sent, 0), directory: "/worktree" }])
 
-    expect(
-      handleWorkspaceConfigMessage({
-        type: "workspaceConfigLoaded",
-        requestID: id(sent, 0),
-        directory: "/worktree",
-        config,
-        projectConfig: project,
-      }),
-    ).toBe(true)
-    expect(workspaceConfigEntry("/worktree")).toEqual({ config, projectConfig: project })
+    expect(loaded(sent, 0, "/worktree", project)).toBe(true)
+    expect(workspaceConfigEntry("/worktree")).toEqual({ projectConfig: project })
 
-    requestWorkspaceConfig("/worktree", "ses_tree", post)
+    requestWorkspaceConfig("/worktree", post)
     expect(sent).toHaveLength(1)
   })
 
   it("keys entries by the directory the request was made for", () => {
     const { sent, post } = collect()
 
-    requestWorkspaceConfig("/a", "ses_a", post)
-    requestWorkspaceConfig("/b", "ses_b", post)
-    handleWorkspaceConfigMessage({ type: "workspaceConfigLoaded", requestID: id(sent, 1), directory: "/b", config })
+    requestWorkspaceConfig("/a", post)
+    requestWorkspaceConfig("/b", post)
+    loaded(sent, 1, "/b", project)
 
     expect(workspaceConfigEntry("/a")).toBeUndefined()
-    expect(workspaceConfigEntry("/b")).toEqual({ config, projectConfig: undefined })
+    expect(workspaceConfigEntry("/b")).toEqual({ projectConfig: project })
   })
 
-  it("drops cached configs and restarts in-flight requests on any config message", () => {
+  it("keeps cached configs visible as stale and restarts in-flight requests on any config message", () => {
     const { sent, post } = collect()
 
-    requestWorkspaceConfig("/cached", "ses_cached", post)
-    handleWorkspaceConfigMessage({
-      type: "workspaceConfigLoaded",
-      requestID: id(sent, 0),
-      directory: "/cached",
-      config,
-    })
-    requestWorkspaceConfig("/pending", "ses_pending", post)
+    requestWorkspaceConfig("/cached", post)
+    loaded(sent, 0, "/cached", project)
+    requestWorkspaceConfig("/pending", post)
     expect(sent).toHaveLength(2)
 
     expect(handleWorkspaceConfigMessage({ type: "configUpdated", config: {}, features })).toBe(false)
-    expect(workspaceConfigEntry("/cached")).toBeUndefined()
+    expect(workspaceConfigEntry("/cached")).toEqual({ projectConfig: project, stale: true })
     expect(sent).toHaveLength(3)
-    expect(sent[2]).toEqual({ type: "requestWorkspaceConfig", requestID: id(sent, 2), sessionID: "ses_pending" })
+    expect(sent[2]).toEqual({ type: "requestWorkspaceConfig", requestID: id(sent, 2), directory: "/pending" })
 
     // The reply to the superseded request is ignored; the new one lands.
+    loaded(sent, 1, "/pending", project)
+    expect(workspaceConfigEntry("/pending")).toBeUndefined()
+    loaded(sent, 2, "/pending", project)
+    expect(workspaceConfigEntry("/pending")).toEqual({ projectConfig: project })
+
+    // A stale entry stays visible while it refreshes, then is replaced.
+    requestWorkspaceConfig("/cached", post)
+    expect(sent).toHaveLength(4)
+    requestWorkspaceConfig("/cached", post)
+    expect(sent).toHaveLength(4)
+    expect(workspaceConfigEntry("/cached")).toEqual({ projectConfig: project, stale: true })
+    loaded(sent, 3, "/cached", other)
+    expect(workspaceConfigEntry("/cached")).toEqual({ projectConfig: other })
+  })
+
+  it("keeps the previous entry when a refresh fails and retries on the next request", () => {
+    const { sent, post } = collect()
+
+    requestWorkspaceConfig("/worktree", post)
+    loaded(sent, 0, "/worktree", project)
+    handleWorkspaceConfigMessage({ type: "globalConfigLoaded", config: {} })
+    // The selector re-requests a stale entry; the stale data stays visible meanwhile.
+    requestWorkspaceConfig("/worktree", post)
+    expect(sent).toHaveLength(2)
+
     handleWorkspaceConfigMessage({
       type: "workspaceConfigLoaded",
       requestID: id(sent, 1),
-      directory: "/pending",
-      config,
+      directory: "/worktree",
+      error: true,
     })
-    expect(workspaceConfigEntry("/pending")).toBeUndefined()
-    handleWorkspaceConfigMessage({
-      type: "workspaceConfigLoaded",
-      requestID: id(sent, 2),
-      directory: "/pending",
-      config,
-    })
-    expect(workspaceConfigEntry("/pending")).toEqual({ config, projectConfig: undefined })
+    expect(workspaceConfigEntry("/worktree")).toEqual({ projectConfig: project, stale: true })
 
-    // A cached directory can be requested again after the invalidation.
-    requestWorkspaceConfig("/cached", "ses_cached", post)
-    expect(sent).toHaveLength(4)
+    requestWorkspaceConfig("/worktree", post)
+    expect(sent).toHaveLength(3)
+    loaded(sent, 2, "/worktree", other)
+    expect(workspaceConfigEntry("/worktree")).toEqual({ projectConfig: other })
   })
 
-  it("does not cache a failed lookup and allows a retry", () => {
+  it("does not cache a failed first lookup", () => {
     const { sent, post } = collect()
 
-    requestWorkspaceConfig("/worktree", "ses_tree", post)
+    requestWorkspaceConfig("/worktree", post)
     handleWorkspaceConfigMessage({
       type: "workspaceConfigLoaded",
       requestID: id(sent, 0),
       directory: "/worktree",
-      config: {},
       error: true,
     })
     expect(workspaceConfigEntry("/worktree")).toBeUndefined()
 
-    requestWorkspaceConfig("/worktree", "ses_tree", post)
+    requestWorkspaceConfig("/worktree", post)
     expect(sent).toHaveLength(2)
   })
 
   it("ignores unrelated and unrequested messages", () => {
     expect(handleWorkspaceConfigMessage({ type: "variantsLoaded", variants: {} })).toBe(false)
     expect(
-      handleWorkspaceConfigMessage({ type: "workspaceConfigLoaded", requestID: 99, directory: "/x", config }),
+      handleWorkspaceConfigMessage({
+        type: "workspaceConfigLoaded",
+        requestID: 99,
+        directory: "/x",
+        projectConfig: project,
+      }),
     ).toBe(true)
     expect(workspaceConfigEntry("/x")).toBeUndefined()
   })

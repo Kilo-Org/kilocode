@@ -37,6 +37,7 @@ describe("routing endpoints store", () => {
       providerID: "kilo",
       modelID: "z-ai/glm-4.6",
       requestID: id(sent, 0),
+      directory: "/root",
     })
 
     handleEndpointsMessage({
@@ -120,26 +121,22 @@ describe("routing endpoints store", () => {
     })
   })
 
-  it("keys results by workspace directory and forwards the session that resolves it", () => {
+  it("keys results by workspace directory and names it on the request", () => {
     const { sent, post } = collect()
 
-    requestEndpoints({ ...scope("kilo", "z-ai/glm-4.6", "/root"), sessionID: "ses_root" }, post)
-    requestEndpoints({ ...scope("kilo", "z-ai/glm-4.6", "/worktree"), sessionID: "ses_tree" }, post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6", "/root"), post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6", "/worktree"), post)
+    requestEndpoints(scope("kilo", "z-ai/glm-4.6", ""), post)
     expect(sent).toEqual([
-      {
-        type: "requestModelEndpoints",
-        providerID: "kilo",
-        modelID: "z-ai/glm-4.6",
-        requestID: 1,
-        sessionID: "ses_root",
-      },
+      { type: "requestModelEndpoints", providerID: "kilo", modelID: "z-ai/glm-4.6", requestID: 1, directory: "/root" },
       {
         type: "requestModelEndpoints",
         providerID: "kilo",
         modelID: "z-ai/glm-4.6",
         requestID: 2,
-        sessionID: "ses_tree",
+        directory: "/worktree",
       },
+      { type: "requestModelEndpoints", providerID: "kilo", modelID: "z-ai/glm-4.6", requestID: 3 },
     ])
 
     const tree = { provider: "baseten/fp8", name: "Worktree organization" }

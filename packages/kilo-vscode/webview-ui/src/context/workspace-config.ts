@@ -1,25 +1,25 @@
 /**
- * Effective configs of workspaces other than the config context's directory.
+ * Project-level configs of workspaces other than the config context's directory.
  *
  * The config context loads one directory — the settings scope. A session in
- * an Agent Manager worktree runs against that worktree's effective config,
- * which can carry its own project-level settings, so controls that must show
- * what applies to the session read it from here instead. Entries are cached
- * per directory and dropped on every config message: the global config is
- * shared by all workspaces, so any change to it makes them stale.
+ * an Agent Manager worktree runs against that worktree's project file, which
+ * can pin routing on its own, so controls that must show what applies to the
+ * session read it from here and lay it over the (shared, always current)
+ * global config. Entries are cached per directory and marked stale on every
+ * config message: they stay visible while the refresh is in flight, and a
+ * failed refresh keeps the previous entry — the next popover open retries.
  */
 
 import { createSignal } from "solid-js"
 import type { ExtensionMessage, WebviewMessage } from "../types/messages"
 
 export interface WorkspaceConfigEntry {
-  config: unknown
   projectConfig: unknown
+  stale?: true
 }
 
 interface PendingRequest {
   directory: string
-  sessionID: string | undefined
   requestID: number
   post: (message: WebviewMessage) => void
 }
@@ -29,11 +29,7 @@ const pending = new Map<string, PendingRequest>()
 let counter = 0
 
 function send(request: PendingRequest): void {
-  request.post({
-    type: "requestWorkspaceConfig",
-    requestID: request.requestID,
-    ...(request.sessionID !== undefined ? { sessionID: request.sessionID } : {}),
-  })
+  request.post({ type: "requestWorkspaceConfig", requestID: request.requestID, directory: request.directory })
 }
 
 /** Re-issue every in-flight request under a new ID so responses to the old ones are ignored. */
@@ -51,21 +47,20 @@ export function handleWorkspaceConfigMessage(message: ExtensionMessage): boolean
     case "configLoaded":
     case "configUpdated":
     case "globalConfigLoaded":
-      setEntries({})
+      setEntries((prev) =>
+        Object.fromEntries(Object.entries(prev).map(([directory, entry]) => [directory, { ...entry, stale: true }])),
+      )
       restartPending()
       return false
     case "workspaceConfigLoaded": {
+      // Matched by request ID: the store keys by the directory the request was
+      // made for, and a reply to a superseded request is ignored.
       const found = [...pending].find(([, request]) => request.requestID === message.requestID)
       if (!found) return true
       const [directory] = found
       pending.delete(directory)
-      // A failed lookup is not cached: the control falls back to the config
-      // context until the next config message triggers a fresh request.
       if (message.error) return true
-      setEntries((prev) => ({
-        ...prev,
-        [directory]: { config: message.config, projectConfig: message.projectConfig },
-      }))
+      setEntries((prev) => ({ ...prev, [directory]: { projectConfig: message.projectConfig } }))
       return true
     }
     default:
@@ -73,19 +68,20 @@ export function handleWorkspaceConfigMessage(message: ExtensionMessage): boolean
   }
 }
 
-/** Reactive read of the cached effective config of a workspace. */
+/** Reactive read of the cached project config of a workspace. */
 export function workspaceConfigEntry(directory: string): WorkspaceConfigEntry | undefined {
   return entries()[directory]
 }
 
-/** Request a workspace's config unless it is cached or a request is in flight. */
-export function requestWorkspaceConfig(
-  directory: string,
-  sessionID: string | undefined,
-  post: (message: WebviewMessage) => void,
-): void {
-  if (pending.has(directory) || entries()[directory]) return
-  const request: PendingRequest = { directory, sessionID, requestID: ++counter, post }
+/**
+ * Request a workspace's project config unless a fresh entry is cached or a
+ * request is in flight. Stale entries stay visible while they refresh.
+ */
+export function requestWorkspaceConfig(directory: string, post: (message: WebviewMessage) => void): void {
+  if (pending.has(directory)) return
+  const entry = entries()[directory]
+  if (entry && !entry.stale) return
+  const request: PendingRequest = { directory, requestID: ++counter, post }
   pending.set(directory, request)
   send(request)
 }

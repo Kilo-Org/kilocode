@@ -1053,14 +1053,13 @@ export interface ModelEndpointsLoadedMessage {
   error?: boolean
 }
 
-// Effective config of a session's workspace and its project-level file
-// (extension → webview), for controls that must reflect a worktree rather
-// than the config context's directory. `error: true` marks a failed lookup.
+// Project-level config file of a workspace (extension → webview), for controls
+// that must reflect a worktree rather than the config context's directory.
+// `error: true` marks a failed lookup.
 export interface WorkspaceConfigLoadedMessage {
   type: "workspaceConfigLoaded"
   requestID: number
   directory: string
-  config: Config
   projectConfig?: Config
   error?: boolean
 }

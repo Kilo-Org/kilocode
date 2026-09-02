@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { useRoutingPick } from "../../webview-ui/src/hooks/useRoutingPick"
-import { routingPartial } from "../../src/shared/provider-routing"
+import { modelRouting, routingPartial } from "../../src/shared/provider-routing"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const model = { providerID: "kilo", modelID: "z-ai/glm-4.6" }
@@ -14,7 +14,7 @@ function setup(initial: Record<string, unknown> = {}) {
   const sent: WebviewMessage[] = []
   let handler: ((message: ExtensionMessage) => void) | undefined
   const routing = createRoot(() =>
-    useRoutingPick(config, {
+    useRoutingPick((model) => modelRouting(config(), model.providerID, model.modelID), {
       postMessage: (message) => sent.push(message),
       onMessage: (next) => {
         handler = next
