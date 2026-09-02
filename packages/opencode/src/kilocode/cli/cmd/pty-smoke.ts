@@ -49,7 +49,12 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
     await mkdir(cwd)
     const proc = spawn(file, args, { name: "xterm-256color", cwd, env, cols: 100, rows: 40 })
     const screen = new VtScreen(100, 40)
-    const state = { output: "", phase: "screen", suffix: "", prefix: "" }
+    const state = {
+      output: "",
+      phase: "screen",
+      suffix: crypto.randomUUID().slice(0, 8),
+      prefix: crypto.randomUUID().slice(0, 8),
+    }
     const ready = Promise.withResolvers<void>()
     const write = (value: string) => {
       try {
@@ -59,10 +64,8 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
       }
     }
     const probe = () => {
-      if (state.phase === "done" || !screen.text().trim()) return
+      if (state.phase === "edit" || state.phase === "done" || !screen.text().trim()) return
       state.phase = "input"
-      state.suffix = crypto.randomUUID().slice(0, 8)
-      state.prefix = crypto.randomUUID().slice(0, 8)
       write(`\x05\x15${state.suffix}`)
     }
     const data = proc.onData((chunk) => {

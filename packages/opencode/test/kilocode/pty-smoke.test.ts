@@ -5,9 +5,9 @@ const run = (source: string, timeout = 3_000) => render(process.execPath, ["-e",
 const raw = "process.stdin.setRawMode(true); process.stdin.resume();"
 const idle = "setInterval(() => {}, 1000)"
 
-const editor = (delay: number) => `
+const editor = (delay: number, fps = 60) => `
   import { createCliRenderer, InputRenderable, TextRenderable } from ${JSON.stringify(import.meta.resolve("@opentui/core"))}
-  const renderer = await createCliRenderer({ exitOnCtrlC: false })
+  const renderer = await createCliRenderer({ exitOnCtrlC: false, maxFps: ${fps} })
   renderer.root.add(new TextRenderable(renderer, { id: "title", content: "A different startup screen" }))
   const input = new InputRenderable(renderer, { id: "input", width: 40, placeholder: "Type here" })
   renderer.root.add(input)
@@ -17,6 +17,10 @@ const editor = (delay: number) => `
 describe("rendered PTY smoke", () => {
   test.each([0, 1_200])("accepts a real renderer with input focus delayed by %dms", async (delay) => {
     await run(editor(delay), 10_000)
+  })
+
+  test("preserves pending input when a redraw takes longer than the retry interval", async () => {
+    await run(editor(0, 0.5), 15_000)
   })
 
   test.each([
