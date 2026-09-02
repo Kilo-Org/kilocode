@@ -7,6 +7,7 @@ import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
 import { organization } from "@/kilocode/provider/catalog" // kilocode_change
+import { Option } from "effect" // kilocode_change
 import {
   disposeAllInstancesAfterProviderAuthCallback,
   invalidatePresence,
@@ -60,8 +61,8 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
       }
       const connected = yield* provider.list()
       // kilocode_change start
-      const info = yield* access.get("kilo").pipe(Effect.orDie)
-      if (organization(config.provider?.kilo?.options, info)) delete filtered.kilo
+      const info = yield* access.get("kilo").pipe(Effect.option)
+      if (Option.isNone(info) || organization(config.provider?.kilo?.options, info.value)) delete filtered.kilo
       const providers = filterPromptTrainingModels(
         Object.assign(
           mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
@@ -69,6 +70,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         ),
         config.hide_prompt_training_models === true,
       )
+      if (Option.isNone(info)) delete providers.kilo
       // kilocode_change end
       // kilocode_change start
       const failed = yield* cache.failedProviders()
@@ -85,7 +87,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
           metadata: providerMetadata(item.id),
         })), // kilocode_change
         default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
-        connected: Object.keys(connected),
+        connected: Object.keys(connected).filter((id) => id !== "kilo" || Option.isSome(info)),
         failed,
       }
       // kilocode_change end

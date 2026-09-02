@@ -87,8 +87,11 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const cfg = yield* config.get()
       const organizationId = catalogOrganization(cfg.provider?.kilo?.options, info)
       const type = getToken(info) && (info?.type === "api" || info?.type === "oauth") ? info.type : undefined
-      if (!type) return { authenticated: false, organizationId }
-      return { authenticated: true, type, organizationId }
+      return {
+        authenticated: !!type,
+        ...(type ? { type } : {}),
+        ...(organizationId == null ? {} : { organizationId }),
+      }
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {

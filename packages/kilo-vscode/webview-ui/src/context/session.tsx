@@ -2169,6 +2169,18 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const effectiveSelection = (() => {
+      if (overrides?.model) return parseModelString(overrides.model)
+      const scope = draftID ?? sid
+      const model = overrides?.agent
+        ? modelForAgent(overrides.agent)
+        : scope
+          ? selected(scope)
+          : getSelected(preferences(), environment(), undefined, pendingAgentSelection() ?? defaultAgent())
+      return model ?? (providerID && modelID ? { providerID, modelID } : null)
+    })()
+    if (!available(effectiveSelection)) return false
+
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
     if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
@@ -2177,16 +2189,12 @@ export const SessionProvider: ParentComponent = (props) => {
       selectAgent(overrides.agent, scope)
     }
     if (overrides?.model) {
-      const parsed = parseModelString(overrides.model)
-      if (!available(parsed)) return false
-      selectModel(parsed.providerID, parsed.modelID, scope)
+      selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)
     }
     if (overrides?.variant) {
       selectVariant(overrides.variant, scope)
     }
 
-    const effectiveSelection = selected(scope) ?? (providerID && modelID ? { providerID, modelID } : null)
-    if (!available(effectiveSelection)) return false
     const effectiveProvider = effectiveSelection.providerID
     const effectiveModel = effectiveSelection.modelID
     recordModelUsage(effectiveProvider, effectiveModel)

@@ -2531,7 +2531,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private invalidateProviders(): void {
     this.providersGeneration++
-    this.providersQueued = false
     this.cachedProvidersMessage = null
     this.postMessage({ type: "providersLoading" })
   }
@@ -4547,14 +4546,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async reloadAfterAuthChange(): Promise<void> {
     this.invalidateProviderUsage()
     this.invalidateProviders()
-    await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
-      this.fetchAndSendAgents(),
-      this.fetchAndSendSkills(),
-      this.fetchAndSendCommands(),
-      this.fetchAndSendIndexingStatus(),
-      this.fetchAndSendNotifications(),
+      this.fetchAndSendConfig().then(() =>
+        Promise.all([
+          this.fetchAndSendAgents(),
+          this.fetchAndSendSkills(),
+          this.fetchAndSendCommands(),
+          this.fetchAndSendIndexingStatus(),
+          this.fetchAndSendNotifications(),
+        ]),
+      ),
     ])
   }
 

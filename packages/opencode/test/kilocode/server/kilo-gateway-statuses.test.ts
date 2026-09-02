@@ -114,7 +114,9 @@ describe("Kilo gateway HttpApi statuses", () => {
     }),
   )
 
-  for (const context of ["config", "oauth", "env", "url", "personal", "anonymous"] as const) {
+  for (const context of ["config", "oauth", "env", "url", "personal", "anonymous", "anonymous-personal"] as const) {
+    const anonymous = context.startsWith("anonymous")
+    const personal = context.endsWith("personal")
     it.live(`reports ${context} organization context locally without secrets`, () =>
       Effect.gen(function* () {
         const previous = { ...state }
@@ -127,17 +129,16 @@ describe("Kilo gateway HttpApi statuses", () => {
                 : context === "url"
                   ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
                   : {}
-            state.info =
-              context === "anonymous"
-                ? undefined
-                : new Auth.Oauth({
-                    type: "oauth",
-                    access: "test-token",
-                    refresh: "private-refresh",
-                    expires: Date.now() + 3600000,
-                    ...(["config", "oauth", "url"].includes(context) ? { accountId: "org-oauth" } : {}),
-                  })
-            if (context === "personal") delete process.env.KILO_ORG_ID
+            state.info = anonymous
+              ? undefined
+              : new Auth.Oauth({
+                  type: "oauth",
+                  access: "test-token",
+                  refresh: "private-refresh",
+                  expires: Date.now() + 3600000,
+                  ...(["config", "oauth", "url"].includes(context) ? { accountId: "org-oauth" } : {}),
+                })
+            if (personal) delete process.env.KILO_ORG_ID
             else process.env.KILO_ORG_ID = "org-env"
           }),
           () =>
@@ -151,9 +152,9 @@ describe("Kilo gateway HttpApi statuses", () => {
         const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
         expect(response.status).toBe(200)
         expect(yield* response.json).toEqual({
-          authenticated: context !== "anonymous",
-          ...(context !== "anonymous" ? { type: "oauth" } : {}),
-          ...(context !== "personal" ? { organizationId: `org-${context === "anonymous" ? "env" : context}` } : {}),
+          authenticated: !anonymous,
+          ...(!anonymous ? { type: "oauth" } : {}),
+          ...(!personal ? { organizationId: `org-${anonymous ? "env" : context}` } : {}),
         })
       }),
     )

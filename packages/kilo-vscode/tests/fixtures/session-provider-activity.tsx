@@ -58,7 +58,10 @@ const { MemoryProvider } = await import("../../webview-ui/src/context/memory")
 const { SpeechToTextModelsProvider } = await import("../../webview-ui/src/context/speech-to-text-models")
 const { drafts, imageDrafts, savePromptDraft } = await import("../../webview-ui/src/utils/draft-store")
 
-const [settings, setSettings] = createSignal<{ model?: string; agent?: Record<string, { model?: string }> }>({})
+const [settings, setSettings] = createSignal<{
+  model?: string
+  agent?: Record<string, { model?: string; variant?: string }>
+}>({})
 const config = {
   config: settings,
   globalConfig: () => ({}),
@@ -209,7 +212,7 @@ const settle = async () => {
   await window.happyDOM.waitUntilComplete()
 }
 const emit = async (data: unknown) => {
-  post(data)
+  post(structuredClone(data))
   await settle()
 }
 const state = (id: string) => {
@@ -304,7 +307,11 @@ try {
       organizationId,
       ready,
       providers: {
-        kilo: { id: "kilo", name: "Kilo", models: Object.fromEntries(ids.map((id) => [id, { id, name: id }])) },
+        kilo: {
+          id: "kilo",
+          name: "Kilo",
+          models: Object.fromEntries(ids.map((id) => [id, { id, name: id, variants: { low: {}, high: {} } }])),
+        },
         openai: { id: "openai", name: "OpenAI", models: { external: { id: "external", name: "External" } } },
       },
       connected: ["kilo", "openai"],
@@ -474,6 +481,239 @@ try {
   await emit({ type: "modelSelectionsLoaded", selections: {} })
   choice(value.selected(), recommended)
   assert.deepEqual(writes(), remembered)
+
+  const snapshot = (scope?: string) =>
+    JSON.stringify({
+      session: value.currentSessionID(),
+      draft: value.draftSessionID(),
+      agent: value.selectedAgent(scope),
+      model: value.selected(scope),
+      variant: value.currentVariant(scope),
+      foreground: [value.selectedAgent(), value.selected(), value.currentVariant()],
+      modes: ["code", "ask"].map((name) => [
+        value.modelForAgent(name),
+        value.variantForAgent(name, value.modelForAgent(name)),
+      ]),
+      recents: value.recentModels(),
+      usage: value.modelUsageHistory(),
+      sessions: value.sessions(),
+      messages: value.allMessages(),
+      submitting: value.submitting(),
+      cleared: value.userClearedSession(),
+    })
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+  value.selectAgent("ask")
+  value.selectVariant("low")
+  for (const scope of [undefined, "ses_command", "ses_background-command", "command-draft"]) {
+    value.setCurrentSessionID(undefined)
+    value.selectAgent("code")
+    value.selectVariant("low")
+    if (scope) {
+      value.setSessionAgent(scope, "code")
+      value.setSessionModel(scope, personal.providerID, personal.modelID)
+      value.selectVariant("low", scope)
+    }
+    value.setCurrentSessionID(
+      scope === "ses_background-command" ? "selection" : scope === "command-draft" ? undefined : scope,
+    )
+    value.setDraftSessionID(scope === "command-draft" ? scope : undefined)
+    await settle()
+    const initial = snapshot(scope)
+    for (const reason of ["retained", "loading", "empty", "invalid", "malformed"]) {
+      if (reason === "retained")
+        await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID, false)
+      if (reason === "loading") await emit({ type: "providersLoading" })
+      if (reason === "empty") await catalog("org-a", [])
+      const before = snapshot(scope)
+      const count = sent.length
+      assert.equal(
+        value.sendCommand(
+          "review-test",
+          "preserve selection",
+          personal.providerID,
+          personal.modelID,
+          undefined,
+          scope === "command-draft" ? scope : undefined,
+          undefined,
+          scope === "command-draft" ? null : scope,
+          {
+            agent: "ask",
+            model: reason === "invalid" ? "kilo/unavailable" : reason === "malformed" ? "invalid" : undefined,
+            variant: "high",
+          },
+        ),
+        false,
+        `${scope ?? "new"}: ${reason}`,
+      )
+      await settle()
+      assert.equal(snapshot(scope), before, `${scope ?? "new"}: ${reason} mutated selection`)
+      assert.deepEqual(sent.slice(count), [], "Rejected commands must not persist, seed, or send")
+      await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+      assert.equal(snapshot(scope), initial, "Restoring the catalog must restore the untouched model and variant")
+    }
+  }
+
+  for (const configured of [false, true]) {
+    const scope = `ses_command-${configured ? "configured" : "preferred"}`
+    setSettings(configured ? { agent: { ask: { model: "kilo/z-first", variant: "high" } } } : {})
+    await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+    value.setCurrentSessionID(scope)
+    value.setSessionAgent(scope, "code")
+    value.setSessionModel(scope, personal.providerID, personal.modelID)
+    await settle()
+    assert.equal(
+      value.sendCommand(
+        "review-test",
+        "agent model",
+        personal.providerID,
+        personal.modelID,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { agent: "ask" },
+      ),
+      true,
+    )
+    const request = requests().at(-1)
+    assert(request?.type === "sendCommand")
+    assert.equal(request.sessionID, scope)
+    assert.equal(request.agent, "ask")
+    assert.equal(request.modelID, configured ? first.modelID : recommended.modelID)
+    assert.equal(request.variant, configured ? "high" : "low")
+    assert.equal(value.selectedAgent(scope), "ask")
+    choice(value.selected(scope), configured ? first : recommended)
+  }
+  setSettings({})
+  await catalog(null, [auto.modelID, personal.modelID, first.modelID, recommended.modelID])
+  await emit({ type: "modelSelectionsLoaded", selections: {} })
+  value.setCurrentSessionID(undefined)
+  value.selectAgent("ask")
+  await settle()
+  value.selectAgent("code")
+  await settle()
+  setSettings({ agent: { ask: { model: "kilo/a-recommended", variant: "high" } } })
+  value.setCurrentSessionID("ses_command-cached")
+  await settle()
+  assert.equal(
+    value.sendCommand(
+      "review-test",
+      "configured mode",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { agent: "ask" },
+    ),
+    true,
+  )
+  const configured = requests().at(-1)
+  assert(configured?.type === "sendCommand")
+  assert.equal(configured.modelID, recommended.modelID)
+  assert.equal(configured.variant, "high")
+  choice(value.selected(), recommended)
+
+  setSettings({})
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+  value.setCurrentSessionID(undefined)
+  value.selectAgent("ask")
+  value.setCurrentSessionID("selection")
+  assert.equal(
+    value.sendCommand(
+      "review-test",
+      "pending agent",
+      personal.providerID,
+      personal.modelID,
+      undefined,
+      undefined,
+      undefined,
+      null,
+      { variant: "high" },
+    ),
+    true,
+  )
+  const pending = requests().at(-1)
+  assert(pending?.type === "sendCommand")
+  assert(pending.draftID)
+  assert.equal(pending.sessionID, undefined)
+  assert.equal(pending.agent, "ask")
+  assert.equal(pending.modelID, recommended.modelID)
+  assert.equal(pending.variant, "high")
+  assert.equal(value.selectedAgent(pending.draftID), "ask")
+  choice(value.selected(pending.draftID), recommended)
+  assert.equal(value.currentVariant(pending.draftID), "high")
+  assert.equal(value.variantForAgent("ask", recommended), "low")
+  const persisted = sent.length
+  assert.equal(
+    value.sendCommand(
+      "review-test",
+      "explicit model",
+      first.providerID,
+      first.modelID,
+      undefined,
+      undefined,
+      undefined,
+      null,
+      { agent: "ask", model: "kilo/personal", variant: "high" },
+    ),
+    true,
+  )
+  const accepted = requests().at(-1)
+  assert(accepted?.type === "sendCommand")
+  assert.equal(accepted.sessionID, undefined)
+  assert(accepted.draftID)
+  assert.equal(accepted.agent, "ask")
+  assert.equal(accepted.modelID, personal.modelID)
+  assert.equal(accepted.variant, "high")
+  assert.equal(value.currentSessionID(), "selection")
+  assert.equal(value.draftSessionID(), accepted.draftID)
+  choice(value.selected(accepted.draftID), personal)
+  assert.equal(value.selectedAgent(accepted.draftID), "ask")
+  assert.equal(value.currentVariant(accepted.draftID), "high")
+  choice(value.modelForAgent("ask"), recommended)
+  assert.equal(
+    sent.slice(persisted).some((message) => message.type === "persistModelSelection"),
+    false,
+  )
+  await emit({ type: "sessionCreated", session: info("ses_command-promoted"), draftID: accepted.draftID })
+  choice(value.selected("ses_command-promoted"), personal)
+  assert.equal(value.selectedAgent("ses_command-promoted"), "ask")
+  assert.equal(value.currentVariant("ses_command-promoted"), "high")
+  assert(
+    sent
+      .slice(persisted)
+      .some(
+        (message) =>
+          message.type === "persistVariant" &&
+          message.key === "session/ses_command-promoted/kilo/personal" &&
+          message.value === "high",
+      ),
+  )
+  assert.equal(
+    value.sendCommand(
+      "review-test",
+      "scoped draft",
+      first.providerID,
+      first.modelID,
+      undefined,
+      "command-draft",
+      undefined,
+      null,
+    ),
+    true,
+  )
+  const scoped = requests().at(-1)
+  assert(scoped?.type === "sendCommand")
+  assert.equal(scoped.draftID, "command-draft")
+  assert.equal(scoped.agent, "code")
+  assert.equal(scoped.modelID, personal.modelID)
+  assert.equal(scoped.variant, "low")
+  assert.equal(value.currentSessionID(), "ses_command-promoted")
+  value.setDraftSessionID(undefined)
 
   const key = "acceptance:session:composer"
   const image = { id: "image", filename: "image.png", mime: "image/png", dataUrl: "data:image/png;base64,cGl4ZWw=" }
