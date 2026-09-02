@@ -245,7 +245,11 @@ export namespace BoardStore {
       .pipe(Effect.mapError((error) => mapError(error)))
   })
 
-  export const activity = Effect.fn("BoardStore.activity")(function* (input: { sessionID: SessionID; after: number }) {
+  export const activity = Effect.fn("BoardStore.activity")(function* (input: {
+    sessionID: SessionID
+    after: number
+    read?: string
+  }) {
     if (!Number.isSafeInteger(input.after) || input.after < 0)
       return yield* fail("Board activity sequence must be a non-negative integer")
     const { db } = yield* Database.Service
@@ -258,6 +262,14 @@ export namespace BoardStore {
           FROM kilo_board_message
           WHERE board_root_session_id = board.root_session_id
             AND seq > ${input.after} AND seq < board.next_seq
+            ${
+              input.read === undefined
+                ? sql``
+                : sql`AND seq > COALESCE((
+                    SELECT seq FROM kilo_board_message
+                    WHERE board_root_session_id = board.root_session_id AND id = ${input.read}
+                  ), 0)`
+            }
             AND sender_session_id <> ${input.sessionID}
             AND (recipient = ${input.sessionID} OR recipient = ${ALL})
         ) AS message
