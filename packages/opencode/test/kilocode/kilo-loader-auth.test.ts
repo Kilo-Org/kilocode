@@ -9,6 +9,7 @@ import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { kiloCustomLoaders, patchKiloProviderPrivacy } from "../../src/kilocode/provider/provider"
 import { Auth } from "../../src/auth"
+import type { Config } from "../../src/config/config"
 import { ModelCache } from "../../src/provider/model-cache"
 import { Provider } from "../../src/provider/provider"
 import { TestConfig } from "../fixture/config"
@@ -17,24 +18,36 @@ import { provideInstance, testInstanceStoreLayer } from "../fixture/fixture"
 
 const input = {
   id: "kilo",
+  name: "Kilo Gateway",
   env: ["KILO_API_KEY"],
   models: {
     "free-model": {
       id: "free-model",
       name: "Free Model",
+      release_date: "",
+      attachment: false,
+      reasoning: false,
+      temperature: true,
+      tool_call: true,
       cost: { input: 0, output: 0 },
       limit: { context: 128000, output: 4096 },
     },
     "paid-model": {
       id: "paid-model",
       name: "Paid Model",
+      release_date: "",
+      attachment: false,
+      reasoning: false,
+      temperature: true,
+      tool_call: true,
       cost: { input: 1, output: 2 },
       limit: { context: 128000, output: 4096 },
     },
   },
-}
+} satisfies ModelsDev.Provider
 
 const seed: Record<string, ModelsDev.Provider> = {
+  kilo: input,
   apertis: {
     id: "apertis",
     name: "Apertis",
@@ -68,36 +81,39 @@ function load(data?: { auth?: object; config?: object; env?: Record<string, stri
   }).kilo(input)
 }
 
-function layer() {
-  const cfg = TestConfig.layer()
+function layer(options?: { config?: Config.Info; info?: Auth.Info; fetch?: ModelCache.KiloModels["fetch"] }) {
+  const cfg = TestConfig.layer({ get: () => Effect.succeed(options?.config ?? {}) })
+  const access = options?.info ? Layer.mock(Auth.Service)({ get: () => Effect.succeed(options.info) }) : auth
   const models = Layer.succeed(
     ModelCache.KiloModelsService,
     ModelCache.KiloModelsService.of({
-      fetch: () =>
-        Effect.succeed({
-          models: {
-            "free-model": {
-              id: "free-model",
-              name: "Free Model",
-              cost: { input: 0, output: 0 },
-              limit: { context: 128000, output: 4096 },
+      fetch:
+        options?.fetch ??
+        (() =>
+          Effect.succeed({
+            models: {
+              "free-model": {
+                id: "free-model",
+                name: "Free Model",
+                cost: { input: 0, output: 0 },
+                limit: { context: 128000, output: 4096 },
+              },
+              "paid-model": {
+                id: "paid-model",
+                name: "Paid Model",
+                cost: { input: 1, output: 2 },
+                isFree: false,
+                mayTrainOnYourPrompts: true,
+                limit: { context: 128000, output: 4096 },
+              },
             },
-            "paid-model": {
-              id: "paid-model",
-              name: "Paid Model",
-              cost: { input: 1, output: 2 },
-              isFree: false,
-              mayTrainOnYourPrompts: true,
-              limit: { context: 128000, output: 4096 },
-            },
-          },
-        }),
+          })),
     }),
   )
   const cache = Layer.fresh(ModelCache.layer).pipe(
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(cfg),
-    Layer.provide(auth),
+    Layer.provide(access),
     Layer.provide(models),
   )
   const core = Layer.succeed(
@@ -112,7 +128,7 @@ function layer() {
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(files),
     Layer.provide(cfg),
-    Layer.provide(auth),
+    Layer.provide(access),
     Layer.provide(cache),
   )
 }
@@ -146,6 +162,77 @@ it.live("does not infer free status from zero catalog prices", () =>
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
     expect(kilo.models["free-model"].isFree).toBeUndefined()
+  }),
+)
+
+for (const context of ["config", "oauth", "env", "url"] as const) {
+  for (const outcome of ["empty", "unauthorized", "network", "throw"] as const) {
+    it.live(`keeps ${context} Org ${outcome} catalogs unavailable without public fallback or detached refresh`, () =>
+      Effect.gen(function* () {
+        const env = process.env.KILO_ORG_ID
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            process.env.KILO_ORG_ID = "org-env"
+          }),
+          () =>
+            Effect.sync(() => {
+              if (env === undefined) delete process.env.KILO_ORG_ID
+              else process.env.KILO_ORG_ID = env
+            }),
+        )
+        const calls: Parameters<ModelCache.KiloModels["fetch"]>[0][] = []
+        const config: Config.Info =
+          context === "config"
+            ? { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
+            : context === "url"
+              ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
+              : {}
+        const info =
+          context === "env"
+            ? undefined
+            : new Auth.Oauth({
+                type: "oauth",
+                access: "test-token",
+                refresh: "test-refresh",
+                expires: 0,
+                accountId: "org-oauth",
+              })
+        const fetch: ModelCache.KiloModels["fetch"] = (options) =>
+          Effect.gen(function* () {
+            calls.push(options)
+            if (outcome === "throw") return yield* Effect.fail(new Error("offline"))
+            return { models: {}, ...(outcome === "empty" ? {} : { error: { kind: outcome } }) }
+          })
+        yield* ModelsDev.Service.use((models) =>
+          Effect.gen(function* () {
+            expect((yield* models.get()).kilo.models).toEqual({})
+            expect((yield* models.get()).kilo.models).toEqual({})
+            expect(calls).toHaveLength(outcome === "throw" ? 2 : 1)
+            expect(calls.at(0)?.kilocodeOrganizationId).toBe(`org-${context}`)
+          }),
+        ).pipe(Effect.provide(layer({ config, info, fetch })), provideInstance(process.cwd()))
+      }),
+    )
+  }
+}
+
+it.live("preserves Personal public snapshot fallback", () =>
+  Effect.gen(function* () {
+    const env = process.env.KILO_ORG_ID
+    yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        delete process.env.KILO_ORG_ID
+      }),
+      () =>
+        Effect.sync(() => {
+          if (env !== undefined) process.env.KILO_ORG_ID = env
+        }),
+    )
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer({ fetch: () => Effect.succeed({ models: {} }) })),
+      provideInstance(process.cwd()),
+    )
+    expect(providers.kilo.models).toEqual(input.models)
   }),
 )
 

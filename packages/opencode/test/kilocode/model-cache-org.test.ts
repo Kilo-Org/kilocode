@@ -3,7 +3,7 @@
 // should use the organization-specific endpoint, not the personal endpoint.
 
 import { expect } from "bun:test"
-import { Effect, Layer, Ref } from "effect"
+import { Deferred, Effect, Fiber, Layer, Ref } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import * as Log from "@opencode-ai/core/util/log"
 
@@ -47,6 +47,79 @@ function layer(info: Auth.Info | undefined, captured: Ref.Ref<Options | undefine
 }
 
 const it = testEffect(Layer.empty)
+
+it.live("switch invalidation drops warm Personal and delayed prior catalogs", () =>
+  Effect.gen(function* () {
+    const account = yield* Ref.make<string | undefined>(undefined)
+    const started = yield* Deferred.make<void>()
+    const wait = yield* Deferred.make<void>()
+    const calls: Options[] = []
+    const auth = Layer.mock(Auth.Service)({
+      get: () =>
+        Ref.get(account).pipe(
+          Effect.map(
+            (accountId) =>
+              new Auth.Oauth({
+                type: "oauth",
+                access: "test-token",
+                refresh: "test-refresh",
+                expires: 0,
+                accountId,
+              }),
+          ),
+        ),
+    })
+    const models = Layer.succeed(
+      ModelCache.KiloModelsService,
+      ModelCache.KiloModelsService.of({
+        fetch: (options) =>
+          Effect.gen(function* () {
+            calls.push(options)
+            if (calls.length === 2) {
+              yield* Deferred.succeed(started, undefined)
+              yield* Deferred.await(wait)
+            }
+            const id = options.kilocodeOrganizationId ?? "personal"
+            return { models: { [id]: { id, name: id, limit: { context: 128000, output: 4096 } } } }
+          }),
+      }),
+    )
+    const cache = Layer.fresh(ModelCache.layer).pipe(
+      Layer.provide(FetchHttpClient.layer),
+      Layer.provide(TestConfig.layer()),
+      Layer.provide(auth),
+      Layer.provide(models),
+    )
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        expect(Object.keys(yield* cache.fetch("kilo"))).toEqual(["personal"])
+        const pending = yield* cache.refresh("kilo").pipe(Effect.forkChild)
+        yield* Deferred.await(started)
+        yield* Ref.set(account, "org-a")
+        yield* cache.clear("kilo")
+        expect(yield* cache.get("kilo")).toBeUndefined()
+        expect(Object.keys(yield* cache.fetch("kilo"))).toEqual(["org-a"])
+        yield* Deferred.succeed(wait, undefined)
+        yield* Fiber.join(pending)
+        expect(Object.keys((yield* cache.get("kilo")) ?? {})).toEqual(["org-a"])
+        expect(yield* cache.getFailure("kilo")).toBeUndefined()
+        yield* Ref.set(account, "org-b")
+        yield* cache.clear("kilo")
+        expect(Object.keys(yield* cache.fetch("kilo"))).toEqual(["org-b"])
+        yield* Ref.set(account, undefined)
+        yield* cache.clear("kilo")
+        expect(Object.keys(yield* cache.fetch("kilo"))).toEqual(["personal"])
+        expect(calls.map((options) => options.kilocodeOrganizationId)).toEqual([
+          undefined,
+          undefined,
+          "org-a",
+          "org-b",
+          undefined,
+        ])
+      }),
+    ).pipe(Effect.provide(cache))
+  }),
+)
 
 it.live("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", () =>
   Effect.gen(function* () {

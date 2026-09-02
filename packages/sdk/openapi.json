@@ -13536,6 +13536,9 @@
                     "type": {
                       "type": "string",
                       "enum": ["api", "oauth"]
+                    },
+                    "organizationId": {
+                      "type": "string"
                     }
                   },
                   "required": ["authenticated"],

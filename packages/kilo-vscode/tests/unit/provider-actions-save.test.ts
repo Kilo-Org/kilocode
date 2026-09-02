@@ -438,6 +438,119 @@ describe("disconnectProvider", () => {
 })
 
 describe("fetchProviderData", () => {
+  for (const item of [
+    { name: "uses the allowed organization default", recommended: "org/default", expected: "org/default" },
+    { name: "uses the first allowed model when no default exists", recommended: undefined, expected: "org/first" },
+    {
+      name: "ignores a default outside the organization catalog",
+      recommended: "kilo-auto/free",
+      expected: "org/first",
+    },
+    { name: "uses the first allowed model when defaults cannot load", error: true, expected: "org/first" },
+    {
+      name: "does not invent a default for an empty catalog",
+      empty: true,
+      recommended: "org/default",
+      expected: undefined,
+    },
+  ]) {
+    it(item.name, async () => {
+      const directories: string[] = []
+      const client = {
+        provider: {
+          list: async () => ({
+            data: {
+              all: [
+                {
+                  id: "kilo",
+                  name: "Kilo Gateway",
+                  models: item.empty ? {} : { "org/first": { id: "org/first" }, "org/default": { id: "org/default" } },
+                },
+                { id: "anthropic", name: "Anthropic", models: { claude: { id: "claude" } }, metadata: { priority: 1 } },
+              ],
+              connected: ["kilo", "anthropic"],
+              default: { kilo: "kilo-auto/free", anthropic: "claude" },
+            },
+          }),
+          auth: async () => ({ data: {} }),
+        },
+        kilo: {
+          authStatus: async () => ({ data: { authenticated: true, type: "oauth", organizationId: "org" } }),
+        },
+        config: {
+          providers: async (input: { directory: string }) => {
+            directories.push(input.directory)
+            if (item.error) throw new Error("Defaults unavailable")
+            return { data: { default: { kilo: item.recommended, anthropic: "unrelated" } } }
+          },
+        },
+      } as unknown as Parameters<typeof fetchProviderData>[0]
+
+      const result = await fetchProviderData(client, "/workspace")
+      expect(result.response.default.kilo).toBe(item.expected)
+      expect(result.response.default.anthropic).toBe("claude")
+      expect(result.response.all.find((provider) => provider.id === "anthropic")).toMatchObject({
+        metadata: { priority: 1 },
+      })
+      expect(result.organizationId).toBe("org")
+      expect(result.ready).toBe(true)
+      expect(directories).toEqual(["/workspace"])
+    })
+  }
+
+  it("distinguishes failed auth context from Personal and removes unverified Kilo models", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              { id: "kilo", models: { "kilo-auto/free": {} } },
+              { id: "external", models: { model: {} } },
+            ],
+            connected: ["kilo", "external"],
+            default: { kilo: "kilo-auto/free", external: "model" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => {
+          throw new Error("Context unavailable")
+        },
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/workspace")
+    expect(result.ready).toBe(false)
+    expect(result.organizationId).toBeUndefined()
+    expect(result.response.all.map((provider) => provider.id)).toEqual(["external"])
+    expect(result.response.connected).toEqual(["external"])
+    expect(result.response.default).toEqual({ external: "model" })
+  })
+
+  it("retains Personal defaults without fetching organization recommendations", async () => {
+    let calls = 0
+    const client = {
+      provider: {
+        list: async () => ({ data: { all: [], connected: [], default: { kilo: "kilo-auto/free" } } }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: { authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }) },
+      config: {
+        providers: async () => {
+          calls++
+          return { data: { default: { kilo: "unexpected" } } }
+        },
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/workspace")
+    expect(result.ready).toBe(true)
+    expect(result.organizationId).toBeNull()
+    expect(calls).toBe(0)
+    expect(result.response.default).toEqual({ kilo: "kilo-auto/free" })
+  })
+
   it("derives api auth state and strips keys from provider payloads", async () => {
     const client = {
       provider: {

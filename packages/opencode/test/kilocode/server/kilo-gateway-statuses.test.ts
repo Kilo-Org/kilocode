@@ -6,6 +6,8 @@ import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { Auth } from "../../../src/auth"
+import type { Config } from "../../../src/config/config"
+import { TestConfig } from "../../fixture/config"
 import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
 import { InstanceStore } from "../../../src/project/instance-store"
@@ -23,9 +25,14 @@ import {
 import { testEffect } from "../../lib/effect"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
+const state: { info: Auth.Info | undefined; config: Config.Info } = {
+  info: new Auth.Api({ type: "api", key: "test-token" }),
+  config: {},
+}
 const auth = Layer.mock(Auth.Service)({
-  get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+  get: () => Effect.sync(() => state.info),
 })
+const config = TestConfig.layer({ get: () => Effect.sync(() => state.config) })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
@@ -53,6 +60,7 @@ const layer = HttpRouter.serve(
       passthroughInstanceContext,
       testWorkspaceRouting,
       auth,
+      config,
       store,
       cache,
       session,
@@ -105,6 +113,51 @@ describe("Kilo gateway HttpApi statuses", () => {
       expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
     }),
   )
+
+  for (const context of ["config", "oauth", "env", "url", "personal", "anonymous"] as const) {
+    it.live(`reports ${context} organization context locally without secrets`, () =>
+      Effect.gen(function* () {
+        const previous = { ...state }
+        const env = process.env.KILO_ORG_ID
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            state.config =
+              context === "config"
+                ? { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
+                : context === "url"
+                  ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
+                  : {}
+            state.info =
+              context === "anonymous"
+                ? undefined
+                : new Auth.Oauth({
+                    type: "oauth",
+                    access: "test-token",
+                    refresh: "private-refresh",
+                    expires: Date.now() + 3600000,
+                    ...(["config", "oauth", "url"].includes(context) ? { accountId: "org-oauth" } : {}),
+                  })
+            if (context === "personal") delete process.env.KILO_ORG_ID
+            else process.env.KILO_ORG_ID = "org-env"
+          }),
+          () =>
+            Effect.sync(() => {
+              Object.assign(state, previous)
+              if (env === undefined) delete process.env.KILO_ORG_ID
+              else process.env.KILO_ORG_ID = env
+            }),
+        )
+        yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))
+        const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          authenticated: context !== "anonymous",
+          ...(context !== "anonymous" ? { type: "oauth" } : {}),
+          ...(context !== "personal" ? { organizationId: `org-${context === "anonymous" ? "env" : context}` } : {}),
+        })
+      }),
+    )
+  }
 
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {

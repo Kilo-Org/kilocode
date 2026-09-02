@@ -16219,6 +16219,7 @@ export type KiloAuthStatusResponses = {
   200: {
     authenticated: boolean
     type?: "api" | "oauth"
+    organizationId?: string
   }
 }
 

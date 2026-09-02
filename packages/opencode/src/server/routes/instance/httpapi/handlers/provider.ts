@@ -5,6 +5,8 @@ import { Provider } from "@/provider/provider"
 
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
+import { organization } from "@/kilocode/provider/catalog" // kilocode_change
 import {
   disposeAllInstancesAfterProviderAuthCallback,
   invalidatePresence,
@@ -45,6 +47,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     const provider = yield* Provider.Service
     const svc = yield* ProviderAuth.Service
     const cache = yield* ModelCache.Service // kilocode_change
+    const access = yield* Auth.Service // kilocode_change
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
@@ -57,6 +60,8 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
       }
       const connected = yield* provider.list()
       // kilocode_change start
+      const info = yield* access.get("kilo").pipe(Effect.orDie)
+      if (organization(config.provider?.kilo?.options, info)) delete filtered.kilo
       const providers = filterPromptTrainingModels(
         Object.assign(
           mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
