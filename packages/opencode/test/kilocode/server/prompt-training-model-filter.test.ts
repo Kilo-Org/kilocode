@@ -1,6 +1,8 @@
-import { afterEach, expect } from "bun:test"
-import { Effect } from "effect"
+import { afterEach, expect, spyOn } from "bun:test"
+import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Auth } from "../../../src/auth"
 import { ModelCache } from "../../../src/provider/model-cache"
 import { Server } from "../../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
@@ -8,7 +10,7 @@ import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 import { resetDatabase } from "../../fixture/db"
 import { testEffectShared } from "../../lib/effect"
 
-const it = testEffectShared(AppNodeBuilder.build(ModelCache.node))
+const it = testEffectShared(Layer.merge(AppNodeBuilder.build(ModelCache.node), AppNodeBuilder.build(Auth.node)))
 
 void Log.init({ print: false })
 
@@ -48,6 +50,17 @@ for (const scenario of [
 ] as const) {
   it.live(`keeps Org catalogs and recommendations safe: ${scenario}`, () =>
     Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          const previous = Flag.KILO_DISABLE_MODELS_FETCH
+          Flag.KILO_DISABLE_MODELS_FETCH = true
+          return previous
+        }),
+        (previous) =>
+          Effect.sync(() => {
+            Flag.KILO_DISABLE_MODELS_FETCH = previous
+          }),
+      )
       const cache = yield* ModelCache.Service
       yield* cache.clear("kilo")
       const env = {
@@ -102,7 +115,7 @@ for (const scenario of [
                           : undefined,
                 })
               }
-              if (url.pathname === "/api/organizations/org-config/models") {
+              if (url.pathname === "/api/organizations/org-env/models") {
                 if (scenario === "unauthorized") return new Response(null, { status: 401 })
                 if (scenario === "error") return new Response(null, { status: 500 })
                 if (scenario === "empty") return Response.json({ data: [] })
@@ -153,7 +166,7 @@ for (const scenario of [
       expect(yield* request("/kilo/auth-status", tmp.path)).toEqual({
         authenticated: true,
         type: "oauth",
-        organizationId: "org-config",
+        organizationId: "org-env",
       })
       const unavailable = ["empty", "error", "unauthorized", "filtered"].includes(scenario)
       expect(models(all, "all")).toEqual(unavailable ? [] : ["test/private", "test/z-last"])
@@ -161,13 +174,44 @@ for (const scenario of [
       expect(connected.default.kilo).toBe(
         unavailable ? undefined : scenario === "valid" ? "test/z-last" : "test/private",
       )
+      expect(all.default.kilo).toBe(connected.default.kilo)
       expect(connected.default.external).toBe("independent")
       expect(all.default.external).toBe("independent")
       expect(all.connected).toContain("external")
-      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(["/api/organizations/org-config/models"])
+      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(["/api/organizations/org-env/models"])
       expect(paths.filter((path) => path.endsWith("/defaults"))).toEqual(
-        unavailable ? [] : ["/api/organizations/org-config/defaults"],
+        unavailable ? [] : ["/api/organizations/org-env/defaults", "/api/organizations/org-env/defaults"],
       )
+      if (scenario === "valid") {
+        const auth = yield* Auth.Service
+        yield* Effect.acquireUseRelease(
+          Effect.sync(() =>
+            spyOn(auth, "get").mockImplementation(() =>
+              Effect.fail(new Auth.AuthError({ message: "Cannot read credentials after provider initialization" })),
+            ),
+          ),
+          () =>
+            Effect.gen(function* () {
+              const retained = yield* request("/provider", tmp.path)
+              const configured = yield* request("/config/providers", tmp.path)
+              expect(models(retained, "all")).toEqual(["test/private", "test/z-last"])
+              expect(models(configured, "providers")).toEqual(["test/private", "test/z-last"])
+              expect(retained.connected).toEqual(all.connected)
+              expect(retained.failed).toEqual(["kilo"])
+              expect(retained.default).toEqual({ external: "independent", kilo: "test/private" })
+              expect(configured.default).toEqual(retained.default)
+              expect(paths.filter((path) => path.endsWith("/defaults"))).toHaveLength(2)
+              expect(paths.filter((path) => path.endsWith("/models"))).toHaveLength(1)
+            }),
+          (spy) => Effect.sync(() => spy.mockRestore()),
+        )
+        const recovered = yield* request("/provider", tmp.path)
+        const configured = yield* request("/config/providers", tmp.path)
+        expect(recovered.default.kilo).toBe("test/z-last")
+        expect(configured.default.kilo).toBe(recovered.default.kilo)
+        expect(recovered.failed).toEqual([])
+        expect(paths.filter((path) => path.endsWith("/defaults"))).toHaveLength(4)
+      }
     }),
   )
 }

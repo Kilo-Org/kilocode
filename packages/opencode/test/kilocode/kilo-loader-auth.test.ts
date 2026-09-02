@@ -135,6 +135,26 @@ function layer(options?: { config?: Config.Info; info?: Auth.Info; fetch?: Model
 
 const it = testEffect(testInstanceStoreLayer)
 
+function environment(values: Record<string, string | undefined>) {
+  return Effect.acquireRelease(
+    Effect.sync(() => {
+      const previous = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]))
+      for (const [key, value] of Object.entries(values)) {
+        if (value === undefined) delete process.env[key]
+        if (value !== undefined) process.env[key] = value
+      }
+      return previous
+    }),
+    (previous) =>
+      Effect.sync(() => {
+        for (const [key, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[key]
+          if (value !== undefined) process.env[key] = value
+        }
+      }),
+  )
+}
+
 it.live("assembles paid Kilo models without auth", () =>
   Effect.gen(function* () {
     const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
@@ -169,17 +189,7 @@ for (const context of ["config", "oauth", "env", "url"] as const) {
   for (const outcome of ["empty", "unauthorized", "network", "throw"] as const) {
     it.live(`keeps ${context} Org ${outcome} catalogs unavailable without public fallback or detached refresh`, () =>
       Effect.gen(function* () {
-        const env = process.env.KILO_ORG_ID
-        yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            process.env.KILO_ORG_ID = "org-env"
-          }),
-          () =>
-            Effect.sync(() => {
-              if (env === undefined) delete process.env.KILO_ORG_ID
-              else process.env.KILO_ORG_ID = env
-            }),
-        )
+        yield* environment({ KILO_API_KEY: undefined, KILO_ORG_ID: context === "env" ? "org-env" : undefined })
         const calls: Parameters<ModelCache.KiloModels["fetch"]>[0][] = []
         const config: Config.Info =
           context === "config"
@@ -195,7 +205,7 @@ for (const context of ["config", "oauth", "env", "url"] as const) {
                 access: "test-token",
                 refresh: "test-refresh",
                 expires: 0,
-                accountId: "org-oauth",
+                ...(context === "oauth" ? { accountId: "org-oauth" } : {}),
               })
         const fetch: ModelCache.KiloModels["fetch"] = (options) =>
           Effect.gen(function* () {
@@ -215,6 +225,124 @@ for (const context of ["config", "oauth", "env", "url"] as const) {
     )
   }
 }
+
+for (const scenario of [
+  {
+    name: "environment",
+    env: "org-env",
+    account: "org-oauth",
+    configured: "org-config",
+    baseURL: "https://gateway.test",
+    org: "org-env",
+    url: "https://gateway.test/api/organizations/org-env",
+  },
+  {
+    name: "OAuth",
+    env: undefined,
+    account: "org-oauth",
+    configured: "org-config",
+    baseURL: "https://gateway.test",
+    org: "org-oauth",
+    url: "https://gateway.test/api/organizations/org-oauth",
+  },
+  {
+    name: "configured",
+    env: undefined,
+    account: undefined,
+    configured: "org-config",
+    baseURL: "https://gateway.test",
+    org: "org-config",
+    url: "https://gateway.test/api/organizations/org-config",
+  },
+  {
+    name: "scoped URL",
+    env: undefined,
+    account: undefined,
+    configured: undefined,
+    baseURL: "https://gateway.test/api/organizations/org-url",
+    org: "org-url",
+    url: "https://gateway.test/api/organizations/org-url",
+  },
+]) {
+  it.live(`wrapper and cache use the same ${scenario.name} organization and credentials`, () =>
+    Effect.gen(function* () {
+      yield* environment({ KILO_ORG_ID: scenario.env, KILO_API_KEY: "env-token" })
+      const calls: Parameters<ModelCache.KiloModels["fetch"]>[0][] = []
+      const config: Config.Info = {
+        provider: {
+          kilo: {
+            options: {
+              apiKey: "configured-token",
+              kilocodeOrganizationId: scenario.configured,
+              baseURL: scenario.baseURL,
+            },
+          },
+        },
+      }
+      const info = new Auth.Oauth({
+        type: "oauth",
+        access: "stored-token",
+        refresh: "refresh",
+        expires: 0,
+        accountId: scenario.account,
+      })
+      const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+        Effect.provide(
+          layer({
+            config,
+            info,
+            fetch: (options) => {
+              calls.push(options)
+              return Effect.succeed({
+                models: { allowed: { id: "allowed", name: "Allowed", limit: { context: 128000, output: 4096 } } },
+              })
+            },
+          }),
+        ),
+        provideInstance(process.cwd()),
+      )
+      expect(Object.keys(providers.kilo.models)).toEqual(["allowed"])
+      expect(calls).toHaveLength(1)
+      expect(calls.at(0)).toMatchObject({
+        kilocodeOrganizationId: scenario.org,
+        kilocodeToken: "env-token",
+        baseURL: scenario.url,
+      })
+    }),
+  )
+}
+
+it.live("does not serve a warm or public catalog after an Org-scoped URL conflicts with the selected Org", () =>
+  Effect.gen(function* () {
+    yield* environment({ KILO_ORG_ID: "org-env", KILO_API_KEY: "env-token" })
+    const options = { baseURL: "https://gateway.test/api/organizations/org-env" }
+    const calls: Parameters<ModelCache.KiloModels["fetch"]>[0][] = []
+    yield* ModelsDev.Service.use((models) =>
+      Effect.gen(function* () {
+        expect(Object.keys((yield* models.get()).kilo.models)).toEqual(["allowed"])
+        options.baseURL = "https://gateway.test/api/organizations/org-other"
+        expect((yield* models.get()).kilo.models).toEqual({})
+        expect((yield* models.get()).kilo.models).toEqual({})
+        options.baseURL = "https://gateway.test/api/organizations/org-env"
+        expect(Object.keys((yield* models.get()).kilo.models)).toEqual(["allowed"])
+        expect(calls).toHaveLength(1)
+      }),
+    ).pipe(
+      Effect.provide(
+        layer({
+          config: { provider: { kilo: { options } } },
+          fetch: (input) => {
+            calls.push(input)
+            return Effect.succeed({
+              models: { allowed: { id: "allowed", name: "Allowed", limit: { context: 128000, output: 4096 } } },
+            })
+          },
+        }),
+      ),
+      provideInstance(process.cwd()),
+    )
+  }),
+)
 
 it.live("preserves Personal public snapshot fallback", () =>
   Effect.gen(function* () {

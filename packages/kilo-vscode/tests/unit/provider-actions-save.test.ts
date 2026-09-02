@@ -439,37 +439,56 @@ describe("disconnectProvider", () => {
 
 describe("fetchProviderData", () => {
   for (const item of [
-    { name: "uses the allowed organization default", recommended: "org/default", expected: "org/default" },
+    { name: "uses the allowed organization API default", recommended: "org/default", expected: "org/default" },
     { name: "uses the first allowed model when no default exists", recommended: undefined, expected: "org/first" },
+    { name: "uses the first allowed model when the default is empty", recommended: "", expected: "org/first" },
     {
       name: "ignores a default outside the organization catalog",
       recommended: "kilo-auto/free",
       expected: "org/first",
     },
-    { name: "uses the first allowed model when defaults cannot load", error: true, expected: "org/first" },
+    { name: "ignores inherited catalog properties", recommended: "toString", expected: "org/first" },
     {
       name: "does not invent a default for an empty catalog",
       empty: true,
       recommended: "org/default",
       expected: undefined,
     },
+    {
+      name: "does not retain a default without a Kilo provider",
+      missing: true,
+      recommended: "org/default",
+      expected: undefined,
+    },
   ]) {
     it(item.name, async () => {
-      const directories: string[] = []
+      let calls = 0
+      const external = {
+        id: "anthropic",
+        name: "Anthropic",
+        models: { claude: { id: "claude" } },
+        metadata: { priority: 1 },
+      }
       const client = {
         provider: {
           list: async () => ({
             data: {
               all: [
-                {
-                  id: "kilo",
-                  name: "Kilo Gateway",
-                  models: item.empty ? {} : { "org/first": { id: "org/first" }, "org/default": { id: "org/default" } },
-                },
-                { id: "anthropic", name: "Anthropic", models: { claude: { id: "claude" } }, metadata: { priority: 1 } },
+                ...(item.missing
+                  ? []
+                  : [
+                      {
+                        id: "kilo",
+                        name: "Kilo Gateway",
+                        models: item.empty
+                          ? {}
+                          : { "org/first": { id: "org/first" }, "org/default": { id: "org/default" } },
+                      },
+                    ]),
+                { ...external, key: "sk-test" },
               ],
-              connected: ["kilo", "anthropic"],
-              default: { kilo: "kilo-auto/free", anthropic: "claude" },
+              connected: item.missing ? ["anthropic"] : ["kilo", "anthropic"],
+              default: { ...(item.recommended === undefined ? {} : { kilo: item.recommended }), anthropic: "claude" },
             },
           }),
           auth: async () => ({ data: {} }),
@@ -478,10 +497,9 @@ describe("fetchProviderData", () => {
           authStatus: async () => ({ data: { authenticated: true, type: "oauth", organizationId: "org" } }),
         },
         config: {
-          providers: async (input: { directory: string }) => {
-            directories.push(input.directory)
-            if (item.error) throw new Error("Defaults unavailable")
-            return { data: { default: { kilo: item.recommended, anthropic: "unrelated" } } }
+          providers: async () => {
+            calls++
+            return { data: { default: { kilo: "org/first", anthropic: "unrelated" } } }
           },
         },
       } as unknown as Parameters<typeof fetchProviderData>[0]
@@ -489,16 +507,16 @@ describe("fetchProviderData", () => {
       const result = await fetchProviderData(client, "/workspace")
       expect(result.response.default.kilo).toBe(item.expected)
       expect(result.response.default.anthropic).toBe("claude")
-      expect(result.response.all.find((provider) => provider.id === "anthropic")).toMatchObject({
-        metadata: { priority: 1 },
-      })
+      expect(result.response.all.find((provider) => provider.id === "anthropic")).toEqual(external)
+      expect(result.response.connected).toEqual(item.missing ? ["anthropic"] : ["kilo", "anthropic"])
+      expect(result.authStates).toEqual({ kilo: "oauth", anthropic: "api" })
       expect(result.organizationId).toBe("org")
       expect(result.ready).toBe(true)
-      expect(directories).toEqual(["/workspace"])
+      expect(calls).toBe(0)
     })
   }
 
-  it("distinguishes failed auth context from Personal and removes unverified Kilo models", async () => {
+  it.each([false, true])("removes unverified Kilo data without auth context (failure: %s)", async (fail) => {
     const client = {
       provider: {
         list: async () => ({
@@ -515,7 +533,8 @@ describe("fetchProviderData", () => {
       },
       kilo: {
         authStatus: async () => {
-          throw new Error("Context unavailable")
+          if (fail) throw new Error("Context unavailable")
+          return { data: undefined }
         },
       },
     } as unknown as Parameters<typeof fetchProviderData>[0]

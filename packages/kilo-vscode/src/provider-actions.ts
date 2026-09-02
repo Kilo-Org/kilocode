@@ -63,22 +63,11 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     .authStatus({ directory: dir }, { throwOnError: true })
     .then((r) => r.data)
     .catch(() => undefined)
-  const recommendation = kiloRequest.then(async (auth) => {
-    if (!auth?.organizationId) return undefined
-    return client.config
-      .providers({ directory: dir }, { throwOnError: true })
-      .then((r) => r.data?.default.kilo)
-      .catch((error: unknown) => {
-        console.warn("[Kilo New] Failed to fetch organization model default:", error)
-        return undefined
-      })
-  })
 
-  const [{ data: response }, authMethods, kiloAuth, recommended] = await Promise.all([
+  const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
     authRequest,
     kiloRequest,
-    recommendation,
   ])
   const authStates: Record<string, AuthState> = {}
   const storedKeys: Record<string, StoredProviderKey> = {}
@@ -105,7 +94,8 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
   const defaults = { ...response.default }
   if (organizationId) {
     const models = all.find((item) => item.id === KILO_PROVIDER_ID)?.models ?? {}
-    const model = recommended && models[recommended] ? recommended : Object.keys(models).at(0)
+    const recommended = response.default[KILO_PROVIDER_ID]
+    const model = recommended && Object.hasOwn(models, recommended) ? recommended : Object.keys(models).at(0)
     if (model) defaults[KILO_PROVIDER_ID] = model
     if (!model) delete defaults[KILO_PROVIDER_ID]
   }

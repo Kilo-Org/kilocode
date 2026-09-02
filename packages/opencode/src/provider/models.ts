@@ -6,7 +6,7 @@ import * as Core from "@opencode-ai/core/models-dev"
 import { Context, Effect, Layer } from "effect"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
 import { overlay } from "@/kilocode/anaconda-desktop/provider"
-import { organization } from "@/kilocode/provider/catalog"
+import { compatible, organization, token } from "@/kilocode/provider/catalog"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
@@ -84,8 +84,9 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           ...(url ? { baseURL: url } : {}),
           ...(org ? { kilocodeOrganizationId: org } : {}),
         }
-        const fetched = yield* cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({})))
-        const models = org || Object.keys(fetched).length > 0 ? fetched : (fallback?.models ?? {})
+        const valid = compatible({ ...fetch, kilocodeToken: token(opts, info) })
+        const fetched = valid ? yield* cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({}))) : {}
+        const models = !valid || org || Object.keys(fetched).length > 0 ? fetched : (fallback?.models ?? {})
         providers.kilo = {
           id: "kilo",
           name: "Kilo Gateway",
@@ -94,7 +95,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           npm: "@kilocode/kilo-gateway",
           models,
         }
-        if (!org && Object.keys(fetched).length === 0)
+        if (valid && !org && Object.keys(fetched).length === 0)
           yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
         return providers

@@ -240,7 +240,7 @@ async function fetchRawKiloModels(options?: {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && token && !organizationId && !baseURL.includes("/api/organizations/")) {
+    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/api/organizations/")) {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"

@@ -4,7 +4,7 @@ import { Context, Deferred, Duration, Effect, Exit, Layer, Schema, Scope } from 
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
-import { organization } from "@/kilocode/provider/catalog"
+import { compatible, organization, token } from "@/kilocode/provider/catalog"
 import type { Provider } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -126,14 +126,9 @@ export const layer: Layer.Layer<
 
       if (providerID === "kilo") {
         const item = config.provider?.[providerID]
-        if (item?.options?.apiKey) options.kilocodeToken = item.options.apiKey
-
         const info = yield* auth.get(providerID)
         options.kilocodeOrganizationId = organization(item?.options, info)
-        if (info?.type === "api") options.kilocodeToken = info.key
-        if (info?.type === "oauth") options.kilocodeToken = info.access
-
-        if (process.env.KILO_API_KEY) options.kilocodeToken = process.env.KILO_API_KEY
+        options.kilocodeToken = token(item?.options, info)
         log.debug("auth options resolved", {
           providerID,
           hasToken: !!options.kilocodeToken,
@@ -176,7 +171,9 @@ export const layer: Layer.Layer<
           }),
         ),
       )
-      return yield* fetchModels(providerID, { ...resolved, ...options })
+      const input = { ...resolved, ...options }
+      if (providerID === "kilo" && !compatible(input)) return { models: {}, error: { kind: "schema" as const } }
+      return yield* fetchModels(providerID, input)
     })
 
     const key = (providerID: string, options?: Options) => {

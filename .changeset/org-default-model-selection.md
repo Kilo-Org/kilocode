@@ -4,4 +4,4 @@
 "@kilocode/kilo-gateway": patch
 ---
 
-Use organization model defaults after login and team switching while preserving valid model preferences. Keep unavailable organization catalogs from falling back to public models.
+Use organization model defaults in VS Code while preserving valid preferences. Return consistent defaults from the CLI provider APIs, respect environment credential overrides, and prevent public-model fallbacks for Org accounts.

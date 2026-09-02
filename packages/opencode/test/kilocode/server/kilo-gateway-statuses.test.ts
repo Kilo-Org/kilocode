@@ -114,32 +114,49 @@ describe("Kilo gateway HttpApi statuses", () => {
     }),
   )
 
-  for (const context of ["config", "oauth", "env", "url", "personal", "anonymous", "anonymous-personal"] as const) {
-    const anonymous = context.startsWith("anonymous")
-    const personal = context.endsWith("personal")
-    it.live(`reports ${context} organization context locally without secrets`, () =>
+  for (const context of [
+    { name: "config", config: true, organization: "org-config" },
+    { name: "oauth", config: true, oauth: true, organization: "org-oauth" },
+    { name: "env", config: true, oauth: true, env: true, organization: "org-env" },
+    { name: "url", url: true, organization: "org-url" },
+    { name: "oauth over url", url: true, oauth: true, organization: "org-oauth" },
+    { name: "env over url", url: true, oauth: true, env: true, organization: "org-env" },
+    { name: "personal" },
+    { name: "anonymous", anonymous: true, env: true, organization: "org-env" },
+    { name: "anonymous config", anonymous: true, config: true, organization: "org-config" },
+    { name: "anonymous url", anonymous: true, url: true, organization: "org-url" },
+    { name: "anonymous-personal", anonymous: true },
+  ] satisfies {
+    name: string
+    config?: boolean
+    oauth?: boolean
+    env?: boolean
+    url?: boolean
+    anonymous?: boolean
+    organization?: string
+  }[]) {
+    it.live(`reports ${context.name} organization context locally without secrets`, () =>
       Effect.gen(function* () {
         const previous = { ...state }
         const env = process.env.KILO_ORG_ID
         yield* Effect.acquireRelease(
           Effect.sync(() => {
-            state.config =
-              context === "config"
-                ? { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
-                : context === "url"
-                  ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
-                  : {}
-            state.info = anonymous
+            state.config = context.config
+              ? { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
+              : context.url
+                ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
+                : {}
+            state.info = context.anonymous
               ? undefined
               : new Auth.Oauth({
                   type: "oauth",
                   access: "test-token",
                   refresh: "private-refresh",
                   expires: Date.now() + 3600000,
-                  ...(["config", "oauth", "url"].includes(context) ? { accountId: "org-oauth" } : {}),
+                  ...(context.oauth ? { accountId: "org-oauth" } : {}),
                 })
-            if (personal) delete process.env.KILO_ORG_ID
-            else process.env.KILO_ORG_ID = "org-env"
+            if (context.env) process.env.KILO_ORG_ID = "org-env"
+            else delete process.env.KILO_ORG_ID
           }),
           () =>
             Effect.sync(() => {
@@ -152,9 +169,9 @@ describe("Kilo gateway HttpApi statuses", () => {
         const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
         expect(response.status).toBe(200)
         expect(yield* response.json).toEqual({
-          authenticated: !anonymous,
-          ...(!anonymous ? { type: "oauth" } : {}),
-          ...(!personal ? { organizationId: `org-${anonymous ? "env" : context}` } : {}),
+          authenticated: !context.anonymous,
+          ...(!context.anonymous ? { type: "oauth" } : {}),
+          ...(context.organization ? { organizationId: context.organization } : {}),
         })
       }),
     )

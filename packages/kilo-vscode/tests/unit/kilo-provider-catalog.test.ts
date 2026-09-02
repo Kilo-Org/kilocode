@@ -7,9 +7,16 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 const external = { id: "external", name: "External", models: { model: { id: "model" } } }
 const catalog = (org: string) => ({
   data: {
-    all: [{ id: "kilo", name: "Kilo Gateway", models: { [`${org}/model`]: { id: `${org}/model` } } }, external],
+    all: [
+      {
+        id: "kilo",
+        name: "Kilo Gateway",
+        models: { [`${org}/first`]: { id: `${org}/first` }, [`${org}/model`]: { id: `${org}/model` } },
+      },
+      external,
+    ],
     connected: ["kilo", "external"],
-    default: { kilo: "kilo-auto/free", external: "model" },
+    default: { kilo: `${org}/model`, external: "model" },
   },
 })
 
@@ -32,7 +39,6 @@ function setup(list: () => Promise<ReturnType<typeof catalog>>, org: () => strin
     config: {
       get: async (): Promise<{ data: Config }> => ({ data: {} }),
       overlay: async () => ({ data: {} }),
-      providers: async () => ({ data: { default: { kilo: `${org()}/model` } } }),
     },
     global: { config: { get: async () => ({ data: {} }) } },
     experimental: { capabilities: { get: async () => ({ data: {} }) } },

@@ -127,6 +127,11 @@ test.each([
   { kilocodeOrganizationId: "org-123" },
   { kilocodeToken: "expired-token", baseURL: "https://api.kilo.ai/api/organizations/org-123" },
   { kilocodeToken: "expired-token", baseURL: "https://gateway.test/api/organizations/org-123" },
+  { kilocodeToken: "https://gateway.test/api/organizations/org-token:expired-token" },
+  {
+    kilocodeToken: "https://gateway.test/api/organizations/org-token:expired-token",
+    baseURL: "https://api.kilo.ai/api/openrouter",
+  },
 ])("never retries an organization-scoped 401 against the public catalog: %j", async (options) => {
   const fetch = spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }))
   try {
