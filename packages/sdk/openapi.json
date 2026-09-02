@@ -35183,6 +35183,9 @@
               "openTelemetry": {
                 "type": "boolean"
               },
+              "shared_agent_board": {
+                "type": "boolean"
+              },
               "primary_tools": {
                 "type": "array",
                 "items": {
