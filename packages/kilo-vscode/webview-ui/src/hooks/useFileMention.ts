@@ -12,6 +12,7 @@ import {
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
+  filePickerNamed,
   filterSessions,
   buildSessionAttachments,
   buildWorktreeAttachments,
@@ -339,8 +340,9 @@ export function useFileMention(
 
   const applyFiles = (query: string, items: FileSearchItem[]) => {
     const next = results(query, items)
-    // A spaced query that matches nothing is prose, not a filename in progress.
-    if (/\s/.test(query) && next.every((item) => item.type === "file-picker")) {
+    // A spaced query that matches nothing is prose, not a filename in progress —
+    // unless it names the Browse files entry, which is a choice, not prose.
+    if (/\s/.test(query) && !filePickerNamed(query) && next.every((item) => item.type === "file-picker")) {
       // Unless this scope's past chats are still on the way: a chat title is
       // exactly the kind of spaced query that no file can answer, so hold the
       // close until the list that could match it has arrived.
@@ -671,8 +673,10 @@ export function useFileMention(
       const result = mentionResults()[mentionIndex()]
       if (!result) return false
       // While a spaced query is still being resolved the only offer can be the
-      // file-picker fallback. Sending the message must win over browsing files.
-      if (result.type === "file-picker" && /\s/.test(mentionQuery() ?? "")) return false
+      // file-picker fallback. Sending the message must win over browsing files,
+      // unless the query names that entry and browsing is what was asked for.
+      const query = mentionQuery() ?? ""
+      if (result.type === "file-picker" && /\s/.test(query) && !filePickerNamed(query)) return false
       e.preventDefault()
       if (textarea) selectMention(result, textarea, setText, onSelect)
       return true

@@ -22,6 +22,7 @@ import {
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
   WORKTREES_RESULT,
+  filePickerNamed,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 import type { MentionResult } from "../../webview-ui/src/hooks/file-mention-utils"
 import { TERMINAL_MENTION } from "../../webview-ui/src/hooks/terminal-context-utils"
@@ -718,6 +719,21 @@ describe("session mentions", () => {
       expect(result[0]).toEqual(TERMINAL_RESULT)
       expect(result).toContainEqual(PAST_CHATS_RESULT)
       expect(result[result.length - 1]).toEqual(FILE_PICKER_RESULT)
+    })
+  })
+
+  describe("filePickerNamed", () => {
+    it("recognises the entry being spelled out", () => {
+      expect(filePickerNamed("browse files")).toBe(true)
+      expect(filePickerNamed("browse fi")).toBe(true)
+      expect(filePickerNamed("Browse")).toBe(true)
+      expect(filePickerNamed("file picker")).toBe(true)
+    })
+
+    it("does not treat the fallback as named", () => {
+      expect(filePickerNamed("")).toBe(false)
+      expect(filePickerNamed("README.md and then")).toBe(false)
+      expect(filePickerNamed("browsers")).toBe(false)
     })
   })
 

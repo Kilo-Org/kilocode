@@ -551,6 +551,76 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("opens the file picker when Enter confirms a query naming it", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@browse files", 13)
+    await wait(170)
+
+    // No file is named "browse files", and the chats do not match it either.
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [],
+      })
+    }
+
+    // The entry stays on offer instead of being closed away as prose.
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT])
+
+    const input = editor("@browse files")
+    const text = { value: "" }
+    mockDocument(input)
+    const prevented = { count: 0 }
+    const event = { key: "Enter", preventDefault: () => prevented.count++ } as unknown as KeyboardEvent
+    try {
+      expect(
+        mention.onKeyDown(event, input, (value: string) => {
+          text.value = value
+        }),
+      ).toBe(true)
+
+      const picker = posted.findLast((message) => message.type === "requestFilePicker")
+      expect(picker).toBeDefined()
+      // The picked file replaces the whole typed query, spaces included.
+      mention.insertFilePickerResult("/outside/notes.txt", picker?.type === "requestFilePicker" ? picker.requestId : "")
+    } finally {
+      restoreDocument()
+    }
+
+    expect(prevented.count).toBe(1)
+    expect(input.value).toBe("@/outside/notes.txt ")
+    expect(text.value).toBe("@/outside/notes.txt ")
+    expect(mention.mentionedPaths().has("/outside/notes.txt")).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("lets Enter send the message when a spaced query only offers the file picker", async () => {
     const posted: WebviewMessage[] = []
     const ctx = {

@@ -40,6 +40,7 @@ const PAST_CHATS_ALIASES = ["past chats", "past", "chats", "sessions", "session"
 const WORKTREE_ALIASES = ["worktrees", "branches", "search worktrees"]
 const TERMINAL_ALIASES = [TERMINAL_MENTION]
 const GIT_CHANGES_ALIASES = [GIT_CHANGES_MENTION, "git"]
+const FILE_PICKER_ALIASES = ["browse files", "browse", "file picker"]
 
 /**
  * Compare mention labels and queries on equal footing: case-insensitive, with
@@ -90,6 +91,17 @@ export const PAST_CHATS_RESULT: MentionResult = {
 }
 
 export const WORKTREES_RESULT: MentionResult = { type: "worktrees", value: "worktrees" }
+
+/**
+ * Whether the query spells out the Browse files entry instead of merely leaving
+ * it as the fallback every list ends with. A named picker is a choice the user
+ * is making, so it must survive the checks that exist to get an unmatched
+ * fallback out of the way.
+ */
+export function filePickerNamed(query: string): boolean {
+  if (!normalize(query)) return false
+  return aliased(query, FILE_PICKER_ALIASES)
+}
 
 export function getTerminalMentionResult(query: string): MentionResult[] {
   if (!aliased(query, TERMINAL_ALIASES)) return []
