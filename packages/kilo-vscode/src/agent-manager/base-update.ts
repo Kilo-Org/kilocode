@@ -42,9 +42,9 @@ export async function handleBaseUpdate(msg: BaseUpdateRequest, ctx: ProjectConte
       const selected = msg.sessionId ? state.getSession(msg.sessionId) : undefined
       if (msg.sessionId && selected?.worktreeId !== worktree.id)
         throw new Error("The target session changed worktrees.")
-      const busy = Object.entries(statuses.data)
-        .filter(([, status]) => status.type !== "idle")
-        .map(([id]) => id)
+      const busy = sessions
+        .filter((session) => (statuses.data[session.id]?.type ?? "idle") !== "idle")
+        .map((session) => session.id)
       const id = selected?.id ?? sessions.find((session) => busy.includes(session.id))?.id ?? sessions.at(0)?.id
       if (busy.some((item) => item !== id))
         throw new Error("Another session in this worktree is busy. Wait for it to finish.")

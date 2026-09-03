@@ -129,6 +129,7 @@ it("sends one prompt to the owning worktree, queues on its busy session, and lea
   const api = backend()
   ctx.stateManager().addSession("ses_target", wt.id)
   api.statuses.ses_target = { type: "busy" }
+  api.statuses.ses_child = { type: "busy" }
   const head = command(wt.path, "rev-parse", "HEAD")
   await Bun.write(join(wt.path, "draft.txt"), "uncommitted work")
   const status = command(wt.path, "status", "--porcelain")
@@ -185,6 +186,7 @@ it("keeps the requested worktree when a different worktree is selected", async (
   state.addSession("ses_target", wt.id)
   state.setActiveTarget({ kind: "worktree", projectId: ctx.id, worktreeId: other.id })
   const api = backend()
+  api.statuses.ses_other = { type: "busy" }
   await handleBaseUpdate(api.request, ctx, api.host)
   expect(api.errors).toEqual([])
   expect(api.requests.every((item) => item.directory === wt.path)).toBe(true)
@@ -207,8 +209,9 @@ it("rejects wrong ownership, competing sessions, and pending permissions", async
   ctx.stateManager().addSession("ses_target", wt.id)
   await handleBaseUpdate({ ...api.request, projectId: "other" }, ctx, api.host)
   await handleBaseUpdate({ ...api.request, sessionId: "ses_local" }, ctx, api.host)
+  ctx.stateManager().addSession("ses_other", wt.id)
   api.statuses.ses_other = { type: "busy" }
-  await handleBaseUpdate(api.request, ctx, api.host)
+  await handleBaseUpdate({ ...api.request, sessionId: "ses_target" }, ctx, api.host)
   delete api.statuses.ses_other
   api.permissions.push({ id: "perm", sessionID: "ses_target" })
   await handleBaseUpdate(api.request, ctx, api.host)
