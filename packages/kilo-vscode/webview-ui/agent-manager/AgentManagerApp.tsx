@@ -1530,7 +1530,7 @@ const AgentManagerContent: Component = () => {
         // Only send a message if there's text — otherwise just clear busy state
         const init = initialMessage(ev)
         if (init) {
-          vscode.postMessage(init)
+          session.submit(init)
         }
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
