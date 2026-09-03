@@ -55,6 +55,14 @@ See [Authentication](/docs/getting-started/setup-authentication), [AI Providers]
 
 Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
 
+### Update from the base branch
+
+In a managed worktree's chat, type `/update-from-base` and select the action to ask its agent to fetch and merge the saved base branch. The worktree's right-click menu and **Agent Manager: Update from base** in the Command Palette run the same action.
+
+The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
+
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing, discarding uncommitted work, and pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
+
 ### Worktree Location
 
 Managed worktrees are created under `.kilo/worktrees/` in your project. Kilo also stores Agent Manager UI state in `.kilo/agent-manager.json`.

@@ -88,6 +88,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "Düşüncələr toplanır",
   "ui.sessionTurn.status.consideringNextSteps": "Növbəti addımlar nəzərdən keçirilir",
   "ui.messagePart.diagnostic.error": "Xəta",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Agent mesajlarını oxu",
+  "ui.messagePart.board.all": "Bütün agentlər",
+  "ui.messagePart.board.primary": "Əsas agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "Göndərən: {{from}}, alıcı: {{to}}",
+  "ui.messagePart.board.empty": "Agent mesajı yoxdur",
+  "ui.messagePart.board.stored": "Yalnız saxlanılıb. Çatdırılması və oxunması təsdiqlənməyib.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Redaktə",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Öz cavabınızı yazın",

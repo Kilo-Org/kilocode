@@ -23,7 +23,7 @@ export function activity(input: ActivityInput): Activity {
 export function activities(input: {
   parents: ReadonlyMap<string, string>
   statuses: Record<string, { type: Status }>
-  outcomes: Record<string, { reason: string } | undefined>
+  outcomes: Record<string, { reason: string; seen?: boolean } | undefined>
   blocked: Iterable<string>
   submitting?: Iterable<string>
   disconnected: boolean
@@ -41,7 +41,7 @@ export function activities(input: {
       blocked: blocked.has(id),
       disconnected: input.disconnected,
       errored: close === "error",
-      finished: close === "completed",
+      finished: close === "completed" && !input.outcomes[id]?.seen,
     })
     result[id] = strongest([result[id] ?? "idle", own])
     if (active === "idle") continue

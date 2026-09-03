@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
   "agentManager.notGitRepo": "Nije git repozitorij",
+
+  "agentManager.updateBase.title": "Ažuriraj iz baze",
+  "agentManager.updateBase.selectWorktree": "Prvo odaberite worktree kojim upravlja Agent Manager.",
+
   "agentManager.worktree.settings": "Postavke Worktree-a",
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",

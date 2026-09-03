@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
 
+  "agentManager.updateBase.title": "به‌روزرسانی از پایه",
+  "agentManager.updateBase.selectWorktree": "ابتدا یک worktree تحت مدیریت انتخاب کنید.",
+
   "agentManager.worktree.settings": "تنظیمات Worktree",
   "agentManager.worktree.new": "Worktree جدید",
   "agentManager.worktree.setupScript": "اسکریپت راه‌اندازی Worktree",

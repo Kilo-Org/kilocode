@@ -17,7 +17,7 @@ import {
   batch,
   untrack,
 } from "solid-js"
-import type { ParentComponent } from "solid-js"
+import type { Accessor, ParentComponent } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
 import { useServer } from "./server"
@@ -124,6 +124,8 @@ interface SessionStore {
 interface CloseState {
   reason: SessionCloseReason
   parentID?: string
+  eventID?: string
+  seen?: boolean
 }
 
 export const SessionContext = createContext<SessionContextValue>()
@@ -767,13 +769,19 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
+    if (message.eventID && closeMap[message.sessionID]?.eventID === message.eventID) return
     if (message.reason === "completed" && closeMap[message.sessionID]?.reason === "error") return
     const ids = recoveries.get(message.sessionID)
     if (message.reason === "completed" && ids) {
       setStore("messages", message.sessionID, (msgs = []) => msgs.filter((msg) => !ids.has(msg.id)))
     }
     recoveries.delete(message.sessionID)
-    setCloseMap(message.sessionID, { reason: message.reason, parentID: message.parentID })
+    setCloseMap(message.sessionID, {
+      reason: message.reason,
+      parentID: message.parentID,
+      eventID: message.eventID,
+      seen: false,
+    })
   }
 
   function failed(id: string, message: Message) {
@@ -1018,12 +1026,17 @@ export const SessionProvider: ParentComponent = (props) => {
   // Handle messages from extension
   onMount(() => {
     const unsubscribeProject = vscode.onMessage(trackAgentProject)
+    const unsubscribeAck = vscode.onMessage((message) => {
+      if (message.type !== "sessionAcknowledged") return
+      if (closeMap[message.sessionID]?.eventID === message.eventID) setCloseMap(message.sessionID, "seen", true)
+    })
     const unsubscribe = vscode.onMessage((message) => {
       if (!isStaleAgentSession(message, agentProjectId())) handleExtensionMessage(message)
     })
     setModelUsageReady(true)
     onCleanup(() => {
       unsubscribeProject()
+      unsubscribeAck()
       unsubscribe()
     })
   })
@@ -1769,6 +1782,12 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   })
   const activityFor = (id: string | undefined): Activity => (id ? (activityMap[id] ?? "idle") : "idle")
+  const acknowledge = (id: string) => {
+    const outcome = closeMap[id]
+    if (activityFor(id) !== "done" || !outcome?.eventID) return
+    setCloseMap(id, "seen", true)
+    vscode.postMessage({ type: "acknowledgeSession", sessionID: id, eventID: outcome.eventID })
+  }
   const inUseFor = (id: string) => inUse(sessionFamily(id), statusMap, [...permissions(), ...questions()])
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
@@ -2878,6 +2897,7 @@ export const SessionProvider: ParentComponent = (props) => {
     allParts,
     allStatusMap,
     activityFor,
+    acknowledge,
     inUseFor,
     recentModels: () => store.recentModels,
     modelUsageHistory: () => store.modelUsageHistory,
@@ -2923,6 +2943,17 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>
+}
+
+export function useSessionVisibility(visible: Accessor<string | null | undefined>) {
+  const session = useSession()
+  const vscode = useVSCode()
+  const current = createMemo(() => (vscode.active() ? visible() : undefined))
+  createEffect(
+    on(current, (id) => {
+      if (id) session.acknowledge(id)
+    }),
+  )
 }
 
 export function useSession(): SessionContextValue {

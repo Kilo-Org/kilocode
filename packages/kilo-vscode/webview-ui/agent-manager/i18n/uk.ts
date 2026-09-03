@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
+  "agentManager.updateBase.title": "Оновити з базової гілки",
+  "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
+
   "agentManager.worktree.settings": "Налаштування робочого дерева",
   "agentManager.worktree.new": "Нове робоче дерево",
   "agentManager.worktree.setupScript": "Скрипт налаштування робочого дерева",
