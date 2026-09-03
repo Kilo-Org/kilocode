@@ -33,4 +33,26 @@ describe("nextSelectionAfterDelete", () => {
   it("handles two-item list deleting second", () => {
     expect(nextSelectionAfterDelete("b", ["a", "b"])).toBe("a")
   })
+
+  it("skips an empty neighbor to select a worktree with a session", () => {
+    expect(nextSelectionAfterDelete("a", ["a", "empty", "c"], (id) => id === "c")).toBe("c")
+  })
+
+  it("selects the nearest available worktree above instead of a farther one below", () => {
+    expect(nextSelectionAfterDelete("b", ["a", "b", "empty", "d"], (id) => id !== "empty")).toBe("a")
+  })
+
+  it("prefers the worktree below when available neighbors are equally distant", () => {
+    expect(nextSelectionAfterDelete("c", ["a", "empty-b", "c", "empty-d", "e"], (id) => !id.startsWith("empty"))).toBe(
+      "e",
+    )
+  })
+
+  it("does not wrap to the last worktree when skipping unavailable neighbors", () => {
+    expect(nextSelectionAfterDelete("a", ["a", "empty", "c", "d"], (id) => id !== "empty")).toBe("c")
+  })
+
+  it("falls back to LOCAL when no remaining worktree is available", () => {
+    expect(nextSelectionAfterDelete("a", ["a", "empty", "deleting", "stale"], (id) => id === "a")).toBe(LOCAL)
+  })
 })
