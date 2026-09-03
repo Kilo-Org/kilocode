@@ -21,7 +21,9 @@ import {
   PAST_CHATS_RESULT,
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
+  WORKTREES_RESULT,
 } from "../../webview-ui/src/hooks/file-mention-utils"
+import type { MentionResult } from "../../webview-ui/src/hooks/file-mention-utils"
 import { TERMINAL_MENTION } from "../../webview-ui/src/hooks/terminal-context-utils"
 import { GIT_CHANGES_MENTION } from "../../webview-ui/src/hooks/git-changes-context-utils"
 
@@ -125,6 +127,28 @@ describe("buildMentionResults", () => {
       FILE_PICKER_RESULT,
     ])
   })
+
+  it.each([
+    ["past chats", PAST_CHATS_RESULT],
+    ["past ch", PAST_CHATS_RESULT],
+    ["git changes", GIT_CHANGES_RESULT],
+    ["git ch", GIT_CHANGES_RESULT],
+  ])("finds the %s entry from a spaced query", (query, expected) => {
+    expect(buildMentionResults(query as string, [])).toContainEqual(expected)
+  })
+
+  it("finds worktree references from a spaced query", () => {
+    const result = buildMentionResults("search work", [], true, true)
+    expect(result).toContainEqual(WORKTREES_RESULT)
+  })
+
+  it("ranks matching past chats between the special entries and the files", () => {
+    const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+    const result = buildMentionResults("fix auth", ["src/auth.ts"], true, false, [
+      { type: "session", value: "Fix auth bug", session },
+    ])
+    expect(result.map((item) => item.type)).toEqual(["session", "file", "file-picker"])
+  })
 })
 
 describe("filterMentionResults", () => {
@@ -140,6 +164,19 @@ describe("filterMentionResults", () => {
   it("always preserves file picker result regardless of query", () => {
     const result = filterMentionResults("zz", [FILE_PICKER_RESULT])
     expect(result).toEqual([FILE_PICKER_RESULT])
+  })
+
+  it("keeps the special entries for spaced queries that spell their labels", () => {
+    const items = [TERMINAL_RESULT, GIT_CHANGES_RESULT, PAST_CHATS_RESULT, WORKTREES_RESULT]
+    expect(filterMentionResults("git changes", items)).toEqual([GIT_CHANGES_RESULT])
+    expect(filterMentionResults("past chats", items)).toEqual([PAST_CHATS_RESULT])
+  })
+
+  it("matches past chats by title, ignoring separator differences", () => {
+    const session = { id: "ses_a", title: "Fix auth bug", updated: 1 }
+    const items: MentionResult[] = [{ type: "session", value: "Fix auth bug", session }]
+    expect(filterMentionResults("auth bug", items)).toEqual(items)
+    expect(filterMentionResults("nothing", items)).toEqual([])
   })
 })
 
@@ -639,6 +676,15 @@ describe("session mentions", () => {
 
     it("hides the picker for unrelated queries", () => {
       expect(getPastChatsMentionResult("index")).toEqual([])
+    })
+
+    it("offers the picker for its spaced label", () => {
+      expect(getPastChatsMentionResult("past chats")).toEqual([PAST_CHATS_RESULT])
+      expect(getPastChatsMentionResult("Past Ch")).toEqual([PAST_CHATS_RESULT])
+    })
+
+    it("still hides the picker once a spaced query stops matching", () => {
+      expect(getPastChatsMentionResult("past chats and more")).toEqual([])
     })
   })
 

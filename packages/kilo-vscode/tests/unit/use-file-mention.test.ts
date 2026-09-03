@@ -288,6 +288,76 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("finds past chats by title in the main list and inserts the picked one", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@fix", 4)
+    const search = posted.find((message) => message.type === "requestSessionSearch")
+    expect(search).toBeDefined()
+
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: search?.type === "requestSessionSearch" ? search.requestId : "",
+        sessions: [
+          { id: "ses_a", title: "Fix auth bug", updated: 2 },
+          { id: "ses_b", title: "Rotate signing keys", updated: 1 },
+        ],
+      })
+    }
+
+    // The chat is offered inline, without opening the dedicated picker first.
+    expect(mention.sessionPicker()).toBe(false)
+    const inline = mention.mentionResults().find((item) => item.type === "session")
+    expect(inline).toMatchObject({ type: "session", value: "Fix auth bug" })
+
+    const input = editor("@fix")
+    mockDocument(input)
+    try {
+      mention.selectMention(inline!, input, () => {})
+    } finally {
+      restoreDocument()
+    }
+
+    expect(input.value).toBe("@Fix auth bug ")
+    expect(mention.mentionedSessions().get("Fix auth bug")?.id).toBe("ses_a")
+
+    dispose.fn?.()
+  })
+
+  it("keeps offering the past chats entry for its spaced label", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@past chats", 11)
+
+    expect(mention.mentionResults().some((item) => item.type === "past-chats")).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("keeps searching a spaced path that starts like an earlier mention", () => {
     const posted: WebviewMessage[] = []
     const ctx = {

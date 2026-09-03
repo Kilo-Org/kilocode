@@ -41,6 +41,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
@@ -173,6 +174,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <Icon name="history" class="file-mention-icon" />
         <span class="file-mention-name">{item.label}</span>
         <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
       </>
     )
   if (item.type === "file-picker")

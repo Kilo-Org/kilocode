@@ -36,8 +36,30 @@ export type MentionResult =
   | { type: "worktrees"; value: "worktrees" }
 
 export const PAST_CHATS_MENTION = "past-chats"
-const PAST_CHATS_ALIASES = ["past", "chats", "sessions", "session", "history"]
-const WORKTREE_ALIASES = ["worktrees", "branches"]
+const PAST_CHATS_ALIASES = ["past chats", "past", "chats", "sessions", "session", "history"]
+const WORKTREE_ALIASES = ["worktrees", "branches", "search worktrees"]
+const TERMINAL_ALIASES = [TERMINAL_MENTION]
+const GIT_CHANGES_ALIASES = [GIT_CHANGES_MENTION, "git"]
+
+/**
+ * Compare mention labels and queries on equal footing: case-insensitive, with
+ * hyphens and runs of whitespace treated as a single separator. A query may now
+ * contain spaces, so the way a user types a label (`git changes`) must match the
+ * token it stands for (`git-changes`).
+ */
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[\s-]+/g, " ")
+    .trim()
+}
+
+/** Whether an in-progress query is still typing out one of these labels. */
+function aliased(query: string, aliases: string[]): boolean {
+  const value = normalize(query)
+  if (!value) return true
+  return aliases.some((alias) => normalize(alias).startsWith(value))
+}
 
 export const TERMINAL_RESULT: MentionResult = {
   type: "terminal",
@@ -67,34 +89,36 @@ export const PAST_CHATS_RESULT: MentionResult = {
   description: "Search previous sessions",
 }
 
+export const WORKTREES_RESULT: MentionResult = { type: "worktrees", value: "worktrees" }
+
 export function getTerminalMentionResult(query: string): MentionResult[] {
-  const normalized = query.toLowerCase()
-  if (!TERMINAL_MENTION.startsWith(normalized)) return []
+  if (!aliased(query, TERMINAL_ALIASES)) return []
   return [TERMINAL_RESULT]
 }
 
 export function getGitChangesMentionResult(query: string): MentionResult[] {
-  const normalized = query.toLowerCase()
-  if (normalized && !GIT_CHANGES_MENTION.startsWith(normalized) && !"git".startsWith(normalized)) return []
+  if (!aliased(query, GIT_CHANGES_ALIASES)) return []
   return [GIT_CHANGES_RESULT]
 }
 
 export function getPastChatsMentionResult(query: string): MentionResult[] {
-  const normalized = query.toLowerCase()
-  if (normalized && !PAST_CHATS_ALIASES.some((alias) => alias.startsWith(normalized))) return []
+  if (!aliased(query, PAST_CHATS_ALIASES)) return []
   return [PAST_CHATS_RESULT]
 }
 
+/**
+ * Everything the `@` menu can offer for a query: the special entries, worktree
+ * references, matching past chats, then files. `sessions` is already filtered
+ * and ranked by the caller, which owns the directory-scoped session list.
+ */
 export function buildMentionResults(
   query: string,
   items: Array<FileSearchItem | string>,
   git = true,
   worktrees = false,
+  sessions: MentionResult[] = [],
 ): MentionResult[] {
-  const references: MentionResult[] =
-    worktrees && WORKTREE_ALIASES.some((alias) => alias.startsWith(query.toLowerCase()))
-      ? [{ type: "worktrees", value: "worktrees" }]
-      : []
+  const references: MentionResult[] = worktrees && aliased(query, WORKTREE_ALIASES) ? [WORKTREES_RESULT] : []
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
@@ -105,7 +129,8 @@ export function buildMentionResults(
     ...getTerminalMentionResult(query),
     ...(git ? getGitChangesMentionResult(query) : []),
     ...getPastChatsMentionResult(query),
-    ...filterMentionResults(query, references),
+    ...references,
+    ...sessions,
     ...results,
     FILE_PICKER_RESULT,
   ]
@@ -175,11 +200,12 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
   const value = query.toLowerCase()
   if (!value) return items
   return items.filter((item) => {
-    if (item.type === "terminal") return TERMINAL_MENTION.startsWith(value)
-    if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
-    if (item.type === "past-chats") return PAST_CHATS_ALIASES.some((alias) => alias.startsWith(value))
+    if (item.type === "terminal") return aliased(query, TERMINAL_ALIASES)
+    if (item.type === "git-changes") return aliased(query, GIT_CHANGES_ALIASES)
+    if (item.type === "past-chats") return aliased(query, PAST_CHATS_ALIASES)
     if (item.type === "file-picker") return true
-    if (item.type === "worktrees") return WORKTREE_ALIASES.some((alias) => alias.startsWith(value))
+    if (item.type === "worktrees") return aliased(query, WORKTREE_ALIASES)
+    if (item.type === "session") return normalize(item.value).includes(normalize(query))
     return item.value.toLowerCase().includes(value)
   })
 }
