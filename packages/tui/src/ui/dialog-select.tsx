@@ -2,7 +2,6 @@ import {
   InputRenderable,
   RGBA,
   ScrollBoxRenderable,
-  TextareaRenderable, // kilocode_change - dialog filter keeps home/end text movement
   TextAttributes,
   type KeyEvent,
   type Renderable,
@@ -425,26 +424,9 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             move(10)
           },
         },
-        {
-          name: "dialog.select.home",
-          title: "First item",
-          category: "Dialog",
-          run() {
-            if (props.locked) return
-            setStore("input", "keyboard")
-            moveTo(0)
-          },
-        },
-        {
-          name: "dialog.select.end",
-          title: "Last item",
-          category: "Dialog",
-          run() {
-            if (props.locked) return
-            setStore("input", "keyboard")
-            moveTo(flat().length - 1)
-          },
-        },
+        // kilocode_change start - dialog.select.home/end live in the gated
+        // layer below so they do not shadow text editing in the filter input
+        // kilocode_change end
         {
           name: "dialog.select.submit",
           title: "Select item",
@@ -504,11 +486,36 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
     }
   })
 
-  // kilocode_change start - keep home/end text movement while editing the dialog
-  // filter; they only jump the list when no editable input is focused.
+  // kilocode_change start - keep home/end text movement while the dialog filter
+  // holds text; they only jump the list while it is empty or not focused.
   useBindings(() => ({
-    enabled: () => !(renderer.currentFocusedEditor instanceof TextareaRenderable),
-    bindings: tuiConfig.keybinds.gather("dialog.select", ["dialog.select.home", "dialog.select.end"]),
+    enabled: () => {
+      const editor = renderer.currentFocusedEditor
+      return editor !== input || store.filter.length === 0
+    },
+    commands: [
+      {
+        name: "dialog.select.home",
+        title: "First item",
+        category: "Dialog",
+        run() {
+          if (props.locked) return
+          setStore("input", "keyboard")
+          moveTo(0)
+        },
+      },
+      {
+        name: "dialog.select.end",
+        title: "Last item",
+        category: "Dialog",
+        run() {
+          if (props.locked) return
+          setStore("input", "keyboard")
+          moveTo(flat().length - 1)
+        },
+      },
+    ],
+    bindings: tuiConfig.keybinds.gather("dialog.select.jump", ["dialog.select.home", "dialog.select.end"]),
   }))
   // kilocode_change end
 
