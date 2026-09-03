@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.ConflictDotIcon
 import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
@@ -10,6 +11,8 @@ import ai.kilocode.client.ui.checksOpenTooltip
 import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.commentsLabel
 import ai.kilocode.client.ui.commentsOpenTooltip
+import ai.kilocode.client.ui.conflicted
+import ai.kilocode.client.ui.mergeLabel
 import ai.kilocode.client.ui.openTooltip
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -28,9 +31,10 @@ import javax.swing.JComponent
 
 /**
  * Everything known about one worktree's pull request, for the row hover popup, one thing per line: state,
- * verdict glyphs and title, then the full changes summary under a rule, then a line each for the unresolved
- * review conversations, the review verdict, and the CI verdict — whose row glyphs have no room to say more
- * than their color and their count. Same order as the glyph strip above them.
+ * verdict glyphs and title, then the full changes summary under a rule, then a line each for the merge
+ * verdict, the unresolved review conversations, the review verdict, and the CI verdict — whose row marks have
+ * no room to say more than their color and their count. Same order as the glyph strip above them, after the
+ * merge verdict, which is marked on the changes badge rather than in that strip.
  *
  * Only a row that has a pull request gets one, which is why [update] takes a non-null one: without that
  * chrome the popup is a restatement of the counts already on the row.
@@ -48,6 +52,7 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
     onLocal: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
     private val header = PrHeaderView(mode = ChangesPanel.Mode.FULL, onLocal = onLocal, stacked = true, openDiff = openDiff)
+    private val merge = Line()
     private val comments = Line()
     private val review = Line()
     private val checks = Line()
@@ -57,6 +62,10 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
         addToCenter(
             Stack.vertical(UiStyle.Gap.sm())
                 .next(header)
+                // The merge verdict leads the lines: it is the one that is about the changes summary directly
+                // above it, and it outranks the rest — a review approving a diff that will not merge is not
+                // the next thing anybody acts on.
+                .next(merge.slot)
                 .next(comments.slot)
                 .next(review.slot)
                 .next(checks.slot),
@@ -80,6 +89,12 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
         )
         // Each line already states its verdict, so the tooltips carry only the click hint. Repeating
         // "19 checks passed" over a line that reads "19 checks passed" tells the user nothing.
+        //
+        // The merge line is marked with the same red dot the changes badge is marked with, and carries the
+        // same sentence the badge's tooltip leads with, so the mark above and the words below match. Blank
+        // text when the branches merge, which is what hides the line.
+        val conflict = if (conflicted(pull)) mergeLabel(stats?.base.orEmpty()) else ""
+        merge.update(ConflictDotIcon, conflict, pull.url, openTooltip())
         comments.update(PrIcons.comments(pull.comments), commentsLabel(pull.comments), pull.url, commentsOpenTooltip())
         review.update(PrIcons.review(pull.review), reviewLabel(pull.review), pull.url, openTooltip())
         // The checks tab rather than the conversation: someone reading a failure count wants the log.

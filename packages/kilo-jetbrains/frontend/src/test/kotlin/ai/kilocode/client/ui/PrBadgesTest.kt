@@ -2,12 +2,15 @@ package ai.kilocode.client.ui
 
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * What a branch status keeps when GitHub refuses to refresh it. A refusal for a spent token budget is
@@ -68,5 +71,29 @@ class PrBadgesTest {
 
         assertSame(next, held(next, null))
         assertNull(held(next, BranchStatusDto(branch = "feature/x", availability = GhAvailability.OK)).pr)
+    }
+
+    @Test
+    fun `a conflict is reported while the pull request is still open`() {
+        for (state in listOf(GhState.OPEN, GhState.DRAFT)) {
+            assertTrue(conflicted(pr.copy(state = state, merge = GhMerge.CONFLICTING)), "for: $state")
+        }
+    }
+
+    @Test
+    fun `a conflict on a finished pull request is not reported`() {
+        // GitHub keeps answering mergeable after a merge or a close, where the answer is both stale and
+        // unactionable — nobody is going to rebase a closed branch.
+        for (state in listOf(GhState.MERGED, GhState.CLOSED)) {
+            assertFalse(conflicted(pr.copy(state = state, merge = GhMerge.CONFLICTING)), "for: $state")
+        }
+    }
+
+    @Test
+    fun `only a stated conflict is reported`() {
+        assertFalse(conflicted(null))
+        assertFalse(conflicted(pr.copy(merge = GhMerge.CLEAN)))
+        // The verdict GitHub has not finished computing, which every PR reports for a moment after a push.
+        assertFalse(conflicted(pr.copy(merge = GhMerge.UNKNOWN)))
     }
 }

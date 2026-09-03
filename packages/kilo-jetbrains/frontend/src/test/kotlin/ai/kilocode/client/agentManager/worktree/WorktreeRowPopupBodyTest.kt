@@ -4,13 +4,16 @@ import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.ConflictDotIcon
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.mergeLabel
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -86,6 +89,57 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         // The row shows a bare number beside a glyph; this is where it becomes a sentence.
         val lines = labels(body)
         assertTrue("expected the conversation counts, got $lines", lines.contains("3 of 8 review conversations unresolved"))
+    }
+
+    /**
+     * The merge verdict has no glyph in the row's strip — it is marked on the changes badge instead — so the
+     * popup is the only surface that states it in words, and it has to open the page that shows the conflict.
+     */
+    fun `test a conflicting merge gets its own clickable line under the changes`() {
+        val browser = installBrowser()
+        val body = body()
+
+        edt {
+            body.update(
+                stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, base = "origin/main"),
+                pull = pr(GhReview.APPROVED, GhChecksDto()).copy(merge = GhMerge.CONFLICTING),
+                name = "feature-x",
+                dirty = null,
+            )
+            layout(body)
+        }
+
+        val lines = labels(body)
+        assertTrue("expected the merge verdict, got $lines", lines.contains(mergeLabel("origin/main")))
+        val line = edt { hovers(body).first() }
+        // Marked with the same red dot the changes badge is marked with, so the words and the mark match.
+        val label = edt { components(line).filterIsInstance<JBLabel>().single() }
+        assertSame(ConflictDotIcon, edt { label.icon })
+        assertEquals(Cursor.HAND_CURSOR, edt { line.cursor.type })
+        assertEquals(mergeLabel("origin/main"), edt { line.accessibleContext.accessibleName })
+
+        edt { click(line) }
+
+        // The conversation page, which is where GitHub prints the conflict and offers the web editor.
+        assertEquals(listOf("https://example.test/pr/7"), browser.urls)
+        // Above the verdicts, and under the summary whose badge carries the mark.
+        edt {
+            val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
+            val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
+            assertTrue(bottom(body, changes) <= top(body, label))
+            assertTrue(bottom(body, label) <= top(body, review))
+        }
+    }
+
+    fun `test a merging branch has no merge line`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.APPROVED, GhChecksDto()).copy(merge = GhMerge.CLEAN), "feature-x", null) }
+
+        // Merging cleanly is the normal state, and a line for it would push the verdicts down to report
+        // that nothing is wrong.
+        val lines = labels(body)
+        assertTrue("expected no merge line, got $lines", lines.none { it.contains("Merge conflicts") })
     }
 
     fun `test a settled conversation drops its line`() {

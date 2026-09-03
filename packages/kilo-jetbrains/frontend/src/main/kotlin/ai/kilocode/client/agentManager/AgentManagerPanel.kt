@@ -30,6 +30,7 @@ import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.commentsCount
 import ai.kilocode.client.ui.commentsTooltip
+import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupFit
@@ -808,6 +809,7 @@ class AgentManagerPanel(
                     additions = stats?.additions ?: 0,
                     deletions = stats?.deletions ?: 0,
                     base = stats?.base.orEmpty(),
+                    conflict = conflicted(pr),
                     onChanges = { openDiff(dto) },
                     localFiles = dirty?.files ?: 0,
                     localAdditions = dirty?.additions ?: 0,

@@ -47,6 +47,8 @@ internal data class ActiveListMetrics(
     val additions: Int = 0,
     val deletions: Int = 0,
     val base: String = "",
+    /** The committed counts no longer merge into [base]. Marks the summary rather than changing it. */
+    val conflict: Boolean = false,
     val onChanges: (() -> Unit)? = null,
     val localFiles: Int = 0,
     val localAdditions: Int = 0,

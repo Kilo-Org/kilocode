@@ -31,6 +31,7 @@ import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.ui.PrIcons
+import ai.kilocode.client.ui.mergeLabel
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListBadgeCell
 import ai.kilocode.client.ui.list.ActiveListItem
@@ -49,6 +50,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.SetupScriptTargetDto
@@ -772,6 +774,36 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(2, metrics.deletions)
         assertEquals(2, metrics.files)
         assertEquals("origin/main", metrics.base)
+    }
+
+    /**
+     * A worktree whose pull request no longer merges. The mark rides the changes summary rather than joining
+     * the verdict glyphs, because what conflicts is the diff the summary is already reporting.
+     */
+    fun `test worktree row marks its changes summary when the pull request no longer merges`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, files = 2, base = "origin/main")))
+        rpc.prResult = prs(item, merge = GhMerge.CONFLICTING)
+        val panel = panelWithPr()
+        waitUntil { row(panel, 0).metrics != null }
+
+        assertTrue(row(panel, 0).metrics?.conflict == true)
+        // The row's own tooltip is where the mark says what it means: a red crescent alone cannot.
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            list.clearSelection()
+            val cell = activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+            val point = center(cell)
+            val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
+            val tip = list.getToolTipText(hover) ?: error("expected a tooltip over the changes cell")
+            assertTrue("expected the conflict named in $tip", tip.contains(mergeLabel("origin/main")))
+            assertTrue("expected the click hint kept in $tip", tip.contains(KiloBundle.message("worktree.stats.tooltip.open")))
+        }
     }
 
     fun `test worktree rows prefer base files and fall back to uncommitted ones`() {
@@ -1592,6 +1624,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         review: GhReview = GhReview.NONE,
         checks: GhChecksDto = GhChecksDto(),
         comments: GhCommentsDto = GhCommentsDto(),
+        merge: GhMerge = GhMerge.UNKNOWN,
     ) = WorktreePrListDto(
         GhAvailability.OK,
         listOf(
@@ -1604,6 +1637,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
                 review,
                 checks,
                 comments,
+                merge,
             ),
         ),
     )

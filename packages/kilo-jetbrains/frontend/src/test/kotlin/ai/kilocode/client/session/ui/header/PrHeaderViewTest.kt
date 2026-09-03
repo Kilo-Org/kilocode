@@ -1,11 +1,14 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.conflictTooltip
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.testing.installBrowser
@@ -13,6 +16,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -285,6 +289,41 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(count, edt { components(view).size })
     }
 
+    /**
+     * A header takes the pull request itself, so nothing above it has to know that a conflict marks the
+     * changes summary — and the summary and its row cannot disagree about a merge, because both read the
+     * same field of the same DTO.
+     */
+    fun `test a pull request that no longer merges marks the changes summary`() {
+        val view = edt { PrHeaderView(mode = ChangesPanel.Mode.FULL, openDiff = {}) }
+
+        edt { view.update(2, 5, 1, pull(GhState.OPEN).copy(merge = GhMerge.CONFLICTING), "feature-x", base = "origin/main") }
+
+        assertTrue(edt { stat(view).conflict })
+        // Mirrored onto the whole group, so the counts, the badge, and the marker all answer the same tip.
+        assertEquals(
+            conflictTooltip(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"), "origin/main"),
+            edt { stat(view).toolTipText },
+        )
+
+        edt { view.update(2, 5, 1, pull(GhState.OPEN).copy(merge = GhMerge.CLEAN), "feature-x", base = "origin/main") }
+
+        assertFalse(edt { stat(view).conflict })
+        assertEquals(
+            KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"),
+            edt { stat(view).toolTipText },
+        )
+    }
+
+    fun `test a conflict on a closed pull request is not marked`() {
+        val view = edt { PrHeaderView(mode = ChangesPanel.Mode.FULL, openDiff = {}) }
+
+        // GitHub keeps answering mergeable after a close, where nobody can act on the answer.
+        edt { view.update(2, 5, 1, pull(GhState.CLOSED).copy(merge = GhMerge.CONFLICTING), "feature-x", base = "origin/main") }
+
+        assertFalse(edt { stat(view).conflict })
+    }
+
     fun `test applyStyle refreshes title without rebuilding`() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 1, additions = 1, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
@@ -313,6 +352,10 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun badge(view: PrHeaderView): JBLabel =
         components(view).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
+
+    /** The badge carrying the committed counts, which is the last of the summary's two groups. */
+    @RequiresEdt
+    private fun stat(view: PrHeaderView): DiffStatBadge = components(view).filterIsInstance<DiffStatBadge>().last()
 
     /** The visible verdict labels, which are the only glyph-icon labels the header owns. */
     @RequiresEdt

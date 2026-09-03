@@ -6,9 +6,11 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 
 /**
@@ -89,6 +91,37 @@ internal fun commentsTooltip(value: GhCommentsDto): String {
 
 /** GitHub's checks tab for a pull request, which is what a CI glyph should open. */
 internal fun checksUrl(pull: WorktreePrDto): String = "${pull.url.trimEnd('/')}/checks"
+
+/**
+ * Whether [pull] no longer merges into its base branch.
+ *
+ * Only while it is still open. GitHub keeps answering `mergeable` for a merged or closed pull request, and
+ * on a closed one the answer is usually stale anyway — a conflict nobody can act on any more is not worth
+ * marking a row for. [GhMerge.UNKNOWN] is not a conflict either; see the enum for why.
+ */
+internal fun conflicted(pull: WorktreePrDto?): Boolean =
+    pull?.merge == GhMerge.CONFLICTING && (pull.state == GhState.OPEN || pull.state == GhState.DRAFT)
+
+/**
+ * Plain-text merge verdict, for a popup line and as the head of a changes tooltip. Names the branch when the
+ * base ref is known: "the base branch" is not what someone holding four worktrees needs to read.
+ */
+internal fun mergeLabel(base: String): String = when {
+    base.isBlank() -> KiloBundle.message("worktree.pr.merge.conflict")
+    else -> KiloBundle.message("worktree.pr.merge.conflict.base", base)
+}
+
+/**
+ * [tip] with the merge verdict added as its own leading line, so a changes summary carrying the conflict
+ * marker also says in words what the marker means.
+ *
+ * Leading, because it outranks what the tooltip was going to open with: a diff that no longer merges is the
+ * fact to read before its counts or its click hint.
+ */
+internal fun conflictTooltip(tip: String, base: String): String {
+    val head = XmlStringUtil.escapeString(mergeLabel(base))
+    return XmlStringUtil.wrapInHtml("$head<br>${UIUtil.getHtmlBody(tip)}")
+}
 
 /**
  * [next], but carrying [previous]'s pull request when [next] could not carry one of its own.

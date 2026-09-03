@@ -30,11 +30,15 @@ internal data class PrLookup(
 internal const val PR_FIELDS = "id,number,state,isDraft,url,title"
 
 /**
- * [PR_FIELDS] plus the review verdict and CI rollup. Both are GraphQL sub-queries rather than scalars,
- * so an older `gh` rejects the field names outright and a restricted token is refused the data. See
+ * [PR_FIELDS] plus the review verdict, the CI rollup, and mergeability. None of the three is a plain
+ * column on the pull request — two are GraphQL sub-queries and the third is computed on demand — so an
+ * older `gh` rejects the field names outright and a restricted token is refused the data. See
  * [richRefusal] for how that is detected and [PrResolver] for the fallback.
+ *
+ * Mergeability rides this list rather than [PR_FIELDS] deliberately: it costs nothing extra here, and a
+ * `gh` old enough to refuse the CI rollup should not lose the pull request itself over a conflict marker.
  */
-internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup"
+internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup,mergeable"
 
 /**
  * Review-conversation resolution flags for one pull request, addressed by node id.

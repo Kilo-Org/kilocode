@@ -16,6 +16,7 @@ import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.commentsCount
 import ai.kilocode.client.ui.commentsTooltip
+import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.prTooltip
 import ai.kilocode.client.ui.reviewTooltip
 import ai.kilocode.client.ui.stateLabel
@@ -168,7 +169,10 @@ internal class PrHeaderView @RequiresEdt constructor(
         localDeletions: Int = 0,
         base: String = "",
     ) {
-        changes.update(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+        changes.update(
+            files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base,
+            conflict = conflicted(pull),
+        )
         syncSeparator()
         applyPr(pull, name)
     }

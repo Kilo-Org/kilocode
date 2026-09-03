@@ -102,6 +102,16 @@ data class GhCommentsDto(
     val unresolved: Int = 0,
 )
 
+/**
+ * Whether a pull request still merges into its base branch, from GitHub's `mergeable`.
+ *
+ * [UNKNOWN] is what GitHub answers for the first seconds after a push, because it computes mergeability
+ * asynchronously, and also what an older `gh` or a refused field leaves behind. It therefore has to read as
+ * "nothing to report" — the absence of a verdict is never evidence that the branches merge cleanly.
+ */
+@Serializable
+enum class GhMerge { UNKNOWN, CLEAN, CONFLICTING }
+
 @Serializable
 data class WorktreePrDto(
     val path: String,
@@ -112,6 +122,8 @@ data class WorktreePrDto(
     val review: GhReview = GhReview.NONE,
     val checks: GhChecksDto = GhChecksDto(),
     val comments: GhCommentsDto = GhCommentsDto(),
+    /** Whether the head still merges into base. Answered by the same request as [checks]. */
+    val merge: GhMerge = GhMerge.UNKNOWN,
 )
 
 /**

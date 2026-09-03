@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
@@ -795,7 +796,18 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         "CLOSED" -> GhState.CLOSED
         else -> GhState.OPEN
     }
-    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj))
+    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj), merge = parseMerge(obj))
+}
+
+/**
+ * Reads GitHub's `mergeable`. Absent, unrequested, and `UNKNOWN` all mean the same thing: nobody has said
+ * the branches conflict. They must not collapse into [GhMerge.CLEAN] — GitHub recomputes mergeability after
+ * every push and answers `UNKNOWN` until it finishes, so a missing verdict is a verdict not yet given.
+ */
+internal fun parseMerge(obj: JsonObject): GhMerge = when (obj["mergeable"]?.jsonPrimitive?.contentOrNull?.uppercase()) {
+    "CONFLICTING" -> GhMerge.CONFLICTING
+    "MERGEABLE" -> GhMerge.CLEAN
+    else -> GhMerge.UNKNOWN
 }
 
 /**

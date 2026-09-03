@@ -6,6 +6,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
@@ -1062,6 +1063,27 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhReview.NONE, pull.review)
         assertEquals(GhChecks.NONE, pull.checks.state)
         assertEquals(GhChecksDto(), pull.checks)
+        assertEquals(GhMerge.UNKNOWN, pull.merge, "a merge verdict nobody gave is not a clean merge")
+    }
+
+    @Test
+    fun `parsePr carries the merge verdict gh reported`() {
+        val pull = assertNotNull(
+            parsePr("/repo", """{"number":1,"state":"OPEN","url":"https://pr/1","mergeable":"CONFLICTING"}"""),
+        )
+
+        assertEquals(GhMerge.CONFLICTING, pull.merge)
+    }
+
+    @Test
+    fun `parseMerge maps every github mergeable answer`() {
+        assertEquals(GhMerge.CONFLICTING, parseMerge(obj("""{"mergeable":"CONFLICTING"}""")))
+        assertEquals(GhMerge.CLEAN, parseMerge(obj("""{"mergeable":"MERGEABLE"}""")))
+        // GitHub recomputes mergeability after every push and answers UNKNOWN until it finishes, so an
+        // unsettled or missing verdict must not read as a clean merge.
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("""{"mergeable":"UNKNOWN"}""")))
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("""{"mergeable":null}""")))
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("{}")))
     }
 
     @Test

@@ -500,6 +500,7 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
             localAdditions = data?.localAdditions ?: 0,
             localDeletions = data?.localDeletions ?: 0,
             base = data?.base.orEmpty(),
+            conflict = data?.conflict == true,
         )
         panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
