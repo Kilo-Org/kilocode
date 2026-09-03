@@ -434,7 +434,7 @@ describe("PR signature", () => {
   }
 
   it("keeps free text and reviewer fields separate in the snapshot", () => {
-    expect(JSON.parse(signature(pr))).toMatchObject({ title: pr.title, body: pr.body, reviewers: pr.reviewers })
+    expect(signature({ ...pr, reviewers: [{ login: "alice", state: "approved" }] })).not.toBe(signature(pr))
     expect(signature({ ...pr, title: "A:B", body: "C" })).not.toBe(signature({ ...pr, title: "A", body: "B:C" }))
   })
 

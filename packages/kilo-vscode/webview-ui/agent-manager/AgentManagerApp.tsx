@@ -625,13 +625,10 @@ const AgentManagerContent: Component = () => {
     panels.toggle(SidePanel.PR)
     closeHistory()
     if (reviewActive()) closeReviewTab()
-    // Trigger an immediate refresh when opening so the panel shows fresh data
-    // rather than waiting for the next poll cycle
-    if (opening) {
-      const sel = selection()
-      if (sel && sel !== LOCAL)
-        vscode.postMessage({ type: "agentManager.refreshPR", projectId: activeProjectId(), worktreeId: sel })
-    }
+    if (!opening) return
+    const sel = selection()
+    if (sel && sel !== LOCAL)
+      vscode.postMessage({ type: "agentManager.refreshPR", projectId: activeProjectId(), worktreeId: sel })
   }
   const openSelectedPR = () => {
     const sel = selection()
@@ -643,12 +640,9 @@ const AgentManagerContent: Component = () => {
     project: currentProjectId,
     active: activeProjectId,
     selection,
-    select: (target) => {
-      if (multiProject() && target.projectId) {
-        activateSelection({ projectId: target.projectId, kind: "worktree", worktreeId: target.worktreeId })
-        return
-      }
-      if (selection() !== target.worktreeId) selectWorktree(target.worktreeId)
+    select: ({ projectId, worktreeId }) => {
+      if (multiProject() && projectId) return activateSelection({ projectId, kind: "worktree", worktreeId })
+      if (selection() !== worktreeId) selectWorktree(worktreeId)
     },
     visible: () => panels.selected() === SidePanel.PR && !history() && !reviewActive(),
     open: () => {
@@ -656,12 +650,8 @@ const AgentManagerContent: Component = () => {
       if (reviewActive()) closeReviewTab()
       panels.open(SidePanel.PR)
     },
-    refresh: (target) =>
-      vscode.postMessage({
-        type: "agentManager.refreshPR",
-        projectId: target.projectId,
-        worktreeId: target.worktreeId,
-      }),
+    refresh: ({ projectId, worktreeId }) =>
+      vscode.postMessage({ type: "agentManager.refreshPR", projectId, worktreeId }),
   })
 
   const runWorktree = (id: string, destination: TerminalDestination) => {

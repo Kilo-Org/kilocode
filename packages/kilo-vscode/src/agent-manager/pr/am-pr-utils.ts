@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { serialize } from "../../util/serialize"
 import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
@@ -183,25 +184,17 @@ export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRSta
 }
 
 export function signature(pr: PRStatus): string {
-  return JSON.stringify({
-    url: pr.url,
-    number: pr.number,
-    title: pr.title,
-    state: pr.state,
-    review: pr.review,
-    checks: {
-      status: pr.checks.status,
-      passed: pr.checks.passed,
-      total: pr.checks.total,
-    },
-    reviewers: pr.reviewers.map((r) => ({ login: r.login, state: r.state })),
-    body: pr.body ?? "",
-    comments: {
-      total: pr.comments?.total ?? null,
-      unresolved: pr.unresolvedThreads ?? null,
-      signature: commentsSig(pr.comments?.comments),
-    },
-  })
+  return serialize([
+    pr.url,
+    pr.number,
+    pr.title,
+    pr.state,
+    pr.review,
+    [pr.checks.status, pr.checks.passed, pr.checks.total],
+    pr.reviewers.map((r) => [r.login, r.state]),
+    pr.body ?? "",
+    [pr.comments?.total ?? null, pr.unresolvedThreads ?? null, commentsSig(pr.comments?.comments)],
+  ])
 }
 
 /**
