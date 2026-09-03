@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
+  "agentManager.updateBase.title": "Temel daldan güncelle",
+  "agentManager.updateBase.selectWorktree": "Önce yönetilen bir worktree seçin.",
+
   "agentManager.worktree.settings": "Worktree ayarları",
   "agentManager.worktree.new": "Yeni Worktree",
   "agentManager.worktree.setupScript": "Worktree Kurulum Betiği",

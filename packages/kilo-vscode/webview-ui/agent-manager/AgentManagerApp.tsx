@@ -74,6 +74,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { useBaseUpdate } from "./update-from-base"
 import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
@@ -239,6 +240,13 @@ const AgentManagerContent: Component = () => {
   const session = useSession()
   const vscode = useVSCode()
   const dialog = useDialog()
+  const updateBase = useBaseUpdate()
+  const update = () =>
+    updateBase(
+      selection(),
+      activeProjectId(),
+      managedSessions().find((item) => item.worktreeId === selection() && item.id === session.currentSessionID())?.id,
+    )
   const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
@@ -1214,6 +1222,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
       else if (msg.action === "quickWorktree") handleCreateWorktree()
       else if (msg.action === "openWorktree") openWorktreeDirectory()
+      else if (msg.action === "updateFromBase") update()
       else if (msg.action === "openPR") openSelectedPR()
       else if (msg.action === "runScript") runSelected()
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
@@ -2540,6 +2549,7 @@ const AgentManagerContent: Component = () => {
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     worktree={worktrees().some((wt) => wt.id === selection())}
+                    onUpdateBase={update}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                     terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}

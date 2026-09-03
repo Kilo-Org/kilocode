@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
+
+  "agentManager.updateBase.title": "베이스에서 업데이트",
+  "agentManager.updateBase.selectWorktree": "먼저 관리 중인 worktree를 선택하세요.",
+
   "agentManager.worktree.settings": "Worktree 설정",
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
