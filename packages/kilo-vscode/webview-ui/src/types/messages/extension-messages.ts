@@ -759,6 +759,11 @@ export interface NotificationSettingsLoadedMessage {
   }
 }
 
+export interface PlayNotificationSoundMessage {
+  type: "playNotificationSound"
+  uri: string
+}
+
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
@@ -1579,6 +1584,7 @@ export type ExtensionMessage =
   | ConfigBindingExpiredMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
+  | PlayNotificationSoundMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
