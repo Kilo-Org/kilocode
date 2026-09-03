@@ -273,9 +273,12 @@ internal class ActiveListRenderer(
         // Bold carries most rows by default: the description under it and the icon beside it both
         // render in the muted secondary color, so cfg.title separates the two lines when enabled.
         val style = if (cfg.title == ActiveListWeight.BOLD) SimpleTextAttributes.STYLE_BOLD else SimpleTextAttributes.STYLE_PLAIN
-        title.append(value.title, SimpleTextAttributes(style, titleFg))
+        // Clipped with an ellipsis rather than cut mid-glyph. A squeezed row already sacrifices title text
+        // to keep its badges, and a title that stops mid-word reads as the name of the thing rather than a
+        // truncation of it — the description line under it has always ellipsed, being a JBLabel.
+        title.appendWithClipping(value.title, SimpleTextAttributes(style, titleFg), CLIPPER)
         value.note?.takeIf { it.isNotBlank() }?.let {
-            title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+            title.appendWithClipping("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES, CLIPPER)
         }
         // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
         // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
@@ -445,6 +448,18 @@ internal class ActiveListRenderer(
         for (i in visible.indices) {
             (cells.getComponent(i) as ActiveListActionCell).update(visible[i])
         }
+    }
+
+    private companion object {
+        /**
+         * The platform's ellipsis clipper, applied to every title fragment.
+         *
+         * [SimpleColoredComponent] hard-clips by default, unlike the [JBLabel] carrying the description
+         * line, so a squeezed title stopped mid-glyph while the line under it ellipsed. Only the fragment
+         * that runs out of room can ellipse — a later one starts past the component edge and is not painted
+         * — which is the same text a hard clip dropped anyway.
+         */
+        val CLIPPER = SimpleColoredComponent.DefaultFragmentTextClipper.INSTANCE
     }
 }
 
