@@ -1,7 +1,5 @@
 package ai.kilocode.backend.app
 
-import ai.kilocode.backend.app.KiloAppState
-import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.CliDownload
 import ai.kilocode.backend.rpc.appStateDto
@@ -39,6 +37,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertContains
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class KiloBackendAppServiceTest {
 
@@ -57,7 +57,7 @@ class KiloBackendAppServiceTest {
 
     private suspend fun ready(svc: KiloBackendAppService): KiloAppState.Ready {
         val state = assertNotNull(
-            withTimeoutOrNull(35_000) {
+            withTimeoutOrNull(35.seconds) {
                 svc.appState.first {
                     it is KiloAppState.Ready || it is KiloAppState.Error || it is KiloAppState.MigrationRequired
                 }
@@ -133,7 +133,7 @@ class KiloBackendAppServiceTest {
         val svc = KiloBackendAppService.create(scope, server, log)
         val job = scope.launch { svc.connect() }
 
-        val downloading = withTimeout(5_000) {
+        val downloading = withTimeout(5.seconds) {
             svc.appState.first { it is KiloAppState.Downloading }
         }
         assertEquals(KiloAppState.Downloading(37, "1.2.3", "darwin-arm64"), downloading)
@@ -143,7 +143,7 @@ class KiloBackendAppServiceTest {
         assertEquals("darwin-arm64", dto.downloadPlatform)
 
         resolved.complete(Unit)
-        withTimeout(5_000) {
+        withTimeout(5.seconds) {
             svc.appState.first { it == KiloAppState.Connecting }
         }
 
@@ -315,7 +315,7 @@ class KiloBackendAppServiceTest {
         ready(svc)
 
         assertNull(svc.config?.model)
-        assertTrue(svc.config?.mcp?.isEmpty() == true)
+        assertEquals(true, svc.config?.mcp?.isEmpty())
     }
 
     @Test
@@ -346,9 +346,9 @@ class KiloBackendAppServiceTest {
         mock.warnings = "[]"
         svc.retry()
 
-        withTimeout(5_000) {
+        withTimeout(5.seconds) {
             while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
-                delay(100)
+                delay(100.milliseconds)
             }
         }
 
@@ -368,9 +368,9 @@ class KiloBackendAppServiceTest {
         val before = mock.requestCount("/global/config")
         svc.retry()
 
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             while (mock.requestCount("/global/config") <= before) {
-                delay(100)
+                delay(100.milliseconds)
             }
         }
 
@@ -438,7 +438,7 @@ class KiloBackendAppServiceTest {
         val svc = create()
         svc.connect()
 
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             svc.appState.first { it is KiloAppState.Error }
         }
 
@@ -454,7 +454,7 @@ class KiloBackendAppServiceTest {
         val svc = create()
         svc.connect()
 
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             svc.appState.first { it is KiloAppState.Error }
         }
 
@@ -469,7 +469,7 @@ class KiloBackendAppServiceTest {
         val svc = create()
         svc.connect()
 
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             svc.appState.first { it is KiloAppState.Error }
         }
 
@@ -501,7 +501,7 @@ class KiloBackendAppServiceTest {
         val svc = KiloBackendAppService.create(scope, failing, log)
         svc.connect()
 
-        withTimeout(5_000) {
+        withTimeout(5.seconds) {
             svc.appState.first { it is KiloAppState.Error }
         }
 
@@ -533,7 +533,7 @@ class KiloBackendAppServiceTest {
         val svc = create()
         svc.connect()
 
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             svc.appState.first { it is KiloAppState.Error }
         }
 
@@ -614,7 +614,7 @@ class KiloBackendAppServiceTest {
         try {
             svc.connect()
 
-            val loading = withTimeout(10_000) {
+            val loading = withTimeout(10.seconds) {
                 svc.appState.first { it is KiloAppState.Loading }
             }
             assertIs<KiloAppState.Loading>(loading)
@@ -635,11 +635,11 @@ class KiloBackendAppServiceTest {
         try {
             svc.connect()
 
-            withTimeout(10_000) {
+            withTimeout(10.seconds) {
                 svc.appState.first { it is KiloAppState.Loading }
             }
 
-            val err = withTimeout(10_000) {
+            val err = withTimeout(10.seconds) {
                 svc.appState.first { it is KiloAppState.Error }
             } as KiloAppState.Error
 
@@ -677,7 +677,7 @@ class KiloBackendAppServiceTest {
         try {
             svc.connect()
 
-            withTimeout(10_000) {
+            withTimeout(10.seconds) {
                 svc.appState.first { it is KiloAppState.Loading }
             }
 
@@ -705,7 +705,7 @@ class KiloBackendAppServiceTest {
         try {
             svc.connect()
 
-            withTimeout(10_000) {
+            withTimeout(10.seconds) {
                 svc.appState.first { it is KiloAppState.Loading }
             }
 
@@ -741,7 +741,7 @@ class KiloBackendAppServiceTest {
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
         assertTrue(mock.awaitRequestCount("/global/config", before + 1))
-        withTimeout(5_000) {
+        withTimeout(5.seconds) {
             svc.appState.first { state ->
                 state is KiloAppState.Ready && state.data.config.model == "updated"
             }
@@ -766,7 +766,7 @@ class KiloBackendAppServiceTest {
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
         assertTrue(mock.awaitRequestCount("/config/warnings", before + 1))
-        withTimeout(5_000) {
+        withTimeout(5.seconds) {
             svc.appState.first { state ->
                 state is KiloAppState.Ready && state.data.warnings.isEmpty()
             }
@@ -823,16 +823,16 @@ class KiloBackendAppServiceTest {
         }
 
         // Wait for the app to settle back to Ready
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             // Allow transient Loading states, wait for final Ready
             while (true) {
                 val state = svc.appState.value
                 if (state is KiloAppState.Ready) {
                     // Verify it's stable
-                    delay(500)
+                    delay(500.milliseconds)
                     if (svc.appState.value is KiloAppState.Ready) break
                 }
-                delay(100)
+                delay(100.milliseconds)
             }
         }
 
@@ -955,7 +955,7 @@ class KiloBackendAppServiceTest {
         // (connection service reconnects SSE if process is alive — but
         // FakeCliServer returns no process, so it delegates to onReconnect
         // which calls reconnect() under mutex)
-        withTimeout(15_000) {
+        withTimeout(15.seconds) {
             svc.appState.first { it is KiloAppState.Ready }
         }
 
