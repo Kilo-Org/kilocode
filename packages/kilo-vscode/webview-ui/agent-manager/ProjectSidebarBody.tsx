@@ -27,7 +27,15 @@ import { WorktreeItem } from "./WorktreeItem"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
-import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import {
+  buildSidebarOrder,
+  buildTopLevelItems,
+  sortWorktrees,
+  isGroupEnd,
+  isGroupStart,
+  isGrouped,
+} from "./section-helpers"
+import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
@@ -86,7 +94,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     if (pending() === worktreeId) {
       clearTimeout(pendingTimer)
       setPending(undefined)
+      store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       post({ type: "agentManager.deleteWorktree", worktreeId })
+      selectAfterDelete(worktreeId)
       return
     }
     clearTimeout(pendingTimer)
@@ -108,6 +118,23 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
   const localState = () => props.activityFor(null)
+
+  const selectAfterDelete = (id: string) => {
+    if (!active() || props.selection !== id) return
+    const ids = new Set(store.managedSessions().map((item) => item.worktreeId))
+    const order = buildSidebarOrder(top(), sorted(), sections(), members, true)
+      .filter((item) => item.type === "wt")
+      .map((item) => item.id)
+    const next = nextSelectionAfterDelete(
+      id,
+      order,
+      (id) => ids.has(id) && !props.busy(id) && !store.staleWorktreeIds().has(id),
+    )
+    if (next === LOCAL) return props.onSelectLocal(props.project.id)
+    const section = sections().find((item) => item.id === worktrees().find((wt) => wt.id === next)?.sectionId)
+    if (section?.collapsed) post({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })
+    props.onSelectWorktree(props.project.id, next)
+  }
 
   const row = (id: string) =>
     projectWorktreeRow({
@@ -278,7 +305,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onRenameInput={setName}
           onCommitRename={() => commitRename(worktree.id)}
           onCancelRename={cancelRename}
-          onRemoveStale={() => post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })}
+          onRemoveStale={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
+            selectAfterDelete(worktree.id)
+          }}
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenPR={() => {
