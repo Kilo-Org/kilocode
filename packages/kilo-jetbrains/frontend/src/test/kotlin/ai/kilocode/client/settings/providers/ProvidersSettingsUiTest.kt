@@ -14,6 +14,7 @@ import ai.kilocode.client.ui.list.activeListCellAt
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.client.ui.list.activeListVisibleCells
+import ai.kilocode.rpc.dto.CustomModelFetchDto
 import ai.kilocode.rpc.dto.CustomModelFetchResultDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -298,6 +299,202 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertEquals("", fields[4].text)
             assertEquals("gpt-4o", fields[5].text)
             assertEquals(KiloBundle.message("settings.providers.customSave"), dialog.okText())
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog shows stored key hint only when editing`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val addDialog = edt {
+            CustomProviderDialog(cs, "/tmp", { CustomModelFetchResultDto() }, { ProviderActionResultDto(ProviderSettingsDto()) })
+        }
+        val editDialog = edt {
+            CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto() },
+                { ProviderActionResultDto(ProviderSettingsDto()) },
+                CustomProviderEdit("my-openai", "My OpenAI", "https://example.com/v1", null, listOf("gpt-4o")),
+            )
+        }
+
+        edt {
+            val hint = KiloBundle.message("settings.providers.customKeyStored")
+            assertTrue(components(center(addDialog)).filterIsInstance<JBLabel>().none { it.text == hint })
+            assertTrue(components(center(editDialog)).filterIsInstance<JBLabel>().any { it.text == hint })
+            dispose(addDialog)
+            dispose(editDialog)
+        }
+    }
+
+    fun `test custom dialog select models sends directory provider id and env var name`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val captured = mutableListOf<CustomModelFetchDto>()
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { input -> captured.add(input); CustomModelFetchResultDto(error = "boom") },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[4].text = "API_KEY"
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { captured.isNotEmpty() }
+
+        edt {
+            assertEquals(1, captured.size)
+            assertEquals("/tmp", captured[0].directory)
+            assertEquals("my-openai", captured[0].providerId)
+            assertEquals("API_KEY", captured[0].env)
+            assertNull(captured[0].apiKey)
+            assertEquals(emptyMap<String, String>(), captured[0].headers)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog select models sends typed api key`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val captured = mutableListOf<CustomModelFetchDto>()
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { input -> captured.add(input); CustomModelFetchResultDto(error = "boom") },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[3].text = "sk-test"
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { captured.isNotEmpty() }
+
+        edt {
+            assertEquals("sk-test", captured[0].apiKey)
+            assertNull(captured[0].env)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog select models forwards saved headers when editing`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val captured = mutableListOf<CustomModelFetchDto>()
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { input -> captured.add(input); CustomModelFetchResultDto(error = "boom") },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+                CustomProviderEdit(
+                    "my-openai",
+                    "My OpenAI",
+                    "https://example.com/v1",
+                    "API_KEY",
+                    listOf("gpt-4o"),
+                    headers = mapOf("X-Custom" to "abc-123"),
+                ),
+            )
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { captured.isNotEmpty() }
+
+        edt {
+            assertEquals(mapOf("X-Custom" to "abc-123"), captured[0].headers)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog select models appends env hint on unresolved env var error`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(error = "HTTP 401: unauthorized", envMissing = true) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[4].text = "API_KEY"
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { edt { validation(dialog) != null } }
+
+        edt {
+            val expected = "HTTP 401: unauthorized ${KiloBundle.message("settings.providers.customEnvMissing", "API_KEY")}"
+            assertEquals(expected, validation(dialog))
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog select models appends env hint when no models found`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(models = emptyList(), envMissing = true) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[4].text = "API_KEY"
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { edt { validation(dialog) != null } }
+
+        edt {
+            val expected = "${KiloBundle.message("settings.providers.customModelsEmpty")} " +
+                KiloBundle.message("settings.providers.customEnvMissing", "API_KEY")
+            assertEquals(expected, validation(dialog))
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog select models does not append hint when env is not missing`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(error = "boom") },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            components(center(dialog)).filterIsInstance<JButton>().first().doClick()
+            dialog
+        }
+
+        flushUntil { edt { validation(dialog) != null } }
+
+        edt {
+            assertEquals("boom", validation(dialog))
             dispose(dialog)
         }
     }

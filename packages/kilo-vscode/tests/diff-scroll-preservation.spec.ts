@@ -131,6 +131,62 @@ test("preserves scroll while adding and editing a review comment", async ({ page
   await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(saved, 0)
 })
 
+for (const modifier of ["Meta", "Control"] as const) {
+  test(`sends all review comments on the second ${modifier}+Enter before the next frame`, async ({ page }) => {
+    await openStory(page)
+    const target = await showTarget(page)
+    await alignTarget(page)
+
+    for (const text of ["First comment", "Second comment"]) {
+      await target.locator('[data-line="1"]').last().hover()
+      await target.locator("[data-utility-button]").last().click()
+      await target.locator(".am-annotation-textarea").fill(text)
+      if (text === "First comment") {
+        await target.getByRole("button", { name: "Comment", exact: true }).click()
+        await expect(target.getByText(text, { exact: true })).toBeVisible()
+      }
+    }
+
+    await page.keyboard.press("Shift+Enter")
+    await expect(target.locator(".am-annotation-textarea")).toHaveValue("Second comment\n")
+
+    const result = await page.evaluate((modifier) => {
+      const sent: Array<{ comments: Array<{ comment: string }>; autoSend: boolean }> = []
+      const listener = (event: MessageEvent) => {
+        if (event.data?.type === "appendReviewComments") sent.push(event.data)
+      }
+      window.addEventListener("message", listener)
+      const press = () =>
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Enter",
+            metaKey: modifier === "Meta",
+            ctrlKey: modifier === "Control",
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+          }),
+        )
+      press()
+      const first = sent.length
+      press()
+      const second = sent.length
+      press()
+      window.removeEventListener("message", listener)
+      return { first, second, sent }
+    }, modifier)
+
+    expect(result.first).toBe(0)
+    expect(result.second).toBe(1)
+    expect(result.sent).toHaveLength(1)
+    expect(result.sent.at(0)).toMatchObject({
+      comments: [{ comment: "First comment" }, { comment: "Second comment" }],
+      autoSend: true,
+    })
+    await expect(page.locator(".am-annotation")).toHaveCount(0)
+  })
+}
+
 test("resets virtual measurements and scroll when the review context changes", async ({ page }) => {
   const first = await openStory(page)
   const scroller = page.locator(".am-review-diff")

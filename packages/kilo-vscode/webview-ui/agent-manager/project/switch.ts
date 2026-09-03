@@ -4,9 +4,7 @@ export function switchProject(opts: {
   set: (id: string | undefined) => void
   first: () => void
   close: () => void
-  hide: () => void
   history: () => void
-  reset: () => void
 }): "first" | "switched" | "same" {
   const previous = opts.current()
   if (opts.id === previous) return "same"
@@ -16,9 +14,7 @@ export function switchProject(opts: {
     return "first"
   }
   opts.close()
-  opts.hide()
   opts.history()
-  opts.reset()
   opts.set(opts.id)
   return "switched"
 }

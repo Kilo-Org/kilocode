@@ -4,7 +4,7 @@ import { KiloRunner } from "@/kilocode/effect/runner" // kilocode_change
 export interface Runner<A, E = never> {
   readonly state: State<A, E>
   readonly busy: boolean
-  readonly ensureRunning: (work: Effect.Effect<A, E>) => Effect.Effect<A, E>
+  readonly ensureRunning: (work: Effect.Effect<A, E>, valid?: () => boolean) => Effect.Effect<A, E> // kilocode_change
   readonly startShell: (work: Effect.Effect<A, E>, ready?: Latch.Latch) => Effect.Effect<A, E | Busy>
   readonly cancel: Effect.Effect<void>
 }
@@ -43,6 +43,7 @@ export const make = <A, E = never>(
     onIdle?: Effect.Effect<void>
     onBusy?: Effect.Effect<void>
     onInterrupt?: Effect.Effect<A, E>
+    lease?: Effect.Effect<() => void> // kilocode_change
   },
 ): Runner<A, E> => {
   const ref = SynchronizedRef.makeUnsafe<State<A, E>>({ _tag: "Idle" })
@@ -82,11 +83,22 @@ export const make = <A, E = never>(
     ).pipe(Effect.flatten)
 
   // kilocode_change start - do not let work publish busy before the Running state is committed
-  const startRun = (work: Effect.Effect<A, E>, done: Deferred.Deferred<A, E | Cancelled>) => {
+  const current = (fiber: Fiber.Fiber<unknown, unknown>) => {
+    const st = state()
+    return st._tag === "Running" && st.run.fiber === fiber
+  }
+
+  const startRun = (
+    work: Effect.Effect<A, E>,
+    done: Deferred.Deferred<A, E | Cancelled>,
+    record: (started: KiloRunner.Started) => void,
+  ) => {
     const id = next()
     return KiloRunner.start({
       work,
       scope,
+      lease: opts?.lease,
+      record,
       finish: (exit) => finishRun(id, done, exit),
       handle: (fiber) => ({ id, done, fiber }) satisfies RunHandle<A, E>,
     })
@@ -95,17 +107,19 @@ export const make = <A, E = never>(
 
   // kilocode_change start - open work only after the Running state is committed
   const finishShell = (id: number) =>
-    SynchronizedRef.modifyEffect(
-      ref,
-      Effect.fnUntraced(function* (st) {
-        if (st._tag === "Shell" && st.shell.id === id) {
-          return [idle, { _tag: "Idle" }] as const
-        }
-        if (st._tag === "ShellThenRun" && st.shell.id === id) {
-          return yield* KiloRunner.commit(startRun(st.run.work, st.run.done), Effect.void)
-        }
-        return [Effect.void, st] as const
-      }),
+    KiloRunner.guard(current, (record) =>
+      SynchronizedRef.modifyEffect(
+        ref,
+        Effect.fnUntraced(function* (st) {
+          if (st._tag === "Shell" && st.shell.id === id) {
+            return [idle, { _tag: "Idle" }] as const
+          }
+          if (st._tag === "ShellThenRun" && st.shell.id === id) {
+            return yield* KiloRunner.commit(startRun(st.run.work, st.run.done, record), Effect.void)
+          }
+          return [Effect.void, st] as const
+        }),
+      ),
     ).pipe(Effect.flatten)
   // kilocode_change end
 
@@ -117,28 +131,31 @@ export const make = <A, E = never>(
     })
 
   // kilocode_change start - open work only after the Running state is committed
-  const ensureRunning = (work: Effect.Effect<A, E>) =>
-    SynchronizedRef.modifyEffect(
-      ref,
-      Effect.fnUntraced(function* (st) {
-        switch (st._tag) {
-          case "Running":
-          case "ShellThenRun":
-            return [awaitDone(st.run.done), st] as const
-          case "Shell": {
-            const run = {
-              id: next(),
-              done: yield* Deferred.make<A, E | Cancelled>(),
-              work,
-            } satisfies PendingHandle<A, E>
-            return [awaitDone(run.done), { _tag: "ShellThenRun", shell: st.shell, run }] as const
+  const ensureRunning = (work: Effect.Effect<A, E>, valid?: () => boolean) =>
+    KiloRunner.guard(current, (record) =>
+      SynchronizedRef.modifyEffect(
+        ref,
+        Effect.fnUntraced(function* (st) {
+          if (valid && !valid()) return [onInterrupt ?? Effect.die(new Cancelled()), st] as const
+          switch (st._tag) {
+            case "Running":
+            case "ShellThenRun":
+              return [awaitDone(st.run.done), st] as const
+            case "Shell": {
+              const run = {
+                id: next(),
+                done: yield* Deferred.make<A, E | Cancelled>(),
+                work,
+              } satisfies PendingHandle<A, E>
+              return [awaitDone(run.done), { _tag: "ShellThenRun", shell: st.shell, run }] as const
+            }
+            case "Idle": {
+              const done = yield* Deferred.make<A, E | Cancelled>()
+              return yield* KiloRunner.commit(startRun(work, done, record), awaitDone(done))
+            }
           }
-          case "Idle": {
-            const done = yield* Deferred.make<A, E | Cancelled>()
-            return yield* KiloRunner.commit(startRun(work, done), awaitDone(done))
-          }
-        }
-      }),
+        }),
+      ),
     ).pipe(Effect.flatten)
 
   const startShell = (work: Effect.Effect<A, E>, ready?: Latch.Latch): Effect.Effect<A, E | Busy> =>
@@ -153,7 +170,12 @@ export const make = <A, E = never>(
         yield* onBusy
         const id = next()
         const cancelled = yield* Deferred.make<void>()
-        const fiber = yield* work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild)
+        // kilocode_change start
+        const fiber = yield* KiloRunner.fork(
+          work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild({ uninterruptible: false })),
+          opts?.lease,
+        )
+        // kilocode_change end
         const shell = { id, cancelled, ready, fiber } satisfies ShellHandle<A, E>
         return [
           Effect.gen(function* () {

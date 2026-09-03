@@ -19,6 +19,7 @@ const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPr
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
@@ -29,10 +30,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
+  path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
   path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/ReviewDiffItem.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"),
@@ -75,6 +79,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
 const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -141,7 +146,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -158,7 +163,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -168,6 +173,23 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Browser module boundaries", () => {
+  it("keeps browser core independent from Agent Manager and VS Code context", () => {
+    const files = ["BrowserPanel.tsx", "controller.ts", "types.ts", "index.ts"]
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(ROOT, "webview-ui/browser", file), "utf-8")
+      expect(source).not.toMatch(/agent-manager|AgentManager|SidePanel|useVSCode|window\.postMessage/)
+    }
+  })
+
+  it("owns browser styles in the reusable module", () => {
+    const css = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"), "utf-8")
+    const browser = fs.readFileSync(path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"), "utf-8")
+    expect(css).not.toContain(".am-browser-")
+    expect(browser).toContain('import "./browser.css"')
   })
 })
 
@@ -612,6 +634,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("keeps the legacy integrated Run adapter isolated and removable", () => {
     const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
     expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("execution.terminate()")
+    expect(task).toContain("Promise.withResolvers<void>()")
+    expect(task).toContain("await ended.promise")
+    expect(task).toContain("STOP_TIMEOUT_MS")
+    expect(task).toContain("ended.resolve()")
+    expect(task.indexOf("vscode.tasks.onDidEndTaskProcess")).toBeLessThan(task.indexOf("vscode.tasks.taskExecutions"))
     expect(task).toContain("Remove this")
     const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
     expect(dest).not.toContain('from "vscode"')
@@ -641,10 +669,13 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("does not restore running indicators after a session is deleted", () => {
     const lifecycle = body("onSessionLifecycle")
     const status = body("onSessionStatus")
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/session-lifecycle.ts"), "utf-8")
 
-    expect(lifecycle).toContain("this.removedSessions.add(id)")
-    expect(lifecycle).toContain("this.busySessions.delete(id)")
-    expect(lifecycle).toContain("info && !this.removedSessions.has(info.id) ? info.directory : undefined")
+    expect(lifecycle).toContain("removed: this.removedSessions")
+    expect(lifecycle).toContain("busy: this.busySessions")
+    expect(helper).toContain("deps.removed.add(id)")
+    expect(helper).toContain("deps.busy.delete(id)")
+    expect(helper).toContain("if (deps.removed.has(info.id)) return")
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
@@ -1168,12 +1199,10 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("retains the guarded setup error delay", () => {
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

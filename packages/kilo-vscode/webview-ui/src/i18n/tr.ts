@@ -856,6 +856,9 @@ export const dict = {
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Bir ana oturum ile görevlerini yürüten alt ajanları arasında, iç içe geçmiş alt ajanlar da dahil olmak üzere bir pano paylaşın. Her görev için değil, paralel çözüm denemeleri veya birbirini tamamlayan çalışmalar için kullanın.",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
   "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
   "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
@@ -883,6 +886,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
+  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
+  "settings.experimental.taskModelSelection.description":
+    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1139,59 +1145,16 @@ export const dict = {
   "question.summary": "{{total}} sorudan {{n}} tanesi",
   "common.review": "İncele",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Eski Sürümden Taşı",
-  "settings.aboutKiloCode.legacyMigration.title": "Eski Sürüm Taşıma",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Kilo Code'un önceki yüklemesinden ayarları taşıyın.",
   "settings.aboutKiloCode.rooImport.description": "Bir Roo Code yüklemesinden konuşma geçmişini içe aktarın.",
   "settings.aboutKiloCode.rooImport.button": "Roo Code'dan Oturumları İçe Aktar",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code'daki Yenilikler",
-  "migration.whatsNew.badge": "Beta",
-  "migration.whatsNew.subtitle": "Uzantıyı daha hızlı ve daha verimli bir temel üzerine yeniden inşa ettik.",
-  "migration.whatsNew.features.performance.title": "Daha Hızlı Ajan Performansı",
-  "migration.whatsNew.features.performance.detail":
-    "Paralel araç çağrıları ve alt ajanlar, ajanınızın aynı anda daha fazlasını yapmasını sağlar — böylece izlemek yerine daha fazla üretirsiniz.",
-  "migration.whatsNew.features.interface.title": "Basitleştirilmiş Arayüz",
-  "migration.whatsNew.features.interface.detail": "Daha az dikkat dağıtıcı, daha kolay ve hızlı okuma.",
-  "migration.whatsNew.features.agentManager.title": "Ajan Yöneticisi",
-  "migration.whatsNew.features.agentManager.detail":
-    "Birden fazla ajanı paralel olarak çalıştırmak için birleşik bir arayüz, her biri kendi worktree'sinde — ilerlemeyi izleyin, bağlam değiştirin ve değişiklikleri tek bir yerden inceleyin.",
-  "migration.whatsNew.features.foundation.title": "Paylaşılan Temel",
-  "migration.whatsNew.features.foundation.detail":
-    "Her Kilo ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
-  "migration.whatsNew.blogLink": "Tam duyuruyu oku",
-  "migration.whatsNew.docsLink": "Yenilikler ve sık sorulan sorular",
-  "migration.whatsNew.continue": "Devam",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Ayarlarınızı Taşıyın",
-  "migration.migrate.subtitle": "Önceki yüklemenizden ayarlar bulduk. İşte taşıyabileceğimiz ayarlar.",
+  "migration.roo.button": "Oturumları İçe Aktar",
+  "migration.roo.empty": "Roo Code oturumu bulunamadı.",
   "migration.migrate.selectLabel": "Taşınacakları seçin",
   "migration.migrate.chatHistory": "Sohbet Oturumları ve Geçmiş",
-  "migration.migrate.button": "Ayarları Taşı",
-  "migration.migrate.skip": "Atla",
-  "migration.migrate.keysDetected": "{{count}} anahtar algılandı",
-  "migration.migrate.serversConfigured": "{{count}} sunucu yapılandırıldı",
-  "migration.migrate.modesFound": "{{count}} mod bulundu",
-  "migration.migrate.nothingToMigrate": "Eski ayarlarda taşınacak bir şey bulunamadı.",
-
-  // Migrate — item labels
-  "migration.select.providers": "Sağlayıcı API Anahtarları",
-  "migration.select.mcpServers": "MCP Sunucuları",
-  "migration.select.customModes": "Özel Modlar / Ajanlar",
-  "migration.select.defaultModel": "Varsayılan Model",
-  "migration.select.autoApproval": "Otomatik Onay",
-  "migration.select.language": "Arayüz Dili",
-  "migration.select.autocomplete": "Otomatik Tamamlama Ayarları",
 
   // Migrate — completion
   "migration.complete.summary": "{{total}} öğeden {{success}} tanesi başarıyla taşındı.",
-  "migration.complete.cleanup": "Eski ayar verilerini kaldır",
-  "migration.complete.cleanupDescription":
-    "Bu, VS Code depolamasından eski ayarları kaldırır. Bu taşımayı yeniden çalıştıramazsınız.",
   "migration.complete.done": "Bitti",
   "migration.migrate.sessionsDetected": "{{count}} oturum bulundu",
   "migration.error.continue": "Devam et",
@@ -1225,7 +1188,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Bilinmeyen tarih",
   "migration.sessionFormat.unknown": "Bilinmiyor",
   "migration.sessionFormat.unknownError": "Bilinmeyen hata",
-  // legacy-migration end
 
   "error.details.show": "Ayrıntılar",
 
@@ -1235,6 +1197,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
+  "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
@@ -1247,6 +1210,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "İptal edildi",
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
+  "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
