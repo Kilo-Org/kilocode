@@ -872,6 +872,9 @@ export const dict = {
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
   "settings.experimental.imageGeneration.title": "Geração de imagens",
   "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Compartilhe um quadro entre uma sessão principal e seus subagentes de tarefas, incluindo subagentes aninhados. Use-o para tentativas de solução em paralelo ou trabalhos complementares, não para todas as tarefas.",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagem",
   "settings.experimental.imageGenerationModel.description": "Modelo de geração de imagens",
   "settings.experimental.imageGenerationModel.placeholder": "Padrão (Auto Router)",
@@ -900,6 +903,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.multiProject.description":
     "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
+  "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1181,58 +1187,16 @@ export const dict = {
   "question.summary": "{{n}} de {{total}} perguntas",
   "common.review": "Revisar",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrar da Versão Legada",
-  "settings.aboutKiloCode.legacyMigration.title": "Migração Legada",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migre as configurações de uma instalação anterior do Kilo Code, incluindo chaves de API de provedor e modelo padrão.",
   "settings.aboutKiloCode.rooImport.description": "Importe o histórico de conversas de uma instalação do Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importar sessões do Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "O Que Há de Novo no Kilo Code",
-  "migration.whatsNew.subtitle": "Reconstruímos a extensão sobre uma base mais rápida e eficiente.",
-  "migration.whatsNew.features.performance.title": "Desempenho de Agente Mais Rápido",
-  "migration.whatsNew.features.performance.detail":
-    "Chamadas de ferramentas paralelas e subagentes permitem que seu agente faça mais de uma vez — assim você gasta menos tempo esperando e mais tempo entregando.",
-  "migration.whatsNew.features.interface.title": "Interface Simplificada",
-  "migration.whatsNew.features.interface.detail": "Menos distrações, mais fácil e rápido de ler.",
-  "migration.whatsNew.features.agentManager.title": "Gerenciador de Agentes",
-  "migration.whatsNew.features.agentManager.detail":
-    "Uma interface unificada para executar múltiplos agentes em paralelo, cada um em sua própria worktree — monitore o progresso, troque de contexto e revise alterações em um só lugar.",
-  "migration.whatsNew.features.foundation.title": "Base Compartilhada",
-  "migration.whatsNew.features.foundation.detail":
-    "Um núcleo pequeno e eficiente em todos os produtos Kilo. Uma experiência familiar independentemente de como você escolha trabalhar.",
-  "migration.whatsNew.blogLink": "Leia o anúncio completo",
-  "migration.whatsNew.docsLink": "Novidades e perguntas frequentes",
-  "migration.whatsNew.continue": "Continuar",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migre Suas Configurações",
-  "migration.migrate.subtitle": "Encontramos configurações da sua instalação anterior. Veja o que podemos trazer.",
+  "migration.roo.button": "Importar sessões",
+  "migration.roo.empty": "Nenhuma sessão do Roo Code encontrada.",
   "migration.migrate.selectLabel": "Selecione o que migrar",
   "migration.migrate.chatHistory": "Sessões de Chat e Histórico",
-  "migration.migrate.button": "Migrar Configurações",
-  "migration.migrate.skip": "Pular",
-  "migration.migrate.keysDetected": "{{count}} chaves detectadas",
-  "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
-  "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
-  "migration.migrate.nothingToMigrate": "Nada para migrar foi encontrado nas configurações legadas.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Chaves de API de Provedor",
-  "migration.select.mcpServers": "Servidores MCP",
-  "migration.select.customModes": "Modos Personalizados / Agentes",
-  "migration.select.defaultModel": "Modelo Padrão",
-  "migration.select.autoApproval": "Aprovação Automática",
-  "migration.select.language": "Idioma da Interface",
-  "migration.select.autocomplete": "Configurações de Autocomplete",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} de {{total}} itens migrados com sucesso.",
-  "migration.complete.cleanup": "Remover dados de configurações legadas",
-  "migration.complete.cleanupDescription":
-    "Isso remove as configurações antigas do armazenamento do VS Code. Você não poderá executar esta migração novamente.",
   "migration.complete.done": "Concluído",
   "migration.migrate.sessionsDetected": "{{count}} sessões detectadas",
   "migration.error.continue": "Continuar",
@@ -1266,7 +1230,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Data desconhecida",
   "migration.sessionFormat.unknown": "Desconhecido",
   "migration.sessionFormat.unknownError": "Erro desconhecido",
-  // legacy-migration end
 
   "error.details.show": "Detalhes",
 
@@ -1276,6 +1239,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agentes em segundo plano",
   "task.backgroundAgents.more": "+{{count}} mais",
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
+  "task.backgroundAgents.openAll": "Abrir todos os agentes em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
@@ -1288,6 +1252,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Cancelado",
   "task.backgroundAgents.status.error": "Erro",
   "task.backgroundAgents.untitled": "Agente em segundo plano",
+  "task.backgroundAgents.stopAll": "Parar todos ({{count}})",
   "settings.saveBar.unsavedChanges": "Alterações não salvas",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Salvar",

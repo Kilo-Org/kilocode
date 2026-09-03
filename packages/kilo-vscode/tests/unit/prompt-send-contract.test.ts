@@ -85,7 +85,7 @@ describe("sendCommand dismisses pending tool requests", () => {
     expect(body).toContain("if (overrides?.agent)")
     expect(body).toContain("selectAgent(overrides.agent, scope)")
     expect(body).toContain("if (overrides?.model)")
-    expect(body).toContain("selectModel(parsed.providerID, parsed.modelID, scope)")
+    expect(body).toContain("selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)")
     expect(body).toContain("if (overrides?.variant)")
     expect(body).toContain("selectVariant(overrides.variant, scope)")
   })
@@ -402,8 +402,9 @@ describe("PromptInput send origin contract", () => {
   })
 
   it("passes the captured origin to message and command sends", () => {
-    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null\)/)
-    expect(source).toMatch(/session\.sendCommand\([\s\S]*origin \?\? null\)/)
+    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null[\s\S]*browserData[\s\S]*\)/)
+    const command = source.slice(source.indexOf("session.sendCommand("))
+    expect(command).toMatch(/origin \?\? null[\s\S]*\{[\s\S]*agent: matched\.agent/)
   })
 
   it("records sent prompts before a pending session key change can return", () => {
@@ -668,6 +669,47 @@ describe("Optimistic parts preservation and smooth status contract", () => {
     expect(match).not.toBeNull()
     expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
     expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
+  })
+})
+
+describe("browser element reference contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("keeps selected browser elements as visible attachments instead of inserting them into the draft", () => {
+    expect(source).toContain('data-component="browser-references"')
+    expect(source).toMatch(/const reference = message\.browser[\s\S]*?textareaRef\?\.focus\(\)[\s\S]*?return/)
+  })
+
+  it("includes browser reference content only when the user sends the prompt", () => {
+    expect(source).toContain("browserFeedbackData(browsers())")
+    expect(source).toContain("formatBrowserFeedback(browserData.references)")
+    expect(source).toContain('const message = [review, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain("references.delete(key)")
+  })
+
+  it("uses the tested failed-send parser before restoring text and references", () => {
+    expect(source).toContain("const restored = failedPrompt(failed)")
+    expect(source).toContain("const draft = restored.text")
+    expect(source).toContain("const browser = restored.browsers")
+    expect(source).not.toContain("partFeedback({ review: failed.review")
+  })
+
+  it("restores browser attachments for the correct session and allows attachment-only sends", () => {
+    expect(source).toContain("setBrowsers(references.get(key) ?? [])")
+    expect(source).toContain("if (reference.sessionId !== sid()) return")
+    expect(source).toContain("mergeBrowserReferences(browsers(), reference)")
+    expect(source).toContain("browsers().length > 0")
+  })
+})
+
+describe("sent browser feedback rendering contract", () => {
+  const message = readFile(path.join(ROOT, "webview-ui/src/components/chat/VscodeUserMessage.tsx"))
+
+  it("renders validated browser metadata as cards and exposes only the instruction body", () => {
+    expect(message).toContain("partFeedback")
+    expect(message).toContain("BrowserReferences")
+    expect(message).toContain("feedback()?.body")
+    expect(message).not.toContain("item.content")
   })
 })
 

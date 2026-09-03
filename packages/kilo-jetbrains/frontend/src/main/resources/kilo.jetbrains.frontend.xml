@@ -9,7 +9,8 @@
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
 
@@ -88,8 +89,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.advanced"
+                id="ai.kilocode.jetbrains.settings.integrations"
                 groupWeight="-2"
+                instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.integrations.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>
@@ -183,6 +192,9 @@
 
         <action id="Kilo.ForceMigration"
                 class="ai.kilocode.client.actions.ForceMigrationAction"/>
+
+        <action id="Kilo.OpenSetupScript"
+                class="ai.kilocode.client.actions.OpenSetupScriptAction"/>
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
@@ -279,8 +291,23 @@
         <action id="Kilo.Worktree.OpenPr"
                 class="ai.kilocode.client.actions.OpenWorktreePrAction"/>
 
+        <action id="Kilo.Worktree.CopyPrRef"
+                class="ai.kilocode.client.actions.CopyWorktreePrRefAction"/>
+
         <action id="Kilo.Worktree.OpenDiff"
                 class="ai.kilocode.client.actions.OpenWorktreeDiffAction"/>
+
+        <action id="Kilo.Worktree.OpenLocalDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
+
+        <action id="Kilo.Worktree.CopyBranchName"
+                class="ai.kilocode.client.actions.CopyBranchNameAction"/>
+
+        <action id="Kilo.Worktree.CopyBranchPath"
+                class="ai.kilocode.client.actions.CopyBranchPathAction"/>
+
+        <action id="Kilo.Worktree.RunSetupScript"
+                class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
 
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
@@ -292,7 +319,15 @@
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.Worktree.CopyPrRef"/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
+            <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.CopyBranchName"/>
+            <reference ref="Kilo.Worktree.CopyBranchPath"/>
+            <separator/>
+            <reference ref="Kilo.OpenSetupScript"/>
+            <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
@@ -348,8 +383,9 @@
             <reference ref="$Copy"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
-            <reference ref="Kilo.Session.Share"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.Session.Share"/>
             <separator/>
             <reference ref="Kilo.StopSession"/>
         </group>
@@ -366,8 +402,9 @@
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
-            <reference ref="Kilo.Session.Share"/>
             <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.Session.Share"/>
         </group>
     </actions>
 </idea-plugin>
