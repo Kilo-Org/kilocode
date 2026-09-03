@@ -34,6 +34,32 @@ class WorktreeRunReaperTest {
     }
 
     @Test
+    fun `ignores a sibling worktree whose name starts the same`() {
+        // Worktree directories are named after branches, so shared prefixes are routine; reaping one
+        // worktree must never touch another's application.
+        val siblings = listOf(
+            entry(pid = 100, exe = "java", cmd = "java -cp $worktree-2/build/classes Main", start = now),
+            entry(pid = 101, exe = "java", cmd = "java -cp ${worktree}2/build/classes Main", start = now),
+            entry(pid = 102, exe = "java", cmd = "java -cp $worktree.bak/build/classes Main", start = now),
+        )
+        assertEquals(emptyList(), WorktreeRunReaper.match(worktree, now, siblings))
+    }
+
+    @Test
+    fun `matches the worktree at every path and argument boundary`() {
+        val forms = listOf(
+            "java -cp $worktree/build/classes Main" to 100L,
+            "java -cp /other/x.jar:$worktree/build/classes:/y.jar Main" to 101L,
+            "java -Dx=$worktree Main" to 102L,
+            "java -cp \"$worktree\" Main" to 103L,
+            "java -cp $worktree" to 104L,
+            "java -cp $worktree\\build\\classes Main" to 105L,
+        )
+        val entries = forms.map { entry(pid = it.second, exe = "java", cmd = it.first, start = now) }
+        assertEquals(forms.map { it.second }, WorktreeRunReaper.match(worktree, now, entries))
+    }
+
+    @Test
     fun `excludes a process that started before the run`() {
         val cmd = "java -cp $worktree/build/classes Main"
         val entry = entry(pid = 100, exe = "java", cmd = cmd, start = now.minusSeconds(10))
@@ -44,6 +70,24 @@ class WorktreeRunReaperTest {
     fun `includes a process at the exact start instant`() {
         val entry = entry(pid = 100, exe = "java", cmd = "java -cp $worktree/build/classes Main", start = now)
         assertEquals(listOf(100L), WorktreeRunReaper.match(worktree, now, listOf(entry)))
+    }
+
+    @Test
+    fun `includes a process whose reported start is only sub-millisecond older`() {
+        // The OS reports start times in milliseconds; Instant.now() carries microseconds. Comparing the
+        // two directly would drop an application that started in the same millisecond as the reference.
+        val since = Instant.parse("2026-01-01T10:00:00.191056Z")
+        val cmd = "java -cp $worktree/build/classes Main"
+        val entry = entry(pid = 100, exe = "java", cmd = cmd, start = Instant.parse("2026-01-01T10:00:00.191Z"))
+        assertEquals(listOf(100L), WorktreeRunReaper.match(worktree, since, listOf(entry)))
+    }
+
+    @Test
+    fun `still excludes a process from an earlier millisecond`() {
+        val since = Instant.parse("2026-01-01T10:00:00.191056Z")
+        val cmd = "java -cp $worktree/build/classes Main"
+        val entry = entry(pid = 100, exe = "java", cmd = cmd, start = Instant.parse("2026-01-01T10:00:00.190Z"))
+        assertEquals(emptyList(), WorktreeRunReaper.match(worktree, since, listOf(entry)))
     }
 
     @Test

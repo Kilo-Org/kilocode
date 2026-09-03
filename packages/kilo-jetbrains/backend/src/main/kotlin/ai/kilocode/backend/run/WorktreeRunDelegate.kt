@@ -67,9 +67,16 @@ internal object WorktreeRunDelegate {
     }
 
     /**
-     * Cheap listing probe: module properties only, no extension dispatch, so it is safe to call for
-     * every configuration whenever the popup opens. Whether the build system will actually accept the
-     * configuration is only known once [derive] runs it past the delegation extensions.
+     * Listing probe: module properties and the configuration's own serialized state, no extension
+     * dispatch, so it is safe to call for every configuration whenever the popup opens. Whether the
+     * build system will actually accept the configuration is only known once [derive] runs it past the
+     * delegation extensions.
+     *
+     * Requiring a main class is what keeps test configurations out of the popup. They are module-based
+     * and Gradle-imported like an application is, so they would otherwise be offered and then fail at
+     * run time with a hint about running applications through Gradle, which is not their problem — and
+     * neither delegation path can run them: no application provider claims them, and [plain] refuses
+     * anything without a main class.
      */
     fun support(config: RunConfiguration): Support {
         if (config !is ModuleBasedConfiguration<*, *>) {
@@ -81,7 +88,22 @@ internal object WorktreeRunDelegate {
         if (systemId.isNullOrEmpty()) {
             return Support.Skip("module '${module.name}' was not imported by a build system")
         }
+        if (mainClass(config).isNullOrBlank()) {
+            return Support.Skip("runs no main class")
+        }
         return Support.Delegate(ProjectSystemId(systemId).readableName)
+    }
+
+    /** [MAIN_CLASS] from [config]'s serialized state, which every JVM application configuration writes. */
+    private fun mainClass(config: RunConfiguration): String? {
+        val element = Element("configuration")
+        try {
+            config.writeExternal(element)
+        } catch (e: WriteExternalException) {
+            LOG.warn("worktree run: cannot read ${config.name}'s state", e)
+            return null
+        }
+        return options(element)[MAIN_CLASS]
     }
 
     /**

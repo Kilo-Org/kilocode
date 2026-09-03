@@ -103,11 +103,16 @@ class WorktreeRunManager internal constructor(
     /** What [produce] built: the clone to execute, plus source settings that will not apply to it. */
     private data class Produced(val settings: RunnerAndConfigurationSettings, val dropped: List<String> = emptyList())
 
-    /** [start] is when this clone was created — the lower bound [WorktreeRunReaper.match] uses. */
+    /**
+     * [start] is when this clone was created — the lower bound [WorktreeRunReaper.match] uses.
+     * [reapable] marks clones that can fork an application outliving their own process: a build only
+     * forks compiler workers, which are shared and must never be reaped.
+     */
     private data class Entry(
         val settings: RunnerAndConfigurationSettings,
         val print: String,
         val dropped: List<String> = emptyList(),
+        val reapable: Boolean = false,
         val start: Instant = Instant.now(),
     )
 
@@ -320,8 +325,11 @@ class WorktreeRunManager internal constructor(
         if (entry != null) handlers[key]?.let { handler ->
             LOG.info("worktree run: stopping replaced clone before restart config=${key.id} worktree=${key.worktree}")
             ExecutionManagerImpl.stopProcess(handler)
+            // Reap against the replaced clone's own start: the new entry's start is later than the old
+            // application's, so once it is in place that process could never be matched again.
+            arm(key, entry.start)
         }
-        return Entry(next.settings, print, next.dropped).also { clones[key] = it }
+        return Entry(next.settings, print, next.dropped, reapable = true).also { clones[key] = it }
     }
 
     /**
@@ -397,7 +405,7 @@ class WorktreeRunManager internal constructor(
             // a delegated bootRun/run is) since 4.8, so this SIGTERMs a delegated app's forked JVM in
             // the common case; arm() is the fallback for when it does not.
             ExecutionManagerImpl.stopProcess(handler)
-            arm(key)
+            clones[key]?.takeIf { it.reapable }?.let { arm(key, it.start) }
             return true
         }
         // No live handler: either unknown, or its app JVM outlived it and arm() is already tracking
@@ -412,20 +420,36 @@ class WorktreeRunManager internal constructor(
     /**
      * Best-effort cleanup once [key]'s [ProcessHandler] is gone: waits briefly in case the platform's
      * own cancel is still landing, then SIGTERMs (never force-kills — that is [stop]'s job on a second
-     * call) any app process [WorktreeRunReaper] can match to this worktree, tracks it as an orphan row
-     * so the popup can offer Kill, and clears the row once the process actually exits.
+     * call) any app process [WorktreeRunReaper] can match to this worktree since [since], tracks it as
+     * an orphan row so the popup can offer Kill, and clears the row once the process actually exits.
+     *
+     * Attribution is by worktree path, not by pid lineage — the application's parent is the build
+     * daemon, not the IDE — so it cannot tell one config's application from another's. It therefore
+     * declines whenever some other run in the same worktree is still live, rather than risk SIGTERMing
+     * an application the user is still using. A live delegated run always has a handler for as long as
+     * its application runs, because the build that forked it blocks.
      */
-    private fun arm(key: Key) {
-        val since = clones[key]?.start ?: return
+    private fun arm(key: Key, since: Instant) {
         cs.launch {
             awaitHandlersGone(listOf(key), HANDLER_WAIT_MS)
             if (handlers[key] != null) {
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
                 return@launch
             }
+            val others = handlers.keys.filter { it != key && pathKey(it.worktree) == pathKey(key.worktree) }
+            if (others.isNotEmpty()) {
+                LOG.info(
+                    "worktree run: not reaping config=${key.id} worktree=${key.worktree};" +
+                        " cannot attribute an app process while ${others.map { it.id }} still run there",
+                )
+                return@launch
+            }
             val matches = WorktreeRunReaper.match(key.worktree, since, WorktreeRunReaper.scan())
             if (matches.isEmpty()) {
-                LOG.info("worktree run: no orphan app process left for config=${key.id} worktree=${key.worktree}")
+                LOG.info(
+                    "worktree run: no orphan app process started since $since" +
+                        " for config=${key.id} worktree=${key.worktree}",
+                )
                 return@launch
             }
             LOG.info("worktree run: reaping orphans config=${key.id} worktree=${key.worktree} pids=$matches")

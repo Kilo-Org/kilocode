@@ -57,10 +57,24 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
 
     fun testSupportReturnsTheBuildSystemNameForALinkedModule() {
         ExternalSystemModulePropertyManager.getInstance(module).setExternalId(ProjectSystemId("GRADLE"))
-        val settings = add(register(moduleType("kilo.test.delegate.linked")), "mod")
-        (settings.configuration as ModuleBasedConfiguration<*, *>).setModule(module)
+        val settings = add(register(frameworkType("kilo.test.delegate.linked")), "mod")
+        val config = settings.configuration as FrameworkConfig
+        config.setModule(module)
+        config.main = "com.example.App"
         assertEquals(
             WorktreeRunDelegate.Support.Delegate(ProjectSystemId("GRADLE").readableName),
+            WorktreeRunDelegate.support(settings.configuration),
+        )
+    }
+
+    fun testSupportSkipsALinkedModuleConfigThatRunsNoMainClass() {
+        // The test-configuration shape: module-based and Gradle-imported, but nothing here can run it,
+        // so it must not reach the popup and get a misleading "Run using Gradle" hint later.
+        ExternalSystemModulePropertyManager.getInstance(module).setExternalId(ProjectSystemId("GRADLE"))
+        val settings = add(register(frameworkType("kilo.test.delegate.nomain")), "tests")
+        (settings.configuration as FrameworkConfig).setModule(module)
+        assertEquals(
+            WorktreeRunDelegate.Support.Skip("runs no main class"),
             WorktreeRunDelegate.support(settings.configuration),
         )
     }

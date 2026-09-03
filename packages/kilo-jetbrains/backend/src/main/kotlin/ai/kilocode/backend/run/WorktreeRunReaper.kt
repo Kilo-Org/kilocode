@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * Best-effort cleanup for a worktree's forked application process once its
@@ -38,6 +39,13 @@ internal object WorktreeRunReaper {
         "KotlinCompileDaemon",
     )
 
+    /**
+     * Characters that legitimately follow a directory path: a separator continuing into a file inside
+     * it, or an argument/classpath delimiter ending it. Anything else (a letter, digit, `-`, `.`) means
+     * the match ran into a sibling directory whose name merely starts the same.
+     */
+    private val BOUNDARY = Regex("[/\\\\:;,\\s'\"]")
+
     data class Entry(val pid: Long, val executable: String, val commandLine: String, val start: Instant?)
 
     /**
@@ -54,27 +62,47 @@ internal object WorktreeRunReaper {
 
     /**
      * Pids in [entries] that are [worktree]'s forked application: a `java`/`javaw` process whose
-     * command line contains the worktree's normalized path, started at or after [since] (entries
-     * whose start time could not be determined are not excluded on that basis alone), not the IDE's
-     * own process, and not on the long-lived-daemon [DENYLIST].
+     * command line references the worktree path, started at or after [since] (entries whose start time
+     * could not be determined are not excluded on that basis alone), not the IDE's own process, and not
+     * on the long-lived-daemon [DENYLIST].
      */
     fun match(worktree: String, since: Instant, entries: List<Entry>): List<Long> {
         val self = ProcessHandle.current().pid()
         val needle = normalize(worktree)
+        // The OS reports process start times in milliseconds while Instant.now() carries microseconds,
+        // so an application that started within the same millisecond as the caller's reference point
+        // would compare as older than it and never be reaped.
+        val floor = since.truncatedTo(ChronoUnit.MILLIS)
         // Everything referencing the worktree, before the java/daemon/start-time filters — the useful
         // view when a forked application was expected but nothing was reaped.
         LOG.debug {
-            val seen = entries.filter { it.commandLine.contains(needle) }
+            val seen = entries.filter { refers(it.commandLine, needle) }
             "worktree run: scanned ${entries.size} processes, ${seen.size} reference $needle" +
                 seen.joinToString("") { "\n  pid=${it.pid} exe=${it.executable} start=${it.start} ${it.commandLine}" }
         }
         return entries.filter { entry ->
             entry.pid != self &&
                 isJava(entry.executable) &&
-                entry.commandLine.contains(needle) &&
-                (entry.start == null || !entry.start.isBefore(since)) &&
+                refers(entry.commandLine, needle) &&
+                (entry.start == null || !entry.start.isBefore(floor)) &&
                 DENYLIST.none { entry.commandLine.contains(it) }
         }.map { it.pid }
+    }
+
+    /**
+     * Whether [command] references the [path] directory rather than merely starting with its name.
+     * Worktree directories are named after branches, so sibling names commonly share a prefix
+     * (`…/worktrees/fix` vs `…/worktrees/fix-2`) and a plain `contains` would let one worktree reap
+     * another's application. A reference must therefore end at a path or argument boundary.
+     */
+    private fun refers(command: String, path: String): Boolean {
+        var from = command.indexOf(path)
+        while (from >= 0) {
+            val after = from + path.length
+            if (after == command.length || BOUNDARY.matches(command[after].toString())) return true
+            from = command.indexOf(path, from + 1)
+        }
+        return false
     }
 
     /** SIGTERM ([force] = false — graceful, lets Spring Boot/JVM shutdown hooks run) or SIGKILL. */

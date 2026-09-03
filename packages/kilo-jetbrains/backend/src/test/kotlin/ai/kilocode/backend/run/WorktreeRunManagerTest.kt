@@ -184,7 +184,9 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         // pipeline runs it as a build-system task instead, which resolves the classpath in the worktree.
         link()
         val settings = add(register(moduleType("kilo.test.module.delegated")), "HvApiGatewayApp")
-        (settings.configuration as ModuleParamsConfig).setModule(module)
+        val source = settings.configuration as ModuleParamsConfig
+        source.setModule(module)
+        source.main = "com.example.HvApiGatewayApp"
         val runner = delegatingRunner()
         val mgr = manager()
         val repo = requireNotNull(project.basePath)
@@ -258,12 +260,26 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         // per-framework "Run using Gradle" advanced setting is off, so no runner produces anything.
         link()
         val settings = add(register(moduleType("kilo.test.module.nodelegate")), "app")
-        (settings.configuration as ModuleParamsConfig).setModule(module)
+        val source = settings.configuration as ModuleParamsConfig
+        source.setModule(module)
+        source.main = "com.example.App"
 
         val result = manager().run(settings.uniqueID, "/tmp/kilo-nodelegate-wt")
         assertFalse(result.ok)
         assertEquals("Gradle declined to run 'app' — ${WorktreeRunDelegate.DECLINED_HINT}", result.error)
         assertTrue(launched.isEmpty())
+    }
+
+    fun testTestStyleConfigIsNotListedForAWorktree() = runBlocking {
+        // A test configuration is module-based and Gradle-imported like an application is, but neither
+        // delegation path can run it, so offering it would only produce a misleading failure later.
+        link()
+        val settings = add(register(moduleType("kilo.test.module.tests")), "MyTest")
+        (settings.configuration as ModuleParamsConfig).setModule(module)
+
+        assertTrue(manager().configs().configs.none { it.name == "MyTest" })
+        val result = manager().run(settings.uniqueID, "/tmp/kilo-tests-wt")
+        assertEquals("cannot run 'MyTest' in a worktree: runs no main class", result.error)
     }
 
     fun testUnsupportedConfigErrorNamesTheReason() = runBlocking {
@@ -452,6 +468,87 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             await("app process killed", REAP_WAIT_NANOS) { !app.isAlive }
             await("orphan row cleared", REAP_WAIT_NANOS, { mgr.states.value }) { mgr.states.value.isEmpty() }
             assertFalse(mgr.stop(settings.uniqueID, wt))
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
+    /**
+     * Attribution is by worktree path, so the reaper cannot tell one config's application from
+     * another's. Stopping one run while another is still live in the same worktree must therefore leave
+     * every process alone rather than SIGTERM an application the user is still using.
+     */
+    fun testStopLeavesAppProcessesAloneWhileAnotherRunIsLiveInTheWorktree() = runBlocking {
+        val type = register(paramsType("kilo.test.params.coexist"))
+        val stopped = add(type, "first")
+        val kept = add(type, "second")
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-coexist-wt").toString()
+        assertTrue(mgr.run(stopped.uniqueID, wt).ok)
+        assertTrue(mgr.run(kept.uniqueID, wt).ok)
+
+        val app = StubbornJvm.start(wt)
+        try {
+            val handlers = launched.map { clone ->
+                val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+                NopProcessHandler().also {
+                    it.startNotify()
+                    project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+                        .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, it)
+                }
+            }
+            assertEquals(2, mgr.states.value.size)
+
+            assertTrue(mgr.stop(stopped.uniqueID, wt))
+            await("first run stopped") { handlers[0].isProcessTerminated }
+            await("first row dropped", REAP_WAIT_NANOS) { mgr.states.value.size == 1 }
+            assertTrue(app.isAlive)
+            assertFalse(mgr.states.value.single().orphan)
+
+            // Stopping the last run in the worktree does reap it, which is what proves the process
+            // survived above because attribution was ambiguous — not because reaping never ran.
+            assertTrue(mgr.stop(kept.uniqueID, wt))
+            await("second run stopped") { handlers[1].isProcessTerminated }
+            await("orphan row", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.singleOrNull()?.orphan == true
+            }
+            assertEquals(kept.uniqueID, mgr.states.value.single().id)
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
+    /**
+     * Editing the source configuration replaces the cached clone. The replaced clone's process is
+     * stopped, and its application must be reaped against the *old* clone's start time — the new entry
+     * starts later than that application, so once it is in place nothing could match the process again.
+     */
+    fun testReplacingACloneStillReapsTheOldRunsAppProcess() = runBlocking {
+        val type = register(paramsType("kilo.test.params.replaced"))
+        val settings = add(type, "srv")
+        val config = settings.configuration as ParamsConfig
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-replaced-wt").toString()
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        val first = launched.single()
+
+        val app = StubbornJvm.start(wt)
+        try {
+            val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), first, project)
+            val handler = NopProcessHandler().also { it.startNotify() }
+            project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+                .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+
+            // Editing the source changes its fingerprint, so the next run builds a fresh clone.
+            config.programParameters = "--changed"
+            assertTrue(mgr.run(settings.uniqueID, wt).ok)
+            assertNotSame(first, launched.last())
+
+            await("replaced run stopped") { handler.isProcessTerminated }
+            await("old app process reaped", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.singleOrNull()?.orphan == true
+            }
+            assertTrue(mgr.states.value.single().killable)
         } finally {
             app.destroyForcibly()
         }
