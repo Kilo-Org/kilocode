@@ -79,7 +79,12 @@ describe("selectLocalAction", () => {
 
 for (const target of ["local", "wt-b"]) {
   describe(`${target} terminal restoration`, () => {
-    it.each([undefined, "terminal:closed", "terminal:second"])("restores a terminal with memory %s", (remembered) => {
+    it.each([
+      { remembered: undefined, ids: [] },
+      { remembered: "terminal:closed", ids: [] },
+      { remembered: "terminal:second", ids: [] },
+      { remembered: "terminal:second", ids: ["ses-1"] },
+    ])("restores a terminal with %j", (entry) => {
       createRoot((dispose) => {
         const result = deps()
         const [selection, select] = createSignal("prj-a:other")
@@ -96,16 +101,17 @@ for (const target of ["local", "wt-b"]) {
         result.value.terms = terms
         result.value.nsKey = (id) => `prj-a:${id}`
         result.value.setSelection = (id) => select(`prj-a:${id}`)
-        result.value.tabMemory = () => (remembered ? { [target]: remembered } : {})
+        result.value.tabMemory = () => (entry.remembered ? { [target]: entry.remembered } : {})
         result.value.activateTerminal = (id) => {
           terms.setActiveId(id)
           result.calls.push(`terminal:${id}`)
         }
 
-        if (target === "local") selectLocalAction(result.value, [])
-        else selectWorktreeAction(result.value, target, [])
+        const sessions = entry.ids.map((id) => ({ id }))
+        if (target === "local") selectLocalAction(result.value, sessions, entry.ids)
+        else selectWorktreeAction(result.value, target, sessions, entry.ids)
 
-        const expected = remembered === "terminal:second" ? remembered : "terminal:first"
+        const expected = entry.remembered === "terminal:second" ? entry.remembered : "terminal:first"
         expect(terms.activeId()).toBe(expected)
         expect(result.calls).toEqual([`terminal:${expected}`])
         expect(terms.current()).toHaveLength(2)
