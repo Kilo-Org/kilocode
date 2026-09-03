@@ -1927,18 +1927,13 @@ const AgentManagerContent: Component = () => {
       requestChatFocus()
       return
     }
-    // Navigate to owning worktree instead of forcing into local mode
-    if (worktreeSessionIds().has(id)) {
-      const ms = managedSessions().find((s) => s.id === id)
-      if (ms?.worktreeId) {
-        selectWorktree(ms.worktreeId)
-        session.selectSession(id)
-        setReviewActive(false)
-        requestChatFocus()
-        return
-      }
-    }
-    openLocally(id)
+    if (!worktreeSessionIds().has(id)) return openLocally(id)
+    const worktree = managedSessions().find((s) => s.id === id)?.worktreeId
+    if (!worktree) return openLocally(id)
+    selectWorktree(worktree)
+    session.selectSession(id)
+    setReviewActive(false)
+    requestChatFocus()
   }
 
   const intro = createIntro({
