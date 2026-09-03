@@ -40,6 +40,7 @@ describe("PR comments", () => {
       conditions: ["browser"],
       external: ["happy-dom"],
       format: "esm",
+      loader: { ".css": "empty" },
       logLevel: "silent",
       platform: "node",
       plugins: [dedupe, solidPlugin()],

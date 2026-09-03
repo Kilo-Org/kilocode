@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
+  "agentManager.updateBase.title": "Temel daldan güncelle",
+  "agentManager.updateBase.selectWorktree": "Önce yönetilen bir worktree seçin.",
+
   "agentManager.worktree.settings": "Worktree ayarları",
   "agentManager.worktree.new": "Yeni Worktree",
   "agentManager.worktree.setupScript": "Worktree Kurulum Betiği",
@@ -213,6 +216,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Yorumlar",
   "agentManager.pr.copyLink": "PR bağlantısını kopyala",
   "agentManager.pr.comment.unresolvedCount": "{{count}} çözülmemiş",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} çözülmemiş inceleme tartışması",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} çözülmemiş inceleme tartışması",
   "agentManager.pr.comment.resolvedGroup": "Çözüldü ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} çözülmemiş yorumu terminale gönder",
   "agentManager.pr.comment.resolve": "Çöz",

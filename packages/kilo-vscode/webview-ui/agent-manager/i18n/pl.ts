@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Usuń z Agent Manager",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
+
+  "agentManager.updateBase.title": "Aktualizuj z bazy",
+  "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
+
   "agentManager.worktree.settings": "Ustawienia Worktree",
   "agentManager.worktree.new": "Nowy Worktree",
   "agentManager.worktree.setupScript": "Skrypt konfiguracji Worktree",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Komentarze",
   "agentManager.pr.copyLink": "Kopiuj link do PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} nierozwiązanych",
+  "agentManager.pr.comment.unresolvedThread": "Nierozwiązany wątek przeglądu: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Nierozwiązane wątki przeglądu: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Rozwiązane ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "Wyślij {{count}} nierozwiązanych do terminala",
   "agentManager.pr.comment.resolve": "Rozwiąż",

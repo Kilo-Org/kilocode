@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
   "agentManager.notGitRepo": "Nije git repozitorij",
+
+  "agentManager.updateBase.title": "Ažuriraj iz baze",
+  "agentManager.updateBase.selectWorktree": "Prvo odaberite worktree kojim upravlja Agent Manager.",
+
   "agentManager.worktree.settings": "Postavke Worktree-a",
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Komentari",
   "agentManager.pr.copyLink": "Kopiraj PR vezu",
   "agentManager.pr.comment.unresolvedCount": "{{count}} neriješenih",
+  "agentManager.pr.comment.unresolvedThread": "Neriješena diskusija u pregledu: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Neriješene diskusije u pregledu: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Riješeno ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "Pošalji {{count}} neriješenih terminalu",
   "agentManager.pr.comment.resolve": "Riješi",

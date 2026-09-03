@@ -40,6 +40,31 @@ export function ConfigToolbar(props: {
   )
 }
 
+export function ConfigToggle(props: {
+  label: string
+  description: string
+  checked: boolean
+  disabled?: boolean
+  onChange: () => void
+}) {
+  return (
+    <button
+      class="ui-toggle"
+      classList={{ selected: props.checked }}
+      type="button"
+      aria-pressed={props.checked}
+      disabled={props.disabled}
+      onClick={props.onChange}
+    >
+      <span>
+        <strong>{props.label}</strong>
+        <small>{props.description}</small>
+      </span>
+      <ConfigTag tone={props.checked ? "success" : "neutral"}>{props.checked ? "On" : "Off"}</ConfigTag>
+    </button>
+  )
+}
+
 export function SourceBadge(props: { source?: string; inherited?: boolean; overridden?: boolean }) {
   return <UiSourceBadge {...props} />
 }

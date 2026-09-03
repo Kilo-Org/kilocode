@@ -21,6 +21,7 @@ export interface PermissionContext {
   recordPermissionDirectory(requestID: string, directory: string): void
   getPermissionDirectory(requestID: string): string | undefined
   clearPermissionDirectory(requestID: string): void
+  getPermissionRevision(): number
   prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void
 }
 
@@ -102,9 +103,10 @@ export async function handlePermissionResponse(
       ctx.postMessage({ type: "permissionError", permissionID: permissionId })
       return "error" as const
     })
-  if (replyResult === "stale") {
-    staleCleanup()
-  }
+  if (replyResult === "stale") staleCleanup()
+  if (replyResult !== "ok") return
+  ctx.clearPermissionDirectory(permissionId)
+  ctx.postMessage({ type: "permissionResolved", permissionID: permissionId, sessionID: target, response })
 }
 
 /**
@@ -118,17 +120,23 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
   try {
     const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories, ctx.extraDirectories?.() ?? [])
 
-    const seen = new Set<string>()
-    const valid = new Set<string>()
-    for (const dir of dirs) {
-      const { data, error } = await ctx.client.permission.list({ directory: dir })
-      if (error) {
-        console.error(`[Kilo New] KiloProvider: Failed to fetch pending permissions for ${dir}:`, error)
-        continue
+    for (;;) {
+      const revision = ctx.getPermissionRevision()
+      const seen = new Set<string>()
+      const valid = new Set<string>()
+      const pending: Array<{ perm: RecoverablePermission; dir: string }> = []
+      for (const dir of dirs) {
+        const { data, error } = await ctx.client.permission.list({ directory: dir })
+        if (error) {
+          console.error(`[Kilo New] KiloProvider: Failed to fetch pending permissions for ${dir}:`, error)
+          continue
+        }
+        valid.add(dir)
+        if (!data) continue
+        for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) pending.push({ perm, dir })
       }
-      valid.add(dir)
-      if (!data) continue
-      for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
+      if (ctx.getPermissionRevision() !== revision) continue
+      for (const { perm, dir } of pending) {
         ctx.recordPermissionDirectory(perm.id, dir)
         ctx.postMessage({
           type: "permissionRequest",
@@ -144,8 +152,9 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
           },
         })
       }
+      ctx.prunePermissionDirectories(seen, valid)
+      return
     }
-    ctx.prunePermissionDirectories(seen, valid)
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
   }

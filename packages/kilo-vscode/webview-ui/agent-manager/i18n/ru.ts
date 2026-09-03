@@ -18,6 +18,10 @@ export const dict = {
   "agentManager.project.remove": "Удалить из Agent Manager",
   "agentManager.project.missing": "Репозиторий не найден",
   "agentManager.notGitRepo": "Не является git-репозиторием",
+
+  "agentManager.updateBase.title": "Обновить из базовой ветки",
+  "agentManager.updateBase.selectWorktree": "Сначала выберите управляемый worktree.",
+
   "agentManager.worktree.settings": "Настройки Worktree",
   "agentManager.worktree.new": "Новый Worktree",
   "agentManager.worktree.setupScript": "Скрипт настройки Worktree",
@@ -206,6 +210,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Комментарии",
   "agentManager.pr.copyLink": "Копировать ссылку на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} нерешённых",
+  "agentManager.pr.comment.unresolvedThread": "Нерешённое обсуждение ревью: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Нерешённые обсуждения ревью: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Решённые ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "Отправить {{count}} нерешённых в терминал",
   "agentManager.pr.comment.resolve": "Решить",

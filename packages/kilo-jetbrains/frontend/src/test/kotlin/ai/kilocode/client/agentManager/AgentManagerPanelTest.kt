@@ -69,6 +69,9 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.ExpandedItemListCellRendererWrapper
+import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.IJSwingUtilities
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
@@ -78,6 +81,8 @@ import java.awt.event.MouseEvent
 import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
+import javax.swing.plaf.FontUIResource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -256,6 +261,47 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         iter.next()
 
         assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+    }
+
+    /**
+     * End-to-end cover for an IDE interface zoom on the real panel. Only the platform's own refresh is
+     * applied — raise the `*.font` defaults and the user scale like `LafManagerImpl.patchLafFonts`, then
+     * walk the tree — because that walk never reaches the shared row renderer and the list is what has
+     * to refresh it. See `ActiveListScaleTest` for the unit-level detail.
+     */
+    fun `test worktree row height grows after an IDE zoom instead of staying at the pre zoom size`() {
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        // Worktree rows carry a "Local worktrees" section, so the list keeps fixedCellHeight at -1 and
+        // BasicListUI measures each row from the renderer instead — this is the exact call it makes.
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        assertEquals(-1, edt { list.fixedCellHeight })
+        val before = edt { rowHeight(list) }
+        assertTrue("expected a real row height, got $before", before > 0)
+
+        val label = UIManager.getFont("Label.font")
+        val scale = JBUIScale.scale(1f)
+        val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
+        val fonts = keys.associateWith { UIManager.getFont(it) }
+        try {
+            edt {
+                keys.forEach { UIManager.put(it, FontUIResource(label.deriveFont(label.size2D * 2f))) }
+                JBUIScale.setUserScaleFactorForTest(scale * 2f)
+                IJSwingUtilities.updateComponentTreeUI(panel)
+            }
+
+            val after = edt { rowHeight(list) }
+            assertTrue("expected the row height to grow with the zoom, was $before then $after", after > before)
+        } finally {
+            edt {
+                JBUIScale.setUserScaleFactorForTest(scale)
+                fonts.forEach { (key, font) -> UIManager.put(key, FontUIResource(font)) }
+            }
+        }
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
@@ -644,6 +690,67 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertSame(WorktreeIcons.locked, row(panel, 0).icon)
     }
 
+    /**
+     * Zooming in and back out repeatedly must land on exactly the original row height. Rows carrying
+     * diff metrics and a PR badge are the tallest shape the panel renders, and the row height is the
+     * maximum across rows, so a single value that latches instead of being re-derived shows up here as
+     * padding that never shrinks back.
+     */
+    fun `test worktree row height round trips through repeated IDE zoom changes`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += main()
+        rpc.listed += item
+        rpc.statsResult = WorktreeStatsListDto(
+            listOf(WorktreeStatsDto(item.path, additions = 742, deletions = 169, ahead = 2, behind = 41, files = 14, base = "origin/main")),
+        )
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        waitUntil { row(panel, 0).metrics != null || row(panel, 1).metrics != null }
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(360, 600)
+            list.doLayout()
+        }
+        val label = UIManager.getFont("Label.font")
+        val scale = JBUIScale.scale(1f)
+        val keys = UIManager.getDefaults().keys.toList().filterIsInstance<String>().filter { it.endsWith(".font") }
+        val fonts = keys.associateWith { UIManager.getFont(it) }
+        // Applies a real IDE zoom — the *.font defaults and the user scale — then refreshes the tree.
+        // The font has to be a FontUIResource like LafManagerImpl.patchLafFonts installs, because
+        // LookAndFeel.installColorsAndFont only replaces a component font that is null or a UIResource.
+        val zoom = { factor: Float ->
+            edt {
+                keys.forEach { UIManager.put(it, FontUIResource(label.deriveFont(label.size2D * factor))) }
+                JBUIScale.setUserScaleFactorForTest(scale * factor)
+                IJSwingUtilities.updateComponentTreeUI(panel)
+            }
+            edt { rowHeight(list) }
+        }
+        try {
+            val base = edt { rowHeight(list) }
+            assertTrue("expected a real row height, got $base", base > 0)
+
+            val zoomed = zoom(1.25f)
+            assertTrue("expected the row height to grow when zooming in, was $base then $zoomed", zoomed > base)
+
+            // Two full round trips, so a value that grows per zoom event cannot hide behind a single one.
+            assertEquals(base, zoom(1f))
+            assertEquals(zoomed, zoom(1.25f))
+            assertEquals(base, zoom(1f))
+        } finally {
+            edt {
+                JBUIScale.setUserScaleFactorForTest(scale)
+                fonts.forEach { (key, font) -> UIManager.put(key, FontUIResource(font)) }
+            }
+        }
+    }
+
     fun `test worktree row shows metrics from status service`() {
         val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
         rpc.listed += item
@@ -664,18 +771,22 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("origin/main", metrics.base)
     }
 
-    fun `test worktree rows show only base files and ignore local changes and commit counters`() {
+    fun `test worktree rows prefer base files and fall back to uncommitted ones`() {
         val committed = worktree("committed")
         val local = worktree("local")
         val both = worktree("both")
         val renamed = worktree("renamed")
-        rpc.listed += listOf(committed, local, both, renamed)
+        val counters = worktree("counters")
+        val clean = worktree("clean")
+        rpc.listed += listOf(committed, local, both, renamed, counters, clean)
         rpc.statsResult = WorktreeStatsListDto(
             listOf(
                 WorktreeStatsDto(committed.path, additions = 5, deletions = 1, files = 2),
                 WorktreeStatsDto(local.path, ahead = 3, behind = 2),
                 WorktreeStatsDto(both.path, additions = 3, files = 1),
                 WorktreeStatsDto(renamed.path, files = 1),
+                WorktreeStatsDto(counters.path, ahead = 3, behind = 2),
+                WorktreeStatsDto(clean.path),
             ),
         )
         rpc.dirtyResult = WorktreeDirtyListDto(
@@ -695,25 +806,119 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val first = row(panel, 0).metrics ?: error("expected committed changes")
         assertEquals(5, first.additions)
         assertEquals(2, first.files)
-        assertNull(row(panel, 1).metrics)
-        val mixed = row(panel, 2).metrics ?: error("expected base changes only")
+        assertFalse(first.local)
+        // Nothing committed, so the uncommitted set is the only thing the row can report.
+        val uncommitted = row(panel, 1).metrics ?: error("expected uncommitted changes")
+        assertTrue(uncommitted.local)
+        assertEquals(0, uncommitted.files)
+        assertEquals(1, uncommitted.localFiles)
+        assertEquals(2, uncommitted.localAdditions)
+        val mixed = row(panel, 2).metrics ?: error("expected base changes to win")
         assertEquals(3, mixed.additions)
         assertEquals(1, mixed.files)
+        assertFalse(mixed.local)
         val move = row(panel, 3).metrics ?: error("expected file-only changes")
         assertEquals(1, move.files)
         assertEquals(0, move.additions)
         assertEquals(0, move.deletions)
+        // A compact summary has no ahead/behind counters, and a clean worktree has nothing at all.
+        assertNull(row(panel, 4).metrics)
+        assertNull(row(panel, 5).metrics)
 
         edt {
             val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
-            view.list.setSize(480, 400)
+            view.list.setSize(480, 600)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
-            for (index in listOf(0, 2, 3)) {
+            for (index in listOf(0, 1, 2, 3)) {
                 assertTrue(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
             }
-            assertFalse(activeListCellBounds(view.list, 1, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+            for (index in listOf(4, 5)) {
+                assertFalse(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+            }
         }
+    }
+
+    fun `test the changes badge opens whichever comparison it is showing`() {
+        val committed = worktree("committed")
+        val local = worktree("local")
+        rpc.listed += listOf(committed, local)
+        rpc.statsResult = WorktreeStatsListDto(
+            listOf(
+                WorktreeStatsDto(committed.path, additions = 5, files = 2, base = "origin/main"),
+                WorktreeStatsDto(local.path),
+            ),
+        )
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(local.path, additions = 2, files = 1)))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt { row(panel, 0).metrics!!.action!!() }
+        waitUntil { opened().isNotEmpty() }
+        assertEquals("branch", opened().single().path.params["source"])
+        edt { FileEditorManager.getInstance(project).openFiles.forEach { FileEditorManager.getInstance(project).closeFile(it) } }
+
+        edt { row(panel, 1).metrics!!.action!!() }
+        // The local comparison passes no branch, so the tab waits on a branch-name lookup for its title.
+        waitUntil { opened().isNotEmpty() }
+        assertEquals("local", opened().single().path.params["source"])
+    }
+
+    fun `test the uncommitted badge says so and reaches its own comparison through the list`() {
+        val local = worktree("local")
+        rpc.listed += local
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(local.path, additions = 2, deletions = 1, files = 3)))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            list.clearSelection()
+            val renderer = list.cellRenderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, true)
+            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
+            assertEquals(
+                listOf("3 files", "-1", "+2"),
+                components(renderer).filterIsInstance<JBLabel>().filter { it.isVisible && !it.text.isNullOrEmpty() && it.text != row(panel, 0).description }
+                    .map { it.text },
+            )
+
+            val point = center(activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL))
+            val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
+            list.mouseMotionListeners.forEach { it.mouseMoved(hover) }
+            assertEquals(Cursor.HAND_CURSOR, list.cursor.type)
+            assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), list.getToolTipText(hover))
+            for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                fire(list, MouseEvent(
+                    list,
+                    id,
+                    System.currentTimeMillis(),
+                    if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1,
+                ))
+            }
+        }
+        waitUntil { opened().isNotEmpty() }
+
+        assertEquals("local", opened().single().path.params["source"])
     }
 
     fun `test open diff opens the branch diff editor`() {
@@ -1314,6 +1519,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         return WorktreeDto(base, "repo", "main", base, main = true)
     }
 
+    /** The preferred height BasicListUI itself measures for row 0 when fixedCellHeight is -1. */
+    @Suppress("UNCHECKED_CAST")
+    private fun rowHeight(rawList: JBList<*>): Int {
+        val list = rawList as JBList<Any?>
+        val renderer = ExpandedItemListCellRendererWrapper.unwrap(list.cellRenderer)
+        return renderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, false).preferredSize.height
+    }
+
     private fun worktree(name: String): WorktreeDto {
         val path = "${project.basePath!!}/.kilo/worktrees/$name"
         return WorktreeDto(path, name, name, path)
@@ -1365,6 +1578,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
+
+    private fun opened(): List<KiloVirtualFile> =
+        edt { FileEditorManager.getInstance(project).openFiles.filterIsInstance<KiloVirtualFile>() }
 
     private fun pump() = pumpEdt()
 }

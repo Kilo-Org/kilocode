@@ -28,10 +28,11 @@ import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
+import { useBaseUpdate } from "./update-from-base"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -44,6 +45,7 @@ export interface SidebarBodyProps {
   currentSessionID: () => string | undefined
   selectLocal: () => void
   selectWorktree: (id: string) => void
+  onOpenComments?: (id: string) => void
   activityFor: (id: string | null) => Activity
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
@@ -96,6 +98,7 @@ export interface SidebarBodyProps {
 /** Legacy single-project sidebar body: local repo, worktrees, unassigned sessions. */
 export const SidebarBody: Component<SidebarBodyProps> = (props) => {
   const vscode = useVSCode()
+  const updateBase = useBaseUpdate()
   const localState = () => props.activityFor(null)
 
   return (
@@ -106,18 +109,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
         data-sidebar-id="local"
         onClick={() => props.selectLocal()}
       >
-        <span class="am-local-status" data-activity={localState()} aria-label={props.t(label(localState()))}>
-          <ActivityIcon
-            state={localState()}
-            idle={
-              <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-                <path d="M10 13.5V16.5" stroke="currentColor" />
-              </svg>
-            }
-          />
-        </span>
+        <LocalActivity state={localState()} label={props.t(label(localState()))} />
         <div class="am-local-text">
           <span class="am-local-label">{props.t("agentManager.local")}</span>
           <Show when={props.repoBranch()}>
@@ -342,6 +334,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
+                                onOpenComments={() => props.onOpenComments?.(wt.id)}
                                 onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
                                   const url = props.prStatuses()[wt.id]?.url
                                   vscode.postMessage({
@@ -370,6 +363,13 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onCommitRename={() => commitRename(wt.id)}
                                 onCancelRename={cancelRename}
                                 onRemoveStale={() => props.confirmRemoveStaleWorktree(wt.id)}
+                                onUpdateBase={() =>
+                                  updateBase(
+                                    wt.id,
+                                    props.projectId,
+                                    wtSessions().find((item) => item.id === props.currentSessionID())?.id,
+                                  )
+                                }
                                 onCopyPath={() => navigator.clipboard.writeText(wt.path)}
                                 onOpen={props.track("open_worktree_window", "worktree_menu", () =>
                                   vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id }),

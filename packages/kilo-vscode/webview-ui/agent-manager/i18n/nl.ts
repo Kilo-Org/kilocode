@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Repository niet gevonden",
   "agentManager.notGitRepo": "Geen git repository",
 
+  "agentManager.updateBase.title": "Bijwerken vanuit de basis",
+  "agentManager.updateBase.selectWorktree": "Selecteer eerst een beheerde worktree.",
+
   "agentManager.worktree.settings": "Worktree instellingen",
   "agentManager.worktree.new": "Nieuwe worktree",
   "agentManager.worktree.setupScript": "Worktree setup script",
@@ -211,6 +214,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Opmerkingen",
   "agentManager.pr.copyLink": "PR-link kopiëren",
   "agentManager.pr.comment.unresolvedCount": "{{count}} onopgelost",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} onopgeloste reviewdiscussie",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} onopgeloste reviewdiscussies",
   "agentManager.pr.comment.resolvedGroup": "Opgelost ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} onopgeloste opmerkingen naar terminal sturen",
   "agentManager.pr.comment.resolve": "Oplossen",

@@ -337,6 +337,7 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
+        event.stopPropagation()
         submit()
       }
     })
@@ -414,6 +415,7 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
+        event.stopPropagation()
         save()
       }
     })

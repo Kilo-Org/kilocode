@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
+
+  "agentManager.updateBase.title": "ベースから更新",
+  "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
+
   "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
@@ -205,6 +209,8 @@ export const dict = {
   "agentManager.pr.comment.title": "コメント",
   "agentManager.pr.copyLink": "PRリンクをコピー",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 件未解決",
+  "agentManager.pr.comment.unresolvedThread": "未解決のレビュースレッド {{count}} 件",
+  "agentManager.pr.comment.unresolvedThreads": "未解決のレビュースレッド {{count}} 件",
   "agentManager.pr.comment.resolvedGroup": "解決済み ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} 件の未解決コメントをターミナルに送信",
   "agentManager.pr.comment.resolve": "解決",

@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "إزالة من Agent Manager",
   "agentManager.project.missing": "المستودع غير موجود",
   "agentManager.notGitRepo": "ليس مستودع git",
+
+  "agentManager.updateBase.title": "تحديث من الفرع الأساسي",
+  "agentManager.updateBase.selectWorktree": "اختر أولًا worktree مُدارًا.",
+
   "agentManager.worktree.settings": "إعدادات Worktree",
   "agentManager.worktree.new": "Worktree جديد",
   "agentManager.worktree.setupScript": "سكربت إعداد Worktree",
@@ -201,6 +205,8 @@ export const dict = {
   "agentManager.pr.comment.title": "التعليقات",
   "agentManager.pr.copyLink": "نسخ رابط PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} غير محلولة",
+  "agentManager.pr.comment.unresolvedThread": "نقاش مراجعة غير محلول: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "نقاشات مراجعة غير محلولة: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "تم الحل ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "إرسال {{count}} غير محلولة إلى الطرفية",
   "agentManager.pr.comment.resolve": "حل",

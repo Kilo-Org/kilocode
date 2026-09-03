@@ -1,4 +1,5 @@
-import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2"
+import type { KiloClient } from "@kilocode/sdk/v2"
+import { KiloRunDrain } from "../run-drain"
 import { UI } from "@/cli/ui"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { isBuiltinCommand, type BuiltinCommand } from "@/kilocode/session/builtin-commands"
@@ -58,7 +59,7 @@ export namespace KiloRunDaemon {
     const daemon = await DaemonClient.maybe()
     if (!daemon) return false
     const dir = input.directory ?? Filesystem.resolve(process.cwd())
-    const client = createKiloClient({ baseUrl: daemon.url, directory: dir, headers: daemon.headers })
+    const client = KiloRunDrain.client({ baseUrl: daemon.url, directory: dir, headers: daemon.headers })
     await input.execute(client)
     return true
   }

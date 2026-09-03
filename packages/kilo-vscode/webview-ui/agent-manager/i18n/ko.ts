@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
+
+  "agentManager.updateBase.title": "베이스에서 업데이트",
+  "agentManager.updateBase.selectWorktree": "먼저 관리 중인 worktree를 선택하세요.",
+
   "agentManager.worktree.settings": "Worktree 설정",
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
@@ -203,6 +207,8 @@ export const dict = {
   "agentManager.pr.comment.title": "댓글",
   "agentManager.pr.copyLink": "PR 링크 복사",
   "agentManager.pr.comment.unresolvedCount": "{{count}}개 미해결",
+  "agentManager.pr.comment.unresolvedThread": "미해결 리뷰 스레드 {{count}}개",
+  "agentManager.pr.comment.unresolvedThreads": "미해결 리뷰 스레드 {{count}}개",
   "agentManager.pr.comment.resolvedGroup": "해결됨 ({{count}})",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}}개 미해결 댓글을 터미널로 보내기",
   "agentManager.pr.comment.resolve": "해결",

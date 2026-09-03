@@ -1,4 +1,6 @@
-import { Effect, Schema } from "effect"
+import { Effect, Exit, Schema } from "effect"
+import type { BackgroundJob } from "@/background/job"
+import type { SessionID } from "@/session/schema"
 import path from "path"
 import { Permission } from "@/permission"
 import { guarded } from "../agent"
@@ -51,6 +53,34 @@ export namespace KiloTask {
   export const modelDescription =
     "Experimental subagent model selection is enabled. Omit these fields, or send null, to keep the normal subagent model and reasoning defaults. Only override model, provider, or variant when the user explicitly requests it. Do not choose overrides on your own based on task complexity, cost, or latency. Use agent_manager_models only when an override is requested to find available models, providers, and variants; do not guess names or use model knowledge from training. This does not create Agent Manager sessions. Resumed tasks keep their last model and variant unless overridden. A variant-only override keeps the resolved model. A model override does not inherit the parent's reasoning effort."
 
+  export const cancelForeground = Effect.fn("KiloTask.cancelForeground")(function* (
+    jobs: Pick<BackgroundJob.Interface, "get">,
+    id: SessionID,
+    work: Effect.Effect<void>,
+  ) {
+    const job = yield* jobs.get(id)
+    if (job?.metadata?.background === true || job?.status !== "running") return
+    yield* work
+  })
+
+  export function start(
+    jobs: Pick<BackgroundJob.Interface, "start" | "get" | "cancel">,
+    cancel: (id: SessionID) => Effect.Effect<void>,
+    notify?: (id: string) => Effect.Effect<void>,
+  ) {
+    return Effect.fn("KiloTask.start")(function* (input: BackgroundJob.StartInput & { id: SessionID }) {
+      return yield* Effect.acquireRelease(
+        jobs
+          .start({ ...input, run: Effect.interruptible(input.run) })
+          .pipe(Effect.tap((job) => (notify ? notify(job.id) : Effect.void))),
+        (_, exit) =>
+          Exit.hasInterrupts(exit)
+            ? cancelForeground(jobs, input.id, Effect.all([cancel(input.id), jobs.cancel(input.id)], { discard: true }))
+            : Effect.void,
+      )
+    })
+  }
+
   /** Reject primary agents used as subagents */
   export function validate(info: Agent.Info, name: string) {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
@@ -97,6 +127,12 @@ export namespace KiloTask {
       (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )
     for (const permission of mutation) {
+      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      inherited.push({ permission, pattern: "*", action: "deny" })
+    }
+    const scoped = rules.filter((rule) => rule.permission !== "*")
+    for (const permission of ["board_read", "board_post"]) {
+      if (Permission.evaluate(permission, "*", scoped).action !== "deny") continue
       if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }

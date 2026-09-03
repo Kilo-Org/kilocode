@@ -46,6 +46,7 @@ export interface ResumeSessionRequest {
 export interface AbortRequest {
   type: "abort"
   sessionID: string
+  scope?: "session" | "tree"
 }
 
 export interface RequestBackgroundJobsMessage {
@@ -1525,7 +1526,9 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | import("./agent-manager").BaseUpdateRequest
   | { type: "sessionActivity"; state: Activity }
+  | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage
