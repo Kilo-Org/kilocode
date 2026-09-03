@@ -3,6 +3,7 @@ import {
   AUTOCOMPACT_PRESETS,
   currentOption,
   parsePercent,
+  runCustomThreshold,
   saveThreshold,
   thresholdLabel,
   thresholdOptions,
@@ -182,5 +183,64 @@ describe("autocompact saveThreshold", () => {
     expect(await saveThreshold(null, h.deps)).toBe(true)
     expect(h.calls).toEqual([{ scope: "global", unset: [["compaction", "threshold_percent"]] }])
     expect(h.toasts).toEqual([{ message: "Auto-compact set to only when full", variant: "success" }])
+  })
+})
+
+describe("autocompact runCustomThreshold", () => {
+  function harness(promptResult: string | null, saveResult: boolean) {
+    const saved: (number | null)[] = []
+    const toasts: { message: string; variant: string }[] = []
+    let opened = 0
+    const deps = {
+      showPrompt: async () => promptResult,
+      save: async (percent: number | null) => {
+        saved.push(percent)
+        return saveResult
+      },
+      toast: (input: { message: string; variant: "success" | "error" }) => toasts.push(input),
+      openPicker: () => {
+        opened++
+      },
+    }
+    return { saved, toasts, openedCount: () => opened, deps }
+  }
+
+  test("cancel restores the picker without saving", async () => {
+    const h = harness(null, true)
+    await runCustomThreshold(h.deps)
+    expect(h.saved).toEqual([])
+    expect(h.openedCount()).toBe(1)
+  })
+
+  test("invalid input toasts and restores the picker without saving", async () => {
+    const h = harness("abc", true)
+    await runCustomThreshold(h.deps)
+    expect(h.saved).toEqual([])
+    expect(h.toasts).toEqual([{ message: 'Invalid percentage: "abc"', variant: "error" }])
+    expect(h.openedCount()).toBe(1)
+  })
+
+  test("a failed custom save restores the picker so the user can retry", async () => {
+    // Regression: DialogPrompt.show resolves without closing, so a failed save
+    // must reopen the picker like the cancel/invalid branches. Without this the
+    // second submit is a no-op on the already-settled promise.
+    const h = harness("70", false)
+    await runCustomThreshold(h.deps)
+    expect(h.saved).toEqual([70])
+    expect(h.openedCount()).toBe(1)
+  })
+
+  test("a successful custom save does not restore the picker", async () => {
+    const h = harness("70", true)
+    await runCustomThreshold(h.deps)
+    expect(h.saved).toEqual([70])
+    expect(h.openedCount()).toBe(0)
+  })
+
+  test("empty input saves the disable value and does not restore the picker", async () => {
+    const h = harness("", true)
+    await runCustomThreshold(h.deps)
+    expect(h.saved).toEqual([null])
+    expect(h.openedCount()).toBe(0)
   })
 })

@@ -112,6 +112,39 @@ export async function saveThreshold(percent: number | null, deps: ThresholdSaveD
   return true
 }
 
+export type CustomThresholdDeps = {
+  /** Opens the custom prompt; resolves with the typed text, or `null` on cancel. */
+  showPrompt: () => Promise<string | null>
+  /** Writes the threshold; returns `false` when the save failed. */
+  save: (percent: number | null) => Promise<boolean>
+  toast: (input: { message: string; variant: "success" | "error" }) => void
+  /** Reopens the threshold picker, e.g. `dialog.replace(() => <DialogAutocompact />)`. */
+  openPicker: () => void
+}
+
+/**
+ * Drive the custom-threshold flow. Cancel, an invalid value, and a failed save
+ * each restore the picker via `openPicker` so the user can retry. The prompt
+ * stays mounted after `showPrompt` resolves, so a failed save must reopen the
+ * picker like the cancel/invalid branches do. A successful save leaves the
+ * dialog closed (the caller's `save` clears it).
+ */
+export async function runCustomThreshold(deps: CustomThresholdDeps): Promise<void> {
+  const result = await deps.showPrompt()
+  if (result === null) {
+    deps.openPicker()
+    return
+  }
+  const percent = parsePercent(result)
+  if (percent === undefined) {
+    deps.toast({ message: `Invalid percentage: "${result.trim()}"`, variant: "error" })
+    deps.openPicker()
+    return
+  }
+  const saved = await deps.save(percent)
+  if (!saved) deps.openPicker()
+}
+
 export function DialogAutocompact() {
   const dialog = useDialog()
   const sync = useSync()
@@ -131,8 +164,9 @@ export function DialogAutocompact() {
       setStore: (key, value) => sync.set(key, value as never),
       toast: (input) => toast.show(input),
     })
-    if (!saved) return
+    if (!saved) return false
     dialog.clear()
+    return true
   }
 
   return (
@@ -144,21 +178,16 @@ export function DialogAutocompact() {
       onSelect={async (option) => {
         const value = option.value
         if (value === "custom") {
-          const result = await DialogPrompt.show(dialog, "Auto-compact threshold (%)", {
-            value: typeof current() === "number" ? String(current()) : "",
-            placeholder: "1–100, empty to disable",
+          await runCustomThreshold({
+            showPrompt: () =>
+              DialogPrompt.show(dialog, "Auto-compact threshold (%)", {
+                value: typeof current() === "number" ? String(current()) : "",
+                placeholder: "1–100, empty to disable",
+              }),
+            save,
+            toast: (input) => toast.show(input),
+            openPicker: () => dialog.replace(() => <DialogAutocompact />),
           })
-          if (result === null) {
-            dialog.replace(() => <DialogAutocompact />)
-            return
-          }
-          const percent = parsePercent(result)
-          if (percent === undefined) {
-            toast.show({ message: `Invalid percentage: "${result.trim()}"`, variant: "error" })
-            dialog.replace(() => <DialogAutocompact />)
-            return
-          }
-          await save(percent)
           return
         }
         await save(value === "off" ? null : value)
