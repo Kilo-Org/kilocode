@@ -153,6 +153,8 @@ describe("shared board tools", () => {
           const read = yield* Tool.init(yield* BoardReadTool)
           const params = { to: "ALL", type: "INFO" as const, body: "Top-level note" }
           const initial = yield* post.execute(params, ctx)
+          expect(initial.metadata.availability.total).toBe(0)
+          expect(JSON.parse(initial.output)).not.toHaveProperty("warning")
           for (const value of ["", " \t ", null, undefined]) {
             const result = yield* post.execute({ ...params, reply_to: value }, ctx)
             expect(result.metadata.id).toBe(initial.metadata.id)
@@ -211,7 +213,15 @@ describe("shared board tools", () => {
           expect(unknown.metadata.availability).toMatchObject({ total: 1, active: 0, inactive: 0, unknown: 1 })
           expect(JSON.parse(unknown.output).warning).toContain("Availability was unknown")
           expect(yield* observed).toBe("unknown")
-          expect((yield* send("main", "main")).metadata.availability).toMatchObject({ total: 0, active: 0 })
+          const self = yield* send("main", "main")
+          expect(self.metadata.availability).toMatchObject({ total: 0, active: 0 })
+          expect(JSON.parse(self.output)).not.toHaveProperty("warning")
+          const own = yield* post.execute(
+            { to: child.id, type: "INFO", body: "Note to self" },
+            yield* context(child.id, MessageID.ascending()),
+          )
+          expect(own.metadata.availability.total).toBe(0)
+          expect(JSON.parse(own.output)).not.toHaveProperty("warning")
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
           const running = yield* send(child.id, "running")
           expect(JSON.parse(running.output)).not.toHaveProperty("warning")

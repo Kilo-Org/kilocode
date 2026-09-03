@@ -1343,14 +1343,9 @@ function McpTool(props: ToolProps) {
                 <For each={rows()}>
                   {(message) => (
                     <div data-slot="board-message">
-                      <div data-slot="board-message-heading">
-                        <Show when={props.tool === "board_read"}>
-                          <BoardRoute {...message} />
-                        </Show>
-                        <Show when={typeof message.type === "string" && message.type}>
-                          {(kind) => <span data-slot="board-message-kind">{kind()}</span>}
-                        </Show>
-                      </div>
+                      <Show when={props.tool === "board_read"}>
+                        <BoardRoute {...message} />
+                      </Show>
                       <div data-slot="board-message-body">
                         <Markdown text={message.body} />
                       </div>

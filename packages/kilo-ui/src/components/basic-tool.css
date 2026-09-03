@@ -198,22 +198,10 @@ html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
     border-top: 1px solid var(--border-weak-base);
   }
 
-  [data-slot="board-message-heading"] {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  [data-slot="board-message-kind"],
   [data-slot="board-message-note"] {
     color: var(--text-weak);
     font-size: var(--kilo-font-size-12);
     overflow-wrap: anywhere;
-  }
-
-  [data-slot="board-message-kind"] {
-    flex: 0 0 auto;
   }
 
   [data-slot="board-message-body"] {
@@ -233,7 +221,6 @@ html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
     display: grid;
     grid-template-columns: 16px auto minmax(0, 1fr);
     gap: 4px 6px;
-    flex-basis: 100%;
 
     .board-route-member {
       max-width: none;
@@ -250,10 +237,6 @@ html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
     .board-route-recipient {
       grid-area: 2 / 3;
     }
-  }
-
-  [data-slot="board-message-heading"] {
-    flex-wrap: wrap;
   }
 }
 

@@ -10,6 +10,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
+import { SessionStatus } from "../../src/session/status"
+import { BackgroundJob } from "../../src/background/job"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { Provider } from "../../src/provider/provider"
@@ -27,6 +29,8 @@ const it = testEffect(
   LayerNode.compile(
     LayerNode.group([
       Session.node,
+      SessionStatus.node,
+      BackgroundJob.node,
       SessionProjector.node,
       Config.node,
       Database.node,

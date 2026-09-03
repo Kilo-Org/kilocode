@@ -160,7 +160,8 @@ export const BoardPostTool = Tool.define<
             snapshot: yield* snapshot(jobs, status),
           }).pipe(Effect.provideService(Database.Service, database))
           const warning = [
-            availability.active === 0 &&
+            availability.total > 0 &&
+              availability.active === 0 &&
               availability.unknown === 0 &&
               "No other recipients were active at this post attempt.",
             availability.inactive > 0 &&
