@@ -265,32 +265,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Uruchom 'gh auth login' w terminalu, aby przywrócić status PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI nie jest zainstalowane",
   "agentManager.pr.error.gh_missing.description": "Zainstaluj GitHub CLI, aby włączyć status PR.",
-  "agentManager.intro.title": "Uruchamiaj agentów równolegle, każdego na własnej gałęzi",
+  "agentManager.intro.title": "Równoległe zadania. Oddzielne worktree.",
   "agentManager.intro.subtitle":
-    "Każdy worktree to osobna kopia tego repozytorium na własnej gałęzi. Agenci pracują tam jednocześnie, a Twój lokalny folder pozostaje nietknięty.",
-  "agentManager.intro.graph.agent": "agent",
-  "agentManager.intro.graph.pr": "PR",
-  "agentManager.intro.graph.conflict": "konflikt",
+    "Worktree to osobny folder i gałąź dla zadania. Agenci mogą pracować obok siebie bez edytowania tych samych plików.",
+  "agentManager.intro.graph.agent": "agent Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Jeśli zmiany powodują konflikt",
   "agentManager.intro.conflictText":
     "Poproś agenta w worktree o scalenie jego oryginalnej gałęzi bazowej i rozwiązanie konfliktów, a następnie przejrzyj wynik. Unikaj git stash: stash jest współdzielony między worktree.",
-  "agentManager.intro.stage1.title": "Twoja gałąź",
-  "agentManager.intro.stage1.text":
-    '"Lokalne" to Twój zwykły folder roboczy na the base branch. Worktree to drugi checkout tego samego repozytorium w .kilo/worktrees/<name>, na własnej gałęzi. Zmiany w worktree nie dotykają Twoich lokalnych plików ani bieżącej gałęzi.',
-  "agentManager.intro.stage2.title": "Rozdziel pracę",
+  "agentManager.intro.stage1.title": "Twoje repozytorium",
+  "agentManager.intro.stage1.text": "Lokalne pliki pozostają niezmienione",
+  "agentManager.intro.stage2.title": "Przykład: dwa zadania równolegle",
   "agentManager.intro.stage2.text":
-    "Utwórz jeden worktree na zadanie. Każdy worktree otrzymuje własną gałąź i własną sesję agenta. Użyj opcji Wersje w oknie Nowy Worktree, aby uruchomić jeden prompt na maksymalnie 4 sposoby i zachować najlepszy wynik.",
-  "agentManager.intro.stage3.title": "Agenci równolegle",
-  "agentManager.intro.stage3.text":
-    "Agenci działają jednocześnie i nie mogą nadpisywać nawzajem swoich plików. Śledź każdego z jego karty, sprawdź diff i uruchom aplikację z terminala danego worktree.",
-  "agentManager.intro.stage4.title": "Przenieś pracę z powrotem",
-  "agentManager.intro.stage4.text":
-    "Otwórz panel diff i użyj Apply, aby skopiować zmiany z worktree na swoją lokalną gałąź. Albo wypchnij gałąź i otwórz PR z terminala sesji. Jeśli dwa worktree zmieniły ten sam kod, drugi scalany ma konflikty: poproś agenta w tym worktree, aby najpierw scalił the base branch. Nigdy nie używaj git stash wewnątrz worktree.",
+    "Oba worktree należą do tego repozytorium. Dla innego repozytorium wybierz inny projekt.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Własny folder + gałąź",
+  "agentManager.intro.stage4.title": "Przywróć zmiany, gdy będziesz gotowy",
+  "agentManager.intro.stage4.text": "Poproś agenta o otwarcie pull request albo użyj Apply w panelu diff.",
   "agentManager.intro.prDetection":
     "Odznaki PR aktualizują się automatycznie dla każdej gałęzi worktree (wymagane zalogowanie do GitHub CLI).",
   "agentManager.intro.checksRunning": "Sprawdzanie w toku",
   "agentManager.intro.approved": "Zatwierdzono",
-  "agentManager.intro.create": "Utwórz swój pierwszy worktree",
+  "agentManager.intro.create": "Utwórz worktree",
   "agentManager.intro.guide": "Przeczytaj przewodnik",
-  "agentManager.intro.dismiss": "Rozumiem",
+  "agentManager.intro.dismiss": "Pomiń wprowadzenie",
   "agentManager.intro.reopen": "Jak działa Agent Manager",
 }

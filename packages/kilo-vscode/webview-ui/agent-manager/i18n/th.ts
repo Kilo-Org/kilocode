@@ -260,32 +260,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "รันคำสั่ง 'gh auth login' ในเทอร์มินัลเพื่อกู้คืนสถานะ PR",
   "agentManager.pr.error.gh_missing.title": "ไม่ได้ติดตั้ง GitHub CLI",
   "agentManager.pr.error.gh_missing.description": "ติดตั้ง GitHub CLI เพื่อเปิดใช้งานสถานะ PR",
-  "agentManager.intro.title": "รันเอเจนต์แบบขนาน แต่ละตัวอยู่บน branch ของตัวเอง",
+  "agentManager.intro.title": "งานแบบขนาน worktree แยกกัน",
   "agentManager.intro.subtitle":
-    "แต่ละ worktree คือสำเนาแยกของ repository นี้บน branch ของตัวเอง เอเจนต์ทำงานที่นั่นพร้อมกัน และโฟลเดอร์ในเครื่องของคุณจะไม่ถูกแก้ไข",
-  "agentManager.intro.graph.agent": "เอเจนต์",
-  "agentManager.intro.graph.pr": "PR",
-  "agentManager.intro.graph.conflict": "ความขัดแย้ง",
+    "worktree คือโฟลเดอร์และ branch แยกสำหรับงานหนึ่งงาน เอเจนต์ทำงานเคียงข้างกันได้โดยไม่แก้ไฟล์เดียวกัน",
+  "agentManager.intro.graph.agent": "Kilo agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "หากการเปลี่ยนแปลงขัดแย้งกัน",
   "agentManager.intro.conflictText":
     "ขอให้ agent ใน worktree merge base branch เดิมของตนและแก้ไขความขัดแย้ง จากนั้นตรวจสอบผลลัพธ์ หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
-  "agentManager.intro.stage1.title": "Branch ของคุณ",
-  "agentManager.intro.stage1.text":
-    '"ในเครื่อง" คือโฟลเดอร์ workspace ปกติของคุณบน the base branch ส่วน worktree คือการ checkout ครั้งที่สองของ repository เดียวกันใน .kilo/worktrees/<name> บน branch ของตัวเอง การเปลี่ยนแปลงใน worktree จะไม่กระทบไฟล์ในเครื่องหรือ branch ปัจจุบันของคุณ',
-  "agentManager.intro.stage2.title": "กระจายงาน",
+  "agentManager.intro.stage1.title": "repository ของคุณ",
+  "agentManager.intro.stage1.text": "ไฟล์ในเครื่องจะไม่เปลี่ยนแปลง",
+  "agentManager.intro.stage2.title": "ตัวอย่าง: สองงานทำพร้อมกัน",
   "agentManager.intro.stage2.text":
-    "สร้าง worktree หนึ่งตัวต่อหนึ่งงาน แต่ละ worktree จะได้ branch ของตัวเองและเซสชันเอเจนต์ของตัวเอง ใช้เวอร์ชันในกล่องโต้ตอบ Worktree ใหม่ เพื่อรันพรอมต์เดียวได้สูงสุด 4 แบบ แล้วเก็บผลลัพธ์ที่ดีที่สุดไว้",
-  "agentManager.intro.stage3.title": "เอเจนต์ทำงานแบบขนาน",
-  "agentManager.intro.stage3.text":
-    "เอเจนต์ทำงานพร้อมกันและไม่สามารถเขียนทับไฟล์ของกันและกันได้ ติดตามแต่ละตัวจากแท็บของมัน ตรวจสอบ diff และรันแอปจากเทอร์มินัลของ worktree",
-  "agentManager.intro.stage4.title": "นำงานกลับมา",
-  "agentManager.intro.stage4.text":
-    "เปิดแผง diff แล้วใช้ Apply เพื่อคัดลอกการเปลี่ยนแปลงของ worktree ไปยัง branch ในเครื่องของคุณ หรือ push branch แล้วเปิด PR จากเทอร์มินัลของเซสชัน ถ้า worktree สองตัวแก้โค้ดส่วนเดียวกัน ตัวที่ merge ทีหลังจะมีความขัดแย้ง: ขอให้เอเจนต์ใน worktree นั้น merge the base branch ก่อน ห้ามใช้ git stash ภายใน worktree เด็ดขาด",
+    "worktree ทั้งสองอยู่ใน repository นี้ หากเป็น repository อื่น ให้เลือกโปรเจกต์อื่น",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "โฟลเดอร์และ branch ของตัวเอง",
+  "agentManager.intro.stage4.title": "นำการเปลี่ยนแปลงกลับมาเมื่อพร้อม",
+  "agentManager.intro.stage4.text": "ขอให้เอเจนต์เปิด pull request หรือใช้ Apply ในแผง diff",
   "agentManager.intro.prDetection":
     "ป้าย PR จะอัปเดตโดยอัตโนมัติสำหรับแต่ละ branch ของ worktree (ต้องลงชื่อเข้าใช้ GitHub CLI)",
   "agentManager.intro.checksRunning": "กำลังตรวจสอบ",
   "agentManager.intro.approved": "อนุมัติแล้ว",
-  "agentManager.intro.create": "สร้าง worktree แรกของคุณ",
+  "agentManager.intro.create": "สร้าง worktree",
   "agentManager.intro.guide": "อ่านคู่มือ",
-  "agentManager.intro.dismiss": "เข้าใจแล้ว",
+  "agentManager.intro.dismiss": "ข้ามบทนำ",
   "agentManager.intro.reopen": "Agent Manager ทำงานอย่างไร",
 }

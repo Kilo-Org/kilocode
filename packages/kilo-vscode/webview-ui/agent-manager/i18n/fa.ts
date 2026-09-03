@@ -269,32 +269,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "برای بازیابی وضعیت PR، دستور 'gh auth login' را در ترمینال اجرا کنید.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI نصب نشده است",
   "agentManager.pr.error.gh_missing.description": "برای فعال کردن وضعیت PR، GitHub CLI را نصب کنید.",
-  "agentManager.intro.title": "عامل‌ها را به‌صورت موازی اجرا کنید، هر یک روی شاخه خودش",
+  "agentManager.intro.title": "وظایف موازی. worktreeهای جدا.",
   "agentManager.intro.subtitle":
-    "هر worktree یک نسخه جدا از این مخزن روی شاخه خودش است. عامل‌ها همان‌جا هم‌زمان کار می‌کنند و پوشه محلی شما دست‌نخورده می‌ماند.",
-  "agentManager.intro.graph.agent": "عامل",
-  "agentManager.intro.graph.pr": "PR",
-  "agentManager.intro.graph.conflict": "تعارض",
+    "worktree برای هر وظیفه یک پوشه و شاخه جداست. عامل‌ها بدون ویرایش فایل‌های یکسان کنار هم کار می‌کنند.",
+  "agentManager.intro.graph.agent": "عامل Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "اگر تغییرات تعارض داشته باشند",
   "agentManager.intro.conflictText":
     "از عامل در worktree بخواهید شاخهٔ پایهٔ اصلی خود را merge کند و تعارض‌ها را حل کند، سپس نتیجه را بررسی کنید. از git stash پرهیز کنید: stashها بین worktreeها مشترک هستند.",
-  "agentManager.intro.stage1.title": "شاخه شما",
-  "agentManager.intro.stage1.text":
-    '"محلی" پوشه عادی فضای کاری شما روی the base branch است. worktree یک checkout دوم از همان مخزن در .kilo/worktrees/<name> و روی شاخه خودش است. تغییرات در یک worktree به فایل‌های محلی یا شاخه فعلی شما دست نمی‌زند.',
-  "agentManager.intro.stage2.title": "تقسیم کار",
+  "agentManager.intro.stage1.title": "مخزن شما",
+  "agentManager.intro.stage1.text": "فایل‌های محلی بدون تغییر می‌مانند",
+  "agentManager.intro.stage2.title": "مثال: دو وظیفه به‌صورت موازی",
   "agentManager.intro.stage2.text":
-    "برای هر وظیفه یک worktree بسازید. هر worktree شاخه خودش و نشست عامل خودش را می‌گیرد. از نسخه‌ها در پنجره Worktree جدید استفاده کنید تا یک پرامپت را تا 4 روش اجرا کنید و بهترین نتیجه را نگه دارید.",
-  "agentManager.intro.stage3.title": "عامل‌ها به‌صورت موازی",
-  "agentManager.intro.stage3.text":
-    "عامل‌ها هم‌زمان اجرا می‌شوند و نمی‌توانند فایل‌های یکدیگر را بازنویسی کنند. هر یک را از تب خودش دنبال کنید، diff را بررسی کنید و برنامه را از ترمینال worktree اجرا کنید.",
-  "agentManager.intro.stage4.title": "بازگرداندن کار",
-  "agentManager.intro.stage4.text":
-    "پنل diff را باز کنید و با Apply تغییرات یک worktree را روی شاخه محلی خود کپی کنید. یا شاخه را push کنید و از ترمینال نشست یک PR باز کنید. اگر دو worktree همان کد را تغییر داده باشند، دومی که merge می‌شود تعارض دارد: از عامل آن worktree بخواهید ابتدا the base branch را merge کند. هرگز درون یک worktree از git stash استفاده نکنید.",
+    "هر دو worktree متعلق به این مخزن هستند. برای مخزن دیگر، پروژه دیگری را انتخاب کنید.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "پوشه و شاخه اختصاصی",
+  "agentManager.intro.stage4.title": "هر زمان آماده بودید تغییرات را برگردانید",
+  "agentManager.intro.stage4.text": "از عامل بخواهید pull request باز کند، یا از Apply در پنل diff استفاده کنید.",
   "agentManager.intro.prDetection":
     "نشان‌های PR برای هر branch در worktree به‌طور خودکار به‌روزرسانی می‌شوند (ورود به GitHub CLI لازم است).",
   "agentManager.intro.checksRunning": "بررسی‌ها در حال اجرا هستند",
   "agentManager.intro.approved": "تأییدشده",
-  "agentManager.intro.create": "اولین worktree خود را بسازید",
+  "agentManager.intro.create": "ایجاد worktree",
   "agentManager.intro.guide": "راهنما را بخوانید",
-  "agentManager.intro.dismiss": "متوجه شدم",
+  "agentManager.intro.dismiss": "رد کردن مقدمه",
   "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
 }
