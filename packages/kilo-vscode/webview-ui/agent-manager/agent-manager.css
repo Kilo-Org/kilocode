@@ -4529,6 +4529,40 @@ body.am-wt-dragging-active * {
   color: var(--syntax-diff-delete, #da3319);
 }
 
+.am-file-tree-file-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.am-file-tree-revert-btn {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-file-tree-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
+.am-diff-revert-btn {
+  color: var(--text-weaker);
+}
+
+.am-diff-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
 /* File tree summary footer */
 
 .am-file-tree-summary {
@@ -4777,35 +4811,6 @@ body.vscode-high-contrast-light {
 
   .am-terminal-host:focus-within {
     box-shadow: inset 0 0 0 1px var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
-  }
-}
-
-/* Context menu — restyle to match dropdown-menu visuals.
-   The kilo-ui ContextMenu component hardcodes its own data-component / data-slot
-   attributes after the prop spread, so we can't override them via props.
-   Instead we apply a class and re-declare the styles here. */
-
-.am-ctx-menu {
-  min-width: 210px;
-  border: 1px solid color-mix(in oklch, var(--border-base) 50%, transparent) !important;
-  box-shadow: var(--shadow-md) !important;
-
-  [data-slot="context-menu-item"],
-  [data-slot="context-menu-checkbox-item"],
-  [data-slot="context-menu-radio-item"],
-  [data-slot="context-menu-sub-trigger"] {
-    padding: 6px 10px;
-    font-size: var(--font-size-small);
-    transition: none;
-
-    &:hover,
-    &[data-highlighted] {
-      background: var(--surface-raised-base-hover);
-    }
-  }
-
-  [data-slot="context-menu-separator"] {
-    margin: 4px 0;
   }
 }
 

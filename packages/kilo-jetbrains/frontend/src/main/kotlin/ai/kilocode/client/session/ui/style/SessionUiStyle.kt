@@ -153,6 +153,14 @@ object SessionUiStyle {
             const val MAX_WIDTH = 350
             const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
             const val MAX_HEIGHT = 450
+
+            /**
+             * Band kept above and below a body that scrolls sideways, so its scrollbar clears the
+             * content instead of landing on the last line of it. Doubles the balloon's own 6px vertical
+             * inset, because a body with a scrollbar is one whose first and last line would otherwise
+             * sit against the balloon edge with a bar over them.
+             */
+            const val SCROLL_PADDING = 12
         }
 
         internal const val BORDER_DELTA = 80

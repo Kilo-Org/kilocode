@@ -26,7 +26,7 @@ export const RemoteCommand = cmd({
       // advertised for the explicit `kilo remote` command path.
       // enableRemote() also ensures a default advertisement; this explicit call
       // remains a legitimate replace (or no-op when identical) per the contract.
-      KiloSessions.setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
+      KiloSessions.setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory, "remote"))
 
       await KiloSessions.enableRemote()
       console.log("Remote connection enabled.")

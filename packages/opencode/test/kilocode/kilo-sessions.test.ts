@@ -292,10 +292,12 @@ multi.live("isolates the process-wide listener by instance directory", () => {
 describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
   let heartbeatCalls = 0
   let outOfBand: Promise<void> | undefined
+  let snapshot: RemoteProtocol.InstanceAdvertisement | undefined
 
   beforeEach(() => {
     heartbeatCalls = 0
     outOfBand = undefined
+    snapshot = undefined
     process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
     delete process.env["KILO_SESSION_INGEST_URL"]
     process.env["KILO_API_KEY"] = "tok"
@@ -316,7 +318,9 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
           send() {},
           heartbeat: () => {
             heartbeatCalls += 1
-            const p = options.getSessions().then(() => undefined)
+            const p = options.getSessions().then((payload) => {
+              snapshot = payload.instance
+            })
             outOfBand = p
             return p
           },
@@ -367,14 +371,16 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
     reset("tok")
   })
 
-  // Reads the `getSessions` closure that kilo-sessions.ts passed to
-  // RemoteWS.connect when enableRemote() ran. The mock stores calls
-  // on the spy's `.mock.calls` array; we extract the Options object.
-  function capturedGetSessions(): () => Promise<RemoteProtocol.Heartbeat> {
+  // Read the latest connection so reconnect tests exercise the new closure.
+  function captured() {
     const calls = (RemoteWS.connect as unknown as { mock: { calls: { 0: RemoteWS.Options }[] } }).mock.calls
-    const getSessions = calls[0]?.[0].getSessions
-    if (!getSessions) throw new Error("RemoteWS.connect was not called")
-    return getSessions as () => Promise<RemoteProtocol.Heartbeat>
+    const options = calls.at(-1)?.[0]
+    if (!options) throw new Error("RemoteWS.connect was not called")
+    return options
+  }
+
+  function capturedGetSessions() {
+    return captured().getSessions as () => Promise<RemoteProtocol.Heartbeat>
   }
 
   test("enableRemote alone advertises the instance (covers /remote and auto-enable)", async () => {
@@ -390,6 +396,34 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         expect(payload.instance).toBeDefined()
         expect(payload.instance!.projectName.length).toBeGreaterThan(0)
         expect(payload.instance!.name.length).toBeGreaterThan(0)
+        expect(payload.instance?.kind).toBe("cli")
+        expect(payload.instance?.startedAt).toBeDefined()
+        expect(payload.instance?.gitBranch).toBeDefined()
+      },
+    })
+  })
+
+  test("explicit remote command advertises remote before enablement", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const bootstrap = await import("../../src/cli/bootstrap")
+        const { RemoteCommand } = await import("../../src/cli/cmd/remote")
+        spyOn(bootstrap, "bootstrap").mockImplementation(async (_directory, cb) => cb())
+        const enable = KiloSessions.enableRemote
+        const stop = new Error("stop before the command waits for shutdown")
+        spyOn(KiloSessions, "enableRemote").mockImplementation(async () => {
+          await enable()
+          throw stop
+        })
+        const handler = RemoteCommand.handler
+        if (typeof handler !== "function") throw new Error("remote command handler is missing")
+        const result = await Promise.resolve(handler({ _: [], $0: "kilo" })).catch((err: unknown) => err)
+        expect(result).toBe(stop)
+        const payload = await capturedGetSessions()()
+        expect(payload.instance?.kind).toBe("remote")
+        expect(payload.instance?.startedAt).toBeDefined()
       },
     })
   })
@@ -421,15 +455,19 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
       fn: async () => {
         await KiloSessions.enableRemote()
         // Explicit set keeps replace semantics even when enableRemote already
-        // derived a default advertisement.
+        // derived a default advertisement. Do not invent metadata for a legacy ad.
         KiloSessions.setInstanceAdvertisement({
           name: "mbp-igor",
           projectName: "cloud",
           version: "1.2.3",
         })
-        const payload = await capturedGetSessions()()
-        expect(payload.type).toBe("heartbeat")
-        expect(payload.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+        await outOfBand
+        expect(snapshot).toEqual({
+          name: "mbp-igor",
+          projectName: "cloud",
+          version: "1.2.3",
+          gitBranch: expect.any(String),
+        })
       },
     })
   })
@@ -446,8 +484,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         KiloSessions.setInstanceAdvertisement({ name: "h", projectName: "p" })
         await outOfBand
         expect(heartbeatCalls).toBe(beforeHeartbeatCalls + 1)
-        const afterPayload = await capturedGetSessions()()
-        expect(afterPayload.instance).toEqual({ name: "h", projectName: "p" })
+        expect(snapshot).toEqual({ name: "h", projectName: "p", gitBranch: expect.any(String) })
       },
     })
   })
@@ -464,22 +501,29 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         KiloSessions.setInstanceAdvertisement({ name: "second", projectName: "p" })
         await outOfBand
         expect(heartbeatCalls).toBe(before + 1)
-        const payload = await capturedGetSessions()()
-        expect(payload.instance).toEqual({ name: "second", projectName: "p" })
+        expect(snapshot).toEqual({ name: "second", projectName: "p", gitBranch: expect.any(String) })
       },
     })
   })
 
-  test("explicit set before enableRemote is preserved (no re-set on enable)", async () => {
+  test("explicit metadata before enableRemote is preserved except for the current branch", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
       directory: tmp.path,
       fn: async () => {
-        // Contract: set before connect → flag stored; enable must not replace.
-        KiloSessions.setInstanceAdvertisement({ name: "pre-set", projectName: "proj", version: "9.9.9" })
+        const instance = {
+          name: "pre-set",
+          projectName: "proj",
+          version: "9.9.9",
+          kind: "remote" as const,
+          startedAt: "2020-01-02T03:04:05.678Z",
+          gitBranch: "stale",
+        }
+        KiloSessions.setInstanceAdvertisement(instance)
         await KiloSessions.enableRemote()
         const payload = await capturedGetSessions()()
-        expect(payload.instance).toEqual({ name: "pre-set", projectName: "proj", version: "9.9.9" })
+        expect(payload.instance?.gitBranch).not.toBe("stale")
+        expect(payload.instance).toEqual({ ...instance, gitBranch: expect.any(String) })
       },
     })
   })
@@ -498,6 +542,77 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         await KiloSessions.enableRemote()
         const after = await capturedGetSessions()()
         expect(after.instance).toEqual(before.instance)
+      },
+    })
+  })
+
+  test("reconnect heartbeat refreshes the branch without replacing process identity", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const first = await capturedGetSessions()()
+        if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        const { Vcs } = await import("../../src/project/vcs")
+        const vcs = await AppRuntime.runPromise(Vcs.Service.use((svc) => Effect.succeed(svc)))
+        spyOn(vcs, "branch").mockReturnValue(Effect.succeed("feature/reconnected"))
+        captured().onDisconnect?.()
+        captured().onOpen?.()
+        await outOfBand
+        expect(snapshot).toEqual({ ...first.instance, gitBranch: "feature/reconnected" })
+      },
+    })
+  })
+
+  test("refreshes and bounds only instance branches while preserving process identity", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        const { Vcs } = await import("../../src/project/vcs")
+        const vcs = await AppRuntime.runPromise(Vcs.Service.use((svc) => Effect.succeed(svc)))
+        const branch = spyOn(vcs, "branch").mockReturnValue(Effect.succeed("main"))
+        await KiloSessions.enableRemote()
+        const first = await capturedGetSessions()()
+        if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
+        const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+        KiloSessions.setAttachedSessions([chat.id])
+        for (const [input, expected] of [
+          ["feature/current", "feature/current"],
+          ["a".repeat(25), "a".repeat(24)],
+          ['"\\\n\u0001'.repeat(7), '"\\\n\u0001'.repeat(6)],
+          ["界".repeat(25), "界".repeat(24)],
+          ["\u{10400}".repeat(13), "\u{10400}".repeat(12)],
+          ["a".repeat(23) + "\u{10400}", "a".repeat(23)],
+          ["a".repeat(22) + "\u{10400}b", "a".repeat(22) + "\u{10400}"],
+          ["", ""],
+          [undefined, undefined],
+        ]) {
+          branch.mockReturnValue(Effect.succeed(input))
+          const payload = await capturedGetSessions()()
+          expect(payload.instance).toEqual({ ...first.instance, gitBranch: expected })
+          expect(payload.sessions.find((row) => row.id === chat.id)).toMatchObject({ id: chat.id, gitBranch: input })
+        }
+        branch.mockReturnValue(Effect.die(new Error("branch unavailable")))
+        const payload = await capturedGetSessions()()
+        expect(payload.instance).toEqual({ ...first.instance, gitBranch: undefined })
+      },
+    })
+  })
+
+  test("omits the whole instance when no advertisement is present", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        KiloSessions.resetInstanceAdvertisementForTests()
+        const payload = await capturedGetSessions()()
+        expect(payload).not.toHaveProperty("instance")
+        expect(payload.sessions).toEqual([])
       },
     })
   })

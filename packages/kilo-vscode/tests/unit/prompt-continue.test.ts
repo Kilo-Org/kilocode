@@ -28,6 +28,32 @@ describe("empty prompt continuation", () => {
     expect(continuation({ ...input, messages: [user, { ...assistant, finish: "stop" }] })).toBe(assistant.id)
   })
 
+  it("keeps a stopped turn resumable while background results wait for user input", () => {
+    const job = { ...user, id: "background" }
+    const part: Part = {
+      id: "result",
+      sessionID: "session",
+      messageID: job.id,
+      type: "text",
+      text: "Background task completed",
+      synthetic: true,
+      metadata: { background: true },
+    }
+    const next = {
+      ...input,
+      messages: [user, assistant, job],
+      parts: (id: string) => (id === job.id ? [part] : []),
+    }
+    expect(continuation(next)).toBe(assistant.id)
+    expect(continuation({ ...next, parts: () => [{ ...part, metadata: {} }] })).toBeUndefined()
+    expect(
+      continuation({
+        ...next,
+        messages: [...next.messages, { ...assistant, id: "reply", parentID: job.id, error: undefined, finish: "stop" }],
+      }),
+    ).toBeUndefined()
+  })
+
   it("accepts unfinished assistant and tool-call turns", () => {
     for (const finish of [undefined, "tool-calls"]) {
       expect(continuation({ ...input, messages: [user, { ...assistant, error: undefined, finish }] })).toBe(
