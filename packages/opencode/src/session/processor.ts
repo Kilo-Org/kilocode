@@ -738,6 +738,16 @@ export const layer = Layer.effect(
                 ignored: true,
               })
             }
+
+            const lengthError = KiloSessionProcessor.lengthFinishError({ msg: ctx.assistantMessage, step: ctx.step })
+            if (lengthError) {
+              yield* bus.publish(Session.Event.Error, {
+                sessionID: ctx.assistantMessage.sessionID,
+                error: lengthError,
+              })
+              yield* status.set(ctx.sessionID, { type: "idle" })
+            }
+
             const providerError = KiloSessionProcessor.providerFinishError(ctx.assistantMessage)
             if (providerError) {
               yield* bus.publish(Session.Event.Error, {
