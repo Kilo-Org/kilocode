@@ -1040,10 +1040,11 @@ try {
     suggestion: { id: "suggestion", sessionID: "task-grand", text: "Try this", actions: [] },
   })
   await check("root", "idle")
-  await check("task-grand", "idle")
+  await check("task-grand", "done")
   assert.equal(value.scopedSuggestions("root").length, 1)
   await emit({ type: "suggestionResolved", requestID: "suggestion" })
   await check("root", "idle")
+  await check("task-grand", "idle")
   assert.equal(value.suggestions().length, 0)
 
   await emit({ type: "webviewActiveChanged", active: true })
@@ -1078,18 +1079,21 @@ try {
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
 
-  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({
     type: "suggestionRequest",
     suggestion: { id: "review", sessionID: "root", text: "Review the changes", actions: [] },
   })
+  await check("root", "busy")
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "done")
+  assert.equal(value.closeReason(), undefined)
   assert.equal(value.suggestions().length, 1)
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await check("root", "busy")
+  await emit({ type: "suggestionResolved", requestID: "review" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
-  await emit({ type: "suggestionResolved", requestID: "review" })
 
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "done")

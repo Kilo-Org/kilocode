@@ -67,6 +67,25 @@ describe("activities", () => {
     expect(activities({ ...input, outcomes: { ...input.outcomes, root: { reason: "completed" } } }).root).toBe("done")
   })
 
+  it("shows pending suggestions as done only for their owning idle sessions", () => {
+    const input = {
+      parents,
+      statuses: {},
+      outcomes: {},
+      blocked: [],
+      suggested: ["nested"],
+      disconnected: false,
+    }
+    expect(activities(input)).toEqual({ nested: "done" })
+    expect(activities({ ...input, suggested: [] })).toEqual({})
+    expect(activities({ ...input, submitting: ["nested"] }).nested).toBe("busy")
+    expect(activities({ ...input, blocked: ["nested"] }).nested).toBe("waiting")
+    expect(activities({ ...input, outcomes: { nested: { reason: "error" } } }).nested).toBe("error")
+    for (const type of ["busy", "retry", "offline"] as const) {
+      expect(activities({ ...input, statuses: { nested: { type } } }).nested).toBe(type === "offline" ? "error" : type)
+    }
+  })
+
   it("hides acknowledged completion without changing other activity", () => {
     const input = {
       parents,

@@ -1793,6 +1793,7 @@ export const SessionProvider: ParentComponent = (props) => {
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
+          suggested: suggestions().map((item) => item.sessionID),
           disconnected: disconnected(),
         }),
       ),
