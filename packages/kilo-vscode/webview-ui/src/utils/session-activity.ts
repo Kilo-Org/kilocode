@@ -49,7 +49,7 @@ export function activities(input: {
       blocked: blocked.has(id),
       disconnected: input.disconnected,
       errored: close === "error",
-      finished: suggested.has(id) || (close === "completed" && !input.outcomes[id]?.seen),
+      finished: close ? close === "completed" && !input.outcomes[id]?.seen : suggested.has(id),
     })
     result[id] = strongest([result[id] ?? "idle", own])
     if (active === "idle") continue

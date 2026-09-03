@@ -81,6 +81,8 @@ describe("activities", () => {
     expect(activities({ ...input, submitting: ["nested"] }).nested).toBe("busy")
     expect(activities({ ...input, blocked: ["nested"] }).nested).toBe("waiting")
     expect(activities({ ...input, outcomes: { nested: { reason: "error" } } }).nested).toBe("error")
+    expect(activities({ ...input, outcomes: { nested: { reason: "completed", seen: true } } }).nested).toBe("idle")
+    expect(activities({ ...input, outcomes: { nested: { reason: "interrupted" } } }).nested).toBe("idle")
     for (const type of ["busy", "retry", "offline"] as const) {
       expect(activities({ ...input, statuses: { nested: { type } } }).nested).toBe(type === "offline" ? "error" : type)
     }
