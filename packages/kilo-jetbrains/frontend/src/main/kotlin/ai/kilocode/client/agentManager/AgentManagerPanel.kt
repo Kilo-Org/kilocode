@@ -245,7 +245,8 @@ class AgentManagerPanel(
         }
     }
 
-    internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
+    internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
+        controller.move(sessionId, directory, surface)
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })

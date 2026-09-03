@@ -100,6 +100,10 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     private lateinit var manager: FakeManager
     private lateinit var panel: WorktreeSessionEditorPanel
     private val saves = mutableListOf<Boolean>()
+    // Read by FakeManager's moveHost/newWorktreeHost, which are passed to the superclass constructor
+    // and so cannot reference FakeManager's own not-yet-initialized properties; the outer test
+    // instance is already fully constructed by the time FakeManager() runs, so these are safe there.
+    private val moves = mutableListOf<Triple<String?, String, String>>()
     private val workspace = Workspace(DIR, kotlinx.coroutines.flow.MutableStateFlow(ai.kilocode.rpc.dto.KiloWorkspaceStateDto(ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY)), {}, {})
 
     override fun setUp() {
@@ -563,6 +567,66 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(KiloBundle.message("common.deleting"), row.progress)
     }
 
+    fun `test move to worktree is offered only from the base checkout`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(edt { panel.canMove(session) })
+
+        manager.baseValue = true
+
+        assertTrue(edt { panel.canMove(session) })
+    }
+
+    fun `test move to worktree hides for the new row and a deleting session`() {
+        manager.baseValue = true
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(edt { panel.canMove(null) })
+
+        manager.deletingIds += session.id
+        assertFalse(edt { panel.canMove(session) })
+    }
+
+    fun `test move to worktree hides while the session is running`() {
+        manager.baseValue = true
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(edt { panel.canMove(session) })
+    }
+
+    fun `test move row calls the manager with the worktree directory`() {
+        manager.baseValue = true
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        edt { panel.moveRow(session) }
+
+        assertEquals(listOf(Triple(session.id, DIR, "worktree_editor")), moves)
+    }
+
+    fun `test move row is a no-op when not offered`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        edt { panel.moveRow(session) }
+
+        assertTrue(moves.isEmpty())
+    }
+
     fun `test pending new session groups under today`() {
         manager.pending = true
         rpc.listed += session("ses_today", nowSeconds())
@@ -987,6 +1051,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         cs = coroutines.scope,
         migration = FakeMigrationUiController(),
         adopt = { _, _, _ -> RenameWorktreeResultDto() },
+        moveHost = { id, dir, surface -> moves += Triple(id, dir, surface) },
     ) {
         var newCount = 0
         var pending = false
@@ -997,6 +1062,11 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
         val renamed = mutableListOf<Pair<String, String>>()
+        // Real editors resolve this once in start() from git; panel tests set it directly so
+        // canMove()/moveRow() can be exercised without touching KiloWorktreeService.
+        var baseValue = false
+
+        override fun base(): Boolean = baseValue
 
         override fun hasPendingNew(): Boolean = pending
 

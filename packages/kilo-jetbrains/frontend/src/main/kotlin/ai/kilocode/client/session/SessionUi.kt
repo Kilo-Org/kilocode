@@ -503,7 +503,15 @@ class SessionUi(
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
             val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
-            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+            // Editor-tab hosts that show the dock (the worktree editor) already have their own
+            // branch/PR header at the top of the tab, so the dock's header summarizes the local
+            // changes those committed counts leave out instead.
+            dock = BranchDock(
+                openDiff = ::openBranchChanges,
+                onMove = move,
+                onNewWorktree = newWorktree,
+                onLocal = if (owner?.hostedInEditorTab == true) ::openLocalChanges else null,
+            )
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -584,8 +592,10 @@ class SessionUi(
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
             // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
-            // readable-width centering used across the transcript.
-            val aligned = if (manager?.hostedInEditorTab == true) {
+            // readable-width centering used across the transcript — for the dock as much as the
+            // prompt, so the strip above the prompt does not run wider than the session it belongs to.
+            val tab = manager?.hostedInEditorTab == true
+            val aligned = if (tab) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
@@ -595,7 +605,18 @@ class SessionUi(
                 prompt.align(HAlign.FIT, VAlign.FIT)
             }
             val container = Stack.vertical()
-            dock?.let { container.next(it) }
+            dock?.let {
+                val row = if (tab) {
+                    it.align(
+                        HAlign.CENTER,
+                        VAlign.FIT,
+                        maxW = { SessionUiStyle.SessionLayout.readableWidth(it, style.transcriptFont) },
+                    )
+                } else {
+                    it
+                }
+                container.next(row)
+            }
             container.next(aligned)
             bottom = container
             root.content.add(container, BorderLayout.SOUTH)
@@ -1078,6 +1099,17 @@ class SessionUi(
         if (disposed || project.isDisposed) return
         refreshBranchChanges()
         openBranchDiff()
+    }
+
+    /**
+     * Opens the local (uncommitted) diff editor. Reached from the dock's local changes summary, which
+     * only the hosts whose own header already carries the branch and its PR show.
+     */
+    @RequiresEdt
+    private fun openLocalChanges() {
+        if (disposed || project.isDisposed) return
+        refreshBranchChanges()
+        openKiloDiff(project, workspace.directory, KiloDiffComparison.LOCAL, parent = this)
     }
 
     /** Starts the Move to Worktree flow for the current session through the side-panel manager. */

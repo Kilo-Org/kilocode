@@ -38,6 +38,7 @@ import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
@@ -278,6 +279,74 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         dock.triggerMove()
 
         assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
+    }
+
+    fun `test editor tab host trades the dock's PR row for a local changes summary`() {
+        // The worktree editor already shows the branch and its PR in its own tab header, so its dock
+        // summarizes the local changes instead -- mirrors WorktreeSessionEditorManager's base tab.
+        installEditorTabWorktree()
+        workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+
+        val dock = find<BranchDock>(ui)
+        val core = find<PrHeaderView>(dock)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+        assertTrue(core.isVisible)
+        assertEquals(
+            listOf("1 file", "-1", "+2"),
+            components(core).filterIsInstance<JBLabel>().filter { it.isVisible && it.text.isNotBlank() }.map { it.text },
+        )
+    }
+
+    fun `test editor tab dock keeps the prompt's readable width`() {
+        installEditorTabWorktree()
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+        layout()
+        // The base helper only walks the prompt's own path down the bottom column; the dock sits in its
+        // own alignment wrapper beside it.
+        layoutAll(ui)
+
+        val dock = find<BranchDock>(ui)
+        val prompt = find<PromptPanel>(ui)
+        assertTrue(dock.isVisible)
+        assertEquals(prompt.width, dock.width)
+        assertTrue("dock must not run the full editor width", dock.width < ui.width)
+        assertEquals(
+            SwingUtilities.convertPoint(prompt, 0, 0, ui).x,
+            SwingUtilities.convertPoint(dock, 0, 0, ui).x,
+        )
+    }
+
+    private fun editorTabOwner() = object : SessionManager {
+        override fun newSession() {}
+        override fun showHistory(back: (() -> Unit)?) {}
+        override fun openSession(ref: SessionRef) {}
+        override val hostedInEditorTab: Boolean get() = true
+        override val supportsMoveToWorktree: Boolean get() = true
+        override fun moveToWorktree(sessionId: String?, directory: String) {}
+    }
+
+    private fun layoutAll(root: Component) {
+        root.doLayout()
+        if (root is Container) root.components.forEach(::layoutAll)
+    }
+
+    private fun installEditorTabWorktree() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(
+                branch = "main",
+                availability = GhAvailability.OK,
+                pr = WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7", "Title"),
+            )
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
     }
 
     fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {

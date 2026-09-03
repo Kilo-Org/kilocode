@@ -123,7 +123,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         onCell = { _, _ -> },
         onOpen = { row, focus -> open(row, focus) },
         menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
-            (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
+            (row as? SessionRow)?.session?.takeIf { canMove(it) || canRename(it) || canDelete(it) }
         }),
     )
     private val run = if (project != null && worktree.directory.isNotBlank()) {
@@ -220,6 +220,22 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     internal fun renameRow(item: SessionDto) = beginRename(item.id)
+
+    /**
+     * Only offered from the base checkout's tab (not a linked worktree's own tab, see
+     * [WorktreeSessionEditorManager.base]), for a real session that is not already being deleted, and
+     * hidden rather than disabled while the session is running -- matching the chat branch dock's
+     * Move to Worktree action.
+     */
+    @RequiresEdt
+    internal fun canMove(item: SessionDto?): Boolean =
+        manager.base() && canDelete(item) && manager.activity()[item?.id] != SessionActivityKind.RUNNING
+
+    @RequiresEdt
+    internal fun moveRow(item: SessionDto) {
+        if (!canMove(item)) return
+        manager.moveToWorktree(item.id, worktree.directory)
+    }
 
     @RequiresEdt
     private fun confirmDelete(ids: List<String>, cell: String? = null) {
