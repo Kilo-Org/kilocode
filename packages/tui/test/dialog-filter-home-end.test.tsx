@@ -1,13 +1,16 @@
 // kilocode_change - new file
-import type { TuiPluginApi } from "@kilocode/plugin/tui"
-import { TextareaRenderable } from "@opentui/core"
-import { createTestRenderer } from "@opentui/core/testing"
-import { Effect } from "effect"
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { Global } from "@opencode-ai/core/global"
-import { expect, mock, test } from "bun:test"
+/** @jsxImportSource @opentui/solid */
+import { InputRenderable } from "@opentui/core"
+import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
+import { testRender, useRenderer } from "@opentui/solid"
+import { expect, test } from "bun:test"
+import { mkdir } from "node:fs/promises"
+import path from "node:path"
+import { onCleanup } from "solid-js"
+import { tmpdir } from "./fixture/fixture"
 import { createTuiResolvedConfig } from "./fixture/tui-runtime"
-import { createEventSource, createFetch, directory } from "./fixture/tui-sdk"
+import { TestTuiContexts } from "./fixture/tui-environment"
+import { DialogSelect, type DialogSelectOption } from "../src/ui/dialog-select"
 
 async function wait(fn: () => boolean, timeout = 10000) {
   const start = Date.now()
@@ -18,73 +21,102 @@ async function wait(fn: () => boolean, timeout = 10000) {
 }
 
 test("home/end keys move the text cursor in a dialog filter input", async () => {
-  const setup = await createTestRenderer({ width: 100, height: 30, useThread: false })
-  const core = await import("@opentui/core")
-  mock.module("@opentui/core", () => ({ ...core, createCliRenderer: async () => setup.renderer }))
-  const events = createEventSource()
-  const calls = createFetch()
-  let started!: () => void
-  let api: TuiPluginApi | undefined
-  const ready = new Promise<void>((resolve) => {
-    started = resolve
-  })
+  await using tmp = await tmpdir()
+  const state = path.join(tmp.path, "state")
+  await mkdir(state, { recursive: true })
+  await Bun.write(path.join(state, "kv.json"), "{}")
 
-  try {
-    const { run } = await import("../src/app")
-    const task = Effect.runPromise(
-      run({
-        url: "http://test",
-        directory,
-        config: createTuiResolvedConfig({ plugin_enabled: {} }),
-        fetch: calls.fetch,
-        events: events.source,
-        args: {},
-        pluginHost: {
-          async start(input) {
-            api = input.api
-            started()
-          },
-          async dispose() {},
-        },
-      }).pipe(Effect.provide(AppNodeBuilder.build(Global.node))),
+  const [
+    { DialogProvider },
+    { KVProvider },
+    { ThemeProvider },
+    { TuiConfigProvider },
+    { ToastProvider },
+    { OpencodeKeymapProvider, registerOpencodeKeymap },
+  ] = await Promise.all([
+    import("../src/ui/dialog"),
+    import("../src/context/kv"),
+    import("../src/context/theme"),
+    import("../src/config"),
+    import("../src/ui/toast"),
+    import("../src/keymap"),
+  ])
+
+  const options: DialogSelectOption<string>[] = [
+    { title: "Alpha", value: "alpha" },
+    { title: "Beta", value: "beta" },
+    { title: "Gamma", value: "gamma" },
+  ]
+  const moves: string[] = []
+
+  function Harness() {
+    const renderer = useRenderer()
+    const keymap = createDefaultOpenTuiKeymap(renderer)
+    const resolvedConfig = createTuiResolvedConfig({ leader_timeout: 1000 })
+    const off = registerOpencodeKeymap(keymap, renderer, resolvedConfig)
+    onCleanup(off)
+
+    return (
+      <TestTuiContexts
+        directory={tmp.path}
+        paths={{
+          home: tmp.path,
+          state,
+          worktree: tmp.path,
+        }}
+      >
+        <OpencodeKeymapProvider keymap={keymap}>
+          <TuiConfigProvider config={resolvedConfig}>
+            <KVProvider>
+              <ThemeProvider mode="dark">
+                <ToastProvider>
+                  <DialogProvider>
+                    <DialogSelect title="Pick one" options={options} onMove={(option) => moves.push(option.value)} />
+                  </DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </KVProvider>
+          </TuiConfigProvider>
+        </OpencodeKeymapProvider>
+      </TestTuiContexts>
     )
+  }
 
-    await ready
-    await setup.renderOnce()
-    await setup.renderOnce()
+  const app = await testRender(() => <Harness />)
+  try {
+    await wait(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
+    const input = app.renderer.currentFocusedEditor
+    if (!(input instanceof InputRenderable)) throw new Error("expected focused dialog filter input")
+    expect(input.placeholder).toBe("Search")
 
-    let found: TextareaRenderable | undefined
-    await wait(() => {
-      const focused = setup.renderer.currentFocusedEditor
-      if (!(focused instanceof TextareaRenderable)) return false
-      if (focused.placeholder !== "Search") return false
-      found = focused
-      return true
-    })
-    const filter = found
-    if (!filter) throw new Error("expected focused dialog filter input")
+    app.mockInput.pressKey("END")
+    await app.flush()
+    expect(moves.at(-1)).toBe("gamma")
+    app.mockInput.pressKey("HOME")
+    await app.flush()
+    expect(moves.at(-1)).toBe("alpha")
 
-    await setup.mockInput.typeText("hello")
-    await wait(() => filter.plainText === "hello")
-    expect(filter.cursorOffset).toBe(5)
+    await app.mockInput.typeText("Alpha")
+    await wait(() => input.plainText === "Alpha")
+    await app.flush()
+    await Bun.sleep(60)
+    expect(input.cursorOffset).toBe(5)
+    const beforeEditing = moves.length
 
-    setup.mockInput.pressArrow("left")
-    setup.mockInput.pressArrow("left")
-    await setup.flush()
-    expect(filter.cursorOffset).toBe(3)
+    app.mockInput.pressArrow("left")
+    await app.flush()
+    expect(input.cursorOffset).toBe(4)
 
-    setup.mockInput.pressKey("END")
-    await setup.flush()
-    expect(filter.cursorOffset).toBe(5)
+    app.mockInput.pressKey("END")
+    await app.flush()
+    expect(input.cursorOffset).toBe(5)
+    expect(moves.length).toBe(beforeEditing)
 
-    setup.mockInput.pressKey("HOME")
-    await setup.flush()
-    expect(filter.cursorOffset).toBe(0)
-
-    void api?.keymap.dispatchCommand("app.exit")
-    await task
+    app.mockInput.pressKey("HOME")
+    await app.flush()
+    expect(input.cursorOffset).toBe(0)
+    expect(moves.length).toBe(beforeEditing)
   } finally {
-    if (!setup.renderer.isDestroyed) setup.renderer.destroy()
-    mock.restore()
+    app.renderer.destroy()
   }
 })
