@@ -235,7 +235,7 @@ const REVIEW_TAB_ID = "review"
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-import { parseBindingTokens } from "./keybind-tokens"
+import { ShortcutsDialog } from "./ShortcutsDialog"
 import { defaultBindings } from "./keybind-defaults"
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -1764,33 +1764,7 @@ const AgentManagerContent: Component = () => {
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
-    dialog.show(() => (
-      <Dialog title={t("agentManager.shortcuts.title")} fit>
-        <div class="am-shortcuts">
-          <For each={categories}>
-            {(category) => (
-              <div class="am-shortcuts-category">
-                <div class="am-shortcuts-category-title">{category.title}</div>
-                <div class="am-shortcuts-list">
-                  <For each={category.shortcuts}>
-                    {(shortcut) => (
-                      <div class="am-shortcuts-row">
-                        <span class="am-shortcuts-label">{shortcut.label}</span>
-                        <span class="am-shortcuts-keys">
-                          <For each={parseBindingTokens(shortcut.binding)}>
-                            {(token) => <kbd class="am-kbd">{token}</kbd>}
-                          </For>
-                        </span>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
-            )}
-          </For>
-        </div>
-      </Dialog>
-    ))
+    dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
   }
 
   const loaded = () => worktreesLoaded() && sessionsLoaded()

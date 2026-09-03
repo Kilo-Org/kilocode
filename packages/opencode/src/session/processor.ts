@@ -307,7 +307,7 @@ const layer = Layer.effect(
         })
         // kilocode_change start
         if (
-          error instanceof PermissionV1.RejectedError ||
+          (error instanceof PermissionV1.RejectedError && !(yield* session.get(ctx.sessionID)).parentID) ||
           error instanceof Question.RejectedError ||
           error instanceof Suggestion.DismissedError
         ) {
