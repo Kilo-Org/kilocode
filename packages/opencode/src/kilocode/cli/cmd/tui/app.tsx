@@ -22,6 +22,7 @@ import { Link } from "@tui/ui/link"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
+import { DialogAutocompact } from "@/kilocode/cli/cmd/tui/component/dialog-autocompact"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
@@ -311,6 +312,21 @@ export function init() {
             return
           }
           dialog.clear()
+        },
+      },
+      {
+        namespace: "palette",
+        name: "compaction.auto_threshold",
+        get title() {
+          const percent = sync.data.config.compaction?.threshold_percent
+          return typeof percent === "number" ? `Auto-compact threshold (${percent}%)` : "Auto-compact threshold"
+        },
+        desc: "Pick the context window percentage that triggers automatic compaction",
+        category: "System",
+        slashName: "autocompact",
+        slashAliases: ["auto-compact"],
+        run: () => {
+          dialog.replace(() => <DialogAutocompact />)
         },
       },
     ],
