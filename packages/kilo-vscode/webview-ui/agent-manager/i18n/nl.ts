@@ -277,4 +277,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Voer 'gh auth login' uit in je terminal om de PR-status te herstellen.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI niet geïnstalleerd",
   "agentManager.pr.error.gh_missing.description": "Installeer de GitHub CLI om de PR-status in te schakelen.",
+  "agentManager.intro.title": "Parallelle taken. Afzonderlijke worktrees.",
+  "agentManager.intro.subtitle":
+    "Een worktree is een aparte map en branch voor een taak. Je agents kunnen naast elkaar werken zonder dezelfde bestanden te bewerken.",
+  "agentManager.intro.graph.agent": "Kilo-agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Als wijzigingen conflicteren",
+  "agentManager.intro.conflictText":
+    "Vraag de agent in de worktree om zijn oorspronkelijke basisbranch te mergen en conflicten op te lossen, en controleer daarna het resultaat. Vermijd git stash: stashes worden gedeeld tussen worktrees.",
+  "agentManager.intro.stage1.title": "Je repository",
+  "agentManager.intro.stage1.text": "Lokale bestanden blijven ongewijzigd",
+  "agentManager.intro.stage2.title": "Voorbeeld: twee taken parallel",
+  "agentManager.intro.stage2.text":
+    "Beide worktrees horen bij deze repository. Kies een ander project voor een andere repository.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Eigen map + branch",
+  "agentManager.intro.stage4.title": "Breng wijzigingen terug wanneer je klaar bent",
+  "agentManager.intro.stage4.text": "Vraag de agent een pull request te openen of gebruik Apply in het diff-paneel.",
+  "agentManager.intro.prDetection":
+    "PR-badges worden automatisch bijgewerkt voor elke worktree-branch (aanmelden bij GitHub CLI vereist).",
+  "agentManager.intro.checksRunning": "Controles worden uitgevoerd",
+  "agentManager.intro.approved": "Goedgekeurd",
+  "agentManager.intro.create": "Een worktree maken",
+  "agentManager.intro.guide": "Lees de handleiding",
+  "agentManager.intro.dismiss": "Introductie overslaan",
+  "agentManager.intro.reopen": "Hoe Agent Manager werkt",
 }

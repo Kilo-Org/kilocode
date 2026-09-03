@@ -266,4 +266,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "รันคำสั่ง 'gh auth login' ในเทอร์มินัลเพื่อกู้คืนสถานะ PR",
   "agentManager.pr.error.gh_missing.title": "ไม่ได้ติดตั้ง GitHub CLI",
   "agentManager.pr.error.gh_missing.description": "ติดตั้ง GitHub CLI เพื่อเปิดใช้งานสถานะ PR",
+  "agentManager.intro.title": "งานแบบขนาน worktree แยกกัน",
+  "agentManager.intro.subtitle":
+    "worktree คือโฟลเดอร์และ branch แยกสำหรับงานหนึ่งงาน เอเจนต์ทำงานเคียงข้างกันได้โดยไม่แก้ไฟล์เดียวกัน",
+  "agentManager.intro.graph.agent": "Kilo agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "หากการเปลี่ยนแปลงขัดแย้งกัน",
+  "agentManager.intro.conflictText":
+    "ขอให้ agent ใน worktree merge base branch เดิมของตนและแก้ไขความขัดแย้ง จากนั้นตรวจสอบผลลัพธ์ หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
+  "agentManager.intro.stage1.title": "repository ของคุณ",
+  "agentManager.intro.stage1.text": "ไฟล์ในเครื่องจะไม่เปลี่ยนแปลง",
+  "agentManager.intro.stage2.title": "ตัวอย่าง: สองงานทำพร้อมกัน",
+  "agentManager.intro.stage2.text":
+    "worktree ทั้งสองอยู่ใน repository นี้ หากเป็น repository อื่น ให้เลือกโปรเจกต์อื่น",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "โฟลเดอร์และ branch ของตัวเอง",
+  "agentManager.intro.stage4.title": "นำการเปลี่ยนแปลงกลับมาเมื่อพร้อม",
+  "agentManager.intro.stage4.text": "ขอให้เอเจนต์เปิด pull request หรือใช้ Apply ในแผง diff",
+  "agentManager.intro.prDetection":
+    "ป้าย PR จะอัปเดตโดยอัตโนมัติสำหรับแต่ละ branch ของ worktree (ต้องลงชื่อเข้าใช้ GitHub CLI)",
+  "agentManager.intro.checksRunning": "กำลังตรวจสอบ",
+  "agentManager.intro.approved": "อนุมัติแล้ว",
+  "agentManager.intro.create": "สร้าง worktree",
+  "agentManager.intro.guide": "อ่านคู่มือ",
+  "agentManager.intro.dismiss": "ข้ามบทนำ",
+  "agentManager.intro.reopen": "Agent Manager ทำงานอย่างไร",
 }
