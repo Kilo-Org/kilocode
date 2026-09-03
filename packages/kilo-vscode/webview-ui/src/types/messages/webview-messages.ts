@@ -520,6 +520,10 @@ export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
 
+export interface RequestSleepSettingsMessage {
+  type: "requestSleepSettings"
+}
+
 export interface RequestAutoApprovalReasonSettingMessage {
   type: "requestAutoApprovalReasonSetting"
 }
@@ -1520,6 +1524,7 @@ export interface DismissAgentMigrationBannerMessage {
 
 export type WebviewMessage =
   | { type: "sessionActivity"; state: Activity }
+  | RequestSleepSettingsMessage
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage

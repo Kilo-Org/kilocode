@@ -626,6 +626,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Make web search available to models from all providers.",
   "settings.checkpoints.title": "Checkpoints",
   "settings.display.title": "Display",
+  "settings.sleep.title": "Power",
+  "settings.sleep.enable.title": "Prevent system sleep during tasks",
+  "settings.sleep.enable.description":
+    "Keep the computer awake while Kilo Code is working. Screen locking is not affected.",
+  "settings.sleep.timeout.title": "Limit per task (minutes)",
+  "settings.sleep.timeout.description":
+    "Only active task time counts; time waiting for your answer does not. Use 0 for no extension-imposed limit. Default: 30 minutes.",
   "settings.autocomplete.title": "Autocomplete",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Context",

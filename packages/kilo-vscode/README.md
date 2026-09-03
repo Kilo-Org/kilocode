@@ -42,6 +42,7 @@
 - **Code Generation:** Kilo can generate code using natural language.
 - **Inline Autocomplete:** Get intelligent code completions as you type, powered by AI.
 - **Task Automation:** Kilo can automate repetitive coding tasks to save time..
+- **System Sleep Prevention:** Kilo keeps the computer awake while agent tasks run without preventing display sleep or screen locking.
 - **Automated Refactoring:** Kilo can refactor and improve existing code efficiently.
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
@@ -53,6 +54,10 @@
 3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo in action:
 
 <a href="https://youtu.be/pqGfYXgrhig"><img src="https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg" alt="Watch the video" width="640" height="360"></a>
+
+### System sleep prevention
+
+System sleep prevention is disabled by default. Enable it with `kilo-code.new.preventSleepDuringTasks`. Each task releases its sleep lock after 30 minutes of active execution by default; time waiting for user input does not count. Change this limit with `kilo-code.new.preventSleepDuringTasksTimeoutMinutes`. Set it to `0` for no extension-imposed limit. Operating-system power rules still apply.
 
 ## Developer Setup
 

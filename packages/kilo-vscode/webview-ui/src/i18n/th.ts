@@ -707,6 +707,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "ทำให้โมเดลจากผู้ให้บริการทั้งหมดใช้การค้นหาเว็บได้",
   "settings.checkpoints.title": "จุดตรวจสอบ",
   "settings.display.title": "การแสดงผล",
+  "settings.sleep.title": "พลังงาน",
+  "settings.sleep.enable.title": "ป้องกันระบบพักเครื่องระหว่างทำงาน",
+  "settings.sleep.enable.description":
+    "ให้คอมพิวเตอร์ทำงานต่อขณะที่ Kilo Code กำลังทำงาน การล็อกหน้าจอไม่ได้รับผลกระทบ",
+  "settings.sleep.timeout.title": "ขีดจำกัดต่อหนึ่งงาน (นาที)",
+  "settings.sleep.timeout.description":
+    "นับเฉพาะเวลาที่งานทำงานอยู่ ไม่นับเวลารอคำตอบจากคุณ ใช้ 0 หากไม่ต้องการให้ส่วนขยายกำหนดขีดจำกัด ค่าเริ่มต้น: 30 นาที",
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
   "settings.autocomplete.model.title": "โมเดล Autocomplete",
   "settings.autocomplete.model.description": "เลือกโมเดลที่ใช้สำหรับการเติมโค้ดแบบอินไลน์ (inline completions)",

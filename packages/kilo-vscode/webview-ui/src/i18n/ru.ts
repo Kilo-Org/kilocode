@@ -714,6 +714,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Сделайте веб-поиск доступным для моделей всех провайдеров.",
   "settings.checkpoints.title": "Контрольные точки",
   "settings.display.title": "Отображение",
+  "settings.sleep.title": "Питание",
+  "settings.sleep.enable.title": "Запретить переход системы в спящий режим во время задач",
+  "settings.sleep.enable.description":
+    "Не переводить компьютер в спящий режим во время работы Kilo Code. Блокировка экрана не затрагивается.",
+  "settings.sleep.timeout.title": "Лимит на задачу (минуты)",
+  "settings.sleep.timeout.description":
+    "Учитывается только время активного выполнения, без ожидания вашего ответа. Укажите 0, чтобы расширение не задавало лимит. По умолчанию: 30 минут.",
   "settings.autocomplete.title": "Автодополнение",
   "settings.autocomplete.model.title": "Модель автодополнения",
   "settings.autocomplete.model.description": "Выберите модель для встроенного (inline) автодополнения кода",

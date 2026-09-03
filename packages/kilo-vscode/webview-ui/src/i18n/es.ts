@@ -721,6 +721,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Permite que los modelos de todos los proveedores usen la búsqueda web.",
   "settings.checkpoints.title": "Puntos de control",
   "settings.display.title": "Pantalla",
+  "settings.sleep.title": "Energía",
+  "settings.sleep.enable.title": "Impedir la suspensión del sistema durante las tareas",
+  "settings.sleep.enable.description":
+    "Mantén el equipo activo mientras Kilo Code trabaja. El bloqueo de pantalla no se ve afectado.",
+  "settings.sleep.timeout.title": "Límite por tarea (minutos)",
+  "settings.sleep.timeout.description":
+    "Solo cuenta el tiempo de ejecución activo, no la espera de tu respuesta. Usa 0 para que la extensión no imponga ningún límite. Valor predeterminado: 30 minutos.",
   "settings.autocomplete.title": "Autocompletado",
   "settings.autocomplete.model.title": "Modelo de autocompletado",
   "settings.autocomplete.model.description": "Selecciona el modelo utilizado para el autocompletado de código en línea",

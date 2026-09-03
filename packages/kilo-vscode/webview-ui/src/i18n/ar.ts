@@ -662,6 +662,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "اجعل البحث على الويب متاحًا لنماذج جميع المزوّدين.",
   "settings.checkpoints.title": "نقاط التحقق",
   "settings.display.title": "العرض",
+  "settings.sleep.title": "الطاقة",
+  "settings.sleep.enable.title": "منع سكون النظام أثناء المهام",
+  "settings.sleep.enable.description": "إبقاء الكمبيوتر في وضع التشغيل أثناء عمل Kilo Code. لا يتأثر قفل الشاشة.",
+  "settings.sleep.timeout.title": "الحد لكل مهمة (بالدقائق)",
+  "settings.sleep.timeout.description":
+    "يُحتسب وقت التنفيذ النشط فقط، ولا يُحتسب وقت انتظار ردك. استخدم 0 لعدم فرض حد من الإضافة. الافتراضي: 30 دقيقة.",
   "settings.autocomplete.title": "الإكمال التلقائي",
   "settings.autocomplete.model.title": "نموذج الإكمال التلقائي",
   "settings.autocomplete.model.description": "حدد النموذج المستخدم لإكمال الكود المضمن (inline completions)",

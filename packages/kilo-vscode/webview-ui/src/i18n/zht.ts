@@ -651,6 +651,12 @@ export const dict = {
   "settings.webTools.webSearch.description": "讓所有供應商的模型都可使用網頁搜尋。",
   "settings.checkpoints.title": "檢查點",
   "settings.display.title": "顯示",
+  "settings.sleep.title": "電源",
+  "settings.sleep.enable.title": "執行任務時防止系統休眠",
+  "settings.sleep.enable.description": "Kilo Code 工作時讓電腦保持喚醒。螢幕鎖定不受影響。",
+  "settings.sleep.timeout.title": "每個任務的限制（分鐘）",
+  "settings.sleep.timeout.description":
+    "只計算任務的實際執行時間，不計算等待你回答的時間。設為 0 表示擴充功能不施加限制。預設值：30 分鐘。",
   "settings.autocomplete.title": "自動完成",
   "settings.autocomplete.model.title": "自動補全模型",
   "settings.autocomplete.model.description": "選擇用於內聯程式碼補全的模型",

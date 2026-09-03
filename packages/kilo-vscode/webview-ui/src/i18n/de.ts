@@ -727,6 +727,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "Machen Sie die Websuche für Modelle aller Anbieter verfügbar.",
   "settings.checkpoints.title": "Prüfpunkte",
   "settings.display.title": "Anzeige",
+  "settings.sleep.title": "Energie",
+  "settings.sleep.enable.title": "Systemruhezustand während Aufgaben verhindern",
+  "settings.sleep.enable.description":
+    "Hält den Computer wach, während Kilo Code arbeitet. Die Bildschirmsperre bleibt unverändert.",
+  "settings.sleep.timeout.title": "Limit pro Aufgabe (Minuten)",
+  "settings.sleep.timeout.description":
+    "Nur aktive Aufgabenzeit zählt; Wartezeit auf Ihre Antwort nicht. 0 bedeutet kein Limit durch die Erweiterung. Standard: 30 Minuten.",
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.autocomplete.model.title": "Autocomplete-Modell",
   "settings.autocomplete.model.description": "Wählen Sie das Modell für Inline-Code-Vervollständigungen",

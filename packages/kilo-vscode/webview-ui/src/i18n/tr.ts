@@ -667,6 +667,12 @@ export const dict = {
     "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin.",
   "settings.checkpoints.title": "Kontrol Noktaları",
   "settings.display.title": "Görünüm",
+  "settings.sleep.title": "Güç",
+  "settings.sleep.enable.title": "Görevler sırasında sistem uykusunu önle",
+  "settings.sleep.enable.description": "Kilo Code çalışırken bilgisayarı uyanık tutar. Ekran kilidi etkilenmez.",
+  "settings.sleep.timeout.title": "Görev başına sınır (dakika)",
+  "settings.sleep.timeout.description":
+    "Yalnızca etkin çalışma süresi sayılır; yanıtınızı bekleme süresi sayılmaz. Uzantının sınır koymaması için 0 kullanın. Varsayılan: 30 dakika.",
   "settings.autocomplete.title": "Otomatik Tamamlama",
   "settings.autocomplete.model.title": "Otomatik tamamlama modeli",
   "settings.autocomplete.model.description": "Satır içi (inline) kod tamamlamaları için kullanılacak modeli seçin",

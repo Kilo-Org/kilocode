@@ -131,6 +131,16 @@
   max-width: none;
 }
 
+[data-slot="sleep-setting-child"] {
+  margin-left: 20px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-weak-base);
+}
+
+[data-slot="sleep-timeout-input"] {
+  width: 100px;
+}
+
 .settings-font-size-control {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
+import { buildSleepSettingsMessage } from "./sleep-settings"
 import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
 import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
@@ -67,6 +68,26 @@ function isResume(input: { sessionID?: unknown; messageID?: unknown; requestID?:
   )
 }
 
+function routeSettingsMessage(message: { type: string }, ctx: Ctx): boolean | undefined {
+  if (message.type === "requestChatSettings") {
+    ctx.post(buildChatSettingsMessage())
+    return true
+  }
+  if (message.type === "requestThroughputSetting") {
+    ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestSleepSettings") {
+    ctx.post(buildSleepSettingsMessage())
+    return true
+  }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
+    return true
+  }
+  return undefined
+}
+
 export async function routeEarlyMessage(
   message: { type: string; id?: unknown; text?: unknown; state?: unknown },
   ctx: Ctx,
@@ -119,18 +140,7 @@ export async function routeEarlyMessage(
     ctx.openSessions(ids)
     return true
   }
-  if (message.type === "requestChatSettings") {
-    ctx.post(buildChatSettingsMessage())
-    return true
-  }
-  if (message.type === "requestThroughputSetting") {
-    ctx.post(buildThroughputSettingMessage())
-    return true
-  }
-  if (message.type === "requestAutoApprovalReasonSetting") {
-    ctx.post(buildAutoApprovalReasonSettingMessage())
-    return true
-  }
+  if (routeSettingsMessage(message, ctx)) return true
   if (message.type === "requestSpeechToTextModels") {
     await ctx.speechToTextModels()
     return true

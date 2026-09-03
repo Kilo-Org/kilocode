@@ -78,6 +78,12 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
+  if (message.type === "sleepSettingsLoaded") {
+    return {
+      preventSleepDuringTasks: message.enabled,
+      preventSleepDuringTasksTimeoutMinutes: message.timeout,
+    }
+  }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {

@@ -710,6 +710,13 @@ export const dict = {
   "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
+  "settings.sleep.title": "電源",
+  "settings.sleep.enable.title": "タスク実行中のシステムスリープを防止",
+  "settings.sleep.enable.description":
+    "Kilo Code の作業中はコンピューターをスリープさせません。画面ロックには影響しません。",
+  "settings.sleep.timeout.title": "タスクごとの上限（分）",
+  "settings.sleep.timeout.description":
+    "実行中の時間だけを数え、回答待ちの時間は数えません。拡張機能による上限をなくすには 0 を指定します。既定値: 30 分。",
   "settings.autocomplete.title": "オートコンプリート",
   "settings.autocomplete.model.title": "オートコンプリートモデル",
   "settings.autocomplete.model.description": "インラインでのコード補完に使用するモデルを選択します",
