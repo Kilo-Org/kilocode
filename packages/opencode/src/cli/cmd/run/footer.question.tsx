@@ -51,7 +51,7 @@ export function RunQuestionBody(props: {
   onReject: (input: QuestionReject) => void | Promise<void>
 }) {
   const dims = useTerminalDimensions()
-  const [state, setState] = createSignal(createQuestionBodyState(props.request.id))
+  const [state, setState] = createSignal(createQuestionBodyState(props.request.id, props.request.questions.at(0))) // kilocode_change
   const single = createMemo(() => questionSingle(props.request))
   const confirm = createMemo(() => questionConfirm(props.request, state()))
   const info = createMemo(() => questionInfo(props.request, state()))
@@ -78,11 +78,11 @@ export function RunQuestionBody(props: {
   let area: TextareaRenderable | undefined
 
   createEffect(() => {
-    setState((prev) => questionSync(prev, props.request.id))
+    setState((prev) => questionSync(prev, props.request.id, props.request.questions.at(0))) // kilocode_change
   })
 
   const setTab = (tab: number) => {
-    setState((prev) => questionSetTab(prev, tab))
+    setState((prev) => questionSetTab(prev, tab, props.request.questions.at(tab))) // kilocode_change
   }
 
   const move = (dir: -1 | 1) => {
