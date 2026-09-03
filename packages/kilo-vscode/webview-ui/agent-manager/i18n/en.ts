@@ -18,6 +18,9 @@ export const dict = {
   "agentManager.project.missing": "Repository not found",
   "agentManager.notGitRepo": "Not a git repository",
 
+  "agentManager.updateBase.title": "Update from base",
+  "agentManager.updateBase.selectWorktree": "Select a managed worktree first.",
+
   "agentManager.worktree.settings": "Worktree settings",
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
@@ -206,6 +209,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Comments",
   "agentManager.pr.copyLink": "Copy PR link",
   "agentManager.pr.comment.unresolvedCount": "{{count}} unresolved",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} unresolved review thread",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} unresolved review threads",
   "agentManager.pr.comment.resolvedGroup": "Resolved ({{count}})",
   "agentManager.pr.comment.sendAll": "Send {{count}} unresolved to agent",
   "agentManager.pr.comment.sendAllToTerminal": "Send {{count}} unresolved to terminal",
@@ -267,4 +272,30 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Run 'gh auth login' in your terminal to restore PR status.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI not installed",
   "agentManager.pr.error.gh_missing.description": "Install the GitHub CLI to enable PR status.",
+  "agentManager.intro.title": "Parallel tasks. Separate worktrees.",
+  "agentManager.intro.subtitle":
+    "A worktree is a separate folder and branch for a task. Your agents can work side by side without editing the same files.",
+  "agentManager.intro.graph.agent": "Kilo agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "If changes conflict",
+  "agentManager.intro.stage1.title": "Your repository",
+  "agentManager.intro.stage1.text": "Local files stay unchanged",
+  "agentManager.intro.stage2.title": "Example: two tasks in parallel",
+  "agentManager.intro.stage2.text":
+    "Both worktrees belong to this repository. For another repository, choose another project.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Own folder + branch",
+  "agentManager.intro.stage4.title": "Bring changes back when you are ready",
+  "agentManager.intro.stage4.text":
+    "Ask the agent in each worktree to open a pull request. Or use Apply in the diff panel to copy changes to Local.",
+  "agentManager.intro.conflictText":
+    "Ask the agent in the worktree to merge its original base branch and resolve conflicts, then review the result. Avoid git stash: stashes are shared across worktrees.",
+  "agentManager.intro.prDetection":
+    "PR badges update automatically for each worktree branch (GitHub CLI sign-in required).",
+  "agentManager.intro.checksRunning": "Checks running",
+  "agentManager.intro.approved": "Approved",
+  "agentManager.intro.create": "Create a worktree",
+  "agentManager.intro.guide": "Read the guide",
+  "agentManager.intro.dismiss": "Skip introduction",
+  "agentManager.intro.reopen": "How Agent Manager works",
 }

@@ -18,6 +18,10 @@ export const dict = {
   "agentManager.project.remove": "Удалить из Agent Manager",
   "agentManager.project.missing": "Репозиторий не найден",
   "agentManager.notGitRepo": "Не является git-репозиторием",
+
+  "agentManager.updateBase.title": "Обновить из базовой ветки",
+  "agentManager.updateBase.selectWorktree": "Сначала выберите управляемый worktree.",
+
   "agentManager.worktree.settings": "Настройки Worktree",
   "agentManager.worktree.new": "Новый Worktree",
   "agentManager.worktree.setupScript": "Скрипт настройки Worktree",
@@ -205,6 +209,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Комментарии",
   "agentManager.pr.copyLink": "Копировать ссылку на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} нерешённых",
+  "agentManager.pr.comment.unresolvedThread": "Нерешённое обсуждение ревью: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Нерешённые обсуждения ревью: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Решённые ({{count}})",
   "agentManager.pr.comment.sendAll": "Отправить {{count}} нерешённых агенту",
   "agentManager.pr.comment.sendAllToTerminal": "Отправить {{count}} нерешённых в терминал",
@@ -267,4 +273,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Выполните 'gh auth login' в терминале, чтобы восстановить статус PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI не установлен",
   "agentManager.pr.error.gh_missing.description": "Установите GitHub CLI, чтобы включить статус PR.",
+  "agentManager.intro.title": "Параллельные задачи. Отдельные worktree.",
+  "agentManager.intro.subtitle":
+    "Worktree — это отдельная папка и ветка для задачи. Агенты могут работать рядом, не редактируя одни и те же файлы.",
+  "agentManager.intro.graph.agent": "агент Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Если изменения конфликтуют",
+  "agentManager.intro.conflictText":
+    "Попросите агента в worktree слить его исходную базовую ветку и разрешить конфликты, затем проверьте результат. Избегайте git stash: stash используется совместно между worktree.",
+  "agentManager.intro.stage1.title": "Ваш репозиторий",
+  "agentManager.intro.stage1.text": "Локальные файлы остаются без изменений",
+  "agentManager.intro.stage2.title": "Пример: две задачи параллельно",
+  "agentManager.intro.stage2.text":
+    "Оба worktree принадлежат этому репозиторию. Для другого репозитория выберите другой проект.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Своя папка и ветка",
+  "agentManager.intro.stage4.title": "Верните изменения, когда будете готовы",
+  "agentManager.intro.stage4.text": "Попросите агента открыть pull request или используйте Apply в панели diff.",
+  "agentManager.intro.prDetection":
+    "Значки PR автоматически обновляются для каждой ветки worktree (требуется вход в GitHub CLI).",
+  "agentManager.intro.checksRunning": "Проверки выполняются",
+  "agentManager.intro.approved": "Одобрено",
+  "agentManager.intro.create": "Создать worktree",
+  "agentManager.intro.guide": "Читать руководство",
+  "agentManager.intro.dismiss": "Пропустить введение",
+  "agentManager.intro.reopen": "Как работает Agent Manager",
 }

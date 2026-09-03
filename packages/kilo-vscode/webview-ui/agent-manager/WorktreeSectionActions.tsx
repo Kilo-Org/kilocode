@@ -18,6 +18,7 @@ interface WorktreeSectionActionsProps extends WorktreeCreateProps {
   onShortcuts: () => void
   onSettings: () => void
   onHistory: () => void
+  onHelp: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -58,6 +59,15 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           variant="ghost"
           aria-label={props.t("session.showHistory")}
           onClick={props.onHistory}
+        />
+      </Tooltip>
+      <Tooltip value={props.t("agentManager.intro.reopen")} placement="bottom">
+        <IconButton
+          icon="help"
+          size="small"
+          variant="ghost"
+          aria-label={props.t("agentManager.intro.reopen")}
+          onClick={props.onHelp}
         />
       </Tooltip>
       <IconButton

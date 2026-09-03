@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
+  "agentManager.updateBase.title": "Temel daldan güncelle",
+  "agentManager.updateBase.selectWorktree": "Önce yönetilen bir worktree seçin.",
+
   "agentManager.worktree.settings": "Worktree ayarları",
   "agentManager.worktree.new": "Yeni Worktree",
   "agentManager.worktree.setupScript": "Worktree Kurulum Betiği",
@@ -212,6 +215,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Yorumlar",
   "agentManager.pr.copyLink": "PR bağlantısını kopyala",
   "agentManager.pr.comment.unresolvedCount": "{{count}} çözülmemiş",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} çözülmemiş inceleme tartışması",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} çözülmemiş inceleme tartışması",
   "agentManager.pr.comment.resolvedGroup": "Çözüldü ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} çözülmemiş yorumu ajana gönder",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} çözülmemiş yorumu terminale gönder",
@@ -275,4 +280,28 @@ export const dict = {
     "PR durumunu geri yüklemek için terminalinizde 'gh auth login' komutunu çalıştırın.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI yüklü değil",
   "agentManager.pr.error.gh_missing.description": "PR durumunu etkinleştirmek için GitHub CLI'yi yükleyin.",
+  "agentManager.intro.title": "Paralel görevler. Ayrı worktree'ler.",
+  "agentManager.intro.subtitle":
+    "Worktree, bir görev için ayrı bir klasör ve daldır. Agentlar aynı dosyaları düzenlemeden yan yana çalışabilir.",
+  "agentManager.intro.graph.agent": "Kilo agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Değişiklikler çakışırsa",
+  "agentManager.intro.conflictText":
+    "worktree'deki ajandan özgün temel dalını birleştirmesini ve çakışmaları çözmesini isteyin, ardından sonucu inceleyin. git stash kullanmaktan kaçının: stash'ler worktree'ler arasında paylaşılır.",
+  "agentManager.intro.stage1.title": "Deponuz",
+  "agentManager.intro.stage1.text": "Yerel dosyalar değişmeden kalır",
+  "agentManager.intro.stage2.title": "Örnek: iki görev paralel",
+  "agentManager.intro.stage2.text": "Her iki worktree de bu depoya aittir. Başka bir depo için başka bir proje seçin.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Kendi klasörü + dalı",
+  "agentManager.intro.stage4.title": "Hazır olduğunuzda değişiklikleri geri getirin",
+  "agentManager.intro.stage4.text": "Agent'tan bir pull request açmasını isteyin veya diff panelinde Apply kullanın.",
+  "agentManager.intro.prDetection":
+    "PR rozetleri her worktree branch'i için otomatik güncellenir (GitHub CLI oturumu açmanız gerekir).",
+  "agentManager.intro.checksRunning": "Kontroller çalışıyor",
+  "agentManager.intro.approved": "Onaylandı",
+  "agentManager.intro.create": "Worktree oluştur",
+  "agentManager.intro.guide": "Kılavuzu okuyun",
+  "agentManager.intro.dismiss": "Tanıtımı atla",
+  "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
 }
