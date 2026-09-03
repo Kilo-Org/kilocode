@@ -863,6 +863,9 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Предоставьте общую доску основному сеансу и его подагентам, выполняющим задачи, включая вложенных подагентов. Используйте её для параллельных попыток найти решение или взаимодополняющей работы, а не для каждой задачи.",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
@@ -890,6 +893,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
+  "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Позволяет явно выбирать модель, провайдера и уровень рассуждения для субагентов Task.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1166,58 +1172,16 @@ export const dict = {
   "question.summary": "{{n}} из {{total}} вопросов",
   "common.review": "Просмотр",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Миграция с устаревшей версии",
-  "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
   "settings.aboutKiloCode.rooImport.description": "Импорт истории переписки из установки Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Импортировать сеансы из Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Что нового в Kilo Code",
-  "migration.whatsNew.subtitle": "Мы перестроили расширение на более быстрой и эффективной основе.",
-  "migration.whatsNew.features.performance.title": "Более быстрая работа агента",
-  "migration.whatsNew.features.performance.detail":
-    "Параллельные вызовы инструментов и подагенты позволяют вашему агенту делать больше одновременно — меньше ожидания, больше результатов.",
-  "migration.whatsNew.features.interface.title": "Упрощённый интерфейс",
-  "migration.whatsNew.features.interface.detail": "Меньше отвлекающих факторов, проще и быстрее для чтения.",
-  "migration.whatsNew.features.agentManager.title": "Менеджер агентов",
-  "migration.whatsNew.features.agentManager.detail":
-    "Единый интерфейс для запуска нескольких агентов параллельно, каждый в своём worktree — отслеживайте прогресс, переключайте контекст и просматривайте изменения в одном месте.",
-  "migration.whatsNew.features.foundation.title": "Общая основа",
-  "migration.whatsNew.features.foundation.detail":
-    "Одно компактное и эффективное ядро для всех продуктов Kilo. Знакомый опыт независимо от выбранного способа работы.",
-  "migration.whatsNew.blogLink": "Читать полный анонс",
-  "migration.whatsNew.docsLink": "Что нового и часто задаваемые вопросы",
-  "migration.whatsNew.continue": "Продолжить",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Перенос ваших настроек",
-  "migration.migrate.subtitle": "Мы нашли настройки от вашей предыдущей установки. Вот что можно перенести.",
+  "migration.roo.button": "Импортировать сеансы",
+  "migration.roo.empty": "Сеансы Roo Code не найдены.",
   "migration.migrate.selectLabel": "Выберите, что перенести",
   "migration.migrate.chatHistory": "Сессии чата и история",
-  "migration.migrate.button": "Перенести настройки",
-  "migration.migrate.skip": "Пропустить",
-  "migration.migrate.keysDetected": "Обнаружено ключей: {{count}}",
-  "migration.migrate.serversConfigured": "Настроено серверов: {{count}}",
-  "migration.migrate.modesFound": "Найдено режимов: {{count}}",
-  "migration.migrate.nothingToMigrate": "В старых настройках не найдено данных для переноса.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "API-ключи провайдеров",
-  "migration.select.mcpServers": "Серверы MCP",
-  "migration.select.customModes": "Пользовательские режимы / Агенты",
-  "migration.select.defaultModel": "Модель по умолчанию",
-  "migration.select.autoApproval": "Автоматическое подтверждение",
-  "migration.select.language": "Язык интерфейса",
-  "migration.select.autocomplete": "Настройки автодополнения",
 
   // Migrate — completion
   "migration.complete.summary": "Успешно перенесено: {{success}} из {{total}} элементов.",
-  "migration.complete.cleanup": "Удалить данные старых настроек",
-  "migration.complete.cleanupDescription":
-    "Это удалит старые настройки из хранилища VS Code. Вы не сможете запустить эту миграцию повторно.",
   "migration.complete.done": "Готово",
   "migration.migrate.sessionsDetected": "Обнаружено {{count}} сеансов",
   "migration.error.continue": "Продолжить",
@@ -1251,7 +1215,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Неизвестная дата",
   "migration.sessionFormat.unknown": "Неизвестно",
   "migration.sessionFormat.unknownError": "Неизвестная ошибка",
-  // legacy-migration end
 
   "error.details.show": "Подробности",
 
@@ -1261,6 +1224,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
   "task.backgroundAgents.more": "+{{count}} ещё",
   "task.backgroundAgents.open": "Открыть фонового агента",
+  "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
@@ -1273,6 +1237,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Отменено",
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
+  "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",

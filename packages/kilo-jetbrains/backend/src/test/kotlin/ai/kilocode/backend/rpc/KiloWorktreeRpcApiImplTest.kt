@@ -3,17 +3,27 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDto
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.openapi.util.SystemInfo
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertFalse
@@ -48,6 +58,54 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `a cache entry is usable only within both the ttl and the caller ceiling`() {
+        assertTrue(usable(time = 0, now = 89_999, ttl = 90_000, maxAge = null))
+        assertFalse(usable(time = 0, now = 90_000, ttl = 90_000, maxAge = null))
+
+        // A ceiling tightens: an entry the TTL alone would have served can be rejected, which is the
+        // only way a caller returning to the IDE can get past a cache filled before it left.
+        assertTrue(usable(time = 0, now = 9_999, ttl = 90_000, maxAge = 10_000))
+        assertFalse(usable(time = 0, now = 10_000, ttl = 90_000, maxAge = 10_000))
+
+        // ...and never extends, so no caller can pin stale data beyond the TTL.
+        assertFalse(usable(time = 0, now = 120_000, ttl = 90_000, maxAge = Long.MAX_VALUE))
+
+        // Zero forces the work to run, and a negative value is clamped to that rather than inverting
+        // the comparison into "always fresh".
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `branch status serves its cache until a caller demands a fresher answer`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("cached")
+        git(repo, "worktree", "add", "-b", "feature/cached", dir.toString())
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/moved")
+
+        // The default ceiling accepts the entry written above, so a change made meanwhile is invisible
+        // for as long as it lives — the staleness a returning caller has to be able to reject.
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+        assertEquals("feature/moved", api.branchStatus(dir.toString(), maxAge = 0).branch)
+    }
+
+    @Test
+    fun `branch status keeps serving the cache for a ceiling wider than the entry age`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("wide")
+        git(repo, "worktree", "add", "-b", "feature/wide", dir.toString())
+        assertEquals("feature/wide", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/other")
+
+        // A returning caller passes the length of its absence, not zero: work that happened while it
+        // was away is still current, so a ceiling the entry fits inside must reuse it.
+        assertEquals("feature/wide", api.branchStatus(dir.toString(), maxAge = 60_000).branch)
+    }
+
+    @Test
     fun `branch status skips a missing directory without caching the empty result`() = runBlocking {
         initRepo()
         val dir = repo.resolve(".kilo").resolve("worktrees").resolve("late")
@@ -56,6 +114,26 @@ class KiloWorktreeRpcApiImplTest {
         git(repo, "worktree", "add", "-b", "feature/x", dir.toString())
 
         assertEquals("feature/x", api.branchStatus(dir.toString()).branch)
+    }
+
+    @Test
+    fun `ghStatus reports git only when the github integration is off`() = runBlocking {
+        initRepo()
+        assertEquals(GhAvailability.OK, api.ghStatus(repo.toString(), github = false))
+    }
+
+    @Test
+    fun `branch status resolves git state without a pull request when the github integration is off`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("off")
+        git(repo, "worktree", "add", "-b", "feature/off", dir.toString())
+
+        val status = api.branchStatus(dir.toString(), github = false)
+
+        assertEquals("feature/off", status.branch)
+        assertTrue(status.worktree)
+        assertEquals(GhAvailability.OK, status.availability)
+        assertNull(status.pr)
     }
 
     @Test
@@ -252,6 +330,17 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhAvailability.MISSING, classifyGhError("Cannot run program \"gh\": No such file or directory"))
         assertEquals(GhAvailability.MISSING, classifyGhError("gh: command not found"))
         assertEquals(GhAvailability.OK, classifyGhError("temporary network failure"))
+    }
+
+    @Test
+    fun `classifyGhError detects a spent api budget without calling it an auth problem`() {
+        // `gh auth status` validates the token against the API, so it is usually the first to be told.
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 403: API rate limit exceeded for user ID 1."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("You have exceeded a secondary rate limit."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 429: Too Many Requests"))
+        // A revoked token also mentions authentication; that reading has to win, because the answer is
+        // "log in again" rather than "wait".
+        assertEquals(GhAvailability.UNAUTH, classifyGhError("authentication failed, and rate limit remaining is 0"))
     }
 
     @Test
@@ -694,23 +783,110 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `stats reports managed worktree diff and ahead counts`() = runBlocking {
+    fun `stats reports committed diff against the base branch`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
         val dir = Path.of(created.path)
         Files.writeString(dir.resolve("tracked.txt"), "one\n")
         git(dir, "add", "tracked.txt")
         git(dir, "commit", "-m", "feature")
+        // Working-tree noise a pull request would not contain.
         Files.writeString(dir.resolve("notes.txt"), "two\nthree\n")
 
         val item = api.stats(repo.toString()).items.single { it.path == created.path }
 
-        assertEquals(3, item.additions)
+        assertEquals(1, item.additions, "only the committed line belongs in the PR number")
         assertEquals(0, item.deletions)
+        assertEquals(1, item.files, "untracked notes.txt must not count")
         assertEquals(1, item.ahead)
         assertEquals(0, item.behind)
-        // tracked.txt (committed ahead of base) + notes.txt (untracked) = 2 changed files.
-        assertEquals(2, item.files)
+    }
+
+    @Test
+    fun `stats ignores the branch upstream and uses the base branch`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        // Emulate a fully pushed branch: an upstream that already contains the commit.
+        git(repo, "branch", "shadow", "feature/x")
+        git(dir, "branch", "--set-upstream-to=shadow", "feature/x")
+
+        val item = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(1, item.additions, "an in-sync upstream must not zero out the diff")
+        assertEquals(1, item.ahead)
+    }
+
+    @Test
+    fun `stats is unchanged by uncommitted edits`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        val before = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        Files.writeString(dir.resolve("tracked.txt"), "one\ntwo\n")
+        Files.writeString(dir.resolve("untracked.txt"), "three\n")
+
+        val after = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(before.additions, after.additions)
+        assertEquals(before.files, after.files)
+    }
+
+    @Test
+    fun `dirty reports staged unstaged and untracked changes`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        // Staged edit, unstaged edit, and an untracked file.
+        Files.writeString(dir.resolve("staged.txt"), "s\n")
+        git(dir, "add", "staged.txt")
+        Files.writeString(dir.resolve("tracked.txt"), "one\ntwo\n")
+        Files.writeString(dir.resolve("untracked.txt"), "u\n")
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(3, item.additions, "staged + unstaged + untracked lines")
+        assertEquals(0, item.deletions)
+        assertEquals(3, item.files)
+        assertEquals(1, item.untracked)
+    }
+
+    @Test
+    fun `dirty reports zero for a clean worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(0, item.files)
+        assertEquals(0, item.unpushed, "no upstream means no unpushed count")
+    }
+
+    @Test
+    fun `dirty counts commits missing from the upstream`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        git(repo, "branch", "shadow", "feature/x")
+        git(dir, "branch", "--set-upstream-to=shadow", "feature/x")
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(1, item.unpushed)
+        assertEquals(0, item.files, "committed work is not uncommitted")
     }
 
     @Test
@@ -877,6 +1053,89 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `parsePr defaults review and checks when gh did not report them`() {
+        val pull = assertNotNull(parsePr("/repo", """{"number":1,"state":"OPEN","url":"https://pr/1"}"""))
+
+        // The scalar fallback and repositories with no review or CI land here, so "nothing to show"
+        // has to be the default rather than an optimistic pass.
+        assertEquals(GhReview.NONE, pull.review)
+        assertEquals(GhChecks.NONE, pull.checks.state)
+        assertEquals(GhChecksDto(), pull.checks)
+    }
+
+    @Test
+    fun `parseReview maps every github review decision`() {
+        assertEquals(GhReview.APPROVED, parseReview(obj("""{"reviewDecision":"APPROVED"}""")))
+        assertEquals(GhReview.CHANGES_REQUESTED, parseReview(obj("""{"reviewDecision":"CHANGES_REQUESTED"}""")))
+        assertEquals(GhReview.PENDING, parseReview(obj("""{"reviewDecision":"REVIEW_REQUIRED"}""")))
+        // A repository that requires no review reports an empty decision rather than omitting it.
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":""}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":null}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("{}")))
+    }
+
+    @Test
+    fun `parseChecks counts a mixed rollup and lets failure win`() {
+        val checks = parseChecks(
+            obj(
+                """
+                {"statusCheckRollup":[
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"FAILURE"},
+                  {"conclusion":"","status":"IN_PROGRESS"},
+                  {"conclusion":"SKIPPED"}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        // A red build stays red however many jobs are still queued behind it.
+        assertEquals(GhChecks.FAILED, checks.state)
+        assertEquals(4, checks.total, "skipped checks are excluded, matching GitHub's own count")
+        assertEquals(2, checks.passed)
+        assertEquals(1, checks.failed)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a running check from status when conclusion is still empty`() {
+        val checks = parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"","status":"IN_PROGRESS"}]}"""))
+
+        assertEquals(GhChecks.PENDING, checks.state)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a legacy commit status from state`() {
+        // Commit statuses carry `state` and never `conclusion`, unlike check runs.
+        assertEquals(GhChecks.PASSED, parseChecks(obj("""{"statusCheckRollup":[{"state":"SUCCESS"}]}""")).state)
+        assertEquals(GhChecks.FAILED, parseChecks(obj("""{"statusCheckRollup":[{"state":"ERROR"}]}""")).state)
+    }
+
+    @Test
+    fun `parseChecks reports none for an absent or empty rollup`() {
+        assertEquals(GhChecks.NONE, parseChecks(obj("{}")).state)
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[]}""")).state)
+        // Every check skipped is still nothing to report, not a pass.
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"SKIPPED"}]}""")).state)
+    }
+
+    @Test
+    fun `checkState treats an unrecognised verdict as pending`() {
+        assertEquals(CheckState.PASSED, checkState("NEUTRAL"))
+        assertEquals(CheckState.FAILED, checkState("TIMED_OUT"))
+        assertEquals(CheckState.FAILED, checkState("CANCELLED"))
+        assertEquals(CheckState.SKIPPED, checkState("SKIPPED"))
+        // A name nobody recognises has not reported success; calling it a failure would paint rows red
+        // the next time GitHub adds a status.
+        assertEquals(CheckState.PENDING, checkState("SOMETHING_NEW"))
+        assertEquals(CheckState.PENDING, checkState(null))
+    }
+
+    private fun obj(raw: String) = Json.parseToJsonElement(raw) as JsonObject
+
+    @Test
     fun `branchStatus reports plain checkout and linked worktree`() = runBlocking {
         initRepo()
 
@@ -905,24 +1164,20 @@ class KiloWorktreeRpcApiImplTest {
         val binary = byteArrayOf(0, 1, 2, 3, 0, 5, 127, -1)
         Files.write(repo.resolve("blob.bin"), binary)
 
-        val snapshot = WorktreeTransfer.capture(repo)
-        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
-        val target = Path.of(created.path)
-        // Baseline the source status after worktree creation (which adds .kilo bookkeeping) so the
-        // assertion isolates the effect of apply, which must not touch the source tree.
-        val before = statusOf(repo)
+        preserved {
+            captured { snapshot ->
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
 
-        val result = WorktreeTransfer.apply(snapshot, repo, target)
-        assertTrue(result.ok, "apply should succeed: ${result.error}")
-
-        assertEquals("modified\n", Files.readString(target.resolve("tracked.txt")))
-        assertEquals("staged content\n", Files.readString(target.resolve("staged.txt")))
-        assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
-        assertTrue(binary.contentEquals(Files.readAllBytes(target.resolve("blob.bin"))), "binary file should round-trip")
-
-        // The source working tree must be untouched by capture + apply.
-        assertEquals(before, statusOf(repo), "source working tree must be unchanged")
-        WorktreeTransfer.cleanup(snapshot)
+                assertEquals("modified\n", Files.readString(target.resolve("tracked.txt")))
+                assertEquals("original\n", output(target, "show", ":tracked.txt"))
+                assertEquals("staged content\n", Files.readString(target.resolve("staged.txt")))
+                assertEquals("staged content\n", output(target, "show", ":staged.txt"))
+                assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
+                assertContentEquals(binary, Files.readAllBytes(target.resolve("blob.bin")))
+            }
+        }
     }
 
     @Test
@@ -931,35 +1186,44 @@ class KiloWorktreeRpcApiImplTest {
         Files.writeString(repo.resolve("staged.txt"), "staged content\n")
         git(repo, "add", "staged.txt")
 
-        val snapshot = WorktreeTransfer.capture(repo)
-        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
-        val target = Path.of(created.path)
-        // Pre-create the staged file in the target so the new-file patch cannot apply cleanly.
-        Files.writeString(target.resolve("staged.txt"), "conflicting\n")
+        preserved {
+            captured { snapshot ->
+                val target = target()
+                Files.writeString(target.resolve("staged.txt"), "conflicting\n")
 
-        val result = WorktreeTransfer.apply(snapshot, repo, target)
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
 
-        assertFalse(result.ok, "apply should fail when the patch conflicts")
-        assertNotNull(result.error)
-        WorktreeTransfer.cleanup(snapshot)
+                    assertFalse(result.ok, "apply should fail when the patch conflicts")
+                    assertTrue(assertNotNull(result.error).contains("staged.txt"), result.error)
+                }
+            }
+        }
     }
 
     @Test
     fun `capture fails instead of reporting a clean tree when git cannot run`() {
         // No git repository: a failed capture must throw rather than look like "nothing to move".
-        val err = assertFails { WorktreeTransfer.capture(repo) }
+        val err = failure(repo)
 
-        assertTrue(err.message.orEmpty().isNotBlank(), "capture failure should explain itself")
+        assertTrue(err.message.orEmpty().contains("git rev-parse"), "capture failure should explain itself: $err")
+    }
+
+    @Test
+    fun `moveToWorktree rejects unresolved merge conflicts before creating a worktree`() = runBlocking {
+        initRepo()
+        diverge("README.md")
+
+        conflicted("README.md")
     }
 
     @Test
     fun `moveToWorktree emits ERROR when capture fails`() = runBlocking {
         val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
 
-        assertEquals(MoveStage.CAPTURING, events.first().stage)
-        val last = events.last()
-        assertEquals(MoveStage.ERROR, last.stage)
-        assertTrue(last.error != null, "the error event should explain the failure")
+        assertEquals(listOf(MoveStage.CAPTURING, MoveStage.ERROR), events.map { it.stage })
+        assertTrue(assertNotNull(events.last().error).isNotBlank(), "the error event should explain the failure")
+        assertFalse(Files.exists(repo.resolve(".kilo/worktrees/feature-x")))
     }
 
     @Test
@@ -969,15 +1233,16 @@ class KiloWorktreeRpcApiImplTest {
 
         // The fork resolves a project-level service that no plain unit test provides, so this move
         // throws after the worktree exists — exactly the case that used to end the flow silently.
-        val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
+        preserved {
+            val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
 
-        assertEquals(MoveStage.ERROR, events.last().stage)
-        assertTrue(events.map { it.stage }.containsAll(listOf(MoveStage.CREATING, MoveStage.TRANSFERRING)))
-        assertFalse(
-            Files.exists(repo.resolve(".kilo").resolve("worktrees").resolve("feature-x")),
-            "a failed move must not leave its worktree behind",
-        )
-        assertTrue(api.list(repo.toString()).worktrees.none { it.branch == "feature/x" }, "git must not track the worktree")
+            assertEquals(
+                listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.FORKING, MoveStage.ERROR),
+                events.map { it.stage },
+            )
+            assertTrue(assertNotNull(events.last().error).isNotBlank())
+            absent()
+        }
     }
 
     @Test
@@ -1003,10 +1268,645 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("hello edited\n", Files.readString(repo.resolve("README.md")))
     }
 
-    private fun statusOf(dir: Path): String {
-        val cmd = GeneralCommandLine(listOf("git", "status", "--porcelain")).withWorkDirectory(dir.toFile())
-        return CapturingProcessHandler(cmd).runProcess(30_000).stdout
+    @Test
+    fun `moveToWorktree rejects unresolved conflicts left by a stash pop without a MERGE_HEAD marker`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "stashed\n")
+        git(repo, "stash", "push")
+        Files.writeString(repo.resolve("README.md"), "advanced\n")
+        git(repo, "commit", "-am", "advance")
+        val popped = runner(repo)(listOf("stash", "pop"))
+        assertFalse(popped.ok, "the fixture must produce an unresolved stash conflict")
+        assertFalse(
+            Files.exists(metadata(repo, "MERGE_HEAD")),
+            "this fixture must reproduce a conflict with no MERGE_HEAD marker",
+        )
+
+        conflicted("README.md")
     }
+
+    @Test
+    fun `moveToWorktree rejects merge conflicts even alongside unrelated staged and unstaged edits`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("other.txt"), "line\n")
+        git(repo, "add", "other.txt")
+        git(repo, "commit", "-m", "add other")
+        diverge("README.md")
+        Files.writeString(repo.resolve("other.txt"), "staged change\n")
+        git(repo, "add", "other.txt")
+        Files.writeString(repo.resolve("other.txt"), "unstaged change\n")
+        Files.write(repo.resolve("untracked.bin"), byteArrayOf(0, 1, -1, 127))
+        assertEquals("staged change\n", output(repo, "show", ":other.txt"))
+        assertEquals("MM other.txt\u0000", output(repo, "status", "--porcelain=v1", "-z", "--", "other.txt"))
+
+        conflicted("README.md")
+    }
+
+    @Test
+    fun `moveToWorktree rejects an add-add conflict with no common ancestor stage`() = runBlocking {
+        initRepo()
+        diverge("new.txt")
+
+        conflicted("new.txt", stages = listOf("2", "3"))
+    }
+
+    @Test
+    fun `moveToWorktree lists every conflicted path exactly once when multiple files conflict`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("b.txt"), "base\n")
+        git(repo, "add", "b.txt")
+        git(repo, "commit", "-m", "add b")
+        diverge("README.md", "b.txt")
+
+        conflicted("README.md", "b.txt")
+    }
+
+    @Test
+    fun `moveToWorktree reports conflicted filenames without quoting or splitting control characters`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "Windows forbids quotes and control characters in filenames")
+        initRepo()
+        val name = "my \"文件\"\tname\n.md"
+        Files.writeString(repo.resolve(name), "hello\n")
+        git(repo, "add", name)
+        git(repo, "commit", "-m", "add unusual filename")
+        diverge(name)
+
+        conflicted(name)
+    }
+
+    @Test
+    fun `moveToWorktree rejects a merge conflict outside the given subdirectory`() = runBlocking {
+        initRepo()
+        Files.createDirectories(repo.resolve("sub"))
+        Files.writeString(repo.resolve("sub/file.txt"), "hello\n")
+        git(repo, "add", "sub/file.txt")
+        git(repo, "commit", "-m", "add sub file")
+        diverge("README.md")
+
+        conflicted("README.md", dir = repo.resolve("sub"))
+    }
+
+    @Test
+    fun `moveToWorktree from a subdirectory transfers root nested and sibling paths without flattening`() = runBlocking {
+        initRepo()
+        val tracked = listOf("README.md", "sub/nested/tracked.txt", "sibling/tracked.txt")
+        tracked.forEach { name ->
+            Files.createDirectories(repo.resolve(name).parent)
+            Files.writeString(repo.resolve(name), "base $name\n")
+        }
+        git(repo, "add", "--", *tracked.toTypedArray())
+        git(repo, "commit", "-m", "add nested files")
+        tracked.forEach { Files.writeString(repo.resolve(it), "staged $it\n") }
+        git(repo, "add", "--", *tracked.toTypedArray())
+        tracked.forEach { Files.writeString(repo.resolve(it), "unstaged $it\n") }
+        val untracked = listOf("notes.txt", "sub/nested/notes.txt", "sibling/notes.txt")
+        untracked.forEach { Files.writeString(repo.resolve(it), "untracked $it\n") }
+        val rev = head(repo, "HEAD")
+
+        preserved {
+            val events = api.moveToWorktree(repo.resolve("sub").toString(), null, "feature/x").toList()
+
+            assertEquals(
+                listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.DONE),
+                events.map { it.stage },
+                events.last().error,
+            )
+            val target = Path.of(assertNotNull(events.last().worktree).path)
+            assertEquals(rev, head(target, "HEAD"))
+            tracked.forEach { name ->
+                assertEquals("staged $name\n", output(target, "show", ":$name"))
+                assertEquals("unstaged $name\n", Files.readString(target.resolve(name)))
+                assertEquals("MM $name\u0000", output(target, "status", "--porcelain=v1", "-z", "--", name))
+            }
+            untracked.forEach { name ->
+                assertEquals("untracked $name\n", Files.readString(target.resolve(name)))
+            }
+            assertEquals(
+                untracked.toSet(),
+                output(target, "ls-files", "--others", "--exclude-standard", "-z").split('\u0000').filter { it.isNotEmpty() }.toSet(),
+            )
+            assertFalse(Files.exists(target.resolve("tracked.txt")))
+            assertFalse(Files.exists(target.resolve("nested")))
+        }
+    }
+
+    @Test
+    fun `moveToWorktree from a linked checkout captures its own HEAD index and files instead of the main checkout`() = runBlocking {
+        initRepo()
+        val source = remote.resolve("source")
+        git(repo, "worktree", "add", "-b", "source", source.toString())
+        Files.writeString(source.resolve("README.md"), "linked base\n")
+        git(source, "commit", "-am", "advance linked checkout")
+        val rev = head(source, "HEAD")
+        assertFalse(rev == head(repo, "HEAD"), "linked and main fixtures must have different commits")
+        Files.writeString(repo.resolve("README.md"), "main staged\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "main unstaged\n")
+        Files.writeString(repo.resolve("notes.txt"), "main notes\n")
+        Files.writeString(repo.resolve("main-only.txt"), "main only\n")
+        Files.writeString(source.resolve("README.md"), "linked staged\n")
+        git(source, "add", "README.md")
+        Files.writeString(source.resolve("README.md"), "linked unstaged\n")
+        Files.writeString(source.resolve("notes.txt"), "linked notes\n")
+        Files.createDirectories(source.resolve("sub"))
+
+        preserved {
+            preserved(source) {
+                val events = api.moveToWorktree(source.resolve("sub").toString(), null, "feature/x").toList()
+
+                assertEquals(
+                    listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.DONE),
+                    events.map { it.stage },
+                    events.last().error,
+                )
+                val target = Path.of(assertNotNull(events.last().worktree).path)
+                assertEquals(repo.resolve(".kilo/worktrees/feature-x").toRealPath(), target.toRealPath())
+                assertEquals(rev, head(target, "HEAD"))
+                assertEquals("linked staged\n", output(target, "show", ":README.md"))
+                assertEquals("linked unstaged\n", Files.readString(target.resolve("README.md")))
+                assertEquals("MM README.md\u0000", output(target, "status", "--porcelain=v1", "-z", "--", "README.md"))
+                assertEquals("linked notes\n", Files.readString(target.resolve("notes.txt")))
+                assertFalse(Files.exists(target.resolve("main-only.txt")))
+                assertFalse(Files.exists(source.resolve(".kilo/worktrees/feature-x")))
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer preserves staged and unstaged edits to the same file`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+
+        preserved {
+            captured { snapshot ->
+                assertEquals(head(repo, "HEAD"), snapshot.head)
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
+                assertEquals("staged version\n", output(target, "show", ":README.md"))
+                assertEquals("unstaged version\n", Files.readString(target.resolve("README.md")))
+                assertEquals("MM README.md\u0000", output(target, "status", "--porcelain=v1", "-z", "--", "README.md"))
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer preserves staged and unstaged versions of the same tracked binary`() = runBlocking {
+        initRepo()
+        Files.write(repo.resolve("blob.bin"), byteArrayOf(0, 1, 2, 3, 4, 5, 127, -1))
+        git(repo, "add", "blob.bin")
+        git(repo, "commit", "-m", "add binary")
+        val staged = byteArrayOf(9, 8, 7, 0, 6, 5, -1, 127)
+        Files.write(repo.resolve("blob.bin"), staged)
+        git(repo, "add", "blob.bin")
+        val index = head(repo, ":blob.bin")
+        val unstaged = byteArrayOf(0, -1, 5, 6, 7, 8, 9, 10)
+        Files.write(repo.resolve("blob.bin"), unstaged)
+
+        preserved {
+            captured { snapshot ->
+                assertTrue(Files.readString(assertNotNull(snapshot.staged)).contains("GIT binary patch"))
+                assertTrue(Files.readString(assertNotNull(snapshot.unstaged)).contains("GIT binary patch"))
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
+                assertEquals(index, head(target, ":blob.bin"))
+                assertContentEquals(unstaged, Files.readAllBytes(target.resolve("blob.bin")))
+                assertEquals("MM blob.bin\u0000", output(target, "status", "--porcelain=v1", "-z", "--", "blob.bin"))
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer round trips untracked Unicode quoted and control character filenames`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "Windows forbids quotes and control characters in filenames")
+        initRepo()
+        val names = listOf("my new file.txt", "文件.txt", "quoted \"name\"\twith\nlines.txt")
+        names.forEach { Files.writeString(repo.resolve(it), "content for $it\n") }
+
+        preserved {
+            captured { snapshot ->
+                assertEquals(names.toSet(), snapshot.untracked.keys)
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
+                names.forEach { name ->
+                    assertEquals("content for $name\n", Files.readString(target.resolve(name)))
+                }
+                assertEquals(
+                    names.toSet(),
+                    output(target, "ls-files", "--others", "--exclude-standard", "-z").split('\u0000').filter { it.isNotEmpty() }.toSet(),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `captured tracked and untracked content survives edits to the source after capture`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+        Files.writeString(repo.resolve("untracked.txt"), "original\n")
+
+        captured { snapshot ->
+            val copy = assertNotNull(snapshot.untracked["untracked.txt"])
+            assertFalse(copy.toRealPath().startsWith(repo.toRealPath()), "the snapshot must own an independent temporary copy")
+            Files.writeString(repo.resolve("README.md"), "mutated after capture\n")
+            git(repo, "add", "README.md")
+            Files.writeString(repo.resolve("untracked.txt"), "mutated after capture\n")
+            assertEquals("original\n", Files.readString(copy))
+
+            preserved {
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
+                assertEquals("staged version\n", output(target, "show", ":README.md"))
+                assertEquals("unstaged version\n", Files.readString(target.resolve("README.md")))
+                assertEquals("original\n", Files.readString(target.resolve("untracked.txt")))
+            }
+        }
+    }
+
+    @Test
+    fun `captured untracked file content survives deletion of the source after capture`() = runBlocking {
+        initRepo()
+        val bytes = byteArrayOf(0, -1, 127, 10, 13)
+        Files.write(repo.resolve("untracked.bin"), bytes)
+
+        captured { snapshot ->
+            val copy = assertNotNull(snapshot.untracked["untracked.bin"])
+            Files.delete(repo.resolve("untracked.bin"))
+            assertContentEquals(bytes, Files.readAllBytes(copy))
+
+            preserved {
+                val target = target()
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, "apply should succeed: ${result.error}")
+                assertContentEquals(bytes, Files.readAllBytes(target.resolve("untracked.bin")))
+                assertFalse(Files.exists(repo.resolve("untracked.bin")), "apply must not recreate the deleted source")
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer reports failure when an unstaged patch cannot apply`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+
+        preserved {
+            captured { snapshot ->
+                assertNull(snapshot.staged)
+                assertNotNull(snapshot.unstaged)
+                val target = target()
+                Files.writeString(target.resolve("README.md"), "conflicting target\n")
+
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
+
+                    assertFalse(result.ok, "an unstaged patch failure must not report success")
+                    val error = assertNotNull(result.error)
+                    assertTrue(error.contains("Unstaged patch failed"), error)
+                    assertTrue(error.contains("README.md"), error)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer reports a locked target index without changing its index or working files`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+
+        preserved {
+            captured { snapshot ->
+                assertNotNull(snapshot.staged)
+                val target = target()
+                val lock = metadata(target, "index.lock")
+                Files.createFile(lock)
+                try {
+                    val index = metadata(target, "index")
+                    val bytes = Files.readAllBytes(index)
+                    preserved(target) {
+                        val result = WorktreeTransfer.apply(snapshot, target)
+
+                        assertFalse(result.ok, "apply must not report success when the target index is locked")
+                        val error = assertNotNull(result.error)
+                        assertTrue(error.contains("Staged patch failed"), error)
+                        assertTrue(error.contains("index.lock"), error)
+                        assertContentEquals(bytes, Files.readAllBytes(index), "a failed index write must leave the index intact")
+                        assertTrue(Files.exists(lock), "apply must not remove another process's lock")
+                    }
+                } finally {
+                    Files.deleteIfExists(lock)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer refuses to overwrite an existing untracked destination`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("untracked.txt"), "source content\n")
+
+        preserved {
+            captured { snapshot ->
+                val target = target()
+                Files.writeString(target.resolve("untracked.txt"), "keep target content\n")
+
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
+
+                    assertFalse(result.ok, "a pre-existing destination must not be overwritten")
+                    assertTrue(assertNotNull(result.error).contains("untracked.txt"), result.error)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer fails when an untracked file cannot be written to the target`() = runBlocking {
+        initRepo()
+        Files.createDirectories(repo.resolve("sub"))
+        Files.writeString(repo.resolve("sub/deep.txt"), "deep\n")
+
+        preserved {
+            captured { snapshot ->
+                val target = target()
+                Files.writeString(target.resolve("sub"), "blocking file\n")
+
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
+
+                    assertFalse(result.ok, "apply should fail when an untracked file cannot be written")
+                    assertTrue(assertNotNull(result.error).contains("sub/deep.txt"), result.error)
+                    assertFalse(Files.exists(target.resolve("sub/deep.txt")))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `worktree transfer names the untracked path when its captured copy is missing`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("untracked.txt"), "source content\n")
+
+        preserved {
+            captured { snapshot ->
+                Files.delete(assertNotNull(snapshot.untracked["untracked.txt"]))
+                val target = target()
+
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
+
+                    assertFalse(result.ok, "missing snapshot content must not be silently skipped")
+                    assertTrue(assertNotNull(result.error).contains("untracked.txt"), result.error)
+                    assertFalse(Files.exists(target.resolve("untracked.txt")))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `moveToWorktree rolls back the worktree and branch when copying an untracked file fails`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+        Files.createDirectories(repo.resolve("sub"))
+        Files.writeString(repo.resolve("sub/deep.txt"), "source content\n")
+
+        preserved {
+            val events = api.moveToWorktree(repo.toString(), null, "feature/x").onEach { event ->
+                if (event.stage == MoveStage.TRANSFERRING) {
+                    val target = repo.resolve(".kilo/worktrees/feature-x")
+                    assertTrue(Files.isDirectory(target))
+                    assertEquals(head(repo, "HEAD"), head(repo, "refs/heads/feature/x"))
+                    Files.writeString(target.resolve("sub"), "blocking file\n")
+                }
+            }.toList()
+
+            assertEquals(
+                listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.ERROR),
+                events.map { it.stage },
+            )
+            assertTrue(assertNotNull(events.last().error).contains("sub/deep.txt"), events.last().error)
+            assertNull(events.last().worktree)
+            absent()
+        }
+    }
+
+    @Test
+    fun `moveToWorktree rejects oversized untracked content instead of moving a partial snapshot`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+        Files.writeString(repo.resolve("a-small.txt"), "capture before the oversized file\n")
+        Files.write(repo.resolve("z-large.bin"), ByteArray(10 * 1024 * 1024 + 1) { (it % 251).toByte() })
+
+        rejected {
+            assertTrue(it.contains("z-large.bin"), it)
+            assertTrue(it.contains("exceeds"), it)
+            assertTrue(it.contains("10485760"), it)
+            assertTrue(it.contains("limit"), it)
+        }
+    }
+
+    @Test
+    fun `moveToWorktree rejects an unreadable untracked regular file without creating a branch`() = runBlocking {
+        assumeTrue(Files.getFileStore(repo).supportsFileAttributeView("posix"), "the fixture requires POSIX permissions")
+        initRepo()
+        val file = repo.resolve("unreadable.txt")
+        Files.writeString(file, "must not be skipped\n")
+        val permissions = Files.getPosixFilePermissions(file)
+
+        preserved {
+            Files.setPosixFilePermissions(file, emptySet())
+            try {
+                assumeFalse(Files.isReadable(file), "the fixture requires read access to be denied")
+                val message = "Failed to capture untracked file unreadable.txt"
+                assertTrue(assertNotNull(failure(repo).message).contains(message))
+                val events = api.moveToWorktree(repo.toString(), null, "feature/x").toList()
+
+                assertEquals(listOf(MoveStage.CAPTURING, MoveStage.ERROR), events.map { it.stage })
+                assertTrue(assertNotNull(events.last().error).contains(message), events.last().error)
+                assertNull(events.last().worktree)
+                absent()
+            } finally {
+                Files.setPosixFilePermissions(file, permissions)
+            }
+        }
+    }
+
+    @Test
+    fun `moveToWorktree rejects an unsupported untracked directory symlink`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        Files.createSymbolicLink(repo.resolve("unsupported"), Path.of("."))
+
+        rejected {
+            assertTrue(it.contains("Failed to capture untracked file unsupported"), it)
+            assertTrue(it.contains("Not a regular file"), it)
+        }
+    }
+
+    @Test
+    fun `moveToWorktree rejects untracked content that cannot be read through a dangling symlink`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        Files.createSymbolicLink(repo.resolve("unreadable.txt"), Path.of("missing.txt"))
+
+        rejected {
+            assertTrue(it.contains("Failed to capture untracked file unreadable.txt"), it)
+        }
+    }
+
+    @Test
+    fun `cleanup deletes every staged unstaged and untracked temporary file`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "staged version\n")
+        git(repo, "add", "README.md")
+        Files.writeString(repo.resolve("README.md"), "unstaged version\n")
+        Files.writeString(repo.resolve("untracked.txt"), "temp content\n")
+        Files.write(repo.resolve("untracked.bin"), byteArrayOf(0, -1, 127))
+
+        preserved {
+            captured { snapshot ->
+                assertEquals(setOf("untracked.txt", "untracked.bin"), snapshot.untracked.keys)
+                val files = listOf(assertNotNull(snapshot.staged), assertNotNull(snapshot.unstaged)) + snapshot.untracked.values
+                assertEquals(4, files.distinct().size)
+                assertTrue(Files.isDirectory(snapshot.storage))
+                files.forEach { file ->
+                    assertTrue(Files.isRegularFile(file), "snapshot file must exist: $file")
+                    assertTrue(file.toRealPath().startsWith(snapshot.storage.toRealPath()))
+                    assertFalse(file.toRealPath().startsWith(repo.toRealPath()), "snapshot file must be independently owned: $file")
+                }
+
+                WorktreeTransfer.cleanup(snapshot)
+
+                files.forEach { assertFalse(Files.exists(it), "cleanup must remove $it") }
+                assertFalse(Files.exists(snapshot.storage), "cleanup must remove the snapshot's owned directory")
+            }
+        }
+    }
+
+    private fun diverge(vararg names: String) {
+        val base = output(repo, "branch", "--show-current").trim()
+        git(repo, "checkout", "-b", "conflicting")
+        names.forEach { Files.writeString(repo.resolve(it), "branch $it\n") }
+        git(repo, "add", "--", *names)
+        git(repo, "commit", "-m", "change on branch")
+        git(repo, "checkout", base)
+        names.forEach { Files.writeString(repo.resolve(it), "main $it\n") }
+        git(repo, "add", "--", *names)
+        git(repo, "commit", "-m", "change on main")
+        val merged = runner(repo)(listOf("merge", "conflicting"))
+        assertFalse(merged.ok, "the fixture must produce unresolved conflicts")
+    }
+
+    private suspend fun conflicted(
+        vararg names: String,
+        dir: Path = repo,
+        stages: List<String> = listOf("1", "2", "3"),
+    ) {
+        val entries = output(repo, "ls-files", "--unmerged", "-z").split('\u0000').filter { it.isNotEmpty() }
+        assertEquals(names.toSet(), entries.map { it.substringAfter('\t') }.toSet(), "the fixture must contain real unmerged entries")
+        names.forEach { name ->
+            assertEquals(
+                stages,
+                entries.filter { it.substringAfter('\t') == name }.map { it.substringBefore('\t').substringAfterLast(' ') },
+                "unexpected index stages for $name",
+            )
+        }
+        rejected(dir) {
+            assertEquals("Resolve merge conflicts before moving to a worktree: ${names.joinToString(", ")}", it)
+        }
+    }
+
+    private suspend fun rejected(dir: Path = repo, check: (String) -> Unit) {
+        preserved {
+            val message = assertNotNull(failure(dir).message)
+            check(message)
+            val events = api.moveToWorktree(dir.toString(), null, "feature/x").toList()
+
+            assertEquals(listOf(MoveStage.CAPTURING, MoveStage.ERROR), events.map { it.stage })
+            assertEquals(message, events.last().error)
+            events.forEach {
+                assertNull(it.worktree)
+                assertNull(it.session)
+            }
+            absent()
+        }
+    }
+
+    private fun absent() {
+        assertFalse(Files.exists(repo.resolve(".kilo/worktrees/feature-x")), "a failed move must not leave a worktree directory")
+        val listed = parseWorktreeList(output(repo, "worktree", "list", "--porcelain"))
+        assertEquals(1, listed.size, "a failed move must not leave a worktree registration: $listed")
+        assertTrue(listed.single().main)
+        assertEquals(
+            "",
+            output(repo, "for-each-ref", "--format=%(refname)", "refs/heads/feature/x"),
+            "a failed move must not leave its branch ref even if the worktree was removed",
+        )
+    }
+
+    private inline fun preserved(dir: Path = repo, block: () -> Unit) {
+        val rev = head(dir, "HEAD")
+        val ref = output(dir, "symbolic-ref", "HEAD")
+        val index = output(dir, "ls-files", "--stage", "-z")
+        val status = output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo")
+        val files = output(dir, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".", ":(exclude).kilo")
+            .split('\u0000').filter { it.isNotEmpty() }.distinct().associateWith { bytes(dir.resolve(it)) }
+
+        block()
+
+        assertEquals(rev, head(dir, "HEAD"), "HEAD must be unchanged in $dir")
+        assertEquals(ref, output(dir, "symbolic-ref", "HEAD"), "branch ref must be unchanged in $dir")
+        assertEquals(index, output(dir, "ls-files", "--stage", "-z"), "index stages must be unchanged in $dir")
+        assertEquals(
+            status,
+            output(dir, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".", ":(exclude).kilo"),
+            "status must be unchanged in $dir",
+        )
+        files.forEach { (name, content) ->
+            assertContentEquals(content, bytes(dir.resolve(name)), "bytes must be unchanged: ${dir.resolve(name)}")
+        }
+    }
+
+    private fun bytes(file: Path): ByteArray? {
+        if (Files.isSymbolicLink(file)) return Files.readSymbolicLink(file).toString().toByteArray()
+        if (!Files.exists(file)) return null
+        return Files.readAllBytes(file)
+    }
+
+    private inline fun captured(dir: Path = repo, block: (WorktreeTransfer.Snapshot) -> Unit) {
+        val snapshot = WorktreeTransfer.capture(dir)
+        try {
+            block(snapshot)
+        } finally {
+            WorktreeTransfer.cleanup(snapshot)
+        }
+    }
+
+    private fun failure(dir: Path): Throwable = assertFails { captured(dir) { Unit } }
+
+    private suspend fun target(): Path {
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
+        return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
+    }
+
+    private fun metadata(dir: Path, name: String): Path =
+        Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-path", name).trimEnd('\r', '\n'))
 
     private fun initRepo() {
         git(repo, "init")

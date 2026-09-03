@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
 import { environmentDetails } from "../../src/kilocode/editor-context"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionID, MessageID, PartID } from "../../src/session/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderTest } from "../fake/provider"
+import { patchAgents } from "../../src/kilocode/agent"
+import PROMPT_ASK from "../../src/agent/prompt/ask.txt"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
 import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
@@ -129,6 +136,38 @@ describe("SystemPrompt.provider", () => {
   })
 })
 
+describe("Ask diagram guidance", () => {
+  test.each([
+    [undefined, false],
+    ["cli", false],
+    ["acp", false],
+    ["unknown", false],
+    ["vscode", true],
+    ["jetbrains", true],
+  ] as const)("matches rendering support for %s", (client, mermaid) => {
+    const previous = process.env.KILO_CLIENT
+    try {
+      if (client === undefined) delete process.env.KILO_CLIENT
+      if (client !== undefined) process.env.KILO_CLIENT = client
+      const agents: Parameters<typeof patchAgents>[0] = {}
+      patchAgents(agents, [], [], {}, { mcpRules: {}, defaultsPatch: [] }, "/repo", [])
+      const prompt = agents.ask.prompt
+      expect(prompt).toContain("You are in Ask mode")
+      expect(prompt).toContain("You must NOT modify files")
+      if (mermaid) {
+        expect(prompt).toBe(PROMPT_ASK)
+        return
+      }
+      expect(prompt).not.toContain("Use Mermaid diagrams")
+      expect(prompt).toContain("Use plain-text or ASCII diagrams")
+      expect(prompt).toContain("cannot render Mermaid")
+    } finally {
+      if (previous === undefined) delete process.env.KILO_CLIENT
+      if (previous !== undefined) process.env.KILO_CLIENT = previous
+    }
+  })
+})
+
 describe("environmentDetails", () => {
   test("includes cwd and worktree in dynamic context", () => {
     const result = environmentDetails({
@@ -142,9 +181,72 @@ describe("environmentDetails", () => {
     expect(result).toContain("Active file: src/app.ts")
   })
 
+  test("block is separated from adjacent content with leading blank lines", () => {
+    const result = environmentDetails({ activeFile: "src/app.ts" })
+
+    expect(result.startsWith("\n\n<environment_details>")).toBe(true)
+    expect(result.endsWith("</environment_details>")).toBe(true)
+  })
+
   test("formats the supplied message time", () => {
     const result = environmentDetails({}, new Date("2026-08-24T12:34:56.123Z"))
 
     expect(result).toContain("Message time: 2026-08-24T12:34:56Z")
+  })
+})
+
+describe("KiloSessionPrompt.injectEditorContext", () => {
+  const sessionID = SessionID.make("ses_env_sep")
+  const providerID = ProviderV2.ID.make("test")
+
+  function userInfo(id: string): MessageV2.User {
+    return {
+      id,
+      sessionID,
+      role: "user",
+      time: { created: 0 },
+      agent: "user",
+      model: { providerID, modelID: ModelV2.ID.make("test") },
+      tools: {},
+      mode: "",
+    } as unknown as MessageV2.User
+  }
+
+  test("appends the environment details block as its own part, separated from user text", () => {
+    const messageID = "m-user"
+    const msgs: MessageV2.WithParts[] = [
+      {
+        info: {
+          ...userInfo(messageID),
+          editorContext: { activeFile: "src/app.ts" },
+        },
+        parts: [
+          {
+            id: PartID.make("prt_p1"),
+            sessionID,
+            messageID: MessageID.make("msg_m-user"),
+            type: "text",
+            text: "write this to a file:",
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+    const cache: KiloSessionPrompt.EnvCache = {}
+
+    KiloSessionPrompt.injectEditorContext({
+      msgs,
+      session: { directory: "/repo/session", path: "session" },
+      sessionID,
+      cache,
+    })
+
+    expect(msgs[0].parts).toHaveLength(2)
+    const userText = msgs[0].parts[0] as MessageV2.TextPart
+    const env = msgs[0].parts[1] as MessageV2.TextPart
+    expect(userText.text).toBe("write this to a file:")
+    expect(env.type).toBe("text")
+    expect(env.synthetic).toBe(true)
+    expect(env.text.startsWith("\n\n<environment_details>")).toBe(true)
+    expect(env.text).toContain("Active file: src/app.ts")
   })
 })

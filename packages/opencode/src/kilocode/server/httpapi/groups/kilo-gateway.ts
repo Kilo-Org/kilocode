@@ -46,6 +46,7 @@ export const ProfileWithBalance = Schema.Struct({
 export const AuthStatus = Schema.Struct({
   authenticated: Schema.Boolean,
   type: Schema.optional(Schema.Literals(["api", "oauth"])),
+  organizationId: Schema.optional(Schema.String),
 })
 
 export const NotificationAction = Schema.Struct({

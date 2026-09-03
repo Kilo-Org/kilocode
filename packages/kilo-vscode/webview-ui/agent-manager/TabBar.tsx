@@ -52,6 +52,9 @@ export interface TabBarProps {
   onRun: (id: string) => void
   onConfigureRun: () => void
   diffOpen: () => boolean
+  browserOpen: () => boolean
+  browserAutomation: () => boolean
+  onToggleBrowser: () => void
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
@@ -275,6 +278,18 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     </Show>
                   </button>
                 </TooltipKeybind>
+                <Show when={props.browserAutomation()}>
+                  <Tooltip value={props.t("agentManager.browser.title")} placement="bottom">
+                    <IconButton
+                      icon="globe"
+                      size="small"
+                      variant="ghost"
+                      aria-label={props.t("agentManager.browser.title")}
+                      class={props.browserOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleBrowser}
+                    />
+                  </Tooltip>
+                </Show>
               </>
             )
           })()}

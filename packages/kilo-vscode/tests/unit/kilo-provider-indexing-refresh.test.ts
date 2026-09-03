@@ -110,7 +110,12 @@ function createConnection() {
 describe("KiloProvider indexing refresh", () => {
   it("shares snapshot payloads across load, SSE refresh, and post-save refresh", async () => {
     const conn = createConnection()
-    const settings = () => ({ maxCost: 0, languageCommitMessage: "sync", multiProject: false })
+    const settings = () => ({
+      maxCost: 0,
+      languageCommitMessage: "sync",
+      multiProject: false,
+      browserAutomation: false,
+    })
     const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
@@ -145,13 +150,16 @@ describe("KiloProvider indexing refresh", () => {
     ])
   })
 
-  it("reloadAfterAuthChange fetches config first, then indexing status", async () => {
+  it("reloadAfterAuthChange refreshes providers immediately but waits for config before indexing", async () => {
     const provider = new KiloProvider({} as never, {} as never)
     const internal = provider as unknown as Internals
     const calls: string[] = []
+    const config = Promise.withResolvers<void>()
 
     internal.fetchAndSendConfig = async () => {
       calls.push("config")
+      await config.promise
+      calls.push("configured")
     }
     internal.fetchAndSendProviders = async () => {
       calls.push("providers")
@@ -172,10 +180,17 @@ describe("KiloProvider indexing refresh", () => {
       calls.push("indexing")
     }
 
-    await internal.reloadAfterAuthChange()
+    const pending = internal.reloadAfterAuthChange()
+    try {
+      expect(calls).toContain("providers")
+      expect(calls).toContain("config")
+      expect(calls).not.toContain("indexing")
+    } finally {
+      config.resolve()
+      await pending
+    }
 
-    expect(calls[0]).toBe("config")
-    expect(calls.includes("indexing")).toBe(true)
+    expect(calls.indexOf("indexing")).toBeGreaterThan(calls.indexOf("configured"))
   })
 
   it("handleUpdateConfig no longer eagerly fetches indexing status", async () => {

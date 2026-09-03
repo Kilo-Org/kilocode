@@ -58,12 +58,16 @@ it.effect("does not expose backend credentials or config to model shell commands
         config: process.env.KILO_CONFIG,
         content: process.env.KILO_CONFIG_CONTENT,
         directory: process.env.KILO_CONFIG_DIR,
+        broker: process.env.KILO_BROWSER_BROKER_URL,
+        token: process.env.KILO_BROWSER_BROKER_TOKEN,
       }
       process.env.KILO_SERVER_PASSWORD = "secret"
       process.env.KILO_SERVER_USERNAME = "kilo"
       process.env.KILO_CONFIG = "/secret/config.json"
       process.env.KILO_CONFIG_CONTENT = '{"provider":{"apiKey":"secret"}}'
       process.env.KILO_CONFIG_DIR = "/secret/config"
+      process.env.KILO_BROWSER_BROKER_URL = "http://127.0.0.1:4321"
+      process.env.KILO_BROWSER_BROKER_TOKEN = "browser-secret"
       return values
     }),
     () =>
@@ -73,8 +77,8 @@ it.effect("does not expose backend credentials or config to model shell commands
             run({
               command:
                 process.platform === "win32"
-                  ? "if ($env:KILO_SERVER_PASSWORD -or $env:KILO_SERVER_USERNAME -or $env:KILO_CONFIG -or $env:KILO_CONFIG_CONTENT -or $env:KILO_CONFIG_DIR) { 'set' } else { 'unset' }"
-                  : 'test -z "$KILO_SERVER_PASSWORD" && test -z "$KILO_SERVER_USERNAME" && test -z "$KILO_CONFIG" && test -z "$KILO_CONFIG_CONTENT" && test -z "$KILO_CONFIG_DIR" && printf unset',
+                  ? "if ($env:KILO_SERVER_PASSWORD -or $env:KILO_SERVER_USERNAME -or $env:KILO_CONFIG -or $env:KILO_CONFIG_CONTENT -or $env:KILO_CONFIG_DIR -or $env:KILO_BROWSER_BROKER_URL -or $env:KILO_BROWSER_BROKER_TOKEN) { 'set' } else { 'unset' }"
+                  : 'test -z "$KILO_SERVER_PASSWORD" && test -z "$KILO_SERVER_USERNAME" && test -z "$KILO_CONFIG" && test -z "$KILO_CONFIG_CONTENT" && test -z "$KILO_CONFIG_DIR" && test -z "$KILO_BROWSER_BROKER_URL" && test -z "$KILO_BROWSER_BROKER_TOKEN" && printf unset',
               description: "Check backend credential isolation",
             }),
           ),
@@ -93,6 +97,10 @@ it.effect("does not expose backend credentials or config to model shell commands
         else process.env.KILO_CONFIG_CONTENT = values.content
         if (values.directory === undefined) delete process.env.KILO_CONFIG_DIR
         else process.env.KILO_CONFIG_DIR = values.directory
+        if (values.broker === undefined) delete process.env.KILO_BROWSER_BROKER_URL
+        else process.env.KILO_BROWSER_BROKER_URL = values.broker
+        if (values.token === undefined) delete process.env.KILO_BROWSER_BROKER_TOKEN
+        else process.env.KILO_BROWSER_BROKER_TOKEN = values.token
       }),
   ),
 )

@@ -823,6 +823,9 @@ export const dict = {
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Współdziel tablicę między główną sesją a jej podagentami wykonującymi zadania, w tym zagnieżdżonymi podagentami. Używaj jej do równoległych prób rozwiązania problemu lub wzajemnie uzupełniających się prac, a nie do każdego zadania.",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",
   "settings.experimental.imageGenerationModel.description": "Model generowania obrazów",
   "settings.experimental.imageGenerationModel.placeholder": "Domyślny (Auto Router)",
@@ -851,6 +854,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
+  "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
+  "settings.experimental.taskModelSelection.description":
+    "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1172,58 +1178,16 @@ export const dict = {
   "question.summary": "{{n}} z {{total}} pytań",
   "common.review": "Przejrzyj",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migracja ze starszej wersji",
-  "settings.aboutKiloCode.legacyMigration.title": "Migracja starszej wersji",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migruj ustawienia z poprzedniej instalacji Kilo Code, w tym klucze API dostawców i domyślny model.",
   "settings.aboutKiloCode.rooImport.description": "Importuj historię rozmów z instalacji Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importuj sesje z Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Co nowego w Kilo Code",
-  "migration.whatsNew.subtitle": "Przebudowaliśmy rozszerzenie na szybszym i wydajniejszym fundamencie.",
-  "migration.whatsNew.features.performance.title": "Szybsza wydajność agenta",
-  "migration.whatsNew.features.performance.detail":
-    "Równoległe wywołania narzędzi i podagenci pozwalają agentowi robić więcej naraz — mniej czekania, więcej działania.",
-  "migration.whatsNew.features.interface.title": "Uproszczony interfejs",
-  "migration.whatsNew.features.interface.detail": "Mniej rozpraszaczy, łatwiejszy i szybszy do czytania.",
-  "migration.whatsNew.features.agentManager.title": "Menedżer agentów",
-  "migration.whatsNew.features.agentManager.detail":
-    "Zunifikowany interfejs do uruchamiania wielu agentów równolegle, każdy na własnym drzewie roboczym — monitoruj postęp, przełączaj kontekst i przeglądaj zmiany w jednym miejscu.",
-  "migration.whatsNew.features.foundation.title": "Wspólny fundament",
-  "migration.whatsNew.features.foundation.detail":
-    "Jedno małe, wydajne jądro we wszystkich produktach Kilo. Znajome doświadczenie niezależnie od sposobu pracy.",
-  "migration.whatsNew.blogLink": "Przeczytaj pełne ogłoszenie",
-  "migration.whatsNew.docsLink": "Nowości i często zadawane pytania",
-  "migration.whatsNew.continue": "Kontynuuj",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migruj swoje ustawienia",
-  "migration.migrate.subtitle": "Znaleźliśmy ustawienia z poprzedniej instalacji. Oto co możemy przenieść.",
+  "migration.roo.button": "Importuj sesje",
+  "migration.roo.empty": "Nie znaleziono sesji Roo Code.",
   "migration.migrate.selectLabel": "Wybierz, co zmigrować",
   "migration.migrate.chatHistory": "Sesje czatu i historia",
-  "migration.migrate.button": "Migruj ustawienia",
-  "migration.migrate.skip": "Pomiń",
-  "migration.migrate.keysDetected": "Wykryto {{count}} kluczy",
-  "migration.migrate.serversConfigured": "Skonfigurowano {{count}} serwer(ów)",
-  "migration.migrate.modesFound": "Znaleziono {{count}} tryb(ów)",
-  "migration.migrate.nothingToMigrate": "W starszych ustawieniach nie znaleziono niczego do zmigrowania.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Klucze API dostawców",
-  "migration.select.mcpServers": "Serwery MCP",
-  "migration.select.customModes": "Niestandardowe tryby / Agenci",
-  "migration.select.defaultModel": "Domyślny model",
-  "migration.select.autoApproval": "Automatyczne zatwierdzanie",
-  "migration.select.language": "Język interfejsu",
-  "migration.select.autocomplete": "Ustawienia autouzupełniania",
 
   // Migrate — completion
   "migration.complete.summary": "Pomyślnie zmigrowano {{success}} z {{total}} elementów.",
-  "migration.complete.cleanup": "Usuń dane starszych ustawień",
-  "migration.complete.cleanupDescription":
-    "Spowoduje to usunięcie starych ustawień z magazynu VS Code. Nie będzie można ponownie uruchomić tej migracji.",
   "migration.complete.done": "Gotowe",
   "migration.migrate.sessionsDetected": "Wykryto {{count}} sesji",
   "migration.error.continue": "Kontynuuj",
@@ -1257,7 +1221,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Nieznana data",
   "migration.sessionFormat.unknown": "Nieznane",
   "migration.sessionFormat.unknownError": "Nieznany błąd",
-  // legacy-migration end
 
   "error.details.show": "Szczegóły",
 
@@ -1267,6 +1230,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
   "task.backgroundAgents.more": "+{{count}} więcej",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
+  "task.backgroundAgents.openAll": "Otwórz wszystkich agentów w tle",
   "task.backgroundAgents.cancel": "Zatrzymaj",
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",
   "task.backgroundAgents.waiting": "Agent w tle potrzebuje danych wejściowych",
@@ -1279,6 +1243,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Anulowano",
   "task.backgroundAgents.status.error": "Błąd",
   "task.backgroundAgents.untitled": "Agent w tle",
+  "task.backgroundAgents.stopAll": "Zatrzymaj wszystkich ({{count}})",
   "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
   "settings.saveBar.discard": "Odrzuć",
   "settings.saveBar.save": "Zapisz",

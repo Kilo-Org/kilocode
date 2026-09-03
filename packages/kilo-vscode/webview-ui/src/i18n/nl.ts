@@ -864,6 +864,9 @@ export const dict = {
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Deel een bord tussen een hoofdsessie en de subagenten die haar taken uitvoeren, inclusief geneste subagenten. Gebruik het voor parallelle oplossingspogingen of werkzaamheden die elkaar aanvullen, niet voor elke taak.",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
@@ -892,6 +895,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
+  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
+  "settings.experimental.taskModelSelection.description":
+    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1152,59 +1158,16 @@ export const dict = {
   "question.summary": "{{n}} van de {{total}} vragen",
   "common.review": "Beoordelen",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migreer van Legacy Versie",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migratie",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migreer instellingen van een eerdere installatie van Kilo Code, inclusief provider API-sleutels en standaard model.",
   "settings.aboutKiloCode.rooImport.description": "Importeer gespreksgeschiedenis van een Roo Code installatie.",
   "settings.aboutKiloCode.rooImport.button": "Sessies importeren uit Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
-  "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
-  "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
-  "migration.whatsNew.features.performance.detail":
-    "Parallelle tool calls en subagents laten je agent meer tegelijk aanpakken — zodat je minder tijd besteedt aan wachten en meer tijd aan releasen.",
-  "migration.whatsNew.features.interface.title": "Gestroomlijnde Interface",
-  "migration.whatsNew.features.interface.detail": "Minder afleiding, makkelijker en sneller te lezen.",
-  "migration.whatsNew.features.agentManager.title": "Agentenbeheer",
-  "migration.whatsNew.features.agentManager.detail":
-    "Een uniforme interface voor het parallel uitvoeren van meerdere agents, elk op zijn eigen worktree — monitor de voortgang, wissel van context en bekijk wijzigingen op één plek.",
-  "migration.whatsNew.features.foundation.title": "Gedeelde Basis",
-  "migration.whatsNew.features.foundation.detail":
-    "Één kleine, efficiënte kern voor elk Kilo-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
-  "migration.whatsNew.blogLink": "Lees de volledige aankondiging",
-  "migration.whatsNew.docsLink": "Wat is er nieuw & veelgestelde vragen",
-  "migration.whatsNew.continue": "Doorgaan",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migreer Je Instellingen",
-  "migration.migrate.subtitle":
-    "We hebben instellingen gevonden van je vorige installatie. Hier is wat we kunnen overzetten.",
+  "migration.roo.button": "Sessies importeren",
+  "migration.roo.empty": "Geen Roo Code-sessies gevonden.",
   "migration.migrate.selectLabel": "Selecteer wat je wilt migreren",
   "migration.migrate.chatHistory": "Chatsessies & Geschiedenis",
-  "migration.migrate.button": "Migreer Instellingen",
-  "migration.migrate.skip": "Overslaan",
-  "migration.migrate.keysDetected": "{{count}} sleutels gedetecteerd",
-  "migration.migrate.serversConfigured": "{{count}} server(s) geconfigureerd",
-  "migration.migrate.modesFound": "{{count}} modus(sen) gevonden",
-  "migration.migrate.nothingToMigrate": "Er is niets om te migreren gevonden in de oude instellingen.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Provider API-sleutels",
-  "migration.select.mcpServers": "MCP Servers",
-  "migration.select.customModes": "Aangepaste Modi / Agents",
-  "migration.select.defaultModel": "Standaard Model",
-  "migration.select.autoApproval": "Automatische Goedkeuring",
-  "migration.select.language": "UI Taal",
-  "migration.select.autocomplete": "Automatisch Aanvullen Instellingen",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} van de {{total}} items succesvol gemigreerd.",
-  "migration.complete.cleanup": "Verwijder oude instellingendata",
-  "migration.complete.cleanupDescription":
-    "Dit verwijdert de oude instellingen uit de VS Code-opslag. U zult deze migratie niet opnieuw kunnen uitvoeren.",
   "migration.complete.done": "Klaar",
   "migration.migrate.sessionsDetected": "{{count}} sessies gedetecteerd",
   "migration.error.continue": "Doorgaan",
@@ -1238,7 +1201,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Onbekende datum",
   "migration.sessionFormat.unknown": "Onbekend",
   "migration.sessionFormat.unknownError": "Onbekende fout",
-  // legacy-migration end
 
   "error.details.show": "Details",
 
@@ -1248,6 +1210,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
   "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
+  "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
@@ -1260,6 +1223,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Geannuleerd",
   "task.backgroundAgents.status.error": "Fout",
   "task.backgroundAgents.untitled": "Achtergrondagent",
+  "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",

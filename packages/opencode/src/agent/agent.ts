@@ -72,7 +72,7 @@ const GeneratedAgent = Schema.Struct({
 })
 
 export interface Interface {
-  readonly get: (agent: string) => Effect.Effect<Info>
+  readonly get: (agent: string, cfg?: Config.Info) => Effect.Effect<Info> // kilocode_change
   readonly list: () => Effect.Effect<Info[]>
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
@@ -512,18 +512,20 @@ const layer = Layer.effect(
     )
 
     // kilocode_change start - rebuild cached agents when permission-relevant config changes
-    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>) {
-      const cfg = yield* config.get()
+    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>, cfg?: Config.Info) {
+      const value = cfg ?? (yield* config.get())
       const s = yield* InstanceState.get(state)
-      if (s.version === KiloAgent.cacheKey(cfg)) return yield* select(s)
+      if (s.version === KiloAgent.cacheKey(value)) return yield* select(s)
       yield* InstanceState.invalidate(state)
       return yield* select(yield* InstanceState.get(state))
     })
 
     return Service.of({
-      get: Effect.fn("Agent.get")(function* (agent: string) {
-        return yield* current((s) => s.get(agent)) // kilocode_change
+      // kilocode_change start
+      get: Effect.fn("Agent.get")(function* (agent: string, cfg?: Config.Info) {
+        return yield* current((s) => s.get(agent), cfg)
       }),
+      // kilocode_change end
       list: Effect.fn("Agent.list")(function* () {
         return yield* current((s) => s.list()) // kilocode_change
       }),

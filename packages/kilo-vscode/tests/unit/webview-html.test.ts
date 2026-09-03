@@ -78,6 +78,17 @@ describe("buildCspString", () => {
     expect(result).toMatch(new RegExp(`connect-src\\s+${cspSource.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`))
   })
 
+  it("does not allow frames for ordinary webviews", () => {
+    expect(buildCspString(cspSource, nonce)).not.toContain("frame-src")
+  })
+
+  it("limits Agent Manager browser frames to approved loopback origins", () => {
+    const result = buildCspString(cspSource, nonce, undefined, "http://localhost:* http://127.0.0.1:*")
+    expect(result).toContain("frame-src http://localhost:* http://127.0.0.1:*")
+    expect(result).not.toContain("frame-src *")
+    expect(result).not.toContain("frame-src https:")
+  })
+
   it("joins directives with semicolons", () => {
     const result = buildCspString(cspSource, nonce)
     const parts = result.split(";")
