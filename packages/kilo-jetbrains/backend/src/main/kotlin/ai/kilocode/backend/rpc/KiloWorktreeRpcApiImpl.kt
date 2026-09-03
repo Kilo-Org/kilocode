@@ -165,10 +165,16 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
     }
 
+    /**
+     * Uncommitted counts for every working tree of [directory]'s repo, the main checkout included: its
+     * own session editor tab shows them in its header, and they are what a move to a worktree carries.
+     * Unlike [stats], which compares a worktree against the base branch and so has nothing to say about
+     * the checkout that branch lives on, this comparison is local to each working tree.
+     */
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
-        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
+        WorktreeDirtyListDto(parallel(items) { item -> dirty(item) })
     }
 
     /**

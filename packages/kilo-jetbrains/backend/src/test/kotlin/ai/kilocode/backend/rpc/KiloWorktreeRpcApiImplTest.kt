@@ -873,6 +873,35 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `dirty reports the main checkout too`() = runBlocking {
+        initRepo()
+        api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
+        val root = repo.toRealPath()
+        // Creating a worktree leaves its own traces in the main checkout, so the edits below are
+        // measured as a delta rather than against an assumed-clean starting point.
+        val items = api.dirty(repo.toString()).items
+        val before = assertNotNull(items.singleOrNull { Path.of(it.path) == root }, "main checkout missing from $items")
+
+        Files.writeString(repo.resolve("README.md"), "hello there\n")
+        Files.writeString(repo.resolve("untracked.txt"), "u\n")
+        val after = assertNotNull(api.dirty(repo.toString()).items.singleOrNull { Path.of(it.path) == root })
+
+        assertEquals(before.files + 2, after.files, "the README edit plus the untracked file")
+        assertEquals(before.untracked + 1, after.untracked)
+    }
+
+    @Test
+    fun `stats leaves the main checkout out`() = runBlocking {
+        initRepo()
+        api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
+        val root = repo.toRealPath()
+
+        // The main checkout holds the branch the others are compared against, so it has no base stats
+        // to report -- only its uncommitted counts, which dirty() answers for.
+        assertTrue(api.stats(repo.toString()).items.none { Path.of(it.path) == root })
+    }
+
+    @Test
     fun `dirty counts commits missing from the upstream`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)

@@ -242,9 +242,12 @@ class WorktreeController(
     /**
      * Copies working-tree changes into a new worktree. When [sessionId] is set, the source session is
      * also forked into the worktree; otherwise the opened worktree starts with a fresh session.
+     * [surface] is reported only on the "Continue in Worktree" telemetry event, so callers other than
+     * the sidebar chat dock (e.g. the worktree editor's session list or its own action toolbar) can be
+     * told apart.
      */
     @RequiresEdt
-    fun move(sessionId: String?, source: String = directory) {
+    fun move(sessionId: String?, source: String = directory, surface: String = "sidebar") {
         val key = sessionId ?: source
         if (!moves.add(key)) return
         val branch = suggestName()
@@ -278,7 +281,7 @@ class WorktreeController(
                                 onCreated?.invoke(worktree)
                                 telemetry(
                                     "Continue in Worktree",
-                                    mapOf("surface" to "sidebar", "session" to (sessionId != null).toString()),
+                                    mapOf("surface" to surface, "session" to (sessionId != null).toString()),
                                 )
                             }
                             MoveStage.ERROR -> failMove(key, temp, event.error, stage)
