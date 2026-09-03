@@ -108,6 +108,28 @@ describe("shared board tools", () => {
           const read = yield* Tool.init(yield* BoardReadTool)
           expect(Object.keys(post.parameters.fields)).toEqual(["to", "type", "body", "reply_to"])
           expect(Object.keys(read.parameters.fields)).toEqual(["since", "limit"])
+          expect(read.description).toContain("before continuing affected work")
+          expect(read.description).toContain(
+            "Reading history does not show whether other participants have read messages",
+          )
+          expect(post.description).toContain("not personal bookkeeping")
+          expect(post.description).toContain("your own board_read is not proof")
+          expect(read.description).toContain(
+            "For incremental reads, set since to your last successful board_read cursor",
+          )
+          expect(read.description).toContain("never a post or Task result ID")
+          expect(read.description).toContain("When board coordination is in use")
+          expect(read.description).toContain("do not reread solely because a Task")
+          expect(post.description).toContain("Include evidence with candidate results")
+          expect(post.description).toContain("Respect requested independence and communication limits")
+          expect(post.description).toContain("including parents, children, and background siblings, not yourself")
+          expect(post.description).toContain("ALL only for team-wide updates")
+          expect(post.description).toContain("Posts do not wake, assign, cancel, or resume workers")
+          expect(post.description).toContain(
+            "Task with a returned task_id only for additional authorized work on your own child",
+          )
+          expect(post.description).toContain("Do not resume workers just to deliver a note or obtain a read receipt")
+          expect(post.description).toContain("not proof that a recipient is active")
           const params = {
             to: "ALL",
             type: "INFO" as const,

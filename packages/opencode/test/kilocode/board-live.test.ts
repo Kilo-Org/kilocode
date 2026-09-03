@@ -16,6 +16,7 @@ import { SessionSummary } from "../../src/session/summary"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { BoardNotice } from "../../src/kilocode/board/notice"
+import { BoardContext } from "../../src/kilocode/board/context"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -199,6 +200,40 @@ function waitFor(llm: TestLLMServer["Service"], match: (input: Probe) => boolean
     }
   })
   return awaitWithTimeout(wait, label, "15 seconds")
+}
+
+for (const enabled of [false, true]) {
+  it.live(`exposes board guidance and tools only when enabled (${enabled})`, () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Board guidance flag" })
+        yield* llm.push(reply().text("Done").stop())
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "code",
+          parts: [{ type: "text", text: "Reply briefly without tools." }],
+        })
+        const request = (yield* llm.inputs).at(0)
+        if (!request) throw new Error("Missing model request")
+        expect(
+          messages({ body: request }).some(
+            (message) => typeof message.content === "string" && message.content.includes(BoardContext.instructions),
+          ),
+        ).toBe(enabled)
+        const tools = Array.isArray(request.tools) ? request.tools.filter(record) : []
+        const names = tools.flatMap((tool) => (record(tool.function) ? [tool.function.name] : []))
+        expect(names.includes("board_read")).toBe(enabled)
+        expect(names.includes("board_post")).toBe(enabled)
+        expect(JSON.stringify(tools).includes("Cursor from your last board_read, not an ID from board_post")).toBe(
+          enabled,
+        )
+        expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
+      }),
+      { config: (url) => ({ ...config(url), experimental: { shared_agent_board: enabled } }) },
+    ),
+  )
 }
 
 it.live(
