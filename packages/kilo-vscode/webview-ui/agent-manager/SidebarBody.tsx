@@ -45,6 +45,7 @@ export interface SidebarBodyProps {
   currentSessionID: () => string | undefined
   selectLocal: () => void
   selectWorktree: (id: string) => void
+  onOpenComments?: (id: string) => void
   activityFor: (id: string | null) => Activity
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
@@ -333,6 +334,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
+                                onOpenComments={() => props.onOpenComments?.(wt.id)}
                                 onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
                                   const url = props.prStatuses()[wt.id]?.url
                                   vscode.postMessage({

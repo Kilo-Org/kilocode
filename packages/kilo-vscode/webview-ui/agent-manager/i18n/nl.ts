@@ -213,6 +213,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Opmerkingen",
   "agentManager.pr.copyLink": "PR-link kopiëren",
   "agentManager.pr.comment.unresolvedCount": "{{count}} onopgelost",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} onopgeloste reviewdiscussie",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} onopgeloste reviewdiscussies",
   "agentManager.pr.comment.resolvedGroup": "Opgelost ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} onopgeloste opmerkingen naar agent sturen",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} onopgeloste opmerkingen naar terminal sturen",

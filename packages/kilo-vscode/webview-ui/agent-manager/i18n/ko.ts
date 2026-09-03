@@ -206,6 +206,8 @@ export const dict = {
   "agentManager.pr.comment.title": "댓글",
   "agentManager.pr.copyLink": "PR 링크 복사",
   "agentManager.pr.comment.unresolvedCount": "{{count}}개 미해결",
+  "agentManager.pr.comment.unresolvedThread": "미해결 리뷰 스레드 {{count}}개",
+  "agentManager.pr.comment.unresolvedThreads": "미해결 리뷰 스레드 {{count}}개",
   "agentManager.pr.comment.resolvedGroup": "해결됨 ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}}개 미해결 댓글을 에이전트로 보내기",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}}개 미해결 댓글을 터미널로 보내기",

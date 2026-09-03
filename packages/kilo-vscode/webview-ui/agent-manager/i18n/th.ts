@@ -202,6 +202,8 @@ export const dict = {
   "agentManager.pr.comment.title": "ความคิดเห็น",
   "agentManager.pr.copyLink": "คัดลอกลิงก์ PR",
   "agentManager.pr.comment.unresolvedCount": "ยังไม่แก้ไข {{count}} รายการ",
+  "agentManager.pr.comment.unresolvedThread": "เธรดการตรวจสอบที่ยังไม่แก้ไข {{count}} รายการ",
+  "agentManager.pr.comment.unresolvedThreads": "เธรดการตรวจสอบที่ยังไม่แก้ไข {{count}} รายการ",
   "agentManager.pr.comment.resolvedGroup": "แก้ไขแล้ว ({{count}})",
   "agentManager.pr.comment.sendAll": "ส่งความคิดเห็นที่ยังไม่แก้ไข {{count}} รายการไปยังเอเจนต์",
   "agentManager.pr.comment.sendAllToTerminal": "ส่งความคิดเห็นที่ยังไม่แก้ไข {{count}} รายการไปยังเทอร์มินัล",

@@ -215,6 +215,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Yorumlar",
   "agentManager.pr.copyLink": "PR bağlantısını kopyala",
   "agentManager.pr.comment.unresolvedCount": "{{count}} çözülmemiş",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} çözülmemiş inceleme tartışması",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} çözülmemiş inceleme tartışması",
   "agentManager.pr.comment.resolvedGroup": "Çözüldü ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} çözülmemiş yorumu ajana gönder",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} çözülmemiş yorumu terminale gönder",

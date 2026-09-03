@@ -962,6 +962,7 @@ html[data-theme="kilo-vscode"]
 .am-pr-badge {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 2px;
   padding: 2px 4px;
   border-radius: 6px;
@@ -989,6 +990,49 @@ html[data-theme="kilo-vscode"]
 }
 .am-pr-badge:hover .am-pr-badge-number {
   color: var(--am-pr-accent);
+}
+.am-pr-badge [data-component="button"].am-pr-badge-comments {
+  --am-pr-comments-accent: var(--vscode-charts-yellow, #fbbf24);
+  position: relative;
+  height: 16px;
+  min-height: 16px;
+  min-width: 0;
+  gap: 3px;
+  margin-block: -2px;
+  margin-inline: 3px -2px;
+  padding: 2px 3px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--am-pr-comments-accent);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.am-pr-badge-comments::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -2px;
+  inset-block-start: 4px;
+  width: 1px;
+  height: 8px;
+  background: currentColor;
+  opacity: 0.25;
+}
+.vscode-high-contrast-light .am-worktree-item-active [data-component="button"].am-pr-badge-comments {
+  --am-pr-comments-accent: var(--vscode-list-activeSelectionForeground);
+}
+.am-pr-badge .am-pr-badge-comments [data-component="icon"],
+.am-pr-badge .am-pr-badge-comments [data-slot="icon-svg"] {
+  color: currentColor;
+}
+.am-pr-badge [data-component="button"].am-pr-badge-comments:hover,
+.am-pr-badge [data-component="button"].am-pr-badge-comments:focus-visible {
+  background: color-mix(in srgb, var(--am-pr-comments-accent) 16%, transparent);
+}
+.am-pr-badge [data-component="button"].am-pr-badge-comments:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
 }
 /* Status icon overlaid on the badge — colored by CI/review result, independent
    of the badge's PR-state accent color. */

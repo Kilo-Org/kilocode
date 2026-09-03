@@ -108,6 +108,7 @@ export interface PRStatus {
     checks: PRCheck[]
   }
   reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number
