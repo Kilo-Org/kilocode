@@ -345,6 +345,8 @@ describe("kilocode tool registry indexing", () => {
       terminal: def("interactive_terminal"),
       notify: def("notify_user"),
       send: def("send_file"),
+      boardRead: def("board_read"),
+      boardPost: def("board_post"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
@@ -464,6 +466,15 @@ describe("kilocode tool registry indexing", () => {
         "notify_user",
         "send_file",
       ])
+      for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
+        process.env["KILO_CLIENT"] = client
+        for (const enabled of [false, true]) {
+          const ids = KiloToolRegistry.extra(tools, { experimental: { shared_agent_board: enabled } })
+            .map((tool) => tool.id)
+            .filter((id) => id.startsWith("board_"))
+          expect(ids).toEqual(enabled ? ["board_read", "board_post"] : [])
+        }
+      }
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev

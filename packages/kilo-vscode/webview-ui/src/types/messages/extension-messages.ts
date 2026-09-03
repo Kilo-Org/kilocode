@@ -510,6 +510,8 @@ export interface ProvidersLoadedMessage {
   providers: Record<string, Provider>
   connected: string[]
   defaults: Record<string, string>
+  organizationId?: string | null
+  ready?: boolean
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
@@ -1544,6 +1546,7 @@ export type ExtensionMessage =
   | ImageModelsLoadedMessage
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
+  | { type: "providersLoading" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage

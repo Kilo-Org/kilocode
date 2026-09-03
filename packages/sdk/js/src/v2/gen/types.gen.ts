@@ -2704,6 +2704,7 @@ export type Config = {
     task_model_selection?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
+    shared_agent_board?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
@@ -16219,6 +16220,7 @@ export type KiloAuthStatusResponses = {
   200: {
     authenticated: boolean
     type?: "api" | "oauth"
+    organizationId?: string
   }
 }
 

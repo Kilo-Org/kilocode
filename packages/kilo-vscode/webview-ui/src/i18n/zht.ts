@@ -792,6 +792,9 @@ export const dict = {
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.imageGeneration.title": "圖像生成",
   "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "讓主要工作階段與負責其任務的子代理共用看板，包括巢狀子代理。用於並行嘗試解決方案或進行相互補充的工作，而不是用於每一項任務。",
   "settings.experimental.imageGenerationModel.title": "圖像模型",
   "settings.experimental.imageGenerationModel.description": "圖像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
