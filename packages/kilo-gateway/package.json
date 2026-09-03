@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-gateway",
-  "version": "7.5.6",
+  "version": "7.5.9",
   "type": "module",
   "license": "MIT",
   "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
@@ -22,7 +22,9 @@
     "./edit": "./src/edit.ts",
     "./edit-prompt": "./src/edit-prompt.ts",
     "./provider-usage": "./src/provider-usage.ts",
-    "./tui": "./src/tui.ts"
+    "./event-service": "./src/event-service/client.ts",
+    "./tui": "./src/tui.ts",
+    "./claw": "./src/claw/index.ts"
   },
   "files": [
     "dist"

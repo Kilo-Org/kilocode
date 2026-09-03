@@ -1,5 +1,6 @@
 import type { Accessor } from "solid-js"
 import type { ReviewMessageData } from "../../../src/shared/review-comments"
+import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import type {
   AgentInfo,
   ContextUsage,
@@ -171,7 +172,8 @@ export interface SessionContextValue {
     context?: string,
     review?: ReviewMessageData,
     origin?: string | null,
-  ) => void
+    browserFeedback?: BrowserFeedbackData,
+  ) => boolean
   sendCommand: (
     command: string,
     args: string,
@@ -182,7 +184,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string },
-  ) => void
+  ) => boolean
   abort: () => void
   compact: () => void
   respondToPermission: (

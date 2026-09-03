@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { Window } from "happy-dom"
 
 const window = new Window({ url: "http://localhost" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
   replaceSync() {}
   replace() {

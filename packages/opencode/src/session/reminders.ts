@@ -53,7 +53,7 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
         messageID: userMessage.info.id,
         sessionID: userMessage.info.sessionID,
         type: "text",
-        text: CODE_SWITCH, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
+        text: `\n\n${CODE_SWITCH}`, // kilocode_change - separated from user content
         synthetic: true,
       })
     }
@@ -71,8 +71,8 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
       sessionID: userMessage.info.sessionID,
       type: "text",
       text: exists
-        ? `${CODE_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it` // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
-        : CODE_SWITCH, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
+        ? `\n\n${CODE_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it` // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
+        : `\n\n${CODE_SWITCH}`, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
       synthetic: true,
     })
     userMessage.parts.push(part)

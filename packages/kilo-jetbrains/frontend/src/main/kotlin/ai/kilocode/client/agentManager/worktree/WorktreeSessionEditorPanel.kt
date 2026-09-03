@@ -1,9 +1,8 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.diff.KiloDiffEditorKind
-import ai.kilocode.client.diff.diffParams
-import ai.kilocode.client.diff.ensureDiffEditorKind
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
@@ -29,9 +28,9 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
@@ -41,13 +40,13 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.ActionGroup
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -79,7 +78,7 @@ import javax.swing.border.Border
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
-class WorktreeSessionEditorPanel(
+class WorktreeSessionEditorPanel @RequiresEdt constructor(
     parent: Disposable,
     private val manager: WorktreeSessionEditorManager,
     private val controller: WorktreeSessionListController,
@@ -135,13 +134,15 @@ class WorktreeSessionEditorPanel(
     private val prHeader = WorktreePrHeaderView(
         openWorktree = ::openInNewFrame,
         openEnabled = worktree.directory.isNotBlank(),
-        openDiff = ::openBranchDiff,
+        openDiff = { openDiff(KiloDiffComparison.BASE) },
+        onLocal = { openDiff(KiloDiffComparison.LOCAL) },
         openTerminal = ::openTerminal,
         run = run?.button,
     )
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
+    private var dirty: WorktreeDirtyDto? = null
     private var pr: WorktreePrDto? = null
     // Last known persisted visibility, and whether it is known at all: until the stored value arrives
     // (or the user clicks) the list stays hidden and nothing is written.
@@ -441,13 +442,9 @@ class WorktreeSessionEditorPanel(
     private fun same(path: String?, dir: String): Boolean = FileUtil.pathsEqual(path, dir)
 
     @RequiresEdt
-    private fun openBranchDiff() {
+    private fun openDiff(comparison: KiloDiffComparison) {
         val target = project ?: return
-        ensureDiffEditorKind()
-        target.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", worktree.directory, null, KiloBundle.message("diff.editor.branch.title")),
-        )
+        openKiloDiff(target, worktree.directory, comparison, parent = this)
     }
 
     /**
@@ -534,18 +531,23 @@ class WorktreeSessionEditorPanel(
     @RequiresEdt
     private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW && it !in manager.deleting() }
 
+    @RequiresEdt
     private fun bindModel() {
         val listener = object : ListDataListener {
+            @RequiresEdt
             override fun intervalAdded(e: ListDataEvent) = sync()
 
+            @RequiresEdt
             override fun intervalRemoved(e: ListDataEvent) = sync()
 
+            @RequiresEdt
             override fun contentsChanged(e: ListDataEvent) = sync()
         }
         controller.model.addListDataListener(listener)
         Disposer.register(this) { controller.model.removeListDataListener(listener) }
     }
 
+    @RequiresEdt
     private fun bindStatus() {
         val key = normalizeWorktreePath(worktree.directory)
         syncHeader()
@@ -561,12 +563,13 @@ class WorktreeSessionEditorPanel(
             this,
             onStats = { value -> stats = value[key]; syncHeader() },
             onPr = { value -> pr = value[key]; syncHeader() },
+            onDirty = { value -> dirty = value[key]; syncHeader() },
         )
     }
 
     @RequiresEdt
     private fun syncHeader() {
-        prHeader.update(stats, pr, worktreeName())
+        prHeader.update(stats, pr, worktreeName(), dirty)
     }
 
     @RequiresEdt
@@ -577,6 +580,7 @@ class WorktreeSessionEditorPanel(
             ?: key.trimEnd('/').substringAfterLast('/').ifBlank { key }
     }
 
+    @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
         sink[WorktreeSessionDataKeys.PANEL] = this
         selectedSession()?.let { sink[WorktreeSessionDataKeys.SESSION] = it }
@@ -589,7 +593,7 @@ class WorktreeSessionEditorPanel(
         manager.onListChanged = null
     }
 
-    private inner class NewAction : AnAction(
+    private inner class NewAction : DumbAwareAction(
         KiloBundle.message("worktree.session.new.action"),
         null,
         AllIcons.General.Add,
@@ -601,7 +605,7 @@ class WorktreeSessionEditorPanel(
         }
     }
 
-    private inner class DeleteAction : AnAction(
+    private inner class DeleteAction : DumbAwareAction(
         KiloBundle.message("worktree.session.delete.action"),
         null,
         AllIcons.Actions.GC,
@@ -618,7 +622,7 @@ class WorktreeSessionEditorPanel(
         }
     }
 
-    private inner class RenameAction : AnAction(
+    private inner class RenameAction : DumbAwareAction(
         KiloBundle.message("worktree.session.rename.action"),
         null,
         AllIcons.Actions.Edit,

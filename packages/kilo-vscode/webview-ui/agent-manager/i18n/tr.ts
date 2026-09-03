@@ -254,6 +254,21 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Hiçbir dal bulunamadı.",
   "agentManager.import.noBranchesHint": "Yukarıya bir PR URL'si yapıştırın veya yeni bir worktree oluşturun.",
   "agentManager.import.failed": "İçe aktarma başarısız oldu",
+  "agentManager.browser.title": "Tarayıcı",
+  "agentManager.browser.url": "Yerel uygulama URL'si",
+  "agentManager.browser.urlPlaceholder": "http://localhost:3000",
+  "agentManager.browser.open": "Aç",
+  "agentManager.browser.refresh": "Tarayıcıyı yenile",
+  "agentManager.browser.close": "Tarayıcıyı kapat",
+  "agentManager.browser.inspect": "Öğeyi seç",
+  "agentManager.browser.devtoolsTitle": "Geliştirici araçları",
+  "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
+  "agentManager.browser.noSession": "Önce bir Agent Manager oturumu seçin.",
+  "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
+  "agentManager.browser.errors": "Tarayıcı sorunları: {{count}}",
+  "agentManager.browser.diagnostics": "Tarayıcı tanılaması",
+  "agentManager.browser.diagnosticsHint":
+    "Otomasyon tarayıcısındaki son olaylar. Güvenlik engellemeleri konsol hatası değildir.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub kimlik doğrulaması gerekli",
   "agentManager.pr.error.gh_auth.description":
