@@ -553,6 +553,33 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .post("/kilocode/session/{sessionID}/resume", "kilocode.resumeSession")
+    .seeded((ctx) => ctx.session({ title: "Empty resume" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/resume", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { messageID: "msg_httpapi_missing" },
+    }))
+    .status(400),
+  http.protected
+    .post("/kilocode/session/{sessionID}/drain", "kilocode.drainSession")
+    .seeded((ctx) => ctx.session({ title: "Empty drain" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "httpapi-drain" },
+    }))
+    .json(200, (body) => check(body === true, "an empty session should drain")),
+  http.protected
+    .post("/kilocode/session/{sessionID}/drain", "kilocode.drainSession.invalid")
+    .seeded((ctx) => ctx.session({ title: "Invalid drain token" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "" },
+    }))
+    .status(400),
+  http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))
     .at((ctx) => ({
@@ -602,6 +629,24 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
+    .mutating()
+    .inProject({ git: true })
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const worktree = path.join(directory(ctx), ".kilo", "worktrees", "api-snapshot-remove")
+        yield* Effect.promise(() => mkdir(worktree, { recursive: true }))
+        yield* Effect.promise(() => rm(worktree, { recursive: true, force: true }))
+        return worktree
+      }),
+    )
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/remove?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: ctx.state },
+    }))
+    .status(401),
   http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })
@@ -795,6 +840,47 @@ export const kiloScenarios: Scenario[] = [
     .json(200, (body) => {
       object(body)
       check(body.ok === true && body.id === "prt_httpapi_import", "part import should return imported ID")
+    }),
+  // The exerciser runs against a throwaway project directory with no Claude Code
+  // or Codex transcripts on the host, so migration correctly finds nothing to do.
+  // That is the no-op contract; the import itself is covered by
+  // test/kilocode/session-resume-integration.test.ts, which can redirect the
+  // harness discovery roots.
+  http.protected
+    .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions")
+    .withLlm()
+    .mutating()
+    .at((ctx) => ({ path: "/kilocode/migrate/sessions", headers: ctx.headers(), body: {} }))
+    .json(200, (body) => {
+      object(body)
+      array(body.sessions)
+      check(body.sessions.length === 0, "migration should find no sources in a throwaway project")
+      check(body.migrated === 0, "migration should report nothing migrated")
+      check(body.skipped === 0, "migration should report nothing skipped")
+      array(body.dropped)
+    }),
+  http.protected
+    .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions.missing")
+    .withLlm()
+    .at((ctx) => ({
+      path: "/kilocode/migrate/sessions",
+      headers: ctx.headers(),
+      body: { ids: ["11111111-1111-4111-8111-111111111111"] },
+    }))
+    .json(422, (body) => {
+      object(body)
+      check(
+        typeof body.message === "string" && body.message.includes("No Claude Code or OpenAI Codex session found"),
+        "requesting an unknown source ID should report a user-actionable failure",
+      )
+    }),
+  http.protected
+    .post("/kilocode/migrate/sessions/discover", "kilocode.migrate.discover")
+    .at((ctx) => ({ path: "/kilocode/migrate/sessions/discover", headers: ctx.headers(), body: {} }))
+    .json(200, (body) => {
+      object(body)
+      array(body.sessions)
+      array(body.dropped)
     }),
   http.protected
     .post("/permission/{requestID}/always-rules", "permission.saveAlwaysRules")

@@ -2,6 +2,7 @@ import { describe, it, expect, spyOn } from "bun:test"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
+import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
@@ -70,6 +71,8 @@ function createClient(options?: {
   createDeferred?: Deferred<{ data: ReturnType<typeof mkCreatedSession> }>
   abortFailures?: string[]
   abortDeferred?: Deferred<void>
+  deleteResult?: unknown
+  deleteError?: boolean
   supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
   sandboxDeferred?: Deferred<{ data: unknown }>
   sandboxStarted?: Deferred<void>
@@ -77,8 +80,14 @@ function createClient(options?: {
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
-  const aborted: { sessionID: string; directory?: string }[] = []
+  const aborted: { sessionID: string; directory?: string; scope?: "session" | "tree" }[] = []
   const deleted: { sessionID: string; directory?: string }[] = []
+  const deletedMessages: Array<{
+    sessionID: string
+    messageID: string
+    directory?: string
+    queued?: boolean
+  }> = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
   const created: Array<Record<string, unknown>> = []
@@ -90,6 +99,7 @@ function createClient(options?: {
     stopped,
     aborted,
     deleted,
+    deletedMessages,
     prompted,
     reverted,
     created,
@@ -117,7 +127,7 @@ function createClient(options?: {
         prompted.push(params)
         return { data: undefined }
       },
-      abort: async (params: { sessionID: string; directory?: string }) => {
+      abort: async (params: { sessionID: string; directory?: string; scope?: "session" | "tree" }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
         await options?.abortDeferred?.promise
@@ -132,6 +142,11 @@ function createClient(options?: {
         deleted.push(params)
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
+      },
+      deleteMessage: async (params: { sessionID: string; messageID: string; directory?: string; queued?: boolean }) => {
+        deletedMessages.push(params)
+        if (options?.deleteError) throw new Error("delete failed")
+        return { data: options?.deleteResult }
       },
     },
     sandbox: {
@@ -171,7 +186,7 @@ function createClient(options?: {
   }
 }
 
-function createConnection(client: ReturnType<typeof createClient>) {
+function createConnection(client: ReturnType<typeof createClient> | null) {
   const state = { value: undefined as boolean | undefined, revision: 0, pending: Promise.resolve() }
   return {
     sandboxPreference: {
@@ -197,9 +212,9 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
+    onSessionAcknowledged: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
@@ -226,6 +241,7 @@ type ProviderInternals = {
   sessionDirectories: Map<string, string>
   sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
+  removedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
@@ -237,7 +253,8 @@ type ProviderInternals = {
   seedSessionStatusMap: (reconcile?: boolean) => Promise<void>
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
-  handleAbort: (sid?: string) => Promise<void>
+  setupWebviewMessageHandler: (webview: unknown) => void
+  handleAbort: (sid?: string, scope?: "session" | "tree") => Promise<void>
   resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
@@ -250,13 +267,14 @@ type ProviderInternals = {
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
+  handleDeleteMessage: (sid: string, mid: string, rid?: string) => Promise<void>
 }
 
-function makeProvider(client: ReturnType<typeof createClient>) {
+function makeProvider(client: ReturnType<typeof createClient> | null) {
   const connection = createConnection(client)
   const provider = new KiloProvider({} as never, connection as never)
   const internal = provider as unknown as ProviderInternals
-  internal.connectionState = "connected"
+  internal.connectionState = client ? "connected" : "disconnected"
   const sent: unknown[] = []
   internal.webview = {
     postMessage: async (message: unknown) => {
@@ -275,6 +293,32 @@ function mockMaxCost(internal: ProviderInternals, value: number) {
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it.each([undefined, "session", "tree"] as const)(
+    "forwards %s abort scope without extra child or process stops",
+    async (scope) => {
+      const client = createClient()
+      const { provider, internal } = makeProvider(client)
+      const listener = Promise.withResolvers<(message: AbortRequest) => Promise<void>>()
+      internal.setupWebviewMessageHandler({
+        onDidReceiveMessage: (handler: (message: AbortRequest) => Promise<void>) => {
+          listener.resolve(handler)
+          return { dispose: () => {} }
+        },
+      })
+      const receive = await listener.promise
+      status(internal, "busy")
+      status(internal, "busy", "/repo", "child")
+
+      await receive({ type: "abort", sessionID: "s1", scope })
+
+      expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo", scope }])
+      expect(client.stopped).toEqual([])
+      expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+      expect(internal.sessionStatusMap.get("child")).toBe("busy")
+      provider.dispose()
+    },
+  )
+
   it("aborts a session whose busy status was seeded without an SSE event", async () => {
     const client = createClient()
     const { internal, sent } = makeProvider(client)
@@ -1135,6 +1179,51 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
     await internal.handleDeleteSession("s1")
 
     expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
+  })
+
+  it("ignores late activity updates after a session is deleted", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const event = {
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "busy" } },
+    }
+
+    internal.handleEvent(event, "/repo")
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+    await internal.handleDeleteSession("s1")
+    const count = sent.length
+
+    internal.handleEvent(event, "/repo")
+
+    expect(internal.removedSessionIds.has("s1")).toBe(true)
+    expect(internal.sessionStatusMap.has("s1")).toBe(false)
+    expect(sent).toHaveLength(count)
+  })
+})
+
+describe("KiloProvider.handleDeleteMessage", () => {
+  const ids = { sessionID: "s1", messageID: "m1", requestID: "r1" }
+
+  it.each([true, false, undefined, "true"])("confirms only a true queued deletion result: %p", async (result) => {
+    const client = createClient({ deleteResult: result })
+    const { internal, sent } = makeProvider(client)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(client.deletedMessages).toEqual([{ sessionID: "s1", messageID: "m1", directory: "/repo", queued: true }])
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: result === true })
+  })
+
+  it.each([true, false])("confirms removal failures when connected=%p", async (connected) => {
+    const error = spyOn(console, "error").mockImplementation(() => {})
+    const { internal, sent } = makeProvider(connected ? createClient({ deleteError: true }) : null)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(sent).toContainEqual({
+      type: "error",
+      message: connected ? "delete failed" : "Not connected to CLI backend",
+      sessionID: ids.sessionID,
+    })
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: false })
+    error.mockRestore()
   })
 })
 

@@ -18,6 +18,10 @@ export const dict = {
   "agentManager.project.remove": "Eliminar de Agent Manager",
   "agentManager.project.missing": "Repositorio no encontrado",
   "agentManager.notGitRepo": "No es un repositorio git",
+
+  "agentManager.updateBase.title": "Actualizar desde la base",
+  "agentManager.updateBase.selectWorktree": "Selecciona primero un worktree gestionado.",
+
   "agentManager.worktree.settings": "Configuración de Worktree",
   "agentManager.worktree.new": "Nuevo Worktree",
   "agentManager.worktree.setupScript": "Script de configuración de Worktree",
@@ -63,8 +67,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Más opciones de nueva pestaña",
-  "agentManager.tabsMenu.status.waiting": "Espera",
-  "agentManager.tabsMenu.status.retry": "Reintento",
   "agentManager.sidebarSearch.label": "Buscar Worktrees y sesiones",
   "agentManager.sidebarSearch.scope":
     "Busca en el espacio de trabajo local, las sesiones locales, los Worktrees y sus sesiones",
@@ -207,6 +209,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Comentarios",
   "agentManager.pr.copyLink": "Copiar enlace del PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} sin resolver",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} hilo de revisión sin resolver",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} hilos de revisión sin resolver",
   "agentManager.pr.comment.resolvedGroup": "Resueltos ({{count}})",
   "agentManager.pr.comment.sendAll": "Enviar {{count}} sin resolver al agente",
   "agentManager.pr.comment.sendAllToTerminal": "Enviar {{count}} sin resolver al terminal",
@@ -250,10 +254,51 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No se encontraron branches.",
   "agentManager.import.noBranchesHint": "Pega una URL de PR arriba o crea un nuevo Worktree.",
   "agentManager.import.failed": "Error en la importación",
+  "agentManager.browser.title": "Navegador",
+  "agentManager.browser.url": "URL de la aplicación local",
+  "agentManager.browser.urlPlaceholder": "http://localhost:3000",
+  "agentManager.browser.open": "Abrir",
+  "agentManager.browser.inspect": "Seleccionar elemento",
+  "agentManager.browser.devtoolsTitle": "Herramientas de desarrollo",
+  "agentManager.browser.refresh": "Actualizar navegador",
+  "agentManager.browser.close": "Cerrar navegador",
+  "agentManager.browser.empty": "Abre una aplicación local para previsualizarla aquí.",
+  "agentManager.browser.noSession": "Selecciona primero una sesión de Agent Manager.",
+  "agentManager.browser.screenshotAlt": "Página actual del navegador",
+  "agentManager.browser.errors": "Problemas del navegador: {{count}}",
+  "agentManager.browser.diagnostics": "Diagnóstico del navegador",
+  "agentManager.browser.diagnosticsHint":
+    "Eventos recientes del navegador de automatización. Los bloqueos de seguridad no son errores de consola.",
 
   "agentManager.pr.error.gh_auth.title": "Se requiere autenticación de GitHub",
   "agentManager.pr.error.gh_auth.description":
     "Ejecuta 'gh auth login' en tu terminal para restaurar el estado del PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI no está instalado",
   "agentManager.pr.error.gh_missing.description": "Instala GitHub CLI para habilitar el estado del PR.",
+  "agentManager.intro.title": "Tareas paralelas. Worktrees separados.",
+  "agentManager.intro.subtitle":
+    "Un worktree es una carpeta y una rama separadas para una tarea. Tus agentes pueden trabajar juntos sin modificar los mismos archivos.",
+  "agentManager.intro.graph.agent": "Agente de Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Si hay conflictos",
+  "agentManager.intro.stage1.title": "Tu repositorio",
+  "agentManager.intro.stage1.text": "Los archivos locales no cambian",
+  "agentManager.intro.stage2.title": "Ejemplo: dos tareas en paralelo",
+  "agentManager.intro.stage2.text":
+    "Ambos worktrees pertenecen a este repositorio. Para otro repositorio, elige otro proyecto.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Carpeta y rama propias",
+  "agentManager.intro.stage4.title": "Devuelve los cambios cuando estés listo",
+  "agentManager.intro.stage4.text":
+    "Pide al agente de cada worktree que abra un pull request. O usa Apply en el panel de diff para copiar los cambios a Local.",
+  "agentManager.intro.conflictText":
+    "Pide al agente del worktree que fusione su rama base original y resuelva los conflictos, y luego revisa el resultado. Evita git stash: los stashes se comparten entre worktrees.",
+  "agentManager.intro.prDetection":
+    "Las insignias de PR se actualizan automáticamente para cada rama de worktree (se requiere iniciar sesión en GitHub CLI).",
+  "agentManager.intro.checksRunning": "Comprobaciones en curso",
+  "agentManager.intro.approved": "Aprobado",
+  "agentManager.intro.create": "Crear un worktree",
+  "agentManager.intro.guide": "Leer la guía",
+  "agentManager.intro.dismiss": "Omitir introducción",
+  "agentManager.intro.reopen": "Cómo funciona Agent Manager",
 }

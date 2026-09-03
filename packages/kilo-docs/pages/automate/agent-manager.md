@@ -55,6 +55,14 @@ See [Authentication](/docs/getting-started/setup-authentication), [AI Providers]
 
 Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
 
+### Update from the base branch
+
+In a managed worktree's chat, type `/update-from-base` and select the action to ask its agent to fetch and merge the saved base branch. The worktree's right-click menu and **Agent Manager: Update from base** in the Command Palette run the same action.
+
+The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
+
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing, discarding uncommitted work, and pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
+
 ### Worktree Location
 
 Managed worktrees are created under `.kilo/worktrees/` in your project. Kilo also stores Agent Manager UI state in `.kilo/agent-manager.json`.
@@ -219,6 +227,8 @@ Each request can include 1-20 tasks. Each task must include at least one of `pro
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
 The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, or move a session's worktree into a section. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+
+Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer the question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again.
 
 The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
 

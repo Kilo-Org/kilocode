@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "プロバイダーに接続",
 
+  "session.activity.waiting": "回答または承認を待っています。",
+  "session.activity.error": "エラーまたは接続切断。",
+  "session.activity.retry": "自動的に再試行中。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "ターン完了。",
+  "session.activity.idle": "実行されていません。",
+
   "command.session.new": "新しいセッション",
   "command.session.show.changes": "変更を表示",
   "command.review.toggle": "レビューの切り替え",
@@ -174,8 +181,11 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "デフォルト",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
+  "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
@@ -850,6 +860,9 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "メインセッションと、そのタスクを担当するサブエージェント（ネストされたサブエージェントを含む）の間でボードを共有します。すべてのタスクで使うのではなく、並行して解決策を試す場合や、互いに補完し合う作業に使用してください。",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
@@ -877,6 +890,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
+  "settings.experimental.taskModelSelection.description":
+    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1053,6 +1069,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
+  "settings.context.compactionModel.title": "圧縮モデル",
+  "settings.context.compactionModel.description":
+    "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
+  "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1145,58 +1165,16 @@ export const dict = {
   "question.summary": "{{total}} 問中 {{n}} 問目",
   "common.review": "確認",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "レガシーバージョンからの移行",
-  "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
   "settings.aboutKiloCode.rooImport.description": "インストールしたRoo Codeから会話履歴を移行します。",
   "settings.aboutKiloCode.rooImport.button": "Roo Codeからセッションをインポート",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Codeの新機能",
-  "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
-  "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
-  "migration.whatsNew.features.performance.detail":
-    "並列ツール呼び出しとサブエージェントにより、エージェントがより多くのタスクを同時に処理できます — 待ち時間が減り、作業効率が向上します。",
-  "migration.whatsNew.features.interface.title": "洗練されたインターフェース",
-  "migration.whatsNew.features.interface.detail": "不要な要素を排除し、より読みやすく素早く操作できます。",
-  "migration.whatsNew.features.agentManager.title": "エージェントマネージャー",
-  "migration.whatsNew.features.agentManager.detail":
-    "複数のエージェントを並列実行するための統合インターフェース。それぞれ独自のワークツリー上で動作し、進捗の確認、コンテキストの切り替え、変更のレビューを一箇所で行えます。",
-  "migration.whatsNew.features.foundation.title": "共通基盤",
-  "migration.whatsNew.features.foundation.detail":
-    "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
-  "migration.whatsNew.blogLink": "完全なアナウンスを読む",
-  "migration.whatsNew.docsLink": "新機能とよくある質問",
-  "migration.whatsNew.continue": "続行",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "設定の移行",
-  "migration.migrate.subtitle": "以前のインストールから設定が見つかりました。移行可能な項目は以下の通りです。",
+  "migration.roo.button": "セッションをインポート",
+  "migration.roo.empty": "Roo Codeのセッションが見つかりませんでした。",
   "migration.migrate.selectLabel": "移行する項目を選択",
   "migration.migrate.chatHistory": "チャットセッションと履歴",
-  "migration.migrate.button": "設定を移行",
-  "migration.migrate.skip": "スキップ",
-  "migration.migrate.keysDetected": "{{count}}個のキーを検出",
-  "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
-  "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
-  "migration.migrate.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "プロバイダーのAPIキー",
-  "migration.select.mcpServers": "MCPサーバー",
-  "migration.select.customModes": "カスタムモード / エージェント",
-  "migration.select.defaultModel": "デフォルトモデル",
-  "migration.select.autoApproval": "自動承認",
-  "migration.select.language": "UI言語",
-  "migration.select.autocomplete": "オートコンプリート設定",
 
   // Migrate — completion
   "migration.complete.summary": "{{total}}個中{{success}}個の項目が正常に移行されました。",
-  "migration.complete.cleanup": "レガシー設定データを削除する",
-  "migration.complete.cleanupDescription":
-    "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
   "migration.migrate.sessionsDetected": "{{count}} 件のセッションが見つかりました",
   "migration.error.continue": "続行",
@@ -1230,7 +1208,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "不明な日付",
   "migration.sessionFormat.unknown": "不明",
   "migration.sessionFormat.unknownError": "不明なエラー",
-  // legacy-migration end
 
   "error.details.show": "詳細",
 
@@ -1238,7 +1215,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} タスク完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
+  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
+  "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
@@ -1251,6 +1230,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "キャンセル済み",
   "task.backgroundAgents.status.error": "エラー",
   "task.backgroundAgents.untitled": "バックグラウンドエージェント",
+  "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",

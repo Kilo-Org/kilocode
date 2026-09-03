@@ -76,7 +76,7 @@ export function useSlashCommand(
       hints: ["clear"],
       action: () => {
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        window.postMessage({ type: "navigate", view: "newTask" }, "*")
+        window.postMessage({ type: "navigate", view: "newTask" }, window.origin)
       },
     },
     {
@@ -84,7 +84,7 @@ export function useSlashCommand(
       description: "Switch to another session",
       hints: ["resume", "continue", "history"],
       action: () => {
-        window.postMessage({ type: "navigate", view: "history" }, "*")
+        window.postMessage({ type: "navigate", view: "history" }, window.origin)
       },
     },
     {
@@ -150,6 +150,11 @@ export function useSlashCommand(
       description: "Review code changes [uncommitted, staged, unpushed, branch, commit, pr]",
       hints: ["code-review", "diff"],
       nested: true,
+    },
+    {
+      name: "review worktree",
+      description: "Review committed and uncommitted worktree changes against its base",
+      hints: [],
     },
     { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
     { name: "review staged", description: "Review staged changes only", hints: [] },

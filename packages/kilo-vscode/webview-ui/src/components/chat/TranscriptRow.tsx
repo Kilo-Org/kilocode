@@ -18,6 +18,7 @@ interface TranscriptRowViewProps {
   row: TranscriptRow
   index?: number
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onEditMessage?: (sessionID: string, messageID: string) => void
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
   activeSearch?: boolean
@@ -27,6 +28,8 @@ interface TranscriptRowViewProps {
   /** For a multi-file apply_patch match, the specific file within that part. */
   activeSearchPartFile?: string
   readonly?: boolean
+  queuedDisabled?: boolean
+  editDisabled?: boolean
 }
 
 export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
@@ -64,11 +67,20 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               parts={row().parts}
               interrupted={row().interrupted}
               queued={row().queued}
+              onEdit={
+                row().queued && !props.readonly && props.onEditMessage
+                  ? () => props.onEditMessage?.(row().message.sessionID, row().message.id)
+                  : undefined
+              }
+              queuedDisabled={props.queuedDisabled || !server.isConnected()}
+              editDisabled={props.editDisabled}
               onFork={
                 props.onForkMessage ? () => props.onForkMessage?.(row().message.sessionID, row().message.id) : undefined
               }
               onDelete={
-                row().queued ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id) : undefined
+                row().queued && !props.readonly
+                  ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id)
+                  : undefined
               }
               onRevert={
                 row().answered

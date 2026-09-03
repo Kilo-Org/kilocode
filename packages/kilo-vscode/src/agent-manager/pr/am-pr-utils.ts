@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { serialize } from "../../util/serialize"
 import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
@@ -174,9 +175,26 @@ export function ghErrorReason(message: string): string {
  * the open comment list in the panel while the user is reading it.
  */
 export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
-  if (next.comments || !prev?.comments) return next
-  if (prev.number !== next.number) return next
-  return { ...next, comments: prev.comments }
+  if (!prev || prev.number !== next.number || prev.url !== next.url) return next
+  return {
+    ...next,
+    comments: next.comments ?? prev.comments,
+    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? prev.unresolvedThreads,
+  }
+}
+
+export function signature(pr: PRStatus): string {
+  return serialize([
+    pr.url,
+    pr.number,
+    pr.title,
+    pr.state,
+    pr.review,
+    [pr.checks.status, pr.checks.passed, pr.checks.total],
+    pr.reviewers.map((r) => [r.login, r.state]),
+    pr.body ?? "",
+    [pr.comments?.total ?? null, pr.unresolvedThreads ?? null, commentsSig(pr.comments?.comments)],
+  ])
 }
 
 /**

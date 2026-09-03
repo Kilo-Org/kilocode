@@ -17,7 +17,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
-import { BrowserAutomationService } from "./services/browser-automation"
+import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -46,7 +46,7 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 // keybindings, autocomplete, commit-message generation, and URI deep links all work immediately —
 // without requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
 
@@ -56,8 +56,16 @@ export function activate(context: vscode.ExtensionContext) {
 
   const telemetry = TelemetryProxy.getInstance()
 
+  const browserBroker = new BrowserBroker({
+    log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
+    enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
+    trusted: () => vscode.workspace.isTrusted,
+    useSystemChrome: () =>
+      vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true),
+  })
+
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context)
+  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -67,20 +75,13 @@ export function activate(context: vscode.ExtensionContext) {
     void context.workspaceState.update(RESTORE_KEY, restore)
   }
 
-  // Create browser automation service (manages Playwright MCP registration)
-  const browserAutomationService = new BrowserAutomationService(connectionService)
-  browserAutomationService.syncWithSettings()
-
   // Create remote status service (one status bar item for all webviews)
   const remoteService = new RemoteStatusService()
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
 
-  // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
-  // set remote service client, and reload autocomplete so it picks up the now-available backend connection.
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
-      browserAutomationService.reregisterIfEnabled()
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
@@ -162,11 +163,25 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
   const git = createGitExecutable({
+    preferred: async () => {
+      const extension = vscode.extensions.getExtension("vscode.git")
+      if (!extension) return undefined
+      if (!extension.isActive) await extension.activate()
+      return extension.exports?.getAPI(1).git.path
+    },
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, git)
+  const binary = process.platform === "win32" ? await git() : git
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.new.experimental.browserAutomation")) {
+        agentManagerProvider.refreshBrowserAutomation()
+      }
+    }),
+  )
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
@@ -457,11 +472,6 @@ export function activate(context: vscode.ExtensionContext) {
       await target.waitForReady()
       await target.toggleMemory()
     }),
-    // legacy-migration start
-    vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
-      provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
-    }),
-    // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
       const input = await vscode.window.showInputBox({
         prompt: "Describe the terminal command you want to generate",
@@ -555,6 +565,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.updateFromBase", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "updateFromBase" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.openPR", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openPR" })
     }),
@@ -629,7 +642,7 @@ export function activate(context: vscode.ExtensionContext) {
       shuttingDown = true
       unsubscribeStateChange()
       attention.dispose()
-      browserAutomationService.dispose()
+      browserBroker.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()

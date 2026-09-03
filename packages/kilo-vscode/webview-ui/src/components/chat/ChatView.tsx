@@ -28,6 +28,7 @@ import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
+import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -37,13 +38,17 @@ interface ChatViewProps {
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
+  worktree?: boolean
+  onUpdateBase?: () => void
   promptBoxId?: string
   terminalContext?: () => string | undefined
+  worktrees?: () => WorktreeReference[]
   deferFocusToQuestion?: () => boolean
   pendingSessionID?: string
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
+  introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
@@ -65,7 +70,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // the very first send instead of growing once the message lands.
   const hasMessages = () => session.messages().length > 0 || session.submitting()
 
-  // "Continue in Worktree" state
+  const [editable, setEditable] = createSignal(false)
+  const [editing, setEditing] = createSignal<{ sessionID: string; messageID: string }>()
+  const edit = (sessionID: string, messageID: string) => {
+    if (props.readonly || !editable() || editing()) return
+    setEditing({ sessionID, messageID })
+  }
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
@@ -353,10 +363,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               onSelectSession={props.onSelectSession}
               onShowHistory={props.onShowHistory}
               onForkMessage={props.onForkMessage}
+              onEditMessage={edit}
+              queuedDisabled={editing()?.sessionID === id() && !!editing()}
+              editDisabled={!editable() || !!editing()}
               questions={standaloneQuestions}
               suggestions={standaloneSuggestions}
               readonly={props.readonly}
               emptyState={props.emptyState}
+              introduction={props.introduction}
               announce={isSidebar()}
               sessionID={pendingSessionID}
             />
@@ -385,10 +399,16 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}
+                edit={editing()}
+                onEditComplete={() => setEditing(undefined)}
+                onEditReady={setEditable}
                 suggesting={suggesting}
                 questioning={questioning}
+                worktree={props.worktree}
+                onUpdateBase={props.onUpdateBase}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
+                worktrees={props.worktrees}
                 deferFocusToQuestion={props.deferFocusToQuestion}
                 pendingSessionID={pendingSessionID()}
                 focusOnDraftChange={props.focusOnDraftChange}

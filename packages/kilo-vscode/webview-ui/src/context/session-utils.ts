@@ -1,5 +1,13 @@
 import { reconcile } from "solid-js/store"
-import type { Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import { Identifier } from "../utils/id"
+import {
+  feedbackMetadata,
+  partFeedback,
+  type BrowserFeedbackData,
+  type BrowserReference,
+} from "../../../src/shared/browser-feedback"
+import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -34,12 +42,45 @@ export function messageParts(messages: Message[]): Record<string, Part[]> {
   return parts
 }
 
+export function optimistic(
+  id: string,
+  text: string,
+  files?: FileAttachment[],
+  review?: ReviewMessageData,
+  browser?: BrowserFeedbackData,
+): Part[] {
+  const parts: Part[] = []
+  if (text) {
+    parts.push({
+      type: "text",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      text,
+      metadata: feedbackMetadata(review, browser),
+    })
+  }
+  for (const file of files ?? []) {
+    parts.push({
+      type: "file",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      mime: file.mime,
+      url: file.url,
+      filename: file.filename,
+      source: file.source,
+    })
+  }
+  return parts
+}
+
 /** Prompt input state rebuilt from a reverted user message's parts. */
 export interface RevertPromptState {
   text: string
   paths: string[]
   sessions: Array<{ id: string; title: string; updated: number }>
   images: Array<{ dataUrl: string; mime: string; filename?: string }>
+  review: ReviewCommentEntry[]
+  browser: BrowserReference[]
 }
 
 /**
@@ -49,10 +90,17 @@ export interface RevertPromptState {
  */
 export function revertPromptState(parts: readonly Part[]): RevertPromptState {
   const files = parts.filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+  const feedback = parts
+    .filter((p): p is Extract<Part, { type: "text" }> => p.type === "text" && !p.synthetic)
+    .map((p) => partFeedback(p.metadata, p.text))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined)
   return {
     text: parts
       .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
-      .map((p) => (p as { text: string }).text ?? "")
+      .map((p) => {
+        if (p.type !== "text") return ""
+        return partFeedback(p.metadata, p.text)?.body ?? p.text
+      })
       .join(""),
     paths: files.map((p) => p.source?.path).filter((p): p is string => !!p && !p.startsWith("session:")),
     sessions: files
@@ -65,6 +113,8 @@ export function revertPromptState(parts: readonly Part[]): RevertPromptState {
     images: files
       .filter((p) => p.mime.startsWith("image/") && p.url.startsWith("data:"))
       .map((p) => ({ dataUrl: p.url, mime: p.mime, filename: p.filename })),
+    review: feedback.flatMap((p) => p.review?.comments ?? []),
+    browser: feedback.flatMap((p) => p.browserFeedback?.references ?? []),
   }
 }
 
@@ -115,6 +165,45 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+export function inUse(
+  family: ReadonlySet<string>,
+  statuses: Record<string, { type: string }>,
+  prompts: readonly { sessionID: string }[],
+): boolean {
+  return (
+    [...family].some((id) => !!statuses[id] && statuses[id].type !== "idle") ||
+    prompts.some((item) => family.has(item.sessionID))
+  )
+}
+
+export function ancestry(
+  sessions: Record<string, ParentSession>,
+  tools: Record<string, readonly TaskPart[]>,
+  outcomes: Record<string, ParentSession | undefined>,
+) {
+  const parents = new Map<string, string>()
+  for (const [id, parts] of Object.entries(tools)) {
+    for (const part of parts) {
+      const child = childID(part)
+      if (child) parents.set(child, id)
+    }
+  }
+  for (const [id, close] of Object.entries(outcomes)) {
+    if (close?.parentID) parents.set(id, close.parentID)
+  }
+  for (const [id, session] of Object.entries(sessions)) {
+    if (session.parentID === null) parents.delete(id)
+    if (session.parentID) parents.set(id, session.parentID)
+  }
+  const children = new Map<string, string[]>()
+  for (const [child, parent] of parents) {
+    const ids = children.get(parent) ?? []
+    ids.push(child)
+    children.set(parent, ids)
+  }
+  return { parents, children }
 }
 
 export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {

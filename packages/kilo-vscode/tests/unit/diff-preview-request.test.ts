@@ -101,6 +101,39 @@ const SCRIPT = `
     fail("did not request after existing loading state cleared " + JSON.stringify(blocked))
   }
   disposeBlocked()
+
+  const lazy = []
+  const entries = Array.from({ length: 85 }, (_, index) => ({
+    ...summary,
+    file: "src/file-" + index + ".ts",
+  }))
+  let request
+  const disposeLazy = createRoot((dispose) => {
+    request = createDiffRequests({
+      key: () => "review-lazy",
+      diffs: () => entries,
+      open: () => entries.map((item) => item.file),
+      loading: () => undefined,
+      send: () => (file) => lazy.push(file),
+      eager: false,
+    })
+    return dispose
+  })
+
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (lazy.length !== 0) fail("offscreen diffs requested eagerly " + JSON.stringify(lazy))
+  request(entries[0])
+  request(entries[1])
+  request(entries[0], () => { throw new Error("Repeated requests must not measure layout") })
+  request(entries[80], () => false)
+  if (lazy.length !== 2 || lazy[0] !== entries[0].file || lazy[1] !== entries[1].file) {
+    fail("visible diff requests were not lazy and deduplicated " + JSON.stringify(lazy))
+  }
+  request(entries[80])
+  if (lazy.length !== 3 || lazy[2] !== entries[80].file) {
+    fail("newly mounted distant diff was not requested " + JSON.stringify(lazy))
+  }
+  disposeLazy()
   console.log("${PASS}")
 `
 

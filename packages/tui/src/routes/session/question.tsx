@@ -81,8 +81,7 @@ export function QuestionPrompt(props: {
       })
       return
     }
-    setStore("tab", store.tab + 1)
-    setStore("selected", 0)
+    selectTab(store.tab + 1) // kilocode_change
   }
 
   function toggle(answer: string) {
@@ -102,7 +101,13 @@ export function QuestionPrompt(props: {
 
   function selectTab(index: number) {
     setStore("tab", index)
-    setStore("selected", 0)
+    // kilocode_change start
+    const item = questions().at(index)
+    setStore(
+      "selected",
+      item?.multiple ? 0 : Math.max(0, item?.options.findIndex((option) => option.label === item.default) ?? 0),
+    )
+    // kilocode_change end
   }
 
   function selectOption() {
@@ -129,6 +134,7 @@ export function QuestionPrompt(props: {
   }
 
   onMount(() => {
+    selectTab(0) // kilocode_change
     const popMode = modeStack.push(QUESTION_MODE)
     onCleanup(popMode)
   })

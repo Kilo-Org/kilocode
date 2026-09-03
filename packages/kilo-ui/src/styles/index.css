@@ -28,13 +28,13 @@
 @import "../components/message-part.css";
 @import "../components/message-row.css";
 @import "../components/model-info-card.css";
-@import "../components/model-selector.css";
 @import "../components/popover.css";
 @import "../components/prompt-input.css";
 @import "../components/radio-group.css";
 @import "../components/select.css";
 @import "../components/session.css";
 @import "../components/settings-sidebar.css";
+@import "../components/spinner.css";
 @import "../components/status-indicator.css";
 @import "../components/switch.css";
 @import "../components/tabs.css";

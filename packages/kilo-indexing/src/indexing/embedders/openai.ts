@@ -10,6 +10,7 @@ import {
 } from "../constants"
 import { getModelQueryPrefix } from "../model-registry"
 import { withValidationErrorHandling, formatEmbeddingError, type HttpError } from "../shared/validation-helpers"
+import { embedBatches } from "../shared/embedder-helpers"
 import { Log } from "../../util/log"
 
 const log = Log.create({ service: "embedder-openai" })
@@ -45,67 +46,16 @@ export class OpenAiEmbedder implements IEmbedder {
   async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
     const modelToUse = model || this.defaultModelId
 
-    // Apply model-specific query prefix if required
-    const queryPrefix = getModelQueryPrefix("openai", modelToUse)
-    const processedTexts = queryPrefix
-      ? texts.map((text, index) => {
-          // Prevent double-prefixing
-          if (text.startsWith(queryPrefix)) {
-            return text
-          }
-          const prefixedText = `${queryPrefix}${text}`
-          const estimatedTokens = Math.ceil(prefixedText.length / 4)
-          if (estimatedTokens > MAX_ITEM_TOKENS) {
-            log.warn(`Text at index ${index} with prefix exceeds token limit (${estimatedTokens} > ${MAX_ITEM_TOKENS})`)
-            // Return original text if adding prefix would exceed limit
-            return text
-          }
-          return prefixedText
-        })
-      : texts
-
-    const allEmbeddings: number[][] = []
-    const usage = { promptTokens: 0, totalTokens: 0 }
-    const remainingTexts = [...processedTexts]
-
-    while (remainingTexts.length > 0) {
-      const currentBatch: string[] = []
-      let currentBatchTokens = 0
-      const processedIndices: number[] = []
-
-      for (let i = 0; i < remainingTexts.length; i++) {
-        const text = remainingTexts[i]
-        const itemTokens = Math.ceil(text.length / 4)
-
-        if (itemTokens > MAX_ITEM_TOKENS) {
-          log.warn(`Text at index ${i} exceeds token limit (${itemTokens} > ${MAX_ITEM_TOKENS})`)
-          processedIndices.push(i)
-          continue
-        }
-
-        if (currentBatchTokens + itemTokens <= MAX_BATCH_TOKENS) {
-          currentBatch.push(text)
-          currentBatchTokens += itemTokens
-          processedIndices.push(i)
-        } else {
-          break
-        }
-      }
-
-      // Remove processed items from remainingTexts (in reverse order to maintain correct indices)
-      for (let i = processedIndices.length - 1; i >= 0; i--) {
-        remainingTexts.splice(processedIndices[i], 1)
-      }
-
-      if (currentBatch.length > 0) {
-        const batchResult = await this._embedBatchWithRetries(currentBatch, modelToUse)
-        allEmbeddings.push(...batchResult.embeddings)
-        usage.promptTokens += batchResult.usage.promptTokens
-        usage.totalTokens += batchResult.usage.totalTokens
-      }
-    }
-
-    return { embeddings: allEmbeddings, usage }
+    return embedBatches(
+      texts,
+      MAX_ITEM_TOKENS,
+      MAX_BATCH_TOKENS,
+      (batch) => this._embedBatchWithRetries(batch, modelToUse),
+      (index, tokens) => log.warn(`Text at index ${index} exceeds token limit (${tokens} > ${MAX_ITEM_TOKENS})`),
+      getModelQueryPrefix("openai", modelToUse),
+      (index, tokens) =>
+        log.warn(`Text at index ${index} with prefix exceeds token limit (${tokens} > ${MAX_ITEM_TOKENS})`),
+    )
   }
 
   /**

@@ -46,6 +46,23 @@ export const MessagesQuery = Schema.Struct({
   limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
   before: Schema.optional(Schema.String),
 })
+// kilocode_change start
+export const DeleteMessageQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  queued: Schema.optional(QueryBoolean),
+})
+// kilocode_change end
+// kilocode_change start
+export const AbortQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  scope: Schema.optional(
+    Schema.Literals(["session", "tree"]).annotate({
+      description:
+        "Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.",
+    }),
+  ),
+})
+// kilocode_change end
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
 export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
@@ -267,7 +284,7 @@ export const SessionApi = HttpApi.make("session")
         ),
         HttpApiEndpoint.post("abort", SessionPaths.abort, {
           params: { sessionID: SessionID },
-          query: WorkspaceRoutingQuery,
+          query: AbortQuery, // kilocode_change
           success: described(Schema.Boolean, "Aborted session"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
@@ -423,7 +440,7 @@ export const SessionApi = HttpApi.make("session")
         ),
         HttpApiEndpoint.delete("deleteMessage", SessionPaths.deleteMessage, {
           params: { sessionID: SessionID, messageID: MessageID },
-          query: WorkspaceRoutingQuery,
+          query: DeleteMessageQuery, // kilocode_change
           success: described(Schema.Boolean, "Successfully deleted message"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(

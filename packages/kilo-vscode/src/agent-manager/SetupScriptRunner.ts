@@ -5,7 +5,6 @@
  * actual execution to an injected RunTask callback (provided by the caller).
  */
 
-import { powershellCommand } from "../util/powershell"
 import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
 interface SetupScriptEnvironment {
@@ -32,7 +31,7 @@ function quoteCmdArg(value: string): string {
 export function buildSetupTaskCommand(script: SetupScriptInfo): { command: string; args: string[] } {
   if (script.kind === "powershell") {
     return {
-      command: powershellCommand(),
+      command: "powershell.exe",
       args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.path],
     }
   }

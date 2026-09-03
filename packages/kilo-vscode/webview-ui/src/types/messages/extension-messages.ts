@@ -17,6 +17,9 @@ import type {
 import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
+import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+
+export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
 export interface BackgroundJobsLoadedMessage {
   type: "backgroundJobsLoaded"
@@ -79,7 +82,6 @@ import type {
   MigrationDataMessage,
   MigrationProgressMessage,
   MigrationSessionProgressMessage,
-  MigrationStateMessage,
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
 
@@ -130,6 +132,8 @@ export interface ErrorMessage {
   message: string
   code?: string
   sessionID?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 export interface SendMessageFailedMessage {
@@ -141,6 +145,14 @@ export interface SendMessageFailedMessage {
   messageID?: string
   files?: FileAttachment[]
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
+}
+
+export interface SessionResumeResultMessage {
+  type: "sessionResumeResult"
+  sessionID: string
+  requestID: string
+  error?: string
 }
 
 export interface SessionCommandCompletedMessage {
@@ -167,7 +179,9 @@ export interface SessionStatusMessage {
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
+  eventID: string
   reason: SessionCloseReason
+  parentID?: string
 }
 
 export interface SessionErrorMessage {
@@ -228,6 +242,14 @@ export interface MessageRemovedMessage {
   type: "messageRemoved"
   sessionID: string
   messageID: string
+}
+
+export interface DeleteMessageResultMessage {
+  type: "deleteMessageResult"
+  sessionID: string
+  messageID: string
+  requestID?: string
+  success: boolean
 }
 
 export interface MessagesLoadedMessage {
@@ -335,11 +357,14 @@ export interface SetChatBoxMessage {
    * array clears them); absent leaves current attachments untouched.
    */
   images?: RestoredImage[]
+  review?: import("../../../../src/shared/review-comments").ReviewCommentEntry[]
+  browser?: BrowserReference[]
 }
 
 export interface AppendChatBoxMessage {
   type: "appendChatBoxMessage"
   text: string
+  browser?: BrowserReference
 }
 
 export interface AppendReviewCommentsMessage {
@@ -486,6 +511,8 @@ export interface ProvidersLoadedMessage {
   providers: Record<string, Provider>
   connected: string[]
   defaults: Record<string, string>
+  organizationId?: string | null
+  ready?: boolean
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
@@ -808,6 +835,11 @@ export interface AgentManagerSessionForkedMessage {
   worktreeId?: string
 }
 
+export interface AgentManagerWorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
+}
+
 export interface AgentManagerSessionClosedMessage {
   type: "agentManager.sessionClosed"
   projectId?: string
@@ -838,6 +870,7 @@ export interface AgentManagerStateMessage {
   activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
+  browserAutomation?: boolean
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -1189,6 +1222,7 @@ export interface AgentManagerSendInitialMessage {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string }>
+  browserFeedback?: BrowserFeedbackData
 }
 
 // Enhance prompt result (extension → webview)
@@ -1409,16 +1443,70 @@ export interface AgentManagerFocusContextRequestedMessage {
   type: "agentManager.focusContextRequested"
 }
 
+export interface AgentManagerBrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  frameError?: string
+}
+
+export interface AgentManagerBrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  error?: string
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: {
+    tag: string
+    id?: string
+    classes?: string
+    text?: string
+    selector?: string
+    rect?: { x: number; y: number; width: number; height: number }
+    hierarchy?: string[]
+    html?: string
+    styles?: { color?: string; backgroundColor?: string }
+    source?: { file: string; line?: number; column?: number }
+  }
+  logs: string[]
+  hover?: boolean
+}
+
+export interface AgentManagerBrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
+}
+
 export type ExtensionMessage =
+  | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
+  | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
   | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage
+  | AgentManagerBrowserStateMessage
+  | AgentManagerBrowserInspectionMessage
+  | AgentManagerBrowserDevtoolsMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionResumeResultMessage
   | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1435,6 +1523,7 @@ export type ExtensionMessage =
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
+  | DeleteMessageResultMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
@@ -1460,6 +1549,7 @@ export type ExtensionMessage =
   | ImageModelsLoadedMessage
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
+  | { type: "providersLoading" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage
@@ -1504,6 +1594,7 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
+  | AgentManagerWorktreeActivityMessage
   | AgentManagerStateMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
@@ -1550,13 +1641,10 @@ export type ExtensionMessage =
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
   | AgentManagerScriptTerminalsMessage
-  // legacy-migration start
-  | MigrationStateMessage
   | MigrationDataMessage
   | MigrationProgressMessage
   | MigrationSessionProgressMessage
   | MigrationCompleteMessage
-  // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage

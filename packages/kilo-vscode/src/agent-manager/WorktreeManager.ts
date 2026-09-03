@@ -78,7 +78,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -89,14 +89,16 @@ export class WorktreeManager {
   private readonly dir: string
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
+  private readonly binary: string
   private readonly log: (msg: string) => void
   private migrated = false
 
-  constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
+  constructor(root: string, log: (msg: string) => void, ops?: GitOps, binary?: string) {
     this.root = root
     this.dir = path.join(root, KILO_DIR, "worktrees")
-    this.git = simpleGit(root)
     this.ops = ops
+    this.binary = binary ?? ops?.path ?? "git"
+    this.git = this.client(root)
     this.log = log
   }
 
@@ -121,8 +123,8 @@ export class WorktreeManager {
   // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
   private static fetchCache = new Map<string, number>()
   private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
-  private static gitAvailable = false
-  private static lfsAvailable: boolean | undefined
+  private gitAvailable = false
+  private lfsAvailable: boolean | undefined
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -134,6 +136,16 @@ export class WorktreeManager {
     )
     WorktreeManager.locks.set(key, barrier)
     return result
+  }
+
+  private client(cwd: string, ssh = false): SimpleGit {
+    return simpleGit(cwd, {
+      binary: this.binary,
+      unsafe: {
+        allowUnsafeCustomBinary: this.binary !== "git",
+        allowUnsafeSshCommand: ssh,
+      },
+    })
   }
 
   // ---------------------------------------------------------------------------
@@ -169,7 +181,7 @@ export class WorktreeManager {
   async hasWork(worktreePath: string, base: string): Promise<boolean> {
     if (!this.isManagedPath(worktreePath)) return false
     return this.withGitLock(async () => {
-      const git = simpleGit(worktreePath)
+      const git = this.client(worktreePath)
       const status = await git.status()
       if (status.files.length > 0) return true
       return git
@@ -185,12 +197,12 @@ export class WorktreeManager {
   }
 
   private async ensureGitAvailable(): Promise<void> {
-    if (WorktreeManager.gitAvailable) return
+    if (this.gitAvailable) return
     try {
-      await execWithShellEnv("git", ["--version"])
-      WorktreeManager.gitAvailable = true
+      await execWithShellEnv(this.binary, ["--version"])
+      this.gitAvailable = true
     } catch (error) {
-      WorktreeManager.gitAvailable = false
+      this.gitAvailable = false
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(
           "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
@@ -313,7 +325,7 @@ export class WorktreeManager {
   private async renameBranchImpl(worktreePath: string, current: string, requested: string): Promise<string> {
     if (!this.isManagedPath(worktreePath)) throw new Error("Worktree is not managed by Agent Manager")
 
-    const git = simpleGit(worktreePath)
+    const git = this.client(worktreePath)
     const actual = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
     if (actual === "HEAD" || actual !== current) throw new Error("Branch changed before automatic naming")
 
@@ -470,10 +482,15 @@ export class WorktreeManager {
     const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
     try {
       await fs.promises.rename(worktreePath, temp)
-    } catch {
-      // Rename failed (e.g. locked files on Windows) — fall back to force remove
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
-      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+    } catch (err) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
+        this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
+      })
+      if (fs.existsSync(worktreePath)) await fs.promises.rm(worktreePath, RM_OPTS)
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch((error: unknown) => {
+        this.log(`Failed to prune worktree metadata for ${worktreePath}: ${error}`)
+      })
       if (branch) await this.deleteBranch(branch)
       return
     }
@@ -633,7 +650,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     const excludePath = path.join(gitDir, "info", "exclude")
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
@@ -697,17 +714,6 @@ export class WorktreeManager {
     await markNoIndex(this.dir, this.log)
   }
 
-  private async resolveGitDir(): Promise<string> {
-    const gitPath = path.join(this.root, ".git")
-    const stat = await fs.promises.stat(gitPath)
-    if (stat.isDirectory()) return gitPath
-
-    const content = await fs.promises.readFile(gitPath, "utf-8")
-    const match = content.match(/^gitdir:\s*(.+)$/m)
-    if (!match) throw new Error("Invalid .git file format")
-    return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
-  }
-
   private async worktreeInfo(wtPath: string): Promise<WorktreeInfo | undefined> {
     const gitFile = path.join(wtPath, ".git")
     if (!fs.existsSync(gitFile)) return undefined
@@ -721,7 +727,7 @@ export class WorktreeManager {
     }
 
     try {
-      const git = simpleGit(wtPath)
+      const git = this.client(wtPath)
       const [branch, stat, meta] = await Promise.all([
         git.revparse(["--abbrev-ref", "HEAD"]),
         fs.promises.stat(wtPath),
@@ -855,7 +861,7 @@ export class WorktreeManager {
     // is the fixed value Kilo injects — never for an inherited one, which
     // could be attacker-controlled.
     const env = nonInteractiveEnv()
-    await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
+    await this.client(this.root, isKiloOwnedSshCommand(env))
       .env(env)
       .raw(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`])
     WorktreeManager.fetchCache.set(key, Date.now())
@@ -902,7 +908,7 @@ export class WorktreeManager {
 
   async repoUsesLfs(): Promise<boolean> {
     // Check .git/lfs/ directory
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     if (fs.existsSync(path.join(gitDir, "lfs"))) return true
 
     // Check .gitattributes
@@ -925,13 +931,13 @@ export class WorktreeManager {
   }
 
   async checkLfsAvailable(): Promise<boolean> {
-    if (WorktreeManager.lfsAvailable) return true
+    if (this.lfsAvailable) return true
     try {
-      await execWithShellEnv("git", ["lfs", "version"], { cwd: this.root, timeout: 5000 })
-      WorktreeManager.lfsAvailable = true
+      await execWithShellEnv(this.binary, ["lfs", "version"], { cwd: this.root, timeout: 5000 })
+      this.lfsAvailable = true
       return true
     } catch {
-      WorktreeManager.lfsAvailable = false
+      this.lfsAvailable = false
       // git-lfs not installed
       return false
     }
@@ -1074,6 +1080,7 @@ export class WorktreeManager {
       throw new Error("This PR's branch is already checked out in another worktree")
     }
 
+    const base = await this.resolvePRBase(info)
     await this.fetchPRBranch(info, parsed, isFork, forkOwner)
 
     if (isFork && forkOwner) {
@@ -1083,7 +1090,15 @@ export class WorktreeManager {
       await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
     }
 
-    return this.createWorktreeImpl({ existingBranch: branch })
+    const result = await this.createWorktreeImpl({ existingBranch: branch })
+    return { ...result, parentBranch: base.branch, remote: base.remote }
+  }
+
+  private async resolvePRBase(info: PRInfo): Promise<{ branch: string; remote?: string }> {
+    if (info.baseRefName === undefined) return this.resolveBaseBranch()
+    validateGitRef(info.baseRefName, "base branch")
+    const point = await this.resolveStartPoint(info.baseRefName, undefined, { allowFallback: false })
+    return { branch: point.branch, remote: point.remote }
   }
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
@@ -1096,7 +1111,7 @@ export class WorktreeManager {
           "--repo",
           `${parsed.owner}/${parsed.repo}`,
           "--json",
-          "headRefName,headRepositoryOwner,isCrossRepository,title",
+          "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
         30000,
       )
@@ -1165,7 +1180,7 @@ export class WorktreeManager {
   }
 
   private async gitExec(args: string[]): Promise<void> {
-    await this.exec("git", args)
+    await this.exec(this.binary, args)
   }
 
   private async gitTry(args: string[]): Promise<boolean> {

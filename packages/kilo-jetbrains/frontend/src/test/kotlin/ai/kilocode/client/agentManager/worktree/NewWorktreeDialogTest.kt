@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -21,6 +22,9 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBTextField
+import com.intellij.ui.tabs.JBTabs
+import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -31,6 +35,7 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.event.FocusEvent
 import javax.swing.JTextField
+import javax.swing.plaf.basic.BasicComboBoxUI
 import javax.swing.plaf.basic.BasicComboPopup
 
 class NewWorktreeDialogTest : BasePlatformTestCase() {
@@ -47,13 +52,16 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
+        KiloPluginSettings.unsetAgent()
     }
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -71,7 +79,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test selecting a mode forwards it with the created prompt and writes no global config`() {
+    fun `test selecting a mode forwards it with the created prompt only`() {
         open()
         flushUntil { edt { model().selectionKeyForTest() != null } }
 
@@ -82,9 +90,10 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
 
+        // The prompt is the only place the pick travels: writing it to the CLI's global default_agent
+        // disposed every instance the CLI held and cancelled every running turn in every worktree.
         assertEquals("plan", submitted().prompt?.agent)
-        // Picking a mode must no longer mutate the global default_agent config.
-        assertTrue(sessionRpc.configs.none { it.second.agent != null })
+        assertNull(KiloPluginSettings.getAgent())
     }
 
     fun `test selecting a model persists it for the default agent`() {
@@ -144,6 +153,21 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test base picker survives a dropped editor during layout`() {
+        open()
+
+        edt {
+            val picker = combo() as BranchPicker
+            val ui = picker.ui as BasicComboBoxUI
+            ui.removeEditor()
+
+            picker.preferredSize
+
+            val comp = picker.editor.editorComponent
+            assertTrue(picker.components.any { it === comp })
+        }
+    }
+
     fun `test creating with empty base branch falls back to default`() {
         open()
         flushUntil { edt { model().selectionKeyForTest() != null } }
@@ -184,6 +208,125 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(plan())
     }
 
+    fun `test importing a pr url produces a pr plan`() {
+        open()
+        selectPr()
+        edt {
+            url().text = "https://github.com/o/r/pull/7"
+            submit()
+        }
+
+        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7"), taken())
+    }
+
+    fun `test blank pr url does not import`() {
+        open()
+        selectPr()
+        edt { submit() }
+
+        assertNull(plan())
+    }
+
+    fun `test non-pr url does not import`() {
+        open()
+        selectPr()
+        edt {
+            url().text = "https://github.com/o/r/issues/7"
+            submit()
+        }
+
+        assertNull(plan())
+    }
+
+    fun `test picking a branch produces a branch plan`() {
+        open(branches = listOf("main", "feature/x"))
+        selectBranch()
+        edt {
+            pickField().text = "feature/x"
+            submit()
+        }
+
+        assertEquals(NewWorktreePlan.Branch("feature/x"), taken())
+    }
+
+    fun `test importing a fuzzy branch resolves to the real branch`() {
+        open(branches = listOf("main", "feature/refactor-ui"))
+        selectBranch()
+        edt {
+            pickField().text = "refui"
+            submit()
+        }
+
+        assertEquals(NewWorktreePlan.Branch("feature/refactor-ui"), taken())
+    }
+
+    fun `test importing an unknown branch does not import`() {
+        open(branches = listOf("main", "feature/x"))
+        selectBranch()
+        edt {
+            pickField().text = "zzzzzz"
+            submit()
+        }
+
+        assertNull(plan())
+    }
+
+    fun `test the new tab creates while the pr tab imports`() {
+        open()
+
+        edt { assertEquals(3, tabs().tabs.size) }
+        selectPr()
+        edt {
+            url().text = "https://github.com/o/r/pull/7"
+            submit()
+        }
+
+        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7"), taken())
+    }
+
+    fun `test the deselected tab stops painting`() {
+        open()
+        val fresh = newTab()
+
+        selectPr()
+
+        assertFalse(edt { fresh.isVisible })
+        assertTrue(edt { prTab().isVisible })
+    }
+
+    fun `test reselecting a tab shows it again`() {
+        open()
+        selectPr()
+
+        select(0)
+
+        assertTrue(edt { newTab().isVisible })
+        assertFalse(edt { prTab().isVisible })
+    }
+
+    fun `test the pr tab is dropped while the github integration is off`() {
+        // Importing a PR needs gh, so the tab must not be offered as a guaranteed failure.
+        KiloPluginSettings.setGithub(false)
+        open()
+
+        edt {
+            val titles = tabs().tabs.map { it.text }
+            assertEquals(listOf("New", "From Branch"), titles)
+        }
+    }
+
+    fun `test an empty branch list disables the branch picker`() {
+        open(branches = emptyList())
+        selectBranch()
+
+        edt {
+            assertFalse(pick().isEnabled)
+            submit()
+        }
+
+        assertNull(plan())
+    }
+
     private fun open(branches: List<String> = listOf("main")) {
         dialog = edt {
             NewWorktreeDialog(
@@ -201,10 +344,13 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     private fun plan(): NewWorktreePlan? = edt { requireNotNull(dialog).result() }
 
+    /** Reads the plan after a confirming submit, then forgets the dialog: closing already disposed it. */
+    private fun taken(): NewWorktreePlan = requireNotNull(plan()).also { dialog = null }
+
     /** Waits for the dialog to accept a create, then forgets it: closing already disposed it. */
-    private fun submitted(): NewWorktreePlan {
+    private fun submitted(): NewWorktreePlan.Create {
         flushUntil { plan() != null }
-        return requireNotNull(plan()).also { dialog = null }
+        return (requireNotNull(plan()) as NewWorktreePlan.Create).also { dialog = null }
     }
 
     private fun workspace(): ModelsWorkspaceDto {
@@ -231,15 +377,39 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     private fun reasoning(): ReasoningPicker = prompt().reasoning
 
-    private fun prompt(): PromptPanel = descendants(root()).filterIsInstance<PromptPanel>().single()
+    private fun prompt(): PromptPanel = descendants(newTab()).filterIsInstance<PromptPanel>().single()
 
-    private fun combo(): ComboBox<*> = descendants(root()).filterIsInstance<ComboBox<*>>().single()
+    private fun combo(): ComboBox<*> = descendants(newTab()).filterIsInstance<ComboBox<*>>().single()
 
     private fun field(): JTextField = combo().editor.editorComponent as JTextField
 
     private fun popup(): BasicComboPopup = combo().accessibleContext.getAccessibleChild(0) as BasicComboPopup
 
-    private fun root(): Component = requireNotNull(dialog).centerComponent()
+    private fun tabs(): JBTabs = requireNotNull(dialog).centerComponent() as JBTabs
+
+    private fun newTab(): Component = tabs().tabs[0].component
+
+    private fun prTab(): Component = tabs().tabs[1].component
+
+    private fun branchTab(): Component = tabs().tabs[2].component
+
+    private fun selectPr() = select(1)
+
+    private fun selectBranch() = select(2)
+
+    private fun select(index: Int) = edt {
+        val info: TabInfo = tabs().tabs[index]
+        tabs().select(info, false)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun url(): JBTextField = descendants(prTab()).filterIsInstance<JBTextField>().single()
+
+    private fun pick(): ComboBox<*> = descendants(branchTab()).filterIsInstance<ComboBox<*>>().single()
+
+    private fun pickField(): JTextField = pick().editor.editorComponent as JTextField
+
+    private fun submit() = requireNotNull(dialog).submit()
 
     private fun descendants(root: Component): List<Component> {
         val out = mutableListOf<Component>()
