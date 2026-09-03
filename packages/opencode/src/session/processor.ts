@@ -741,7 +741,7 @@ export const layer = Layer.effect(
 
             const lengthError = KiloSessionProcessor.lengthFinishError({ msg: ctx.assistantMessage, step: ctx.step })
             if (lengthError) {
-              yield* bus.publish(Session.Event.Error, {
+              yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.assistantMessage.sessionID,
                 error: lengthError,
               })
@@ -750,7 +750,7 @@ export const layer = Layer.effect(
 
             const providerError = KiloSessionProcessor.providerFinishError(ctx.assistantMessage)
             if (providerError) {
-              yield* bus.publish(Session.Event.Error, {
+              yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.assistantMessage.sessionID,
                 error: providerError,
               })
