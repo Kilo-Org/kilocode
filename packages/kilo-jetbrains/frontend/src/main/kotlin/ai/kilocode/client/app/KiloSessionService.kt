@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
@@ -29,6 +30,7 @@ import com.intellij.openapi.project.Project
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +41,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -55,12 +58,14 @@ class KiloSessionService internal constructor(
     private val cs: CoroutineScope,
     private val rpc: KiloSessionRpcApi?,
     private val log: KiloLog = LOG,
+    private val grace: Long = ATTENTION_GRACE_MS,
 ) {
     /** Platform constructor — resolves RPC from the service container. */
     constructor(project: Project, cs: CoroutineScope) : this(project, cs, null)
 
     companion object {
         private val LOG = KiloLog.create(KiloSessionService::class.java)
+        private const val ATTENTION_GRACE_MS = 400L
     }
 
     // Reflects the sessions from the most recent tracking [list]/[renameSession] call, which is
@@ -81,10 +86,44 @@ class KiloSessionService internal constructor(
         combine(stream { statuses() }, removed) { map, gone -> map - gone }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
-    /** Live session activity map from backend global events, minus sessions deleted this run. */
+    // Last snapshot published downstream, and when the attention it is still holding back was first
+    // seen. Touched only from the single upstream collector below, so no synchronisation.
+    private var shown = emptyMap<String, SessionActivityDto>()
+    private var since = 0L
+
+    /**
+     * Live session activity map from backend global events, minus sessions deleted this run.
+     *
+     * A permission the client answers itself (auto-approve) still goes through a real
+     * `permission.asked`/`permission.replied` pair, so every auto-approved edit would otherwise swap
+     * every badge to the attention glyph and straight back. A kind that newly becomes an attention
+     * state is held for [ATTENTION_GRACE_MS]; a newer snapshot cancels the wait, so a machine-answered
+     * permission is never published. Clearing, RUNNING and ERROR transitions are never delayed, and
+     * [since] survives the cancellation so continuous churn cannot starve a real prompt.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val activity: StateFlow<Map<String, SessionActivityDto>> =
         combine(stream { activity() }, removed) { map, gone -> map - gone }
+            .transformLatest { next ->
+                if (rising(shown, next)) {
+                    if (since == 0L) since = System.currentTimeMillis()
+                    val wait = grace - (System.currentTimeMillis() - since)
+                    if (wait > 0) delay(wait)
+                }
+                shown = next
+                since = 0L
+                emit(next)
+            }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /** Whether [next] turns some session into an attention state that [prev] did not already show. */
+    private fun rising(prev: Map<String, SessionActivityDto>, next: Map<String, SessionActivityDto>): Boolean =
+        next.any { (id, dto) -> waiting(dto.kind) && !waiting(prev[id]?.kind) }
+
+    private fun waiting(kind: SessionActivityKindDto?): Boolean =
+        kind == SessionActivityKindDto.PERMISSION ||
+            kind == SessionActivityKindDto.QUESTION ||
+            kind == SessionActivityKindDto.PLAN
 
     /**
      * Session create/update/delete across every directory the CLI serves, including sessions
