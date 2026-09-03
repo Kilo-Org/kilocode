@@ -82,7 +82,13 @@ import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
 import { worktreeSessionIds as worktreeMembership, worktreeSessions } from "./project/session-filter"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
-import { createLocalSessions, persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
+import {
+  createLocalSessions,
+  needsLocalDraft,
+  persistLocalTabs,
+  projectLocalIds,
+  projectLocalSessions,
+} from "./project/local-tabs"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
@@ -1143,7 +1149,7 @@ const AgentManagerContent: Component = () => {
       applyTabOrder,
     )
     if (restored) setLocalSessionIDs(restored)
-    if (switched === "switched" && localSessionIDs().length === 0) addPendingTab()
+    if (switched === "switched" && needsLocalDraft(localSessionIDs(), terms.forSelection(nsKey(LOCAL)))) addPendingTab()
     if (switched !== "same") {
       restoreProjectTarget(state, {
         selectLocal,
