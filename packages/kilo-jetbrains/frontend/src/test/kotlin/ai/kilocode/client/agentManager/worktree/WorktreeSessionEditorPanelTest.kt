@@ -593,15 +593,34 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertFalse(edt { panel.canMove(session) })
     }
 
-    fun `test move to worktree hides while the session is running`() {
+    fun `test move to worktree hides for every in-flight turn state`() {
         manager.baseValue = true
-        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
         val session = session("ses_1", nowSeconds())
         rpc.listed += session
         edt { controller.reload() }
         flush()
 
-        assertFalse(edt { panel.canMove(session) })
+        // The chat dock hides its Move action for anything SessionState.isBusy() covers, and a session
+        // stopped on a question or a permission is as mid-turn as a running one.
+        for (kind in SessionActivityKind.entries.filter { it.busy() }) {
+            manager.kinds = mapOf("ses_1" to kind)
+            assertFalse("$kind must hide Move to Worktree", edt { panel.canMove(session) })
+        }
+    }
+
+    fun `test move to worktree stays offered for a failed or login-blocked session`() {
+        manager.baseValue = true
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        // Neither state is busy: the turn is over and the session is waiting on the user, which is
+        // exactly when moving it into a worktree is worth offering.
+        for (kind in SessionActivityKind.entries.filterNot { it.busy() }) {
+            manager.kinds = mapOf("ses_1" to kind)
+            assertTrue("$kind must keep Move to Worktree", edt { panel.canMove(session) })
+        }
     }
 
     fun `test move row calls the manager with the worktree directory`() {

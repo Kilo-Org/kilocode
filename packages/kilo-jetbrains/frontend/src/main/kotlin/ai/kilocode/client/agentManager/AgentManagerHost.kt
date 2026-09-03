@@ -22,6 +22,10 @@ class AgentManagerHost(private val project: Project) {
     private var onMove: ((String?, String, String) -> Unit)? = null
     private var onNew: (() -> Unit)? = null
     private var queued: (() -> Unit)? = null
+    // Which bind owns the callbacks currently installed. A tool window is not guaranteed to be
+    // disposed before its replacement is created -- a plugin reload creates the new one first -- so a
+    // disposer that cleared unconditionally would take the live callbacks down with the dead window.
+    private var generation = 0
 
     /**
      * Registers the tool window's worktree flows for the lifetime of [parent] (the tool window's
@@ -30,9 +34,11 @@ class AgentManagerHost(private val project: Project) {
      */
     @RequiresEdt
     fun bind(parent: Disposable, move: (String?, String, String) -> Unit, newWorktree: () -> Unit) {
+        val gen = ++generation
         onMove = move
         onNew = newWorktree
         Disposer.register(parent) {
+            if (gen != generation) return@register
             onMove = null
             onNew = null
         }

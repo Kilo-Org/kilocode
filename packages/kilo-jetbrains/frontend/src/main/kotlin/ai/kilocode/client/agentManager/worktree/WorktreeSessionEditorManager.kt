@@ -93,6 +93,10 @@ open class WorktreeSessionEditorManager(
     // once in start(), before the first session opens; see resolveBase().
     private var resolvedBase = false
     private var baseResolved = false
+    // The answer lands on the EDT after the lookup coroutine has already finished, so a second start()
+    // in between would launch a second lookup and open the first session twice. This spans the whole
+    // gap; the job's own lifetime does not.
+    private var resolving = false
     override val showsBranchDock: Boolean get() = base()
     override val supportsNewWorktree: Boolean get() = base()
     override val supportsMoveToWorktree: Boolean get() = base()
@@ -137,9 +141,14 @@ open class WorktreeSessionEditorManager(
             startSessions()
             return
         }
+        // A start() that arrives mid-lookup needs nothing: the lookup in flight opens the first session
+        // when it lands, and that is what this call would have done itself.
+        if (resolving) return
+        resolving = true
         cs.launch {
             val resolved = runCatching { resolveBase(worktree.directory) }.getOrDefault(false)
-            edt {
+            edt({ !Disposer.isDisposed(this@WorktreeSessionEditorManager) }) {
+                resolving = false
                 resolvedBase = resolved
                 baseResolved = true
                 startSessions()

@@ -224,12 +224,12 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     /**
      * Only offered from the base checkout's tab (not a linked worktree's own tab, see
      * [WorktreeSessionEditorManager.base]), for a real session that is not already being deleted, and
-     * hidden rather than disabled while the session is running -- matching the chat branch dock's
-     * Move to Worktree action.
+     * hidden rather than disabled while the session's turn is in flight -- the same states the chat
+     * branch dock hides its own Move to Worktree action in, see [SessionActivityKind.busy].
      */
     @RequiresEdt
     internal fun canMove(item: SessionDto?): Boolean =
-        manager.base() && canDelete(item) && manager.activity()[item?.id] != SessionActivityKind.RUNNING
+        manager.base() && canDelete(item) && manager.activity()[item?.id]?.busy() != true
 
     @RequiresEdt
     internal fun moveRow(item: SessionDto) {

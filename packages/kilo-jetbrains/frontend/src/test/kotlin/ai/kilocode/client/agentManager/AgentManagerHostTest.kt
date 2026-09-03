@@ -8,13 +8,16 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 @Suppress("UnstableApiUsage")
 class AgentManagerHostTest : BasePlatformTestCase() {
 
-    // The light test project (and its services, including this one) can be reused across test
-    // methods, so a request left queued by one test could otherwise leak into the next and fire
-    // against that test's handler with stale arguments. Rebinding a throwaway no-op handler flushes
-    // any such leftover request before it can do that.
+    // The light test project (and its services, including this one) can be reused across test methods,
+    // so a request left queued by one test would otherwise fire against the next test's handler with
+    // stale arguments. Binding a throwaway no-op handler swallows any such leftover, and disposing it
+    // right away -- as the newest binding, so its disposer is the one that still owns the callbacks --
+    // hands the next test an unbound host.
     override fun tearDown() {
         try {
-            edt { host().bind(Disposer.newDisposable(), move = { _, _, _ -> }, newWorktree = {}) }
+            val reset = Disposer.newDisposable("host reset")
+            edt { host().bind(reset, move = { _, _, _ -> }, newWorktree = {}) }
+            edt { Disposer.dispose(reset) }
         } finally {
             super.tearDown()
         }
@@ -85,6 +88,23 @@ class AgentManagerHostTest : BasePlatformTestCase() {
         edt { host.move("ses_1", "/repo/wt", "session_list") }
 
         assertTrue(moves.isEmpty())
+    }
+
+    fun `test disposing a replaced tool window leaves the newer handlers installed`() {
+        // A plugin reload creates the replacement tool window before disposing the old one, so the old
+        // disposable fires last and must not take the live callbacks with it.
+        val host = host()
+        val old = mutableListOf<String?>()
+        val new = mutableListOf<String?>()
+        val first = Disposer.newDisposable("old tool window")
+        edt { host.bind(first, move = { id, _, _ -> old += id }, newWorktree = {}) }
+        edt { host.bind(testRootDisposable, move = { id, _, _ -> new += id }, newWorktree = {}) }
+
+        edt { Disposer.dispose(first) }
+        edt { host.move("ses_1", "/repo/wt", "session_list") }
+
+        assertEquals(listOf<String?>("ses_1"), new)
+        assertTrue(old.isEmpty())
     }
 
     private fun host(): AgentManagerHost = project.service<AgentManagerHost>()

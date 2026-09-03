@@ -426,6 +426,41 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(edt { manager.base() })
     }
 
+    fun `test a start during the lookup neither repeats it nor opens a second session`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        var calls = 0
+        val gate = CompletableDeferred<Unit>()
+        val manager = manager(resolveBase = { calls++; gate.await(); true })
+
+        edt { manager.start() }
+        flush()
+        // The migration path calls start() again, and a tab shown twice can too, both while the lookup
+        // is still out.
+        edt { manager.start() }
+        flush()
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(1, calls)
+        assertEquals(listOf(DIR to "ses_1"), created)
+        assertTrue(edt { manager.base() })
+    }
+
+    fun `test a lookup that lands after disposal opens nothing`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        val gate = CompletableDeferred<Unit>()
+        val manager = manager(resolveBase = { gate.await(); true })
+
+        edt { manager.start() }
+        flush()
+        edt { Disposer.dispose(manager) }
+        gate.complete(Unit)
+        flush()
+
+        assertTrue("no session may open for a disposed editor, opened $created", created.isEmpty())
+        assertFalse(edt { manager.base() })
+    }
+
     fun `test the first session still opens once base resolution settles`() {
         rpc.listed += session("ses_old", updated = 1.0)
         rpc.listed += session("ses_new", updated = 3.0)
