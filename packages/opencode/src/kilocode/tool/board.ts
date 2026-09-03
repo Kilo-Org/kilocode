@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Config } from "@/config/config"
 import { BackgroundJob } from "@/background/job"
-import { SessionID } from "@/session/schema"
 import { SessionStatus } from "@/session/status"
 import { Tool } from "@/tool/tool"
 import { BoardStore } from "@/kilocode/board/store"
@@ -25,14 +24,53 @@ const Post = Schema.Struct({
   }),
 })
 
-type ReadMeta = { cursor?: string; hasMore: boolean; truncated: boolean }
-type PostMeta = { id: string; to: string; type: BoardStore.Kind; truncated: boolean }
+type ReadMeta = {
+  cursor?: string
+  hasMore: boolean
+  truncated: boolean
+  participants: BoardStore.Participant[]
+  participantsTruncated: boolean
+  observedAt: number
+}
+type PostMeta = {
+  id: string
+  from: string
+  to: string
+  fromLabel?: string
+  toLabel?: string
+  type: BoardStore.Kind
+  truncated: boolean
+  availability: Effect.Success<ReturnType<typeof BoardStore.availability>>
+}
 
-export const BoardReadTool = Tool.define<typeof Read, ReadMeta, Config.Service | Database.Service, "board_read">(
+const snapshot = Effect.fn("BoardTools.snapshot")(function* (
+  jobs: BackgroundJob.Interface,
+  status: SessionStatus.Interface,
+) {
+  const sessions = new Map<string, BoardStore.Execution>()
+  for (const job of yield* jobs.list()) {
+    if (job.type !== "task") continue
+    sessions.set(job.id, { state: job.status, updated: job.started_at })
+  }
+  for (const [id, value] of yield* status.list()) {
+    if (value.type === "idle") continue
+    sessions.set(id, { state: value.type, updated: sessions.get(id)?.updated })
+  }
+  return { observedAt: Date.now(), sessions } satisfies BoardStore.Snapshot
+})
+
+export const BoardReadTool = Tool.define<
+  typeof Read,
+  ReadMeta,
+  Config.Service | Database.Service | BackgroundJob.Service | SessionStatus.Service,
+  "board_read"
+>(
   "board_read",
   Effect.gen(function* () {
     const config = yield* Config.Service
     const database = yield* Database.Service
+    const jobs = yield* BackgroundJob.Service
+    const status = yield* SessionStatus.Service
     return {
       description:
         "Read the shared board for this main session and its task children. Work independently by default. " +
@@ -54,11 +92,19 @@ export const BoardReadTool = Tool.define<typeof Read, ReadMeta, Config.Service |
             sessionID: ctx.sessionID,
             since: params.since?.trim() || undefined,
             limit: params.limit ?? undefined,
+            snapshot: yield* snapshot(jobs, status),
           }).pipe(Effect.provideService(Database.Service, database))
           return {
             title: "Shared agent board",
             output: JSON.stringify(result),
-            metadata: { cursor: result.cursor, hasMore: result.hasMore, truncated: false },
+            metadata: {
+              cursor: result.cursor,
+              hasMore: result.hasMore,
+              truncated: false,
+              participants: result.participants,
+              participantsTruncated: result.participantsTruncated ?? false,
+              observedAt: result.observedAt,
+            },
           }
         }).pipe(Effect.orDie),
     }
@@ -108,24 +154,40 @@ export const BoardPostTool = Tool.define<
             messageID: ctx.messageID,
             callID: ctx.callID,
           }).pipe(Effect.provideService(Database.Service, database))
-          const target =
-            message.to === "ALL"
-              ? undefined
-              : message.to === "main"
-                ? (yield* BoardStore.scope(ctx.sessionID).pipe(Effect.provideService(Database.Service, database))).root
-                : SessionID.make(message.to)
-          const job = target === undefined ? undefined : yield* jobs.get(target)
-          const inactive =
-            target !== undefined &&
-            job?.type === "task" &&
-            (job.status === "completed" || job.status === "error" || job.status === "cancelled") &&
-            (yield* status.get(target)).type === "idle"
+          const availability = yield* BoardStore.availability({
+            sessionID: ctx.sessionID,
+            to: message.to,
+            snapshot: yield* snapshot(jobs, status),
+          }).pipe(Effect.provideService(Database.Service, database))
+          const warning = [
+            availability.active === 0 &&
+              availability.unknown === 0 &&
+              "No other recipients were active at this post attempt.",
+            availability.inactive > 0 &&
+              `${availability.inactive} recipient(s) had finished invocations at this post attempt.`,
+            availability.unknown > 0 &&
+              `Availability was unknown for ${availability.unknown} recipient(s) at this post attempt.`,
+          ]
+            .filter(Boolean)
+            .join(" ")
           return {
             title: `${message.type} to ${message.to}`,
-            output: inactive
-              ? JSON.stringify({ ...message, warning: "Stored only; resume the task to request work." })
-              : BoardStore.format(message),
-            metadata: { id: message.id, to: message.to, type: message.type, truncated: false },
+            output: JSON.stringify({
+              ...message,
+              availability,
+              receipt: "Stored only. This does not confirm delivery, reading, or action, and does not wake recipients.",
+              ...(warning ? { warning } : {}),
+            }),
+            metadata: {
+              id: message.id,
+              from: message.from,
+              to: message.to,
+              ...(message.fromLabel === undefined ? {} : { fromLabel: message.fromLabel }),
+              ...(message.toLabel === undefined ? {} : { toLabel: message.toLabel }),
+              type: message.type,
+              availability,
+              truncated: false,
+            },
           }
         }).pipe(Effect.orDie),
     }
