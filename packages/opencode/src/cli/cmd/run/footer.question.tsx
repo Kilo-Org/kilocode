@@ -41,6 +41,7 @@ import {
   questionTabs,
   questionTotal,
 } from "./question.shared"
+import { questionAdvance } from "@/kilocode/cli/cmd/run/question.shared" // kilocode_change
 import { footerWidthPolicy } from "./footer.width"
 import type { RunFooterTheme } from "./theme"
 import type { QuestionReject, QuestionReply } from "./types"
@@ -67,7 +68,7 @@ export function RunQuestionBody(props: {
     }
 
     if (info()?.multiple) {
-      return "toggle"
+      return "next" // kilocode_change
     }
 
     if (single()) {
@@ -232,6 +233,30 @@ export function RunQuestionBody(props: {
       }
       return
     }
+
+    // kilocode_change start - space toggles a multiple-choice option, enter advances
+    if (info()?.multiple) {
+      if (event.name === "space") {
+        select()
+        event.preventDefault()
+        return
+      }
+
+      if (event.name === "return") {
+        const next = questionAdvance(cur, props.request)
+        if (next.state !== cur) {
+          setState(next.state)
+        }
+
+        if (next.reply) {
+          void beginReply(next.reply)
+        }
+
+        event.preventDefault()
+        return
+      }
+    }
+    // kilocode_change end
 
     const total = questionTotal(props.request, cur)
     const max = Math.min(total, 9)
@@ -577,6 +602,13 @@ export function RunQuestionBody(props: {
                 <text fg={props.theme.text}>
                   {"↑↓"} <span style={{ fg: props.theme.muted }}>select</span>
                 </text>
+                {/* kilocode_change start - multiple-choice questions toggle with space */}
+                <Show when={info()?.multiple}>
+                  <text fg={props.theme.text}>
+                    space <span style={{ fg: props.theme.muted }}>toggle</span>
+                  </text>
+                </Show>
+                {/* kilocode_change end */}
               </Show>
               <text fg={props.theme.text}>
                 enter <span style={{ fg: props.theme.muted }}>{verb()}</span>
