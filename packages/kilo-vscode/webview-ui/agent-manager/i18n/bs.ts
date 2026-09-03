@@ -275,4 +275,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Pokrenite 'gh auth login' u terminalu da vratite status PR-a.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI nije instaliran",
   "agentManager.pr.error.gh_missing.description": "Instalirajte GitHub CLI da omogućite status PR-a.",
+  "agentManager.intro.title": "Paralelni zadaci. Odvojeni worktree-i.",
+  "agentManager.intro.subtitle":
+    "Worktree je zaseban folder i grana za zadatak. Agenti mogu raditi usporedno bez uređivanja istih datoteka.",
+  "agentManager.intro.graph.agent": "Kilo agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Ako se promjene sukobe",
+  "agentManager.intro.conflictText":
+    "Zamolite agenta u worktree-u da spoji svoju originalnu osnovnu granu i riješi konflikte, a zatim pregledajte rezultat. Izbjegavajte git stash: stash-ovi se dijele između worktree-a.",
+  "agentManager.intro.stage1.title": "Vaš repozitorij",
+  "agentManager.intro.stage1.text": "Lokalne datoteke ostaju nepromijenjene",
+  "agentManager.intro.stage2.title": "Primjer: dva zadatka paralelno",
+  "agentManager.intro.stage2.text":
+    "Oba worktree-a pripadaju ovom repozitoriju. Za drugi repozitorij odaberite drugi projekt.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Vlastiti folder i grana",
+  "agentManager.intro.stage4.title": "Vratite promjene kada budete spremni",
+  "agentManager.intro.stage4.text": "Zamolite agenta da otvori pull request ili koristite Apply u diff panelu.",
+  "agentManager.intro.prDetection":
+    "PR oznake se automatski ažuriraju za svaki worktree branch (potrebna je prijava u GitHub CLI).",
+  "agentManager.intro.checksRunning": "Provjere u toku",
+  "agentManager.intro.approved": "Odobreno",
+  "agentManager.intro.create": "Kreiraj worktree",
+  "agentManager.intro.guide": "Pročitajte vodič",
+  "agentManager.intro.dismiss": "Preskoči uvod",
+  "agentManager.intro.reopen": "Kako radi Agent Manager",
 }

@@ -20,6 +20,8 @@ import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
@@ -106,6 +108,7 @@ export class VscodeHost implements Host {
       title: "Agent Manager",
       port,
       browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
       frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
@@ -144,16 +147,18 @@ export class VscodeHost implements Host {
     const unsubscribe = this.caffeination?.onChange(snapshot)
     panel.onDidDispose(() => unsubscribe?.())
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: async (message) => {
-        if (message.type === "agentManager.setCaffeination") {
-          if (typeof message.enabled === "boolean") await this.caffeination?.setEnabled(message.enabled)
+      onBeforeMessage: async (msg) => {
+        if (msg.type === "agentManager.setCaffeination") {
+          if (typeof msg.enabled === "boolean") await this.caffeination?.setEnabled(msg.enabled)
           return null
         }
-        if (message.type === "agentManager.requestCaffeination") {
+        if (msg.type === "agentManager.requestCaffeination") {
           snapshot()
           return null
         }
-        return opts.onBeforeMessage(message)
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
       },
     })
     provider.setStreamVisibility(panel.active && panel.visible)

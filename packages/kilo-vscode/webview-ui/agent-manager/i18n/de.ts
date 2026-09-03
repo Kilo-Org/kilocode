@@ -280,4 +280,30 @@ export const dict = {
     "Führen Sie 'gh auth login' in Ihrem Terminal aus, um den PR-Status wiederherzustellen.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI nicht installiert",
   "agentManager.pr.error.gh_missing.description": "Installieren Sie die GitHub CLI, um den PR-Status zu aktivieren.",
+  "agentManager.intro.title": "Parallele Aufgaben. Getrennte Worktrees.",
+  "agentManager.intro.subtitle":
+    "Ein Worktree ist ein separater Ordner und Branch für eine Aufgabe. Ihre Agenten können nebeneinander arbeiten, ohne dieselben Dateien zu ändern.",
+  "agentManager.intro.graph.agent": "Kilo-Agent",
+  "agentManager.intro.graph.pr": "Pull Request",
+  "agentManager.intro.graph.conflict": "Bei Konflikten",
+  "agentManager.intro.stage1.title": "Ihr Repository",
+  "agentManager.intro.stage1.text": "Lokale Dateien bleiben unverändert",
+  "agentManager.intro.stage2.title": "Beispiel: zwei Aufgaben parallel",
+  "agentManager.intro.stage2.text":
+    "Beide Worktrees gehören zu diesem Repository. Für ein anderes Repository wählen Sie ein anderes Projekt.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Eigener Ordner und Branch",
+  "agentManager.intro.stage4.title": "Änderungen zurückholen, wenn Sie bereit sind",
+  "agentManager.intro.stage4.text":
+    "Bitten Sie den Agenten in jedem Worktree, einen Pull Request zu öffnen. Oder verwenden Sie Apply im Diff-Panel, um Änderungen nach Local zu kopieren.",
+  "agentManager.intro.conflictText":
+    "Bitten Sie den Agenten im Worktree, seinen ursprünglichen Basis-Branch zu mergen und Konflikte zu lösen, und prüfen Sie anschließend das Ergebnis. Vermeiden Sie git stash: Stashes werden zwischen Worktrees geteilt.",
+  "agentManager.intro.prDetection":
+    "PR-Abzeichen werden für jeden Worktree-Branch automatisch aktualisiert (GitHub CLI-Anmeldung erforderlich).",
+  "agentManager.intro.checksRunning": "Prüfungen laufen",
+  "agentManager.intro.approved": "Genehmigt",
+  "agentManager.intro.create": "Worktree erstellen",
+  "agentManager.intro.guide": "Anleitung lesen",
+  "agentManager.intro.dismiss": "Einführung überspringen",
+  "agentManager.intro.reopen": "So funktioniert Agent Manager",
 }

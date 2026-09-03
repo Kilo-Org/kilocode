@@ -868,6 +868,11 @@ export interface AgentManagerCopyToClipboardRequest {
   text: string
 }
 
+export interface AgentManagerSetIntroDismissedRequest {
+  type: "agentManager.setIntroDismissed"
+  dismissed: boolean
+}
+
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
   type: "copyToClipboard"
@@ -1673,6 +1678,7 @@ export type WebviewMessage =
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | AgentManagerCopyToClipboardRequest
+  | AgentManagerSetIntroDismissedRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest

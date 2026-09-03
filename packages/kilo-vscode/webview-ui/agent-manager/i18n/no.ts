@@ -275,4 +275,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Kjør 'gh auth login' i terminalen for å gjenopprette PR-status.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI er ikke installert",
   "agentManager.pr.error.gh_missing.description": "Installer GitHub CLI for å aktivere PR-status.",
+  "agentManager.intro.title": "Parallelle oppgaver. Separate worktrees.",
+  "agentManager.intro.subtitle":
+    "Et worktree er en separat mappe og branch for en oppgave. Agentene dine kan jobbe side om side uten å redigere de samme filene.",
+  "agentManager.intro.graph.agent": "Kilo-agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Hvis endringer kommer i konflikt",
+  "agentManager.intro.conflictText":
+    "Be agenten i worktree-et om å slå sammen den opprinnelige base-branchen og løse konflikter, og gå deretter gjennom resultatet. Unngå git stash: stash deles mellom worktrees.",
+  "agentManager.intro.stage1.title": "Ditt repositorium",
+  "agentManager.intro.stage1.text": "Lokale filer forblir uendret",
+  "agentManager.intro.stage2.title": "Eksempel: to oppgaver parallelt",
+  "agentManager.intro.stage2.text":
+    "Begge worktrees tilhører dette repositoriet. Velg et annet prosjekt for et annet repositorium.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Egen mappe + branch",
+  "agentManager.intro.stage4.title": "Ta endringene tilbake når du er klar",
+  "agentManager.intro.stage4.text": "Be agenten åpne en pull request, eller bruk Apply i diff-panelet.",
+  "agentManager.intro.prDetection":
+    "PR-merker oppdateres automatisk for hver worktree-branch (pålogging i GitHub CLI kreves).",
+  "agentManager.intro.checksRunning": "Kontroller kjører",
+  "agentManager.intro.approved": "Godkjent",
+  "agentManager.intro.create": "Opprett et worktree",
+  "agentManager.intro.guide": "Les veiledningen",
+  "agentManager.intro.dismiss": "Hopp over introduksjonen",
+  "agentManager.intro.reopen": "Slik fungerer Agent Manager",
 }
