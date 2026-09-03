@@ -44,6 +44,7 @@ export type ExecuteOptions<Tools extends Record<string, unknown> = {}> = {
   onToolCallStart?: (call: ToolRuntime.ToolCallStarted) => Effect.Effect<void, never, Services<Tools>>
   /** Observes each admitted tool call as it settles, with outcome and duration. */
   onToolCallEnd?: (call: ToolRuntime.ToolCallEnded) => Effect.Effect<void, never, Services<Tools>>
+  onWait?: (waiting: boolean) => void // kilocode_change
 }
 
 /** A JSON value that can cross the confined interpreter boundary. */

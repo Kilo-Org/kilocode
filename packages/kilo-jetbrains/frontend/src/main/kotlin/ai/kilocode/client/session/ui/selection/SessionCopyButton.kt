@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.selection
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
+import ai.kilocode.client.ui.copyImage
 import ai.kilocode.client.ui.toolbarButton
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.IconLoader
@@ -13,17 +14,20 @@ import java.awt.Point
 import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import javax.swing.Icon
 
 internal class SessionCopyButton(
     fill: Boolean = false,
     tooltip: String = KiloBundle.message("session.copy.hover"),
+    icon: Icon = COPY_ICON,
+    private val image: () -> BufferedImage? = { null },
     private val text: () -> String?,
 ) {
     private var balloon: Balloon? = null
     val button = toolbarButton(
         ToolbarButtonAction(
-            COPY_ICON,
+            icon,
             tooltip,
         ) { copy() },
         fill,
@@ -45,8 +49,7 @@ internal class SessionCopyButton(
 
     @RequiresEdt
     fun copy() {
-        val value = text()?.takeIf { it.isNotEmpty() } ?: return
-        CopyPasteManager.getInstance().setContents(StringSelection(value))
+        if (!put()) return
         dismiss()
         balloon = JBPopupFactory.getInstance()
             .createHtmlTextBalloonBuilder(KiloBundle.message("session.copy.copied"), null, null, null)
@@ -55,6 +58,24 @@ internal class SessionCopyButton(
                 item.setAnimationEnabled(false)
                 item.show(RelativePoint(button, Point(button.width / 2, 0)), Balloon.Position.above)
             }
+    }
+
+    /**
+     * Writes the clipboard and reports whether anything was put there.
+     *
+     * A picture wins over text, so a rendered diagram is pasted as an image while everything else (and
+     * a diagram that is still streaming or failed to render) keeps copying its text.
+     */
+    @RequiresEdt
+    private fun put(): Boolean {
+        val picture = image()
+        if (picture != null) {
+            copyImage(picture)
+            return true
+        }
+        val value = text()?.takeIf { it.isNotEmpty() } ?: return false
+        CopyPasteManager.getInstance().setContents(StringSelection(value))
+        return true
     }
 
     companion object {

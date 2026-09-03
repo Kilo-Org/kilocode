@@ -1,7 +1,9 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
+import ai.kilocode.client.settings.integrations.IntegrationsConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
@@ -34,6 +36,14 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     fun `test child context id matches xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.context", ContextConfigurable.ID)
+    }
+
+    fun `test child integrations id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.integrations", IntegrationsConfigurable.ID)
+    }
+
+    fun `test child advanced id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.advanced", AdvancedConfigurable.ID)
     }
 
     fun `test child provider and behavior ids match xml registration`() {
@@ -110,7 +120,10 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Auto-Approve", "Context"), labels)
+            assertEquals(
+                listOf("User Profile", "Models", "Providers", "Agent Behavior", "Auto-Approve", "Context", "Integrations", "Advanced"),
+                labels,
+            )
         }
     }
 
@@ -141,12 +154,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     // -- helpers --
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun links(root: Container): List<ActionLink> = buildList {
         for (comp in root.components) {

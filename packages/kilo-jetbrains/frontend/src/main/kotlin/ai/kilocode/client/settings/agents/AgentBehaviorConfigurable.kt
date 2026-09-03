@@ -27,6 +27,7 @@ class AgentBehaviorConfigurable : SearchableConfigurable {
             KiloBundle.message("settings.agentBehavior.agents.displayName") to AgentsConfigurable.ID,
             KiloBundle.message("settings.agentBehavior.mcp.displayName") to McpConfigurable.ID,
             KiloBundle.message("settings.agentBehavior.skills.displayName") to SkillsConfigurable.ID,
+            KiloBundle.message("settings.agentBehavior.workflows.displayName") to WorkflowsConfigurable.ID,
             KiloBundle.message("settings.agentBehavior.rules.displayName") to RulesConfigurable.ID,
         ).forEach { (label, id) ->
             panel.next(ActionLink(label) { e ->

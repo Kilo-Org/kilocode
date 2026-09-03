@@ -36,6 +36,8 @@ class SessionLayout(
 
     private val cache = IdentityHashMap<Component, Measured>()
 
+    var maxWidth: ((Container) -> Int)? = null
+
     override fun addLayoutComponent(name: String, comp: Component) = Unit
     override fun removeLayoutComponent(comp: Component) {
         cache.remove(comp)
@@ -50,7 +52,7 @@ class SessionLayout(
             if (!comp.isVisible) continue
             if (!first) h += gap(comp)
             first = false
-            val child = bounds(ins, w, comp)
+            val child = bounds(parent, ins, w, comp)
             h += measure(comp, child.width)
         }
         // w and h are already scaled px (child preferred heights + scaled gaps/insets) and
@@ -70,7 +72,7 @@ class SessionLayout(
             if (!comp.isVisible) continue
             if (!first) y += gap(comp)
             first = false
-            val child = bounds(ins, w, comp)
+            val child = bounds(parent, ins, w, comp)
             val h = measure(comp, child.width)
             comp.setBounds(child.left, y, child.width, h)
             y += h
@@ -106,13 +108,20 @@ class SessionLayout(
         return h
     }
 
-    private fun bounds(ins: Insets, width: Int, comp: Component): Bounds {
-        val view = view(comp) ?: return Bounds(ins.left, width)
-        if (view.sessionViewKind != SessionView.Kind.UserPrompt) return Bounds(ins.left, width)
+    private fun bounds(parent: Container, ins: Insets, width: Int, comp: Component): Bounds {
+        val lane = lane(parent, ins, width)
+        val view = view(comp) ?: return lane
+        if (view.sessionViewKind != SessionView.Kind.UserPrompt) return lane
         val shift = JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)
-        val next = width - shift
-        if (next < JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)) return Bounds(ins.left, width)
-        return Bounds(ins.left + shift, next)
+        val next = lane.width - shift
+        if (next < JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)) return lane
+        return Bounds(lane.left + shift, next)
+    }
+
+    private fun lane(parent: Container, ins: Insets, width: Int): Bounds {
+        val cap = maxWidth?.invoke(parent) ?: width
+        val w = minOf(width, cap.coerceAtLeast(0))
+        return Bounds(ins.left + (width - w) / 2, w)
     }
 
     private fun insets(parent: Container): Insets {

@@ -1,6 +1,7 @@
-import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { ConnectionState } from "../cli-backend/connection-service"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
+import { feed } from "./feed"
 import { createCaffeinationDriver, type CaffeinationDriver } from "./inhibitor"
 
 export interface CaffeinationState {
@@ -11,6 +12,12 @@ export interface CaffeinationState {
 }
 
 type Listener = (state: CaffeinationState) => void
+
+type Run = {
+  epoch: number
+  error?: Error
+  stopping: boolean
+}
 
 interface Connection {
   onEvent(listener: (event: SSEPayload, directory?: string) => void): () => void
@@ -24,19 +31,11 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function key(dir: string | undefined, sessionID: string): string {
-  return `${dir ?? "*"}\u0000${sessionID}`
-}
-
-function active(status: SessionStatus | undefined): boolean {
-  return status?.type === "busy" || status?.type === "retry"
-}
-
 export class CaffeinationService {
   private readonly driver: CaffeinationDriver
   private readonly connection: Connection
-  private readonly sessions = new Set<string>()
-  private revision = 0
+  private readonly projection: ReturnType<typeof feed>
+  private busy = false
   private readonly listeners = new Set<Listener>()
   private readonly unsubscribeEvent: () => void
   private readonly unsubscribeState: () => void
@@ -44,6 +43,8 @@ export class CaffeinationService {
   private state: CaffeinationState
   private retried = false
   private disposed = false
+  private epoch = 0
+  private run: Run | undefined
   private closing: Promise<void> | undefined
 
   constructor(connection: Connection, driver: CaffeinationDriver = createCaffeinationDriver()) {
@@ -55,9 +56,19 @@ export class CaffeinationService {
       available: driver.available,
       ...(driver.reason && !driver.available ? { error: driver.reason } : {}),
     }
-    this.unsubscribeEvent = connection.onEvent((event, directory) => this.event(event, directory))
+    this.projection = feed({
+      paths: () => connection.getKnownDirectories(),
+      watching: () => this.watching(),
+      load: (dir) => this.load(dir),
+      post: (busy) => {
+        if (this.busy === busy) return
+        this.busy = busy
+        if (!busy) this.epoch++
+        void this.queue()
+      },
+    })
+    this.unsubscribeEvent = connection.onEvent((event, directory) => this.projection.event(event, directory))
     this.unsubscribeState = connection.onStateChange((state) => this.connectionState(state))
-    if (connection.getConnectionState() === "connected") void this.refresh()
   }
 
   getState(): CaffeinationState {
@@ -70,74 +81,56 @@ export class CaffeinationService {
   }
 
   setEnabled(enabled: boolean): Promise<void> {
-    if (this.disposed || this.state.enabled === enabled) return this.work
+    if (this.disposed) return this.closing ?? this.work
+    if (this.state.enabled === enabled && (enabled || !this.run)) return this.work
     this.retried = false
-    this.revision++
+    this.epoch++
     this.update({
       enabled,
       available: this.driver.available,
       error: this.driver.available ? undefined : this.driver.reason,
     })
-    if (enabled) void this.refresh()
+    if (enabled) return this.refresh()
+    this.projection.clear()
     return this.queue()
   }
 
   async refresh(): Promise<void> {
-    if (this.disposed || this.connection.getConnectionState() !== "connected") return
-    const revision = this.revision
-    const client = await Promise.resolve()
-      .then(() => this.connection.getClient())
-      .catch((error: unknown) => {
-        console.warn("[Kilo New] Caffeination status refresh failed:", error)
-        return undefined
-      })
-    if (!client || this.disposed || this.connection.getConnectionState() !== "connected") return
-
-    const results = await Promise.all(
-      this.connection.getKnownDirectories().map((dir) =>
-        client.session
-          .status({ directory: dir })
-          .then((result) => (result.data ? { dir, data: result.data } : undefined))
-          .catch((error: unknown) => {
-            console.warn(`[Kilo New] Caffeination status refresh failed for ${dir}:`, error)
-            return undefined
-          }),
-      ),
-    )
-    if (revision !== this.revision || this.disposed) return
-
-    const sessions = new Set(this.sessions)
-    for (const result of results) {
-      if (!result) continue
-      const prefix = `${result.dir}\u0000`
-      const returned = new Set<string>()
-      for (const [sessionID, status] of Object.entries(result.data) as [string, SessionStatus][]) {
-        const id = key(result.dir, sessionID)
-        returned.add(id)
-        if (active(status)) sessions.add(id)
-        else sessions.delete(id)
-      }
-      for (const id of sessions) {
-        if (id.startsWith(prefix) && !returned.has(id)) sessions.delete(id)
-      }
-    }
-    this.sessions.clear()
-    for (const id of sessions) this.sessions.add(id)
+    if (!this.watching()) return
+    await this.projection.sync()
     await this.queue()
+  }
+
+  private load(dir: string) {
+    return Promise.resolve()
+      .then(async () => {
+        if (!this.watching()) return {}
+        const status = await this.connection.getClient().session.status({ directory: dir }, { throwOnError: true })
+        if (!status.data) throw new Error("Incomplete session activity")
+        return status.data
+      })
+      .catch((error: unknown) => {
+        console.warn(`[Kilo New] Caffeination activity refresh failed for ${dir}:`, error)
+        return {}
+      })
   }
 
   dispose(): Promise<void> {
     if (this.closing) return this.closing
     this.disposed = true
+    this.epoch++
     this.unsubscribeEvent()
     this.unsubscribeState()
-    this.sessions.clear()
+    this.projection.dispose()
+    this.busy = false
     this.listeners.clear()
-    const stop = () =>
-      this.driver.stop().catch((error: unknown) => {
-        console.warn("[Kilo New] Failed to stop caffeination:", error)
+    this.update({ enabled: false })
+    this.closing = this.work
+      .then(() => this.stop())
+      .catch((error: unknown) => {
+        this.fail(error)
+        throw error
       })
-    this.closing = this.work.then(stop, stop)
     return this.closing
   }
 
@@ -147,86 +140,84 @@ export class CaffeinationService {
     return this.work
   }
 
-  private event(event: SSEPayload, directory?: string): void {
-    if (this.disposed) return
-    if (event.type === "session.status") {
-      const id = key(directory, event.properties.sessionID)
-      this.revision++
-      if (active(event.properties.status)) this.sessions.add(id)
-      else this.sessions.delete(id)
-      this.removeFallback(directory, event.properties.sessionID)
-      void this.queue()
-      return
-    }
-    if (
-      event.type === "session.deleted" ||
-      event.type === "session.error" ||
-      event.type === "session.idle" ||
-      event.type === "session.turn.close"
-    ) {
-      const sessionID = (event.properties as { sessionID?: string }).sessionID
-      if (!sessionID) return
-      const id = key(directory, sessionID)
-      this.revision++
-      this.sessions.delete(id)
-      this.removeFallback(directory, sessionID)
-      void this.queue()
-    }
-  }
-
-  private removeFallback(directory: string | undefined, sessionID: string): void {
-    if (directory !== undefined) {
-      this.sessions.delete(key(undefined, sessionID))
-      return
-    }
-    for (const id of this.sessions) {
-      if (id.endsWith(`\u0000${sessionID}`)) this.sessions.delete(id)
-    }
-  }
-
   private connectionState(state: ConnectionState): void {
     if (this.disposed) return
     if (state === "connected") {
       void this.refresh()
       return
     }
-    if (state !== "error" && state !== "disconnected") return
-    this.revision++
-    this.sessions.clear()
-    void this.queue()
+    this.epoch++
+    this.projection.clear()
+    if (this.run) void this.queue()
+  }
+
+  private watching(): boolean {
+    return (
+      !this.disposed &&
+      this.state.enabled &&
+      this.driver.available &&
+      this.connection.getConnectionState() === "connected"
+    )
+  }
+
+  private wants(): boolean {
+    return this.watching() && this.busy
   }
 
   private async reconcile(): Promise<void> {
-    if (this.disposed) return
-    const wants = this.state.enabled && this.sessions.size > 0
-    if (!wants) {
-      await this.driver.stop()
-      if (this.state.active) this.update({ active: false })
+    const prior = this.run
+    if (prior && (!this.wants() || prior.epoch !== this.epoch || prior.error)) {
+      await this.stop()
+      if (prior.error && prior.epoch === this.epoch && this.wants()) {
+        this.recover(prior.error)
+        return
+      }
+    }
+    if (!this.wants() || !this.state.available || this.run) return
+    const run: Run = { epoch: this.epoch, stopping: false }
+    this.run = run
+    try {
+      await this.driver.start(process.pid, (error?: Error) => this.exited(run, error))
+    } catch (error) {
+      run.error = error instanceof Error ? error : new Error(message(error))
+    }
+    if (run.epoch !== this.epoch || !this.wants()) {
+      await this.stop()
       return
     }
-    if (!this.state.available || this.state.active) return
-    await this.driver.start(process.pid, () => this.exited())
-    if (this.disposed || !this.state.enabled) {
-      await this.driver.stop()
+    if (run.error) {
+      await this.stop()
+      this.recover(run.error)
       return
     }
     this.update({ active: true, error: undefined })
   }
 
-  private exited(): void {
-    if (this.disposed || !this.state.enabled || this.sessions.size === 0) return
-    this.update({ active: false, error: "The keep-awake process exited unexpectedly" })
-    if (this.retried) {
-      this.update({ available: false })
-      return
-    }
+  private async stop(): Promise<void> {
+    const run = this.run
+    if (!run) return
+    run.stopping = true
+    await this.driver.stop()
+    this.run = undefined
+    this.update({ active: false })
+  }
+
+  private exited(run: Run, error?: Error): void {
+    if (this.run !== run || run.stopping || run.error) return
+    run.error = error ?? new Error("The keep-awake process exited unexpectedly")
+    this.update({ active: false, error: run.error.message })
+    if (!this.disposed) void this.queue()
+  }
+
+  private recover(error: Error): void {
+    this.update({ active: false, available: !this.retried && this.driver.available, error: error.message })
+    if (this.retried || !this.driver.available) return
     this.retried = true
     void this.queue()
   }
 
   private fail(error: unknown): void {
-    if (this.disposed) return
-    this.update({ active: false, available: false, error: message(error) })
+    this.update({ available: false, error: message(error) })
   }
 
   private update(next: Partial<CaffeinationState>): void {

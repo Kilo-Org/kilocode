@@ -194,6 +194,7 @@ export const dict = {
   "ui.patch.action.created": "作成済み",
   "ui.patch.action.moved": "移動済み",
   "ui.patch.action.patched": "パッチ適用済み",
+  "ui.patch.action.plan": "計画", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}}件回答済み",
   "ui.question.answer.none": "(回答なし)",
@@ -228,11 +229,17 @@ export const dict = {
   "ui.message.deleteQueued": "キュー内のメッセージを削除",
   "ui.messagePart.mcp.input": "入力",
   "ui.messagePart.mcp.output": "出力",
+  "ui.messagePart.board.read": "エージェントのメッセージを読み込む",
+  "ui.messagePart.board.all": "すべてのエージェント",
+  "ui.messagePart.board.primary": "メインエージェント",
+  "ui.messagePart.board.agent": "エージェント",
+  "ui.messagePart.board.route": "{{from}} から {{to}} へ",
+  "ui.messagePart.board.empty": "エージェントのメッセージはありません",
+  "ui.messagePart.board.stored": "保存のみです。配信や読み取りは確認されていません。",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "変更あり",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} 行中 {{kept}} 行を保持",
   // kilocode_change end
 }

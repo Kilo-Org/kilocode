@@ -174,6 +174,7 @@ export const dict: Record<Keys, string> = {
   "ui.patch.action.created": "Opprettet",
   "ui.patch.action.moved": "Flyttet",
   "ui.patch.action.patched": "Oppdatert",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} besvart",
   "ui.question.answer.none": "(ingen svar)",
@@ -233,11 +234,19 @@ export const dict: Record<Keys, string> = {
   "ui.message.deleteQueued": "Slett melding i kø",
   "ui.messagePart.mcp.input": "Inndata",
   "ui.messagePart.mcp.output": "Utdata",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Les meldinger fra agenter",
+  "ui.messagePart.board.all": "Alle agenter",
+  "ui.messagePart.board.primary": "Hovedagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} til {{to}}",
+  "ui.messagePart.board.empty": "Ingen meldinger fra agenter",
+  "ui.messagePart.board.stored": "Kun lagret. Levering og lesing er ikke bekreftet.",
+  // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Endret",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} av {{total}} linjer beholdt",
   // kilocode_change end
 }

@@ -13,6 +13,7 @@ interface Props {
 export const CaffeinationButton: Component<Props> = (props) => {
   const label = () => {
     const state = props.state()
+    if (state.error) return state.error
     if (!state.available) return props.t("agentManager.caffeination.unavailable")
     if (state.active) return props.t("agentManager.caffeination.active")
     if (state.enabled) return props.t("agentManager.caffeination.armed")
@@ -24,11 +25,10 @@ export const CaffeinationButton: Component<Props> = (props) => {
       <IconButton
         icon="coffee"
         size="small"
-        variant="ghost"
-        label={label()}
-        aria-pressed={props.state().enabled}
-        class={props.state().active ? "am-tab-diff-btn-active" : ""}
-        disabled={!props.state().available}
+        variant={props.state().active ? "primary" : "ghost"}
+        aria-label={label()}
+        aria-pressed={props.state().enabled || props.state().active}
+        disabled={!props.state().available && !props.state().enabled && !props.state().active}
         onClick={props.onToggle}
       />
     </Tooltip>

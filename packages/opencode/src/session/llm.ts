@@ -28,6 +28,8 @@ import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { Activity } from "@/kilocode/session/activity"
+import { ActivityLLM } from "@/kilocode/session/activity-llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
@@ -298,6 +300,10 @@ const live: Layer.Layer<
       }
       // kilocode_change end
 
+      // kilocode_change start
+      const activity = yield* Activity.Pending
+      const wrapped = ActivityLLM.tools(activity, prepared.tools)
+      // kilocode_change end
       // Runtime seam: native is an opt-in adapter over @opencode-ai/llm. It
       // either returns a ready LLMEvent stream or a concrete fallback reason.
       if (flags.experimentalNativeLlm) {
@@ -307,15 +313,22 @@ const live: Layer.Layer<
           auth: info,
           llmClient,
           messages: prepared.messages,
-          tools: prepared.tools,
+          tools: wrapped, // kilocode_change
           toolChoice: input.toolChoice,
           temperature: prepared.params.temperature,
           topP: prepared.params.topP,
           topK: prepared.params.topK,
-          maxOutputTokens: prepared.params.maxOutputTokens,
+          // kilocode_change start
+          maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
+            model: input.model,
+            options: prepared.params.options,
+            maxOutputTokens: prepared.params.maxOutputTokens,
+          }),
+          // kilocode_change end
           providerOptions: prepared.params.options,
           headers: prepared.headers,
           abort: input.abort,
+          activity, // kilocode_change
         })
         if (native.type === "supported") {
           yield* Effect.logInfo("llm runtime selected", {
@@ -374,23 +387,26 @@ const live: Layer.Layer<
             l.info("repairing tool call", { tool: failed.toolCall.toolName, repaired: lower }) // kilocode_change
             return { ...failed.toolCall, toolName: lower }
           }
-          return {
-            ...failed.toolCall,
-            input: JSON.stringify({
-              tool: failed.toolCall.toolName,
-              error: failed.error.message,
-            }),
-            toolName: "invalid",
-          }
+          // kilocode_change start - surface the original tool-name error instead of a
+          // repaired call to the hidden "invalid" tool, which activeTools excludes and
+          // therefore fails with a confusing "unavailable tool 'invalid'" error
+          return null
+          // kilocode_change end
         },
         temperature: prepared.params.temperature,
         topP: prepared.params.topP,
         topK: prepared.params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, prepared.params.options),
         activeTools: Object.keys(prepared.tools).filter((x) => x !== "invalid"),
-        tools: prepared.tools,
+        // kilocode_change start
+        tools: wrapped, // kilocode_change
         toolChoice: input.toolChoice,
-        maxOutputTokens: prepared.params.maxOutputTokens,
+        maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
+          model: input.model,
+          options: prepared.params.options,
+          maxOutputTokens: prepared.params.maxOutputTokens,
+        }),
+        // kilocode_change end
         abortSignal: input.abort,
         ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
@@ -400,6 +416,7 @@ const live: Layer.Layer<
         model: wrapLanguageModel({
           model: language,
           middleware: [
+            ActivityLLM.middleware(activity), // kilocode_change
             {
               specificationVersion: "v3" as const,
               async transformParams(args) {

@@ -181,6 +181,7 @@ export const dict = {
   "ui.patch.action.created": "Erstellt",
   "ui.patch.action.moved": "Verschoben",
   "ui.patch.action.patched": "Gepatched",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} beantwortet",
   "ui.question.answer.none": "(keine Antwort)",
@@ -223,6 +224,15 @@ export const dict = {
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.messagePart.mcp.input": "Eingabe",
   "ui.messagePart.mcp.output": "Ausgabe",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Nachrichten von Agenten lesen",
+  "ui.messagePart.board.all": "Alle Agenten",
+  "ui.messagePart.board.primary": "Hauptagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} an {{to}}",
+  "ui.messagePart.board.empty": "Keine Nachrichten von Agenten",
+  "ui.messagePart.board.stored": "Nur gespeichert. Zustellung und Lesen sind nicht bestätigt.",
+  // kilocode_change end
   "ui.mermaid.rendering": "Mermaid-Diagramm wird gerendert...",
   "ui.mermaid.renderError": "Mermaid-Rendering fehlgeschlagen: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid-Diagramm kann nicht gerendert werden.",
@@ -233,7 +243,6 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopieren",
   "ui.mermaid.downloadSvg": "SVG herunterladen",
   "ui.mermaid.downloadPng": "PNG herunterladen",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} von {{total}} Zeilen behalten",
   "ui.message.deleteQueued": "Nachricht in Warteschlange löschen",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

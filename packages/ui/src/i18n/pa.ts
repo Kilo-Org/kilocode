@@ -89,6 +89,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "خیال اکٹھے ہو رہے نیں",
   "ui.sessionTurn.status.consideringNextSteps": "اگلے قدماں بارے سوچیا جا رہیا اے",
   "ui.messagePart.diagnostic.error": "نقص",
+  // kilocode_change start
+  "ui.messagePart.board.read": "ایجنٹاں دے سنیہے پڑھو",
+  "ui.messagePart.board.all": "سارے ایجنٹ",
+  "ui.messagePart.board.primary": "مُکھ ایجنٹ",
+  "ui.messagePart.board.agent": "ایجنٹ",
+  "ui.messagePart.board.route": "{{from}} توں {{to}} نوں",
+  "ui.messagePart.board.empty": "ایجنٹاں دا کوئی سنیہا نئیں",
+  "ui.messagePart.board.stored": "صرف محفوظ کیتا گیا اے۔ پہنچن تے پڑھے جان دی تصدیق نئیں ہوئی۔",
+  // kilocode_change end
   "ui.messagePart.title.edit": "ترمیم کرو",
   "ui.messagePart.title.write": "لکھو",
   "ui.messagePart.option.typeOwnAnswer": "اپنا جواب آپ ٹائپ کرو",
@@ -189,6 +198,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "بنایا گیا",
   "ui.patch.action.moved": "منتقل ہو گیا",
   "ui.patch.action.patched": "پیچ کیتا گیا",
+  "ui.patch.action.plan": "ਯੋਜਨਾ", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} جواب دتا گیا",
   "ui.question.answer.none": "(کوئی جواب نئیں)",
   "ui.question.review.notAnswered": "(جواب نئیں دتا گیا)",

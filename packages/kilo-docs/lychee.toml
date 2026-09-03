@@ -20,6 +20,9 @@ accept = [
 exclude = [
   '\.png$',
   'https://synthetic.new/user-settings/api',
+  # Synthetic's site intermittently returns 503 to automated link checks.
+  '^https?://synthetic\.new/?$',
+  '^https?://synthetic\.new/pricing/?$',
   'https://platform.slack-edge.com/img/add_to_slack.png',
   'https://console.groq.com/pages/models',
   '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',
@@ -57,6 +60,8 @@ exclude = [
   '^https?://aistudio\.google\.com/api-keys/?$',
   # Linear intermittently returns 503 to CI link checks.
   '^https?://linear\.app/?$',
+  # These VS Code Marketplace pages intermittently return 503 to automated link checks.
+  '^https://marketplace\.visualstudio\.com/items\?itemName=(connor4312\.esbuild-problem-matchers|dbaeumer\.vscode-eslint|esbenp\.prettier-vscode|Requesty\.requesty)$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',

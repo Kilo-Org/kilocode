@@ -103,6 +103,15 @@ export const dict = {
   "ui.messagePart.diagnostic.error": "Fejl",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Læs beskeder fra agenter",
+  "ui.messagePart.board.all": "Alle agenter",
+  "ui.messagePart.board.primary": "Hovedagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} til {{to}}",
+  "ui.messagePart.board.empty": "Ingen beskeder fra agenter",
+  "ui.messagePart.board.stored": "Kun gemt. Levering og læsning er ikke bekræftet.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",
@@ -137,7 +146,6 @@ export const dict = {
 
   "ui.tool.read": "Læs",
   "ui.tool.loaded": "Indlæst",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} af {{total}} linjer beholdt", // kilocode_change
   "ui.tool.list": "Liste",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -192,6 +200,7 @@ export const dict = {
   "ui.patch.action.created": "Oprettet",
   "ui.patch.action.moved": "Flyttet",
   "ui.patch.action.patched": "Patchet",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} besvaret",
   "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change

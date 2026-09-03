@@ -6,6 +6,7 @@ import { Tool } from "../../tool/tool"
 import { Suggestion } from "./index"
 import { SessionStatus } from "../../session/status"
 import { SessionID } from "../../session/schema"
+import { Activity } from "../session/activity"
 
 const log = Log.create({ service: "tool.suggest" })
 
@@ -102,7 +103,7 @@ export const SuggestTool = Tool.define<typeof Params, Meta, Command.Service | Se
               .finally(() => {
                 ctx.abort.removeEventListener("abort", listener)
               }),
-          )
+          ).pipe(Activity.wait)
 
           // Restore busy immediately on accept so the session doesn't flash idle
           // while the follow-up response is being generated. The next runLoop

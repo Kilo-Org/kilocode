@@ -18,6 +18,7 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
+import type { CaffeinationService } from "../services/caffeination"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -34,6 +35,7 @@ export class VscodeHost implements Host {
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
     private readonly remoteService: RemoteStatusService,
+    private readonly caffeination?: Pick<CaffeinationService, "getState" | "onChange" | "setEnabled">,
   ) {}
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
@@ -54,6 +56,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -85,6 +88,7 @@ export class VscodeHost implements Host {
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -101,15 +105,27 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -120,8 +136,22 @@ export class VscodeHost implements Host {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
     provider.setRemoteService(this.remoteService)
+    const snapshot = () => {
+      if (this.caffeination) {
+        void panel.webview.postMessage({ type: "agentManager.caffeination", ...this.caffeination.getState() })
+      }
+    }
+    const unsubscribe = this.caffeination?.onChange(snapshot)
+    panel.onDidDispose(() => unsubscribe?.())
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (message) => {
+        if (message.type === "agentManager.setCaffeination") {
+          if (typeof message.enabled === "boolean") await this.caffeination?.setEnabled(message.enabled)
+          return null
+        }
+        if (message.type === "agentManager.requestState") snapshot()
+        return opts.onBeforeMessage(message)
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -234,6 +264,10 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
   }
 
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
@@ -298,7 +332,7 @@ export class VscodeHost implements Host {
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
@@ -313,6 +347,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

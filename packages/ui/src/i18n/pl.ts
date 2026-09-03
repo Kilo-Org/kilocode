@@ -203,6 +203,7 @@ export const dict = {
   "ui.patch.action.created": "Utworzono",
   "ui.patch.action.moved": "Przeniesiono",
   "ui.patch.action.patched": "Załatano",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "Liczba odpowiedzi: {{count}}",
   "ui.question.answer.none": "(brak odpowiedzi)",
@@ -237,11 +238,17 @@ export const dict = {
   "ui.message.deleteQueued": "Usuń wiadomość z kolejki",
   "ui.messagePart.mcp.input": "Wejście",
   "ui.messagePart.mcp.output": "Wyjście",
+  "ui.messagePart.board.read": "Odczyt wiadomości agentów",
+  "ui.messagePart.board.all": "Wszystkie agenty",
+  "ui.messagePart.board.primary": "Agent główny",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "Nadawca: {{from}}, odbiorca: {{to}}",
+  "ui.messagePart.board.empty": "Brak wiadomości agentów",
+  "ui.messagePart.board.stored": "Tylko zapisano. Dostarczenie i odczytanie nie są potwierdzone.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Zmieniono",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · zachowano {{kept}} z {{total}} wierszy",
   // kilocode_change end
 }

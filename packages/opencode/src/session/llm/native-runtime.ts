@@ -18,6 +18,7 @@ import {
 } from "@opencode-ai/llm"
 import type { LLMClientShape } from "@opencode-ai/llm/route"
 import { LLMNative } from "./native-request"
+import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 export type RuntimeStatus =
   | { readonly type: "supported"; readonly apiKey: string; readonly baseURL?: string }
@@ -41,6 +42,7 @@ type StreamInput = {
   readonly providerOptions?: Record<string, any>
   readonly headers: Record<string, string>
   readonly abort: AbortSignal
+  readonly activity?: Activity.Request // kilocode_change
 }
 
 export function status(input: Pick<StreamInput, "model" | "provider" | "auth">): RuntimeStatus {
@@ -103,6 +105,7 @@ export function stream(input: StreamInput): StreamResult {
   const stream = Stream.scoped(
     Stream.unwrap(
       Effect.gen(function* () {
+        Activity.start(input.activity) // kilocode_change
         const settlements = yield* FiberSet.make<void>()
         const results = yield* Queue.unbounded<LLMEvent, Cause.Done>()
         const provider = input.llmClient
@@ -112,6 +115,13 @@ export function stream(input: StreamInput): StreamResult {
             }),
           )
           .pipe(
+            // kilocode_change start
+            Stream.tap((event) =>
+              Effect.sync(() => {
+                if (event.type === "tool-call" && !event.providerExecuted) Activity.reserve(input.activity, event.id)
+              }),
+            ),
+            // kilocode_change end
             Stream.flatMap((event) =>
               event.type !== "tool-call" || event.providerExecuted
                 ? Stream.make(event)
@@ -119,6 +129,7 @@ export function stream(input: StreamInput): StreamResult {
                     Stream.concat(
                       Stream.fromEffectDrain(
                         ToolRuntime.dispatch(tools, event).pipe(
+                          Effect.tap(() => Effect.sync(() => Activity.settle(input.activity, event.id))), // kilocode_change
                           Effect.flatMap((dispatched) => Queue.offerAll(results, dispatched.events)),
                           Effect.catchCause((cause) => Queue.failCause(results, cause)),
                           Effect.asVoid,
@@ -128,6 +139,7 @@ export function stream(input: StreamInput): StreamResult {
                     ),
                   ),
             ),
+            Stream.concat(Stream.fromEffectDrain(Effect.sync(() => Activity.finish(input.activity)))), // kilocode_change
             Stream.concat(
               Stream.fromEffectDrain(
                 FiberSet.awaitEmpty(settlements).pipe(Effect.andThen(Queue.end(results)), Effect.asVoid),

@@ -261,7 +261,13 @@ export namespace KiloSessionProcessor {
     usage: boolean
   }) {
     if (input.finish !== undefined && input.finish !== "unknown") return false
-    return !input.text && !input.reasoning && !input.tool && !input.usage
+    if (input.text || input.tool) return false
+    // Reasoning without text or tools has no actionable output. Retry it through
+    // the existing bounded recovery budget instead of silently settling unknown.
+    // Keeping this decision here avoids the unbounded loop caused by continuing
+    // every unknown finish at the prompt-loop boundary.
+    if (input.reasoning) return true
+    return !input.usage
   }
 
   export function blockRetry(error: ReturnType<typeof MessageV2.fromError>) {

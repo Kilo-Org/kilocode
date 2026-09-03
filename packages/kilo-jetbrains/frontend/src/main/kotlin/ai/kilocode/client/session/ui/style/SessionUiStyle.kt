@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Component
 import java.awt.Font
 import javax.swing.UIManager
 
@@ -75,6 +76,7 @@ object SessionUiStyle {
 
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
+        const val READABLE_COLUMNS = 98
         const val GAP = 3
         const val USER_PROMPT_GAP = 10
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
@@ -87,6 +89,11 @@ object SessionUiStyle {
 
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
+
+        fun readableWidth(component: Component, font: Font): Int {
+            val width = component.getFontMetrics(font).charWidth('0').coerceAtLeast(1)
+            return width * READABLE_COLUMNS
+        }
     }
 
     /** Shared tokens for individual transcript views and session views. */
@@ -105,6 +112,13 @@ object SessionUiStyle {
             const val HORIZONTAL_PADDING = 12
             const val BODY_EXTRA_HEIGHT = 16
         }
+
+        /**
+         * Left inset for expanded card content that should read as nested under the header — the diff
+         * body's filename row and the auto-approve rule rows both use it. Reuse this wherever expanded
+         * content needs indenting so the amount stays consistent across cards.
+         */
+        fun contentIndent() = UiStyle.Gap.pad()
 
         /**
          * Standard transparent inset separating an expanded card header from its content, and
@@ -139,6 +153,14 @@ object SessionUiStyle {
             const val MAX_WIDTH = 350
             const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
             const val MAX_HEIGHT = 450
+
+            /**
+             * Band kept above and below a body that scrolls sideways, so its scrollbar clears the
+             * content instead of landing on the last line of it. Doubles the balloon's own 6px vertical
+             * inset, because a body with a scrollbar is one whose first and last line would otherwise
+             * sit against the balloon edge with a bar over them.
+             */
+            const val SCROLL_PADDING = 12
         }
 
         internal const val BORDER_DELTA = 80
@@ -267,9 +289,20 @@ object SessionUiStyle {
             fun topPadding(): Int = VIEWPORT_TOP_PADDING + UiStyle.Gap.lg()
         }
 
+        object Diagram {
+            const val MAX_HEIGHT = 480
+            const val PADDING = 16
+            const val EMPTY_HEIGHT = 96
+        }
+
         /** Permission session-view command preview limits. */
         object Permission {
             const val COMMAND_LINES = 3
+        }
+
+        /** Outcome/error footer card preview limits. */
+        object Outcome {
+            const val ERROR_LINES = 5
         }
 
         /** Tool session-view preview limits and state colors. */

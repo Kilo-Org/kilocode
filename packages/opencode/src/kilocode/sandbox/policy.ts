@@ -260,7 +260,15 @@ export function profile(
       allowedHosts,
     },
     environment: {
-      deny: ["KILO_CONFIG", "KILO_CONFIG_CONTENT", "KILO_CONFIG_DIR", "KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"],
+      deny: [
+        "KILO_CONFIG",
+        "KILO_CONFIG_CONTENT",
+        "KILO_CONFIG_DIR",
+        "KILO_SERVER_PASSWORD",
+        "KILO_SERVER_USERNAME",
+        "KILO_BROWSER_BROKER_URL",
+        "KILO_BROWSER_BROKER_TOKEN",
+      ],
       set: {
         TMPDIR: Global.Path.tmp,
         TMP: Global.Path.tmp,
@@ -621,6 +629,10 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
 
 export function executeTool<A, E, R>(sessionID: SessionID, tool: { id: string }, effect: Effect.Effect<A, E, R>) {
   return execute(sessionID, Network.tool(tool, effect))
+}
+
+export function executeEscalated<A, E, R>(approved: boolean, effect: Effect.Effect<A, E, R>) {
+  return approved ? unrestricted(effect) : effect
 }
 
 export function executeMcp<A, E, R>(sessionID: SessionID, tool: object, effect: Effect.Effect<A, E, R>) {

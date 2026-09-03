@@ -15,6 +15,7 @@ import { MessageV2 } from "@/session/message-v2" // kilocode_change
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { SessionStatus } from "@/session/status"
 import { Provider } from "../../src/provider/provider" // kilocode_change
 import { KiloSession } from "../../src/kilocode/session" // kilocode_change
@@ -47,6 +48,7 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
       Session.node,
       SessionProjector.node,
       SessionRunState.node,
+      SessionDrain.node, // kilocode_change
       SessionStatus.node,
       Truncate.node,
       ToolRegistry.node,
@@ -59,7 +61,8 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   )
 
 const it = testEffect(layer())
-const background = testEffect(layer({ experimentalBackgroundSubagents: true }))
+const background = it // kilocode_change - background subagents are enabled by default
+const disabled = testEffect(layer({ experimentalBackgroundSubagents: false })) // kilocode_change
 
 function defer<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -501,6 +504,70 @@ describe("tool.task", () => {
     }),
   )
 
+  // kilocode_change start - regression for #13469: a trailing synthetic empty text part (the memory marker)
+  // or an ignored length-warning part must not be picked as the task result
+  it.instance("returns the real answer when synthetic or ignored text parts trail it", () =>
+    Effect.gen(function* () {
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const promptOps: TaskPromptOps = {
+        ...stubOps(),
+        prompt: (input) =>
+          Effect.sync(() => {
+            const rep = reply(input, "the actual answer")
+            const id = MessageID.ascending()
+            return {
+              ...rep,
+              parts: [
+                ...rep.parts,
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  text: "output limit hit",
+                  ignored: true,
+                },
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  text: "",
+                  synthetic: true,
+                  ignored: true,
+                },
+              ],
+            }
+          }),
+      }
+
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+
+      expect(result.output).toContain("the actual answer")
+      expect(result.output).not.toContain("output limit hit")
+      expect(result.output).not.toContain("<task_result></task_result>")
+    }),
+  )
+  // kilocode_change end
+
   it.instance("prevents subagents from launching subagents by default", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
@@ -781,7 +848,8 @@ describe("tool.task", () => {
     }),
   )
   // kilocode_change end
-  it.instance("rejects background execution when the experiment is disabled", () =>
+  // kilocode_change start - preserve the disabled-background regression test
+  disabled.instance("rejects background execution when the experiment is disabled", () =>
     Effect.gen(function* () {
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
@@ -811,6 +879,7 @@ describe("tool.task", () => {
       expect(Exit.isFailure(exit)).toBe(true)
     }),
   )
+  // kilocode_change end
 
   it.instance("promotes a running foreground task without restarting it", () =>
     Effect.gen(function* () {

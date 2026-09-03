@@ -9,6 +9,7 @@
 
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import type { DiffImage } from "../diff/types"
+import type { BrowserElement } from "../services/browser-automation"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
@@ -19,6 +20,7 @@ import type { ProjectSnapshot } from "./project/contexts"
 import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 import type { ScriptTerminalView } from "./ScriptTerminalManager"
+import type { BrowserFeedbackData } from "../shared/browser-feedback"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -59,6 +61,11 @@ export interface PRCheck {
   duration?: string
 }
 
+export interface PRCommentReply {
+  author: string
+  body: string
+}
+
 export interface PRComment {
   id: string
   threadId: string
@@ -69,8 +76,12 @@ export interface PRComment {
   line?: number
   url?: string
   resolved: boolean
+  outdated: boolean
   createdAt?: number
   diffHunk?: string
+  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  after?: string[]
+  replies?: PRCommentReply[]
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
@@ -118,6 +129,11 @@ interface WorktreeStatsMessage {
   stats: WorktreeStats[]
 }
 
+interface WorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
+}
+
 interface LocalStatsMessage {
   type: "agentManager.localStats"
   /** Owning project; absent in single-project mode. */
@@ -160,6 +176,7 @@ interface StateMessage {
   activeTarget?: SidebarTarget
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
+  browserAutomation?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -249,16 +266,21 @@ interface ScriptTerminalsMessage {
 interface ErrorOutMessage {
   type: "error"
   message: string
+  code?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 interface SessionAddedMessage {
   type: "agentManager.sessionAdded"
+  projectId?: string
   sessionId: string
   worktreeId: string
 }
 
 interface SessionForkedMessage {
   type: "agentManager.sessionForked"
+  projectId?: string
   sessionId: string
   forkedFromId: string
   worktreeId?: string
@@ -266,6 +288,7 @@ interface SessionForkedMessage {
 
 interface SessionClosedMessage {
   type: "agentManager.sessionClosed"
+  projectId?: string
   sessionId: string
 }
 
@@ -300,6 +323,7 @@ interface SendInitialMessage {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string }>
+  browserFeedback?: BrowserFeedbackData
 }
 
 interface BranchesMessage {
@@ -326,10 +350,12 @@ interface RepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
   defaultBranch?: string
+  projectId?: string
 }
 
 interface ApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
+  projectId?: string
   worktreeId: string
   status: ApplyDiffStatus
   message: string
@@ -338,6 +364,7 @@ interface ApplyWorktreeDiffResultMessage {
 
 interface WorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -345,25 +372,42 @@ interface WorktreeDiffLoadingMessage {
 /** Source-level notice for a diff context (e.g. snapshots disabled). */
 interface WorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: string
 }
 
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeDiffEntry[]
 }
 
 interface WorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeDiffEntry | null
 }
 
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -373,6 +417,7 @@ interface RevertWorktreeFileResultMessage {
 /** Branch picker data for a context's diff directory. */
 interface DiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchListItem[]
   defaultBranch: string
@@ -393,11 +438,13 @@ interface PRStatusOutMessage {
 
 interface PRErrorOutMessage {
   type: "agentManager.prError"
+  projectId?: string
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
 interface CommentActionResultMessage {
   type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+  projectId?: string
   worktreeId: string
   threadId: string
   success: boolean
@@ -407,6 +454,43 @@ interface CommentActionResultMessage {
 interface ActionOutMessage {
   type: "action"
   action: string
+}
+
+interface BrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  frameError?: string
+}
+
+interface BrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  error?: string
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: BrowserElement
+  logs: string[]
+  hover?: boolean
+}
+
+interface BrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
 }
 
 interface RunStatusMessage extends RunStatus {
@@ -425,6 +509,7 @@ interface CaffeinationMessage {
 
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
   | WorktreeSetupMessage
@@ -448,12 +533,16 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
   | PRErrorOutMessage
   | CommentActionResultMessage
   | ActionOutMessage
+  | BrowserStateMessage
+  | BrowserInspectionMessage
+  | BrowserDevtoolsMessage
   | RunStatusMessage
   | CaffeinationMessage
   | TerminalCreatedMessage
@@ -519,12 +608,6 @@ interface SetProjectExpandedIn {
   expanded: boolean
 }
 
-/** Grant a project permission to run project-controlled scripts and load state. */
-interface TrustProjectIn {
-  type: "agentManager.trustProject"
-  projectId: string
-}
-
 interface DeleteWorktreeIn {
   type: "agentManager.deleteWorktree"
   projectId?: string
@@ -553,6 +636,13 @@ interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
   sessionId?: string
+}
+
+/** Move a session back to the project root and open it in the local tabs. */
+interface OpenSessionLocallyIn {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
 }
 
 interface CloseSessionIn {
@@ -653,6 +743,12 @@ interface RenameWorktreeIn {
   label: string
 }
 
+interface OpenSettingsPanelIn {
+  type: "openSettingsPanel"
+  tab?: string
+  projectId?: string
+}
+
 interface RequestStateIn {
   type: "agentManager.requestState"
 }
@@ -720,18 +816,21 @@ interface ImportFromPRIn {
 
 interface RequestWorktreeDiffIn {
   type: "agentManager.requestWorktreeDiff"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 interface ApplyWorktreeDiffIn {
   type: "agentManager.applyWorktreeDiff"
+  projectId?: string
   worktreeId: string
   selectedFiles?: string[]
 }
 
 interface RequestWorktreeDiffFileIn {
   type: "agentManager.requestWorktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -741,6 +840,7 @@ interface RequestWorktreeDiffFileIn {
 
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
+  projectId?: string
   sessionId: string
   scope?: string
   /** Active session for the session scope (ctx alone is a worktree/local id). */
@@ -749,10 +849,12 @@ interface StartDiffWatchIn {
 
 interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
+  projectId?: string
 }
 
 interface RevertWorktreeFileIn {
   type: "agentManager.revertWorktreeFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -760,12 +862,14 @@ interface RevertWorktreeFileIn {
 
 interface RequestDiffBranchesIn {
   type: "agentManager.requestDiffBranches"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 interface SetDiffBaseBranchIn {
   type: "agentManager.setDiffBaseBranch"
+  projectId?: string
   sessionId: string
   scope?: string
   branch?: string
@@ -773,6 +877,7 @@ interface SetDiffBaseBranchIn {
 
 interface RefreshPRIn {
   type: "agentManager.refreshPR"
+  projectId?: string
   worktreeId: string
 }
 
@@ -785,6 +890,7 @@ interface OpenPRIn {
 
 interface CommentActionIn {
   type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  projectId?: string
   worktreeId: string
   threadId: string
 }
@@ -805,6 +911,13 @@ interface OpenFileIn {
   filePath: string
   line?: number
   column?: number
+}
+
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
 }
 
 // Pass-through messages intercepted for side effects
@@ -831,6 +944,7 @@ interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
   mode?: "replace" | "prepend" | "focus"
+  focus?: boolean
   before?: string
   limit?: number
 }
@@ -859,6 +973,7 @@ interface SendMessageIn {
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
   contextDirectory?: string
+  browserFeedback?: BrowserFeedbackData
 }
 
 interface SendCommandIn {
@@ -912,6 +1027,7 @@ interface RequestTerminalContextIn {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 interface ClearSessionIn {
@@ -928,6 +1044,7 @@ interface ForkSessionIn {
 interface AbortIn {
   type: "abort"
   sessionID: string
+  scope?: "session" | "tree"
 }
 
 interface ContinueInWorktreeIn {
@@ -1027,6 +1144,28 @@ interface TerminalDestinationSelectedIn {
   destination: TerminalDestination
 }
 
+interface BrowserRequestIn {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+  sessionId: string
+  requestId?: string
+  projectId?: string
+  url?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
   | CreateWorktreeIn
@@ -1037,11 +1176,11 @@ export type AgentManagerInMessage =
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
-  | TrustProjectIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
   | OpenLocallyIn
+  | OpenSessionLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
@@ -1060,6 +1199,7 @@ export type AgentManagerInMessage =
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
+  | OpenSettingsPanelIn
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
@@ -1086,6 +1226,7 @@ export type AgentManagerInMessage =
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
+  | RequestDocumentIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn
@@ -1113,3 +1254,4 @@ export type AgentManagerInMessage =
   | TerminalResizeIn
   | TerminalRestartIn
   | TerminalDestinationSelectedIn
+  | BrowserRequestIn

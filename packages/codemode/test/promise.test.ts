@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Schema } from "effect"
+import { Deferred, Effect, Fiber, Schema } from "effect" // kilocode_change
 import { CodeMode, Tool, toolError } from "../src/index.js"
 
 // Wave 5 acceptance suite: first-class promise values. Un-awaited tool calls start eagerly on
@@ -454,3 +454,174 @@ describe("unsupported promise surface", () => {
     expect(diagnostic.message).toContain("already return promises")
   })
 })
+
+// kilocode_change start
+describe("interpreter wait observation", () => {
+  for (const method of ["all", "allSettled", "race"] as const) {
+    test(`observes Promise.${method} coordination without changing its result`, async () => {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const first = yield* Deferred.make<string>()
+          const second = yield* Deferred.make<string>()
+          const started = Promise.withResolvers<void>()
+          const events: boolean[] = []
+          const stopped: string[] = []
+          const tool = (gate: Deferred.Deferred<string>, name: string) =>
+            Tool.make({
+              description: name,
+              input: Schema.Struct({}),
+              output: Schema.String,
+              run: () => Deferred.await(gate).pipe(Effect.onInterrupt(() => Effect.sync(() => stopped.push(name)))),
+            })
+          const running = yield* CodeMode.execute({
+            tools: { first: tool(first, "first"), second: tool(second, "second") },
+            code: `return await Promise.${method}([tools.first({}), tools.second({})])`,
+            onWait: (waiting) => {
+              events.push(waiting)
+              if (waiting) started.resolve()
+            },
+          }).pipe(Effect.forkChild)
+          yield* Effect.promise(() => started.promise)
+          expect(events).toEqual([true])
+          yield* Deferred.succeed(second, "second")
+          if (method !== "race") {
+            yield* Effect.yieldNow
+            expect(events).toEqual([true])
+            yield* Deferred.succeed(first, "first")
+          }
+          const result = yield* Fiber.join(running)
+          expect(result.ok).toBe(true)
+          if (!result.ok) return
+          expect(result.value).toEqual(
+            method === "race"
+              ? "second"
+              : method === "all"
+                ? ["first", "second"]
+                : [
+                    { status: "fulfilled", value: "first" },
+                    { status: "fulfilled", value: "second" },
+                  ],
+          )
+          expect(events.at(-1)).toBe(false)
+          expect(events.filter(Boolean).length).toBe(events.filter((value) => !value).length)
+          expect(stopped).toEqual(method === "race" ? ["first"] : [])
+          if (method === "race") expect(events).toEqual([true, false])
+        }).pipe(Effect.scoped),
+      )
+    })
+  }
+
+  test("keeps eager computation active and skips already-settled joins", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<string>()
+        const started = Promise.withResolvers<void>()
+        const events: boolean[] = []
+        const running = yield* CodeMode.execute({
+          tools: {
+            blocked: Tool.make({
+              description: "Wait for a value",
+              input: Schema.Struct({}),
+              output: Schema.String,
+              run: () => Deferred.await(gate),
+            }),
+            inspect: Tool.make({
+              description: "Observe eager computation",
+              input: Schema.Struct({ value: Schema.Number }),
+              output: Schema.Number,
+              run: (input) =>
+                Effect.sync(() => {
+                  expect(input.value).toBe(45)
+                  expect(events).toEqual([])
+                  return input.value
+                }),
+            }),
+          },
+          code: `
+            const pending = tools.blocked({})
+            let value = 0
+            for (let i = 0; i < 10; i++) value += i
+            tools.inspect({ value })
+            await pending
+            return await Promise.race([pending, Promise.resolve("other")])
+          `,
+          onWait: (waiting) => {
+            events.push(waiting)
+            if (waiting) started.resolve()
+          },
+        }).pipe(Effect.forkChild)
+        yield* Effect.promise(() => started.promise)
+        yield* Deferred.succeed(gate, "ready")
+        expect(yield* Fiber.join(running)).toMatchObject({ ok: true, value: "ready" })
+        expect(events).toEqual([true, false])
+      }).pipe(Effect.scoped),
+    )
+  })
+
+  test("balances cancellation without changing child interruption", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const started = Promise.withResolvers<void>()
+        const events: boolean[] = []
+        const stopped: boolean[] = []
+        const running = yield* CodeMode.execute({
+          tools: {
+            blocked: Tool.make({
+              description: "Wait until interrupted",
+              input: Schema.Struct({}),
+              output: Schema.String,
+              run: () => Effect.never.pipe(Effect.onInterrupt(() => Effect.sync(() => stopped.push(true)))),
+            }),
+          },
+          code: "return await tools.blocked({})",
+          onWait: (waiting) => {
+            events.push(waiting)
+            if (waiting) started.resolve()
+          },
+        }).pipe(Effect.forkChild)
+        yield* Effect.promise(() => started.promise)
+        yield* Fiber.interrupt(running)
+        expect(events).toEqual([true, false])
+        expect(stopped).toEqual([true])
+      }).pipe(Effect.scoped),
+    )
+  })
+
+  for (const fail of [false, true]) {
+    test(`observer errors do not change program ${fail ? "failure" : "success"}`, async () => {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const gate = yield* Deferred.make<void>()
+          const started = Promise.withResolvers<void>()
+          const events: boolean[] = []
+          const running = yield* CodeMode.execute({
+            tools: {
+              blocked: Tool.make({
+                description: "Wait before settling",
+                input: Schema.Struct({}),
+                output: Schema.String,
+                run: () =>
+                  Deferred.await(gate).pipe(
+                    Effect.andThen(fail ? Effect.fail(toolError("Refused")) : Effect.succeed("done")),
+                  ),
+              }),
+            },
+            code: "return await tools.blocked({})",
+            onWait: (waiting) => {
+              events.push(waiting)
+              if (waiting) started.resolve()
+              throw new Error("Observer failed")
+            },
+          }).pipe(Effect.forkChild)
+          yield* Effect.promise(() => started.promise)
+          yield* Deferred.succeed(gate, undefined)
+          expect(yield* Fiber.join(running)).toMatchObject(
+            fail ? { ok: false, error: { kind: "ToolFailure", message: "Refused" } } : { ok: true, value: "done" },
+          )
+          expect(events).toEqual([true, false])
+        }).pipe(Effect.scoped),
+      )
+    })
+  }
+})
+// kilocode_change end

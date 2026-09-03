@@ -22,9 +22,11 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // ---------------------------------------------------------------------------
 
   let scroll: HTMLElement | undefined
+  let top = 0
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
+  let watcher: MutationObserver | undefined
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
@@ -66,12 +68,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const resume = () => {
+    userActivity.reset()
     if (store.userScrolled) setStore("userScrolled", false)
     force()
   }
 
   const pause = () => {
-    if (!scroll || store.userScrolled) return
+    if (!scroll) return
+    top = scroll.scrollTop
+    if (store.userScrolled) return
     setStore("userScrolled", true)
     options.onUserInteracted?.()
   }
@@ -89,7 +94,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
     grace: USER_INTERACTION_GRACE_MS,
     // Upward wheel input anywhere in the transcript expresses the user's
     // intent to review earlier content, even when a nested region consumes it.
-    onWheelUp: stop,
+    onUp: stop,
   })
 
   // ---------------------------------------------------------------------------
@@ -99,13 +104,31 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleScroll = () => {
     if (!scroll) return
 
-    userActivity.consumeScroll()
+    const position = scroll.scrollTop
+    const down = position > top
+    top = position
+    const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
 
     if (!canScroll(scroll)) return
 
     if (distance < threshold()) {
-      if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
+      if (store.userScrolled && down && (distance < 2 || !userActivity.isRecent())) {
+        userActivity.clear()
+        setStore("userScrolled", false)
+      }
+      return
+    }
+
+    // Virtualizer and layout corrections can move the viewport without
+    // changing content height. Only an input event should pause auto-follow.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) {
+      // A tool card that swaps views shrinks the transcript and recovers inside
+      // the same frame. The shrink makes the browser clamp the pin away, and
+      // because the final content size is unchanged no resize entry follows, so
+      // the correction has to happen here or the transcript stays parked below
+      // its bottom until the next content update.
+      if (active()) bottom()
       return
     }
 
@@ -127,6 +150,18 @@ export function createAutoScroll(options: AutoScrollOptions) {
       }
       return
     }
+
+    follow()
+  }
+
+  // Content mutations are pinned while they are still queued, before the frame
+  // lays out and paints. A ResizeObserver entry arrives after that layout, so
+  // waiting for it lets the browser paint one frame with the new content hanging
+  // below the viewport, which reads as the transcript twitching as it streams.
+  const onContentMutate = () => {
+    if (!scroll) return
+    if (store.userScrolled || userActivity.isRecent()) return
+    if (!canScroll(scroll)) return
 
     follow()
   }
@@ -161,7 +196,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
       settleTimer = undefined
 
       if (working) {
-        force()
+        follow()
         return
       }
 
@@ -189,6 +224,18 @@ export function createAutoScroll(options: AutoScrollOptions) {
     el.style.overflowAnchor = store.userScrolled ? "auto" : "none"
   }
 
+  const setContent = (el: HTMLElement | undefined) => {
+    watcher?.disconnect()
+    watcher = undefined
+
+    setStore("contentRef", el)
+
+    if (!el || typeof MutationObserver !== "function") return
+
+    watcher = new MutationObserver(onContentMutate)
+    watcher.observe(el, { childList: true, subtree: true, characterData: true })
+  }
+
   const setScroll = (el: HTMLElement | undefined) => {
     if (cleanup) {
       cleanup()
@@ -196,6 +243,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }
 
     scroll = el
+    top = el?.scrollTop ?? 0
     setStore("scrollRef", el)
 
     if (!el) return
@@ -206,6 +254,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   onCleanup(() => {
     if (settleTimer) clearTimeout(settleTimer)
+    watcher?.disconnect()
+    watcher = undefined
     if (cleanup) cleanup()
   })
 
@@ -215,7 +265,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   return {
     scrollRef: setScroll,
-    contentRef: (el: HTMLElement | undefined) => setStore("contentRef", el),
+    contentRef: setContent,
     handleScroll,
     pause,
     resume,

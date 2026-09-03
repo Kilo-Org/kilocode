@@ -8,6 +8,7 @@ import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
 import { format } from "@/kilocode/tool/tool" // kilocode_change
+import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 interface Metadata {
   [key: string]: any
@@ -120,10 +121,7 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
         }
         return Effect.gen(function* () {
           // kilocode_change start
-          const decoded = yield* decode(
-            args,
-            { errors: "all" },
-          ).pipe(
+          const decoded = yield* decode(args, { errors: "all" }).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({
@@ -148,7 +146,13 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
               ...(truncated.truncated && { outputPath: truncated.outputPath }),
             },
           }
-        }).pipe(Effect.orDie, Effect.withSpan("Tool.execute", { attributes: attrs }))
+          // kilocode_change start
+        }).pipe(
+          (work) => Activity.call(ctx, work),
+          Effect.orDie,
+          Effect.withSpan("Tool.execute", { attributes: attrs }),
+        )
+        // kilocode_change end
       }
       return toolInfo
     })

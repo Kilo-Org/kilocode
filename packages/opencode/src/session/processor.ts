@@ -23,6 +23,7 @@ import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
+import { Activity } from "@/kilocode/session/activity"
 import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
@@ -390,6 +391,10 @@ const layer = Layer.effect(
       }
 
       const handleEvent = Effect.fnUntraced(function* (value: StreamEvent) {
+        // kilocode_change start
+        if (value.type === "tool-result" || value.type === "tool-error")
+          Activity.settle(yield* Activity.Pending, value.id)
+        // kilocode_change end
         KiloSessionProcessor.observe(attempt, value) // kilocode_change
         switch (value.type) {
           case "reasoning-start":
@@ -950,6 +955,7 @@ const layer = Layer.effect(
                 Stream.runDrain,
               )
             }).pipe(
+              (work) => Activity.request(ctx.assistantMessage.id, work), // kilocode_change
               Effect.onInterrupt(() =>
                 Effect.gen(function* () {
                   aborted = true

@@ -5,6 +5,8 @@ description: "Pricing details for KiloClaw instances and model inference"
 
 # Pricing
 
+{% partial file="kiloclaw-eol.md" /%}
+
 KiloClaw uses Kilo Gateway credits by default — if you route requests through BYOK, model usage is billed directly by your provider instead.
 
 ## Instance Hosting

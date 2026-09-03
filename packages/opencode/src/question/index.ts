@@ -4,6 +4,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "./schema"
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
+import { Activity } from "@/kilocode/session/activity" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { QuestionV1 } from "@opencode-ai/schema/question-v1"
 
@@ -101,7 +102,7 @@ export const layer = Layer.effect(
       const info: Request = {
         id,
         sessionID: input.sessionID,
-        questions: input.questions,
+        questions: input.questions.map(KiloQuestion.normalize), // kilocode_change
         blocking: input.blocking, // kilocode_change
         tool: input.tool,
       }
@@ -114,7 +115,7 @@ export const layer = Layer.effect(
       yield* events.publish(Event.Asked, info)
 
       return yield* Effect.ensuring(
-        Deferred.await(deferred),
+        input.blocking === false ? Deferred.await(deferred) : Activity.wait(Deferred.await(deferred), info), // kilocode_change
         // kilocode_change start - every asked question gets a terminal event when its waiter is interrupted
         KiloQuestion.finalize({
           pending,

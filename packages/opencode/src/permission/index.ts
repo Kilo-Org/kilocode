@@ -15,6 +15,7 @@ import { SessionID } from "@/session/schema" // kilocode_change - used by AllowE
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { KiloHeadless } from "@/kilocode/permission/headless"
+import { Activity } from "@/kilocode/session/activity"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
@@ -146,6 +147,7 @@ function subset(permission: string, ruleset: Ruleset) {
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
+  if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -212,7 +214,7 @@ const layer = Layer.effect(
         : false
       // kilocode_change end
 
-      const forceAsk = request.metadata?.["skillShell"] === true // kilocode_change
+      const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -273,7 +275,7 @@ const layer = Layer.effect(
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
-        Deferred.await(deferred),
+        Activity.wait(Deferred.await(deferred), info),
         Effect.sync(() => {
           pending.delete(id)
         }),
@@ -291,8 +293,12 @@ const layer = Layer.effect(
       // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
-      if (existing.info.metadata?.["skillShell"] === true && input.reply !== "reject" && input.interactive !== true) {
-        yield* Effect.logWarning("skill shell approval refused: requires an interactive human reply", {
+      if (
+        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        input.reply !== "reject" &&
+        input.interactive !== true
+      ) {
+        yield* Effect.logWarning("sensitive permission approval refused: requires an interactive human reply", {
           id: input.requestID,
         })
         return

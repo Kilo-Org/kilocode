@@ -3,6 +3,7 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.KiloBackendActivityManager
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -10,7 +11,6 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -22,6 +22,8 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
@@ -71,6 +73,9 @@ class KiloSessionRpcApiImpl internal constructor(
     private val chat: KiloBackendChatManager
         get() = app.chat
 
+    private val activity: KiloBackendActivityManager
+        get() = app.activity
+
     private val app: KiloBackendAppService
         get() = appOverride ?: service()
 
@@ -83,7 +88,9 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun create(directory: String): SessionDto {
         app.requireReady()
         log.info("create session: directory=$directory")
-        return workspaces.get(directory).createSession()
+        val session = workspaces.get(directory).createSession()
+        log.info("create session: id=${session.id}, directory=$directory")
+        return session
     }
 
     override suspend fun get(id: String, directory: String): SessionDto {
@@ -94,6 +101,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun delete(id: String, directory: String) {
         app.requireReady()
+        log.info("delete session: id=$id, directory=$directory")
         val dir = sessions.getDirectory(id, directory)
         workspaces.get(dir).deleteSession(id)
     }
@@ -104,6 +112,12 @@ class KiloSessionRpcApiImpl internal constructor(
         return sessions.rename(id, dir, title)
     }
 
+    override suspend fun share(id: String, directory: String): SessionDto =
+        ready { sessions.share(id, sessions.getDirectory(id, directory)) }
+
+    override suspend fun unshare(id: String, directory: String): SessionDto =
+        ready { sessions.unshare(id, sessions.getDirectory(id, directory)) }
+
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         ready { sessions.cloudSessions(directory, cursor, limit, gitUrl) }
 
@@ -112,6 +126,12 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> =
         sessions.statuses
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> =
+        activity.activity
+
+    override suspend fun changes(): Flow<SessionChangeDto> =
+        sessions.changes
 
     override suspend fun setDirectory(id: String, directory: String) =
         sessions.setDirectory(id, directory)
@@ -264,9 +284,6 @@ class KiloSessionRpcApiImpl internal constructor(
                 }
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true failed message=${cause.message}", cause)
             }
-
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =
-        ready { chat.updateConfig(directory, config) }
 
     // ------ permission / question resolution ------
 
