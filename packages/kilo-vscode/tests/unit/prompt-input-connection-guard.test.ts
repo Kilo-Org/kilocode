@@ -18,7 +18,7 @@ describe("PromptInput connection guard", () => {
     const attachments = src.indexOf("const gitFile = await git.resolveAttachment")
     const guard = src.indexOf("if (isDisabled()) {", attachments)
     const finish = src.indexOf("finishPending(pendingId)", guard)
-    const send = src.indexOf("session.sendMessage(message", guard)
+    const send = src.indexOf("session.sendMessage(", guard)
     const clear = src.indexOf("drafts.delete(key)", send)
 
     expect(attachments).toBeGreaterThan(-1)
@@ -53,8 +53,8 @@ describe("PromptInput sandbox toggle", () => {
   })
 
   it("captures edits made while sandbox session creation is pending", () => {
-    const start = src.indexOf('if (message.type === "sessionCreated")')
-    const end = src.indexOf('if (message.type === "action"', start)
+    const start = src.indexOf("const created = (message:")
+    const end = src.indexOf("const unsubscribe", start)
     const created = src.slice(start, end)
     const save = created.indexOf(
       "if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())",
@@ -65,7 +65,10 @@ describe("PromptInput sandbox toggle", () => {
     expect(end).toBeGreaterThan(start)
     expect(save).toBeGreaterThan(-1)
     expect(move).toBeGreaterThan(save)
-    expect(created).toContain("{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts }")
+    expect(created).toContain(
+      "{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references }",
+    )
+    expect(created).toContain("saveDraft(source, text(), reviewComments(), imageAttach.images())")
   })
 
   it("restores each prompt draft's textarea and highlight scroll positions", () => {
@@ -74,8 +77,14 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain("textareaRef.scrollTop = scroll")
     expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
     expect(src).toContain("scrollDrafts.set(draftKey(), textareaRef.scrollTop)")
-    expect(src).toContain("images: imageAttach.images(),\n    scroll: textareaRef?.scrollTop")
-    expect(src).toContain("draft.text, draft.comments, draft.images, draft.scroll")
+    expect(src).toContain(
+      "images: imageAttach.images(),\n    browsers: browsers(),\n    scroll: textareaRef?.scrollTop",
+    )
+    expect(src).toContain("draft.text,")
+    expect(src).toContain("draft.comments,")
+    expect(src).toContain("draft.images,")
+    expect(src).toContain("draft.scroll,")
+    expect(src).toContain("draft.browsers")
   })
 
   it("tracks in-flight toggles per session while switching", () => {

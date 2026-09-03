@@ -17,6 +17,9 @@ import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
 import type { Provider } from "@/provider/provider"
+import type { Auth } from "@/auth"
+import type { Config } from "@/config/config"
+import { organization, token } from "./catalog"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -165,6 +168,24 @@ function useLanguageModel(sdk: any) {
 export function patchKiloProviderPrivacy(provider: { options?: Record<string, any> } | undefined, config: any) {
   if (!provider || config.hide_prompt_training_models !== true) return
   provider.options = { ...provider.options, dataCollection: "deny" }
+}
+
+export function patchKiloProviderAuth(
+  provider: Provider.Info | undefined,
+  config: Config.Info,
+  info: Auth.Info | undefined,
+) {
+  if (!provider) return
+  const options = config.provider?.kilo?.options
+  const key = token(options, info)
+  const org = organization(options, info)
+  if (key !== undefined) provider.options.kilocodeToken = key
+  if (org !== undefined) provider.options.kilocodeOrganizationId = org
+}
+
+export function publicKiloProvider(provider: Provider.Info): Provider.Info {
+  if (provider.id !== "kilo") return provider
+  return { ...provider, key: undefined, options: omit(provider.options, ["apiKey", "kilocodeToken"]) }
 }
 
 export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> {

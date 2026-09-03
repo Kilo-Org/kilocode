@@ -40,6 +40,8 @@ import {
   customProviderVariants,
   patchCustomLoaderResult,
   patchKiloProviderPrivacy,
+  patchKiloProviderAuth,
+  publicKiloProvider,
   kiloSmallModelPriority,
   hasKiloCredentials,
   buildTimeoutSignal,
@@ -1134,7 +1136,7 @@ export function toPublicInfo(provider: Info): Info {
   return JSON.parse(
     JSON.stringify(
       {
-        ...provider,
+        ...publicKiloProvider(provider), // kilocode_change
         models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
       },
       (_, value) => {
@@ -1680,6 +1682,7 @@ const layer = Layer.effect(
           mergeProvider(providerID, partial)
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
+        patchKiloProviderAuth(providers[ProviderV2.ID.make("kilo")], cfg, auths["kilo"]) // kilocode_change
 
         const gitlab = ProviderV2.ID.make("gitlab")
         if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {

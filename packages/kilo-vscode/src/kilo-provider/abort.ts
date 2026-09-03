@@ -32,13 +32,14 @@ export class SessionAbort {
     sessionID: string,
     fallback: string,
     run?: (dir: string, action: () => Promise<void>) => Promise<void>,
+    scope?: "session" | "tree",
   ) {
     const known = this.active.has(sessionID)
     const dirs = [...(this.active.get(sessionID) ?? [])]
     if (!dirs.some((dir) => sameDirectory(dir, fallback))) dirs.push(fallback)
     const results = await Promise.allSettled(
       dirs.map((dir) => {
-        const action = () => abortSession({ client, sessionID, dir })
+        const action = () => abortSession({ client, sessionID, dir, scope })
         return known && run ? run(dir, action) : action()
       }),
     )
@@ -75,6 +76,14 @@ export class SessionAbort {
   }
 }
 
-export async function abortSession(input: { client: KiloClient; sessionID: string; dir: string }) {
-  await input.client.session.abort({ sessionID: input.sessionID, directory: input.dir }, { throwOnError: true })
+export async function abortSession(input: {
+  client: KiloClient
+  sessionID: string
+  dir: string
+  scope?: "session" | "tree"
+}) {
+  await input.client.session.abort(
+    { sessionID: input.sessionID, directory: input.dir, scope: input.scope },
+    { throwOnError: true },
+  )
 }

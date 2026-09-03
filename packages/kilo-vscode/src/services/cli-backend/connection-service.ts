@@ -14,7 +14,6 @@ type SSEEventFilter = (event: SSEPayload, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
-type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
@@ -103,7 +102,6 @@ export class KiloConnectionService {
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
-  private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly modelSelectorExpandedListeners: Set<ModelSelectorExpandedListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
@@ -111,6 +109,7 @@ export class KiloConnectionService {
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   private currentDirectory: string | undefined
   private readonly permissionDirectories: Map<string, string> = new Map()
+  private permissionRevision = 0
   private readonly questionDirectories: Map<string, string> = new Map()
   private questionRevision = 0
 
@@ -133,7 +132,7 @@ export class KiloConnectionService {
   private viewedDirty = false
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, env?: () => Promise<Record<string, string>>) {
     const state =
       context.workspaceState ??
       ({
@@ -141,7 +140,7 @@ export class KiloConnectionService {
         update: async () => undefined,
       } satisfies Pick<vscode.Memento, "get" | "update">)
     this.sandboxPreference = new SandboxPreference(state)
-    this.serverManager = new ServerManager(context, (code, signal) => this.handleServerExit(code, signal))
+    this.serverManager = new ServerManager(context, (code, signal) => this.handleServerExit(code, signal), env)
     this.active = vscode.window.state.focused
     this.windowStateDisposable = vscode.window.onDidChangeWindowState((ws) => {
       this.active = ws.focused
@@ -364,9 +363,15 @@ export class KiloConnectionService {
 
   clearPermissionDirectory(requestID: string): void {
     this.permissionDirectories.delete(requestID)
+    this.permissionRevision += 1
+  }
+
+  getPermissionRevision(): number {
+    return this.permissionRevision
   }
 
   prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    const size = this.permissionDirectories.size
     for (const [id, dir] of this.permissionDirectories) {
       if (active.has(id)) {
         continue
@@ -376,6 +381,7 @@ export class KiloConnectionService {
       }
       this.permissionDirectories.delete(id)
     }
+    if (this.permissionDirectories.size !== size) this.permissionRevision += 1
   }
 
   recordQuestionDirectory(requestID: string, directory: string): void {
@@ -462,25 +468,6 @@ export class KiloConnectionService {
   notifyProfileChanged(data: unknown): void {
     for (const listener of this.profileChangeListeners) {
       listener(data)
-    }
-  }
-
-  /**
-   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
-   */
-  onMigrationComplete(listener: MigrationCompleteListener): () => void {
-    this.migrationCompleteListeners.add(listener)
-    return () => {
-      this.migrationCompleteListeners.delete(listener)
-    }
-  }
-
-  /**
-   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
-   */
-  notifyMigrationComplete(): void {
-    for (const listener of this.migrationCompleteListeners) {
-      listener()
     }
   }
 
@@ -705,7 +692,6 @@ export class KiloConnectionService {
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
     this.profileChangeListeners.clear()
-    this.migrationCompleteListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
@@ -713,6 +699,7 @@ export class KiloConnectionService {
     this.currentDirectory = undefined
     this.messageSessionIdsByMessageId.clear()
     this.permissionDirectories.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
     if (this.client?.session?.viewed) {
@@ -808,6 +795,7 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.permissionDirectories.clear()
+    this.permissionRevision += 1
     this.questionDirectories.clear()
     this.questionRevision += 1
   }
@@ -937,6 +925,7 @@ export class KiloConnectionService {
 
   private handlePermissionEvent(event: SSEPayload, directory?: string): void {
     if (event.type === "permission.asked" && directory) {
+      this.permissionRevision += 1
       this.recordPermissionDirectory(event.properties.id, directory)
       return
     }

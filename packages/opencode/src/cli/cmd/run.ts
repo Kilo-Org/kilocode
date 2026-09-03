@@ -279,12 +279,12 @@ export const RunCommand = effectCmd({
     const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
     const { ServerAuth } = yield* Effect.promise(() => import("@/server/auth"))
     // kilocode_change start - lazy Kilo implementations (see top-of-file note)
-    const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
     const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
     const { importCloudSession, validateCloudFork, reportCloudImportError } = yield* Effect.promise(
       () => import("@/kilocode/cloud-session"),
     )
     const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
+    const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
     // kilocode_change end
@@ -368,7 +368,8 @@ export const RunCommand = effectCmd({
         ? ServerAuth.headers({ password: args.password, username: args.username })
         : undefined
       const attachSDK = (dir?: string) => {
-        return createKiloClient({
+        return KiloRunDrain.client({
+          // kilocode_change
           baseUrl: args.attach!,
           directory: dir,
           headers: attachHeaders,
@@ -769,6 +770,7 @@ export const RunCommand = effectCmd({
         const sessionID = sess.id
         // kilocode_change start - track Task children; plain headless runs deny subagent asks instead of hanging (#11903)
         const tracked = KiloRunAuto.create(sessionID) // kilocode_change - named to avoid shadowing the `auto` flag
+        const drain = KiloRunDrain.create(sessionID)
         if (!args.attach && !args.auto && !skipPermissions) KiloHeadless.mark(sessionID) // kilocode_change - --yolo skips too
         // kilocode_change end
 
@@ -800,6 +802,7 @@ export const RunCommand = effectCmd({
 
           // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
           for await (const event of events.stream) {
+            if (drain.event(event)) break // kilocode_change
             // kilocode_change end
 
             if (
@@ -903,14 +906,6 @@ export const RunCommand = effectCmd({
             }
             // kilocode_change end
 
-            if (
-              event.type === "session.status" &&
-              event.properties.sessionID === sessionID &&
-              event.properties.status.type === "idle"
-            ) {
-              break
-            }
-
             // kilocode_change start - non-interactive runs dismiss suggestions so they don't block
             if (event.type === "suggestion.shown") {
               const suggestion = event.properties
@@ -923,6 +918,7 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
+              if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue // kilocode_change
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
               if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
@@ -991,7 +987,7 @@ export const RunCommand = effectCmd({
             // kilocode_change start - bounded network retry handling
             if (event.type === "session.network.asked") {
               const request = event.properties
-              if (request.sessionID !== sessionID) continue
+              if (!KiloRunAuto.allowed(tracked, request.sessionID)) continue
               retries++
               if (retries > MAX_RETRIES) {
                 UI.println(
@@ -1002,7 +998,7 @@ export const RunCommand = effectCmd({
                 continue
               }
               const delay = Math.min(5000 * Math.pow(2, retries - 1), 60000)
-              await new Promise((resolve) => setTimeout(resolve, delay))
+              await drain.pause(delay)
               await client.network.reply({ requestID: request.id })
             }
             // kilocode_change end
@@ -1017,8 +1013,8 @@ export const RunCommand = effectCmd({
           // kilocode_change end
           return error
         }
-        const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
-        const client = args.attach ? attachSDK(cwd) : sdk
+        const cwd = sess.directory ?? directory ?? (await current(sdk)) // kilocode_change
+        const client = KiloRunDrain.scope(sdk, cwd, interactive ? undefined : drain.signal) // kilocode_change
         // kilocode_change start - classify deferred attach commands in the session directory
         const builtin = deferred ? await KiloRun.resolveBuiltin(client, args.command, cwd) : initial
         if (deferred) {
@@ -1032,63 +1028,64 @@ export const RunCommand = effectCmd({
 
         await share(client, sessionID)
 
+        // kilocode_change start
         if (!interactive) {
-          const events = await client.event.subscribe()
-          const completed = loop(client, events).catch((e) => {
-            console.error(e)
-            process.exitCode = 1
+          const events = await client.event.subscribe(undefined, {
+            signal: drain.signal,
+            sseMaxRetryAttempts: 1,
+            onSseError: (error) => drain.end(error),
           })
-          async function finish() {
-            if (args.attach) return
-            const error = await completed
-            if (error) process.exitCode = 1
-          }
-
-          // kilocode_change start - handle built-in session commands
-          if (builtin) {
-            const result = await KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd)
+          const completed = loop(client, events).then(
+            (error) => {
+              drain.end()
+              return error
+            },
+            (error) => {
+              drain.end(error)
+              return undefined
+            },
+          )
+          try {
+            await drain.race(KiloRunDrain.check(client, drain.signal))
+            await drain.ready()
+            const result = await drain.race(
+              builtin
+                ? KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd)
+                : args.command
+                  ? client.session.command({
+                      sessionID,
+                      agent,
+                      model: args.model,
+                      command: args.command,
+                      arguments: message,
+                      variant: args.variant,
+                    })
+                  : client.session.prompt({
+                      sessionID,
+                      agent,
+                      model: pick(args.model),
+                      variant: args.variant,
+                      parts: [...files, { type: "text", text: message }],
+                    }),
+            )
             if (result.error) {
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
               process.exitCode = 1
             }
-            return
-          }
-          // kilocode_change end
-
-          if (args.command) {
-            const result = await client.session.command({
-              sessionID,
-              agent,
-              model: args.model,
-              command: args.command,
-              arguments: message,
-              variant: args.variant,
-            })
-            if (result.error) {
-              if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
-              process.exitCode = 1
-              return
-            }
-            await finish()
-            return
-          }
-
-          const model = pick(args.model)
-          const result = await client.session.prompt({
-            sessionID,
-            agent,
-            model,
-            variant: args.variant,
-            parts: [...files, { type: "text", text: message }],
-          })
-          if (result.error) {
-            if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
+            await drain.wait(client, cwd)
+            if (await completed) process.exitCode = 1
+          } catch (error) {
+            const text = error instanceof Error ? error.message : String(error)
+            if (!emit("error", { error: text })) UI.error(text)
             process.exitCode = 1
-            return
+          } finally {
+            drain.close()
+            await completed
+            await KiloRunDrain.flush()
           }
-          await finish()
           return
         }
+        // kilocode_change end
 
         const model = pick(args.model)
         const { runInteractiveMode } = await import("./run/runtime")
@@ -1169,7 +1166,8 @@ export const RunCommand = effectCmd({
         if (auth) headers.set("Authorization", auth)
         return Server.Default().app.fetch(new Request(request, { headers }))
       }) as typeof globalThis.fetch
-      const sdk = createKiloClient({
+      const sdk = KiloRunDrain.client({
+        // kilocode_change
         baseUrl: "http://kilo.internal",
         fetch: fetchFn,
         directory,

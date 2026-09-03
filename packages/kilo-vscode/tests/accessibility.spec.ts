@@ -73,6 +73,176 @@ test.describe("webview accessibility ratchet", () => {
     await expect(list).toBeHidden()
   })
 
+  test("Background agents preserve running spinners and collapse after completion", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await page.clock.install()
+    await page.clock.pauseAt(new Date())
+    await page.addInitScript(() => {
+      let revision = 0
+      Object.defineProperty(window, "acquireVsCodeApi", {
+        value: () => ({
+          getState: () => undefined,
+          setState: () => {},
+          postMessage: (message: { type: string; sessionID?: string; requestID?: string }) => {
+            if (message.type !== "requestBackgroundJobs") return
+            revision += 1
+            window.postMessage(
+              {
+                type: "backgroundJobsLoaded",
+                sessionID: message.sessionID,
+                requestID: message.requestID,
+                jobs: [
+                  {
+                    id: "job-spinner",
+                    type: "task",
+                    title: `Background agent ${revision}`,
+                    status: revision < 4 ? "running" : "completed",
+                    started_at: 1,
+                    metadata: { parentSessionId: message.sessionID, sessionId: "child-spinner", background: true },
+                  },
+                ],
+              },
+              "*",
+            )
+          },
+        }),
+      })
+    })
+    await open(page, "chat--task-header-background-agents-420")
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const toggle = agents.locator('[data-slot="task-header-agents-toggle"]')
+    const list = agents.locator('[data-slot="task-header-todos-list"]')
+    const preview = agents.locator('[data-slot="task-header-agents-item"]')
+    await toggle.click()
+    const row = list.locator('[data-slot="task-header-agent"]')
+    await expect(row).toContainText("Background agent 1")
+    const node = await row.elementHandle()
+    const spinner = await row.locator('[data-component="spinner"]').elementHandle()
+    expect(spinner).not.toBeNull()
+
+    for (const revision of [2, 3]) {
+      await page.clock.runFor(1000)
+      await expect(row).toContainText(`Background agent ${revision}`)
+      await expect(row).toHaveAttribute("data-status", "running")
+      expect(await node!.evaluate((node) => node.isConnected)).toBe(true)
+      expect(await spinner!.evaluate((node) => node.isConnected)).toBe(true)
+    }
+
+    await row.locator('[data-slot="task-header-agent-main"]').focus()
+    await page.clock.runFor(1000)
+    await expect(toggle).toHaveAttribute("aria-expanded", "false")
+    await expect(toggle).toBeFocused()
+    await expect(toggle).toHaveAccessibleName("1 background agent (Done)")
+    await expect(list).toBeHidden()
+    await expect(preview).toHaveAttribute("data-status", "completed")
+    await expect(preview).toHaveAttribute("aria-hidden", "false")
+    await expect(preview).toHaveAccessibleName("Open background agent: Background agent 4 (Done)")
+    await expect(preview).toHaveAttribute("title", "Open background agent: Background agent 4 (Done)")
+    await expect(preview.locator('[data-component="icon"]')).toBeVisible()
+    await expect(preview.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await toggle.click()
+    await expect(list).toBeVisible()
+    await expect(row).toHaveAttribute("data-status", "completed")
+    await expect(row.getByRole("button", { name: "Dismiss: Background agent 4", exact: true })).toBeVisible()
+    await page.clock.runFor(1000)
+    await expect(row).toContainText("Background agent 5")
+    await expect(toggle).toHaveAttribute("aria-expanded", "true")
+    await expect(list).toBeVisible()
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await toggle.click()
+    await page.setViewportSize({ width: 200, height: 720 })
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await expect(summary).toHaveText("1 background agent")
+    await expect(summary).toHaveAccessibleName("1 background agent (Done)")
+    await expect(summary.locator('[data-component="icon"]')).toBeVisible()
+    await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
+    await expect(preview).toHaveAttribute("aria-hidden", "true")
+  })
+
+  test("Background agent previews show all finished statuses and a compact summary", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "acquireVsCodeApi", {
+        value: () => ({
+          getState: () => undefined,
+          setState: () => {},
+          postMessage: (message: { type: string; sessionID?: string; requestID?: string }) => {
+            if (message.type !== "requestBackgroundJobs") return
+            window.postMessage(
+              {
+                type: "backgroundJobsLoaded",
+                sessionID: message.sessionID,
+                requestID: message.requestID,
+                jobs: [
+                  "completed",
+                  "cancelled",
+                  "error",
+                  ...(document.documentElement.dataset.running ? ["running"] : []),
+                ].map((status) => ({
+                  id: `job-${status}`,
+                  type: "task",
+                  title: `Background agent ${status}`,
+                  status,
+                  started_at: 1,
+                  metadata: { parentSessionId: message.sessionID, sessionId: `child-${status}`, background: true },
+                })),
+              },
+              "*",
+            )
+          },
+        }),
+      })
+    })
+    await open(page, "chat--task-header-background-agents-1280")
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const items = agents.locator('[data-slot="task-header-agents-item"]')
+    await expect(items).toHaveCount(3)
+    const clear = agents.getByRole("button", { name: "Clear finished", exact: true })
+    await expect(clear).toHaveText("")
+    await expect(clear).toHaveAttribute("title", "Clear finished")
+    for (const [status, label, icon] of [
+      ["completed", "Done", "circle-check"],
+      ["cancelled", "Cancelled", "circle-ban-sign"],
+      ["error", "Error", "warning"],
+    ] as const) {
+      const item = agents.locator(`[data-slot="task-header-agents-item"][data-status="${status}"]`)
+      const name = `Open background agent: Background agent ${status} (${label})`
+      await expect(item).toHaveAttribute("aria-hidden", "false")
+      await expect(item).toHaveText(`Background agent ${status}`)
+      await expect(item).toHaveAccessibleName(name)
+      await expect(item).toHaveAttribute("title", name)
+      await expect(item.locator('[data-component="icon"]')).toBeVisible()
+      await expect(item.locator('[data-component="icon"] use')).toHaveAttribute("href", `#opencode-icon-${icon}`)
+    }
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await page.setViewportSize({ width: 200, height: 720 })
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await expect(summary).toHaveText("3 background agents")
+    await expect(summary).toHaveAccessibleName("3 background agents (Error)")
+    await expect(agents.locator('[data-slot="task-header-agents-toggle"]')).toHaveAccessibleName(
+      "3 background agents (Error)",
+    )
+    await expect(summary.locator('[data-component="icon"]')).toBeVisible()
+    await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-warning")
+    await expect(agents.locator('[data-slot="task-header-agents-item"][aria-hidden="false"]')).toHaveCount(0)
+
+    await page.evaluate(() => {
+      document.documentElement.dataset.running = "true"
+    })
+    await page.setViewportSize({ width: 600, height: 720 })
+    await expect(items).toHaveCount(4)
+    await expect(items.first()).toHaveAttribute("data-status", "running")
+    await expect(items.first()).toHaveAttribute("aria-hidden", "false")
+    await expect(items.first().locator('[data-component="spinner"]')).toBeVisible()
+    await expect(agents.locator('[data-slot="task-header-agents-overflow"]')).toHaveAttribute("aria-hidden", "false")
+  })
+
   test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
     await open(page, "agentmanager--sidebar-search-open")
 

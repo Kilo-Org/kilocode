@@ -15,20 +15,45 @@ import javax.swing.SwingUtilities
 
 private const val CELL_GAP = 8
 
-internal data class ActiveListBadge(val text: String, val style: UiStyle.Badge.Style = UiStyle.Badge.Secondary)
+/**
+ * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
+ * badge into hit-testing; [action] requires an id to have any effect.
+ *
+ * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph.
+ * The glyph form is how a row shows a status that already has a settled visual language — a CI or review
+ * verdict — where a worded pill would only repeat what the icon already says.
+ */
+internal data class ActiveListBadge(
+    val text: String,
+    val style: UiStyle.Badge.Style = UiStyle.Badge.Secondary,
+    val id: String? = null,
+    val tooltip: String? = null,
+    val action: (() -> Unit)? = null,
+    val icon: Icon? = null,
+)
 
+/**
+ * A row's changes summary: what the row has committed against [base], and what it has left uncommitted.
+ * A row with nothing committed shows the uncommitted counts instead of hiding, so [onLocal] is the click
+ * target in that case and [onChanges] the rest of the time.
+ */
 internal data class ActiveListMetrics(
+    val files: Int = 0,
     val additions: Int = 0,
     val deletions: Int = 0,
-    val ahead: Int = 0,
-    val behind: Int = 0,
-    val pr: ActiveListBadge? = null,
-    val prTooltip: String? = null,
-    /** Click handler for the changes badge, e.g. open the branch diff. Null leaves it inert. */
+    val base: String = "",
     val onChanges: (() -> Unit)? = null,
-    /** Click handler for the PR badge, e.g. open the pull request. Null leaves it inert. */
-    val onPr: (() -> Unit)? = null,
-)
+    val localFiles: Int = 0,
+    val localAdditions: Int = 0,
+    val localDeletions: Int = 0,
+    val onLocal: (() -> Unit)? = null,
+) {
+    /** Whether the uncommitted counts are standing in for a committed set that is empty. */
+    val local: Boolean get() = files == 0 && localFiles > 0
+
+    /** The one action the summary answers to, matched to whichever counts it is showing. */
+    val action: (() -> Unit)? get() = if (local) onLocal else onChanges
+}
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
@@ -47,6 +72,13 @@ internal data class ActiveListConfig(
     val header: ActiveListWeight = ActiveListWeight.BOLD,
     /** Show a separator line above section headers, except above the first row. */
     val divider: Boolean = true,
+    /**
+     * Pin title-line [ActiveListItem.badges] to the row's trailing edge instead of letting them trail
+     * the title text. Turn it on for status glyphs, which are scanned down the list as a column and
+     * then line up with the metrics on the description line; leave it off for pills that label the
+     * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
+     */
+    val badgesRight: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)
@@ -78,8 +110,7 @@ internal data class ActiveListCell(
 
 /**
  * A component in a rendered [ActiveListItem] row that the list hit-tests for clicks, hover cursor,
- * and tooltips. Implemented by the action-cell buttons and by rich trailing badges (the worktree
- * changes/PR metrics) so both flow through the same click/cursor/tooltip plumbing.
+ * and tooltips.
  */
 internal interface ActiveListHitCell {
     val cellId: String
@@ -92,9 +123,10 @@ internal interface ActiveListHitCell {
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
  * list, and the session history stack: a leading icon, a title whose weight follows
- * [ActiveListConfig.title] with an inline [note], a secondary [description] line, inline [badges],
- * optional right-aligned [trailing] text, and action [cells]. Action cells are shown only for the
- * active focused selection unless [ActiveListCell.alwaysVisible] is true.
+ * [ActiveListConfig.title] with an inline [note], a secondary [description] line, [leading] badges
+ * before the title, inline [badges] after it, optional right-aligned [trailing] text, and action
+ * [cells]. Action cells are shown only for the active focused selection unless
+ * [ActiveListCell.alwaysVisible] is true.
  */
 internal interface ActiveListItem {
     val key: String
@@ -117,7 +149,10 @@ internal interface ActiveListItem {
      */
     val tinted: Boolean get() = false
     val section: String? get() = null
+    val leading: List<ActiveListBadge> get() = emptyList()
+    /** Badges rendered after the title. */
     val badges: List<ActiveListBadge> get() = emptyList()
+    val secondaryBadges: List<ActiveListBadge> get() = emptyList()
     /** Right-aligned secondary text, such as a relative timestamp. */
     val trailing: String? get() = null
     val metrics: ActiveListMetrics? get() = null
@@ -230,8 +265,6 @@ internal fun activeListCellAt(
         .firstOrNull { cell -> cell.enabled && bounds[cell.id]?.contains(point) == true }
         ?.id
     if (fromCell != null) return fromCell
-    // Regions that are not backed by an ActiveListCell (the changes/PR badges) are actionable in
-    // place: match the first enabled one with a handler under the point.
     return hits.firstOrNull { it.enabled && it.action != null && it.bounds.contains(point) }?.id
 }
 
@@ -270,7 +303,7 @@ private fun forEachHitCell(component: Component, action: (ActiveListHitCell) -> 
         // Skip hidden subtrees so a badge left visible inside a hidden trailing panel is not
         // collected as a live hit target.
         if (!c.isVisible) return
-        if (c is ActiveListHitCell) action(c)
+        if (c is ActiveListHitCell && c.cellId.isNotBlank()) action(c)
         if (c is Container) c.components.forEach(::visit)
     }
     visit(component)

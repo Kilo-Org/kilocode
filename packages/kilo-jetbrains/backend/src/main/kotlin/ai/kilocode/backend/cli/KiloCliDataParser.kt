@@ -20,7 +20,6 @@ import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.CompactionConfigDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
@@ -913,31 +912,6 @@ object KiloCliDataParser {
         val parts = prompt.parts.filter { it.type == "file" }.joinToString(",") { buildPromptPartJson(it) }
         if (parts.isNotEmpty()) fields += "\"parts\":[$parts]"
         return "{${fields.joinToString(",")}}"
-    }
-
-    /**
-     * Build the partial JSON body for `PATCH /global/config`.
-     */
-    fun buildConfigPartial(update: ConfigUpdateDto): String {
-        val sb = StringBuilder("{")
-        var first = true
-        fun sep() { if (!first) sb.append(","); first = false }
-
-        val model = update.model
-        if (model != null) {
-            sep(); sb.append(""""model":${escape(model)}""")
-        }
-        val agent = update.agent
-        if (agent != null) {
-            sep(); sb.append(""""default_agent":${escape(agent)}""")
-        }
-        val temp = update.temperature
-        if (temp != null) {
-            val target = agent ?: "ask"
-            sep(); sb.append(""""agent":{"$target":{"temperature":$temp}}""")
-        }
-        sb.append("}")
-        return sb.toString()
     }
 
     fun buildConfigPatch(patch: ConfigPatchDto): String {

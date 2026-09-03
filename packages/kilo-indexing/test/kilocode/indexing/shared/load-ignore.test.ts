@@ -70,6 +70,41 @@ describe("loadIgnore", () => {
     expect(ig.ignores("pkg/sub/dist/file.ts")).toBe(true)
   })
 
+  test("derives simple prunes when no negation rules are present", async () => {
+    await writeFile(path.join(root, ".gitignore"), ".venv/\n/generated-root/\n")
+    await mkdir(path.join(root, "pkg"))
+    await writeFile(path.join(root, "pkg", ".gitignore"), "generated/\n")
+
+    const ig = await loadIgnore(root)
+
+    expect(ig.ignores(".venv/file.ts")).toBe(true)
+    expect(ig.ignores("generated-root/file.ts")).toBe(true)
+    expect(ig.ignores("pkg/sub/generated/file.ts")).toBe(true)
+    expect(ig.ignores("outside/generated/file.ts")).toBe(false)
+    expect(ig.watchIgnoreGlobs?.()).toEqual(["**/.venv", "generated-root", "pkg/**/generated"])
+  })
+
+  test.each(["!data/", "!d*/", "!DATA/"])("keeps paths re-included by %s visible to the watcher", async (rule) => {
+    await writeFile(path.join(root, ".gitignore"), `.venv/\n/pkg/data/\n${rule}\n`)
+
+    const ig = await loadIgnore(root)
+
+    expect(ig.ignores("pkg/data/file.ts")).toBe(false)
+    expect(ig.ignores(".venv/file.ts")).toBe(true)
+    expect(ig.watchIgnoreGlobs?.()).toEqual([])
+  })
+
+  test.each([".gitignore", ".kilocodeignore"])("keeps nested %s re-includes visible to the watcher", async (name) => {
+    await writeFile(path.join(root, ".gitignore"), "/pkg/sub/data/\n")
+    await mkdir(path.join(root, "pkg"))
+    await writeFile(path.join(root, "pkg", name), "!data/\n")
+
+    const ig = await loadIgnore(root)
+
+    expect(ig.ignores("pkg/sub/data/file.ts")).toBe(false)
+    expect(ig.watchIgnoreGlobs?.()).toEqual([])
+  })
+
   test("lets child ignore files override parent rules with negation", async () => {
     await mkdir(path.join(root, "pkg"), { recursive: true })
     await writeFile(path.join(root, ".gitignore"), "*.ts\n")
