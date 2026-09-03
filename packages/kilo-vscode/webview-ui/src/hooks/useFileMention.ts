@@ -31,6 +31,8 @@ import {
 const FILE_SEARCH_DEBOUNCE_MS = 150
 /** Past chats shown inline before the file results, so files stay reachable. */
 const SESSION_RESULT_LIMIT = 3
+/** How long a spaced query waits for past chats before it counts as prose. */
+const SESSION_FETCH_GRACE_MS = 3000
 const FILE_SEARCH_CACHE_MS = 5000
 const FILE_SEARCH_CACHE_LIMIT = 8
 
@@ -196,8 +198,12 @@ export function useFileMention(
   let filePickerCounter = 0
   let sessionSearchCounter = 0
   // Scope whose past chats have been fetched, so opening "@" loads the list
-  // once per session instead of on every keystroke.
+  // once per session instead of on every keystroke, plus the fetch state a
+  // spaced query consults before deciding it is prose rather than a title.
   let sessionScope: string | undefined
+  let sessionsInFlight = false
+  let sessionTimer: ReturnType<typeof setTimeout> | undefined
+  let pending: { query: string } | undefined
   let pickerState: {
     requestId: string
     textarea: HTMLTextAreaElement
@@ -235,6 +241,10 @@ export function useFileMention(
     prewarmRequest = undefined
     workspaceDir = dirs.get(value) ?? ""
     sessionScope = undefined
+    sessionsInFlight = false
+    pending = undefined
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
     setSessionCandidates([])
     setWorktreePicker(false)
     setMentionResults([])
@@ -308,6 +318,45 @@ export function useFileMention(
     })
   })
 
+  /**
+   * Apply a prose-close that was held back until the past chats which could
+   * still rescue the query were known. Re-ranking first keeps a query that a
+   * chat title matches open, so only a query nothing answers is closed.
+   */
+  const resolvePending = () => {
+    if (!pending) return
+    const query = pending.query
+    pending = undefined
+    if (mentionQuery() !== query) return
+    const next = results(query, files(mentionResults()))
+    if (next.every((item) => item.type === "file-picker")) {
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    replaceResults(next)
+  }
+
+  const applyFiles = (query: string, items: FileSearchItem[]) => {
+    const next = results(query, items)
+    // A spaced query that matches nothing is prose, not a filename in progress.
+    if (/\s/.test(query) && next.every((item) => item.type === "file-picker")) {
+      // Unless this scope's past chats are still on the way: a chat title is
+      // exactly the kind of spaced query that no file can answer, so hold the
+      // close until the list that could match it has arrived.
+      if (sessionsInFlight) {
+        pending = { query }
+        replaceResults(next)
+        return
+      }
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    pending = undefined
+    replaceResults(next)
+  }
+
   const applySessions = (sessions: SessionSearchItem[]) => {
     // Most recently updated first; with a query the List re-ranks by fuzzy score.
     setSessionCandidates(
@@ -316,6 +365,10 @@ export function useFileMention(
         .filter((session) => session.title)
         .sort((a, b) => b.updated - a.updated),
     )
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
+    sessionsInFlight = false
+    resolvePending()
     // The list can land while the menu is already open on a query that could
     // match a chat title, so re-rank what is on screen.
     const open = mentionQuery()
@@ -346,19 +399,13 @@ export function useFileMention(
     }
     if (!request.query) writeCache(message.dir, items, request.revision)
     if (!showMention() || request.query !== mentionQuery()) return
-    const next = results(request.query, items)
-    // A spaced query that matches nothing is prose, not a filename in progress.
-    if (/\s/.test(request.query) && next.every((item) => item.type === "file-picker")) {
-      dead = { at, query: request.query }
-      closeMention()
-      return
-    }
-    replaceResults(next)
+    applyFiles(request.query, items)
   })
 
   onCleanup(() => {
     unsubscribe()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    if (sessionTimer) clearTimeout(sessionTimer)
     if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
@@ -412,6 +459,15 @@ export function useFileMention(
   // The same list backs both the inline results and the dedicated picker.
   const requestSessions = () => {
     sessionSearchCounter++
+    sessionsInFlight = true
+    // A reply that never arrives must not leave the prose-close disabled for
+    // the rest of the session, so the wait is bounded.
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = setTimeout(() => {
+      sessionTimer = undefined
+      sessionsInFlight = false
+      resolvePending()
+    }, SESSION_FETCH_GRACE_MS)
     const id = sessionID?.()
     vscode.postMessage({
       type: "requestSessionSearch",

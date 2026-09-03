@@ -339,6 +339,102 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("waits for past chats before treating a spaced query as prose", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@fix auth", 9)
+    await wait(170)
+
+    // No file answers a chat title, and the file search is the first to reply.
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+    expect(mention.showMention()).toBe(true)
+
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [{ id: "ses_a", title: "Fix auth bug", updated: 2 }],
+      })
+    }
+
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults().find((item) => item.type === "session")).toMatchObject({ value: "Fix auth bug" })
+
+    dispose.fn?.()
+  })
+
+  it("closes a spaced query once the past chats fail to match it either", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@README.md and", 14)
+    await wait(170)
+
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [{ id: "ses_a", title: "Something else entirely", updated: 2 }],
+      })
+    }
+
+    expect(mention.showMention()).toBe(false)
+    // And it stays closed as the sentence continues.
+    mention.onInput("@README.md and then", 19)
+    expect(mention.showMention()).toBe(false)
+
+    dispose.fn?.()
+  })
+
   it("keeps offering the past chats entry for its spaced label", () => {
     const ctx = {
       postMessage: () => {},
@@ -421,7 +517,7 @@ describe("useFileMention", () => {
 
     mention.onInput("@README.md and", 14)
     await wait(170)
-    const request = posted.at(-1)
+    const request = posted.findLast((message) => message.type === "requestFileSearch")
     for (const handler of handlers) {
       handler({
         type: "fileSearchResult",
@@ -429,6 +525,16 @@ describe("useFileMention", () => {
         dir: "/repo",
         paths: [],
         items: [],
+      })
+    }
+
+    // The close waits for the past chats, which cannot match this query either.
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [],
       })
     }
 
