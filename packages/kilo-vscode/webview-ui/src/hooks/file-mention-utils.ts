@@ -44,22 +44,15 @@ const FILE_PICKER_ALIASES = ["browse files", "browse", "file picker"]
 
 /**
  * Compare mention labels and queries on equal footing: case-insensitive, with
- * hyphens and runs of whitespace treated as a single separator. A query may now
- * contain spaces, so the way a user types a label (`git changes`) must match the
- * token it stands for (`git-changes`).
+ * hyphens and runs of whitespace treated as a single separator, so the way a
+ * user types a label (`git changes`) matches the token it stands for
+ * (`git-changes`).
  */
 function normalize(value: string): string {
   return value
     .toLowerCase()
     .replace(/[\s-]+/g, " ")
     .trim()
-}
-
-/** Whether an in-progress query is still typing out one of these labels. */
-function aliased(query: string, aliases: string[]): boolean {
-  const value = normalize(query)
-  if (!value) return true
-  return aliases.some((alias) => normalize(alias).startsWith(value))
 }
 
 export const TERMINAL_RESULT: MentionResult = {
@@ -93,35 +86,99 @@ export const PAST_CHATS_RESULT: MentionResult = {
 export const WORKTREES_RESULT: MentionResult = { type: "worktrees", value: "worktrees" }
 
 /**
- * Whether the query spells out the Browse files entry instead of merely leaving
- * it as the fallback every list ends with. A named picker is a choice the user
- * is making, so it must survive the checks that exist to get an unmatched
- * fallback out of the way.
+ * Whether the query spells out the Browse files entry rather than just leaving
+ * it on offer. Naming it is a choice the user is making, so it survives the
+ * check that reads an unanswered spaced query as prose.
+ *
+ * This asks the ranking the same question the list does, rather than testing
+ * the aliases separately: typing the label in full, dots and all, scores 1.0
+ * but is not a prefix of any alias, and the two answers must not disagree.
  */
 export function filePickerNamed(query: string): boolean {
   if (!normalize(query)) return false
-  return aliased(query, FILE_PICKER_ALIASES)
-}
-
-export function getTerminalMentionResult(query: string): MentionResult[] {
-  if (!aliased(query, TERMINAL_ALIASES)) return []
-  return [TERMINAL_RESULT]
-}
-
-export function getGitChangesMentionResult(query: string): MentionResult[] {
-  if (!aliased(query, GIT_CHANGES_ALIASES)) return []
-  return [GIT_CHANGES_RESULT]
-}
-
-export function getPastChatsMentionResult(query: string): MentionResult[] {
-  if (!aliased(query, PAST_CHATS_ALIASES)) return []
-  return [PAST_CHATS_RESULT]
+  return score(query, FILE_PICKER_RESULT) >= FLOOR
 }
 
 /**
- * Everything the `@` menu can offer for a query: the special entries, worktree
- * references, matching past chats, then files. `sessions` is already filtered
- * and ranked by the caller, which owns the directory-scoped session list.
+ * The entries the menu always knows about, as opposed to the files and chats a
+ * query finds. They only form a group of their own on an empty `@`, which lists
+ * the menu rather than answering a query.
+ */
+const MENTION_ENTRIES = new Set(["terminal", "git-changes", "past-chats", "worktrees", "file-picker"])
+
+export function isMentionEntry(item: MentionResult): boolean {
+  return MENTION_ENTRIES.has(item.type)
+}
+
+/** Score of a query that matched nothing, which sorts below every real match. */
+const MISS = -1
+/**
+ * How well a query must fit a label before the menu offers it. Deliberate
+ * matches score well clear of this (`git` on Git changes 0.87, `fix auth` on a
+ * chat titled "Fix auth bug" 0.91), while the noise a loose subsequence finds
+ * falls below it (`e` on Terminal 0.60, `chevron` on "500 character novel
+ * generation" 0.25). Files are exempt: the file search already chose them, and
+ * a weak score only decides where they sit.
+ */
+const FLOOR = 0.7
+
+/** Everything a result answers to, so one query can be scored against them all. */
+function labels(item: MentionResult): string[] {
+  if (item.type === "terminal") return [item.label, ...TERMINAL_ALIASES]
+  if (item.type === "git-changes") return [item.label, ...GIT_CHANGES_ALIASES]
+  if (item.type === "past-chats") return [item.label, ...PAST_CHATS_ALIASES]
+  if (item.type === "file-picker") return [item.label, ...FILE_PICKER_ALIASES]
+  if (item.type === "worktrees") return WORKTREE_ALIASES
+  if (item.type === "session") return [item.session.title, item.session.worktreeName ?? ""].filter(Boolean)
+  return [item.value]
+}
+
+function score(query: string, item: MentionResult): number {
+  const best = labels(item).reduce((top, label) => Math.max(top, fuzzysort.single(query, label)?.score ?? MISS), MISS)
+  // A Browse files the query ignores is the last resort of the list, below even
+  // the files the search returned that the query does not literally spell.
+  if (item.type === "file-picker" && best === MISS) return MISS - 1
+  return best
+}
+
+/**
+ * Order every offer by how well it answers the query, so a menu entry, a past
+ * chat and a file compete on the same scale — a literal filename match beats a
+ * chat title the query only scatters across. Anything the query misses drops
+ * out, except Browse files, which stays on as the last resort it is.
+ */
+export function rankMentionResults(query: string, items: MentionResult[]): MentionResult[] {
+  if (!query) return items
+  return items
+    .map((item) => ({ item, score: score(query, item) }))
+    .filter((entry) => {
+      // Browse files is the way out when nothing matches, so it is never
+      // dropped; it just sinks to the bottom when the query ignores it.
+      if (entry.item.type === "file-picker") return true
+      if (isMentionEntry(entry.item) || entry.item.type === "session") return entry.score >= FLOOR
+      return true
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item)
+}
+
+/**
+ * Where the selection starts. A query puts its best answer first, so the top of
+ * the list is already the right place. An empty `@` ranks nothing, so it starts
+ * on the first file instead of on the menu entries listed above them.
+ */
+export function defaultMentionIndex(items: MentionResult[], query: string): number {
+  if (query) return 0
+  const index = items.findIndex((item) => !isMentionEntry(item))
+  return index === -1 ? 0 : index
+}
+
+/**
+ * Everything the `@` menu can offer for a query, ranked as one list: menu
+ * entries, past chats and files all compete on the same score, so what answers
+ * the query best comes first whatever kind of thing it is. An empty `@` has
+ * nothing to rank and keeps the menu order, entries first. `sessions` is
+ * already filtered by the caller, which owns the directory-scoped chat list.
  */
 export function buildMentionResults(
   query: string,
@@ -130,22 +187,22 @@ export function buildMentionResults(
   worktrees = false,
   sessions: MentionResult[] = [],
 ): MentionResult[] {
-  const references: MentionResult[] = worktrees && aliased(query, WORKTREE_ALIASES) ? [WORKTREES_RESULT] : []
+  const references: MentionResult[] = worktrees ? [WORKTREES_RESULT] : []
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
     if (item.type === "opened-file") return { type: "opened-file", value: item.path }
     return { type: "file", value: item.path }
   })
-  return [
-    ...getTerminalMentionResult(query),
-    ...(git ? getGitChangesMentionResult(query) : []),
-    ...getPastChatsMentionResult(query),
+  return rankMentionResults(query, [
+    TERMINAL_RESULT,
+    ...(git ? [GIT_CHANGES_RESULT] : []),
+    PAST_CHATS_RESULT,
     ...references,
+    FILE_PICKER_RESULT,
     ...sessions,
     ...results,
-    FILE_PICKER_RESULT,
-  ]
+  ])
 }
 
 export function filterSessions(sessions: SessionSearchItem[], query: string) {
@@ -212,11 +269,10 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
   const value = query.toLowerCase()
   if (!value) return items
   return items.filter((item) => {
-    if (item.type === "terminal") return aliased(query, TERMINAL_ALIASES)
-    if (item.type === "git-changes") return aliased(query, GIT_CHANGES_ALIASES)
-    if (item.type === "past-chats") return aliased(query, PAST_CHATS_ALIASES)
+    // Entries answer here exactly as they do to the ranking, so a query cannot
+    // keep an entry in one place and lose it in the other.
     if (item.type === "file-picker") return true
-    if (item.type === "worktrees") return aliased(query, WORKTREE_ALIASES)
+    if (isMentionEntry(item)) return score(query, item) >= FLOOR
     if (item.type === "session") return normalize(item.value).includes(normalize(query))
     return item.value.toLowerCase().includes(value)
   })

@@ -12,6 +12,7 @@ import {
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
+  defaultMentionIndex,
   filePickerNamed,
   filterSessions,
   buildSessionAttachments,
@@ -30,7 +31,7 @@ import {
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
-/** Past chats shown inline before the file results, so files stay reachable. */
+/** Past chats offered to the ranking, bounded so chats cannot flood the list. */
 const SESSION_RESULT_LIMIT = 3
 /** How long a spaced query waits for past chats before it counts as prose. */
 const SESSION_FETCH_GRACE_MS = 3000
@@ -73,6 +74,8 @@ export interface FileMention {
   ) => void
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
+  /** The in-progress query, or null when the menu is closed. Empty for a bare "@". */
+  mentionQuery: Accessor<string | null>
   showMention: Accessor<boolean>
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
@@ -225,6 +228,9 @@ export function useFileMention(
   let at = 0
   let dead: { at: number; query: string } | undefined
   const inserted = new Map<number, string>()
+  // Whether the user has moved the selection themselves, which later results
+  // must not undo. Typing a new query hands the choice back to the default.
+  let touched = false
 
   const showMention = () => mentionQuery() !== null
   const scope = () => sessionID?.() ?? ""
@@ -289,16 +295,27 @@ export function useFileMention(
     const index = mentionIndex()
     const selected = mentionResults()[index]
     setMentionResults(items)
-    if (!selected) {
-      setMentionIndex(0)
+    // An untouched selection follows the results in: it sat on Browse files
+    // only for want of a candidate, so an arriving one should take it.
+    if (!touched || !selected) {
+      setMentionIndex(defaultMentionIndex(items, mentionQuery() ?? ""))
       return
     }
     const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
     setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
   }
 
+  /** Move the selection on the user's behalf, pinning it against later results. */
+  const chooseIndex = (index: number) => {
+    touched = true
+    setMentionIndex(index)
+  }
+
   createEffect(() => {
-    if (!showMention()) setMentionIndex(0)
+    if (!showMention()) {
+      touched = false
+      setMentionIndex(0)
+    }
   })
 
   createEffect(() => {
@@ -631,11 +648,13 @@ export function useFileMention(
       return
     }
     dead = undefined
+    touched = false
     setMentionQuery(query)
     const items = readCache(workspaceDir)
     if (!query) {
-      setMentionResults(results("", items))
-      setMentionIndex(0)
+      const empty = results("", items)
+      setMentionResults(empty)
+      setMentionIndex(defaultMentionIndex(empty, ""))
       requestFileSearch("")
       return
     }
@@ -646,7 +665,7 @@ export function useFileMention(
       const base = prev.length ? prev : results("", items)
       return results(query, files(filterMentionResults(query, base)))
     })
-    setMentionIndex(0)
+    setMentionIndex(defaultMentionIndex(mentionResults(), query))
     requestFileSearch(query)
   }
 
@@ -661,20 +680,22 @@ export function useFileMention(
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
+      touched = true
       setMentionIndex((i) => Math.min(i + 1, Math.max(mentionResults().length - 1, 0)))
       return true
     }
     if (e.key === "ArrowUp") {
       e.preventDefault()
+      touched = true
       setMentionIndex((i) => Math.max(i - 1, 0))
       return true
     }
     if (e.key === "Enter" || e.key === "Tab") {
       const result = mentionResults()[mentionIndex()]
       if (!result) return false
-      // While a spaced query is still being resolved the only offer can be the
-      // file-picker fallback. Sending the message must win over browsing files,
-      // unless the query names that entry and browsing is what was asked for.
+      // Browse files always stays on offer, so a spaced query that found
+      // nothing else leaves it highlighted with nothing behind it. Sending the
+      // message wins there, unless the query actually names the entry.
       const query = mentionQuery() ?? ""
       if (result.type === "file-picker" && /\s/.test(query) && !filePickerNamed(query)) return false
       e.preventDefault()
@@ -916,7 +937,8 @@ export function useFileMention(
     onInput,
     onKeyDown,
     selectMention,
-    setMentionIndex,
+    mentionQuery,
+    setMentionIndex: chooseIndex,
     closeMention,
     parseFileAttachments,
     addPaths,

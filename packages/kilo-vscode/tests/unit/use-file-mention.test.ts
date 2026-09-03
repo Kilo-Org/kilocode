@@ -551,6 +551,241 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("starts the selection below browse files and falls back to it", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@chevron", 8)
+    await wait(170)
+
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [
+          { id: "ses_a", title: "Check prompt navigator implementation", updated: 3 },
+          { id: "ses_b", title: "500 character novel generation", updated: 2 },
+        ],
+      })
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["resources/icons/chevron-down.svg"],
+        items: [{ path: "resources/icons/chevron-down.svg", type: "file" }],
+      })
+    }
+
+    // Chats whose titles only scatter the query do not outrank a real filename
+    // match, and the focus starts on the best answer.
+    expect(mention.mentionResults().at(0)).toEqual({ type: "file", value: "resources/icons/chevron-down.svg" })
+    expect(mention.mentionResults().some((item) => item.type === "session")).toBe(false)
+    expect(mention.mentionIndex()).toBe(0)
+    // Browse files stays on offer, ranked last by a query that ignores it.
+    expect(mention.mentionResults().at(-1)).toEqual(FILE_PICKER_RESULT)
+
+    // With nothing else matching, the entry is all that is left and takes focus.
+    mention.onInput("@chevronzz", 10)
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+    expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT])
+    expect(mention.mentionIndex()).toBe(0)
+
+    dispose.fn?.()
+  })
+
+  it("keeps the entry on offer when the label is typed in full", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // The trailing dots belong to the label, so this spaced query is a choice
+    // rather than the prose an unanswered spaced query normally means.
+    mention.onInput("@browse files...", 16)
+    await wait(170)
+
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [],
+      })
+    }
+
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT])
+    expect(mention.mentionIndex()).toBe(0)
+
+    dispose.fn?.()
+  })
+
+  it("ranks a menu entry first when the query names it best", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@browse f", 9)
+    await wait(170)
+
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["src/browser-feedback.ts"],
+        items: [{ path: "src/browser-feedback.ts", type: "file" }],
+      })
+    }
+
+    // "browse f" fits the entry better than the file that merely contains it.
+    expect(mention.mentionResults().at(0)).toEqual(FILE_PICKER_RESULT)
+    expect(mention.mentionResults().at(1)).toEqual({ type: "file", value: "src/browser-feedback.ts" })
+    expect(mention.mentionIndex()).toBe(0)
+
+    dispose.fn?.()
+  })
+
+  it("does not move a selection the user made themselves", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@browse f", 9)
+    await wait(170)
+
+    // The user picks Browse files while the search is still running.
+    mention.setMentionIndex(0)
+
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["src/browser-feedback.ts"],
+        items: [{ path: "src/browser-feedback.ts", type: "file" }],
+      })
+    }
+
+    expect(mention.mentionResults().at(mention.mentionIndex())).toEqual(FILE_PICKER_RESULT)
+
+    dispose.fn?.()
+  })
+
+  it("keeps the selection on a matching chat above the files", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@fix auth", 9)
+    await wait(170)
+
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    const search = posted.findLast((message) => message.type === "requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: sessions?.type === "requestSessionSearch" ? sessions.requestId : "",
+        sessions: [{ id: "ses_a", title: "Fix auth bug", updated: 2 }],
+      })
+      handler({
+        type: "fileSearchResult",
+        requestId: search?.type === "requestFileSearch" ? search.requestId : "",
+        dir: "/repo",
+        paths: ["src/auth.ts"],
+        items: [{ path: "src/auth.ts", type: "file" }],
+      })
+    }
+
+    // The chat title answers this query better than any file does.
+    expect(mention.mentionResults().at(mention.mentionIndex())).toMatchObject({
+      type: "session",
+      value: "Fix auth bug",
+    })
+
+    dispose.fn?.()
+  })
+
   it("opens the file picker when Enter confirms a query naming it", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()
@@ -621,7 +856,7 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
-  it("lets Enter send the message when a spaced query only offers the file picker", async () => {
+  it("lets Enter send the message when a spaced query answers to nothing", async () => {
     const posted: WebviewMessage[] = []
     const ctx = {
       postMessage: (message: WebviewMessage) => posted.push(message),
@@ -634,9 +869,11 @@ describe("useFileMention", () => {
       return useFileMention(ctx, undefined, () => false)
     })
 
+    // Prose leaves Browse files as the only offer, and it takes the focus for
+    // want of anything better — but sending the message still wins over it.
     mention.onInput("@README.md and then", 19)
-    expect(mention.showMention()).toBe(true)
     expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT])
+    expect(mention.mentionIndex()).toBe(0)
 
     const prevented = { count: 0 }
     const event = { key: "Enter", preventDefault: () => prevented.count++ } as unknown as KeyboardEvent
@@ -1280,9 +1517,9 @@ describe("useFileMention", () => {
     expect(mention.mentionResults()).toEqual([
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      FILE_PICKER_RESULT,
       { type: "opened-file", value: "src/index.ts" },
       { type: "file", value: "package.json" },
-      FILE_PICKER_RESULT,
     ])
 
     // Close mention and reopen @ - should still be instant
@@ -1293,9 +1530,9 @@ describe("useFileMention", () => {
     expect(mention.mentionResults()).toEqual([
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      FILE_PICKER_RESULT,
       { type: "opened-file", value: "src/index.ts" },
       { type: "file", value: "package.json" },
-      FILE_PICKER_RESULT,
     ])
 
     dispose.fn?.()
