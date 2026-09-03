@@ -185,7 +185,88 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         assertEquals(1, rpc.prCalls.size)
         gate.complete(Unit)
         drain()
+
+        // The return is held, not spent: the running lookup covered the request, and the attach lookup
+        // is still inside the spend floor, so the trailing lookup waits out the rest of the window.
+        assertEquals(1, rpc.prCalls.size)
+        timers.advanceBy(PR_FLOOR - Away.FRESH)
+        drain()
+        assertEquals(2, rpc.prCalls.size)
         handle.close()
+    }
+
+    fun `test a return held behind a running lookup is spent when that lookup ends`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        // Clear of the spend floor, so the in-flight guard is the only thing left holding the return.
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals("the running lookup must not be joined by a second fan-out", 1, rpc.prCalls.size)
+
+        // The lookup that was running started before the departure, so its answer can predate the very
+        // change this return came back to observe. Dropping the request would leave that stale answer
+        // standing until the 120s poll, which is the staleness this whole path exists to avoid.
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals("the held return keeps the ceiling it was submitted with", Away.FRESH, rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test a return held behind a lookup that reports a rate limit is dropped`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // The budget was still OK when the return was recorded, so it could not have been refused up
+        // front. Spending it now would pay for the one fan-out GitHub is currently refusing.
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test a return held behind a running lookup does not outlive a detach`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+        timers.advanceBy(PR_FLOOR)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // Nothing is watching worktrees any more, so the held return has no surface left to update.
+        handle.close()
+        gate.complete(Unit)
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
     }
 
     fun `test gh availability propagates from pr status`() {

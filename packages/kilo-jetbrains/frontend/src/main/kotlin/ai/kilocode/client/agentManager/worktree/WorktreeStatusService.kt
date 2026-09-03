@@ -5,6 +5,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -154,26 +155,68 @@ class WorktreeStatusService internal constructor(
         }
         // Under the bar the absence is window churn: reload, but let the backend answer from cache.
         val max = Away.ceiling(gone) ?: return refreshPr()
-        val since = timers.now() - lastPr
-        if (since >= PR_THROTTLE) {
-            refreshPr(force = true, maxAge = max)
-            return
-        }
-        hold(max, PR_THROTTLE - since)
+        hold(max)
     }
 
     /**
-     * Folds a return blocked by the spend floor into the single trailing lookup, so the news it was
-     * submitted for does not wait out a full [PR_POLL] interval. The strictest ceiling survives, and
-     * the newest return cannot make an earlier one cheaper.
-     *
-     * Deliberately not a sliding debounce: a continuing burst must not keep pushing the deadline out,
-     * so an already-armed timer is left alone and the window end stays fixed from the first deferral.
+     * Records a return that deserves fresh data, then tries to spend it. The record is what makes a
+     * return that cannot run right now survive: the strictest ceiling wins, and the newest return can
+     * never make an earlier one cheaper.
      */
     @RequiresEdt(generateAssertion = false)
-    private fun hold(max: Long, wait: Long) {
+    private fun hold(max: Long) {
         pending = pending?.let { minOf(it, max) } ?: max
-        LOG.info("worktree PR focus deferred maxAge=$pending waitMs=$wait")
+        spend()
+    }
+
+    /**
+     * Spends the held return when nothing stands in the way, and otherwise leaves it held for whichever
+     * trigger clears first — the floor timer, or the completion of the lookup already running.
+     *
+     * Both blockers must hold rather than drop. The spend floor is the cheap case: the request only has
+     * to wait out the rest of the window. The in-flight lookup is the dangerous one, because it may have
+     * started *before* the departure, so its answer can predate the very change the return came back to
+     * see; dropping the request there would leave that stale answer standing until the next [PR_POLL].
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun spend() {
+        val max = pending ?: return
+        if (project.isDisposed || refs == 0 || !github) {
+            pending = null
+            return
+        }
+        // Re-checked here and not only at focus time: a lookup that landed while the return was held can
+        // report the budget spent, and the fan-out it would pay for is the one GitHub is refusing.
+        if (ghFlow.value == GhAvailability.RATE_LIMITED) {
+            LOG.info("worktree PR focus dropped, github budget spent maxAge=$max")
+            pending = null
+            return
+        }
+        // Its completion calls back here, so the return stays held instead of stacking a second fan-out.
+        if (prJob?.isActive == true) {
+            LOG.info("worktree PR focus held, lookup in flight maxAge=$max")
+            return
+        }
+        val since = timers.now() - lastPr
+        if (since < PR_THROTTLE) {
+            LOG.info("worktree PR focus deferred maxAge=$max sinceMs=$since")
+            arm(PR_THROTTLE - since)
+            return
+        }
+        pending = null
+        trail?.stop()
+        trail = null
+        LOG.info("worktree PR focus resumed maxAge=$max")
+        refreshPr(force = true, maxAge = max)
+    }
+
+    /**
+     * Arms the trailing lookup at the end of the current floor window. Deliberately not a sliding
+     * debounce: a continuing burst must not keep pushing the deadline out, so an already-armed timer is
+     * left alone and the window end stays fixed from the first deferral.
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun arm(wait: Long) {
         if (trail?.isRunning() == true) return
         trail = timers.timer(wait.coerceAtLeast(1).toInt(), repeats = false) { flush() }.also { it.start() }
     }
@@ -181,10 +224,7 @@ class WorktreeStatusService internal constructor(
     @RequiresEdt(generateAssertion = false)
     private fun flush() {
         trail = null
-        val max = pending ?: return
-        pending = null
-        LOG.info("worktree PR focus resumed maxAge=$max")
-        refreshPr(force = true, maxAge = max)
+        spend()
     }
 
     private fun start() {
@@ -261,7 +301,7 @@ class WorktreeStatusService internal constructor(
 
     private fun loadPr(maxAge: Long? = null) {
         val gen = ++generation
-        prJob = cs.launch {
+        val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge) }
                 .onSuccess { dto ->
@@ -284,5 +324,10 @@ class WorktreeStatusService internal constructor(
                 }
                 .onFailure { err -> LOG.warn("worktree PR refresh failed dir=$dir", err) }
         }
+        prJob = job
+        // Covers every way the lookup can end — answered, failed, cancelled, or returned early on an
+        // unresolved root — so a return held behind it is spent rather than left for the poll. A
+        // superseded generation means a newer lookup already owns the loop and will drain it instead.
+        job.invokeOnCompletion { edt { if (gen == generation) spend() } }
     }
 }
