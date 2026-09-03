@@ -18,7 +18,12 @@ export namespace ConfigVariableGuard {
     return err instanceof BlockedError || (typeof err === "object" && err !== null && (err as any).blocked === true)
   }
 
-  const secret = new Set(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
+  const secret = new Set([
+    "KILO_SERVER_PASSWORD",
+    "KILO_SERVER_USERNAME",
+    "KILO_BROWSER_BROKER_URL",
+    "KILO_BROWSER_BROKER_TOKEN",
+  ])
 
   export function env(name: string) {
     return !secret.has(name.toUpperCase())

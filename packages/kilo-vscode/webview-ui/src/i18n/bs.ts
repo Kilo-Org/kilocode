@@ -867,6 +867,9 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Dijelite ploču između glavne sesije i njenih podagenata za zadatke, uključujući ugniježđene podagente. Koristite je za paralelne pokušaje rješavanja problema ili rad na zadacima koji se međusobno nadopunjuju, a ne za svaki zadatak.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
@@ -894,6 +897,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
+  "settings.experimental.taskModelSelection.description":
+    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1172,58 +1178,16 @@ export const dict = {
   "question.summary": "{{n}} od {{total}} pitanja",
   "common.review": "Pregled",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migriraj sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
   "settings.aboutKiloCode.rooImport.description": "Uvezite historiju razgovora iz instalacije Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Uvezi sesije iz Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Šta je novo u Kilo Code",
-  "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
-  "migration.whatsNew.features.performance.title": "Brže performanse agenta",
-  "migration.whatsNew.features.performance.detail":
-    "Paralelni pozivi alata i podagenti omogućavaju vašem agentu da radi više odjednom — tako trošite manje vremena čekajući, a više isporučujući.",
-  "migration.whatsNew.features.interface.title": "Pojednostavljeni interfejs",
-  "migration.whatsNew.features.interface.detail": "Manje distrakcija, lakše i brže za čitanje.",
-  "migration.whatsNew.features.agentManager.title": "Upravljač agentima",
-  "migration.whatsNew.features.agentManager.detail":
-    "Jedinstveni interfejs za pokretanje više agenata paralelno, svaki na svom worktree-u — pratite napredak, mijenjajte kontekst i pregledajte promjene na jednom mjestu.",
-  "migration.whatsNew.features.foundation.title": "Zajednički temelj",
-  "migration.whatsNew.features.foundation.detail":
-    "Jedno malo, efikasno jezgro kroz sve Kilo proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
-  "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
-  "migration.whatsNew.docsLink": "Novosti i često postavljana pitanja",
-  "migration.whatsNew.continue": "Nastavi",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrirajte svoje postavke",
-  "migration.migrate.subtitle": "Pronašli smo postavke iz vaše prethodne instalacije. Evo šta možemo prenijeti.",
+  "migration.roo.button": "Uvezi sesije",
+  "migration.roo.empty": "Nisu pronađene sesije iz Roo Code.",
   "migration.migrate.selectLabel": "Odaberite šta želite migrirati",
   "migration.migrate.chatHistory": "Sesije razgovora i historija",
-  "migration.migrate.button": "Migriraj postavke",
-  "migration.migrate.skip": "Preskoči",
-  "migration.migrate.keysDetected": "{{count}} ključeva otkriveno",
-  "migration.migrate.serversConfigured": "{{count}} server(a) konfigurisano",
-  "migration.migrate.modesFound": "{{count}} režim(a) pronađeno",
-  "migration.migrate.nothingToMigrate": "U starim postavkama nije pronađeno ništa za migraciju.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "API ključevi provajdera",
-  "migration.select.mcpServers": "MCP serveri",
-  "migration.select.customModes": "Prilagođeni režimi / Agenti",
-  "migration.select.defaultModel": "Podrazumijevani model",
-  "migration.select.autoApproval": "Automatsko odobravanje",
-  "migration.select.language": "Jezik korisničkog interfejsa",
-  "migration.select.autocomplete": "Postavke automatskog dovršavanja",
 
   // Migrate — completion
   "migration.complete.summary": "Uspješno migrirano {{success}} od {{total}} stavki.",
-  "migration.complete.cleanup": "Ukloni stare podatke postavki",
-  "migration.complete.cleanupDescription":
-    "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
   "migration.migrate.sessionsDetected": "Otkrivene {{count}} sesije",
   "migration.error.continue": "Nastavi",
@@ -1257,7 +1221,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Nepoznat datum",
   "migration.sessionFormat.unknown": "Nepoznato",
   "migration.sessionFormat.unknownError": "Nepoznata greška",
-  // legacy-migration end
 
   "error.details.show": "Detalji",
 
@@ -1267,6 +1230,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
   "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
+  "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
@@ -1279,6 +1243,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Otkazano",
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
+  "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",

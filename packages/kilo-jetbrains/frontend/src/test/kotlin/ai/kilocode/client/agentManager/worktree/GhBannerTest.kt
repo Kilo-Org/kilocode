@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
@@ -37,6 +38,7 @@ class GhBannerTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -65,6 +67,25 @@ class GhBannerTest : BasePlatformTestCase() {
         assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
     }
 
+    fun `test banner explains a spent github budget and says it recovers on its own`() {
+        edt { service.report(project, GhAvailability.RATE_LIMITED) }
+        pump()
+
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        // The badges are stale rather than gone, and there is nothing to authorize or install, so the
+        // banner explains the wait instead of offering an action that would not help.
+        assertTrue(edt { banner.isVisible })
+        assertEquals(
+            "GitHub is rate limiting this token, so pull request badges may be out of date. Kilo retries automatically.",
+            edt { banner.text },
+        )
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
+        assertTrue(edt { links(banner).none { it.text == "Authorize" } })
+        // Still a gh problem, so opting out of gh entirely remains on offer.
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
+    }
+
     fun `test banner hides immediately when coordinator reports ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val banner = edt { GhBanner(project, testRootDisposable) }
@@ -78,6 +99,44 @@ class GhBannerTest : BasePlatformTestCase() {
         edt { service.report(project, GhAvailability.OK) }
         pump()
 
+        assertFalse(edt { banner.isVisible })
+    }
+
+    fun `test banner offers turning the github integration off for gh problems`() {
+        edt { service.report(project, GhAvailability.MISSING) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        val disable = edt { links(banner).single { it.text == "Turn off GitHub integration" } }
+        assertEquals(
+            "Kilo stops running gh. You can turn this back on in Settings | Tools | Kilo Code | Integrations.",
+            edt { disable.toolTipText },
+        )
+
+        edt { service.report(project, GhAvailability.UNAUTH) }
+        pump()
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
+    }
+
+    fun `test banner does not offer turning the integration off for a missing git`() {
+        edt { service.report(project, GhAvailability.GIT_MISSING) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        assertTrue(edt { links(banner).none { it.text == "Turn off GitHub integration" } })
+    }
+
+    fun `test banner disable action turns the setting off and hides the banner`() {
+        edt { service.report(project, GhAvailability.UNAUTH) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+        assertTrue(edt { banner.isVisible })
+
+        edt { links(banner).single { it.text == "Turn off GitHub integration" }.doClick() }
+        pump()
+
+        assertFalse(KiloPluginSettings.getGithub())
+        assertEquals(GhAvailability.OK, edt { service.current() })
         assertFalse(edt { banner.isVisible })
     }
 

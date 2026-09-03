@@ -186,6 +186,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -212,3 +213,20 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 {% /tab %}
 {% /tabs %}
+
+### Kilo Swarm
+
+Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+
+Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+
+Use it when agents can benefit from discoveries during work:
+
+- **Search races:** agents try independent approaches to the same problem and share useful findings.
+- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+
+Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+
+All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.

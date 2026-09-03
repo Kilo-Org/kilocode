@@ -2,7 +2,8 @@
    File Mention Dropdown
    ============================================ */
 
-.file-mention-dropdown {
+.file-mention-dropdown,
+.slash-command-dropdown {
   position: absolute;
   bottom: calc(100% + 4px);
   left: 0;
@@ -155,20 +156,6 @@
 /* ============================================
    Slash Command Dropdown
    ============================================ */
-
-.slash-command-dropdown {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 10;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
-  border-radius: 4px;
-  overflow: hidden;
-  max-height: 200px;
-  overflow-y: auto;
-}
 
 .slash-command-item {
   display: flex;

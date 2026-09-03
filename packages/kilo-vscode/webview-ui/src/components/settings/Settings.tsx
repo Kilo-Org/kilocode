@@ -47,7 +47,7 @@ export interface SettingsProps {
   agentManagerProjectId?: string
   agentManagerSettings?: boolean
   onTabChange?: (tab: string) => void
-  onMigrationClick?: (source: MigrationSource) => void // legacy-migration
+  onMigrationClick?: (source: MigrationSource) => void
 }
 
 const AgentManagerTab: Component<{ projectId?: string }> = (props) => {

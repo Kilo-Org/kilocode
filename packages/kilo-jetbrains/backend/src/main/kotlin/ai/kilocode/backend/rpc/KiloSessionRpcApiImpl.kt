@@ -11,7 +11,6 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -285,9 +284,6 @@ class KiloSessionRpcApiImpl internal constructor(
                 }
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true failed message=${cause.message}", cause)
             }
-
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =
-        ready { chat.updateConfig(directory, config) }
 
     // ------ permission / question resolution ------
 

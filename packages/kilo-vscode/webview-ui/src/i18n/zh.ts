@@ -832,6 +832,9 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "让主会话与负责其任务的子智能体共享看板，包括嵌套的子智能体。用于并行尝试解决方案或开展相互补充的工作，而不是用于每一项任务。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
@@ -858,6 +861,8 @@ export const dict = {
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
+  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1104,57 +1109,16 @@ export const dict = {
   "question.summary": "第 {{n}} / {{total}} 个问题",
   "common.review": "审查",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "从旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
   "settings.aboutKiloCode.rooImport.description": "从 Roo Code 安装导入对话历史记录。",
   "settings.aboutKiloCode.rooImport.button": "从 Roo Code 导入会话",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.subtitle": "我们在更快、更高效的基础上重新构建了扩展。",
-  "migration.whatsNew.features.performance.title": "更快的智能体性能",
-  "migration.whatsNew.features.performance.detail":
-    "并行工具调用和子智能体让你的智能体可以同时处理更多任务——减少等待时间，更快交付成果。",
-  "migration.whatsNew.features.interface.title": "简洁的界面",
-  "migration.whatsNew.features.interface.detail": "更少干扰，更易阅读，更快上手。",
-  "migration.whatsNew.features.agentManager.title": "代理管理器",
-  "migration.whatsNew.features.agentManager.detail":
-    "一个统一的界面，可以并行运行多个智能体，每个智能体各自使用独立的 worktree——在同一个地方监控进度、切换上下文和审查变更。",
-  "migration.whatsNew.features.foundation.title": "共享基础",
-  "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 产品共享一个小巧高效的核心。无论你选择哪种方式工作，都能获得熟悉的体验。",
-  "migration.whatsNew.blogLink": "阅读完整公告",
-  "migration.whatsNew.docsLink": "新功能与常见问题",
-  "migration.whatsNew.continue": "继续",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "迁移你的设置",
-  "migration.migrate.subtitle": "我们发现了你之前安装的设置。以下是可以迁移的内容。",
+  "migration.roo.button": "导入会话",
+  "migration.roo.empty": "未找到 Roo Code 会话。",
   "migration.migrate.selectLabel": "选择要迁移的内容",
   "migration.migrate.chatHistory": "聊天会话和历史记录",
-  "migration.migrate.button": "迁移设置",
-  "migration.migrate.skip": "跳过",
-  "migration.migrate.keysDetected": "检测到 {{count}} 个密钥",
-  "migration.migrate.serversConfigured": "已配置 {{count}} 个服务器",
-  "migration.migrate.modesFound": "发现 {{count}} 个模式",
-  "migration.migrate.nothingToMigrate": "在旧版设置中未找到要迁移的内容。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "提供商 API 密钥",
-  "migration.select.mcpServers": "MCP 服务器",
-  "migration.select.customModes": "自定义模式 / 代理",
-  "migration.select.defaultModel": "默认模型",
-  "migration.select.autoApproval": "自动审批",
-  "migration.select.language": "界面语言",
-  "migration.select.autocomplete": "自动补全设置",
 
   // Migrate — completion
   "migration.complete.summary": "成功迁移 {{success}}/{{total}} 项。",
-  "migration.complete.cleanup": "清除旧版设置数据",
-  "migration.complete.cleanupDescription": "此操作将从 VS Code 存储中删除旧版设置。您将无法再次运行此迁移。",
   "migration.complete.done": "完成",
   "migration.migrate.sessionsDetected": "检测到 {{count}} 个会话",
   "migration.error.continue": "继续",
@@ -1187,7 +1151,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "未知日期",
   "migration.sessionFormat.unknown": "未知",
   "migration.sessionFormat.unknownError": "未知错误",
-  // legacy-migration end
 
   "error.details.show": "详细信息",
 
@@ -1197,6 +1160,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
   "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
+  "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
@@ -1209,6 +1173,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "已取消",
   "task.backgroundAgents.status.error": "错误",
   "task.backgroundAgents.untitled": "后台智能体",
+  "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",

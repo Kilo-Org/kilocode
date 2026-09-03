@@ -15,6 +15,7 @@ import { MessageV2 } from "@/session/message-v2" // kilocode_change
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { SessionRunState } from "@/session/run-state"
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { SessionStatus } from "@/session/status"
 import { Provider } from "../../src/provider/provider" // kilocode_change
 import { KiloSession } from "../../src/kilocode/session" // kilocode_change
@@ -47,6 +48,7 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
       Session.node,
       SessionProjector.node,
       SessionRunState.node,
+      SessionDrain.node, // kilocode_change
       SessionStatus.node,
       Truncate.node,
       ToolRegistry.node,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { createRoot } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 import {
   createEditPreview,
   diffCounts,
@@ -17,6 +17,33 @@ const diff = {
 }
 
 describe("Agent Manager edit preview", () => {
+  it("restores each session's preview and keeps an explicit close local to that session", () => {
+    createRoot((dispose) => {
+      const [context, select] = createSignal("first")
+      const preview = createEditPreview({
+        context,
+        matches: (id) => id === context(),
+        show: () => undefined,
+        hide: () => undefined,
+      })
+      preview.open(diff, "first", "split")
+      const first = preview.preview()
+      select("second")
+      expect(preview.preview()).toBeUndefined()
+      preview.open({ ...diff, file: "second.ts" }, "second")
+      select("first")
+      expect(preview.preview()).toBe(first)
+      preview.open(diff, "second")
+      expect(preview.preview()).toBe(first)
+      preview.close()
+      select("second")
+      expect(preview.preview()?.diff.file).toBe("second.ts")
+      select("first")
+      expect(preview.preview()).toBeUndefined()
+      dispose()
+    })
+  })
+
   it("replaces the current patch and opens the inspector", () => {
     createRoot((dispose) => {
       const calls = { shown: 0, hidden: 0 }

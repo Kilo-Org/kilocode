@@ -61,6 +61,28 @@ describe("createSessionActivity", () => {
 })
 
 describe("createWorktreeActivity", () => {
+  it("merges terminal states without changing deletion guards", () => {
+    const states: Record<string, Activity> = {
+      "current:wt-current": "waiting",
+      "current:local": "busy",
+      "background:wt-current": "error",
+    }
+    const state = createWorktreeActivity({
+      ...options({ "current-wt": "busy" }),
+      inUseFor: () => false,
+      terminal: (id, project = "current") => states[`${project}:${id ?? "local"}`] ?? "idle",
+      worktrees: () => [],
+      subscribe: () => () => undefined,
+    })
+    expect(state.local()).toBe("busy")
+    expect(state.agent("wt-current")).toBe("waiting")
+    expect(state.project("background", "wt-current")).toBe("error")
+    expect(state.project("background", null)).toBe("idle")
+    expect(state.blocked("wt-current")).toBe(false)
+    states["current:wt-current"] = "idle"
+    expect(state.agent("wt-current")).toBe("busy")
+  })
+
   it("keeps directory activity separate from parent status and other projects", () => {
     const listeners = new Set<(message: ExtensionMessage) => void>()
     const state = createWorktreeActivity({

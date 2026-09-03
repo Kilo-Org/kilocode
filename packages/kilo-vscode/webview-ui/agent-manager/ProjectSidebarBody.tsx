@@ -18,7 +18,7 @@ import type {
   WorktreeGitStats,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
@@ -298,18 +298,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         data-sidebar-id={`${props.project.id}:local`}
         onClick={() => props.onSelectLocal(props.project.id)}
       >
-        <span class="am-local-status" data-activity={localState()} aria-label={props.t(label(localState()))}>
-          <ActivityIcon
-            state={localState()}
-            idle={
-              <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-                <path d="M10 13.5V16.5" stroke="currentColor" />
-              </svg>
-            }
-          />
-        </span>
+        <LocalActivity state={localState()} label={props.t(label(localState()))} />
         <div class="am-local-text">
           <span class="am-local-label">{props.t("agentManager.local")}</span>
           <Show when={props.local === undefined}>
