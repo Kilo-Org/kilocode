@@ -215,11 +215,11 @@ describe("useSlashCommand sandbox action", () => {
     ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
     expect(state.text).toBe("/review ")
     expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
       "review uncommitted",
       "review staged",
       "review unpushed",
       "review branch",
-      "review worktree",
       "review quick",
     ])
     ctx.dispose()
@@ -244,7 +244,7 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
-  it("reactively re-includes worktree review without changing nested ordering", () => {
+  it("puts worktree review first when allowed and preserves the other options' order", () => {
     const [allowed, setAllowed] = createSignal(false)
     const ctx = setup(() => {}, { exclude: () => (allowed() ? new Set() : new Set(["review worktree"])) })
 
@@ -259,11 +259,11 @@ describe("useSlashCommand sandbox action", () => {
 
     setAllowed(true)
     expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
       "review uncommitted",
       "review staged",
       "review unpushed",
       "review branch",
-      "review worktree",
       "review quick",
     ])
     ctx.dispose()
