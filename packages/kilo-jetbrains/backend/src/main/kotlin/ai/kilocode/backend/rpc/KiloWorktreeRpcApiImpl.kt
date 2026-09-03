@@ -1,6 +1,8 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.diff.GitComparison
+import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.parsePrUrl
@@ -8,12 +10,17 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -46,8 +53,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -56,21 +65,20 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
-        private const val BASE_TTL = 60_000L
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
+        // A spent budget lasts until GitHub's window rolls over, so re-probing on the ordinary cadence
+        // would spend calls confirming a state that cannot have changed. Long enough to stop the churn,
+        // short enough to notice the reset without waiting out a poll interval.
+        private const val GH_LIMIT_TTL = 60_000L
         private const val PR_TTL = 90_000L
     }
 
-    private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
@@ -157,6 +165,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
     }
 
+    override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
+        val root = Path.of(directory).normalize()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
+    }
+
     /**
      * Lists the managed worktrees of [root] after reconciling git's metadata with the disk, so
      * callers never probe a directory that no longer exists. Returns null when [root] itself is gone
@@ -189,13 +203,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return synced.filter { Files.isDirectory(Path.of(it.path)) }
     }
 
-    override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
-        probeGh(Path.of(directory).normalize(), "rpc")
+    override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability = withContext(Dispatchers.IO) {
+        probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        prs[directory]?.takeIf { usable(it.time, now, PR_TTL, maxAge) }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
         // from a live directory still reaches the UI.
@@ -203,7 +217,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             LOG.info("pr status skipped, directory does not exist: $root")
             return@withContext WorktreePrListDto()
         }
-        val available = ghAvailable(root)
+        // A caller that rejected the cached PR list would not accept a cached availability verdict
+        // from the same moment either, so the ceiling carries into the gh probe.
+        val available = ghAvailable(root, maxAge = maxAge)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
         // Sync the worktree list before the per-worktree lookups so a worktree that was added and
         // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
@@ -224,9 +240,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         dto
     }
 
-    override suspend fun branchStatus(directory: String): BranchStatusDto = withContext(Dispatchers.IO) {
+    override suspend fun branchStatus(directory: String, github: Boolean, maxAge: Long?): BranchStatusDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        // Keyed by directory + mode so flipping the GitHub integration setting cannot serve a
+        // cross-mode entry (a disabled-mode entry always has a null pr; an enabled-mode entry may
+        // not) for up to PR_TTL after the flip.
+        val key = "$directory|$github"
+        branches[key]?.takeIf { usable(it.time, now, PR_TTL, maxAge) }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
         if (!Files.isDirectory(root)) {
             LOG.info("branch status skipped, directory does not exist: $root")
@@ -234,8 +254,8 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
-        val availability = ghAvailable(root)
-        val lookup = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+        val availability = ghAvailable(root, github, maxAge)
+        val lookup = if (github && availability == GhAvailability.OK && branch.isNotBlank()) {
             resolver.resolve(directory, branch, baseBranch(root))
         } else {
             PrLookup()
@@ -247,7 +267,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             availability = if (availability == GhAvailability.OK) lookup.availability else availability,
             pr = lookup.pr,
         )
-        branches[directory] = Timed(System.currentTimeMillis(), dto)
+        branches[key] = Timed(System.currentTimeMillis(), dto)
         dto
     }
 
@@ -278,7 +298,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             leftover = worktree
             val target = Path.of(worktree.path).normalize()
             emit(MoveProgressDto(MoveStage.TRANSFERRING))
-            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, base, target) }
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, target) }
             if (!applied.ok) {
                 leftover = null
                 rollback(directory, worktree, branch, "transfer failure")
@@ -361,6 +381,11 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 GhAvailability.GIT_MISSING -> return@withContext CreateWorktreeResultDto(error = "Git is not installed")
                 GhAvailability.MISSING -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not installed")
                 GhAvailability.UNAUTH -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not authorized")
+                // Stated rather than attempted: the import runs several gh calls and the first would
+                // fail anyway, so say why instead of leaving a half-made worktree behind.
+                GhAvailability.RATE_LIMITED -> return@withContext CreateWorktreeResultDto(
+                    error = "GitHub is rate limiting this token. Try again later.",
+                )
                 GhAvailability.OK -> Unit
             }
             val fields = "headRefName,title,isCrossRepository,headRepositoryOwner"
@@ -583,15 +608,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun runGit(base: Path, vararg args: String): CmdOut = runGit(base, args.toList())
 
-    private fun runGit(base: Path, args: List<String>): CmdOut {
-        return try {
-            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
-        } catch (e: Exception) {
-            CmdOut(-1, "", e.message ?: "git failed")
-        }
-    }
+    private fun runGit(base: Path, args: List<String>): CmdOut = runGitCommand(base, args)
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
@@ -628,65 +645,63 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
         val dir = Path.of(item.path).normalize()
-        return runCatching {
-            val base = base(item, fallback)
-            val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
-            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val untrackedFiles = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
-                .stdout
-                .lineSequence()
-                .filter { it.isNotBlank() }
-                .toList()
-            val untracked = untrackedFiles.sumOf { countUntracked(dir, it) }
-            val counts = aheadBehind(dir, base)
-            WorktreeStatsDto(
-                item.path,
-                tracked.sumOf { it.additions } + untracked,
-                tracked.sumOf { it.deletions },
-                counts.second,
-                counts.first,
-                files = tracked.size + untrackedFiles.size,
-            )
-        }.getOrElse { err ->
-            LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
-            WorktreeStatsDto(item.path)
-        }
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Base, fallback) ?: return WorktreeStatsDto(item.path)
+        val files = comparison.files(false)
+        val counts = comparison.counts()
+        return WorktreeStatsDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            ahead = counts.second,
+            behind = counts.first,
+            files = files.size,
+            base = comparison.base,
+        )
     }
 
-    private fun base(item: WorktreeDto, fallback: String): String {
-        val now = System.currentTimeMillis()
-        bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
+    private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
         val dir = Path.of(item.path).normalize()
-        val upstream = runGit(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-        val value = upstream.stdout.trim().takeIf { upstream.ok && it.isNotBlank() } ?: fallback
-        bases[item.path] = Timed(now, value)
-        return value
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Local) ?: return WorktreeDirtyDto(item.path)
+        val files = comparison.files(false)
+        return WorktreeDirtyDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            files = files.size,
+            untracked = files.count { it.status == "untracked" },
+            unpushed = comparison.unpushed(),
+        )
     }
 
-    private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {
-        val out = runGit(dir, "rev-list", "--left-right", "--count", "$base...HEAD")
-        if (!out.ok) return 0 to 0
-        val parts = out.stdout.trim().split(Regex("\\s+"))
-        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
-    }
-
-    private fun ghAvailable(root: Path): GhAvailability {
+    /**
+     * Resolves git/gh availability. When [github] is false, only git presence is checked and `gh`
+     * is never spawned — used while the user has turned off the GitHub integration setting.
+     */
+    private fun ghAvailable(root: Path, github: Boolean = true, maxAge: Long? = null): GhAvailability {
         if (!Files.isDirectory(root)) {
             LOG.info("gh availability skipped dir=$root missing=true")
             return GhAvailability.OK
         }
-        val status = probeGh(root, "availability")
-        if (status != GhAvailability.MISSING) return status
+        val status = probeGh(root, "availability", github, maxAge)
+        // A git-only probe can only return GIT_MISSING or OK, so the gh-binary re-check below is
+        // unreachable while github is false; the guard documents that explicitly.
+        if (!github || status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
-        ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
+        // Installing gh is the transition this long-lived entry hides, so a caller demanding
+        // freshness must be able to re-check the binary and not just the auth verdict.
+        ghProbe?.takeIf { usable(it.time, now, GH_PROBE_TTL, maxAge) }?.let { return it.value }
         val res = runGh(root, "--version")
         val value = if (res.ok) GhAvailability.OK else GhAvailability.MISSING
         ghProbe = Timed(now, value)
         return value
     }
 
-    private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+    /**
+     * Resolves git/gh availability. When [github] is false, resolves git presence only and never
+     * spawns `gh` or touches [ghCache] (the cache mixes gh-auth verdicts with a boolean this probe
+     * would otherwise poison with a git-only "OK").
+     */
+    private fun probeGh(root: Path, reason: String, github: Boolean = true, maxAge: Long? = null): GhAvailability = synchronized(ghLock) {
         // A stale/removed worktree directory makes the process spawn fail, which would be
         // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
         // don't cache it, so the next probe on a real directory still runs.
@@ -695,12 +710,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             return@synchronized GhAvailability.OK
         }
         val now = System.currentTimeMillis()
-        ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
-            LOG.info("gh probe cache hit reason=$reason value=${it.value}")
-            return@synchronized it.value
+        if (github) {
+            ghCache?.takeIf { usable(it.time, now, ghTtl(it.value), maxAge) }?.let {
+                LOG.info("gh probe cache hit reason=$reason value=${it.value} ageMs=${now - it.time}")
+                return@synchronized it.value
+            }
         }
         val start = System.currentTimeMillis()
-        LOG.info("gh probe start reason=$reason dir=$root")
+        LOG.info("gh probe start reason=$reason dir=$root github=$github maxAge=${maxAge ?: "default"}")
         val git = runGit(root, "--version")
         if (!git.ok) {
             // The directory can disappear between the check above and the spawn; a failed working
@@ -710,9 +727,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 return@synchronized GhAvailability.OK
             }
             val value = GhAvailability.GIT_MISSING
-            ghCache = Timed(System.currentTimeMillis(), value)
+            if (github) ghCache = Timed(System.currentTimeMillis(), value)
             LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
             return@synchronized value
+        }
+        if (!github) {
+            LOG.info("gh probe result reason=$reason value=OK github=false ms=${System.currentTimeMillis() - start}")
+            return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
         val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
@@ -721,10 +742,25 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         value
     }
 
+    /** How long a cached gh verdict may be served. See [GH_LIMIT_TTL] for why one value is special. */
+    private fun ghTtl(value: GhAvailability): Long =
+        if (value == GhAvailability.RATE_LIMITED) GH_LIMIT_TTL else GH_STATUS_TTL
+
     private fun snippet(text: String): String {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
 
+}
+
+/**
+ * Whether a cache entry written at [time] may still be served. [maxAge] is the caller's own ceiling
+ * on staleness: it can only tighten [ttl], never extend it, so an event-driven request can reject an
+ * entry the poll would have accepted while no caller is able to pin stale data in place past the TTL.
+ * A [maxAge] of 0 (or below) rejects every entry and forces the work to run.
+ */
+internal fun usable(time: Long, now: Long, ttl: Long, maxAge: Long?): Boolean {
+    val limit = maxAge?.coerceIn(0, ttl) ?: ttl
+    return now - time < limit
 }
 
 /** True when a process failed because its working directory is gone, not because the tool is absent. */
@@ -740,6 +776,10 @@ internal fun classifyGhError(text: String): GhAvailability {
     // transient gh auth failures (e.g. a GitHub Enterprise 404 or revoked token) as an uninstalled gh;
     // scope to spawn/shell signals instead.
     if (msg.contains("cannot run program") || msg.contains("no such file") || msg.contains("command not found")) return GhAvailability.MISSING
+    // `gh auth status` validates the token against the API, so it is usually the first command to be
+    // told the budget is spent. Checked after the auth wordings above: a rate-limited response says
+    // nothing about whether the token is valid, so it must not be reported as a login problem.
+    if (rateLimited(msg)) return GhAvailability.RATE_LIMITED
     return GhAvailability.OK
 }
 
@@ -754,7 +794,71 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         "CLOSED" -> GhState.CLOSED
         else -> GhState.OPEN
     }
-    return WorktreePrDto(path, number, state, url, title)
+    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj))
+}
+
+/**
+ * Reads GitHub's `reviewDecision`. Absent when the field was not requested, when the repository asks
+ * for no review, or when this `gh` could not answer it — all of which mean "nothing to show".
+ */
+internal fun parseReview(obj: JsonObject): GhReview {
+    return when (obj["reviewDecision"]?.jsonPrimitive?.contentOrNull?.uppercase()) {
+        "APPROVED" -> GhReview.APPROVED
+        "CHANGES_REQUESTED" -> GhReview.CHANGES_REQUESTED
+        "REVIEW_REQUIRED" -> GhReview.PENDING
+        else -> GhReview.NONE
+    }
+}
+
+/**
+ * Rolls GitHub's `statusCheckRollup` up into counts and one verdict.
+ *
+ * A rollup entry is either a check run (`conclusion`, still empty while it runs, plus `status`) or a
+ * legacy commit status (`state`), so the verdict is read from whichever the entry carries. Skipped
+ * checks are excluded from [GhChecksDto.total] because GitHub does not count them either, and a single
+ * failure outranks anything still running: a red build stays red however many jobs are queued behind it.
+ */
+internal fun parseChecks(obj: JsonObject): GhChecksDto {
+    val items = obj["statusCheckRollup"] as? JsonArray ?: return GhChecksDto()
+    var total = 0
+    var passed = 0
+    var failed = 0
+    var pending = 0
+    for (item in items) {
+        val entry = item as? JsonObject ?: continue
+        val raw = entry["conclusion"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: entry["state"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: entry["status"]?.jsonPrimitive?.contentOrNull
+        when (checkState(raw)) {
+            CheckState.SKIPPED -> continue
+            CheckState.PASSED -> passed++
+            CheckState.FAILED -> failed++
+            CheckState.PENDING -> pending++
+        }
+        total++
+    }
+    val state = when {
+        total == 0 -> GhChecks.NONE
+        failed > 0 -> GhChecks.FAILED
+        pending > 0 -> GhChecks.PENDING
+        else -> GhChecks.PASSED
+    }
+    return GhChecksDto(state, total, passed, failed, pending)
+}
+
+/** One rollup entry's verdict. [SKIPPED] is tracked only so it can be left out of the totals. */
+internal enum class CheckState { PASSED, FAILED, PENDING, SKIPPED }
+
+/**
+ * Maps one rollup entry's conclusion, commit-status state, or run status to a verdict. An unknown or
+ * missing value counts as pending: a check nobody recognises has not reported success, and calling it
+ * a failure would paint rows red on GitHub's next new status name.
+ */
+internal fun checkState(raw: String?): CheckState = when (raw?.uppercase()) {
+    "SUCCESS", "NEUTRAL" -> CheckState.PASSED
+    "FAILURE", "ERROR", "ACTION_REQUIRED", "CANCELLED", "TIMED_OUT", "STALE", "STARTUP_FAILURE" -> CheckState.FAILED
+    "SKIPPED" -> CheckState.SKIPPED
+    else -> CheckState.PENDING
 }
 
 /** Head of a pull request being imported. */
@@ -1049,37 +1153,4 @@ private fun samePath(a: String, b: String): Boolean {
 private fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
-}
-
-private fun countUntracked(base: Path, rel: String): Int {
-    return runCatching {
-        val path = base.resolve(rel).normalize()
-        if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > 2 * 1024 * 1024L) return@runCatching 0
-        countLines(path) ?: 0
-    }.getOrElse { err ->
-        KiloWorktreeRpcApiImpl.LOG.debug { "worktree stats untracked read failed: path=$rel message=${err.message}" }
-        0
-    }
-}
-
-private fun countLines(path: Path): Int? {
-    var newlines = 0
-    var last = 0
-    var any = false
-    path.inputStream().buffered().use { input ->
-        val buf = ByteArray(8192)
-        while (true) {
-            val n = input.read(buf)
-            if (n <= 0) break
-            any = true
-            for (i in 0 until n) {
-                val b = buf[i].toInt()
-                if (b == 0) return null
-                if (b == '\n'.code) newlines++
-            }
-            last = buf[n - 1].toInt()
-        }
-    }
-    if (!any) return 0
-    return if (last == '\n'.code) newlines else newlines + 1
 }

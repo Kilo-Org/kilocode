@@ -11,28 +11,32 @@ import {
   isPendingSend,
   promotePendingDraftDiscard,
   reviewDrafts,
+  browserDrafts,
   savePromptDraft,
   scrollDrafts,
   finishPendingSend,
 } from "../../webview-ui/src/utils/draft-store"
 
-const stores = [drafts, reviewDrafts, imageDrafts, scrollDrafts]
+const stores = [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts]
 
 beforeEach(() => stores.forEach((store) => store.clear()))
 
 describe("prompt draft storage", () => {
   it("stores and clears all prompt artifacts together", () => {
+    const browser = [{ id: "browser", sessionId: "s1", selector: "#save", content: "legacy" }]
     savePromptDraft(
       "prompt:default:pending:sidebar-pending:1",
       "draft",
       [{ id: "review", file: "a.ts", side: "additions", line: 1, comment: "comment", selectedText: "line" }],
       [{ id: "image", filename: "a.png", mime: "image/png", dataUrl: "data:image/png;base64,a" }],
       42,
+      browser,
     )
 
     expect(drafts.size).toBe(1)
     expect(reviewDrafts.size).toBe(1)
     expect(imageDrafts.size).toBe(1)
+    expect(browserDrafts.get("prompt:default:pending:sidebar-pending:1")).toEqual(browser)
     expect(scrollDrafts.size).toBe(1)
 
     discardPendingDraft("sidebar-pending:1")
