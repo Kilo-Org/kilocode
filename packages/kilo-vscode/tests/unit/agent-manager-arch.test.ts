@@ -24,6 +24,7 @@ const CSS_FILES = [
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
