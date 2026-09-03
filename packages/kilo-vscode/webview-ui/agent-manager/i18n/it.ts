@@ -20,6 +20,9 @@ export const dict = {
   "agentManager.project.missing": "Repository non trovata",
   "agentManager.notGitRepo": "Non è una repository git",
 
+  "agentManager.updateBase.title": "Aggiorna dalla base",
+  "agentManager.updateBase.selectWorktree": "Seleziona prima un worktree gestito.",
+
   "agentManager.worktree.settings": "Impostazioni worktree",
   "agentManager.worktree.new": "Nuovo worktree",
   "agentManager.worktree.setupScript": "Script di setup del worktree",
@@ -212,6 +215,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Commenti",
   "agentManager.pr.copyLink": "Copia link PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} non risolti",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} discussione di revisione non risolta",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} discussioni di revisione non risolte",
   "agentManager.pr.comment.resolvedGroup": "Risolti ({{count}})",
   "agentManager.pr.comment.sendAll": "Invia {{count}} non risolti all'agente",
   "agentManager.pr.comment.sendAllToTerminal": "Invia {{count}} non risolti al terminale",
@@ -276,4 +281,30 @@ export const dict = {
     "Esegui 'gh auth login' nel terminale per ripristinare lo stato della PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI non installato",
   "agentManager.pr.error.gh_missing.description": "Installa GitHub CLI per abilitare lo stato della PR.",
+  "agentManager.intro.title": "Attività parallele. Worktree separati.",
+  "agentManager.intro.subtitle":
+    "Un worktree è una cartella e un branch separati per un'attività. I tuoi agenti possono lavorare fianco a fianco senza modificare gli stessi file.",
+  "agentManager.intro.graph.agent": "Agente Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "In caso di conflitti",
+  "agentManager.intro.stage1.title": "Il tuo repository",
+  "agentManager.intro.stage1.text": "I file locali restano invariati",
+  "agentManager.intro.stage2.title": "Esempio: due attività in parallelo",
+  "agentManager.intro.stage2.text":
+    "Entrambi i worktree appartengono a questo repository. Per un altro repository, scegli un altro progetto.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Cartella e branch propri",
+  "agentManager.intro.stage4.title": "Riporta le modifiche quando sei pronto",
+  "agentManager.intro.stage4.text":
+    "Chiedi all'agente di ogni worktree di aprire una pull request. Oppure usa Apply nel pannello diff per copiare le modifiche in Local.",
+  "agentManager.intro.conflictText":
+    "Chiedi all'agente nel worktree di unire il proprio branch di base originale e risolvere i conflitti, poi controlla il risultato. Evita git stash: gli stash sono condivisi tra i worktree.",
+  "agentManager.intro.prDetection":
+    "I badge PR si aggiornano automaticamente per ogni branch del worktree (è richiesto l'accesso a GitHub CLI).",
+  "agentManager.intro.checksRunning": "Controlli in corso",
+  "agentManager.intro.approved": "Approvato",
+  "agentManager.intro.create": "Crea un worktree",
+  "agentManager.intro.guide": "Leggi la guida",
+  "agentManager.intro.dismiss": "Salta introduzione",
+  "agentManager.intro.reopen": "Come funziona Agent Manager",
 }

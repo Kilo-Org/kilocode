@@ -15,6 +15,10 @@ type Entry = {
 
 export interface IgnoreMatcher {
   ignores(filePath: string): boolean
+  // Directory globs (relative to root) a native file watcher can safely prune.
+  // Optional and best-effort: correctness stays in ignores(); this only trims
+  // watch descriptors so large repos don't exhaust inotify (ENOSPC).
+  watchIgnoreGlobs?(): readonly string[]
 }
 
 function notFound(err: unknown): boolean {
@@ -97,8 +101,68 @@ function rules(dir: string, txt: string): string[] {
   return result
 }
 
+// Glob metacharacters (matching discovery()'s set, including `!`, which parcel
+// treats as negation) that we don't translate into watcher globs; such patterns
+// fall back to ignores() rather than risk drift or an inverted (negation) prune.
+const GLOB_META = /[*?![\]{}()]/
+
+// Derive best-effort directory-prune globs for the native watcher from the same
+// .gitignore/.kilocodeignore lines. Only non-negated, non-glob directory patterns
+// are emitted, and any candidate a re-include (!) could reach is dropped: parcel's
+// ignore cannot honor negation, so an over-prune would silently stop indexing a
+// re-included file. Under-pruning only costs a few watch descriptors.
+//
+// parcel matches glob entries (those containing `*`) against paths relative to the
+// subscribed root and resolves plain entries to absolute paths, so both the
+// `**/name` / `dir/**/name` globs and the anchored plain forms prune correctly.
+function pruneGlobs(entries: Entry[]): string[] {
+  const result = new Set<string>()
+
+  for (const entry of entries) {
+    // The ignore file's own directory is interpolated raw into the emitted globs.
+    // If it contains glob metacharacters (e.g. a Next.js `[slug]` route), that glob
+    // would prune the wrong tree — skip emitting for it (shouldIndex() still filters
+    // those paths).
+    const dirHasMeta = !!entry.dir && GLOB_META.test(entry.dir)
+    for (const line of (entry.txt ?? "").split(/\r?\n/)) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue
+      }
+      if (trimmed.startsWith("!")) {
+        return []
+      }
+
+      const anchored = trimmed.startsWith("/")
+      const withoutAnchor = anchored ? trimmed.slice(1) : trimmed
+      const body = withoutAnchor.endsWith("/") ? withoutAnchor.slice(0, -1) : withoutAnchor
+      if (!body) {
+        continue
+      }
+
+      const scoped = entry.dir ? `${entry.dir}/${body}` : body
+      if (GLOB_META.test(body) || dirHasMeta) {
+        continue
+      }
+
+      if (anchored || body.includes("/")) {
+        // Anchored/pathful: a specific subtree, matched relative to root.
+        result.add(scoped)
+      } else {
+        // Bare name: prune that directory at any depth under its ignore file.
+        result.add(entry.dir ? `${entry.dir}/**/${body}` : `**/${body}`)
+      }
+    }
+  }
+
+  return [...result]
+}
+
 class WorkspaceIgnore implements IgnoreMatcher {
-  constructor(private readonly matcher: Ignore) {}
+  constructor(
+    private readonly matcher: Ignore,
+    private readonly watchGlobs: readonly string[] = [],
+  ) {}
 
   ignores(filePath: string): boolean {
     const rel = toPosix(path.normalize(filePath))
@@ -107,6 +171,10 @@ class WorkspaceIgnore implements IgnoreMatcher {
     }
 
     return this.matcher.ignores(rel)
+  }
+
+  watchIgnoreGlobs(): readonly string[] {
+    return this.watchGlobs
   }
 }
 
@@ -177,5 +245,5 @@ export async function loadIgnore(root: string): Promise<IgnoreMatcher> {
   }
   matcher.add([".gitignore", ".kilocodeignore", "**/.gitignore", "**/.kilocodeignore"])
 
-  return new WorkspaceIgnore(matcher)
+  return new WorkspaceIgnore(matcher, pruneGlobs(sorted))
 }

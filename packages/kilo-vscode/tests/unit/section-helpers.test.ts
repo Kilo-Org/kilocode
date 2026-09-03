@@ -214,6 +214,16 @@ describe("buildSidebarOrder", () => {
     ])
   })
 
+  it("includes collapsed section members when choosing a deletion fallback", () => {
+    const section = sec("s1", 0, { collapsed: true })
+    const hidden = wt("hidden", { sectionId: "s1" })
+    const visible = wt("visible")
+    const sorted = [hidden, visible]
+    const items = buildTopLevelItems([section], [visible], sorted, [])
+    const result = buildSidebarOrder(items, sorted, [section], () => [hidden], true)
+    expect(result.map((item) => item.id)).toEqual(["local", "visible", "hidden"])
+  })
+
   it("respects section order after ungrouped worktrees", () => {
     const s1 = sec("s1", 0)
     const s2 = sec("s2", 1)

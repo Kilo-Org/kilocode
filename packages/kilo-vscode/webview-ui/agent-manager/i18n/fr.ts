@@ -19,6 +19,10 @@ export const dict = {
   "agentManager.project.remove": "Retirer d'Agent Manager",
   "agentManager.project.missing": "Dépôt introuvable",
   "agentManager.notGitRepo": "Ce n'est pas un dépôt git",
+
+  "agentManager.updateBase.title": "Mettre à jour depuis la base",
+  "agentManager.updateBase.selectWorktree": "Sélectionnez d'abord un worktree géré.",
+
   "agentManager.worktree.settings": "Paramètres du Worktree",
   "agentManager.worktree.new": "Nouveau Worktree",
   "agentManager.worktree.setupScript": "Script de configuration du Worktree",
@@ -207,6 +211,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Commentaires",
   "agentManager.pr.copyLink": "Copier le lien du PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} non résolus",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} discussion de révision non résolue",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} discussions de révision non résolues",
   "agentManager.pr.comment.resolvedGroup": "Résolus ({{count}})",
   "agentManager.pr.comment.sendAll": "Envoyer {{count}} non résolus à l’agent",
   "agentManager.pr.comment.sendAllToTerminal": "Envoyer {{count}} non résolus au terminal",
@@ -270,4 +276,30 @@ export const dict = {
     "Exécutez 'gh auth login' dans votre terminal pour restaurer le statut de la PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI non installé",
   "agentManager.pr.error.gh_missing.description": "Installez GitHub CLI pour activer le statut de la PR.",
+  "agentManager.intro.title": "Tâches parallèles. Worktrees séparés.",
+  "agentManager.intro.subtitle":
+    "Un worktree est un dossier et une branche séparés pour une tâche. Vos agents peuvent travailler côte à côte sans modifier les mêmes fichiers.",
+  "agentManager.intro.graph.agent": "Agent Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "En cas de conflit",
+  "agentManager.intro.stage1.title": "Votre dépôt",
+  "agentManager.intro.stage1.text": "Les fichiers locaux restent inchangés",
+  "agentManager.intro.stage2.title": "Exemple : deux tâches en parallèle",
+  "agentManager.intro.stage2.text":
+    "Les deux worktrees appartiennent à ce dépôt. Pour un autre dépôt, choisissez un autre projet.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Dossier et branche propres",
+  "agentManager.intro.stage4.title": "Rapportez les modifications quand vous êtes prêt",
+  "agentManager.intro.stage4.text":
+    "Demandez à l'agent de chaque worktree d'ouvrir une pull request. Ou utilisez Apply dans le panneau de diff pour copier les modifications vers Local.",
+  "agentManager.intro.conflictText":
+    "Demandez à l'agent du worktree de fusionner sa branche de base d'origine et de résoudre les conflits, puis examinez le résultat. Évitez git stash : les stashes sont partagés entre les worktrees.",
+  "agentManager.intro.prDetection":
+    "Les badges PR se mettent à jour automatiquement pour chaque branche de worktree (connexion à GitHub CLI requise).",
+  "agentManager.intro.checksRunning": "Vérifications en cours",
+  "agentManager.intro.approved": "Approuvé",
+  "agentManager.intro.create": "Créer un worktree",
+  "agentManager.intro.guide": "Lire le guide",
+  "agentManager.intro.dismiss": "Ignorer l'introduction",
+  "agentManager.intro.reopen": "Fonctionnement d'Agent Manager",
 }

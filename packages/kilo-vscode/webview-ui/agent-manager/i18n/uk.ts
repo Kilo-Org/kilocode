@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
+  "agentManager.updateBase.title": "Оновити з базової гілки",
+  "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
+
   "agentManager.worktree.settings": "Налаштування робочого дерева",
   "agentManager.worktree.new": "Нове робоче дерево",
   "agentManager.worktree.setupScript": "Скрипт налаштування робочого дерева",
@@ -213,6 +216,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Коментарі",
   "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
+  "agentManager.pr.comment.unresolvedThread": "Невирішене обговорення рев'ю: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Невирішені обговорення рев'ю: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",
   "agentManager.pr.comment.sendAllToTerminal": "Надіслати {{count}} невирішених до терміналу",
@@ -275,4 +280,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Виконайте 'gh auth login' у терміналі, щоб відновити статус PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI не встановлено",
   "agentManager.pr.error.gh_missing.description": "Встановіть GitHub CLI, щоб увімкнути статус PR.",
+  "agentManager.intro.title": "Паралельні завдання. Окремі worktree.",
+  "agentManager.intro.subtitle":
+    "Worktree — це окрема папка та гілка для завдання. Агенти можуть працювати поруч, не редагуючи одні й ті самі файли.",
+  "agentManager.intro.graph.agent": "агент Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Якщо зміни конфліктують",
+  "agentManager.intro.conflictText":
+    "Попросіть агента в worktree злити його початкову базову гілку та вирішити конфлікти, а потім перегляньте результат. Уникайте git stash: stash є спільним для worktree.",
+  "agentManager.intro.stage1.title": "Ваш репозиторій",
+  "agentManager.intro.stage1.text": "Локальні файли залишаються без змін",
+  "agentManager.intro.stage2.title": "Приклад: два завдання паралельно",
+  "agentManager.intro.stage2.text":
+    "Обидва worktree належать цьому репозиторію. Для іншого репозиторію виберіть інший проєкт.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Власні папка та гілка",
+  "agentManager.intro.stage4.title": "Поверніть зміни, коли будете готові",
+  "agentManager.intro.stage4.text": "Попросіть агента відкрити pull request або використайте Apply на панелі diff.",
+  "agentManager.intro.prDetection":
+    "Бейджі PR автоматично оновлюються для кожної гілки worktree (потрібен вхід у GitHub CLI).",
+  "agentManager.intro.checksRunning": "Перевірки виконуються",
+  "agentManager.intro.approved": "Схвалено",
+  "agentManager.intro.create": "Створити worktree",
+  "agentManager.intro.guide": "Читати посібник",
+  "agentManager.intro.dismiss": "Пропустити вступ",
+  "agentManager.intro.reopen": "Як працює Agent Manager",
 }

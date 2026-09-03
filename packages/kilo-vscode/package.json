@@ -321,6 +321,12 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.updateFromBase",
+        "title": "Agent Manager: Update from base",
+        "category": "Kilo Code",
+        "enablement": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.openPR",
         "title": "Agent Manager: Open Pull Request",
         "category": "Kilo Code"
