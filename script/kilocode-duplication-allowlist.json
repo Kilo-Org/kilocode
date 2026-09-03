@@ -154,18 +154,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
-        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
-      ],
-      "fingerprint": "9020d3c20123ef72",
-      "maxMatches": 1,
-      "maxTokens": 104,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/webview-ui/src/context/session-variant-store.ts",
         "packages/opencode/src/kilocode/cli/cmd/run/variant.ts"
       ],
