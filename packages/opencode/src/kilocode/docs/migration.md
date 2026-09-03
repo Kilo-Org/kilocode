@@ -192,7 +192,7 @@ Kilocode skills are automatically discovered and made available in Opencode. Thi
 
 ## How It Works
 
-Opencode scans additional directories for skills alongside its native `.opencode/skill/` locations. The `KilocodePaths.skillDirectories()` function provides these paths.
+Kilo scans canonical `.kilo/skill/` and `.kilo/skills/` directories alongside legacy `.kilocode/` equivalents. The `KilocodePaths.skillDirectories()` function provides these paths.
 
 ## Source Locations
 
@@ -249,16 +249,7 @@ Detailed instructions for the agent...
 
 ## Priority / Override Behavior
 
-When the same skill name exists in multiple locations, **last one wins**:
-
-1. `.claude/skills/` (lowest priority)
-2. `.kilocode/skills/` (walk-up)
-3. `~/.kilocode/skills/`
-4. VSCode extension storage
-5. `.opencode/skill/` (walk-up)
-6. `~/.opencode/skill/` (highest priority)
-
-This means Opencode native skills take precedence over Kilocode skills with the same name.
+When the same skill name exists in multiple locations, **last one wins**. Canonical `.kilo/` skills take precedence over legacy `.kilocode/` skills at the same project level. Explicit external skill paths and compatibility directories are loaded according to the configured scan order.
 
 ## Mode-Specific Skills
 
@@ -286,8 +277,8 @@ Skills can be symlinked from a shared location:
 
 ```
 .agents/skills/shared-skill/          # Actual skill
-.kilocode/skills/shared-skill -> ...  # Symlink
-.opencode/skill/shared-skill -> ...   # Symlink
+.kilocode/skills/shared-skill -> ...  # Legacy symlink
+.kilo/skill/shared-skill -> ...       # Canonical symlink
 ```
 
 The scanner follows symlinks, so a skill installed once can be available to both Kilo VSCode and Opencode CLI.

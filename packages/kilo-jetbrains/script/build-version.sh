@@ -6,10 +6,12 @@ usage() {
 Usage: $0 <version> [options]
 
 Builds the JetBrains plugin for a version without creating or validating a git tag.
-By default this runs a clean build, prepares production CLI binaries, signs the ZIP, and verifies it.
+By default this runs a clean build, signs the ZIP, and verifies it.
 
 Version:
-  x.y.z or x.y.z-rc.n, with an optional leading v.
+  x.y.z or x.y.z-rc.n, with an optional leading v. An optional +<sha> build-metadata
+  suffix marks a local, non-release build off a dev commit (e.g. 7.0.1-rc.1+8d0c4147);
+  it never matches a jetbrains/v<version> release tag.
 
 Options:
   --skip-signing       Build an unsigned ZIP without requiring JetBrains signing secrets.
@@ -22,6 +24,7 @@ Examples:
   $0 v7.0.1-rc.1
   $0 7.0.1-rc.1 --skip-signing --skip-verification
   $0 7.0.1 --skip-clean --skip-signing --skip-verification
+  $0 7.0.1-rc.1+8d0c4147 --skip-signing --skip-verification
 EOF
 }
 
@@ -68,14 +71,13 @@ if [[ -z "$raw" ]]; then
 fi
 
 version="${raw#v}"
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
-  echo "Unsupported version '$raw'. Expected x.y.z or x.y.z-rc.n, for example 7.0.1 or 7.0.1-rc.1." >&2
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?(\+[0-9a-f]+)?$ ]]; then
+  echo "Unsupported version '$raw'. Expected x.y.z or x.y.z-rc.n, optionally with a +<sha> suffix, for example 7.0.1, 7.0.1-rc.1, or 7.0.1-rc.1+8d0c4147." >&2
   exit 1
 fi
 
 script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 plugin="$(cd "${script}/.." && pwd)"
-cli="$(cd "${plugin}/../opencode" && pwd)"
 secrets="${HOME}/.secrets/jetbrains"
 chain="${secrets}/chain.crt"
 key="${secrets}/private.pem"
@@ -87,8 +89,8 @@ if [[ ! -d "$plugin" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${cli}/package.json" ]]; then
-  echo "Expected CLI package at $cli" >&2
+if grep -Eq '^[[:space:]]*kilo\.cli\.pinned[[:space:]]*=[[:space:]]*false[[:space:]]*$' "$plugin/gradle.properties"; then
+  echo "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before building a version." >&2
   exit 1
 fi
 
@@ -117,8 +119,6 @@ if [[ "$clean" == "1" ]]; then
   ./gradlew clean
 fi
 
-rm -rf "${cli}/dist"
-KILO_VERSION="$version" KILO_CHANNEL=rc bun "${plugin}/script/build.ts" --production --prepare-cli
 ./gradlew buildPlugin -Pproduction=true -Pkilo.version="$version" -Pkilo.channel=eap
 
 if [[ "$sign" == "1" ]]; then

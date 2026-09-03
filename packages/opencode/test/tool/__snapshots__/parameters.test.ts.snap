@@ -114,16 +114,37 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
+    "context": {
+      "description": "Number of context lines to show before and after each match (default 0)",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer",
+    },
+    "ignoreCase": {
+      "description": "Match without regard to letter case (default false)",
+      "type": "boolean",
+    },
     "include": {
       "description": "File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")",
       "type": "string",
+    },
+    "limit": {
+      "description": "Maximum matching lines to return (default 100)",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "minimum": -9007199254740991,
+      "type": "integer",
+    },
+    "literal": {
+      "description": "Treat pattern as plain text instead of a regex (default false)",
+      "type": "boolean",
     },
     "path": {
       "description": "The directory to search in. Defaults to the current working directory.",
       "type": "string",
     },
     "pattern": {
-      "description": "The regex pattern to search for in file contents",
+      "description": "Pattern to search for in file contents (regex by default)",
       "type": "string",
     },
   },
@@ -224,6 +245,10 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
       "description": "Questions to ask",
       "items": {
         "properties": {
+          "default": {
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.",
+            "type": "string",
+          },
           "header": {
             "description": "Very short label (max 30 chars)",
             "type": "string",
@@ -344,7 +369,7 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "background": {
-      "description": "When true, launch the subagent in the background and return immediately",
+      "description": "Run the agent in the background. You will be notified when it completes. DO NOT sleep, poll, or proactively check on its progress",
       "type": "boolean",
     },
     "command": {
@@ -355,9 +380,31 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
       "description": "A short (3-5 words) description of the task",
       "type": "string",
     },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional subagent model name or qualified provider/model ID from agent_manager_models. Only set when the user explicitly requests a different model. Omit or send null to keep the normal subagent model.",
+    },
     "prompt": {
       "description": "The task for the agent to perform",
       "type": "string",
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional provider ID from agent_manager_models. Only set when the user explicitly requests a provider. Requires model; omit or send null to prefer the current turn's provider, then Kilo Gateway.",
     },
     "subagent_type": {
       "description": "The type of specialized agent to use for this task",
@@ -366,6 +413,17 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
     "task_id": {
       "description": "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
       "type": "string",
+    },
+    "variant": {
+      "anyOf": [
+        {
+          "type": "string",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "description": "Optional reasoning effort override from agent_manager_models. Only set when the user explicitly requests a different reasoning effort. Omit or send null to keep the normal reasoning effort. Can be used without model.",
     },
   },
   "required": [
@@ -420,21 +478,14 @@ exports[`tool parameters JSON Schema (wire shape) webfetch 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "format": {
-      "anyOf": [
-        {
-          "default": "markdown",
-          "description": "The format to return the content in (text, markdown, or html). Defaults to markdown.",
-          "enum": [
-            "text",
-            "markdown",
-            "html",
-          ],
-          "type": "string",
-        },
-        {
-          "type": "null",
-        },
+      "default": "markdown",
+      "description": "The format to return the content in (text, markdown, or html). Defaults to markdown.",
+      "enum": [
+        "text",
+        "markdown",
+        "html",
       ],
+      "type": "string",
     },
     "timeout": {
       "description": "Optional timeout in seconds (max 120)",
@@ -469,7 +520,7 @@ exports[`tool parameters JSON Schema (wire shape) websearch 1`] = `
       "type": "string",
     },
     "numResults": {
-      "description": "Number of search results to return (default: 8)",
+      "description": "Number of search results to return (default: 8, maximum: 10)",
       "type": "number",
     },
     "query": {

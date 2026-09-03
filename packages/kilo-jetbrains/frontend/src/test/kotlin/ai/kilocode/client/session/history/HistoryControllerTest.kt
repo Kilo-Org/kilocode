@@ -9,6 +9,13 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
+import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -19,12 +26,9 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.SearchTextField
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
@@ -34,12 +38,14 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.Scrollable
+import javax.swing.ScrollPaneConstants
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
 @Suppress("UnstableApiUsage")
 class HistoryControllerTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var parent: Disposable
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
@@ -47,11 +53,11 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         parent = Disposer.newDisposable("history")
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        val workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        val workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(status = KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
@@ -60,7 +66,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(parent)
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -153,7 +159,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         )
         flush()
 
-        val activity = sessions.activity()
+        val activity = sessions.activitySnapshot()
 
         assertEquals(mapOf("ses_busy" to SessionActivityKind.RUNNING), activity)
     }
@@ -167,37 +173,50 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(mapOf("ses_1" to SessionActivityKind.RUNNING), activity)
     }
 
-    fun `test local history renderer shows running badge for active id`() {
+    fun `test local history rows show running badge for active id`() {
         val item = LocalHistoryItem(session("ses_1", "Running"))
-        val controller = controller()
-        controller.local.replace(listOf(item))
-        val renderer = LocalHistoryRenderer(controller.local, activity = { mapOf("ses_1" to SessionActivityKind.RUNNING) })
+        val snapshot = HistoryActivitySnapshot(activity = mapOf("ses_1" to SessionActivityKind.RUNNING))
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = localHistoryRows(listOf(item), snapshot) { false }[0]
 
-        assertTrue(renderer.runningVisible())
+        assertEquals(KiloBundle.message("session.part.tool.running"), row.badges.single().text)
     }
 
-    fun `test local history renderer uses title overlay`() {
+    fun `test local history rows use title overlay`() {
         val item = LocalHistoryItem(session("ses_1", "Stored"))
-        val controller = controller()
-        controller.local.replace(listOf(item))
-        val renderer = LocalHistoryRenderer(controller.local, titles = { mapOf("ses_1" to "Live") })
+        val snapshot = HistoryActivitySnapshot(titles = mapOf("ses_1" to "Live"))
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = localHistoryRows(listOf(item), snapshot) { false }[0]
 
-        assertEquals("Live", renderer.titleText())
+        assertEquals("Live", row.title)
     }
 
-    fun `test cloud history renderer hides running badge for inactive id`() {
+    fun `test cloud history rows hide running badge for inactive id`() {
         val item = CloudHistoryItem(cloud("cloud_1", "Cloud"))
-        val controller = controller()
-        controller.cloud.replace(listOf(item), null)
-        val renderer = CloudHistoryRenderer(controller.cloud) { emptyMap() }
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = cloudHistoryRows(listOf(item), HistoryActivitySnapshot())[0]
 
-        assertFalse(renderer.runningVisible())
+        assertTrue(row.badges.isEmpty())
+    }
+
+    fun `test local history rows use trailing time and rename and delete cells`() {
+        val item = LocalHistoryItem(session("ses_1", "Long ".repeat(80)))
+        val row = localHistoryRows(listOf(item), HistoryActivitySnapshot()) { false }[0]
+
+        assertEquals(HistoryTime.relative(item), row.trailing)
+        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertTrue(row.cells.all { it.iconOnly })
+    }
+
+    fun `test deleting local history rows hide actions and badges`() {
+        val item = LocalHistoryItem(session("ses_1", "Running"))
+        val snapshot = HistoryActivitySnapshot(activity = mapOf("ses_1" to SessionActivityKind.RUNNING))
+
+        val row = localHistoryRows(listOf(item), snapshot) { true }[0]
+
+        assertEquals(KiloBundle.message("common.deleting"), row.progress)
+        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(SessionActivityKind.RUNNING.label()), row.badges.map { it.text })
     }
 
     fun `test history panel sync updates running badges`() {
@@ -218,7 +237,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         rpc.listed += session("ses_1", "Local One")
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override fun activity() = mapOf("ses_1" to SessionActivityKind.PERMISSION)
         })
@@ -234,9 +253,9 @@ class HistoryControllerTest : BasePlatformTestCase() {
         var kind: SessionActivityKind? = null
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
-            override fun activity() = sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
+            override fun activity() = sessions.activitySnapshot() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
         })
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()
@@ -255,7 +274,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         var title = "Live"
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override fun titles() = title.takeIf { it.isNotBlank() }?.let { mapOf("ses_1" to it) }.orEmpty()
         })
@@ -291,11 +310,29 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(1, panel.itemCount())
     }
 
+    fun `test history panels do not scroll horizontally`() {
+        rpc.listed += session("ses_1", "Local ".repeat(80))
+        rpc.cloud += cloud("cloud_1", "Cloud ".repeat(80))
+        val panel = HistoryPanel(parent, controller())
+        flush()
+
+        assertNoHorizontalScroll(panel)
+        panel.clickCloud()
+        flush()
+
+        assertNoHorizontalScroll(panel)
+    }
+
     fun `test panel shows back button with tabs`() {
         val panel = HistoryPanel(parent, controller())
         flush()
 
         assertEquals(KiloBundle.message("history.back"), panel.backText())
+        val backs = UIUtil.uiTraverser(panel.component).filter(HoverIcon::class.java)
+            .filter { it.toolTipText == KiloBundle.message("history.back") }
+            .toList()
+        assertTrue(backs.isNotEmpty())
+        assertTrue(backs.all { it.parent is Align })
 
         panel.clickCloud()
         flush()
@@ -593,6 +630,55 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(javax.swing.ListSelectionModel.SINGLE_SELECTION, panel.listSelectionMode())
     }
 
+    // ------ Selection advances naturally on delete ------
+
+    fun `test deleting the selected session advances selection to the next row`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        rpc.listed += session("ses_c", "C", 1.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(1)
+
+        controller.delete(controller.local.items[1])
+        flush()
+
+        assertEquals(1, panel.selectedIndex())
+        assertEquals("C", panel.titleText(1))
+    }
+
+    fun `test deleting the last selected session falls back to the previous row`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(1)
+
+        controller.delete(controller.local.items[1])
+        flush()
+
+        assertEquals(0, panel.selectedIndex())
+        assertEquals("A", panel.titleText(0))
+    }
+
+    fun `test deleting a background session keeps the current selection`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        rpc.listed += session("ses_c", "C", 1.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(0)
+
+        controller.delete(controller.local.items[2])
+        flush()
+
+        assertEquals(0, panel.selectedIndex())
+        assertEquals("A", panel.titleText(0))
+    }
+
     // ------ Rename failure and directory selection ------
 
     fun `test rename failure keeps original title and sets error`() {
@@ -735,7 +821,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
     fun `test cloud git url resolves once across overlapping reloads`() {
         rpc.cloud += cloud("cloud_1", "Cloud One")
         val calls = AtomicInteger()
-        val controller = HistoryController(sessions, workspace, scope, gitUrlProvider = {
+        val controller = HistoryController(sessions, workspace, coroutines.scope, gitUrlProvider = {
             calls.incrementAndGet()
             Thread.sleep(100)
             "git@github.com:test/repo.git"
@@ -743,7 +829,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         controller.reloadCloud()
         controller.reloadCloud()
-        flush()
+        waitFor { rpc.cloudCalls.size == 2 }
 
         assertEquals(1, calls.get())
         assertEquals(2, rpc.cloudCalls.size)
@@ -824,34 +910,70 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertFalse(panel.repoOnlySelected())
     }
 
-    private fun controller() = HistoryController(sessions, workspace, scope)
+    private fun controller() = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
 
     private fun telemetryController(events: MutableList<Pair<String, Map<String, String>>>) = HistoryController(
         sessions,
         workspace,
-        scope,
+        coroutines.scope,
         telemetry = { event, props -> events.add(event to props) },
+        io = coroutines.dispatcher,
     )
 
     private fun controllerWithGit(url: String?) = HistoryController(
         sessions,
         workspace,
-        scope,
+        coroutines.scope,
         gitUrlProvider = { url },
+        io = coroutines.dispatcher,
     )
 
-    private fun controller(opened: MutableList<String>) = HistoryController(sessions, workspace, scope, open = { open ->
-        val id = when (open) {
-            is SessionRef.Local -> open.id
-            is SessionRef.Cloud -> "cloud:${open.id}"
-        }
-        opened.add(id)
-    })
+    private fun controller(opened: MutableList<String>) = HistoryController(
+        sessions,
+        workspace,
+        coroutines.scope,
+        open = { open ->
+            val id = when (open) {
+                is SessionRef.Local -> open.id
+                is SessionRef.Cloud -> "cloud:${open.id}"
+            }
+            opened.add(id)
+        },
+        io = coroutines.dispatcher,
+    )
 
     private class FakeManager : SessionManager {
         override fun newSession() {}
-        override fun showHistory() {}
+        override fun showHistory(back: (() -> Unit)?) {}
         override fun openSession(ref: SessionRef) {}
+    }
+
+    private fun assertNoHorizontalScroll(panel: HistoryPanel) {
+        assertEquals(0, panel.component.insets.right)
+
+        val searches = UIUtil.uiTraverser(panel.component).filter(SearchTextField::class.java).toList()
+        assertTrue(searches.isNotEmpty())
+        assertTrue(searches.all { inset(it.parent as JComponent) == UiStyle.Gap.lg() })
+
+        val scrolls = UIUtil.uiTraverser(panel.component).filter(JBScrollPane::class.java).toList()
+            .filter { it.viewport.view is Scrollable }
+        assertTrue(scrolls.isNotEmpty())
+        assertTrue(scrolls.all { it.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER })
+        assertTrue(scrolls.all { padded(it as JComponent) })
+
+        val views = scrolls.map { it.viewport.view as Scrollable }
+        assertTrue(views.all { it.getScrollableTracksViewportWidth() })
+    }
+
+    private fun inset(component: JComponent) = component.border?.getBorderInsets(component)?.right ?: -1
+
+    private fun padded(component: JComponent): Boolean {
+        var cur: java.awt.Component? = component
+        while (cur != null) {
+            if (cur is JComponent && inset(cur) == UiStyle.Gap.lg()) return true
+            cur = cur.parent
+        }
+        return false
     }
 
     private fun collect(controller: HistoryController): MutableList<String> {
@@ -873,11 +995,12 @@ class HistoryControllerTest : BasePlatformTestCase() {
         return events
     }
 
-    private fun flush() = runBlocking {
-        repeat(5) {
-            delay(100)
-            ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-        }
+    private fun flush() = coroutines.drain()
+
+    private fun pump() = pumpEdt()
+
+    private fun waitFor(done: () -> Boolean) {
+        assertTrue(coroutines.pumpUntil(cond = done))
     }
 
     private fun key(component: JComponent, code: Int) {

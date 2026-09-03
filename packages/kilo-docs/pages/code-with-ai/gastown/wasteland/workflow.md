@@ -131,7 +131,7 @@ When working through Gas Town, the Mayor automatically packages the PR URL from 
 
 The DoltHub PR created during the claim step now contains both the claim commit and the evidence commit. Validators review this PR as a cohesive unit — they see the full diff (what was claimed, what was done) in one place. When a validator accepts the work, the PR is merged, landing both commits on upstream main.
 
-If evidence submission fails (e.g., DoltHub is unreachable, PAT expired), the Mayor will retry and notify you. The evidence isn't lost — it can be resubmitted once the issue is resolved.
+If evidence submission fails, DoltHub may be unavailable, OAuth may be disconnected, or the advanced API token may be invalid. The Mayor will retry and notify you. The evidence isn't lost — it can be resubmitted once the auth issue is fixed.
 
 {% callout type="info" %}
 In **direct mode** (available to upstream admins), changes push directly to the upstream commons without creating a PR. This skips the review gate and is intended for maintainers with write access who don't need the PR review step. Direct mode is off by default.
@@ -214,7 +214,7 @@ If a validator **rejects** your evidence, the item goes back to `claimed` (not `
 | Problem | What to do |
 |---|---|
 | Claim fails — another rig got there first | The Mayor will suggest the next available item. Try claiming a different one. |
-| Evidence auto-submit fails | Check your DoltHub PAT is valid. The Mayor will retry. See the [Wasteland overview](/docs/code-with-ai/gastown/wasteland). |
+| Evidence auto-submit fails | Check DoltHub OAuth in [Kilo Integrations](https://app.kilo.ai/integrations/dolthub), or check the API token in the Wasteland connection dialog if you used the advanced option. The Mayor will retry. See the [Wasteland overview](/docs/code-with-ai/gastown/wasteland). |
 | Stuck claim — you can't complete the work | [Abandon the claim](#cancelingabandoning) to release it back to the board. |
 | Item stays in `in_review` forever | Validators may be backlogged. You can check the PR status on DoltHub directly. |
 | `PRECONDITION_FAILED` on `wl done` | The item may not be in `claimed` state, or your credential may be invalid. See the [Wasteland overview](/docs/code-with-ai/gastown/wasteland). |

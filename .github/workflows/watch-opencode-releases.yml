@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   check-release:
-    if: github.repository == 'Kilo-Org/kilocode' && vars.OPENCODE_WATCH_ENABLED != 'false'
+    if: vars.OPENCODE_WATCH_ENABLED != 'false' && (github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode') # kilocode_change
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -40,9 +40,12 @@ jobs:
         env:
           URL: ${{ secrets.OPENCODE_WATCH_SYNC_URL }}
           SECRET: ${{ secrets.OPENCODE_WATCH_SYNC_SECRET }}
+          VERCEL: ${{ secrets.OPENCODE_WATCH_VERCEL_SECRET }}
         run: |
           if [ -n "$URL" ] && [ -n "$SECRET" ]; then
-            curl -sf -X POST "$URL" -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{}' || true
+            headers=(-H "x-sync-secret: $SECRET" -H "Content-Type: application/json")
+            [ -n "$VERCEL" ] && headers+=(-H "x-vercel-protection-bypass: $VERCEL")
+            curl -sf -X POST "$URL" "${headers[@]}" -d '{}' || true
           fi
 
       - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'

@@ -51,6 +51,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
     "enabled": true,
     "provider": "openai",
     "model": "text-embedding-3-small",
+    "fileExtensions": [".php", ".js", ".css"],
     "vectorStore": "lancedb",
     "openai": { "apiKey": "sk-..." },
     "lancedb": {}
@@ -129,6 +130,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
       "apiKey": "pa-..."
     },
     "lancedb": {},
+    "fileExtensions": [".php", ".js", ".css"],
     "searchMinScore": 0.4,
     "searchMaxResults": 50,
     "embeddingBatchSize": 60,
@@ -163,44 +165,6 @@ For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **Lance
 ### Status indicator
 
 When indexing is enabled, the CLI shows an indexing status badge at the bottom of the TUI in the form `IDX <state>` (for example `IDX In Progress 40% 120/300`, `IDX Complete`, `IDX Standby`, or `IDX Error <message>`).
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension uses its own Codebase Indexing settings panel.
-
-### Open Codebase Indexing Settings
-
-1. In the chat header, click the database icon (indexing status).
-2. The Codebase Indexing settings panel opens.
-3. If you don't see the icon, open Kilo Code settings ({% codicon name="gear" /%}) and search for **Codebase Indexing**.
-
-{% image src="/docs/img/codebase-indexing/codebase-indexing.png" alt="Codebase Indexing Settings" width="800" caption="Codebase Indexing Settings (legacy)" /%}
-
-### Configure Settings
-
-1. Enable **"Enable Codebase Indexing"** using the toggle switch.
-2. Configure your embedding provider:
-   - **OpenAI**: Enter API key and select model
-   - **Gemini**: Enter Google AI API key and select embedding model
-   - **Ollama**: Enter base URL and select model
-3. Set Qdrant URL and optional API key.
-4. Configure **Max Search Results** (default: 20, range: 1-100).
-5. Click **Save** to start initial indexing.
-
-### Embedding providers
-
-The legacy extension supports a smaller set of providers:
-
-| Provider | How to use | Notes |
-|---|---|---|
-| **OpenAI** | API key | Default: `text-embedding-3-small`. |
-| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
-| **Ollama (local)** | Local base URL | No API costs. |
-
-### Vector store
-
-The legacy extension only supports **Qdrant**. See [Setting Up Qdrant](#setting-up-qdrant).
 
 {% /tab %}
 {% /tabs %}
@@ -264,6 +228,18 @@ The interface shows real-time status:
   - Splits large functions intelligently
 
 ### Automatic File Filtering
+
+Set `indexing.fileExtensions` to a non-empty array to index only the listed file extensions. Values are case-insensitive and may be written with or without a leading dot. When this setting is omitted, Kilo uses its built-in language list. Configured text formats without a Tree-sitter parser use line-based fallback chunking.
+
+```json
+{
+  "indexing": {
+    "fileExtensions": [".php", ".js", ".css"]
+  }
+}
+```
+
+The configured list replaces the built-in defaults rather than adding to them. Clear the field in the settings UI to restore the defaults, or to inherit the global list from project scope.
 
 The indexer automatically excludes:
 

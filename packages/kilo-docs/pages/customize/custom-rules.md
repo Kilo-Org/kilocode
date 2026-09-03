@@ -101,36 +101,6 @@ The CLI is backward compatible with `.kilocode/rules/` directories. Existing rul
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Project Rules
-
-Custom rules are primarily loaded from the **`.kilocode/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
-
-```
-project/
-├── .kilocode/
-│   ├── rules/
-│   │   ├── formatting.md
-│   │   ├── restricted_files.md
-│   │   └── naming_conventions.md
-├── src/
-└── ...
-```
-
-### Global Rules
-
-Global rules are stored in your home directory and apply to all projects:
-
-```
-~/.kilocode/
-├── rules/
-│   ├── coding_standards.md
-│   ├── security_guidelines.md
-│   └── documentation_style.md
-```
-
-{% /tab %}
 {% /tabs %}
 
 ## Managing Rules Through the UI
@@ -176,22 +146,6 @@ Rules are managed by editing the `instructions` array in your `kilo.jsonc` confi
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
-
-You can access the rules management UI to:
-
-- View all active rules (both project and global)
-- Toggle rules on/off without deleting them
-- Create and edit rules directly in the interface
-- Organize rules by category and priority
-
-{% callout type="note" title="UI Support" %}
-The built-in rules management UI is available for general rules only. Mode-specific rules must be managed through the file system.
-{% /callout %}
-
-{% /tab %}
 {% /tabs %}
 
 ## Rule Loading Order
@@ -223,35 +177,6 @@ Files matched by glob patterns are loaded in filesystem order. Project-level ins
 {% callout type="note" title="Backward Compatibility" %}
 If `.kilocode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `kilo.jsonc`.
 {% /callout %}
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### General Rules (Any Mode)
-
-Rules are loaded in the following priority order:
-
-1. **Global rules** from `~/.kilocode/rules/` directory
-2. **Project rules** from `.kilocode/rules/` directory
-3. **Legacy fallback files** (for backward compatibility):
-   - `.roorules`
-   - `.clinerules`
-   - `.kilocoderules` (deprecated)
-
-When both global and project rules exist, they are combined with project rules taking precedence over global rules for conflicting directives.
-
-{% callout type="note" %}
-We strongly recommend keeping your rules in the `.kilocode/rules/` folder as it provides better organization and is the preferred approach for future versions. The legacy file-based approach is maintained for backward compatibility but may be subject to change in future releases.
-{% /callout %}
-
-### Mode-Specific Rules
-
-The system also supports mode-specific rules with their own priority order:
-
-1. First, it checks for `.kilocode/rules-${mode}/` directory
-2. If that doesn't exist or is empty, it falls back to `.kilocoderules-${mode}` file (deprecated)
-
-Mode-specific rules are only supported at the project level. When both generic and mode-specific rules exist, mode-specific rules take priority.
 
 {% /tab %}
 {% /tabs %}
@@ -295,40 +220,6 @@ Rules are applied on the next interaction. You can also edit `kilo.jsonc` throug
 ```
 
 Rules are applied on the next interaction.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Using the UI Interface
-
-{% image src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Kilo Code" width="400" /%}
-
-The easiest way to create and manage rules is through the built-in UI:
-
-1. Access the rules management interface from the Kilo Code panel
-2. Choose between creating project-specific or global rules
-3. Use the interface to create, edit, or toggle rules
-4. Rules are automatically saved and applied immediately
-
-### Using the File System
-
-To create rules manually:
-
-**For Project Rules:**
-
-1. Create the `.kilocode/rules/` directory if it doesn't already exist
-2. Create a new Markdown file with a descriptive name in this directory
-3. Write your rule using Markdown formatting
-4. Save the file
-
-**For Global Rules:**
-
-1. Create the `~/.kilocode/rules/` directory if it doesn't already exist
-2. Create a new Markdown file with a descriptive name in this directory
-3. Write your rule using Markdown formatting
-4. Save the file
-
-Rules will be automatically applied to all future Kilo Code interactions. Any new changes will be applied immediately.
 
 {% /tab %}
 {% /tabs %}
@@ -419,21 +310,6 @@ If your rules aren't being followed:
 1. **Check the `instructions` array** in your config to ensure the file path is correct.
 2. **Verify Markdown formatting**: Ensure the file is valid Markdown.
 3. **Restart the session**: Start a new chat session to pick up config changes.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-If your custom rules aren't being properly followed:
-
-1. **Verify rule formatting**: Ensure that your rules are properly formatted with clear Markdown structure
-2. **Rule specificity**: Verify that the rules are specific and unambiguous
-3. **Check rule locations**:
-   - **Check rule status in the UI**: Use the rules management interface to verify that your rules are active and properly loaded
-   - Ensure rules are in supported locations:
-     - Global rules: `~/.kilocode/rules/` directory
-     - Project rules: `.kilocode/rules/` directory
-     - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
-   - **Restart VS Code** to ensure the rules are properly loaded
 
 {% /tab %}
 {% /tabs %}

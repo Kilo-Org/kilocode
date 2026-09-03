@@ -16,7 +16,7 @@ env:
 jobs:
   changes:
     name: detect JetBrains changes
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     outputs:
       jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}
     steps:
@@ -33,6 +33,9 @@ jobs:
           filters: |
             jetbrains:
               - '**'
+              - '!.changeset/**'
+              - '!.kilo/plans/**'
+              - '!packages/opencode/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
 
@@ -40,9 +43,7 @@ jobs:
     name: jetbrains
     needs: changes
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.jetbrains == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    container:
-      image: ghcr.io/kilo-org/build/jetbrains:24.04
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     defaults:
       run:
         shell: bash
@@ -55,12 +56,27 @@ jobs:
       - name: Mark workspace as git-safe
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Install dependencies
-        run: bun install
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
         working-directory: packages/kilo-jetbrains
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish JetBrains unit reports
         if: always()
@@ -88,7 +104,7 @@ jobs:
       - changes
       - unit
     if: always()
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     steps:
       - name: Verify JetBrains jobs passed
         run: |

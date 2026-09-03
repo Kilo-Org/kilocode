@@ -18,9 +18,38 @@
   min-height: 0;
   overflow: hidden;
   container: chat / inline-size;
-  --chat-readable-width: 88ch;
+  --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
+  --prompt-gutter: max(var(--prompt-min-gutter), 2cqi);
+}
+
+/* ============================================
+   Sidebar Top Bar
+   ============================================ */
+
+/* Always-visible in-webview equivalent of the native `view/title` toolbar, which
+   disappears in the Secondary Side Bar with no way to detect or work around
+   that. border-top/-bottom rule it off from the native pane title above (which
+   a webview can't render into) and the chat content below. */
+.sidebar-top-bar {
+  --top-bar-border: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+  display: flex;
+  align-items: center;
+  /* Matches the native view/title toolbar, which clusters its icons at the
+     right edge of the row rather than the left. */
+  justify-content: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border-top: var(--top-bar-border);
+  border-bottom: var(--top-bar-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sidebar-top-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-messages-wrapper {
@@ -103,6 +132,15 @@
   margin-inline: calc(var(--chat-scrollbar-width, 10px) / 2) calc(var(--chat-scrollbar-width, 10px) / -2);
 }
 
+/* Streaming content reflows under a parked pointer, so without a cursor of its
+   own the transcript alternated between the text cursor over message text and
+   the default cursor over containers and gaps. The whole transcript is
+   selectable text, so it declares the text cursor once and every descendant
+   inherits it. Controls keep their own pointer cursor. */
+.message-list-content {
+  cursor: text;
+}
+
 .message-list-content-empty {
   display: flex;
   min-height: 100%;
@@ -115,10 +153,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   height: 100%;
+  width: 100%;
+  min-width: 0;
   color: var(--vscode-descriptionForeground);
   text-align: center;
   padding: 20px;
+  padding-inline: 12px;
   gap: 20px;
 }
 
@@ -154,36 +196,200 @@
 }
 
 /* ============================================
+   Session Dock
+   ============================================ */
+
+/* The single row between the transcript and the composer. Both states occupy the
+   same grid cell and only one is visible, so the row is always exactly as tall
+   as the taller state at the current width. Swapping the working indicator for
+   the session actions therefore never resizes the transcript viewport and never
+   shifts the conversation text.
+
+   The height cannot be a fixed pixel value: the actions row wraps to a second
+   line in a narrow sidebar (see the container query in session-actions.css), and
+   a hard-coded height clipped it behind the composer. */
+.session-dock {
+  /* Tracks the natural width of the actions row (measured at 434px: New Session,
+     Fork Session, Move to Worktree, and the diff stats), so the two dock states
+     read as one centered component on wide surfaces. Deliberately px and not ch:
+     a font-relative lane changes width with the webview font metrics. */
+  --session-dock-lane: 440px;
+  display: grid;
+  box-sizing: border-box;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.session-dock:not([data-active]) {
+  display: none;
+}
+
+.session-dock-state {
+  display: flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Hidden rather than unmounted, so the inactive state keeps reserving its height
+   and the row cannot resize when the two swap. */
+.session-dock-state:not([data-active]) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ============================================
    Working Indicator
    ============================================ */
 
 .working-indicator {
+  /* Kept under the SWAP budget in StatusText.tsx, which releases the width lock
+     only after the glide has landed. */
+  --working-status-glide: 420ms;
+  --working-status-fade: 240ms;
+  --working-status-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 16px;
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
 }
 
-.working-indicator-slot {
-  /* Offset the session actions appearing when work finishes. */
-  min-height: 10px;
-  flex-shrink: 0;
+/* On a wide surface (Agent Manager) the dock spans the whole composer. The lane
+   caps how far a long status label may stretch before it ellipsizes, so the
+   indicator stays a centered cluster on the same axis as the actions row instead
+   of reaching for both edges. */
+.session-dock-state > .working-indicator {
+  width: 100%;
+  max-width: var(--session-dock-lane);
+  margin-inline: auto;
 }
 
-.working-text {
-  flex: 1;
+/* The hidden state stays laid out to reserve the row height, so the spinner and
+   the label shimmer would otherwise animate for the whole idle session. */
+.session-dock-state:not([data-active]) .working-indicator * {
+  animation-play-state: paused;
+}
+
+/* Sized to its text rather than stretched, so the spinner, the label, and the
+   counter stay one cluster. Stretching it pushed the counter onto the far edge of
+   whatever surface the dock spanned.
+
+   The cluster is centered, so every label change moved the spinner by half the
+   width delta. `StatusText` locks this box to the outgoing width and releases it
+   to the incoming one, which turns that jump into a single short glide. */
+.working-status {
+  display: inline-grid;
+  flex: 0 1 auto;
   min-width: 0;
+  /* The clip is only meant to bite horizontally. The padding gives the labels room
+     to travel vertically, and the matching negative margin keeps the row the exact
+     height it was. `overflow-y: visible` is not an option: paired with a hidden
+     axis it computes to auto and turns the label into a scroll container. */
+  padding-block: 0.75em;
+  margin-block: -0.75em;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  transition: width var(--working-status-glide) var(--working-status-ease);
 }
 
+/* Set by StatusText while the label does not fit, so the cut reads as truncation
+   rather than a label that lost its last few characters. */
+.working-status[data-clip] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
+}
+
+/* Both labels share the one cell, so the outgoing copy never widens the box. */
+.working-status-line {
+  grid-area: 1 / 1;
+  justify-self: start;
+  white-space: nowrap;
+  animation: working-status-in var(--working-status-fade) var(--working-status-ease) both;
+}
+
+/* Rises out of the way as the incoming label rises in, so the swap reads as one
+   line being rewritten rather than two labels crossfading in place. */
+.working-status-line[data-old] {
+  animation-name: working-status-out;
+  animation-duration: calc(var(--working-status-fade) * 0.75);
+}
+
+/* Sweep between the two greys the indicator already uses, instead of the shared
+   text tokens the transcript tools shimmer with. */
+.working-status [data-component="text-shimmer"] {
+  --text-shimmer-base-color: var(--vscode-descriptionForeground);
+  --text-shimmer-peak-color: var(--vscode-foreground);
+}
+
+/* Reserving the width keeps the cluster still while the counter ticks: tabular
+   digits alone still reflow when the value gains a character (9s to 10s). */
 .working-elapsed {
   flex-shrink: 0;
+  min-width: 3.5ch;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
+  transition: opacity var(--working-status-fade) var(--working-status-ease);
+}
+
+/* Before the first tick the counter holds its slot without showing a stale 0s. */
+.working-elapsed[data-empty] {
+  opacity: 0;
+}
+
+/* Same treatment for the retry countdown: it ticks every second, so it is a
+   fixed-width sibling of the label instead of part of the morphing text. */
+.working-count {
+  flex-shrink: 0;
+  min-width: 5ch;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+@keyframes working-status-in {
+  from {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(0.45em);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes working-status-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(-0.45em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-status {
+    transition-duration: 0ms;
+  }
+
+  .working-status-line {
+    animation: none;
+  }
+
+  /* Without its fade the outgoing copy would sit on top of the new label. */
+  .working-status-line[data-old] {
+    display: none;
+  }
 }
 
 /* ============================================
@@ -228,6 +434,18 @@
   width: 100%;
 }
 
+[data-component="assistant-throughput"] {
+  /* Plain-text generation-speed value shown beside the copy/feedback buttons
+   * on an assistant message. Renders as muted metadata — no icon, no
+   * background, no border — so it reads as tertiary info that never
+   * competes with the action row for visual weight. */
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-11);
+  line-height: var(--line-height-normal);
+  font-variant-numeric: tabular-nums;
+}
+
 .vscode-session-turn-diffs {
   width: 100%;
 }
@@ -243,9 +461,50 @@
   margin-inline: auto;
 }
 
+/* Lights up the part behind a hovered/focused task-timeline bar, using the
+   bar's own color, so it's easy to follow which bar belongs to which tool
+   call (mirrors the legacy extension's task-timeline row gutter highlight).
+   Drawn as an absolutely positioned strip flush with the card's left edge,
+   not an inset box-shadow: a box-shadow paints as part of the wrapper's own
+   background layer, underneath every child, so tool cards with a negative-
+   margin background (bleeding past this edge) would otherwise cover it.
+   An absolutely positioned element always paints above normal-flow
+   (position: static) children, so it stays visible without needing to
+   extend past the wrapper's own box — virtua's row virtualizer clips its
+   content to exactly that box (`overflow: clip`). */
+[data-component="tool-part-wrapper"] {
+  position: relative;
+}
+
+[data-component="tool-part-wrapper"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  /* Use the turn's existing 4px inset: the 3px strip stays within the
+     virtualized row and leaves a 1px gap before the card. */
+  left: -4px;
+  width: 3px;
+  border-radius: 2px 0 0 2px;
+  background: var(--timeline-color, transparent);
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+[data-component="tool-part-wrapper"][data-timeline-highlight]::before {
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="tool-part-wrapper"]::before {
+    transition: none;
+  }
+}
+
 .chat-view .message-list-content > .revert-banner,
 .chat-view .message-list-content > [data-component="question-dock"],
-.chat-view .message-list-content > .working-indicator-slot,
 .chat-view .message-list-content > .vscode-session-turn[role="status"],
 .chat-view .message-list-content > [data-component="suggest-bar"] {
   width: calc(100% - 8px);
@@ -254,27 +513,61 @@
 }
 
 .chat-view .prompt-input-container,
-.chat-view .new-task-button-wrapper {
+.chat-view .session-dock {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
+}
+
+.chat-view .prompt-input-container {
+  margin-block: var(--prompt-gutter) var(--prompt-min-gutter);
 }
 
 .chat-view .chat-input > .startup-error-banner,
 .chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
 }
 
 .chat-view .chat-input > [data-component="permission-shortcuts"] > [data-component="dock-prompt"] {
   margin-inline: 0;
+}
+
+/* A permission card with a diff can be taller than the room left under the
+   transcript, and `.chat-view` clips whatever doesn't fit. With a rigid
+   `.chat-input` that silently cut off the Allow/Deny row with nothing to
+   scroll. Only while a permission is pending, lay the composer column out so
+   the card is a shrinkable flex item: its height is then bounded by the space
+   actually available and its own body scrolls instead. */
+.chat-input:has(> [data-component="permission-shortcuts"]) {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.chat-input:has(> [data-component="permission-shortcuts"]) > * {
+  flex-shrink: 0;
+}
+
+/* Margins don't collapse in a flex column, so drop the halves that used to
+   overlap and keep the spacing around the card identical. */
+.chat-input:has(> [data-component="permission-shortcuts"]) > .startup-error-banner {
+  margin-bottom: 0;
+}
+
+.chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container {
+  margin-top: var(--prompt-gutter);
+}
+
+.chat-input > [data-component="permission-shortcuts"] {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  /* Shrinks down to the card's own floor plus its 12px vertical margins, so the
+     card is never laid out over the prompt input below it. */
+  min-height: calc(var(--permission-card-min-height, 11em) + 24px);
 }
 
 .vscode-session-turn-diffs-trigger {
@@ -323,4 +616,39 @@
 .vscode-session-turn-diffs-trigger [data-slot="session-turn-diffs-meta"] {
   display: inline-flex;
   align-items: center;
+}
+
+/* ============================================
+   Search Active Match Highlight
+   ============================================ */
+
+.vscode-session-turn[data-search-active] {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: -2px;
+  border-radius: 4px;
+  animation: search-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes search-pulse {
+  0%,
+  100% {
+    outline-color: var(--vscode-focusBorder);
+  }
+  50% {
+    outline-color: color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+  }
+}
+
+/* Occurrence-level highlights painted via the CSS Custom Highlight API (see
+   transcript-search-highlight.ts). Falls back to no visual effect in engines
+   without ::highlight() support — row-level scroll navigation still works.
+   Uses VS Code's own editor find-match theme colors so this matches
+   whatever color scheme the user has configured, rather than a fixed
+   palette that can clash with some themes. */
+::highlight(kilo-transcript-search-match) {
+  background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 190, 0, 0.35));
+}
+
+::highlight(kilo-transcript-search-match-active) {
+  background-color: var(--vscode-editor-findMatchBackground, rgba(255, 165, 0, 0.65));
 }

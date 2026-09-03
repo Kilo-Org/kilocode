@@ -18,11 +18,23 @@ export const CommitMessagePayload = Schema.Struct({
   previousMessage: Schema.optional(Schema.String).annotate({
     description: "Previously generated message — triggers regeneration with a different result",
   }),
+  language: Schema.optional(Schema.String).annotate({
+    description: "Target language for the generated commit message (e.g. zh, en). Falls back to English.",
+  }),
 })
 
 const CommitMessageResponse = Schema.Struct({
   message: Schema.String,
 })
+
+export class CommitMessageNoChangesError extends Schema.ErrorClass<CommitMessageNoChangesError>(
+  "CommitMessageNoChangesError",
+)({ message: Schema.String }, { httpApiStatus: 422 }) {}
+
+export class CommitMessageFailedError extends Schema.ErrorClass<CommitMessageFailedError>("CommitMessageFailedError")(
+  { message: Schema.String },
+  { httpApiStatus: 422 },
+) {}
 
 export const CommitMessageApi = HttpApi.make("commit-message")
   .add(
@@ -32,7 +44,7 @@ export const CommitMessageApi = HttpApi.make("commit-message")
           query: WorkspaceRoutingQuery,
           payload: CommitMessagePayload,
           success: described(CommitMessageResponse, "Generated commit message"),
-          error: HttpApiError.BadRequest,
+          error: [HttpApiError.BadRequest, CommitMessageNoChangesError, CommitMessageFailedError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "commitMessage.generate",

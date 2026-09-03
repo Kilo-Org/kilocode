@@ -19,6 +19,8 @@ sealed class KiloWorkspaceState {
         val commands: List<CommandInfo>,
         val skills: List<SkillInfo>,
     ) : KiloWorkspaceState()
+    data class Unsupported(val reason: String) : KiloWorkspaceState()
+    data class Missing(val path: String) : KiloWorkspaceState()
     data class Error(val message: String, val errors: List<LoadError> = emptyList()) : KiloWorkspaceState()
 }
 
@@ -49,21 +51,70 @@ data class ProviderInfo(
 data class ModelInfo(
     val id: String,
     val name: String,
+    val inputPrice: Double? = null,
+    val outputPrice: Double? = null,
+    val contextLength: Long? = null,
+    val releaseDate: String? = null,
+    val latest: Boolean? = null,
     val attachment: Boolean,
     val reasoning: Boolean,
     val temperature: Boolean,
     val toolCall: Boolean,
     val free: Boolean,
+    val byok: Boolean = false,
     val status: String?,
     val recommendedIndex: Double?,
     val variants: List<String>,
     val limit: ModelLimitInfo?,
+    val cost: ModelCostInfo? = null,
+    val capabilities: ModelCapabilitiesInfo? = null,
+    val options: ModelOptionsInfo? = null,
+    val autoRouting: ModelAutoRoutingInfo? = null,
+    val terminalBench: ModelTerminalBenchInfo? = null,
+    val mayTrainOnYourPrompts: Boolean = false,
 )
 
 data class ModelLimitInfo(
     val context: Long = 0,
     val input: Long? = null,
     val output: Long = 0,
+)
+
+data class ModelCostInfo(
+    val input: Double,
+    val output: Double,
+    val cache: ModelCacheCostInfo? = null,
+)
+
+data class ModelCacheCostInfo(
+    val read: Double,
+    val write: Double,
+)
+
+data class ModelCapabilitiesInfo(
+    val reasoning: Boolean = false,
+    val input: ModelInputCapabilitiesInfo? = null,
+)
+
+data class ModelInputCapabilitiesInfo(
+    val text: Boolean = false,
+    val image: Boolean = false,
+    val audio: Boolean = false,
+    val video: Boolean = false,
+    val pdf: Boolean = false,
+)
+
+data class ModelOptionsInfo(
+    val description: String? = null,
+)
+
+data class ModelAutoRoutingInfo(
+    val models: List<String> = emptyList(),
+)
+
+data class ModelTerminalBenchInfo(
+    val overallScore: Double,
+    val avgAttemptCostUsd: Double,
 )
 
 data class AgentData(
@@ -86,12 +137,17 @@ data class AgentInfo(
 data class CommandInfo(
     val name: String,
     val description: String?,
+    val agent: String?,
+    val model: String?,
+    val variant: String?,
     val source: String?,
     val hints: List<String>,
+    val subtask: Boolean?,
 )
 
 data class SkillInfo(
     val name: String,
     val description: String?,
     val location: String,
+    val content: String?,
 )

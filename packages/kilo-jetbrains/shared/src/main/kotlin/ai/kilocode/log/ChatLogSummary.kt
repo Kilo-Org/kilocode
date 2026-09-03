@@ -2,6 +2,7 @@ package ai.kilocode.log
 
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
@@ -32,9 +33,11 @@ object ChatLogSummary {
         is ChatEventDto.SessionStatusChanged -> event.sessionID
         is ChatEventDto.SessionUpdated -> event.sessionID
         is ChatEventDto.SessionIdle -> event.sessionID
+        is ChatEventDto.SessionQueueChanged -> event.sessionID
         is ChatEventDto.SessionCompacted -> event.sessionID
         is ChatEventDto.SessionDiffChanged -> event.sessionID
         is ChatEventDto.TodoUpdated -> event.sessionID
+        is ChatEventDto.SessionInterrupted -> event.sessionID
     }
 
     fun dir(dir: String): String = "dirHash=${hash(dir)}"
@@ -70,8 +73,20 @@ object ChatLogSummary {
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
         prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }
+        prompt.editorContext?.let { ctx ->
+            out += "editorContext=true"
+            ctx.activeFile?.let { file -> out += editorFile("activeFile", file) }
+            ctx.openTabs?.size?.takeIf { it > 0 }?.let { out += "openTabs=$it" }
+            ctx.visibleFiles?.size?.takeIf { it > 0 }?.let { out += "visibleFiles=$it" }
+            ctx.shell?.takeIf { it.isNotBlank() }?.let { out += "shell=$it" }
+        }
         preview(text)?.let { out += "preview=\"$it\"" }
         return out.joinToString(" ")
+    }
+
+    private fun editorFile(key: String, file: String): String {
+        if (mode() == LogConfig.ContentMode.OFF) return "${key}Hash=${hash(file)}"
+        return "$key=\"${clean(file)}\""
     }
 
     fun history(items: List<MessageWithPartsDto>): String {
@@ -202,11 +217,18 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.updated",
             "title=${event.session.title.length}",
+            "revert=${event.session.revert?.messageID ?: "none"}",
         )
 
         is ChatEventDto.SessionIdle -> join(
             sid(event.sessionID),
             "evt=session.idle",
+        )
+
+        is ChatEventDto.SessionQueueChanged -> join(
+            sid(event.sessionID),
+            "evt=session.queue.changed",
+            "queued=${event.queued.size}",
         )
 
         is ChatEventDto.SessionCompacted -> join(
@@ -225,6 +247,12 @@ object ChatLogSummary {
             "evt=todo.updated",
             todos(event.todos),
         )
+
+        is ChatEventDto.SessionInterrupted -> join(
+            sid(event.sessionID),
+            "evt=session.interrupted",
+            "reason=${event.reason}",
+        )
     }
 
     fun eventBody(event: ChatEventDto): String = event(event).substringAfter("evt=").let { body ->
@@ -233,12 +261,36 @@ object ChatLogSummary {
         join("evt=$evt", rest)
     }
 
+    fun hasError(event: ChatEventDto): Boolean = when (event) {
+        is ChatEventDto.Error -> true
+        is ChatEventDto.MessageUpdated -> event.info.error != null
+        else -> false
+    }
+
+    fun error(event: ChatEventDto): String? = when (event) {
+        is ChatEventDto.Error -> error(event.error, sid(event.sessionID), "evt=session.error")
+        is ChatEventDto.MessageUpdated -> event.info.error?.let { err ->
+            error(err, sid(event.sessionID), "evt=message.updated", "mid=${event.info.id}")
+        }
+        else -> null
+    }
+
     private fun message(dto: MessageDto): String = join(
         "mid=${dto.id}",
         "role=${dto.role}",
         dto.agent?.takeIf { it.isNotBlank() }?.let { "agent=$it" },
         model(dto.providerID, dto.modelID)?.let { "model=$it" },
         dto.error?.type?.let { "err=$it" },
+    )
+
+    private fun error(err: MessageErrorDto?, vararg parts: String): String = join(
+        *parts,
+        err?.type?.let { "err=$it" },
+        err?.statusCode?.let { "code=$it" },
+        err?.message?.let { msg -> statusPreview(msg)?.let { "message=\"$it\"" } },
+        err?.responseBody?.let { body(it) },
+        err?.dataKeys?.takeIf { it.isNotEmpty() }?.let { "dataKeys=${it.joinToString(",")}" },
+        err?.ref?.takeIf { it.isNotBlank() }?.let { "ref=$it" },
     )
 
     private fun part(dto: PartDto): String = join(
@@ -310,10 +362,10 @@ object ChatLogSummary {
 
     private fun preview(text: String): String? {
         val mode = mode()
-        if (mode == Mode.OFF) return null
+        if (mode == LogConfig.ContentMode.OFF) return null
         val raw = clean(text)
         if (raw.isEmpty()) return null
-        val cut = if (mode == Mode.FULL) raw else raw.take(max())
+        val cut = if (mode == LogConfig.ContentMode.FULL) raw else raw.take(max())
         return if (cut.length == raw.length) cut else "$cut..."
     }
 
@@ -321,7 +373,7 @@ object ChatLogSummary {
         val raw = clean(text)
         if (raw.isEmpty()) return null
         val mode = mode()
-        val cut = if (mode == Mode.FULL) raw else raw.take(max())
+        val cut = if (mode == LogConfig.ContentMode.FULL) raw else raw.take(max())
         return if (cut.length == raw.length) cut else "$cut..."
     }
 
@@ -332,18 +384,7 @@ object ChatLogSummary {
 
     private fun hash(text: String): String = text.hashCode().toUInt().toString(16)
 
-    private fun mode(): Mode = when ((System.getProperty("kilo.dev.log.chat.content") ?: "off").lowercase()) {
-        "preview" -> Mode.PREVIEW
-        "full" -> Mode.FULL
-        else -> Mode.OFF
-    }
+    private fun mode(): LogConfig.ContentMode = LogConfig.contentMode()
 
-    private fun max(): Int = (System.getProperty("kilo.dev.log.chat.preview.max")?.toIntOrNull() ?: 160)
-        .coerceIn(1, 2000)
-
-    private enum class Mode {
-        OFF,
-        PREVIEW,
-        FULL,
-    }
+    private fun max(): Int = LogConfig.previewMax()
 }

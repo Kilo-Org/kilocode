@@ -1,68 +1,39 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import { Database } from "../../src/storage/db"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { Database } from "@opencode-ai/core/database/database"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { AbsolutePath } from "@opencode-ai/core/schema"
+import { makeRuntime } from "@opencode-ai/core/effect/runtime"
+import { Effect } from "effect"
+import { eq } from "drizzle-orm"
 import { SessionImportService } from "../../src/kilocode/session-import/service"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 
-let spy: ReturnType<typeof spyOn>
+const projectID = ProjectV2.ID.make("proj_test")
 
-const db = {
-  select() {
-    return {
-      from() {
-        return {
-          where() {
-            return {
-              get() {
-                return rows.session
-              },
-            }
-          },
-        }
-      },
-    }
-  },
-  delete() {
-    return {
-      where() {
-        return {
-          run() {
-            deletes.push("session")
-            rows.session = undefined
-            rows.messages = []
-            rows.parts = []
-          },
-        }
-      },
-    }
-  },
-  insert() {
-    return {
-      values(input: Record<string, unknown>) {
-        return {
-          onConflictDoUpdate() {
-            return {
-              run() {
-                rows.session = { ...input }
-              },
-            }
-          },
-          run() {
-            rows.session = { ...input }
-          },
-        }
-      },
-    }
-  },
+const runtime = makeRuntime(Database.Service, AppNodeBuilder.build(Database.node))
+const db = <A, E>(effect: Effect.Effect<A, E, Database.Service>) => runtime.runPromise(() => effect)
+
+async function prepare() {
+  await db(
+    Effect.gen(function* () {
+      const { db } = yield* Database.Service
+      yield* db
+        .delete(SessionTable)
+        .where(eq(SessionTable.id, SessionID.make(input().id)))
+        .run()
+      yield* db.delete(ProjectTable).where(eq(ProjectTable.id, projectID)).run()
+      yield* db
+        .insert(ProjectTable)
+        .values({ id: projectID, worktree: AbsolutePath.make("/workspace/testing"), sandboxes: [] })
+        .run()
+    }),
+  )
 }
-
-const rows = {
-  session: undefined as Record<string, unknown> | undefined,
-  messages: [] as string[],
-  parts: [] as string[],
-}
-
-const deletes: string[] = []
 
 function input(force?: boolean) {
   return {
@@ -110,38 +81,96 @@ describe("SessionImportService.project", () => {
 })
 
 describe("SessionImportService.session", () => {
-  beforeEach(() => {
-    spy = spyOn(Database, "use").mockImplementation((fn: any) => fn(db))
-    deletes.length = 0
-    rows.session = undefined
-    rows.messages = []
-    rows.parts = []
-  })
-
-  afterEach(() => {
-    spy.mockRestore()
-  })
+  beforeEach(prepare)
+  afterEach(prepare)
 
   test("returns skipped when the session already exists and force is false", async () => {
-    rows.session = { id: "ses_migrated_test", title: "Legacy task" }
+    await SessionImportService.session(input())
 
     const result = await SessionImportService.session(input())
 
     expect(result).toEqual({ ok: true, id: "ses_migrated_test", skipped: true })
-    expect(deletes).toEqual([])
+  })
+
+  test.each([false, true])("preserves imported fields with force=%s", async (force) => {
+    if (force) await SessionImportService.session(input())
+    const value = {
+      ...input(force),
+      shareURL: "https://example.test/session",
+      summary: { additions: 3, deletions: 2, files: 1, diffs: [] },
+      timeCreated: 11,
+      timeUpdated: 22,
+      timeCompacting: 33,
+      timeArchived: 44,
+    }
+    await SessionImportService.session(value)
+    const row = await db(
+      Database.Service.use(({ db }) =>
+        db
+          .select()
+          .from(SessionTable)
+          .where(eq(SessionTable.id, SessionID.make(value.id)))
+          .get(),
+      ),
+    )
+    expect(row).toMatchObject({
+      id: value.id,
+      project_id: value.projectID,
+      slug: value.slug,
+      directory: value.directory,
+      title: value.title,
+      version: value.version,
+      share_url: value.shareURL,
+      summary_additions: 3,
+      summary_deletions: 2,
+      summary_files: 1,
+      summary_diffs: [],
+      time_created: 11,
+      time_updated: 22,
+      time_compacting: 33,
+      time_archived: 44,
+    })
   })
 
   test("deletes and recreates the session when force is true", async () => {
-    rows.session = { id: "ses_migrated_test", title: "Legacy task" }
-    rows.messages = ["msg_test"]
-    rows.parts = ["prt_test"]
+    await SessionImportService.session(input())
+
+    // The forced delete must cascade to dependent messages and parts, not just replace the session row.
+    const sessionID = SessionID.make(input().id)
+    const messageID = MessageID.make("msg_forced_cleanup")
+    await db(
+      Effect.gen(function* () {
+        const { db } = yield* Database.Service
+        yield* db
+          .insert(MessageTable)
+          .values({ id: messageID, session_id: sessionID, data: { role: "user" } as never })
+          .run()
+        yield* db
+          .insert(PartTable)
+          .values({
+            id: PartID.make("prt_forced_cleanup"),
+            message_id: messageID,
+            session_id: sessionID,
+            data: { type: "text", text: "seed" } as never,
+          })
+          .run()
+      }),
+    )
 
     const result = await SessionImportService.session(input(true))
+    const [row, messages, parts] = await db(
+      Database.Service.use(({ db }) =>
+        Effect.all([
+          db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
+          db.select().from(MessageTable).where(eq(MessageTable.session_id, sessionID)).all(),
+          db.select().from(PartTable).where(eq(PartTable.session_id, sessionID)).all(),
+        ]),
+      ),
+    )
 
     expect(result).toEqual({ ok: true, id: "ses_migrated_test" })
-    expect(deletes).toEqual(["session"])
-    expect(rows.messages).toEqual([])
-    expect(rows.parts).toEqual([])
-    expect(rows.session).toMatchObject({ title: "Reimported task" })
+    expect(row?.title).toBe("Reimported task")
+    expect(messages).toEqual([])
+    expect(parts).toEqual([])
   })
 })

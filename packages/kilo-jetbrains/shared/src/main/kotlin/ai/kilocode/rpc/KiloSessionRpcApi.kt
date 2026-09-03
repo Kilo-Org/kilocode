@@ -2,7 +2,7 @@ package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -13,6 +13,8 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -40,7 +42,7 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** List root sessions for a directory. */
     suspend fun list(directory: String): SessionListDto
 
-    /** List recent root sessions for the current worktree family. */
+    /** List recent root sessions for the worktree containing [directory]. */
     suspend fun recent(directory: String, limit: Int): SessionListDto
 
     /** Create a new session in the given directory. */
@@ -55,6 +57,17 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Rename a session. */
     suspend fun rename(id: String, directory: String, title: String): SessionDto
 
+    /**
+     * Create a public share link for a session.
+     *
+     * Requires Kilo credentials and fails when sharing is disabled by config. The CLI collapses every
+     * cause into a bare HTTP 500, so callers cannot tell those apart.
+     */
+    suspend fun share(id: String, directory: String): SessionDto
+
+    /** Revoke a session's public share link. */
+    suspend fun unshare(id: String, directory: String): SessionDto
+
     /** List cloud-backed sessions. */
     suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
 
@@ -63,6 +76,15 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Observe live session status changes. */
     suspend fun statuses(): Flow<Map<String, SessionStatusDto>>
+
+    /** Observe live per-session activity with the session's directory. */
+    suspend fun activity(): Flow<Map<String, SessionActivityDto>>
+
+    /**
+     * Observe session create/update/delete across every directory this CLI serves, so a
+     * directory-scoped list can refresh when a session is started in another project frame.
+     */
+    suspend fun changes(): Flow<SessionChangeDto>
 
     /** Register a worktree directory override for a session. */
     suspend fun setDirectory(id: String, directory: String)
@@ -78,23 +100,44 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
 
+    /** Run a configured slash command/workflow in a session. */
+    suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto)
+
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
 
     /** Summarize/compact a session using the selected model. */
     suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
 
+    /** Revert a session to a prior user message or part. */
+    suspend fun revert(id: String, directory: String, messageID: String, partID: String?)
+
+    /** Delete a single message (used to remove a queued prompt). */
+    suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean
+
+    /** Redo all reverted changes for a session. */
+    suspend fun unrevert(id: String, directory: String)
+
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+
+    /** Load cumulative file changes for a session. */
+    suspend fun diff(id: String, directory: String): List<DiffFileDto>
+
+    /**
+     * Full before/after content for one changed file so the diff editor can show a whole-file diff.
+     * Prefers authoritative snapshot content from a CLI that supports it (correct even for historical
+     * turns); falls back to rebuilding locally from the working tree + hunk patch against any pinned
+     * CLI. Returns null when neither is available (fall back to the hunk view). Added/deleted files
+     * return null because the frontend reconstructs those directly.
+     */
+    suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto?
 
     /** Load one attachment part from a session without returning full history to the frontend. */
     suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?
 
     /** Subscribe to streaming chat events for a specific session. */
     suspend fun events(id: String, directory: String): Flow<ChatEventDto>
-
-    /** Update config (model, agent/mode, temperature). */
-    suspend fun updateConfig(directory: String, config: ConfigUpdateDto)
 
     // ------ permission / question resolution ------
 

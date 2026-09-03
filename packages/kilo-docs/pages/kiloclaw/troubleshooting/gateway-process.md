@@ -5,6 +5,8 @@ description: "Understanding KiloClaw gateway process states"
 
 # Gateway Process States
 
+{% partial file="kiloclaw-eol.md" /%}
+
 The Gateway Process tab shows the current state of the OpenClaw process inside your machine:
 
 - **Running** — The process is up and handling requests

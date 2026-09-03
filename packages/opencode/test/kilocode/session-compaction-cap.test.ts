@@ -3,10 +3,11 @@
 // overflows the model context, and that the exhausted turn surfaces as an
 // error (rather than silently completing).
 
-import { NodeFileSystem } from "@effect/platform-node"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
 import { Deferred, Effect, Layer } from "effect"
-import { FetchHttpClient } from "effect/unstable/http"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
@@ -16,22 +17,22 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
-import { Ripgrep } from "../../src/file/ripgrep"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Format } from "../../src/format"
 import { Git } from "../../src/git"
 import { Image } from "../../src/image/image"
 import { KiloSession } from "../../src/kilocode/session"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Question } from "../../src/question"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
 import { Session } from "../../src/session/session"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
@@ -48,11 +49,10 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
-import { Storage } from "../../src/storage/storage"
-import { SyncEvent } from "../../src/sync"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import * as Log from "@opencode-ai/core/util/log"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestLLMServer } from "../lib/llm-server"
@@ -60,8 +60,8 @@ import { TestLLMServer } from "../lib/llm-server"
 Log.init({ print: false })
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 const summary = Layer.succeed(
@@ -91,6 +91,8 @@ const mcp = Layer.succeed(
     tools: () => Effect.succeed({}),
     prompts: () => Effect.succeed({}),
     resources: () => Effect.succeed({}),
+    instructions: () => Effect.succeed([]),
+    resourceTemplates: () => Effect.succeed({}),
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
@@ -126,85 +128,59 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
-const runState = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const memoryNode = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const serverNode = LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] })
+const root = LayerNode.group([
+  SessionPrompt.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  LLM.node,
+  Env.node,
+  AgentSvc.node,
+  Command.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  ProviderSvc.node,
+  LSP.node,
+  MCP.node,
+  FSUtil.node,
+  BackgroundJob.node,
+  SessionStatus.node,
+  SessionRunState.node,
+  Database.node,
+  EventV2Bridge.node,
+  Question.node,
+  Todo.node,
+  ToolRegistry.node,
+  Skill.node,
+  Git.node,
+  Ripgrep.node,
+  Format.node,
+  Truncate.node,
+  SessionProcessor.node,
+  Image.node,
+  SessionCompaction.node,
+  SessionRevert.node,
+  Instruction.node,
+  SystemPrompt.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  memoryNode,
+  serverNode,
+])
 
 function makeHttp() {
-  const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    AgentSvc.defaultLayer,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    plugin,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    ProviderSvc.defaultLayer,
-    lsp,
-    mcp,
-    AppFileSystem.defaultLayer,
-    SyncEvent.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Reference.defaultLayer,
-    status,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Command.defaultLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
-  return Layer.mergeAll(
-    TestLLMServer.layer,
-    SessionPrompt.layer.pipe(
-      Layer.provide(SessionRevert.defaultLayer),
-      Layer.provide(Image.defaultLayer),
-      Layer.provide(summary),
-      Layer.provideMerge(runState),
-      Layer.provideMerge(compact),
-      Layer.provideMerge(proc),
-      Layer.provideMerge(registry),
-      Layer.provideMerge(trunc),
-      Layer.provideMerge(question),
-      Layer.provide(Instruction.defaultLayer),
-      Layer.provide(SystemPrompt.defaultLayer),
-      Layer.provideMerge(deps),
-    ),
-  ).pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        summary,
-        deps,
-        Config.defaultLayer,
-        RuntimeFlags.layer(),
-        BackgroundJob.defaultLayer,
-        Bus.layer,
-        infra,
-        Storage.defaultLayer,
-        Reference.defaultLayer,
-      ),
-    ),
-  )
+  return LayerNode.compile(root, [
+    [SessionSummary.node, summary],
+    [Plugin.node, plugin],
+    [LSP.node, lsp],
+    [MCP.node, mcp],
+    [RuntimeFlags.node, RuntimeFlags.layer()],
+    [KiloSessions.node, KiloSessions.testLayer],
+  ])
 }
 
 const it = testEffect(makeHttp())
@@ -264,7 +240,6 @@ describe("session compaction cap", () => {
         Effect.fnUntraced(function* ({ llm }) {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
-          const bus = yield* Bus.Service
           const chat = yield* sessions.create({
             title: "Compaction cap",
             permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -284,7 +259,7 @@ describe("session compaction cap", () => {
           yield* llm.error(400, overflowBody) // 7 — exhausts, breaks
 
           const turnClose = yield* Deferred.make<KiloSession.CloseReason>()
-          const unsub = yield* bus.subscribeCallback(KiloSession.Event.TurnClose, (evt) => {
+          const unsub = Bus.subscribe(KiloSession.Event.TurnClose, (evt) => {
             if (evt.properties.sessionID === chat.id)
               Deferred.doneUnsafe(turnClose, Effect.succeed(evt.properties.reason))
           })
@@ -322,7 +297,6 @@ describe("session compaction cap", () => {
         Effect.fnUntraced(function* ({ llm }) {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
-          const bus = yield* Bus.Service
           const chat = yield* sessions.create({
             title: "Compaction under cap",
             permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -333,7 +307,7 @@ describe("session compaction cap", () => {
           yield* llm.text("final answer") // 3 — replayed turn completes
 
           const turnClose = yield* Deferred.make<KiloSession.CloseReason>()
-          const unsub = yield* bus.subscribeCallback(KiloSession.Event.TurnClose, (evt) => {
+          const unsub = Bus.subscribe(KiloSession.Event.TurnClose, (evt) => {
             if (evt.properties.sessionID === chat.id)
               Deferred.doneUnsafe(turnClose, Effect.succeed(evt.properties.reason))
           })

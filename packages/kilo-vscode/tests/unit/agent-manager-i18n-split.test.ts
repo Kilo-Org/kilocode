@@ -39,6 +39,7 @@ import { dict as amTr } from "../../webview-ui/agent-manager/i18n/tr"
 import { dict as amNl } from "../../webview-ui/agent-manager/i18n/nl"
 import { dict as amUk } from "../../webview-ui/agent-manager/i18n/uk"
 import { dict as amIt } from "../../webview-ui/agent-manager/i18n/it"
+import { dict as amFa } from "../../webview-ui/agent-manager/i18n/fa"
 
 const PREFIX = "agentManager."
 
@@ -63,6 +64,7 @@ const locales = {
   nl: amNl,
   uk: amUk,
   it: amIt,
+  fa: amFa,
 }
 
 const appLocales = {
@@ -140,6 +142,13 @@ describe("Agent Manager i18n split", () => {
         const localeVars = placeholders(localized)
         expect(localeVars, `placeholder mismatch for ${key} in locale ${locale}`).toEqual(baseVars)
       }
+    }
+  })
+
+  it("keeps introduction card captions short in every locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      expect(dict["agentManager.intro.stage1.text"].length, `${locale}: repository caption`).toBeLessThanOrEqual(100)
+      expect(dict["agentManager.intro.stage3.text"].length, `${locale}: worktree caption`).toBeLessThanOrEqual(80)
     }
   })
 

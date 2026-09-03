@@ -58,7 +58,7 @@ Config files live in the same locations as the rest of your CLI configuration �
 Drop TypeScript or JavaScript files into a `plugin/` or `plugins/` folder inside any config directory:
 
 - Global: `~/.config/kilo/plugin/`
-- Project: `.kilo/plugin/`, `.kilocode/plugin/`, or `.opencode/plugin/`
+- Project: `.kilo/plugin/` or legacy `.kilocode/plugin/`
 
 Every `.ts` or `.js` file in those directories is auto-registered at startup — no need to list them in the config file.
 
@@ -86,7 +86,7 @@ kilo plugin my-plugin --global
 kilo plugin my-plugin --force
 ```
 
-The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file (currently `.opencode/opencode.jsonc` / `.opencode/tui.jsonc` for local installs, or `~/.config/kilo/opencode.jsonc` / `~/.config/kilo/tui.jsonc` for `--global`) while preserving JSONC comments.
+The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file (`.kilo/opencode.jsonc` / `.kilo/tui.jsonc` for local installs, or `~/.config/kilo/opencode.jsonc` / `~/.config/kilo/tui.jsonc` for `--global`) while preserving JSONC comments.
 
 ### How plugins are installed
 
@@ -446,7 +446,7 @@ If a custom tool uses the same name as a built-in tool, **the custom tool wins**
 
 ### Alternative: standalone tool files
 
-For tools that don't need the full plugin context, drop them in a `tool/` or `tools/` folder inside any config directory — for example `.kilo/tool/database.ts` or `~/.config/kilo/tool/database.ts`. The filename becomes the tool name, and each file exports a `tool()` definition directly. The layout is identical to the [OpenCode custom tools guide](https://opencode.ai/docs/custom-tools); substitute `.kilo/` (or `.kilocode/` / `.opencode/`) for `.opencode/`.
+For tools that don't need the full plugin context, drop them in a `tool/` or `tools/` folder inside any config directory — for example `.kilo/tool/database.ts` or `~/.config/kilo/tool/database.ts`. The filename becomes the tool name, and each file exports a `tool()` definition directly. The layout is identical to the [OpenCode custom tools guide](https://opencode.ai/docs/custom-tools); use `.kilo/`, or legacy `.kilocode/`, instead of `.opencode/`.
 
 ---
 
@@ -456,7 +456,7 @@ For tools that don't need the full plugin context, drop them in a `tool/` or `to
 
 The CLI has built-in attention alerts for session completion, errors, and prompts that need input. You do not need a plugin or platform-specific notification command.
 
-Enable notifications and sounds in `kilo console` under **Settings > CLI > Notifications**, or configure the `attention` section of `tui.json`. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for configuration and custom sound overrides.
+Configure the `attention` section of `tui.json` or `tui.jsonc` to enable notifications and sounds. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for configuration and custom sound overrides.
 
 ### Block reads of `.env` files
 

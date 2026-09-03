@@ -1,4 +1,7 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import path from "path"
 import { tool, type ModelMessage } from "ai"
 import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect"
@@ -6,14 +9,11 @@ import { InstanceRef } from "../../src/effect/instance-ref"
 import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import z from "zod"
 import { LLM } from "../../src/session/llm"
-import { LLMClient, RequestExecutor, WebSocketExecutor } from "@opencode-ai/llm/route"
-import { Auth } from "@/auth"
-import { Config } from "@/config/config"
+import { LLMClient, RequestExecutor } from "@opencode-ai/llm/route"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
-import { Plugin } from "@/plugin"
-import { ProviderID, ModelID } from "../../src/provider/schema"
+
 import { testEffect } from "../lib/effect"
 import type { Agent } from "../../src/agent/agent"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -23,10 +23,15 @@ import { Permission } from "@/permission"
 import { LLMAISDK } from "@/session/llm/ai-sdk"
 import { Session as SessionNs } from "@/session/session"
 import { USER_AGENT } from "../../src/installation" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
-type ConfigModel = NonNullable<NonNullable<NonNullable<Config.Info["provider"]>[string]>["models"]>[string] // kilocode_change
+type ConfigModel = NonNullable<NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]>["models"]>[string] // kilocode_change
 
-const openAIConfig = (model: ModelsDev.Provider["models"][string], baseURL: string): Partial<Config.Info> => {
+const openAIConfig = (model: ModelsDev.Provider["models"][string], baseURL: string): Partial<ConfigV1.Info> => {
   const { experimental: _experimental, ...configModel } = model
   return {
     enabled_providers: ["openai"],
@@ -48,15 +53,17 @@ const openAIConfig = (model: ModelsDev.Provider["models"][string], baseURL: stri
   }
 }
 
-const it = testEffect(Layer.mergeAll(LLM.defaultLayer, Provider.defaultLayer))
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([LLM.node, Provider.node])))
 
 // LLM.stream returns a Stream, not an Effect, so we can't use the serviceUse proxy.
 const drain = (input: LLM.StreamInput) => LLM.Service.use((svc) => svc.stream(input).pipe(Stream.runDrain))
 
-// drainWith builds an isolated runtime so the custom layer fully owns LLM and
-// its transitive deps — `Effect.provide(layer)` over an existing runtime layers
-// the new services on top, but transitive Service overrides (e.g. RequestExecutor)
-// resolved through the outer LLM.defaultLayer leak through.
+// collect runs the stream and returns every emitted LLMEvent for assertions. // kilocode_change
+const collect = (input: LLM.StreamInput) => // kilocode_change
+  LLM.Service.use((svc) => svc.stream(input).pipe(Stream.runCollect)) // kilocode_change
+
+// drainWith builds an isolated runtime so custom replacements fully own LLM and
+// its transitive deps.
 const drainWith = (layer: Layer.Layer<LLM.Service>, input: LLM.StreamInput) =>
   Effect.gen(function* () {
     const ctx = yield* InstanceRef
@@ -71,15 +78,16 @@ const drainWith = (layer: Layer.Layer<LLM.Service>, input: LLM.StreamInput) =>
     )
   })
 
-function llmLayerWithExecutor(executor: Layer.Layer<RequestExecutor.Service>, flags: Partial<RuntimeFlags.Info> = {}) {
-  return LLM.layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(LLMClient.layer.pipe(Layer.provide(Layer.mergeAll(executor, WebSocketExecutor.layer)))),
-    Layer.provide(RuntimeFlags.layer(flags)),
-  )
+function llmLayerWithExecutor(
+  options: {
+    executor?: Layer.Layer<RequestExecutor.Service>
+    flags?: Partial<RuntimeFlags.Info>
+  } = {},
+) {
+  return AppNodeBuilder.build(LLM.node, [
+    [RuntimeFlags.node, RuntimeFlags.layer(options.flags)],
+    ...(options.executor ? ([[LayerNodePlatform.requestExecutor, options.executor]] as const) : []),
+  ])
 }
 
 describe("session.llm.hasToolCalls", () => {
@@ -276,7 +284,7 @@ describe("session.llm.ai-sdk adapter", () => {
       {
         type: "step-finish",
         index: 0,
-        reason: "unknown",
+        reason: "other", // kilocode_change
         usage: {
           inputTokens: 10,
           outputTokens: 5,
@@ -289,7 +297,7 @@ describe("session.llm.ai-sdk adapter", () => {
       },
       {
         type: "finish",
-        reason: "unknown",
+        reason: "other", // kilocode_change
         usage: {
           inputTokens: 11,
           outputTokens: 6,
@@ -331,7 +339,7 @@ describe("session.llm.ai-sdk adapter", () => {
   })
 
   test("preserves tool-error cause", async () => {
-    const error = new Permission.RejectedError()
+    const error = new PermissionV1.RejectedError()
     const events = await Effect.runPromise(
       LLMAISDK.toLLMEvents(LLMAISDK.adapterState(), {
         type: "tool-error",
@@ -499,7 +507,12 @@ describe("session.llm.ai-sdk adapter", () => {
     expect(events).toHaveLength(1)
     const stepFinish = events[0]
     if (stepFinish.type !== "step-finish") throw new Error("expected step-finish")
-    expect(stepFinish.providerMetadata).toEqual({ anthropic: { cacheCreationInputTokens: 300 } })
+    // kilocode_change start
+    expect(stepFinish.providerMetadata).toEqual({
+      anthropic: { cacheCreationInputTokens: 300 },
+      kilocode: { routedModelID: "claude-3-5-sonnet" },
+    })
+    // kilocode_change end
     expect(stepFinish.usage?.cacheWriteInputTokens).toBeUndefined()
     expect(stepFinish.usage?.cacheReadInputTokens).toBe(200)
 
@@ -527,6 +540,57 @@ describe("session.llm.ai-sdk adapter", () => {
     })
     expect(result.tokens.cache.write).toBe(300)
     expect(result.tokens.cache.read).toBe(200)
+  })
+
+  test("captures Copilot billed usage from raw Anthropic message deltas per step", async () => {
+    const events = await adapt([
+      uncheckedAdapterEvent({
+        type: "raw",
+        rawValue: {
+          type: "message_delta",
+          copilot_usage: { total_nano_aiu: 4_473_525_000 },
+        },
+      }),
+      {
+        type: "finish-step",
+        response: { id: "msg_test", timestamp: new Date(0), modelId: "claude-sonnet-4.6" },
+        finishReason: "stop",
+        rawFinishReason: "end_turn",
+        usage: {
+          inputTokens: 11_774,
+          outputTokens: 39,
+          totalTokens: 11_813,
+          inputTokenDetails: { noCacheTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 11_771 },
+          outputTokenDetails: { textTokens: 39, reasoningTokens: undefined },
+        },
+        providerMetadata: { anthropic: { cacheCreationInputTokens: 11_771 } },
+      },
+      {
+        type: "finish-step",
+        response: { id: "msg_follow_up", timestamp: new Date(0), modelId: "claude-sonnet-4.6" },
+        finishReason: "stop",
+        rawFinishReason: "end_turn",
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: { noCacheTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
+          outputTokenDetails: { textTokens: 1, reasoningTokens: undefined },
+        },
+        providerMetadata: { anthropic: {} },
+      },
+    ])
+
+    expect(events[0]).toMatchObject({
+      type: "step-finish",
+      providerMetadata: {
+        anthropic: { cacheCreationInputTokens: 11_771 },
+        copilot: { totalNanoAiu: 4_473_525_000 },
+      },
+    })
+    expect(events[1]).toMatchObject({ type: "step-finish", providerMetadata: { anthropic: {} } })
+    if (events[1].type !== "step-finish") throw new Error("expected step-finish")
+    expect(events[1].providerMetadata?.copilot).toBeUndefined()
   })
 })
 
@@ -742,8 +806,8 @@ describe("session.llm.stream", () => {
         )
 
         const resolved = yield* Provider.use.getModel(
-          ProviderID.make(vivgridFixture.providerID),
-          ModelID.make(fixture.model.id),
+          ProviderV2.ID.make(vivgridFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-1")
         const agent = {
@@ -761,8 +825,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(vivgridFixture.providerID), modelID: resolved.id, variant: "high" },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make(vivgridFixture.providerID), modelID: resolved.id, variant: "high" },
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -808,6 +872,191 @@ describe("session.llm.stream", () => {
     },
   )
 
+  const cerebrasFixture = { providerID: "cerebras", modelID: "gpt-oss-120b" }
+  it.instance(
+    "replays Cerebras assistant reasoning using the provider-supported field",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(cerebrasFixture.providerID, cerebrasFixture.modelID)
+        const request = waitRequest(
+          "/chat/completions",
+          new Response(createChatStream("Hello"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          }),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(cerebrasFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-cerebras-reasoning")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-cerebras-reasoning"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderV2.ID.make(cerebrasFixture.providerID), modelID: resolved.id },
+        } satisfies SessionV1.User
+
+        yield* drain({
+          user,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [
+            { role: "user", content: "Hello" },
+            {
+              role: "assistant",
+              content: [
+                { type: "reasoning", text: "thinking" },
+                { type: "text", text: "Previous answer" },
+              ],
+            },
+            { role: "user", content: "Continue" },
+          ] satisfies ModelMessage[],
+          tools: {},
+        })
+
+        const capture = yield* Effect.promise(() => request)
+        const messages = capture.body.messages as Array<Record<string, unknown>>
+        const assistant = messages.find((msg) => msg.role === "assistant")
+
+        expect(assistant?.reasoning).toBe("thinking")
+        expect(assistant && "reasoning_content" in assistant).toBe(false)
+      }),
+    {
+      config: () => ({
+        enabled_providers: [cerebrasFixture.providerID],
+        provider: {
+          [cerebrasFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+
+  const mistralFixture = { providerID: "mistral", modelID: "mistral-small-latest" }
+  it.instance(
+    "replays native Mistral reasoning from chat history",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(mistralFixture.providerID, mistralFixture.modelID)
+        const request = waitRequest(
+          "/chat/completions",
+          createEventResponse(
+            [
+              {
+                id: "chatcmpl-mistral",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [{ index: 0, delta: { role: "assistant", content: "Hello" } }],
+              },
+              {
+                id: "chatcmpl-mistral",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+              },
+            ],
+            true,
+          ),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(mistralFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-mistral-reasoning")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-mistral-reasoning"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderV2.ID.make(mistralFixture.providerID), modelID: resolved.id },
+        } satisfies SessionV1.User
+
+        const thinking = {
+          type: "thinking",
+          thinking: [
+            { type: "text", text: "thinking" },
+            {
+              type: "tool_reference",
+              tool: "web_search",
+              title: "Example result",
+              url: "https://example.com/tool",
+              favicon: "https://example.com/favicon.ico",
+              description: "Example description",
+            },
+            { type: "reference", reference_ids: [1, "source-2"] },
+          ],
+          closed: true,
+          signature: "sig-123",
+        }
+
+        yield* drain({
+          user,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [
+            { role: "user", content: "Hello" },
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "reasoning",
+                  text: "thinking",
+                  providerOptions: { mistral: { thinking } },
+                },
+                { type: "text", text: "Previous answer" },
+              ],
+            },
+            { role: "user", content: "Continue" },
+          ] satisfies ModelMessage[],
+          tools: {},
+        })
+
+        const capture = yield* Effect.promise(() => request)
+        const messages = capture.body.messages as Array<Record<string, unknown>>
+        expect(messages.find((message) => message.role === "assistant")).toEqual({
+          role: "assistant",
+          content: [thinking, { type: "text", text: "Previous answer" }],
+        })
+      }),
+    {
+      config: () => ({
+        enabled_providers: [mistralFixture.providerID],
+        provider: {
+          [mistralFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+
   const alibabaQwenFixture = { providerID: "alibaba", modelID: "qwen-plus" }
   it.instance(
     "service stream cancellation cancels provider response body promptly",
@@ -817,8 +1066,8 @@ describe("session.llm.stream", () => {
         const pending = waitStreamingRequest("/chat/completions")
 
         const resolved = yield* Provider.use.getModel(
-          ProviderID.make(alibabaQwenFixture.providerID),
-          ModelID.make(fixture.model.id),
+          ProviderV2.ID.make(alibabaQwenFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-service-abort")
         const agent = {
@@ -833,8 +1082,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+        } satisfies SessionV1.User
 
         const fiber = yield* drain({
           user,
@@ -885,8 +1134,8 @@ describe("session.llm.stream", () => {
         )
 
         const resolved = yield* Provider.use.getModel(
-          ProviderID.make(alibabaQwenFixture.providerID),
-          ModelID.make(fixture.model.id),
+          ProviderV2.ID.make(alibabaQwenFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-tools")
         const agent = {
@@ -902,9 +1151,9 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
           tools: { question: true },
-        } satisfies MessageV2.User
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -989,12 +1238,12 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/responses", createEventResponse(responseChunks, true))
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-2")
         const agent = {
           name: "test",
           mode: "primary",
-          options: {},
+          options: { reasoningMode: "pro" },
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
           temperature: 0.2,
         } satisfies Agent.Info
@@ -1005,8 +1254,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make("openai"), modelID: resolved.id, variant: "high" },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -1025,6 +1274,7 @@ describe("session.llm.stream", () => {
         expect(body.model).toBe(resolved.api.id)
         expect(body.stream).toBe(true)
         expect((body.reasoning as { effort?: string } | undefined)?.effort).toBe("high")
+        expect((body.reasoning as { mode?: string } | undefined)?.mode).toBe("pro")
 
         const maxTokens = body.max_output_tokens as number | undefined
         expect(maxTokens).toBe(undefined) // match codex cli behavior
@@ -1094,7 +1344,7 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-flag-off")
         const agent = {
           name: "test",
@@ -1104,14 +1354,10 @@ describe("session.llm.stream", () => {
         } satisfies Agent.Info
 
         yield* drainWith(
-          LLM.layer.pipe(
-            Layer.provide(Auth.defaultLayer),
-            Layer.provide(Config.defaultLayer),
-            Layer.provide(Provider.defaultLayer),
-            Layer.provide(Plugin.defaultLayer),
-            Layer.provide(failingNativeClient),
-            Layer.provide(RuntimeFlags.layer({ experimentalNativeLlm: false })),
-          ),
+          AppNodeBuilder.build(LLM.node, [
+            [LayerNodePlatform.llmClient, failingNativeClient],
+            [RuntimeFlags.node, RuntimeFlags.layer({ experimentalNativeLlm: false })],
+          ]),
           {
             user: {
               id: MessageID.make("msg_user-native-flag-off"),
@@ -1119,8 +1365,8 @@ describe("session.llm.stream", () => {
               role: "user",
               time: { created: Date.now() },
               agent: agent.name,
-              model: { providerID: ProviderID.make("openai"), modelID: resolved.id, variant: "high" },
-            } satisfies MessageV2.User,
+              model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+            } satisfies SessionV1.User,
             sessionID,
             model: resolved,
             agent,
@@ -1164,7 +1410,7 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/responses", createEventResponse(chunks, true))
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native")
         const agent = {
           name: "test",
@@ -1174,15 +1420,15 @@ describe("session.llm.stream", () => {
           temperature: 0.2,
         } satisfies Agent.Info
 
-        yield* drainWith(llmLayerWithExecutor(RequestExecutor.defaultLayer, { experimentalNativeLlm: true }), {
+        yield* drainWith(llmLayerWithExecutor({ flags: { experimentalNativeLlm: true } }), {
           user: {
             id: MessageID.make("msg_user-native"),
             sessionID,
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderID.make("openai"), modelID: resolved.id, variant: "high" },
-          } satisfies MessageV2.User,
+            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+          } satisfies SessionV1.User,
           sessionID,
           model: resolved,
           agent,
@@ -1197,6 +1443,7 @@ describe("session.llm.stream", () => {
         expect(capture.body.model).toBe(model.id)
         expect(capture.body.stream).toBe(true)
         expect((capture.body.reasoning as { effort?: string } | undefined)?.effort).toBe("high")
+        expect(capture.body.include).toEqual(["reasoning.encrypted_content"])
         expect(JSON.stringify(capture.body.input)).toContain("You are a helpful assistant.")
         expect(capture.body.input).toContainEqual({ role: "user", content: [{ type: "input_text", text: "Hello" }] })
       }),
@@ -1247,7 +1494,7 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-injected-tool")
         const agent = {
           name: "test",
@@ -1256,15 +1503,15 @@ describe("session.llm.stream", () => {
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
         } satisfies Agent.Info
 
-        yield* drainWith(llmLayerWithExecutor(executor, { experimentalNativeLlm: true }), {
+        yield* drainWith(llmLayerWithExecutor({ executor, flags: { experimentalNativeLlm: true } }), {
           user: {
             id: MessageID.make("msg_user-native-injected-tool"),
             sessionID,
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderID.make("openai"), modelID: resolved.id },
-          } satisfies MessageV2.User,
+            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+          } satisfies SessionV1.User,
           sessionID,
           model: resolved,
           agent,
@@ -1288,6 +1535,7 @@ describe("session.llm.stream", () => {
             type: "function",
             name: "lookup",
             description: "Lookup data",
+            strict: false,
             parameters: {
               type: "object",
               properties: { query: { type: "string" } },
@@ -1335,7 +1583,7 @@ describe("session.llm.stream", () => {
         const request = waitRequest("/responses", createEventResponse(chunks, true))
         let executed: unknown
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-tool")
         const agent = {
           name: "test",
@@ -1344,15 +1592,15 @@ describe("session.llm.stream", () => {
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
         } satisfies Agent.Info
 
-        yield* drainWith(llmLayerWithExecutor(RequestExecutor.defaultLayer, { experimentalNativeLlm: true }), {
+        yield* drainWith(llmLayerWithExecutor({ flags: { experimentalNativeLlm: true } }), {
           user: {
             id: MessageID.make("msg_user-native-tool"),
             sessionID,
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderID.make("openai"), modelID: resolved.id },
-          } satisfies MessageV2.User,
+            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+          } satisfies SessionV1.User,
           sessionID,
           model: resolved,
           agent,
@@ -1376,6 +1624,7 @@ describe("session.llm.stream", () => {
             type: "function",
             name: "lookup",
             description: "Lookup data",
+            strict: false,
             parameters: {
               type: "object",
               properties: { query: { type: "string" } },
@@ -1461,7 +1710,7 @@ describe("session.llm.stream", () => {
           ),
         ).toString("base64")}`
 
-        const resolved = yield* Provider.use.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-data-url")
         const agent = {
           name: "test",
@@ -1476,8 +1725,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make("openai"), modelID: resolved.id },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -1549,8 +1798,8 @@ describe("session.llm.stream", () => {
         const request = waitRequest("/messages", createEventResponse(chunks))
 
         const resolved = yield* Provider.use.getModel(
-          ProviderID.make(minimaxFixture.providerID),
-          ModelID.make(model.id),
+          ProviderV2.ID.make(minimaxFixture.providerID),
+          ModelV2.ID.make(model.id),
         )
         const sessionID = SessionID.make("session-test-3")
         const agent = {
@@ -1568,8 +1817,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make("minimax"), modelID: ModelID.make("MiniMax-M2.5") },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make("minimax"), modelID: ModelV2.ID.make("MiniMax-M2.5") },
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -1645,7 +1894,7 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/messages", createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(ProviderID.make("anthropic"), ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.make("anthropic"), ModelV2.ID.make(model.id))
         const sessionID = SessionID.make("session-test-anthropic-tools")
         const agent = {
           name: "test",
@@ -1659,8 +1908,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make("anthropic"), modelID: resolved.id, variant: "max" },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make("anthropic"), modelID: resolved.id, variant: "max" },
+        } satisfies SessionV1.User
 
         const input = [
           {
@@ -1846,7 +2095,10 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest(pathSuffix, createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(ProviderID.make(geminiFixture.providerID), ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(geminiFixture.providerID),
+          ModelV2.ID.make(model.id),
+        )
         const sessionID = SessionID.make("session-test-4")
         const agent = {
           name: "test",
@@ -1863,8 +2115,8 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(geminiFixture.providerID), modelID: resolved.id },
-        } satisfies MessageV2.User
+          model: { providerID: ProviderV2.ID.make(geminiFixture.providerID), modelID: resolved.id },
+        } satisfies SessionV1.User
 
         yield* drain({
           user,
@@ -1872,7 +2124,10 @@ describe("session.llm.stream", () => {
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
-          messages: [{ role: "user", content: "Hello" }],
+          messages: [
+            { role: "user", content: "Hello" },
+            { role: "assistant", content: [{ type: "reasoning", text: "" }] },
+          ],
           tools: {},
         })
 
@@ -1883,6 +2138,12 @@ describe("session.llm.stream", () => {
           | undefined
 
         expect(capture.url.pathname).toBe(pathSuffix)
+        expect(body.contents).toEqual([{ role: "user", parts: [{ text: "Hello" }] }])
+        // kilocode_change start - auth keys use the same Google API key header as Standard keys
+        expect(capture.headers.get("x-goog-api-key")).toBe("test-google-key")
+        expect(capture.headers.get("authorization")).toBeNull()
+        expect(capture.url.searchParams.get("key")).toBeNull()
+        // kilocode_change end
         expect(config?.temperature).toBe(0.3)
         expect(config?.topP).toBe(0.8)
         expect(config?.maxOutputTokens).toBe(ProviderTransform.maxOutputTokens(resolved))
@@ -1898,4 +2159,195 @@ describe("session.llm.stream", () => {
       }),
     },
   )
+
+  // kilocode_change start
+  it.instance(
+    "repairs whitespace-padded tool names and executes the correct tool",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
+        let toolExecuted = false
+
+        waitRequest(
+          "/chat/completions",
+          createEventResponse(
+            [
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      role: "assistant",
+                      content: null,
+                      tool_calls: [{ index: 0, id: "call-1", type: "function", function: { name: " bash", arguments: "" } }],
+                    },
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "{}" } }] } }],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+              },
+            ],
+            true,
+          ),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(alibabaQwenFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-repair")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-repair"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        yield* drain({
+          user,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [{ role: "user", content: "Run bash" }],
+          tools: {
+            bash: tool({
+              description: "Run bash",
+              inputSchema: z.object({}),
+              execute: async () => {
+                toolExecuted = true
+                return { output: "" }
+              },
+            }),
+          },
+        })
+
+        expect(toolExecuted).toBe(true)
+      }),
+    {
+      config: () => ({
+        enabled_providers: [alibabaQwenFixture.providerID],
+        provider: {
+          [alibabaQwenFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+  it.instance(
+    "surfaces the real tool name when a tool call cannot be repaired",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
+
+        waitRequest(
+          "/chat/completions",
+          createEventResponse(
+            [
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      role: "assistant",
+                      content: null,
+                      tool_calls: [{ index: 0, id: "call-1", type: "function", function: { name: "Write", arguments: "" } }],
+                    },
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "{}" } }] } }],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+              },
+            ],
+            true,
+          ),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(alibabaQwenFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-unavailable-tool")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-unavailable-tool"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        const events = Array.from(
+          yield* collect({
+            user,
+            sessionID,
+            model: resolved,
+            agent,
+            system: ["You are a helpful assistant."],
+            messages: [{ role: "user", content: "Write a file" }],
+            tools: {
+              read: tool({
+                description: "Read a file",
+                inputSchema: z.object({ filePath: z.string() }),
+                execute: async () => ({ output: "stub" }),
+              }),
+            },
+          }),
+        )
+
+        const errors = events.filter((event) => event.type === "tool-error")
+        expect(errors).toHaveLength(1)
+        expect(errors[0].name).toBe("Write")
+        expect(errors[0].message).toContain("unavailable tool 'Write'")
+        expect(errors[0].message).not.toContain("invalid")
+      }),
+    {
+      config: () => ({
+        enabled_providers: [alibabaQwenFixture.providerID],
+        provider: {
+          [alibabaQwenFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+  // kilocode_change end
 })

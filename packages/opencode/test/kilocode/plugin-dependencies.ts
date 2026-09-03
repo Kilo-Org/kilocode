@@ -11,5 +11,5 @@ async function mark(dir: string) {
 }
 
 export function preparePluginDependencies(dir: string) {
-  return Promise.all([mark(path.join(dir, ".opencode")), mark(Global.Path.config)])
+  return Promise.all([mark(path.join(dir, ".kilo")), mark(Global.Path.config)])
 }

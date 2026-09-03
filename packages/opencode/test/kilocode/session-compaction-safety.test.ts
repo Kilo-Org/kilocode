@@ -6,10 +6,17 @@ import { describe, expect, test } from "bun:test"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { KiloSessionMessageOrder } from "../../src/kilocode/session/message-order"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import type { Provider } from "../../src/provider/provider"
 
 const sessionID = SessionID.make("ses_safety")
+const model = {
+  id: ModelV2.ID.make("test"),
+  providerID: ProviderV2.ID.make("test"),
+  api: { id: "test", npm: "@ai-sdk/openai" },
+} as Provider.Model
 
 function userInfo(id: string): MessageV2.User {
   return {
@@ -18,7 +25,7 @@ function userInfo(id: string): MessageV2.User {
     role: "user",
     time: { created: 0 },
     agent: "test",
-    model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test") },
+    model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
     tools: {},
     mode: "",
   } as unknown as MessageV2.User
@@ -35,8 +42,8 @@ function assistantInfo(
     role: "assistant",
     time: { created: 0 },
     parentID: MessageID.make(parentID),
-    modelID: ModelID.make("test"),
-    providerID: ProviderID.make("test"),
+    modelID: ModelV2.ID.make("test"),
+    providerID: ProviderV2.ID.make("test"),
     mode: "",
     agent: "test",
     path: { cwd: "/", root: "/" },
@@ -579,5 +586,27 @@ describe("KiloSessionPrompt.maybeStripHistoricalMedia", () => {
     expect((histPart as MessageV2.TextPart).text).toBe("[Attached image/png: hist.png]")
     // last user untouched
     expect(result[3].parts[0].type).toBe("text")
+  })
+})
+
+describe("MessageV2 tool output truncation", () => {
+  test("does not split a surrogate pair during compaction", async () => {
+    const part = toolPart("msg_a", "completed")
+    if (part.state.status !== "completed") throw new Error("expected completed tool part")
+    part.state.output = "x".repeat(1999) + "📁" + "tail"
+
+    const result = await MessageV2.toModelMessages(
+      [user("msg_u", [textPart("msg_u", "read")]), assistant("msg_a", "msg_u", [part])],
+      model,
+      { toolOutputMaxChars: 2000 },
+    )
+    const message = result[2]
+    if (message.role !== "tool") throw new Error("expected tool message")
+    const item = message.content[0]
+    if (item.type !== "tool-result" || item.output.type !== "text") throw new Error("expected text tool result")
+
+    const isolated = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+    expect(isolated.test(item.output.value)).toBe(false)
+    expect(item.output.value).toContain("omitted 6 chars")
   })
 })

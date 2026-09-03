@@ -1,3 +1,5 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
 import { Struct } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
@@ -5,12 +7,12 @@ import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
 import { Config } from "@/config/config"
 import { Global } from "@opencode-ai/core/global"
-import * as Log from "@opencode-ai/core/util/log"
+import { Info } from "@opencode-ai/schema/file-diff"
 // kilocode_change start
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { DiffFull } from "../kilocode/snapshot/diff-full"
@@ -28,30 +30,17 @@ export const Patch = Schema.Struct({
 }).pipe(withStatics((s) => ({ zod: zod(s) }))) // kilocode_change
 export type Patch = typeof Patch.Type
 
-export const FileDiff = Schema.Struct({
-  // Optional because legacy/imported `summary_diffs` on disk may omit
-  // file details and patch text. Required Schema rejected the whole
-  // session response and broke session loading on Desktop.
-  file: Schema.optional(Schema.String),
-  patch: Schema.optional(Schema.String),
-  additions: Schema.Finite,
-  deletions: Schema.Finite,
-  status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
-  // kilocode_change start
-})
-  .annotate({ identifier: "SnapshotFileDiff" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
-// kilocode_change end
+// kilocode_change - retain the legacy Zod facade while sharing the canonical schema
+export const FileDiff = Info.pipe(withStatics((s) => ({ zod: zod(s) })))
 export type FileDiff = typeof FileDiff.Type
 
-// kilocode_change start - lightweight FileDiff without patch for session summaries
-export const SummaryFileDiff = FileDiff.mapFields(Struct.omit(["patch"]))
+// kilocode_change start - lightweight FileDiff without heavy content (patch/before/after) for session summaries
+export const SummaryFileDiff = FileDiff.mapFields(Struct.omit(["patch", "before", "after"]))
   .annotate({ identifier: "SnapshotSummaryFileDiff" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type SummaryFileDiff = typeof SummaryFileDiff.Type
 // kilocode_change end
 
-const log = Log.create({ service: "snapshot" })
 const prune = "7.days"
 const retention = 7 * 24 * 60 * 60 * 1000 // kilocode_change
 const limit = 2 * 1024 * 1024
@@ -83,18 +72,19 @@ export interface Interface {
   readonly revert: (patches: Patch[]) => Effect.Effect<void>
   readonly diff: (hash: string) => Effect.Effect<string>
   readonly diffFull: (from: string, to: string) => Effect.Effect<FileDiff[]>
+  readonly diffFile: (from: string, to: string, file: string) => Effect.Effect<FileDiff | undefined> // kilocode_change - authoritative full-content detail
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Snapshot") {}
 
 // kilocode_change start
-type Requirements = AppFileSystem.Service | AppProcess.Service | Config.Service | EffectFlock.Service
+type Requirements = FSUtil.Service | AppProcess.Service | Config.Service | EffectFlock.Service
 export const layer: Layer.Layer<Service, never, Requirements> =
   // kilocode_change end
   Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const appProcess = yield* AppProcess.Service
       const config = yield* Config.Service
       const flock = yield* EffectFlock.Service // kilocode_change
@@ -121,6 +111,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const args = (cmd: string[]) => ["--git-dir", state.gitdir, "--work-tree", state.worktree, ...cmd]
 
           const feed = (list: string[]) => list.join("\0") + "\0"
+          const literal = (list: string[]) => feed(list.map((file) => `:(top,literal)${file}`))
 
           const git = Effect.fnUntraced(
             function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string>; stdin?: string }) {
@@ -145,6 +136,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
           const ignore = Effect.fnUntraced(function* (files: string[]) {
             if (!files.length) return new Set<string>()
+            // check-ignore treats a leading colon as pathspec magic but accepts and echoes a protective ./ prefix.
+            const checkIgnorePaths = files.map((item) => (item.startsWith(":") ? `./${item}` : item))
             const check = yield* git(
               [
                 ...quote,
@@ -158,12 +151,18 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 "-z",
               ],
               {
-                cwd: state.directory,
-                stdin: feed(files),
+                // ls-files --full-name emits worktree-relative candidates, so resolve them from the worktree root
+                cwd: state.worktree,
+                stdin: feed(checkIgnorePaths),
               },
             )
             if (check.code !== 0 && check.code !== 1) return new Set<string>()
-            return new Set(check.text.split("\0").filter(Boolean))
+            return new Set(
+              check.text
+                .split("\0")
+                .filter(Boolean)
+                .map((item) => (item.startsWith("./:") ? item.slice(2) : item)),
+            )
           })
 
           const drop = Effect.fnUntraced(function* (files: string[]) {
@@ -174,8 +173,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 ...args(["rm", "--cached", "-f", "--ignore-unmatch", "--pathspec-from-file=-", "--pathspec-file-nul"]),
               ],
               {
-                cwd: state.directory,
-                stdin: feed(files),
+                // :(top,literal) pathspecs and --full-name candidates are both worktree-relative
+                cwd: state.worktree,
+                stdin: literal(files),
               },
             )
           })
@@ -197,11 +197,11 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             const result = yield* git([...cfg, ...args(cmd)], {
               cwd: state.directory,
               env: opts?.env,
-              stdin: opts?.root ? undefined : feed(files),
+              stdin: opts?.root ? undefined : literal(files),
             })
             // kilocode_change end
             if (result.code === 0) return
-            log.warn("failed to add snapshot files", {
+            yield* Effect.logWarning("failed to add snapshot files", {
               exitCode: result.code,
               stderr: result.stderr,
             })
@@ -209,7 +209,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
           const exists = (file: string) => fs.exists(file).pipe(Effect.orDie)
           const read = (file: string) => fs.readFileString(file).pipe(Effect.catch(() => Effect.succeed("")))
-          const remove = (file: string) => fs.remove(file).pipe(Effect.catch(() => Effect.void))
+          // kilocode_change start - restoration must fail if deletion fails
+          const remove = (file: string) => fs.remove(file, { force: true }).pipe(Effect.orDie)
+          // kilocode_change end
           // kilocode_change start - serialize snapshot repositories across CLI and extension processes
           const locked = <A, R>(fx: Effect.Effect<A, never, R>) =>
             lock(state.gitdir).withPermits(1)(flock.withLock(fx, `snapshot:${state.gitdir}`).pipe(Effect.orDie))
@@ -254,14 +256,17 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 git([...quote, ...args(["diff-files", "--name-only", "-z", "--", "."])], {
                   cwd: state.directory,
                 }),
-                git([...quote, ...args(["ls-files", "--others", "--exclude-standard", "-z", "--", "."])], {
-                  cwd: state.directory,
-                }),
+                git(
+                  [...quote, ...args(["ls-files", "--full-name", "--others", "--exclude-standard", "-z", "--", "."])],
+                  {
+                    cwd: state.directory,
+                  },
+                ),
               ],
               { concurrency: 2 },
             )
             if (diff.code !== 0 || other.code !== 0) {
-              log.warn("failed to list snapshot files", {
+              yield* Effect.logWarning("failed to list snapshot files", {
                 diffCode: diff.code,
                 diffStderr: diff.stderr,
                 otherCode: other.code,
@@ -282,7 +287,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             // Remove newly-ignored files from snapshot index to prevent re-adding
             if (ignored.size > 0) {
               const ignoredFiles = Array.from(ignored)
-              log.info("removing gitignored files from snapshot", { count: ignoredFiles.length })
+              yield* Effect.logInfo("removing gitignored files from snapshot", { count: ignoredFiles.length })
               yield* drop(ignoredFiles)
             }
 
@@ -293,7 +298,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
               (yield* Effect.all(
                 allow.map((item) =>
                   fs
-                    .stat(path.join(state.directory, item))
+                    .stat(path.join(state.worktree, item))
                     .pipe(Effect.catch(() => Effect.void))
                     .pipe(
                       Effect.map((stat) => {
@@ -319,10 +324,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const materialize = Effect.fnUntraced(function* () {
             yield* locked(KiloSnapshotMaterialize.run({ gitdir: state.gitdir, git, fs }).pipe(Effect.orDie)).pipe(
               Effect.timeout("5 minutes"),
-              Effect.catchCause((cause) => {
-                log.error("snapshot materialization failed", { cause: Cause.pretty(cause) })
-                return Effect.void
-              }),
+              Effect.catchCause((cause) =>
+                Effect.logError("snapshot materialization failed", { cause: Cause.pretty(cause) }),
+              ),
               Effect.forkDetach,
               Effect.asVoid,
             )
@@ -339,13 +343,13 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 // kilocode_change end
                 const result = yield* git(args(["gc", `--prune=${prune}`]), { cwd: state.directory })
                 if (result.code !== 0) {
-                  log.warn("cleanup failed", {
+                  yield* Effect.logWarning("cleanup failed", {
                     exitCode: result.code,
                     stderr: result.stderr,
                   })
                   return
                 }
-                log.info("cleanup", { prune })
+                yield* Effect.logInfo("cleanup", { prune })
               }),
             )
           })
@@ -377,7 +381,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                     fs,
                   })
                   // kilocode_change end
-                  log.info("initialized")
+                  yield* Effect.logInfo("initialized")
                 }
                 // kilocode_change start - pin every snapshot before background materialization
                 const seed = seeded.value?.source
@@ -414,7 +418,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 const alt = path.join(state.gitdir, "objects", "info", "alternates")
                 if (yield* exists(alt)) yield* materialize()
                 // kilocode_change end
-                log.info("tracking", { hash, cwd: state.directory, git: state.gitdir })
+                yield* Effect.logInfo("tracking", { hash, cwd: state.directory, git: state.gitdir })
                 return hash
               }),
             )
@@ -436,7 +440,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   },
                 )
                 if (result.code !== 0) {
-                  log.warn("failed to get diff", { hash, exitCode: result.code })
+                  yield* Effect.logWarning("failed to get diff", { hash, exitCode: result.code })
                   return { hash, files: [] }
                 }
                 const files = result.text
@@ -461,25 +465,26 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const restore = Effect.fnUntraced(function* (snapshot: string) {
             return yield* locked(
               Effect.gen(function* () {
-                log.info("restore", { commit: snapshot })
+                yield* Effect.logInfo("restore", { commit: snapshot })
                 const result = yield* git([...core, ...args(["read-tree", snapshot])], { cwd: state.worktree })
                 if (result.code === 0) {
                   const checkout = yield* git([...core, ...args(["checkout-index", "-a", "-f"])], {
                     cwd: state.worktree,
                   })
                   if (checkout.code === 0) return
-                  log.error("failed to restore snapshot", {
+                  yield* Effect.logError("failed to restore snapshot", {
                     snapshot,
                     exitCode: checkout.code,
                     stderr: checkout.stderr,
                   })
-                  return
+                  return yield* Effect.die(new Error(`Failed to restore snapshot ${snapshot}`)) // kilocode_change
                 }
-                log.error("failed to restore snapshot", {
+                yield* Effect.logError("failed to restore snapshot", {
                   snapshot,
                   exitCode: result.code,
                   stderr: result.stderr,
                 })
+                return yield* Effect.die(new Error(`Failed to restore snapshot ${snapshot}`)) // kilocode_change
               }),
             )
           })
@@ -487,6 +492,14 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const revert = Effect.fnUntraced(function* (patches: Patch[]) {
             return yield* locked(
               Effect.gen(function* () {
+                // kilocode_change start - validate every checkpoint before mutating workspace files
+                for (const hash of new Set(patches.filter((item) => item.files.length > 0).map((item) => item.hash))) {
+                  const tree = yield* git([...core, ...args(["cat-file", "-e", `${hash}^{tree}`])], {
+                    cwd: state.worktree,
+                  })
+                  if (tree.code !== 0) return yield* Effect.die(new Error(`Snapshot ${hash} is unavailable`))
+                }
+                // kilocode_change end
                 const ops: { hash: string; file: string; rel: string }[] = []
                 const seen = new Set<string>()
                 for (const item of patches) {
@@ -502,7 +515,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 }
 
                 const single = Effect.fnUntraced(function* (op: (typeof ops)[number]) {
-                  log.info("reverting", { file: op.file, hash: op.hash })
+                  yield* Effect.logInfo("reverting", { file: op.file, hash: op.hash })
                   const result = yield* git([...core, ...args(["checkout", op.hash, "--", op.file])], {
                     cwd: state.worktree,
                   })
@@ -510,11 +523,24 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   const tree = yield* git([...core, ...args(["ls-tree", op.hash, "--", op.rel])], {
                     cwd: state.worktree,
                   })
-                  if (tree.code === 0 && tree.text.trim()) {
-                    log.info("file existed in snapshot but checkout failed, keeping", { file: op.file, hash: op.hash })
-                    return
+                  // kilocode_change start - never report success for a file that Git could not restore
+                  if (tree.code !== 0) {
+                    return yield* Effect.die(new Error(`Snapshot ${op.hash} is unavailable`))
                   }
-                  log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+                  if (tree.text.trim()) {
+                    yield* Effect.logError("file existed in snapshot but checkout failed", {
+                      file: op.file,
+                      hash: op.hash,
+                      exitCode: result.code,
+                      stderr: result.stderr,
+                    })
+                    return yield* Effect.die(new Error(`Failed to restore ${op.file} from snapshot ${op.hash}`))
+                  }
+                  // kilocode_change end
+                  yield* Effect.logInfo("file did not exist in snapshot, deleting", {
+                    file: op.file,
+                    hash: op.hash,
+                  })
                   yield* remove(op.file)
                 })
 
@@ -547,7 +573,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   )
 
                   if (tree.code !== 0) {
-                    log.info("batched ls-tree failed, falling back to single-file revert", {
+                    yield* Effect.logInfo("batched ls-tree failed, falling back to single-file revert", {
                       hash: first.hash,
                       files: run.length,
                     })
@@ -567,7 +593,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   )
                   const list = run.filter((item) => have.has(item.rel))
                   if (list.length) {
-                    log.info("reverting", { hash: first.hash, files: list.length })
+                    yield* Effect.logInfo("reverting", { hash: first.hash, files: list.length })
                     const result = yield* git(
                       [...core, ...args(["checkout", first.hash, "--", ...list.map((item) => item.file)])],
                       {
@@ -575,7 +601,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                       },
                     )
                     if (result.code !== 0) {
-                      log.info("batched checkout failed, falling back to single-file revert", {
+                      yield* Effect.logInfo("batched checkout failed, falling back to single-file revert", {
                         hash: first.hash,
                         files: list.length,
                       })
@@ -589,7 +615,10 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
                   for (const op of run) {
                     if (have.has(op.rel)) continue
-                    log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+                    yield* Effect.logInfo("file did not exist in snapshot, deleting", {
+                      file: op.file,
+                      hash: op.hash,
+                    })
                     yield* remove(op.file)
                   }
 
@@ -607,7 +636,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   cwd: state.worktree,
                 })
                 if (result.code !== 0) {
-                  log.warn("failed to get diff", {
+                  yield* Effect.logWarning("failed to get diff", {
                     hash,
                     exitCode: result.code,
                     stderr: result.stderr,
@@ -687,18 +716,19 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                       { stdin: refs.map((item) => item.ref).join("\n") + "\n" },
                     )
                     if (batch.exitCode !== 0) {
-                      log.info("git cat-file --batch failed during snapshot diff, falling back to per-file git show", {
-                        stderr: batch.stderr.toString("utf8"),
-                        refs: refs.length,
-                      })
+                      yield* Effect.logInfo(
+                        "git cat-file --batch failed during snapshot diff, falling back to per-file git show",
+                        {
+                          stderr: batch.stderr.toString("utf8"),
+                          refs: refs.length,
+                        },
+                      )
                       return
                     }
                     const out = batch.stdout
 
-                    const fail = (msg: string, extra?: Record<string, string>) => {
-                      log.info(msg, { ...extra, refs: refs.length })
-                      return undefined
-                    }
+                    const fail = (msg: string, extra?: Record<string, string>) =>
+                      Effect.logInfo(msg, { ...extra, refs: refs.length }).pipe(Effect.as(undefined))
 
                     const map = new Map<string, { before: string; after: string }>()
                     const dec = new TextDecoder()
@@ -707,7 +737,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                       let end = i
                       while (end < out.length && out[end] !== 10) end += 1
                       if (end >= out.length) {
-                        return fail(
+                        return yield* fail(
                           "git cat-file --batch returned a truncated header during snapshot diff, falling back to per-file git show",
                         )
                       }
@@ -722,7 +752,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
                       const match = head.match(/^[0-9a-f]+ blob (\d+)$/)
                       if (!match) {
-                        return fail(
+                        return yield* fail(
                           "git cat-file --batch returned an unexpected header during snapshot diff, falling back to per-file git show",
                           { head },
                         )
@@ -730,7 +760,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
                       const size = Number(match[1])
                       if (!Number.isInteger(size) || size < 0 || i + size >= out.length || out[i + size] !== 10) {
-                        return fail(
+                        return yield* fail(
                           "git cat-file --batch returned truncated content during snapshot diff, falling back to per-file git show",
                           { head },
                         )
@@ -744,7 +774,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                     }
 
                     if (i !== out.length) {
-                      return fail(
+                      return yield* fail(
                         "git cat-file --batch returned trailing data during snapshot diff, falling back to per-file git show",
                       )
                     }
@@ -859,21 +889,34 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           yield* materialize() // kilocode_change - resume interrupted snapshot object materialization
 
           yield* cleanup().pipe(
-            Effect.catchCause((cause) => {
-              log.error("cleanup loop failed", { cause: Cause.pretty(cause) })
-              return Effect.void
-            }),
+            Effect.catchCause((cause) => Effect.logError("cleanup loop failed", { cause: Cause.pretty(cause) })),
             Effect.repeat(Schedule.spaced(Duration.hours(1))),
             Effect.delay(Duration.minutes(1)),
             Effect.forkScoped,
           )
 
-          return { cleanup, track, patch, restore, revert, diff, diffFull }
+          // kilocode_change start - authoritative full-content detail for editor diff tabs
+          const diffFile = Effect.fnUntraced(function* (from: string, to: string, file: string) {
+            return yield* locked(
+              DiffFull.detail(
+                {
+                  diff: (cmd) => git([...quote, ...args(cmd)], { cwd: state.directory }),
+                  show: (cmd) => git([...cfg, ...args(cmd)], { cwd: state.directory }),
+                },
+                from,
+                to,
+                file,
+              ),
+            )
+          })
+          // kilocode_change end
+
+          return { cleanup, track, patch, restore, revert, diff, diffFull, diffFile } // kilocode_change - diffFile
         }),
       )
 
       // kilocode_change start - service-local state and cache avoid leaking across Snapshot layer instances
-      const trackState = KiloSnapshotTrack.makeState()
+      const trackState = KiloSnapshotTrack.makeStates()
       const cache = new Map<string, Promise<FileDiff[]>>()
       const max = 100
       // kilocode_change end
@@ -885,20 +928,34 @@ export const layer: Layer.Layer<Service, never, Requirements> =
         cleanup: Effect.fn("Snapshot.cleanup")(function* () {
           return yield* InstanceState.useEffect(state, (s) => s.cleanup())
         }),
-        // kilocode_change start - guard slow snapshots and surface progress to the active session
+        // kilocode_change start - isolate turn-facing snapshot work from poisoned locks
         track: Effect.fn("Snapshot.track")(function* (opts) {
-          return yield* KiloSnapshotTrack.wrap({
-            inner: InstanceState.useEffect(state, (s) => s.track(opts)),
-            state: trackState,
-            snapshotInitialization: opts?.snapshotInitialization,
-            sessionID: opts?.sessionID,
-            messageID: opts?.messageID,
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: KiloSnapshotTrack.wrap({
+              inner: InstanceState.useEffect(state, (s) => s.track(opts)),
+              state: guard,
+              snapshotInitialization: opts?.snapshotInitialization,
+              sessionID: opts?.sessionID,
+              messageID: opts?.messageID,
+            }),
+            state: guard,
+            fallback: undefined,
+            operation: "track",
+          })
+        }),
+        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: InstanceState.useEffect(state, (s) => s.patch(hash)),
+            state: guard,
+            fallback: { hash, files: [] },
+            operation: "patch",
           })
         }),
         // kilocode_change end
-        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
-          return yield* InstanceState.useEffect(state, (s) => s.patch(hash))
-        }),
         restore: Effect.fn("Snapshot.restore")(function* (snapshot: string) {
           return yield* InstanceState.useEffect(state, (s) => s.restore(snapshot))
         }),
@@ -930,15 +987,22 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           return yield* Effect.promise(() => pending)
           // kilocode_change end
         }),
+        // kilocode_change start - authoritative full-content detail for editor diff tabs
+        diffFile: Effect.fn("Snapshot.diffFile")(function* (from: string, to: string, file: string) {
+          if (from === to) return undefined
+          return yield* InstanceState.useEffect(state, (s) => s.diffFile(from, to, file))
+        }),
+        // kilocode_change end
       })
     }),
   )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(AppProcess.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(EffectFlock.defaultLayer), // kilocode_change
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
+
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [FSUtil.node, AppProcess.node, Config.node, EffectFlock.node], // kilocode_change
+})
 
 export * as Snapshot from "."

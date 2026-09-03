@@ -1,6 +1,122 @@
-import type { Message, Part, ToolPart } from "../types/messages"
+import { reconcile } from "solid-js/store"
+import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import { Identifier } from "../utils/id"
+import {
+  feedbackMetadata,
+  partFeedback,
+  type BrowserFeedbackData,
+  type BrowserReference,
+} from "../../../src/shared/browser-feedback"
+import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+export type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
+
+export interface MessagePageState {
+  loadingInitial: boolean
+  loadingOlder: boolean
+  before?: string
+  hasMore: boolean
+  lastMutation?: MessageMutation
+}
+
+export const emptyPageState: MessagePageState = {
+  loadingInitial: false,
+  loadingOlder: false,
+  hasMore: false,
+}
+
+/** Remove ids from a Set immutably, returning the original when nothing changed. */
+export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
+  const next = new Set(prev)
+  for (const id of ids) next.delete(id)
+  return next.size === prev.size ? prev : next
+}
+
+export function messageParts(messages: Message[]): Record<string, Part[]> {
+  const parts: Record<string, Part[]> = {}
+  for (const msg of messages) {
+    if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
+  }
+  return parts
+}
+
+export function optimistic(
+  id: string,
+  text: string,
+  files?: FileAttachment[],
+  review?: ReviewMessageData,
+  browser?: BrowserFeedbackData,
+): Part[] {
+  const parts: Part[] = []
+  if (text) {
+    parts.push({
+      type: "text",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      text,
+      metadata: feedbackMetadata(review, browser),
+    })
+  }
+  for (const file of files ?? []) {
+    parts.push({
+      type: "file",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      mime: file.mime,
+      url: file.url,
+      filename: file.filename,
+      source: file.source,
+    })
+  }
+  return parts
+}
+
+/** Prompt input state rebuilt from a reverted user message's parts. */
+export interface RevertPromptState {
+  text: string
+  paths: string[]
+  sessions: Array<{ id: string; title: string; updated: number }>
+  images: Array<{ dataUrl: string; mime: string; filename?: string }>
+  review: ReviewCommentEntry[]
+  browser: BrowserReference[]
+}
+
+/**
+ * Extract the prompt content of a user message for restoration into the input
+ * box after a revert. Inline images are returned as data URLs so PromptInput
+ * can re-attach them without re-uploading.
+ */
+export function revertPromptState(parts: readonly Part[]): RevertPromptState {
+  const files = parts.filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+  const feedback = parts
+    .filter((p): p is Extract<Part, { type: "text" }> => p.type === "text" && !p.synthetic)
+    .map((p) => partFeedback(p.metadata, p.text))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined)
+  return {
+    text: parts
+      .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
+      .map((p) => {
+        if (p.type !== "text") return ""
+        return partFeedback(p.metadata, p.text)?.body ?? p.text
+      })
+      .join(""),
+    paths: files.map((p) => p.source?.path).filter((p): p is string => !!p && !p.startsWith("session:")),
+    sessions: files
+      .filter((p) => p.url.startsWith("session:"))
+      .map((p) => ({
+        id: p.url.slice("session:".length),
+        title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
+        updated: 0,
+      })),
+    images: files
+      .filter((p) => p.mime.startsWith("image/") && p.url.startsWith("data:"))
+      .map((p) => ({ dataUrl: p.url, mime: p.mime, filename: p.filename })),
+    review: feedback.flatMap((p) => p.review?.comments ?? []),
+    browser: feedback.flatMap((p) => p.browserFeedback?.references ?? []),
+  }
+}
 
 type SnapshotPart = {
   type?: string
@@ -39,6 +155,7 @@ type ToolState = {
 }
 
 type TaskPart = {
+  id?: string
   type: string
   tool?: string
   metadata?: { sessionId?: string }
@@ -48,6 +165,50 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+export function inUse(
+  family: ReadonlySet<string>,
+  statuses: Record<string, { type: string }>,
+  prompts: readonly { sessionID: string }[],
+): boolean {
+  return (
+    [...family].some((id) => !!statuses[id] && statuses[id].type !== "idle") ||
+    prompts.some((item) => family.has(item.sessionID))
+  )
+}
+
+export function ancestry(
+  sessions: Record<string, ParentSession>,
+  tools: Record<string, readonly TaskPart[]>,
+  outcomes: Record<string, ParentSession | undefined>,
+) {
+  const parents = new Map<string, string>()
+  for (const [id, parts] of Object.entries(tools)) {
+    for (const part of parts) {
+      const child = childID(part)
+      if (child) parents.set(child, id)
+    }
+  }
+  for (const [id, close] of Object.entries(outcomes)) {
+    if (close?.parentID) parents.set(id, close.parentID)
+  }
+  for (const [id, session] of Object.entries(sessions)) {
+    if (session.parentID === null) parents.delete(id)
+    if (session.parentID) parents.set(id, session.parentID)
+  }
+  const children = new Map<string, string[]>()
+  for (const [child, parent] of parents) {
+    const ids = children.get(parent) ?? []
+    ids.push(child)
+    children.set(parent, ids)
+  }
+  return { parents, children }
+}
+
+export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {
+  if (!partID || !child) return false
+  return parts.findLast((part) => childID(part) === child)?.id === partID
 }
 
 function stringField(value: unknown): string | undefined {
@@ -83,6 +244,10 @@ export function buildSessionToolParts(
     }
   }
   return tools
+}
+
+export function reconcileSessionToolParts(tools: ToolPart[]) {
+  return reconcile(tools, { key: "id" })
 }
 
 export function upsertSessionToolPart(
@@ -197,6 +362,106 @@ export function calcTokenUsage(
 
   if (total.input > 0 || total.output > 0 || total.cached > 0) return total
   return undefined
+}
+
+/**
+ * Pick the throughput snapshot from the last step-finish part that carries a
+ * `metrics` block. We surface only the most recent assistant turn's rate so
+ * the figure reflects what the user is currently waiting on rather than a
+ * stale session-wide average — older turns scroll out of view and shouldn't
+ * keep pulling the displayed value down.
+ *
+ * PP (prompt-processing) is intentionally not surfaced here: the AI SDK
+ * adapter drops llama.cpp's `prompt_per_second` before providerMetadata
+ * reaches computeMetrics, so the wire shape stays `{ prompt?, generation? }`
+ * for future use but only `generation` is populated today. PP support lands
+ * when the upstream metadataExtractor wiring ships.
+ *
+ * Returns `undefined` when no step-finish part in the input carries metrics,
+ * which is the signal callers use to hide the throughput UI.
+ */
+export function latestMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  let generation: number | undefined
+  for (const part of parts) {
+    if (part.type !== "step-finish") continue
+    const metrics = part.metrics
+    if (!metrics) continue
+    if (metrics.generation !== undefined) generation = metrics.generation
+  }
+  if (generation === undefined) return undefined
+  return { generation, source: "computed" }
+}
+
+/**
+ * Aggregate tokens-per-second throughput across the step-finish parts of a
+ * session. Kept as an alias of `latestMetrics` because the historical name
+ * still appears in tests and external callers — both now resolve to the same
+ * "last non-empty sample wins" snapshot semantics.
+ */
+export function aggregateMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return latestMetrics(parts)
+}
+
+/**
+ * Pick the throughput snapshot from a single assistant message's parts.
+ * Same selection strategy as `latestMetrics` so the per-message badge and
+ * the header row stay consistent.
+ */
+export function messageMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return latestMetrics(parts)
+}
+
+/**
+ * Weighted generation throughput for a single assistant message. Aggregates
+ * output + reasoning tokens across every step-finish part against the sum of
+ * their active model-generation durations, so the displayed value represents
+ * the turn rather than whichever step happened to finish last.
+ *
+ * Steps without `time.elapsed`, with non-positive `elapsed`, or with no
+ * generated tokens are skipped — tool-only steps, idempotent cache hits,
+ * and tool re-execution should not skew the figure.
+ */
+export function messageThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  let generated = 0
+  let elapsedMs = 0
+  for (const part of parts) {
+    if (part.type !== "step-finish") continue
+    const time = part.time
+    if (!time || !Number.isFinite(time.elapsed) || time.elapsed <= 0) continue
+    const tokens = part.tokens
+    if (!tokens) continue
+    const stepGenerated = tokens.output + (tokens.reasoning ?? 0)
+    if (stepGenerated <= 0) continue
+    generated += stepGenerated
+    elapsedMs += time.elapsed
+  }
+  if (generated <= 0 || elapsedMs <= 0) return undefined
+  const generation = (generated * 1000) / elapsedMs
+  if (!Number.isFinite(generation) || generation <= 0) return undefined
+  return { generation, source: "computed" }
+}
+
+/**
+ * Weighted generation throughput across the flat array of parts from every
+ * message in a session. Same weighted semantics as `messageThroughput` —
+ * useful when a caller has already flattened parts across messages.
+ */
+export function sessionThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return messageThroughput(parts)
+}
+
+/**
+ * Format a text-generation rate for display. Shared by every rendering site
+ * so the same value reads the same in the per-message badge and the
+ * aggregated header row.
+ */
+function formatRateValue(value: number | undefined, locale: string): string {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) return "–"
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} t/s`
+}
+
+export function formatTG(value: number | undefined, locale: string) {
+  return formatRateValue(value, locale)
 }
 
 /**

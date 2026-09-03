@@ -1,45 +1,3 @@
-// legacy-migration start
-export interface MigrationProviderInfo {
-  profileName: string
-  provider: string
-  model?: string
-  hasApiKey: boolean
-  supported: boolean
-  newProviderName?: string
-}
-
-export interface MigrationMcpServerInfo {
-  name: string
-  type: string
-}
-
-export interface MigrationCustomModeInfo {
-  name: string
-  slug: string
-}
-
-export interface LegacyAutocompleteSettings {
-  enableAutoTrigger?: boolean
-  enableSmartInlineTaskKeybinding?: boolean
-  enableChatAutocomplete?: boolean
-}
-
-export interface LegacySettings {
-  autoApprovalEnabled?: boolean
-  allowedCommands?: string[]
-  deniedCommands?: string[]
-  // Fine-grained auto-approval (legacy globalState keys — no prefix)
-  alwaysAllowReadOnly?: boolean
-  alwaysAllowReadOnlyOutsideWorkspace?: boolean
-  alwaysAllowWrite?: boolean
-  alwaysAllowExecute?: boolean
-  alwaysAllowMcp?: boolean
-  alwaysAllowModeSwitch?: boolean
-  alwaysAllowSubtasks?: boolean
-  language?: string
-  autocomplete?: LegacyAutocompleteSettings
-}
-
 export interface MigrationSessionInfo {
   id: string
   title: string
@@ -49,30 +7,19 @@ export interface MigrationSessionInfo {
 
 export interface MigrationResultItem {
   item: string
-  category: "provider" | "mcpServer" | "customMode" | "session" | "defaultModel" | "settings"
+  category: "session"
   status: "success" | "warning" | "error"
   message?: string
 }
 
-export type MigrationSource = "legacy" | "roo"
-
-export interface MigrationStateMessage {
-  type: "migrationState"
-  needed: boolean
-  source: "legacy"
-}
+export type MigrationSource = "roo"
 
 export interface MigrationDataMessage {
   type: "migrationData"
   source: MigrationSource
   operationId: string
   data: {
-    providers: MigrationProviderInfo[]
-    mcpServers: MigrationMcpServerInfo[]
-    customModes: MigrationCustomModeInfo[]
     sessions?: MigrationSessionInfo[]
-    defaultModel?: { provider: string; model: string }
-    settings?: LegacySettings
   }
 }
 
@@ -111,15 +58,6 @@ export interface RequestMigrationDataMessage {
   operationId: string
 }
 
-export interface MigrationAutoApprovalSelections {
-  commandRules: boolean
-  readPermission: boolean
-  writePermission: boolean
-  executePermission: boolean
-  mcpPermission: boolean
-  taskPermission: boolean
-}
-
 export interface MigrationSessionSelection {
   id: string
   force?: boolean
@@ -130,28 +68,6 @@ export interface StartMigrationMessage {
   source: MigrationSource
   operationId: string
   selections: {
-    providers: string[]
-    mcpServers: string[]
-    customModes: string[]
     sessions?: MigrationSessionSelection[]
-    defaultModel: boolean
-    settings: {
-      autoApproval: MigrationAutoApprovalSelections
-      language: boolean
-      autocomplete: boolean
-    }
   }
 }
-
-export interface SkipLegacyMigrationMessage {
-  type: "skipLegacyMigration"
-}
-
-export interface ClearLegacyDataMessage {
-  type: "clearLegacyData"
-}
-
-export interface FinalizeLegacyMigrationMessage {
-  type: "finalizeLegacyMigration"
-}
-// legacy-migration end

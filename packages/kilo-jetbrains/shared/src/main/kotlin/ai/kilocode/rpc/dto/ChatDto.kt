@@ -17,7 +17,14 @@ data class MessageDto(
     val parentID: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val finish: String? = null,
     val error: MessageErrorDto? = null,
+    val summary: MessageSummaryDto? = null,
+)
+
+@Serializable
+data class MessageSummaryDto(
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable
@@ -41,7 +48,15 @@ data class MessageErrorDto(
     val message: String? = null,
     val statusCode: Int? = null,
     val responseBody: String? = null,
-)
+    val dataKeys: List<String> = emptyList(),
+    val ref: String? = null,
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(
@@ -64,6 +79,7 @@ data class PartDto(
     val title: String? = null,
     val input: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val approval: ToolApprovalDto? = null,
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
@@ -75,6 +91,37 @@ data class PartDto(
     val mime: String? = null,
     val url: String? = null,
     val filename: String? = null,
+    val synthetic: Boolean? = null,
+    val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class ToolApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
+)
+
+@Serializable
+data class PartSourceDto(
+    val type: String,
+    val text: PartSourceTextDto,
+    val path: String? = null,
+    val clientName: String? = null,
+    val uri: String? = null,
+    val name: String? = null,
+    val kind: Int? = null,
+)
+
+@Serializable
+data class PartSourceTextDto(
+    val value: String,
+    val start: Double,
+    val end: Double,
 )
 
 @Serializable
@@ -94,6 +141,17 @@ data class PromptDto(
     val agent: String? = null,
     val variant: String? = null,
     val noReply: Boolean? = null,
+    val editorContext: EditorContextDto? = null,
+)
+
+@Serializable
+data class EditorContextDto(
+    val directory: String? = null,
+    val worktree: String? = null,
+    val visibleFiles: List<String>? = null,
+    val openTabs: List<String>? = null,
+    val activeFile: String? = null,
+    val shell: String? = null,
 )
 
 @Serializable
@@ -103,6 +161,7 @@ data class PromptPartDto(
     val mime: String? = null,
     val url: String? = null,
     val filename: String? = null,
+    val source: PartSourceDto? = null,
 )
 
 // --- Streaming Events ---
@@ -232,6 +291,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.queue.changed")
+    data class SessionQueueChanged(
+        val sessionID: String,
+        val queued: List<String> = emptyList(),
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.compacted")
     data class SessionCompacted(
         val sessionID: String,
@@ -250,6 +316,25 @@ sealed class ChatEventDto {
         val sessionID: String,
         val todos: List<TodoDto> = emptyList(),
     ) : ChatEventDto()
+
+    /**
+     * The CLI cancelled this session's turn on its own, for [reason].
+     *
+     * Synthesized by the backend, never parsed from a CLI event. The CLI reports a server-side
+     * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
+     * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
+     */
+    @Serializable
+    @SerialName("session.interrupted")
+    data class SessionInterrupted(
+        val sessionID: String,
+        val reason: String,
+    ) : ChatEventDto() {
+        companion object {
+            /** The CLI disposed its instances — a config, provider, or organization change — and cancelled every running turn. */
+            const val RELOAD = "reload"
+        }
+    }
 }
 
 // --- Permission DTOs ---
@@ -276,8 +361,18 @@ data class PermissionRequestDto(
     val message: String? = null,
     val command: String? = null,
     val rules: List<String> = emptyList(),
+    val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+    // Verbatim skill-shell commands (metadata.commands) the prompt must display; empty for non-skill requests.
+    val skillCommands: List<String> = emptyList(),
+)
+
+@Serializable
+data class PermissionRuleDecisionDto(
+    val pattern: String,
+    val decision: String = "pending",
+    val defaultDecision: String = decision,
 )
 
 @Serializable
@@ -290,6 +385,8 @@ data class ToolRefDto(
 data class PermissionReplyDto(
     val reply: String,
     val message: String? = null,
+    // Set when a human answered the prompt; the CLI ignores machine approvals of skill-shell batches.
+    val interactive: Boolean = false,
 )
 
 @Serializable
@@ -361,13 +458,7 @@ data class DiffFileDto(
     val additions: Int,
     val deletions: Int,
     val patch: String? = null,
-)
-
-// --- Config Update ---
-
-@Serializable
-data class ConfigUpdateDto(
-    val model: String? = null,
-    val agent: String? = null,
-    val temperature: Double? = null,
+    val status: String? = null,
+    val before: String? = null,
+    val after: String? = null,
 )

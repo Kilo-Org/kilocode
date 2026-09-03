@@ -43,6 +43,34 @@ class SessionCreationTest : SessionControllerTestBase() {
         assertEquals("ses_test", rpc.prompts[1].first)
     }
 
+    fun `test same-turn first prompts share session creation`() {
+        val m = controller()
+
+        edt {
+            m.prompt("first")
+            m.prompt("second")
+        }
+        flush()
+
+        assertEquals(1, rpc.creates)
+        assertEquals(listOf("ses_test", "ses_test"), rpc.prompts.map { it.first })
+        assertEquals(listOf("first", "second"), rpc.prompts.map { it.third.parts.single().text.toString() }.sorted())
+    }
+
+    fun `test same-turn first prompt and command share session creation`() {
+        val m = controller()
+
+        edt {
+            m.prompt("first")
+            m.command("deploy", "prod")
+        }
+        flush()
+
+        assertEquals(1, rpc.creates)
+        assertEquals("ses_test", rpc.prompts.single().first)
+        assertEquals("ses_test", rpc.commands.single().id)
+    }
+
     fun `test prompt with existing ID skips creation`() {
         val m = controller("existing")
         collect(m)

@@ -1,5 +1,5 @@
 import { MCP } from "@/mcp"
-import { ConfigMCP } from "@/config/mcp"
+import { ConfigMCPV1 } from "@opencode-ai/core/v1/config/mcp"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { McpServerNotFoundError } from "../errors"
@@ -7,10 +7,11 @@ import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import { WorkspaceRoutingMiddleware, WorkspaceRoutingQuery } from "../middleware/workspace-routing"
 import { described } from "./metadata"
+import { McpApps } from "@/kilocode/mcp/apps" // kilocode_change - MCP Apps schemas live in Kilo-owned code
 
 export const AddPayload = Schema.Struct({
   name: Schema.String,
-  config: ConfigMCP.Info,
+  config: ConfigMCPV1.Info,
 })
 
 export const StatusMap = Schema.Record(Schema.String, MCP.Status)
@@ -36,6 +37,8 @@ export const McpPaths = {
   authAuthenticate: "/mcp/:name/auth/authenticate",
   connect: "/mcp/:name/connect",
   disconnect: "/mcp/:name/disconnect",
+  readResource: "/experimental/resource/read", // kilocode_change
+  callTool: "/experimental/mcp/call-tool", // kilocode_change
 } as const
 
 export const McpApi = HttpApi.make("mcp")
@@ -136,6 +139,34 @@ export const McpApi = HttpApi.make("mcp")
             description: "Disconnect an MCP server.",
           }),
         ),
+        // kilocode_change start - MCP Apps experimental endpoints
+        HttpApiEndpoint.post("readResource", McpPaths.readResource, {
+          query: WorkspaceRoutingQuery,
+          payload: McpApps.ReadResourcePayload,
+          success: described(McpApps.ReadResourceContent, "Resource content"),
+          error: [HttpApiError.NotFound, HttpApiError.BadRequest],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "mcp.readResource",
+            summary: "Read MCP resource",
+            description:
+              "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+          }),
+        ),
+        HttpApiEndpoint.post("callTool", McpPaths.callTool, {
+          query: WorkspaceRoutingQuery,
+          payload: McpApps.CallToolPayload,
+          success: described(McpApps.CallToolResponse, "Tool call result"),
+          error: [HttpApiError.NotFound, HttpApiError.BadRequest],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "mcp.callTool",
+            summary: "Call MCP tool",
+            description:
+              "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
+          }),
+        ),
+        // kilocode_change end
       )
       .annotateMerge(
         OpenApi.annotations({

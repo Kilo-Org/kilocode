@@ -6,7 +6,9 @@
  */
 
 import * as vscode from "vscode"
+import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
@@ -17,9 +19,17 @@ import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
+  /**
+   * Shared project route registry for every Agent Manager panel opened by
+   * this host. One service keeps raw session id ambiguity consistent across
+   * panels, so two panels never disagree about whether an id is ambiguous.
+   */
+  private readonly routes = new ProjectRouteService()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -46,6 +56,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -59,6 +70,8 @@ export class VscodeHost implements Host {
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
       worktreeDirectories?: () => string[]
+      workspaceRoot?: () => string | undefined
+      projectId?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -69,10 +82,13 @@ export class VscodeHost implements Host {
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
       worktreeDirectories?: () => string[]
+      workspaceRoot?: () => string | undefined
+      projectId?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -89,20 +105,44 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
+      rootDirectory: opts.workspaceRoot,
+      disableViewedRegistration: true,
+      disableStatsPolling: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
+      routeService: this.routes,
+      projectQualifier: () => {
+        const projectId = opts.projectId?.()
+        return projectId ? { projectId } : undefined
+      },
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
     provider.setRemoteService(this.remoteService)
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (msg) => {
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -114,11 +154,25 @@ export class VscodeHost implements Host {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),
       clearSessionDirectory: (id) => provider.clearSessionDirectory(id),
       getSessionDirectories: () => provider.getSessionDirectories(),
+      getSessionInfo: (id) => provider.getSessionInfo(id),
+      listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
       registerSession: (s) => provider.registerSession(s),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
+      acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
+      abortSessions: (ids) => provider.abortSessions(ids),
+      showMemory: (id) => provider.showMemory(id),
+      toggleMemory: (id) => provider.toggleMemory(id),
+      registerProjectRoute: (ref, root, generation) => provider.registerProjectRoute(ref, root, generation),
+      unregisterProjectRoute: (projectId) => provider.unregisterProjectRoute(projectId),
+      registerWorktreeRoute: (ref, directory, generation) => provider.registerWorktreeRoute(ref, directory, generation),
+      registerSessionRoute: (ref, directory, generation) => provider.registerSessionRoute(ref, directory, generation),
+      unregisterSessionRoute: (ref) => provider.unregisterSessionRoute(ref),
+      isSessionRouteAmbiguous: (sessionId) => provider.isSessionRouteAmbiguous(sessionId),
+      routeSessionDirectoryFor: (ref) => provider.routeSessionDirectoryFor(ref),
+      refreshGitStatus: () => void provider.refreshGitStatus(),
       dispose: () => provider.dispose(),
     }
 
@@ -163,8 +217,80 @@ export class VscodeHost implements Host {
     }
   }
 
+  /**
+   * List root sessions for one project directory via the shared CLI backend.
+   * Used by per-project session discovery so multi-project Agent Manager lists
+   * real Local/history sessions by their exact directory instead of only the
+   * persisted managed records. Returns [] when the backend is not connected or
+   * the listing fails, so one directory's failure cannot erase another's
+   * results.
+   */
+  private async listProjectSessions(dir: string): Promise<Session[]> {
+    try {
+      const client = await this.connectionService.getClientAsync(dir)
+      const res = await client.session.list({ directory: dir, roots: true }, { throwOnError: true })
+      return res.data
+    } catch (err) {
+      console.warn(`[Kilo New] Agent Manager: failed to list project sessions for ${dir}:`, err)
+      return []
+    }
+  }
+
   workspacePath(): string | undefined {
     return getWorkspaceRoot()
+  }
+
+  async pickFolder(): Promise<string | undefined> {
+    const uris = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: "Add Project",
+      title: "Add Project to Agent Manager",
+    })
+    return uris?.[0]?.fsPath
+  }
+
+  multiProject(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
+  }
+
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
+  }
+
+  readProjects(): unknown {
+    return this.context.globalState.get("agentManager.projects")
+  }
+
+  async writeProjects(value: unknown): Promise<void> {
+    await this.context.globalState.update("agentManager.projects", value)
+  }
+
+  unregisterProjectRoutes(projectId: string): void {
+    this.routes.unregisterProject(projectId)
+  }
+
+  onDidChangeWorkspaceFolders(cb: () => void): Disposable {
+    return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
+  }
+
+  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
+    })
+  }
+
+  isTrusted(): boolean {
+    return vscode.workspace.isTrusted
+  }
+
+  autoBranchNaming(): { enabled: boolean; prefix: string } {
+    const cfg = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+    return {
+      enabled: cfg.get("autoBranchNaming", true),
+      prefix: cfg.get("branchPrefix", ""),
+    }
   }
 
   showError(msg: string): void {
@@ -197,13 +323,9 @@ export class VscodeHost implements Host {
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
-  }
-
-  serverPort(): number | undefined {
-    return this.connectionService.getServerInfo()?.port
   }
 
   copyToClipboard(text: string): void {
@@ -216,6 +338,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

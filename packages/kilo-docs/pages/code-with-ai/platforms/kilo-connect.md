@@ -16,7 +16,7 @@ description: "Use Kilo Code from Slack, GitHub, and Linear, and connect DoltHub 
 | [Slack](/docs/code-with-ai/platforms/slack) | `@Kilo` in any channel or DM | Ask questions, implement fixes, debug issues |
 | [GitHub](/docs/code-with-ai/platforms/github) | `@kilocode-bot` on issues and PRs | Fix issues, review code, cross-repo changes |
 | [Linear](/docs/code-with-ai/platforms/linear) | `@kilo` on any issue | Implement fixes, investigate bugs, cross-repo changes |
-| DoltHub | [Connect DoltHub](https://app.kilo.ai/integrations/dolthub) from Integrations | Query Dolt-versioned data from your workspace |
+| DoltHub | [Connect DoltHub](https://app.kilo.ai/integrations/dolthub) from Integrations | Query Dolt-versioned data and authorize DoltHub access for Gas Town Wasteland |
 
 ---
 

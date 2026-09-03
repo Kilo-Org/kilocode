@@ -21,6 +21,7 @@ export interface QuestionInfo {
   header: string
   options: QuestionOption[]
   multiple?: boolean
+  default?: string
   custom?: boolean
   // Optional i18n keys for question text and header (see QuestionOption for details).
   questionKey?: string
@@ -32,6 +33,10 @@ export interface QuestionRequest {
   sessionID: string
   questions: QuestionInfo[]
   blocking?: boolean
+  autoSubmit?: boolean
+  dismissResponse?: "continue"
+  rejectLabel?: string
+  tone?: "warning"
   tool?: {
     messageID: string
     callID: string

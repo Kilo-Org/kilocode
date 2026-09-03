@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { describe, expect } from "bun:test"
 import { truncate } from "fs/promises"
@@ -6,14 +7,14 @@ import { write, utils, type WorkBook, type WorkSheet } from "xlsx"
 import { TextReader, TextWriter, Uint8ArrayReader, Uint8ArrayWriter, ZipReader, ZipWriter } from "@zip.js/zip.js"
 import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { LSP } from "../../src/lsp/lsp"
 import { Instruction } from "../../src/session/instruction"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -29,12 +30,13 @@ const ctx = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    AppFileSystem.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Instruction.defaultLayer,
-    LSP.defaultLayer,
-    Truncate.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Instruction.node),
+    AppNodeBuilder.build(LSP.node),
+    AppNodeBuilder.build(Truncate.node),
+    testInstanceStoreLayer,
   ),
 )
 
@@ -58,7 +60,7 @@ const fail = Effect.fn("XlsxReadTest.fail")(function* (dir: string, file: string
 })
 
 const put = Effect.fn("XlsxReadTest.put")(function* (file: string, bytes: Uint8Array | string) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   yield* fs.writeWithDirs(file, bytes)
 })
 

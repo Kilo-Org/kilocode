@@ -42,20 +42,6 @@ internal object MdTerminal {
         }
     }
 
-    fun backspace(text: String): String {
-        val out = StringBuilder()
-        var idx = 0
-        while (idx < text.length) {
-            val ch = text[idx++]
-            if (ch == '\b') {
-                if (out.isNotEmpty()) out.deleteCharAt(out.length - 1)
-                continue
-            }
-            out.append(ch)
-        }
-        return out.toString()
-    }
-
     fun reduce(text: String, keepSgr: Boolean): String = split(text.replace("\r\n", "\n"), '\n')
         .joinToString("\n") { controls(it, keepSgr) }
 

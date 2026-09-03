@@ -6,10 +6,21 @@ import { Global } from "@opencode-ai/core/global"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "node:path"
 import { Bus } from "@/bus"
+import { Provider } from "@/provider/provider"
+import { Session } from "@/session/session"
+import { SessionSummary } from "@/session/summary"
 import { SessionExport } from "@/kilocode/session-export"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 import { Instance } from "@/kilocode/instance"
 import { Identity } from "@kilocode/kilo-telemetry"
+import { MemoryLifecycle } from "@/kilocode/memory/turn"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { MemoryEvents } from "@/kilocode/memory/events"
+import { installMemoryRuntime } from "@/kilocode/memory/runtime"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { KilocodeWatcher } from "@/kilocode/watcher"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -23,12 +34,30 @@ export namespace KilocodeBootstrap {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const sessions = yield* KiloSessions.Service
+      // Bind the package memory effect layer to opencode (paths, instance binder, logger, event sink).
+      installMemoryRuntime()
+      const kilo = yield* KiloSessions.Service
+      const bus = yield* Bus.Service
+      const sessions = yield* Session.Service
+      const summary = yield* SessionSummary.Service
+      const provider = yield* Provider.Service
+      const memory = yield* MemoryService.Service
+      const watcher = yield* KilocodeWatcher.Service
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
-        yield* sessions.init()
-        // kilocode_change start - session export bootstrap
+        yield* watcher.init()
+        yield* kilo.init()
+        yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, memory })
+        // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
+        yield* bus.subscribeCallback(MemoryEvents.Status, (evt) =>
+          KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
+        )
+        yield* bus.subscribeCallback(MemoryEvents.Updated, (evt) =>
+          KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
+        )
+        // Session export bootstrap.
         yield* Effect.gen(function* () {
+          if (!SessionExport.enabled) return
           const anon = yield* EffectBridge.fromPromise(() =>
             Identity.getMachineId().catch((err) => {
               log.warn("session export identity failed", { err })
@@ -51,20 +80,41 @@ export namespace KilocodeBootstrap {
             Effect.sync(() => log.warn("session export bootstrap failed", { err: Cause.squash(cause) })),
           ),
         )
-        // kilocode_change end
-        yield* EffectBridge.fromPromise(() =>
-          import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
-        ).pipe(
-          Effect.catchCause((cause) =>
-            Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
-          ),
-          Effect.forkDetach,
-        )
+        if (process.env["KILO_PLATFORM"] !== "vscode") {
+          yield* EffectBridge.fromPromise(() =>
+            import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
+          ).pipe(
+            Effect.catchCause((cause) =>
+              Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
+            ),
+            Effect.forkDetach,
+          )
+        }
       })
 
       return Service.of({ init })
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(KiloSessions.defaultLayer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide([
+      KiloSessions.defaultLayer,
+      Session.defaultLayer,
+      AppNodeBuilder.build(SessionSummary.node),
+      AppNodeBuilder.build(Provider.node),
+      MemoryService.layer,
+      Bus.defaultLayer,
+      KilocodeWatcher.defaultLayer,
+    ]),
+  )
+
+  const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+  const watcher = LayerNode.make({ service: KilocodeWatcher.Service, layer: KilocodeWatcher.defaultLayer, deps: [] })
+  export const node = LayerNode.suspend(() =>
+    LayerNode.make({
+      service: Service,
+      layer,
+      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, watcher],
+    }),
+  )
 }

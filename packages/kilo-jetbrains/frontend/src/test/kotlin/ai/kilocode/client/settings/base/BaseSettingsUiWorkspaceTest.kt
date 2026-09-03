@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.base
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -12,6 +13,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -101,12 +103,7 @@ class BaseSettingsUiWorkspaceTest : BasePlatformTestCase() {
         config = ConfigDto(model = model),
     )
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(20) {
@@ -135,7 +132,7 @@ class BaseSettingsUiWorkspaceTest : BasePlatformTestCase() {
         workspaces,
         hint,
     ) {
-        val roots = mutableListOf<String>()
+        val roots = CopyOnWriteArrayList<String>()
         var unavailable = 0
             private set
         var favoriteCount = 0

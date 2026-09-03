@@ -57,7 +57,7 @@ The full list of recommended extensions is in `.vscode/extensions.json`
 
 AI and coding agents are allowed in this repo. If you use one, start it from the repository root so the root `AGENTS.md` is available, then check package-specific guidance when your change touches a package with its own `AGENTS.md` or contributor docs.
 
-You remain responsible for the submitted work. Before opening a PR, personally review the diff, test the change, make sure you can explain it, and understand how it interacts with the affected package and the rest of the repo. Do not use agents to submit batches of agent-generated, untested, or weakly reviewed PRs. Keep concurrent PRs limited, generally no more than three at a time, and prioritize high-impact issues first. Do not use automation or agents to mass-create issues without human review and prioritization.
+You remain responsible for the submitted work. Before opening a PR, personally review the diff, test the change, make sure you can explain it, and understand how it interacts with the affected package and the rest of the repo. Do not use agents to submit batches of agent-generated, untested, or weakly reviewed PRs. Prioritize high-impact issues first. Do not use automation or agents to mass-create issues without human review and prioritization.
 
 Kilo has bug bounties. To be eligible, make sure your GitHub account is connected in your Kilo account.
 
@@ -108,6 +108,50 @@ bun run extension
 ```
 
 This will build and launch the extension in an isolated VS Code instance.
+
+For a fully isolated development environment, use one of the isolated scripts:
+
+```bash
+bun run extension:isolated
+bun run extension:isolated:clean
+```
+
+`extension:isolated` launches a separate VS Code process with user data and extensions under `.kilo-dev/vscode/`, and points Kilo at isolated XDG storage under `.kilo-dev/{data,config,state,cache}`. Re-running it keeps the same isolated environment, so installed extensions, VS Code settings, Kilo auth, sessions, config, state, and cache persist.
+
+`extension:isolated:clean` deletes `.kilo-dev/` before launch. Use it to simulate a fresh VS Code + Kilo install without affecting your main VS Code profile or real Kilo config.
+
+The command auto-detects VS Code on macOS, Linux, and Windows. Use these options when the default launch target is not the one you need:
+
+| Option | Use |
+|---|---|
+| `--no-build` | Launch the extension host without rebuilding first |
+| `--app-path <path>` | Point to a specific VS Code executable |
+| `VSCODE_EXEC_PATH` | Set the VS Code executable through the current shell environment |
+| `--insiders` | Prefer VS Code Insiders |
+| `--workspace <path>` | Open a specific workspace folder |
+| `<path>` | Open a specific workspace folder when passed as the final positional argument |
+| `--clean` | Reset cached extension state before launch |
+
+For example, to test the extension against a sample workspace:
+
+```bash
+bun run extension --workspace ../sample-project
+bun run extension:isolated -- ../sample-project
+bun run extension:isolated:clean -- ../sample-project
+```
+
+To set the executable through an environment variable, use the syntax for your shell:
+
+```bash
+VSCODE_EXEC_PATH=/usr/local/bin/code bun run extension
+```
+
+```powershell
+$env:VSCODE_EXEC_PATH = "C:\Users\me\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+bun run extension
+```
+
+When the Extension Development Host opens, check the Kilo Code output channel and the Developer Tools console for startup or webview errors.
 
 ### Building the Extension
 
@@ -210,7 +254,7 @@ Agent limitations, local resource constraints, OOM constraints, or an agent prom
 
 ## Git Hooks
 
-This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks. The current pre-push hook checks the Bun version against root `package.json` and runs the repo-level typecheck.
+This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks. The current pre-push hook checks the Bun version against root `package.json` and runs the repo-level typecheck. The JetBrains typecheck runs only when the pushed changes can affect the JetBrains plugin, so VS Code-only, docs-only, and changeset-only pushes do not require Java.
 
 ## Troubleshooting
 

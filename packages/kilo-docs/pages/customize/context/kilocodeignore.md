@@ -66,30 +66,6 @@ You can also exclude paths from the file watcher separately using `watcher.ignor
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Create a `.kilocodeignore` file at the root of your project.
-2. Add patterns for files or folders you want Kilo Code to avoid.
-3. Save the file. Kilo Code will pick up the changes automatically.
-
-Example:
-
-```txt
-# Secrets
-.env
-secrets/
-**/*.pem
-**/*.key
-
-# Build output
-dist/
-coverage/
-
-# Allow a specific file inside a blocked folder
-!secrets/README.md
-```
-
-{% /tab %}
 {% /tabs %}
 
 ## Pattern Rules
@@ -130,20 +106,6 @@ In addition to your explicit permission rules:
 - **`.gitignore` and `.ignore` files** are also respected when listing and searching files.
 
 If a file is denied by a permission rule, the tool will report that access was blocked.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Kilo Code checks `.kilocodeignore` before accessing files in tools like:
-
-- [`read_file`](/docs/automate/tools/read-file)
-- [`write_to_file`](/docs/automate/tools/write-to-file)
-- [`apply_diff`](/docs/automate/tools/apply-diff)
-- [`delete_file`](/docs/automate/tools/delete-file)
-- [`execute_command`](/docs/automate/tools/execute-command)
-- [`list_files`](/docs/automate/tools/list-files)
-
-If a file is blocked, Kilo Code will return an "access denied" message and suggest updating your `.kilocodeignore` rules.
 
 {% /tab %}
 {% /tabs %}
@@ -229,15 +191,6 @@ The `watcher.ignore` setting controls which paths the file watcher skips. This i
   }
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Visibility in Lists
-
-By default, ignored files are hidden from file lists. You can show them with a lock icon by enabling:
-
-Settings -> Context -> **Show .kilocodeignore'd files in lists and searches**
 
 {% /tab %}
 {% /tabs %}

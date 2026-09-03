@@ -2,10 +2,10 @@
 import { describe, expect, test } from "bun:test"
 
 describe("Auto mode flag", () => {
-  test("auto mode should create session with allow-all permissions except questions", () => {
+  test("auto mode should create session with allow-all permissions except human-driven tools", () => {
     // When --auto flag is set, the session should be created with:
     // 1. Wildcard allow rule for all permissions
-    // 2. Explicit deny rule for questions (to prevent user interaction)
+    // 2. Explicit deny rules for tools that require live user interaction
 
     const autoPermissions = [
       {
@@ -18,19 +18,35 @@ describe("Auto mode flag", () => {
         action: "deny" as const,
         pattern: "*",
       },
+      {
+        permission: "suggest",
+        action: "deny" as const,
+        pattern: "*",
+      },
+      {
+        permission: "interactive_terminal",
+        action: "deny" as const,
+        pattern: "*",
+      },
     ]
 
-    expect(autoPermissions).toHaveLength(2)
+    expect(autoPermissions).toHaveLength(4)
 
     // First rule: allow all
     expect(autoPermissions[0].permission).toBe("*")
     expect(autoPermissions[0].action).toBe("allow")
     expect(autoPermissions[0].pattern).toBe("*")
 
-    // Second rule: deny questions (comes after wildcard to override it)
+    // Human-driven tools are denied after wildcard allow so they cannot block automation.
     expect(autoPermissions[1].permission).toBe("question")
     expect(autoPermissions[1].action).toBe("deny")
     expect(autoPermissions[1].pattern).toBe("*")
+    expect(autoPermissions[2].permission).toBe("suggest")
+    expect(autoPermissions[2].action).toBe("deny")
+    expect(autoPermissions[2].pattern).toBe("*")
+    expect(autoPermissions[3].permission).toBe("interactive_terminal")
+    expect(autoPermissions[3].action).toBe("deny")
+    expect(autoPermissions[3].pattern).toBe("*")
   })
 
   test("non-auto mode should not set allow-all permissions", () => {
@@ -41,12 +57,14 @@ describe("Auto mode flag", () => {
   })
 
   test("permission evaluation order matters (findLast behavior)", () => {
-    // The permission system uses findLast, so the last matching rule wins
-    // This test verifies that the question deny rule comes AFTER the wildcard
+    // The permission system uses findLast, so the last matching rule wins.
+    // Explicit human-interaction denies must come after the wildcard.
 
     const autoPermissions = [
       { permission: "*", action: "allow" as const, pattern: "*" },
       { permission: "question", action: "deny" as const, pattern: "*" },
+      { permission: "suggest", action: "deny" as const, pattern: "*" },
+      { permission: "interactive_terminal", action: "deny" as const, pattern: "*" },
     ]
 
     // Simulate findLast behavior
@@ -62,6 +80,10 @@ describe("Auto mode flag", () => {
     // Test that "question" permission resolves to "deny"
     const questionRule = findLastMatch("question")
     expect(questionRule?.action).toBe("deny")
+    const suggestRule = findLastMatch("suggest")
+    expect(suggestRule?.action).toBe("deny")
+    const terminalRule = findLastMatch("interactive_terminal")
+    expect(terminalRule?.action).toBe("deny")
 
     // Test that other permissions resolve to "allow"
     const bashRule = findLastMatch("bash")

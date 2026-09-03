@@ -3,10 +3,43 @@
  * Pure functions — no solid-dnd dependency so they remain testable.
  */
 import type { WorktreeState, SectionState } from "../src/types/messages"
+import { applyTabOrder } from "./tab-order"
 
 export type TopLevelItem = { kind: "section"; section: SectionState } | { kind: "worktree"; wt: WorktreeState }
 
 export type SidebarItem = { type: "local" | "wt" | "session"; id: string }
+
+/** Apply persisted order while keeping multi-version worktrees adjacent. */
+export function sortWorktrees<T extends { id: string; groupId?: string }>(all: T[], order: string[]): T[] {
+  const ordered = applyTabOrder(all, order)
+  if (ordered.length === 0) return []
+
+  const groups = new Map<string, T[]>()
+  for (const wt of ordered) {
+    if (!wt.groupId) continue
+    const group = groups.get(wt.groupId) ?? []
+    group.push(wt)
+    groups.set(wt.groupId, group)
+  }
+
+  const result: T[] = []
+  const placed = new Set<string>()
+  for (const wt of ordered) {
+    if (placed.has(wt.id)) continue
+    if (!wt.groupId) {
+      result.push(wt)
+      placed.add(wt.id)
+      continue
+    }
+    if (placed.has(wt.groupId)) continue
+    placed.add(wt.groupId)
+    for (const item of groups.get(wt.groupId) ?? []) {
+      result.push(item)
+      placed.add(item.id)
+    }
+  }
+  return result
+}
 
 /** Build a canonical sidebar order containing section IDs and every worktree ID. */
 export function completeSidebarOrder(secs: SectionState[], all: WorktreeState[], order: string[]): string[] {
@@ -78,20 +111,20 @@ export function buildTopLevelItems(
 /**
  * Build the flat visual order of all sidebar items matching what the user sees.
  * LOCAL is always first, then worktrees in visual order (ungrouped first, then sections,
- * skipping collapsed sections), then unassigned sessions.
+ * skipping collapsed sections). Sessions are reachable through the history view, not the tree.
  */
 export function buildSidebarOrder(
   items: TopLevelItem[],
   sorted: WorktreeState[],
   sections: SectionState[],
   members: (id: string) => WorktreeState[],
-  sessions: { id: string }[],
+  includeCollapsed = false,
 ): SidebarItem[] {
   const result: SidebarItem[] = [{ type: "local", id: "local" }]
   if (sections.length > 0) {
     for (const item of items) {
       if (item.kind === "section") {
-        if (!item.section.collapsed) {
+        if (includeCollapsed || !item.section.collapsed) {
           for (const wt of members(item.section.id)) {
             result.push({ type: "wt", id: wt.id })
           }
@@ -105,14 +138,11 @@ export function buildSidebarOrder(
       result.push({ type: "wt", id: wt.id })
     }
   }
-  for (const s of sessions) {
-    result.push({ type: "session", id: s.id })
-  }
   return result
 }
 
 /** Build a map from sidebar item id → 1-based shortcut number (1 for LOCAL, 2+ for worktrees). */
-export function buildShortcutMap(order: SidebarItem[]): Map<string, number> {
+export function buildShortcutMap(order: { id: string }[]): Map<string, number> {
   const map = new Map<string, number>()
   for (let i = 0; i < order.length && i < 9; i++) {
     map.set(order[i]!.id, i + 1)

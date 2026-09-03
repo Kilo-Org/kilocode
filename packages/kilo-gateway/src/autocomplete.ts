@@ -1,7 +1,7 @@
 export type AutocompleteProviderID = "kilo" | "mistral" | "inception"
 export type DirectAutocompleteProviderID = Exclude<AutocompleteProviderID, "kilo">
 
-export interface AutocompleteModelDef {
+interface AutocompleteModelBase {
   /** Stable combined value for internal comparisons. */
   readonly id: string
   /** Model value stored in settings and sent to the autocomplete API. */
@@ -18,13 +18,22 @@ export interface AutocompleteModelDef {
   readonly directProvider?: DirectAutocompleteProviderID
   /** Request temperature. */
   readonly temperature: number
-  /**
-   * Which gateway endpoint this model targets. Defaults to "fim" if omitted
-   * (back-compat with existing entries). Models with `kind: "edit"` route
-   * through `/kilo/edit` and use Mercury's Next Edit pipeline.
-   */
-  readonly kind?: "fim" | "edit"
 }
+
+export type AutocompleteModelDef = AutocompleteModelBase &
+  (
+    | {
+        /** Route through `/kilo/edit` using the Next Edit pipeline. */
+        readonly kind: "edit"
+        /** Stable combined ID of the FIM model used where Next Edit is unsupported. */
+        readonly fimModelID: string
+      }
+    | {
+        /** Route through the FIM endpoint. */
+        readonly kind?: "fim"
+        readonly fimModelID?: never
+      }
+  )
 
 const models: AutocompleteModelDef[] = [
   {
@@ -57,6 +66,7 @@ const models: AutocompleteModelDef[] = [
     requestModel: "inception/mercury-edit-2",
     temperature: 0,
     kind: "edit",
+    fimModelID: "kilo/inception/mercury-edit-2",
   },
   {
     id: "mistral/codestral-2508",
@@ -91,13 +101,14 @@ const models: AutocompleteModelDef[] = [
     directProvider: "inception",
     temperature: 0,
     kind: "edit",
+    fimModelID: "inception/mercury-edit-2",
   },
 ]
 
 export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
 
 export const DEFAULT_AUTOCOMPLETE_PROVIDER_ID: AutocompleteProviderID = "kilo"
-export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/codestral-2508"
+export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "inception/mercury-next-edit"
 
 export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = (() => {
   const found = models.find(

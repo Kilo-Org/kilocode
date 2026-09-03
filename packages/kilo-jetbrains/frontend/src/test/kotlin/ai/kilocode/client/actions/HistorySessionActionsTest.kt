@@ -1,9 +1,11 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.CloudHistoryItem
@@ -14,6 +16,9 @@ import ai.kilocode.client.session.history.HistorySource
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -23,21 +28,19 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.content.ContentManager
+import java.lang.reflect.Proxy
+import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class HistorySessionActionsTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
     private lateinit var workspace: Workspace
@@ -49,20 +52,20 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        val workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        val workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(status = KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
-        controller = HistoryController(sessions, workspace, scope, deleted = { deleteCount++ })
+        controller = HistoryController(sessions, workspace, coroutines.scope, deleted = { deleteCount++ })
         manager = FakeManager()
     }
 
     override fun tearDown() {
         try {
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -123,7 +126,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     fun `test open action performs opens local item`() {
         val opened = mutableListOf<String>()
-        val ctrl = HistoryController(sessions, workspace, scope, open = { ref ->
+        val ctrl = HistoryController(sessions, workspace, coroutines.scope, open = { ref ->
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
@@ -141,7 +144,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     fun `test open action performs opens cloud item`() {
         val opened = mutableListOf<String>()
-        val ctrl = HistoryController(sessions, workspace, scope, open = { ref ->
+        val ctrl = HistoryController(sessions, workspace, coroutines.scope, open = { ref ->
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
@@ -300,108 +303,61 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     // ------ RenameSessionAction.actionPerformed ------
 
-    fun `test rename action calls controller with trimmed changed title`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
+    fun `test rename action opens rename popover for single local selection`() {
+        val item = localItem("ses_1")
+        val renamed = mutableListOf<String>()
+        val action = RenameSessionAction()
+        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller) { renamed += it.id }
 
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "  Renamed  " } }
+        action.actionPerformed(event)
+
+        assertEquals(listOf("ses_1"), renamed)
+    }
+
+    fun `test rename action does nothing without a rename provider`() {
+        val item = localItem("ses_1")
+        val action = RenameSessionAction()
         val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
 
         action.actionPerformed(event)
         flush()
 
-        assertEquals(listOf(Triple("ses_1", "/test", "Renamed")), rpc.renames)
+        assertTrue(rpc.renames.isEmpty())
     }
 
-    fun `test rename action passes displayed current title to input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
+    fun `test rename action does nothing for multiple local selection`() {
+        val items = listOf(localItem("ses_1"), localItem("ses_2"))
+        val renamed = mutableListOf<String>()
+        val action = RenameSessionAction()
+        val event = event(action, manager, selection(HistorySource.LOCAL, items), controller) { renamed += it.id }
 
-        val prompts = mutableListOf<String>()
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply {
-            input = { _, current ->
-                prompts.add(current)
-                null
-            }
+        action.actionPerformed(event)
+
+        assertTrue(renamed.isEmpty())
+    }
+
+    fun `test history action selects chat content from agent manager`() = edtWait {
+        val action = HistoryAction()
+        val content = ContentFactory.getInstance().createContentManager(false, project)
+        try {
+            val chat = ContentFactory.getInstance().createContent(JPanel(), "Branch", false)
+            val agent = ContentFactory.getInstance().createContent(JPanel(), "Agent Manager", false)
+            chat.applySidePanelMode(SidePanelMode.CHAT)
+            agent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
+            content.addContent(chat)
+            content.addContent(agent)
+            content.setSelectedContent(agent)
+            val event = event(action, manager, content)
+
+            action.actionPerformed(event)
+
+            assertSame(chat, content.selectedContent)
+            assertEquals(1, manager.history)
+            manager.back?.invoke()
+            assertSame(agent, content.selectedContent)
+        } finally {
+            Disposer.dispose(content)
         }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertEquals(listOf("Original"), prompts)
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action passes untitled fallback to input`() {
-        rpc.listed += sessionDto("ses_1", "")
-        controller.reloadLocal()
-        flush()
-
-        val prompts = mutableListOf<String>()
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply {
-            input = { _, current ->
-                prompts.add(current)
-                null
-            }
-        }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertEquals(listOf(KiloBundle.message("history.untitled")), prompts)
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action ignores blank input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "   " } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action ignores unchanged input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "Original" } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action ignores null input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> null } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertTrue(rpc.renames.isEmpty())
     }
 
     fun `test frontend descriptor registers history actions`() {
@@ -413,12 +369,74 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("id=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.Session.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.Rename\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyPrRef\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenLocalDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchName\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.CopyBranchPath\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.RunSetupScript\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.MoveToWorktree\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.RowMenu\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.RowMenu\""))
         assertTrue(xml.contains("id=\"Kilo.History.ContextMenu\""))
         assertTrue(xml.contains("id=\"Kilo.Session.ContextMenu\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Delete\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.Rename\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyPrRef\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenLocalDiff\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchName\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.CopyBranchPath\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.MoveToWorktree\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
+
+        // Row menu order: rename, (separator), open pr, copy pr ref, open diff, open local diff,
+        // (separator), copy branch name, copy branch path, (separator), open/create setup script,
+        // run setup script, (separator), delete.
+        val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
+        val rowMenuEnd = xml.indexOf("</group>", rowMenuStart)
+        val rowMenu = xml.substring(rowMenuStart, rowMenuEnd)
+        assertTrue(rowMenu.contains("ref=\"Kilo.OpenSetupScript\""))
+        assertTrue(rowMenu.contains("ref=\"Kilo.Worktree.RunSetupScript\""))
+
+        val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
+        val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
+        val copyPrRef = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyPrRef\"")
+        val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
+        val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
+        val copyName = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchName\"")
+        val copyPath = rowMenu.indexOf("ref=\"Kilo.Worktree.CopyBranchPath\"")
+        val openSetup = rowMenu.indexOf("ref=\"Kilo.OpenSetupScript\"")
+        val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
+        val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
+        assertTrue(
+            rename in 0 until openPr && openPr < copyPrRef && copyPrRef < openDiff && openDiff < openLocalDiff &&
+                openLocalDiff < copyName && copyName < copyPath && copyPath < openSetup &&
+                openSetup < runSetup && runSetup < delete,
+        )
+
+        // Worktree session row menu order: move to worktree, (separator), rename, delete.
+        val sessionRowMenuStart = xml.indexOf("<group id=\"Kilo.WorktreeSession.RowMenu\">")
+        val sessionRowMenuEnd = xml.indexOf("</group>", sessionRowMenuStart)
+        val sessionRowMenu = xml.substring(sessionRowMenuStart, sessionRowMenuEnd)
+        val move = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.MoveToWorktree\"")
+        val separator = sessionRowMenu.indexOf("<separator/>")
+        val sessionRename = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Rename\"")
+        val sessionDelete = sessionRowMenu.indexOf("ref=\"Kilo.WorktreeSession.Delete\"")
+        assertTrue(
+            move in 0 until separator && separator < sessionRename && sessionRename < sessionDelete,
+        )
     }
 
     // ------ Helpers ------
@@ -428,6 +446,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         manager: SessionManager?,
         selection: HistorySelection,
         ctrl: HistoryController,
+        rename: ((LocalHistoryItem) -> Unit)? = null,
     ): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         val context = DataContext { id ->
@@ -436,6 +455,33 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
                 SessionManager.KEY.`is`(id) -> manager
                 HistoryDataKeys.SELECTION.`is`(id) -> selection
                 HistoryDataKeys.CONTROLLER.`is`(id) -> ctrl
+                HistoryDataKeys.RENAME.`is`(id) -> rename
+                else -> null
+            }
+        }
+        return AnActionEvent.createFromDataContext("", presentation, context)
+    }
+
+    private fun event(
+        action: com.intellij.openapi.actionSystem.AnAction,
+        manager: SessionManager,
+        content: ContentManager,
+    ): AnActionEvent {
+        val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
+        val tool = Proxy.newProxyInstance(
+            ToolWindow::class.java.classLoader,
+            arrayOf(ToolWindow::class.java),
+        ) { _, method, _ ->
+            when (method.name) {
+                "getContentManager" -> content
+                else -> error("unexpected ToolWindow method ${method.name}")
+            }
+        } as ToolWindow
+        val context = DataContext { id ->
+            when {
+                SessionManager.KEY.`is`(id) -> manager
+                SidePanelKeys.MODE.`is`(id) -> SidePanelMode.AGENT_MANAGER
+                PlatformDataKeys.TOOL_WINDOW.`is`(id) -> tool
                 else -> null
             }
         }
@@ -474,26 +520,24 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         waitFor { deleteCount >= n }
     }
 
-    private fun flush() = runBlocking {
-        repeat(10) {
-            delay(100)
-            ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-        }
-    }
+    private fun flush() = coroutines.drain()
 
-    private fun waitFor(done: () -> Boolean) = runBlocking {
-        withTimeout(5_000) {
-            while (!done()) {
-                delay(25)
-                ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-            }
-        }
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
+    private fun pump() = pumpEdt()
+
+    private fun waitFor(done: () -> Boolean) {
+        assertTrue(coroutines.pumpUntil(cond = done))
     }
 
     private class FakeManager : SessionManager {
+        var history = 0
+        var back: (() -> Unit)? = null
+
         override fun newSession() {}
-        override fun showHistory() {}
+        override fun showHistory(back: (() -> Unit)?) {
+            history++
+            this.back = back
+        }
+
         override fun openSession(ref: SessionRef) {}
     }
 }

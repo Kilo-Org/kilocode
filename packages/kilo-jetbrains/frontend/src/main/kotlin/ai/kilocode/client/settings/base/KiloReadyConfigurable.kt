@@ -6,6 +6,8 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
@@ -13,6 +15,7 @@ import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
+import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
@@ -26,19 +29,24 @@ import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import javax.swing.JComponent
 
-abstract class KiloReadyConfigurable : SearchableConfigurable, Configurable.NoScroll {
+abstract class KiloReadyConfigurableBase : SearchableConfigurable, Configurable.NoMargin {
     private var shell: SettingsOverlayPanel? = null
     private var scope: CoroutineScope? = null
     private var ready: JComponent? = null
+    protected var project: Project? = null
+        private set
 
     @RequiresEdt
     override fun createComponent(): JComponent {
         checkEdt()
-        val root = if (scrollReadyShell()) SettingsPanel() else SettingsOverlayPanel()
+        // The shell never pads: the ready UI (or unavailable content) owns its own insets. This keeps
+        // a single margin when the shell scrolls a nested SettingsPanel.
+        val root = if (scrollReadyShell()) SettingsPanel(pad = false) else SettingsOverlayPanel()
         val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         shell = root
         scope = cs
         setContent(root, unavailable())
+        updateProject(root)
         cs.launch { service<KiloAppService>().connect() }
         cs.launch {
             service<KiloAppService>().state.collect { state ->
@@ -94,6 +102,7 @@ abstract class KiloReadyConfigurable : SearchableConfigurable, Configurable.NoSc
         checkEdt()
         if (state.status != KiloAppStatusDto.READY || ready != null) return
         val cs = scope ?: return
+        shell?.let { updateProject(it) }
         val panel = createReadyComponent(cs)
         ready = panel
         val root = shell
@@ -125,6 +134,10 @@ abstract class KiloReadyConfigurable : SearchableConfigurable, Configurable.NoSc
         }
     }
 
+    private fun updateProject(src: JComponent) {
+        project = CommonDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(src)) ?: project
+    }
+
     protected abstract fun createReadyComponent(cs: CoroutineScope): JComponent
 
     protected open fun isModifiedReady(): Boolean = false
@@ -150,3 +163,5 @@ abstract class KiloReadyConfigurable : SearchableConfigurable, Configurable.NoSc
         val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
     }
 }
+
+abstract class KiloReadyConfigurable : KiloReadyConfigurableBase(), Configurable.NoScroll

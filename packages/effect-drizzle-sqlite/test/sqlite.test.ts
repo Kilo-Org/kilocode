@@ -1,12 +1,14 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
 import { eq, sql } from "drizzle-orm"
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { Effect } from "effect"
 import type { SqlClient as SqlClientService } from "effect/unstable/sql/SqlClient"
+import { isSqlError } from "effect/unstable/sql/SqlError"
 import { EffectDrizzleSqlite } from "../src"
 
 const users = sqliteTable("users", {
@@ -96,6 +98,55 @@ test("rolls back explicit transaction rollback", async () => {
     }),
   )
 })
+
+test("preserves failed transaction begin errors", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "effect-drizzle-sqlite-"))
+  const filename = join(dir, "locked.db")
+  const holder = new Database(filename)
+
+  try {
+    holder.run("create table users (id integer primary key autoincrement, name text not null)")
+    holder.run("pragma busy_timeout = 0")
+    holder.run("begin immediate")
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const db = yield* EffectDrizzleSqlite.makeWithDefaults()
+        yield* db.run(sql`pragma busy_timeout = 0`)
+
+        const error = yield* db
+          .transaction((tx) => tx.insert(users).values({ name: "Blocked" }), { behavior: "immediate" })
+          .pipe(Effect.flip)
+
+        if (!isSqlError(error)) throw new Error("Expected SqlError")
+        expect(error.reason._tag).toBe("LockTimeoutError")
+        expect(error.reason.cause instanceof Error ? error.reason.cause.message : "").toContain("database is locked")
+      }).pipe(Effect.provide(SqliteClient.layer({ filename, disableWAL: true })), Effect.scoped),
+    )
+  } finally {
+    if (holder.inTransaction) holder.run("rollback")
+    holder.close()
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+// kilocode_change start - query errors must never expose bound credential values
+test("redacts bound values from query errors", async () => {
+  await run(
+    Effect.gen(function* () {
+      const db = yield* makeDb
+      const secret = "must-not-leak"
+      yield* db.insert(users).values({ id: 1, name: "Ada" })
+
+      const error = yield* db.insert(users).values({ id: 1, name: secret }).pipe(Effect.flip)
+
+      expect(error.message).not.toContain(secret)
+      expect(error.params).not.toContain(secret)
+      expect(error.params.every((param) => param === "<redacted>")).toBe(true)
+    }),
+  )
+})
+// kilocode_change end
 
 test("supports returning and rejects empty update sets", async () => {
   await run(

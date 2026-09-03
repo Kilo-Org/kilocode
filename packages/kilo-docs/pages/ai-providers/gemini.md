@@ -17,17 +17,17 @@ Kilo Code supports Google's Gemini family of models through the Google AI Gemini
 3.  **Create API Key:** Click on "Create API key" in the left-hand menu.
 4.  **Copy API Key:** Copy the generated API key.
 
+## API key requirements
+
+Google AI Studio creates auth keys by default. Kilo sends these keys in the `x-goog-api-key` header required by the Gemini API. An auth key is not an OAuth access token, so you do not need to configure OAuth.
+
+Google began rejecting unrestricted Standard keys on June 19, 2026. If Gemini returns `Request had invalid authentication credentials`, open the key in [Google AI Studio](https://aistudio.google.com/api-keys) and check its type and status. Replace a Standard key with a new auth key. If the rejected key is already an auth key, check its Gemini API access or create a replacement before updating Kilo.
+
+You can temporarily keep a Standard key working by restricting it to the Gemini API (`generativelanguage.googleapis.com`), but Google will reject all Standard keys in September 2026. See [Google's Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key) for restriction and migration steps.
+
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Google Gemini" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Gemini API key into the "Gemini API Key" field.
-4.  **Select Model:** Choose your desired Gemini model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Google Gemini and enter your API key.

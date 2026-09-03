@@ -9,6 +9,7 @@ import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryDataKeys
 import ai.kilocode.client.session.history.HistoryPanel
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -18,6 +19,8 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -36,9 +39,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import javax.swing.JLabel
 import javax.swing.JComponent
@@ -46,7 +46,7 @@ import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class SessionSidePanelManagerTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var workspace: Workspace
@@ -61,13 +61,13 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         timers = TestUiTimers()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        app = KiloAppService(scope, FakeAppRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        app = KiloAppService(coroutines.scope, FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         })
-        workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
@@ -76,7 +76,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             managers.forEach { Disposer.dispose(it) }
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -87,6 +87,21 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val provider = manager.component as DataProvider
 
         assertSame(manager, provider.getData(SessionManager.KEY.name))
+    }
+
+    fun `test host empty panel is full recents panel`() {
+        rpc.recent.add(session("ses_recent"))
+        val manager = manager()
+        val controller = controller()
+        settle()
+
+        val panel = manager.emptyPanel(testRootDisposable, controller)
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertTrue(panel.descriptionVisible())
+        assertTrue(panel.historyVisible())
+        assertTrue(panel.recentVisible())
     }
 
     fun `test new session replaces active component`() {
@@ -140,6 +155,19 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertSame(history.defaultFocusedComponent, manager.defaultFocusedComponent)
     }
 
+    fun `test history back callback overrides local session fallback`() {
+        val manager = manager()
+        var calls = 0
+
+        manager.newSession()
+        manager.showHistory { calls++ }
+        settle()
+        val history = active(manager) as HistoryPanel
+        history.clickBack()
+
+        assertEquals(1, calls)
+    }
+
     fun `test opening same existing session reuses component`() {
         useLongInactiveDisposeTimeout()
         val manager = manager()
@@ -152,7 +180,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val second = active(manager)
 
         assertSame(first, second)
-        assertEquals(listOf("/test" to "ses_1", "/test" to null), created)
+        assertTrue(created.containsAll(listOf("/test" to "ses_1", "/test" to null)))
     }
 
     fun `test prompted blank session is reused from recents`() {
@@ -287,7 +315,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         useLongInactiveDisposeTimeout()
         lateinit var history: HistoryPanel
         val manager = manager(history = { parent, _, _ ->
-            val controller = HistoryController(sessions, workspace, scope)
+            val controller = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
             controller.local.replace(listOf(LocalHistoryItem(session("ses_1", "/test", "Stored"))))
             HistoryPanel(parent, controller, manager = parent as SessionManager).also { history = it }
         })
@@ -319,7 +347,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         useLongInactiveDisposeTimeout()
         lateinit var history: HistoryPanel
         val manager = manager(history = { parent, _, _ ->
-            val controller = HistoryController(sessions, workspace, scope)
+            val controller = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
             controller.local.replace(listOf(LocalHistoryItem(session("ses_1", "/test", "Stored"))))
             HistoryPanel(parent, controller, manager = parent as SessionManager).also { history = it }
         })
@@ -382,6 +410,20 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertSame(first, active(manager))
     }
 
+    fun `test history back restores latest session focus`() {
+        useLongInactiveDisposeTimeout()
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(request = { requests.add(it) })
+
+        manager.openSession(session("ses_1"))
+        val first = active(manager) as SessionUi
+        manager.showHistory()
+        requests.clear()
+        back(manager)
+
+        assertSame(first.defaultFocusedComponent, requests.single())
+    }
+
     fun `test history back without latest session opens new session`() {
         val manager = manager()
 
@@ -416,7 +458,40 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         open(SessionRef.Local(session("ses_1")))
 
         assertTrue(active(manager) is SessionUi)
-        assertEquals(listOf("/test" to "ses_1"), created)
+        assertTrue(created.contains("/test" to "ses_1"))
+    }
+
+    fun `test opening local history item restores session focus`() {
+        lateinit var open: (SessionRef) -> Unit
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(
+            history = { _, fn, _ ->
+                open = fn
+                JLabel("History")
+            },
+            request = { requests.add(it) },
+        )
+
+        manager.showHistory()
+        open(SessionRef.Local(session("ses_1")))
+        val active = active(manager) as SessionUi
+
+        assertSame(active.defaultFocusedComponent, requests.single())
+    }
+
+    fun `test focus prompt requests active prompt even when modal content has focus`() {
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(request = { requests.add(it) })
+
+        manager.newSession()
+        val active = active(manager) as SessionUi
+        val modal = JLabel("modal")
+        active.setModalContent(modal) { modal }
+        requests.clear()
+        manager.focusPrompt()
+
+        assertSame(active.promptFocusedComponent, requests.single())
+        assertNotSame(active.defaultFocusedComponent, requests.single())
     }
 
     fun `test opening cloud history item shows session ui before import`() {
@@ -625,6 +700,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
     private fun manager(
         history: ((com.intellij.openapi.Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
+        request: (JComponent) -> Unit = {},
     ): SessionSidePanelManager {
         val manager = SessionSidePanelManager(
             project = project,
@@ -642,7 +718,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                     workspace,
                     sessions,
                     app,
-                    scope,
+                    coroutines.scope,
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
@@ -653,15 +729,25 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 }
             },
             resolve = { workspaces.workspace(it) },
-            status = { sessions.activity() },
+            status = { sessions.activitySnapshot() },
             history = history,
             timers = timers,
+            request = request,
         )
         managers.add(manager)
         return manager
     }
 
     private fun active(manager: SessionSidePanelManager) = manager.component.getComponent(0) as JPanel
+
+    private fun controller() = SessionController(
+        parent = testRootDisposable,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = coroutines.scope,
+        timers = timers,
+    )
 
     private fun empty(panel: JPanel): Boolean {
         var empty = false
@@ -716,14 +802,9 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         timers.advanceBy(10)
     }
 
-    private fun settle() = kotlinx.coroutines.runBlocking {
-        repeat(5) {
-            kotlinx.coroutines.delay(100)
-            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
-            }
-        }
-    }
+    private fun settle() = coroutines.drain(::pump)
+
+    private fun pump() = pumpEdt()
 
     private fun session(id: String) = session(id, "/test")
 

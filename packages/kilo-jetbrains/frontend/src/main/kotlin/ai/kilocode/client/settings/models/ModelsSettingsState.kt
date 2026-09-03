@@ -36,7 +36,10 @@ internal fun patch(from: ModelsDraft, to: ModelsDraft): ConfigPatchDto {
 
     val agents = linkedMapOf<String, AgentConfigPatchDto>()
     for (name in (from.agents.keys + to.agents.keys).sorted()) {
-        if (from.agents[name] != to.agents[name]) agents[name] = AgentConfigPatchDto(model = to.agents[name])
+        if (from.agents[name] != to.agents[name]) {
+            val model = to.agents[name]
+            agents[name] = if (model == null) AgentConfigPatchDto(clear = listOf("model")) else AgentConfigPatchDto(model = model)
+        }
     }
     return ConfigPatchDto(values = values, agents = agents)
 }

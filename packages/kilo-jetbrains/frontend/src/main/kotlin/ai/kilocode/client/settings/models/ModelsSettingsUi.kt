@@ -5,7 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.model.ModelText
+import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsBannerKind
@@ -168,18 +168,7 @@ internal class ModelsSettingsUi(
         }
     }
 
-    private fun items(includeSmall: Boolean): List<ModelPicker.Item> {
-        val cfg = providers ?: return emptyList()
-        return cfg.providers
-            .filter { it.id == KILO_PROVIDER || it.id in cfg.connected }
-            .flatMap { provider ->
-                provider.models.mapNotNull { (id, model) ->
-                    val item = ModelPicker.Item(id, model.name, provider.id, provider.name, model.recommendedIndex, model.free, model.variants)
-                    if (!includeSmall && ModelText.small(item)) return@mapNotNull null
-                    item
-                }
-            }
-    }
+    private fun items(includeSmall: Boolean): List<ModelPicker.Item> = modelItems(providers, includeSmall)
 
     @RequiresEdt
     private fun syncVariant(ready: Boolean): Boolean {
@@ -235,8 +224,6 @@ internal class ModelsSettingsUi(
     }
 }
 
-private const val KILO_PROVIDER = "kilo"
-
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }
     return "values=$values agents=${patch.agents.size}"
@@ -273,7 +260,8 @@ internal class ModelsSettingsContent(
             picker.picker.onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) }
         }
 
-        val rows = section(KiloBundle.message("settings.models.displayName"))
+        val rows = SettingsRows()
+        next(rows)
         rows.row(SettingsRow(
             KiloBundle.message("settings.models.defaultModel.title"),
             KiloBundle.message("settings.models.defaultModel.description"),

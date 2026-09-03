@@ -165,6 +165,8 @@ MCP tools use the same permission system as built-in tools (`allow`, `ask`, `den
 
 For full details and examples, see [MCP Tool Permissions](/docs/automate/mcp/using-in-kilo-code#auto-approve-tools).
 
+Connected servers can also add usage instructions to the model context and expose resources, including parameterized resource templates. See [Server instructions and resources](/docs/automate/mcp/using-in-kilo-code#server-instructions-and-resources).
+
 ## Environment Variables
 
 Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:

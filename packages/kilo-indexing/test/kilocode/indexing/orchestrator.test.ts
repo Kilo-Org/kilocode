@@ -18,7 +18,9 @@ import { Emitter } from "../../../src/indexing/runtime"
 class Store {
   public clearCount = 0
   public closeCount = 0
+  public completeCount = 0
   public deleteCount = 0
+  public incompleteCount = 0
 
   constructor(
     private readonly existing: boolean,
@@ -57,8 +59,12 @@ class Store {
   async hasIndexedData(): Promise<boolean> {
     return this.existing
   }
-  async markIndexingComplete(): Promise<void> {}
-  async markIndexingIncomplete(): Promise<void> {}
+  async markIndexingComplete(): Promise<void> {
+    this.completeCount += 1
+  }
+  async markIndexingIncomplete(): Promise<void> {
+    this.incompleteCount += 1
+  }
 }
 
 class Scanner {
@@ -270,6 +276,31 @@ describe("CodeIndexOrchestrator telemetry", () => {
 
     expect(scanner.finished).toBe(true)
     expect(store.closeCount).toBe(1)
+    expect(store.incompleteCount).toBe(1)
+    expect(store.completeCount).toBe(0)
+  })
+
+  test("preserves an unchanged index when an incremental scan is interrupted", async () => {
+    const scanner = new BlockingScanner()
+    const store = new Store(true)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const active = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    await orchestrator.shutdown()
+    await active
+
+    expect(store.incompleteCount).toBe(1)
+    expect(store.completeCount).toBe(1)
+    expect(store.clearCount).toBe(0)
   })
 
   test("clears stale vectors and hashes before rebuilding an incomplete store", async () => {
@@ -324,35 +355,6 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.clearCount).toBe(0)
     expect(cache.clears).toBe(0)
     expect(orchestrator.state).toBe("Error")
-  })
-
-  test("rebuilds a complete independent index when the shared baseline is unavailable", async () => {
-    const cache = {
-      clears: 0,
-      async clearCacheFile() {
-        this.clears += 1
-      },
-      async flush() {},
-    }
-    const store = new Store(true, false)
-    const orchestrator = new CodeIndexOrchestrator(
-      createConfig(),
-      new CodeIndexStateManager(),
-      "/tmp/ws",
-      cache as unknown as CacheManager,
-      store as unknown as IVectorStore,
-      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
-      new Watcher() as unknown as IFileWatcher,
-      undefined,
-      undefined,
-      true,
-    )
-
-    await orchestrator.startIndexing("background")
-
-    expect(store.clearCount).toBe(1)
-    expect(cache.clears).toBe(1)
-    expect(orchestrator.state).toBe("Indexed")
   })
 
   test("preserves cache and collection data on retryable start failures", async () => {

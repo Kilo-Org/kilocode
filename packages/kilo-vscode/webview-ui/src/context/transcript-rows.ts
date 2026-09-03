@@ -1,5 +1,5 @@
 import type { Message, Part } from "../types/messages"
-import type { MessageTurn } from "./session-queue"
+import { visibleParts, type MessageTurn, type RevertBoundary } from "./session-queue"
 
 interface TranscriptMeta {
   turn: string
@@ -46,6 +46,7 @@ export interface TranscriptOptions {
   queued?: ReadonlySet<string>
   live?: ReadonlySet<string>
   hidden?: (id: string) => boolean
+  revert?: RevertBoundary
 }
 
 export interface TranscriptPartition {
@@ -107,7 +108,19 @@ function diffs(msg: Message) {
   return msg.summary.diffs ?? []
 }
 
-function copy(messages: Message[], getParts: (id: string) => Part[]) {
+function content(parts: Part[]) {
+  const text = parts.find((part) => part.type === "text" && !part.synthetic)
+  if (text?.type === "text" && text.text.trim()) return true
+  return parts.some(
+    (part) => part.type === "file" && (part.mime.startsWith("image/") || part.mime === "application/pdf"),
+  )
+}
+
+function copy(messages: Message[], getParts: (id: string) => Part[], live: boolean) {
+  // While the session streams, the last non-empty text part changes at every
+  // part boundary and the copy/feedback row would hop between parts (mount/
+  // unmount churn next to the streamed text). Anchor it only once idle.
+  if (live) return undefined
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const parts = getParts(messages[i]!.id)
     for (let j = parts.length - 1; j >= 0; j -= 1) {
@@ -127,6 +140,8 @@ export function transcriptRows(
 ): TranscriptRow[] {
   const size = Math.max(1, Math.floor(opts.size ?? 8))
   const rows: TranscriptRow[] = []
+  const parts = (id: string) => visibleParts(id, getParts(id), opts.revert)
+  const terminal = (msg: Message) => !(opts.revert?.partID && msg.id === opts.revert.messageID)
 
   for (const turn of turns) {
     const meta = {
@@ -135,35 +150,36 @@ export function transcriptRows(
       queued: opts.queued?.has(turn.id) === true,
       live: opts.live?.has(turn.id) === true,
     }
-    const copied = copy(turn.assistant, getParts)
+    const copied = copy(turn.assistant, parts, meta.live)
+    const user = turn.partial ? [] : parts(turn.user.id)
 
-    if (!turn.partial) {
+    if (!turn.partial && (!meta.queued || content(user))) {
       rows.push({
         ...meta,
         type: "user",
         key: `${turn.id}:user`,
         message: turn.user,
-        parts: getParts(turn.user.id),
-        interrupted: turn.assistant.some((msg) => msg.error?.name === "MessageAbortedError"),
+        parts: user,
+        interrupted: turn.assistant.some((msg) => terminal(msg) && msg.error?.name === "MessageAbortedError"),
         answered: turn.assistant.length > 0,
       })
     }
 
     for (const msg of turn.assistant) {
-      const parts = getParts(msg.id)
-      if (parts.length === 0) {
+      const visible = parts(msg.id)
+      if (visible.length === 0) {
         rows.push({
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:empty`,
           message: msg,
-          parts,
+          parts: visible,
           copy: copied,
         })
         continue
       }
-      for (let start = 0; start < parts.length; start += size) {
-        const chunk = parts.slice(start, start + size)
+      for (let start = 0; start < visible.length; start += size) {
+        const chunk = visible.slice(start, start + size)
         rows.push({
           ...meta,
           type: "assistant",
@@ -181,7 +197,7 @@ export function transcriptRows(
     }
 
     const failed = turn.assistant.find(
-      (msg) => msg.error && msg.error.name !== "MessageAbortedError" && opts.hidden?.(msg.id) !== true,
+      (msg) => terminal(msg) && msg.error && msg.error.name !== "MessageAbortedError" && opts.hidden?.(msg.id) !== true,
     )
     if (failed?.error) {
       rows.push({ ...meta, type: "error", key: `${turn.id}:error:${failed.id}`, message: failed, error: failed.error })

@@ -2,15 +2,17 @@
  * Sidebar worktree item with inline delete confirmation, HoverCard, rename, and stats.
  * Extracted from AgentManagerApp for reuse and visual-regression testing via Storybook.
  */
-import { Component, For, Show, createSignal } from "solid-js"
+import { Component, For, Match, Show, Switch, createSignal } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
-import type { WorktreeState, WorktreeGitStats, PRStatus, SectionState, RunStatus } from "../src/types/messages"
+import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
+import type { PRStatus } from "../src/types/messages"
+import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { description, label, running, strongest, type Activity } from "../src/utils/session-activity"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -20,7 +22,10 @@ import { parseBindingTokens } from "./keybind-tokens"
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 interface WorktreeItemProps {
+  preview?: boolean
   worktree: WorktreeState
+  /** Stable composite ID used by multi-project sidebar bodies. */
+  sidebarId?: string
   /** Display label (resolved from label, first session title, or branch). */
   label: string
   /** Branch name shown as subtitle when it differs from the label. */
@@ -28,8 +33,8 @@ interface WorktreeItemProps {
   active: boolean
   pendingDelete: boolean
   busy: boolean
-  /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
-  working: boolean
+  activity: Activity
+  blocked?: boolean
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
@@ -55,10 +60,11 @@ interface WorktreeItemProps {
   /** Keybinding string for the open-in-vscode action. */
   openKeybind: string
   /** PR status for this worktree's branch, or null if no PR. */
-  pr?: PRStatus | null
+  pr?: PRStatus
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
+  onOpenComments?: () => void
   /** Available sections for the "Move to Section" submenu. */
   sections?: SectionState[]
   /** ID of the section this worktree currently belongs to (for disabling current item). */
@@ -77,6 +83,7 @@ interface WorktreeItemProps {
   onRemoveStale: () => void
   onCopyPath: () => void
   onOpen: () => void
+  onUpdateBase?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -84,15 +91,33 @@ const MAX_SHORTCUT = 9
 const hasStats = (s: WorktreeGitStats | undefined): s is WorktreeGitStats =>
   !!s && (s.files > 0 || s.additions > 0 || s.deletions > 0 || s.ahead > 0 || s.behind > 0)
 
-/** Returns the accent color for a PR badge based on state priority. */
-export function prAccentColor(pr: PRStatus): string {
-  if (pr.state === "draft") return "var(--text-weaker)"
-  if (pr.state === "merged") return "#a78bfa"
-  if (pr.state === "closed") return "#f87171"
-  if (pr.checks.status === "failure") return "#ef4444"
-  if (pr.review === "changes_requested") return "#fbbf24"
-  if (pr.checks.status === "pending") return "#fbbf24"
-  return "#34d399"
+/**
+ * Accent color for a PR badge, derived from the PR's lifecycle state
+ * (open/draft/merged/closed). The one exception is an open PR with checks still
+ * running, which uses amber and pulses its background (see prChecksRunning) — a
+ * transient, unambiguous signal since no lifecycle state uses amber. Terminal CI
+ * and review results are conveyed by a separate status icon (see prBadgeIndicator)
+ * so a failing check is not mistaken for a closed PR.
+ */
+/** True while an open PR's checks are still running — drives the pulsing amber badge. */
+export function prChecksRunning(pr: PRStatus): boolean {
+  return pr.state === "open" && pr.checks.status === "pending"
+}
+
+export type PRBadgeIndicator = "failure" | "changes" | "approved" | "none"
+
+/**
+ * Terminal CI/review status shown as an icon overlaid on the PR badge, independent
+ * of the badge's state-based accent color. Running checks are not represented here —
+ * they are shown by the pulsing amber background instead. Terminal PRs (merged/closed)
+ * show no indicator since their checks are no longer actionable.
+ */
+export function prBadgeIndicator(pr: PRStatus): PRBadgeIndicator {
+  if (pr.state === "merged" || pr.state === "closed") return "none"
+  if (pr.checks.status === "failure") return "failure"
+  if (pr.review === "changes_requested") return "changes"
+  if (pr.review === "approved") return "approved"
+  return "none"
 }
 
 function prStateLabel(state: PRStatus["state"]): string {
@@ -133,12 +158,26 @@ function RunBadge(props: { status?: RunStatus }) {
 export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const { t } = useLanguage()
   const [hovered, setHovered] = createSignal(false)
-  const [overClose, setOverClose] = createSignal(false)
+  const [overAction, setOverAction] = createSignal(false)
+  const state = () => strongest([props.activity, props.busy || props.runStatus?.state === "running" ? "busy" : "idle"])
+  const blocked = () =>
+    props.busy ||
+    props.blocked ||
+    running(state()) ||
+    props.runStatus?.state === "running" ||
+    props.runStatus?.state === "stopping"
 
   const handleOpenPR = (e: MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
     props.onOpenPR?.()
+  }
+
+  /** Worktree directory basename shown in the hover card (e.g. "decorous-taker"). */
+  const name = () => {
+    const p = props.worktree.path.replace(/[\\/]+$/, "")
+    const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"))
+    return i >= 0 ? p.slice(i + 1) : p
   }
 
   return (
@@ -151,11 +190,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
       </Show>
       <ContextMenu>
         <HoverCard
-          openDelay={100}
-          closeDelay={100}
+          class="am-worktree-hover-card"
+          openDelay={0}
+          closeDelay={0}
           placement="right-start"
           gutter={8}
-          open={hovered() && !overClose() && !props.pendingDelete}
+          open={hovered() && !overAction() && !props.pendingDelete}
           onOpenChange={(open) => setHovered(open)}
           trigger={
             <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
@@ -167,13 +207,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.worktree.id}
+                data-sidebar-id={props.preview ? undefined : (props.sidebarId ?? props.worktree.id)}
                 onClick={() => props.onClick()}
               >
-                <div class="am-wt-icon">
-                  <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
-                    <Icon name="branch" size="small" />
-                  </Show>
+                <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
+                  <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
                 </div>
                 <div class="am-wt-content">
                   {/* Row 1: label + stale badge + stats/hover-actions overlay */}
@@ -274,11 +312,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!props.busy && !props.pendingDelete}>
+                        <Show when={!blocked() && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
-                            onMouseEnter={() => setOverClose(true)}
-                            onMouseLeave={() => setOverClose(false)}
+                            onMouseEnter={() => setOverAction(true)}
+                            onMouseLeave={() => setOverAction(false)}
                           >
                             <TooltipKeybind
                               title={t("agentManager.worktree.delete")}
@@ -313,16 +351,72 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       }
                     >
                       {(pr) => {
-                        const accent = () => prAccentColor(pr())
+                        const indicator = () => prBadgeIndicator(pr())
+                        const count = () => pr().unresolvedThreads ?? pr().comments?.unresolved ?? 0
+                        const tooltip = () =>
+                          t(
+                            count() === 1
+                              ? "agentManager.pr.comment.unresolvedThread"
+                              : "agentManager.pr.comment.unresolvedThreads",
+                            { count: count() },
+                          )
                         return (
                           <span
                             class="am-pr-badge"
-                            style={{ "--pr-accent": accent() }}
-                            data-pending={pr().state === "open" && pr().checks.status === "pending" ? "" : undefined}
+                            classList={{
+                              "am-pr-accent-draft": pr().state === "draft",
+                              "am-pr-accent-merged": pr().state === "merged",
+                              "am-pr-accent-closed": pr().state === "closed",
+                              "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
+                              "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
+                              "am-pr-badge-pending": prChecksRunning(pr()),
+                            }}
                             onClick={handleOpenPR}
                           >
-                            <Icon name={pr().review === "approved" ? "check-small" : "branch"} size="small" />
+                            <Icon name="pull-request" size="small" />
                             <span class="am-pr-badge-number">#{pr().number}</span>
+                            <Switch>
+                              <Match when={indicator() === "failure"}>
+                                <Icon
+                                  name="circle-x-outline"
+                                  size="small"
+                                  class="am-pr-badge-status"
+                                  data-status="failure"
+                                />
+                              </Match>
+                              <Match when={indicator() === "changes"}>
+                                <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
+                              </Match>
+                              <Match when={indicator() === "approved"}>
+                                <Icon
+                                  name="circle-check"
+                                  size="small"
+                                  class="am-pr-badge-status"
+                                  data-status="approved"
+                                />
+                              </Match>
+                            </Switch>
+                            <Show when={count() > 0}>
+                              <Tooltip value={tooltip()} placement="top">
+                                <Button
+                                  class="am-pr-badge-comments"
+                                  variant="ghost"
+                                  size="small"
+                                  aria-label={tooltip()}
+                                  onMouseEnter={() => setOverAction(true)}
+                                  onMouseLeave={() => setOverAction(false)}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    setHovered(false)
+                                    props.onOpenComments?.()
+                                  }}
+                                >
+                                  <Icon name="speech-bubble" size="small" />
+                                  <span>{count()}</span>
+                                </Button>
+                              </Tooltip>
+                            </Show>
                           </span>
                         )
                       }}
@@ -343,6 +437,16 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Show when={props.navHint}>
                 <span class="am-hover-card-keybind">{props.navHint}</span>
               </Show>
+            </div>
+            <Show when={state() !== "idle"}>
+              <div class="am-hover-card-divider" />
+              <div class="am-hover-card-label">{t(label(state()))}</div>
+              <div class="am-hover-card-note">{t(description(state()))}</div>
+            </Show>
+            <div class="am-hover-card-divider" />
+            <div class="am-hover-card-row">
+              <span class="am-hover-card-row-label">{t("agentManager.hoverCard.worktree")}</span>
+              <span class="am-hover-card-row-value">{name()}</span>
             </div>
             <Show when={props.worktree.parentBranch}>
               <div class="am-hover-card-divider" />
@@ -459,17 +563,19 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="edit" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
-              <Icon name="trash" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
-              <Show when={props.closeKeybind}>
-                <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.closeKeybind).map((token) => (
-                    <kbd class="am-menu-key">{token}</kbd>
-                  ))}
-                </span>
-              </Show>
-            </ContextMenu.Item>
+            <Show when={!blocked()}>
+              <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
+                <Icon name="trash" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
+                <Show when={props.closeKeybind}>
+                  <span class="am-menu-shortcut">
+                    {parseBindingTokens(props.closeKeybind).map((token) => (
+                      <kbd class="am-menu-key">{token}</kbd>
+                    ))}
+                  </span>
+                </Show>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onOpen()}>
               <Icon name="open-file" size="small" />
@@ -482,6 +588,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 </span>
               </Show>
             </ContextMenu.Item>
+            <Show when={props.onUpdateBase && !props.stale}>
+              <ContextMenu.Item onSelect={() => props.onUpdateBase?.()}>
+                <Icon name="branch" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.updateBase.title")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Item onSelect={() => props.onCopyPath()}>
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>

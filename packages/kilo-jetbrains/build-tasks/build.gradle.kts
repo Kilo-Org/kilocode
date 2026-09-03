@@ -8,6 +8,7 @@ repositories {
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.commons.compress)
     testImplementation(kotlin("test"))
 }
 

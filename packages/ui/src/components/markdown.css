@@ -15,6 +15,12 @@
   > *:last-child {
     margin-bottom: 0;
   }
+  > [data-markdown-block]:first-child > *:first-child {
+    margin-top: 0;
+  }
+  > [data-markdown-block]:last-child > *:last-child {
+    margin-bottom: 0;
+  }
 
   /* Headings: Same size, distinguished by color and spacing */
   h1,
@@ -55,13 +61,31 @@
     text-underline-offset: 2px;
   }
 
+  /* kilocode_change start — file-path links from markdown [text](path) */
+  a.file-path-link {
+    color: var(--syntax-string);
+    font-family: var(--font-family-mono);
+    font-feature-settings: var(--font-family-mono--font-feature-settings);
+    font-weight: var(--font-weight-medium);
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+  }
+
+  a.file-path-link:hover {
+    color: var(--text-interactive-base);
+    text-decoration-style: solid;
+  }
+  /* kilocode_change end */
+
   /* Lists */
   ul,
   ol {
     margin-top: 8px;
     margin-bottom: 12px;
-    margin-left: 0;
-    padding-left: 32px;
+    margin-inline-start: 0; /* kilocode_change */
+    padding-inline-start: 32px; /* kilocode_change */
     list-style-position: outside;
   }
 
@@ -71,7 +95,7 @@
 
   ol {
     list-style-type: decimal;
-    padding-left: 2.25rem;
+    padding-inline-start: 2.25rem; /* kilocode_change */
   }
 
   li {
@@ -97,18 +121,18 @@
   li > ol {
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
-    padding-left: 1rem; /* Minimal indent for nesting only */
+    padding-inline-start: 1rem; /* Minimal indent for nesting only */  /* kilocode_change */
   }
 
   li > ol {
-    padding-left: 1.75rem;
+    padding-inline-start: 1.75rem; /* kilocode_change */
   }
 
   /* Blockquotes */
   blockquote {
-    border-left: 2px solid var(--border-weak-base);
+    border-inline-start: 2px solid var(--border-weak-base); /* kilocode_change */
     margin: 1.5rem 0;
-    padding-left: 0.5rem;
+    padding-inline-start: 0.5rem; /* kilocode_change */
     color: var(--text-weak);
     font-style: normal;
   }
@@ -121,6 +145,8 @@
   }
 
   .shiki {
+    background: var(--color-background-stronger);
+    color: var(--text-base);
     font-size: 13px;
     padding: 12px;
     border-radius: 6px;
@@ -237,6 +263,25 @@
         text-decoration-style: solid;
       }
     }
+
+    /* A plan reference reads as a document, not a boxed chip: a small glyph in
+       front of the path, keeping the same dotted-underline affordance every
+       other validated file link already uses. No border, no badge, no fill. */
+    &.plan-document-link::before {
+      content: "";
+      display: inline-block;
+      width: 0.95em;
+      height: 0.95em;
+      margin-inline-end: 0.3em;
+      vertical-align: -0.15em;
+      background-color: currentColor;
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/%3E%3Cpath d='M14 2v5h6'/%3E%3Cpath d='M9 13h6'/%3E%3Cpath d='M9 17h4'/%3E%3C/svg%3E");
+      mask-repeat: no-repeat;
+      mask-size: contain;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/%3E%3Cpath d='M14 2v5h6'/%3E%3Cpath d='M9 13h6'/%3E%3Cpath d='M9 17h4'/%3E%3C/svg%3E");
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+    }
     /* kilocode_change end */
   }
 
@@ -255,7 +300,7 @@
     /* Minimal borders for structure, matching TUI "lines" roughly but keeping it web-clean */
     border-bottom: 1px solid var(--border-weaker-base);
     padding: 12px;
-    text-align: left;
+    text-align: start; /* kilocode_change */
     vertical-align: top;
   }
 

@@ -1,33 +1,30 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
 import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Config } from "../../src/config/config"
+import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
-import { provideInstance, provideTmpdirInstance, tmpdir } from "../fixture/fixture"
+import { provideInstance, provideTmpdirInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import path from "path"
 import fs from "fs/promises"
 
-const node = CrossSpawnSpawner.defaultLayer
+const node = AppNodeBuilder.build(CrossSpawnSpawner.node)
 
 const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
-  Skill.layer.pipe(
-    Layer.provide(Discovery.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Bus.layer),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Global.layer),
-    Layer.provide(RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })),
-  )
+  AppNodeBuilder.build(Skill.node, [
+    [RuntimeFlags.node, RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })],
+  ])
 
-const it = testEffect(Layer.mergeAll(skills(false, false), node))
-const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node))
-const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node)) // kilocode_change
+const it = testEffect(Layer.mergeAll(skills(false, false), node, testInstanceStoreLayer))
+const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node, testInstanceStoreLayer))
+const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node, testInstanceStoreLayer)) // kilocode_change
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")
@@ -64,6 +61,33 @@ const discovered = <T extends { location: string }>(list: readonly T[]) =>
   list.filter((skill) => ![Skill.BUILTIN_LOCATION, "<built-in>"].includes(skill.location)) // kilocode_change
 
 describe("skill", () => {
+  it.effect("formats verbose locations as XML-safe filesystem paths", () =>
+    Effect.sync(() => {
+      const output = Skill.fmt(
+        [
+          {
+            name: "tagged-skill",
+            description: "A tagged skill.",
+            location: "/tmp/plugin.git#v1.3.0/SKILL.md",
+            content: "",
+          },
+          {
+            name: "built-in-skill",
+            description: "A built-in skill.",
+            location: "<built-in>",
+            content: "",
+          },
+        ],
+        { verbose: true },
+      )
+
+      expect(output).toContain("<location>/tmp/plugin.git#v1.3.0/SKILL.md</location>")
+      expect(output).toContain("<location>&lt;built-in&gt;</location>")
+      expect(output).not.toContain("file://")
+      expect(output).not.toContain("%23")
+    }),
+  )
+
   // kilocode_change start
   it.live("discovers skills from .kilo/skill/ directory", () =>
     // kilocode_change end
@@ -192,10 +216,12 @@ Just some content without YAML frontmatter.
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
+          // kilocode_change start - load .kilo skills without falling back to .opencode
           yield* Effect.promise(() =>
-            Bun.write(
-              path.join(dir, ".opencode", "skill", "manual-skill", "SKILL.md"),
-              `---
+            Promise.all([
+              Bun.write(
+                path.join(dir, ".kilo", "skill", "manual-skill", "SKILL.md"),
+                `---
 name: manual-skill
 ---
 
@@ -203,8 +229,18 @@ name: manual-skill
 
 Instructions here.
 `,
-            ),
+              ),
+              Bun.write(
+                path.join(dir, ".opencode", "skill", "ignored-skill", "SKILL.md"),
+                `---
+name: ignored-skill
+description: This skill must not load.
+---
+`,
+              ),
+            ]),
           )
+          // kilocode_change end
 
           const skill = yield* Skill.Service
           const list = discovered(yield* skill.all()) // kilocode_change
@@ -483,16 +519,18 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
+              // kilocode_change start
               Bun.write(
-                path.join(dir, ".opencode", "skill", "opencode-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skill", "opencode-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skill directory.
+description: A skill in the .kilo/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
+              // kilocode_change end
             ]),
           )
 
@@ -530,26 +568,28 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
+              // kilocode_change start
               Bun.write(
-                path.join(dir, ".opencode", "skill", "agent-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skill", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skill directory.
+description: A skill in the .kilo/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
               Bun.write(
-                path.join(dir, ".opencode", "skills", "agent-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skills", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skills directory.
+description: A skill in the .kilo/skills directory.
 ---
 
 # OpenCode Skill
 `,
               ),
+              // kilocode_change end
             ]),
           )
 

@@ -4,18 +4,22 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.editor.SessionEditorTextField
 import ai.kilocode.client.session.views.SessionViewIcons
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
@@ -23,27 +27,26 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
-import javax.swing.ScrollPaneConstants
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.GridBagLayout
 import java.awt.Rectangle
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
-import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.ButtonGroup
 import javax.swing.JPanel
-import com.intellij.openapi.editor.event.DocumentEvent
-import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.util.concurrency.annotations.RequiresEdt
+import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 /** Question tool form rendered inside the session transcript. */
 class QuestionView(
@@ -53,7 +56,8 @@ class QuestionView(
     private val follow: () -> Boolean = { true },
     private val scroll: (Boolean) -> Unit = {},
     private val selection: SessionSelection? = null,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
+    focus: (() -> Unit)? = null,
+) : DialogView(selection, focus), SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
     private var request: String? = null
@@ -70,8 +74,12 @@ class QuestionView(
     // The custom editor for the currently shown question; null when not shown.
     private var customEditor: SessionEditorTextField? = null
     private var customFocus: FocusAdapter? = null
-
-    private val card = BaseQuestionView(selection)
+    private val resize = object : ComponentAdapter() {
+        @RequiresEdt
+        override fun componentResized(e: ComponentEvent) {
+            customEditor?.let(::syncEditorHeight)
+        }
+    }
 
     private val summary = JBLabel()
     private val nav = JPanel().apply {
@@ -111,15 +119,21 @@ class QuestionView(
     init {
         isOpaque = false
         isVisible = false
+        addComponentListener(resize)
 
         nav.add(back)
         nav.add(fwd)
         topPanel.add(summary, BorderLayout.WEST)
         topPanel.add(nav, BorderLayout.EAST)
 
-        card.setTopPanel(topPanel)
-        card.setContent(body)
-        add(card, BorderLayout.CENTER)
+        setTopPanel(topPanel)
+        setContent(body)
+    }
+
+    @RequiresEdt
+    override fun addNotify() {
+        super.addNotify()
+        customEditor?.let(::syncEditorHeight)
     }
 
     @RequiresEdt
@@ -154,7 +168,7 @@ class QuestionView(
         disposeRegs()
         texts.clear()
         body.removeAll()
-        card.setActions(emptyList())
+        setActions(emptyList())
         isVisible = false
         refresh()
     }
@@ -162,11 +176,11 @@ class QuestionView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        card.applyStyle(style)
+        super.applyStyle(style)
         customEditor?.let { ed ->
-            ed.font = style.editorFont
-            ed.getEditor(false)?.let(style::applyToEditor)
-            ed.background = style.editorScheme.defaultBackground
+            style.applyTranscriptToField(ed)
+            ed.background = SessionUiStyle.Colors.codeBlockBackground()
+            syncEditorHeight(ed)
         }
         val changed = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
         if (!changed) return
@@ -182,14 +196,14 @@ class QuestionView(
         customFocus = null
         body.removeAll()
         if (review(q)) {
-            card.setHeader(KiloBundle.message("session.question.review.title"))
+            setHeader(KiloBundle.message("session.question.review.title"))
             addReview(q)
         } else {
             val item = q.items[idx]
             val hint = KiloBundle.message(
                 if (item.multiple) "session.question.hint.multi" else "session.question.hint.single"
             )
-            card.setHeader(item.question, hint)
+            setHeader(item.question, hint)
             addContent(item, selections[idx])
         }
         syncHeader(q)
@@ -203,26 +217,26 @@ class QuestionView(
         val total = q.items.size
         val shown = minOf(idx + 1, total)
         summary.text = KiloBundle.message("session.question.summary", shown, total)
-        summary.foreground = UiStyle.Colors.weak()
+        summary.foreground = SessionUiStyle.Text.Secondary.foreground()
         summary.isVisible = total > 1
         nav.isVisible = total > 1
         topPanel.isVisible = total > 1
         if (total > 1) {
             topPanel.border = JBUI.Borders.empty(0, 0, UiStyle.Gap.sm(), 0)
-            card.setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())
+            setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())
             return
         }
-        card.setSpacing(UiStyle.Gap.xl(), UiStyle.Gap.pad())
+        setSpacing(UiStyle.Gap.xl(), UiStyle.Gap.pad())
     }
 
     @RequiresEdt
     private fun syncFooter(q: Question) {
-        val actions = mutableListOf<BaseQuestionView.Action>()
-        actions.add(BaseQuestionView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
+        val actions = mutableListOf<DialogView.Action>()
+        actions.add(DialogView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
 
         if (review(q)) {
-            actions.add(BaseQuestionView.Action(ID_BACK, KiloBundle.message("session.question.back"), primary = false) { goBack() })
-            actions.add(BaseQuestionView.Action(ID_MAIN, KiloBundle.message("session.question.submit"), primary = true) { doReply() })
+            actions.add(DialogView.Action(ID_BACK, KiloBundle.message("session.question.back"), primary = false) { goBack() })
+            actions.add(DialogView.Action(ID_MAIN, KiloBundle.message("session.question.submit"), primary = true) { doReply() })
         } else {
             val label = when {
                 direct(q) -> KiloBundle.message("session.question.submit")
@@ -230,7 +244,7 @@ class QuestionView(
                 else -> KiloBundle.message("session.question.next")
             }
             val isPrimary = direct(q) || lastItem(q)
-            actions.add(BaseQuestionView.Action(ID_MAIN, label, isPrimary) {
+            actions.add(DialogView.Action(ID_MAIN, label, isPrimary) {
                 when {
                     direct(q) -> doReply()
                     lastItem(q) -> goReview()
@@ -238,7 +252,7 @@ class QuestionView(
                 }
             })
         }
-        card.setActions(actions)
+        setActions(actions)
     }
 
     @RequiresEdt
@@ -246,7 +260,7 @@ class QuestionView(
         val ready = isReady(idx)
         back.isEnabled = idx > 0
         fwd.isEnabled = idx < q.items.size && ready
-        card.setActionEnabled(ID_MAIN, review(q) || ready)
+        setActionEnabled(ID_MAIN, review(q) || ready)
     }
 
     /**
@@ -311,7 +325,7 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
         }
-        val qText = text(item.question, UiStyle.Colors.weak())
+        val qText = text(item.question, SessionUiStyle.Text.Secondary.foreground())
         qText.alignmentX = Component.LEFT_ALIGNMENT
         row.add(qText)
 
@@ -319,7 +333,7 @@ class QuestionView(
         val joined = answers.joinToString(", ")
         val answer = text(
             joined.ifBlank { KiloBundle.message("session.question.review.notAnswered") },
-            UiStyle.Colors.fg(),
+            SessionUiStyle.Colors.foreground(),
             true,
         )
         answer.alignmentX = Component.LEFT_ALIGNMENT
@@ -422,7 +436,7 @@ class QuestionView(
             addMouseListener(press)
         }
 
-        val label = text(KiloBundle.message("session.question.custom.label"), UiStyle.Colors.fg(), true)
+        val label = text(KiloBundle.message("session.question.custom.label"), SessionUiStyle.Colors.foreground(), true)
         label.alignmentX = Component.LEFT_ALIGNMENT
         label.addMouseListener(press)
         col.add(label)
@@ -495,20 +509,18 @@ class QuestionView(
         ed.setShowPlaceholderWhenFocused(true)
         ed.setOneLineMode(false)
         ed.addSettingsProvider { ex ->
-            style.applyToEditor(ex)
-            ex.setBorder(JBUI.Borders.empty())
-            ex.scrollPane.border = JBUI.Borders.empty()
-            ex.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ex.backgroundColor = style.editorScheme.defaultBackground
-            ex.scrollPane.background = style.editorScheme.defaultBackground
-            ex.scrollPane.viewport.background = style.editorScheme.defaultBackground
+            style.applyPromptToEditor(ex)
             ex.settings.isUseSoftWraps = true
+            ex.settings.isPaintSoftWraps = false
             ex.settings.isAdditionalPageAtBottom = false
+            ex.setHorizontalScrollbarVisible(false)
+            ex.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            syncEditorHeight(ed, ex)
         }
         selection?.register(ed)?.let(regs::add)
-        ed.font = style.editorFont
-        ed.background = style.editorScheme.defaultBackground
+        style.applyTranscriptToField(ed)
+        ed.background = SessionUiStyle.Colors.codeBlockBackground()
 
         // Pre-fill with saved text. This call also forces lazy document creation so
         // that addDocumentListener can install on a non-null document immediately.
@@ -544,13 +556,43 @@ class QuestionView(
 
     @RequiresEdt
     private fun syncEditorHeight(ed: SessionEditorTextField) {
-        val editor = ed.getEditor(false)
+        syncEditorHeight(ed, ed.getEditor(false))
+    }
+
+    @RequiresEdt
+    private fun syncEditorHeight(ed: SessionEditorTextField, editor: EditorEx?) {
         val estimated = estimatedLines(ed)
         val lines = maxOf(editor?.offsetToVisualPosition(editor.document.textLength)?.line?.plus(1) ?: estimated, estimated)
         val line = editor?.lineHeight ?: ed.getFontMetrics(ed.font).height
-        val height = line * lines.coerceAtLeast(1) + JBUI.scale(16)
+        val min = line + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val content = line * lines.coerceAtLeast(1) + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val cap = rootCap(min)
+        val height = minOf(content, cap ?: content).coerceAtLeast(min)
+        syncEditorScroll(editor, content > height)
+        // height is already scaled px (from the editor lineHeight); assign with plain
+        // Dimension so IDE zoom does not scale it again via the user scale factor.
         ed.preferredSize = Dimension(0, height)
         ed.minimumSize = Dimension(0, height)
+    }
+
+    @RequiresEdt
+    private fun syncEditorScroll(ed: EditorEx?, overflow: Boolean) {
+        // AS_NEEDED keeps the standard auto-hiding editor scrollbar (appears on
+        // scroll/hover, fades on inactivity); NEVER hides it entirely when the
+        // content fits so no bar is shown at all.
+        ed?.scrollPane?.verticalScrollBarPolicy = if (overflow) {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        } else {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+        }
+    }
+
+    @RequiresEdt
+    private fun rootCap(min: Int): Int? {
+        val root = SwingUtilities.getAncestorOfClass(SessionRootPanel::class.java, this) as? SessionRootPanel
+            ?: return null
+        if (root.height <= 0) return null
+        return (root.height / 3).coerceAtLeast(min)
     }
 
     @RequiresEdt
@@ -652,13 +694,13 @@ class QuestionView(
             layout = if (center) GridBagLayout() else BoxLayout(this, BoxLayout.Y_AXIS)
             addMouseListener(press)
         }
-        val label = text(opt.label, UiStyle.Colors.fg(), true)
+        val label = text(opt.label, SessionUiStyle.Colors.foreground(), true)
         label.alignmentX = Component.LEFT_ALIGNMENT
         label.addMouseListener(press)
         col.add(label)
 
         if (opt.description.isNotBlank()) {
-            val desc = text(opt.description, UiStyle.Colors.weak())
+            val desc = text(opt.description, SessionUiStyle.Text.Secondary.foreground())
             desc.alignmentX = Component.LEFT_ALIGNMENT
             desc.addMouseListener(press)
             col.add(desc)
@@ -800,11 +842,4 @@ class QuestionView(
         return true
     }
 
-    @RequiresEdt
-    private fun refresh() {
-        revalidate()
-        repaint()
-        parent?.revalidate()
-        parent?.repaint()
-    }
 }

@@ -23,6 +23,30 @@ export interface WorktreeDiffSourceOptions {
    * the current branch — only the comparison target changes. Reset on dispose.
    */
   baseBranchOverride?: string
+  /**
+   * Resolve the directory to diff. Defaults to the VS Code workspace root.
+   * Agent Manager passes a worktree path so the source diffs inside the
+   * worktree rather than the main checkout.
+   */
+  dir?: () => string | undefined
+  /**
+   * When true, a `dir` that resolves to undefined yields an empty diff rather
+   * than falling back to the workspace root. Prevents an unresolvable
+   * worktree context from silently diffing the main checkout.
+   */
+  strictDir?: boolean
+  /**
+   * Explicit base branch to diff against. When set, the source skips
+   * auto-resolution (tracking → default) and diffs against this ref directly.
+   * Agent Manager passes the worktree's recorded parent so a worktree always
+   * compares against its own base even when the workspace default differs.
+   */
+  baseBranch?: string
+  /** Shared GitOps / log so sources don't each spawn their own channel. */
+  git?: GitOps
+  log?: (...args: unknown[]) => void
+  summary?: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
+  file?: (dir: string, base: string, file: string, signal?: AbortSignal) => Promise<WorktreeDiffEntry | null>
 }
 
 /**
@@ -32,9 +56,18 @@ export interface WorktreeDiffSourceOptions {
  * extension host — no `kilo serve` round-trip.
  */
 export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): DiffSource {
-  const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
-  const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
-  const git = new GitOps({ log })
+  const output = opts.git ? undefined : vscode.window.createOutputChannel("Kilo Diff: Workspace")
+  const log = opts.log ?? ((...args: unknown[]) => appendOutput(output!, "WorktreeDiffSource", ...args))
+  const git = opts.git ?? new GitOps({ log })
+  const controller = new AbortController()
+  let warmed = false
+
+  const root = (): string | undefined => {
+    const dir = opts.dir?.()
+    if (dir) return dir
+    if (opts.strictDir) return undefined
+    return getWorkspaceRoot()
+  }
 
   // Cached between fetches so repeated polling doesn't re-resolve the base
   // branch every tick. Reset only on dispose (when the source is swapped out).
@@ -42,27 +75,39 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
 
   const resolveTarget = async (): Promise<DiffTarget | undefined> => {
     if (target) return target
+    if (opts.baseBranch) {
+      const dir = root()
+      if (!dir) {
+        log("Local diff: no directory (explicit base mode)")
+        return
+      }
+      target = { directory: dir, baseBranch: opts.baseBranch }
+      log(`Local diff: using explicit base=${opts.baseBranch} dir=${dir}`)
+      return target
+    }
     if (opts.baseBranchOverride) {
-      const root = getWorkspaceRoot()
-      if (!root) {
+      const dir = root()
+      if (!dir) {
         log("Local diff: no workspace root (override mode)")
         return
       }
-      const resolved = await resolveOverrideRef(git, root, opts.baseBranchOverride, log)
+      const resolved = await resolveOverrideRef(git, dir, opts.baseBranchOverride, log)
       if (!resolved) {
         log(`Local diff: override base="${opts.baseBranchOverride}" could not be resolved, falling back to auto`)
       } else {
-        target = { directory: root, baseBranch: resolved }
+        target = { directory: dir, baseBranch: resolved }
         log(`Local diff: using override base=${resolved}`)
         return target
       }
     }
-    target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
+    target = await resolveLocalDiffTarget(git, log, root())
     return target
   }
 
   const status: StatusResolver = async (current, file) => {
-    const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+    const entry = opts.file
+      ? await opts.file(current.directory, current.baseBranch, file)
+      : await diffFile(git, current.directory, current.baseBranch, file, log)
     return entry?.status
   }
 
@@ -73,8 +118,20 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       const current = await resolveTarget()
       if (!current) return { diffs: [] }
 
-      const entries = await diffSummary(git, current.directory, current.baseBranch, log)
+      const entries = opts.summary
+        ? await opts.summary(current.directory, current.baseBranch)
+        : await diffSummary(git, current.directory, current.baseBranch, log)
       const diffs = entries.map(toDiffFile)
+      if (!warmed && opts.file && !controller.signal.aborted) {
+        warmed = true
+        const initial = entries.filter((entry) => entry.summarized && !entry.kind && !entry.generatedLike).slice(0, 2)
+        for (const entry of initial) {
+          if (!entry.file) continue
+          void opts.file(current.directory, current.baseBranch, entry.file, controller.signal).catch((err) => {
+            log("Failed to prefetch initial diff:", err)
+          })
+        }
+      }
       log(`Diff: ${diffs.length} file(s)`)
       return { diffs }
     },
@@ -85,7 +142,9 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       if (!current) return null
 
       try {
-        const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+        const entry = opts.file
+          ? await opts.file(current.directory, current.baseBranch, file, controller.signal)
+          : await diffFile(git, current.directory, current.baseBranch, file, log)
         if (!entry) return null
         return toDiffFile(entry)
       } catch (err) {
@@ -109,8 +168,11 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
     },
 
     dispose(): void {
-      git.dispose()
-      output.dispose()
+      // Only dispose resources we own (created here). Injected git/log are
+      // owned by the caller.
+      if (!opts.git) git.dispose()
+      output?.dispose()
+      controller.abort()
       target = undefined
     },
   }

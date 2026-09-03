@@ -1,0 +1,252 @@
+# kilocode_change - new file
+name: docs-sync
+
+# Daily bot: collects PRs merged to Kilo-Org/cloud and Kilo-Org/kilocode,
+# triages them for docs relevance, runs Kilo CLI headless to update
+# packages/kilo-docs, and maintains one rolling PR for human review.
+#
+# Security posture: scheduled/manual runs check out the dispatched ref and may
+# push/comment with write permissions and org secrets. PR runs (paths-limited to
+# this workflow and .github/docs-sync/**) execute branch code only in a
+# read-only, secretless `selftest` job that never pushes, comments, or calls an
+# LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+# State is derived from the bot's own PRs (watermark marker in the PR body), so
+# missed or failed runs self-heal on the next run.
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # 07:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Override watermark (ISO date, e.g. 2026-07-20). Default: last processed-through marker, 72h fallback, 14d cap."
+        required: false
+        type: string
+      dry_run:
+        description: "Collect + triage only, no edits, no PR"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - ".github/docs-sync/**"
+      - ".github/workflows/docs-sync.yml"
+
+permissions:
+  contents: write # push the rolling branch, create the auto-docs label
+  pull-requests: write # create/update the rolling PR
+  issues: write # comment on the rolling PR
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('docs-sync-pr-{0}', github.event.pull_request.number) || 'docs-sync' }}
+  cancel-in-progress: false
+
+env:
+  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilo/moonshotai/kimi-k3' }}
+  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
+
+jobs:
+  selftest:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
+
+  sync:
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 2 upsert = 238 min, 12-minute reserve.
+    # These are ceilings, not costs: a caught-up run triages ~2 chunks and edits
+    # ~1 batch and finishes in ~25 min. The old 35/50 pair was the binding
+    # constraint on backlog drain — run 30306629290 deferred 54 PRs untriaged and
+    # 31 unedited purely on budget, with no attempt made. See the throughput note
+    # in the PR description for the arithmetic.
+    timeout-minutes: 250
+    env:
+      # Both are required: without KILO_ORG_ID the gateway bills the key
+      # owner's personal balance (402 "Add credits") instead of the org.
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # prepare-branch merges main into the rolling branch
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
+
+      - name: Install Kilo CLI
+        run: |
+          npm install -g @kilocode/cli
+          kilo --version
+
+      - name: Resolve watermark
+        id: wm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SINCE: ${{ inputs.since }}
+        run: node .github/docs-sync/watermark.mjs
+
+      - name: Learn from maintainer corrections
+        id: learn
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEARNINGS_BUDGET_MINUTES: "10"
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node .github/docs-sync/learn.mjs
+
+      - name: Collect merged PRs
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/docs-sync/collect.mjs --since "${{ steps.wm.outputs.since }}"
+
+      - name: Triage merged PRs (LLM, chunked)
+        id: triage
+        if: steps.collect.outputs.count != '0'
+        env:
+          SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
+          # Default 35 fit only 8 of 11 chunks on a 254-PR window. Headroom for
+          # --auto making chunks slower now that the agent really runs commands.
+          TRIAGE_BUDGET_MINUTES: "90"
+        run: node .github/docs-sync/triage.mjs
+
+      - name: Filter docs-worthy PRs
+        id: worthy
+        if: steps.collect.outputs.count != '0'
+        run: |
+          node .github/docs-sync/filter-worthy.mjs \
+            docs-sync-out/digest-full.json docs-sync-out/triage.json docs-sync-out/worthy.json
+          count=$(node -p "require('./docs-sync-out/worthy.json').length")
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" = "0" ]; then
+            echo "No docs-worthy PRs in this window; skipping edit/verify/PR."
+          fi
+
+      - name: Setup Bun
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        uses: ./.github/actions/setup-bun
+
+      - name: Prepare rolling branch
+        id: prep
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/docs-sync/prepare-branch.mjs
+
+      # After prepare-branch checks out the rolling branch and merges main, the
+      # worktree holds main's scripts. Restore the dispatched ref's copies so a
+      # branch-dispatch AC9 run actually exercises the fixed code. git restore
+      # (not checkout) leaves them unstaged so upsert-pr's bare commit won't
+      # include them in the docs PR.
+      - name: Restore docs-sync scripts from the dispatched ref
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        run: git restore --source=${{ github.sha }} -- .github/docs-sync
+
+      - name: Update docs (Kilo CLI, batched)
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        continue-on-error: true
+        env:
+          # Default 50 fit only 4 of 11 batches. A healthy --auto batch is ~8 min,
+          # and edit.mjs will not start a batch without EDIT_BATCH_TIMEOUT_MINUTES
+          # (15) left, so 120 covers 14 batches = 70 PRs against ~5 worthy/day.
+          EDIT_BUDGET_MINUTES: "120"
+        run: node .github/docs-sync/edit.mjs
+
+      - name: Verify docs build and tests
+        id: verify
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: |
+          set -o pipefail
+          { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify.log
+
+      - name: Fix verify failures (one pass)
+        id: fix
+        if: steps.verify.outcome == 'failure'
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: |
+          set -o pipefail
+          # Headless kilo run auto-rejects every permission ask; the runner has no
+          # user config granting bash, so without --auto the agent cannot run ordinary
+          # shell commands against the repository.
+          kilo run --auto "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+            -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
+            | node .github/docs-sync/redact-stream.mjs \
+            | tee -a docs-sync-out/edit-log.txt \
+            || echo "::warning::kilo fix pass exited nonzero; re-verifying anyway"
+          # The rebuild below decides this step's outcome, not the agent's exit code.
+          # Without the guard above, `set -o pipefail` + the default `bash -e` would
+          # abort here once the CLI half of this PR ships: a mid-stream session error
+          # (or an auto-rejected ask) exits 1, verify2.log is never written, and
+          # `Re-verify status` reports VERIFIED=false even when the docs build fine.
+          { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
+
+      - name: Re-verify status
+        id: verified
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          FIX_OUTCOME: ${{ steps.fix.outcome }}
+        run: |
+          if [ "$VERIFY_OUTCOME" = "success" ] || [ "$FIX_OUTCOME" = "success" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write the learnings file
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        run: node .github/docs-sync/learn.mjs --apply
+
+      - name: Upsert rolling PR
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
+          PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
+          SINCE: ${{ steps.wm.outputs.since }}
+          SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
+          BRANCH: ${{ steps.prep.outputs.branch }}
+          PREP_MODE: ${{ steps.prep.outputs.mode }}
+          PR_NUMBER: ${{ steps.prep.outputs.pr_number }}
+          VERIFIED: ${{ steps.verified.outputs.ok }}
+        run: node .github/docs-sync/upsert-pr.mjs
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-out
+          path: docs-sync-out/
+          retention-days: 14
+          if-no-files-found: ignore

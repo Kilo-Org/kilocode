@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway, kodlama ajanları için optimize edilmiş güvenilir modellere erişim sağlar.",
-  "provider.connect.kiloGateway.line2":
-    "Tek bir API anahtarıyla Claude, GPT, Gemini, GLM ve daha fazlası gibi modellere erişebilirsiniz.",
-  "provider.connect.kiloGateway.visit.prefix": "API anahtarınızı almak için ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " adresini ziyaret edin.",
   "provider.connect.kiloGateway.byok.prefix": "Daha fazla kullanım istatistiği için ",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway üzerinden BYOK",
   "provider.connect.kiloGateway.byok.suffix": " kullanın.",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Akıllı yönlendirme ile AI modellerine birleşik erişim",
 
   // Reasoning block label
-  "ui.permission.run": "Çalıştır",
   "ui.reasoning.label": "Akıl Yürütme",
 
   // Marketplace
-  "marketplace.tab.skills": "Yetenekler",
-  "marketplace.tab.mcpServers": "MCP Sunucuları",
-  "marketplace.category.all": "Tümü",
-  "marketplace.placeholder": "Uygulanacak",
   "marketplace.card.installed": "Yüklendi",
   "marketplace.card.install": "Yükle",
   "marketplace.card.remove": "Kaldır",
@@ -42,6 +30,26 @@ export const dict = {
   "marketplace.install.scope": "Kapsam",
   "marketplace.install.scope.project": "Proje",
   "marketplace.install.scope.global": "Genel",
+  "marketplace.install.scope.project.description":
+    "Yalnızca bu proje. Yüklenen dosyalar sürüm kontrolüne eklenebilir ve ekibinizle paylaşılabilir.",
+  "marketplace.install.scope.global.description": "Bu makinedeki tüm projeler. Kullanıcı yapılandırmanızda saklanır.",
+  "marketplace.install.destination": "Yükleme hedefi",
+  "marketplace.install.about.mcp":
+    "Bir MCP sunucusu, harici hizmetler veya yerel programlarla çalışmak için Kilo'ya ek araçlar sağlar.",
+  "marketplace.install.about.agent":
+    "Bir ajan, kendi talimatları ve izinleri olan yeniden kullanılabilir bir rol ekler.",
+  "marketplace.install.about.skill":
+    "Bir yetenek, Kilo'nun gerektiğinde yükleyebileceği göreve özel talimatlar ve kaynaklar ekler.",
+  "marketplace.install.mcp.warning":
+    "MCP sunucuları yerel komutları çalıştırabilir veya harici hizmetlere bağlanabilir. İzinleriniz otomatik olarak izin vermediği sürece Kilo, araçlarını kullanmadan önce izin ister.",
+  "marketplace.install.project.warning":
+    "Proje dosyaları sürüm kontrolüne eklenebilir. Yapılandırma bir ortam değişkenine başvurmuyorsa gizli bilgileri burada saklamayın.",
+  "marketplace.install.learnMore": "Marketplace yüklemelerinin nasıl çalıştığını öğrenin",
+  "marketplace.install.learnMcp": "MCP hakkında daha fazla bilgi edinin",
+  "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
+  "marketplace.intro":
+    "Yeniden kullanılabilir ajanları, yetenekleri ve MCP araçlarını bir proje veya tüm projeler için yükleyin.",
+  "marketplace.intro.learnMore": "Marketplace hakkında",
   "marketplace.install.prerequisites": "Ön koşullar",
   "marketplace.install.installing": "Yükleniyor...",
   "marketplace.install.cancel": "İptal",
@@ -54,19 +62,17 @@ export const dict = {
     "Bu {{type}} öğesini kaldırmak istediğinizden emin misiniz? Bu, {{scope}} yapılandırmanızdan kaldırılacaktır.",
   "marketplace.remove.cancel": "İptal",
   "marketplace.remove.confirm.button": "Kaldır",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Ajanlar",
   "marketplace.search": "Ara...",
   "marketplace.filter.all": "Tüm Öğeler",
   "marketplace.filter.notInstalled": "Yüklü Değil",
+  "marketplace.filter.relevant": "Çalışma alanımla ilgili",
   "marketplace.empty": "Öğe bulunamadı",
+  "marketplace.empty.relevant": "Bu çalışma alanıyla ilgili marketplace öğesi bulunamadı.",
   "marketplace.badge.mcpServer": "MCP Sunucusu",
-  "marketplace.badge.mode": "Mod",
   "marketplace.card.by": "{{author}} tarafından",
   "marketplace.install.method": "Yükleme Yöntemi",
   "marketplace.install.parameters": "Parametreler",
   "marketplace.install.optional": "(isteğe bağlı)",
-  "marketplace.install.required": "{{name}} gereklidir",
   "marketplace.scope.project": "proje",
   "marketplace.scope.global": "genel",
   "marketplace.remove.type.mcp": "MCP sunucusu",
@@ -92,6 +98,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
   "plan.followup.answer.continue": "Burada devam et",
   "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
+  "plan.followup.answer.keepRefining": "İyileştirmeye devam et",
+  "plan.followup.answer.keepRefining.description": "Henüz uygulamadan planlamaya devam et",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Anlık görüntü yavaş",
@@ -106,8 +114,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Fark Görüntüleyicide Aç",
-  "ui.messagePart.shell.command": "Komut",
-  "ui.messagePart.shell.output": "Çıktı",
   "ui.messagePart.openInEditor": "Düzenleyicide Aç",
 
   // Message feedback (thumbs up/down per assistant response)

@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { t } from "./shims/i18n"
+import { t } from "../i18n"
 
 export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider {
   public readonly providedCodeActionKinds = {

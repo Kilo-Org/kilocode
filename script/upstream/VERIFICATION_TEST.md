@@ -42,10 +42,10 @@ Start the CLI from this branch with `bun install` if dependencies are missing, t
   What is my favourite animal?
   ```
 
-- Find `/local-review` and run it:
+- Find `/review` and run it:
 
   ```text
-  /local-review
+  /review branch
   ```
 
 - Change from Code mode to Ask mode and ask what it can do:

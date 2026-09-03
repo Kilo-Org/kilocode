@@ -1,16 +1,19 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Image } from "@/image/image"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Cause, Deferred, Effect, Exit, Layer, Context, Scope, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import { Snapshot } from "@/snapshot"
-import * as Session from "./session"
+import { Session } from "./session"
 import { LLM } from "./llm"
 import { MessageV2 } from "./message-v2"
 import { isOverflow } from "./overflow"
+import { RuntimeFlags } from "@/effect/runtime-flags" // kilocode_change - configured output token ceiling
 import { PartID } from "./schema"
 import type { SessionID } from "./schema"
 import { SessionRetry } from "./retry"
@@ -20,31 +23,27 @@ import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
+import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
-import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { SessionEvent } from "@opencode-ai/core/session-event"
-import { ModelV2 } from "@opencode-ai/core/model"
-import { ProviderV2 } from "@opencode-ai/core/provider"
-import * as DateTime from "effect/DateTime"
-import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Database } from "@opencode-ai/core/database/database"
 import { Usage, type LLMEvent } from "@opencode-ai/llm"
 
 const DOOM_LOOP_THRESHOLD = 3
-const log = Log.create({ service: "session.processor" })
-
 export type Result = "compact" | "stop" | "continue"
 
 export interface Handle {
-  readonly message: MessageV2.Assistant
+  readonly message: SessionV1.Assistant
   readonly updateToolCall: (
     toolCallID: string,
-    update: (part: MessageV2.ToolPart) => MessageV2.ToolPart,
-  ) => Effect.Effect<MessageV2.ToolPart | undefined>
+    update: (part: SessionV1.ToolPart) => SessionV1.ToolPart,
+  ) => Effect.Effect<SessionV1.ToolPart | undefined>
   // kilocode_change start
   readonly metadata: (
     toolCallID: string,
@@ -57,7 +56,7 @@ export interface Handle {
       title: string
       metadata: Record<string, any>
       output: string
-      attachments?: MessageV2.FilePart[]
+      attachments?: SessionV1.FilePart[]
     },
   ) => Effect.Effect<void>
   readonly process: (streamInput: LLM.StreamInput) => Effect.Effect<Result>
@@ -65,7 +64,7 @@ export interface Handle {
 }
 
 type Input = {
-  assistantMessage: MessageV2.Assistant
+  assistantMessage: SessionV1.Assistant
   sessionID: SessionID
   model: Provider.Model
   // kilocode_change start
@@ -79,11 +78,10 @@ export interface Interface {
 }
 
 type ToolCall = {
-  partID: MessageV2.ToolPart["id"]
-  messageID: MessageV2.ToolPart["messageID"]
-  sessionID: MessageV2.ToolPart["sessionID"]
+  partID: SessionV1.ToolPart["id"]
+  messageID: SessionV1.ToolPart["messageID"]
+  sessionID: SessionV1.ToolPart["sessionID"]
   done: Deferred.Deferred<void>
-  inputEnded: boolean
 }
 
 interface ProcessorContext extends Input {
@@ -94,10 +92,11 @@ interface ProcessorContext extends Input {
   blocked: boolean
   needsCompaction: boolean
   compactionError: ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
-  currentText: MessageV2.TextPart | undefined
-  reasoningMap: Record<string, MessageV2.ReasoningPart>
+  currentText: SessionV1.TextPart | undefined
+  reasoningMap: Record<string, SessionV1.ReasoningPart>
   // kilocode_change start
   stepStart: number
+  stepStartDate: number | undefined
   step: { reasoning: boolean; text: boolean; tool: boolean }
   // kilocode_change end
 }
@@ -106,12 +105,11 @@ type StreamEvent = LLMEvent
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionProcessor") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const session = yield* Session.Service
     const config = yield* Config.Service
-    const bus = yield* Bus.Service
     const snapshot = yield* Snapshot.Service
     const agents = yield* Agent.Service
     const llm = yield* LLM.Service
@@ -122,7 +120,8 @@ export const layer = Layer.effect(
     const status = yield* SessionStatus.Service
     const image = yield* Image.Service
     const events = yield* EventV2Bridge.Service
-    const flags = yield* RuntimeFlags.Service
+    const database = yield* Database.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
 
     const create = Effect.fn("SessionProcessor.create")(function* (input: Input) {
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
@@ -151,18 +150,27 @@ export const layer = Layer.effect(
         // kilocode_change start
         telemetry: input.telemetry,
         stepStart: 0,
+        stepStartDate: undefined,
         step: { reasoning: false, text: false, tool: false },
         // kilocode_change end
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
-      const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
+      let attempt = KiloSessionProcessor.attempt() // kilocode_change
 
+      // kilocode_change start
       const parse = (e: unknown) =>
-        MessageV2.fromError(e, {
+        KiloSessionProcessor.parseError(e, {
           providerID: input.model.providerID,
           aborted,
         })
+      const retryParse = (e: unknown) => {
+        const error = parse(e)
+        if (e instanceof KiloSessionProcessor.IncompleteResponseError) return KiloSessionProcessor.blockRetry(error)
+        if (attempt.text || attempt.reasoning || attempt.tool) return KiloSessionProcessor.blockRetry(error)
+        return error
+      }
+      // kilocode_change end
 
       const settleToolCall = Effect.fn("SessionProcessor.settleToolCall")(function* (toolCallID: string) {
         const done = ctx.toolcalls[toolCallID]?.done
@@ -192,7 +200,10 @@ export const layer = Layer.effect(
         const fresh = yield* MessageV2.get({
           sessionID: ctx.assistantMessage.sessionID,
           messageID: ctx.assistantMessage.id,
-        }).pipe(Effect.catchTag("NotFoundError", () => Effect.void))
+        }).pipe(
+          Effect.provideService(Database.Service, database),
+          Effect.catchTag("NotFoundError", () => Effect.void),
+        )
         if (fresh?.info.role !== "assistant") return
         if (fresh.info.cost <= ctx.assistantMessage.cost) return
         ctx.assistantMessage.cost = fresh.info.cost
@@ -201,7 +212,7 @@ export const layer = Layer.effect(
 
       const updateToolCall = Effect.fn("SessionProcessor.updateToolCall")(function* (
         toolCallID: string,
-        update: (part: MessageV2.ToolPart) => MessageV2.ToolPart,
+        update: (part: SessionV1.ToolPart) => SessionV1.ToolPart,
       ) {
         const match = yield* readToolCall(toolCallID)
         if (!match) return undefined
@@ -221,10 +232,13 @@ export const layer = Layer.effect(
         input: { title?: string; metadata?: Record<string, any> },
       ) {
         const match = yield* readToolCall(toolCallID)
+        // approval provenance is written once during ask() and must survive later tool metadata writes
         if (!match || match.part.state.status !== "running") {
+          const prev = ctx.toolmeta[toolCallID]
           ctx.toolmeta[toolCallID] = {
-            ...ctx.toolmeta[toolCallID],
+            ...prev,
             ...input,
+            metadata: PermissionProvenance.carryApproval(prev?.metadata, input.metadata),
           }
           return
         }
@@ -235,7 +249,7 @@ export const layer = Layer.effect(
             state: {
               ...part.state,
               title: input.title ?? part.state.title,
-              metadata: input.metadata ?? part.state.metadata,
+              metadata: PermissionProvenance.carryApproval(part.state.metadata, input.metadata) ?? part.state.metadata,
             },
           }
         })
@@ -248,18 +262,22 @@ export const layer = Layer.effect(
           title: string
           metadata: Record<string, any>
           output: string
-          attachments?: MessageV2.FilePart[]
+          attachments?: SessionV1.FilePart[]
         },
       ) {
         const match = yield* readToolCall(toolCallID)
         if (!match || match.part.state.status !== "running") return
+        // kilocode_change start - preserve approval provenance recorded during permission checks
+        const prior = isRecord(match.part.state.metadata) ? match.part.state.metadata : undefined
+        const metadata = PermissionProvenance.carryApproval(prior, output.metadata) ?? output.metadata
+        // kilocode_change end
         yield* session.updatePart({
           ...match.part,
           state: {
             status: "completed",
             input: match.part.state.input,
             output: output.output,
-            metadata: output.metadata,
+            metadata, // kilocode_change - merged to keep approval
             title: output.title,
             time: { start: match.part.state.time.start, end: Date.now() },
             attachments: output.attachments,
@@ -282,13 +300,14 @@ export const layer = Layer.effect(
             status: "error",
             input: match.part.state.input,
             error: errorMessage(error),
-            metadata: match.part.state.metadata, // kilocode_change - preserve running tool metadata on failure
+            // Keep metadata streamed while running so failures retain progress detail (e.g. execute's child calls).
+            metadata: match.part.state.metadata,
             time: { start: match.part.state.time.start, end: Date.now() },
           },
         })
         // kilocode_change start
         if (
-          error instanceof Permission.RejectedError ||
+          (error instanceof PermissionV1.RejectedError && !(yield* session.get(ctx.sessionID)).parentID) ||
           error instanceof Question.RejectedError ||
           error instanceof Suggestion.DismissedError
         ) {
@@ -301,15 +320,6 @@ export const layer = Layer.effect(
 
       const finishReasoning = Effect.fn("SessionProcessor.finishReasoning")(function* (reasoningID: string) {
         if (!(reasoningID in ctx.reasoningMap)) return
-        // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-        if (flags.experimentalEventSystem) {
-          yield* events.publish(SessionEvent.Reasoning.Ended, {
-            sessionID: ctx.sessionID,
-            reasoningID,
-            text: ctx.reasoningMap[reasoningID].text,
-            timestamp: DateTime.makeUnsafe(Date.now()),
-          })
-        }
         // oxlint-disable-next-line no-self-assign -- reactivity trigger
         ctx.reasoningMap[reasoningID].text = ctx.reasoningMap[reasoningID].text
         ctx.reasoningMap[reasoningID].time = { ...ctx.reasoningMap[reasoningID].time, end: Date.now() }
@@ -337,15 +347,6 @@ export const layer = Layer.effect(
           }
           return { call: ctx.toolcalls[input.id], part }
         }
-        // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-        if (flags.experimentalEventSystem) {
-          yield* events.publish(SessionEvent.Tool.Input.Started, {
-            sessionID: ctx.sessionID,
-            callID: input.id,
-            name: input.name,
-            timestamp: DateTime.makeUnsafe(Date.now()),
-          })
-        }
         const part = yield* session.updatePart({
           id: PartID.ascending(),
           messageID: ctx.assistantMessage.id,
@@ -355,22 +356,21 @@ export const layer = Layer.effect(
           callID: input.id,
           state: { status: "pending", input: {}, raw: "" },
           metadata: input.providerExecuted ? { providerExecuted: true } : undefined,
-        } satisfies MessageV2.ToolPart)
+        } satisfies SessionV1.ToolPart)
         ctx.toolcalls[input.id] = {
           done: yield* Deferred.make<void>(),
           partID: part.id,
           messageID: part.messageID,
           sessionID: part.sessionID,
-          inputEnded: false,
         }
         return { call: ctx.toolcalls[input.id], part }
       })
 
-      const isFilePart = (value: unknown): value is MessageV2.FilePart => Schema.is(MessageV2.FilePart)(value)
+      const isFilePart = (value: unknown): value is SessionV1.FilePart => Schema.is(SessionV1.FilePart)(value)
 
       const toolResultOutput = (
         value: Extract<StreamEvent, { type: "tool-result" }>,
-      ): { title: string; metadata: Record<string, any>; output: string; attachments?: MessageV2.FilePart[] } => {
+      ): { title: string; metadata: Record<string, any>; output: string; attachments?: SessionV1.FilePart[] } => {
         if (isRecord(value.result.value) && typeof value.result.value.output === "string") {
           return {
             title: typeof value.result.value.title === "string" ? value.result.value.title : value.name,
@@ -389,21 +389,11 @@ export const layer = Layer.effect(
         }
       }
 
-      const toolInput = (value: unknown): Record<string, any> => (isRecord(value) ? value : { value })
-
       const handleEvent = Effect.fnUntraced(function* (value: StreamEvent) {
+        KiloSessionProcessor.observe(attempt, value) // kilocode_change
         switch (value.type) {
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
-            ctx.step.reasoning = true // kilocode_change
-            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (flags.experimentalEventSystem) {
-              yield* events.publish(SessionEvent.Reasoning.Started, {
-                sessionID: ctx.sessionID,
-                reasoningID: value.id,
-                timestamp: DateTime.makeUnsafe(Date.now()),
-              })
-            }
             ctx.reasoningMap[value.id] = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -420,6 +410,7 @@ export const layer = Layer.effect(
             // Match dev: silently drop orphan deltas (no preceding reasoning-start).
             if (!(value.id in ctx.reasoningMap)) return
             ctx.reasoningMap[value.id].text += value.text
+            if (value.text.trim()) ctx.step.reasoning = true // kilocode_change
             if (value.providerMetadata) ctx.reasoningMap[value.id].metadata = value.providerMetadata
             yield* session.updatePartDelta({
               sessionID: ctx.reasoningMap[value.id].sessionID,
@@ -441,64 +432,27 @@ export const layer = Layer.effect(
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.name}`)
             }
-            ctx.step.tool = true // kilocode_change
+            // kilocode_change start
+            ctx.step.tool = true
+            // kilocode_change end
             yield* ensureToolCall(value)
             return
 
+          // kilocode_change start - upstream calls ensureToolCall here, which creates a part when none
+          // exists and so resurrects a settled call as pending. Nothing else is needed from these two:
+          // tool-call carries the full input, and the v2 runner publishes the input events.
           case "tool-input-delta":
-            // AI SDK emits a final `tool-call` with the parsed `input`; accumulating
-            // delta fragments into `state.raw` is redundant work for no current consumer.
+          case "tool-input-end":
             return
-
-          case "tool-input-end": {
-            const toolCall = yield* ensureToolCall(value)
-            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (flags.experimentalEventSystem) {
-              yield* events.publish(SessionEvent.Tool.Input.Ended, {
-                sessionID: ctx.sessionID,
-                callID: value.id,
-                text: "",
-                timestamp: DateTime.makeUnsafe(Date.now()),
-              })
-            }
-            ctx.toolcalls[value.id] = { ...toolCall.call, inputEnded: true }
-            return
-          }
+          // kilocode_change end
 
           case "tool-call": {
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.name}`)
             }
-            // kilocode_change start
-            ctx.step.tool = true
-            // kilocode_change end
-            const toolCall = yield* ensureToolCall(value)
-            const input = toolInput(value.input)
-            if (!toolCall.call.inputEnded) {
-              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (flags.experimentalEventSystem) {
-                yield* events.publish(SessionEvent.Tool.Input.Ended, {
-                  sessionID: ctx.sessionID,
-                  callID: value.id,
-                  text: "",
-                  timestamp: DateTime.makeUnsafe(Date.now()),
-                })
-              }
-            }
-            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (flags.experimentalEventSystem) {
-              yield* events.publish(SessionEvent.Tool.Called, {
-                sessionID: ctx.sessionID,
-                callID: value.id,
-                tool: value.name,
-                input,
-                provider: {
-                  executed: toolCall.part.metadata?.providerExecuted === true,
-                  ...(value.providerMetadata ? { metadata: value.providerMetadata } : {}),
-                },
-                timestamp: DateTime.makeUnsafe(Date.now()),
-              })
-            }
+            ctx.step.tool = true // kilocode_change
+            yield* ensureToolCall(value)
+            const input = isRecord(value.input) ? value.input : { value: value.input }
             // kilocode_change start - apply metadata buffered before the running transition
             const meta = ctx.toolmeta[value.id]
             yield* updateToolCall(value.id, (match) => ({
@@ -526,7 +480,9 @@ export const layer = Layer.effect(
             delete ctx.toolmeta[value.id]
             // kilocode_change end
 
-            const parts = MessageV2.parts(ctx.assistantMessage.id)
+            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
             const recentParts = parts.slice(-DOOM_LOOP_THRESHOLD)
 
             if (
@@ -556,9 +512,20 @@ export const layer = Layer.effect(
 
           case "tool-result": {
             const toolCall = yield* readToolCall(value.id)
+            if (!toolCall && value.result.type === "error") return
+            if (value.result.type === "error") {
+              yield* failToolCall(value.id, value.result.value)
+              return
+            }
             const rawOutput = toolResultOutput(value)
+            // kilocode_change start — send_file delivery attachments (up to 4 MiB raw)
+            // must reach mobile byte-for-byte. Base64-encoded images near the cap can
+            // exceed the generic 5 MiB normalization limit, causing rewrites or omission
+            // after the tool reports success. These attachments are delivery-only; the
+            // existing message-v2 filter already strips them from model context.
+            const skipNormalization = value.name === "send_file"
             const normalized = yield* Effect.forEach(rawOutput.attachments ?? [], (attachment) =>
-              attachment.mime.startsWith("image/")
+              attachment.mime.startsWith("image/") && !skipNormalization
                 ? image.normalize(attachment).pipe(
                     Effect.catchIf(
                       (error) => error instanceof Image.ResizerUnavailableError,
@@ -566,8 +533,9 @@ export const layer = Layer.effect(
                     ),
                     Effect.exit,
                   )
-                : Effect.succeed(Exit.succeed<MessageV2.FilePart>(attachment)),
+                : Effect.succeed(Exit.succeed<SessionV1.FilePart>(attachment)),
             )
+            // kilocode_change end
             const omitted = normalized.filter(Exit.isFailure).length
             const attachments = normalized.filter(Exit.isSuccess).map((item) => item.value)
             const output = {
@@ -577,30 +545,6 @@ export const layer = Layer.effect(
                   ? rawOutput.output
                   : `${rawOutput.output}\n\n[${omitted} image${omitted === 1 ? "" : "s"} omitted: could not be resized below the image size limit.]`,
               attachments: attachments.length ? attachments : undefined,
-            }
-            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (flags.experimentalEventSystem) {
-              yield* events.publish(SessionEvent.Tool.Success, {
-                sessionID: ctx.sessionID,
-                callID: value.id,
-                structured: output.metadata,
-                content: [
-                  {
-                    type: "text",
-                    text: output.output,
-                  },
-                  ...(output.attachments?.map((item: MessageV2.FilePart) => ({
-                    type: "file" as const,
-                    uri: item.url,
-                    mime: item.mime,
-                    name: item.filename,
-                  })) ?? []),
-                ],
-                provider: {
-                  executed: value.providerExecuted === true || toolCall?.part.metadata?.providerExecuted === true,
-                },
-                timestamp: DateTime.makeUnsafe(Date.now()),
-              })
             }
             yield* completeToolCall(value.id, output)
             // kilocode_change start - dismissed suggestions stop the turn after persisting normalized output
@@ -612,22 +556,6 @@ export const layer = Layer.effect(
           }
 
           case "tool-error": {
-            const toolCall = yield* readToolCall(value.id)
-            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (flags.experimentalEventSystem) {
-              yield* events.publish(SessionEvent.Tool.Failed, {
-                sessionID: ctx.sessionID,
-                callID: value.id,
-                error: {
-                  type: "unknown",
-                  message: value.message,
-                },
-                provider: {
-                  executed: toolCall?.part.metadata?.providerExecuted === true,
-                },
-                timestamp: DateTime.makeUnsafe(Date.now()),
-              })
-            }
             yield* failToolCall(value.id, value.error ?? new Error(value.message))
             return
           }
@@ -638,6 +566,7 @@ export const layer = Layer.effect(
           case "step-start":
             // kilocode_change start
             ctx.stepStart = performance.now()
+            ctx.stepStartDate = Date.now()
             ctx.step = { reasoning: false, text: false, tool: false }
             if (!ctx.snapshot)
               ctx.snapshot = yield* snapshot.track({
@@ -646,32 +575,31 @@ export const layer = Layer.effect(
                 snapshotInitialization: input.snapshotInitialization,
               })
             // kilocode_change end
-            if (!ctx.assistantMessage.summary) {
-              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (flags.experimentalEventSystem) {
-                yield* events.publish(SessionEvent.Step.Started, {
-                  sessionID: ctx.sessionID,
-                  agent: input.assistantMessage.agent,
-                  model: {
-                    id: ModelV2.ID.make(ctx.model.id),
-                    providerID: ProviderV2.ID.make(ctx.model.providerID),
-                    variant: ModelV2.VariantID.make(input.assistantMessage.variant ?? "default"),
-                  },
-                  snapshot: ctx.snapshot,
-                  timestamp: DateTime.makeUnsafe(Date.now()),
-                })
-              }
-            }
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
+              time: { start: ctx.stepStartDate }, // kilocode_change
             })
             return
 
           case "step-finish": {
+            // kilocode_change start - retry only terminally incomplete attempts before settlement
+            if (
+              KiloSessionProcessor.replayable({
+                finish: attempt.finish,
+                text: attempt.text,
+                reasoning: attempt.reasoning,
+                tool: attempt.tool,
+                usage: attempt.usage,
+              })
+            )
+              return yield* Effect.fail(
+                new KiloSessionProcessor.IncompleteResponseError(KiloResponseMetadata.read(value.providerMetadata)),
+              )
+            // kilocode_change end
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
               sessionID: ctx.sessionID,
@@ -685,31 +613,35 @@ export const layer = Layer.effect(
               usage: value.usage ?? new Usage({}),
               metadata: value.providerMetadata,
             })
+            // kilocode_change start
+            const model = KiloRoutedModel.readAuto(value.providerMetadata, {
+              providerID: ctx.model.providerID,
+              modelID: ctx.model.id,
+              selected: ctx.assistantMessage.modelID,
+            })
+            const generationID = KiloSessionProcessor.generationID(value.providerMetadata)
+            const vercelID = KiloResponseMetadata.read(value.providerMetadata)
+            // kilocode_change end
             // kilocode_change start - guard against finish-step without start-step:
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
+            const endDate = Date.now()
+            const elapsedMs = Math.round(performance.now() - (ctx.stepStart || performance.now()))
+            const startDate = ctx.stepStartDate ?? (Number.isFinite(elapsedMs) ? endDate - elapsedMs : endDate)
+            const metrics = KiloSessionProcessor.computeMetrics({
+              providerMetadata: value.providerMetadata,
+              tokens: usage.tokens,
+              elapsedMs,
+            })
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
+              elapsed: elapsedMs,
               telemetry: ctx.telemetry,
             })
             // kilocode_change end
-            if (!ctx.assistantMessage.summary) {
-              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (flags.experimentalEventSystem) {
-                yield* events.publish(SessionEvent.Step.Ended, {
-                  sessionID: ctx.sessionID,
-                  finish: value.reason,
-                  cost: usage.cost,
-                  tokens: usage.tokens,
-                  snapshot: completedSnapshot,
-                  timestamp: DateTime.makeUnsafe(Date.now()),
-                })
-              }
-            }
             ctx.assistantMessage.finish = value.reason
             // kilocode_change start - capture any subagent cost propagated by tool calls during this step (#6321)
             yield* reconcile()
@@ -723,6 +655,11 @@ export const layer = Layer.effect(
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
+              time: { start: startDate, end: endDate, elapsed: elapsedMs }, // kilocode_change
+              ...(model ? { model } : {}), // kilocode_change
+              ...(generationID ? { generationID } : {}), // kilocode_change
+              ...(vercelID ? { vercelID } : {}), // kilocode_change
+              ...(metrics ? { metrics } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,
             })
@@ -800,15 +737,6 @@ export const layer = Layer.effect(
           }
 
           case "text-start":
-            if (!ctx.assistantMessage.summary) {
-              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (flags.experimentalEventSystem) {
-                yield* events.publish(SessionEvent.Text.Started, {
-                  sessionID: ctx.sessionID,
-                  timestamp: DateTime.makeUnsafe(Date.now()),
-                })
-              }
-            }
             ctx.currentText = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -848,17 +776,10 @@ export const layer = Layer.effect(
               },
               { text: ctx.currentText.text },
             )).text
-            if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
-            if (!ctx.assistantMessage.summary) {
-              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (flags.experimentalEventSystem) {
-                yield* events.publish(SessionEvent.Text.Ended, {
-                  sessionID: ctx.sessionID,
-                  text: ctx.currentText.text,
-                  timestamp: DateTime.makeUnsafe(Date.now()),
-                })
-              }
-            }
+            if (ctx.currentText.text.trim()) {
+              attempt.text = true // kilocode_change
+              ctx.step.text = true
+            } // kilocode_change
             {
               const end = Date.now()
               ctx.currentText.time = { start: ctx.currentText.time?.start ?? end, end }
@@ -930,7 +851,12 @@ export const layer = Layer.effect(
         }
         ctx.toolcalls = {}
         ctx.toolmeta = {} // kilocode_change
-        KiloSessionProcessor.guardEmptyToolCalls(ctx.assistantMessage, MessageV2.parts(ctx.assistantMessage.id)) // kilocode_change
+        // kilocode_change start - read parts through the upstream Effect database
+        KiloSessionProcessor.guardEmptyToolCalls(
+          ctx.assistantMessage,
+          yield* MessageV2.parts(ctx.assistantMessage.id).pipe(Effect.provideService(Database.Service, database)),
+        )
+        // kilocode_change end
         ctx.assistantMessage.time.completed = Date.now()
         // kilocode_change start - reconcile cost with any subagent propagation written during tool calls (#6321)
         yield* reconcile()
@@ -945,31 +871,32 @@ export const layer = Layer.effect(
           return
         }
         // kilocode_change end
-        slog.error("process", { error: errorMessage(e), stack: e instanceof Error ? e.stack : undefined })
+        yield* Effect.logError("process", {
+          "session.id": input.sessionID,
+          messageID: input.assistantMessage.id,
+          error: errorMessage(e),
+          stack: e instanceof Error ? e.stack : undefined,
+        })
         const error = parse(e)
         // kilocode_change start
+        if (e instanceof KiloSessionProcessor.IncompleteResponseError) ctx.assistantMessage.finish = "unknown"
         ctx.compactionError = MessageV2.ContextOverflowError.isInstance(error) ? error : ctx.compactionError
         // kilocode_change end
         if (MessageV2.ContextOverflowError.isInstance(error)) {
+          // respect compaction.auto === false by surfacing overflow as a hard error instead of auto-compacting
+          if ((yield* config.get()).compaction?.auto === false && !ctx.assistantMessage.summary) {
+            ctx.assistantMessage.error = error
+            ctx.assistantMessage.finish = "error"
+            yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+            yield* status.set(ctx.sessionID, { type: "idle" })
+            return
+          }
           ctx.needsCompaction = true
-          yield* bus.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
           return
         }
-        if (!ctx.assistantMessage.summary) {
-          // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-          if (flags.experimentalEventSystem) {
-            yield* events.publish(SessionEvent.Step.Failed, {
-              sessionID: ctx.sessionID,
-              error: {
-                type: "unknown",
-                message: errorMessage(e),
-              },
-              timestamp: DateTime.makeUnsafe(Date.now()),
-            })
-          }
-        }
         ctx.assistantMessage.error = error
-        yield* bus.publish(Session.Event.Error, {
+        yield* events.publish(Session.Event.Error, {
           sessionID: ctx.assistantMessage.sessionID,
           error: ctx.assistantMessage.error,
         })
@@ -983,80 +910,136 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       const process = Effect.fn("SessionProcessor.process")(function* (streamInput: LLM.StreamInput) {
-        slog.info("process")
+        yield* Effect.logInfo("process", {
+          "session.id": input.sessionID,
+          messageID: input.assistantMessage.id,
+        })
+        // kilocode_change start - a deleted session cannot accept EventV2 writes under core FK enforcement
+        const exists = yield* session.get(ctx.sessionID).pipe(
+          Effect.as(true),
+          Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+        )
+        if (!exists) return "stop"
+        // kilocode_change end
         ctx.needsCompaction = false
         ctx.compactionError = undefined // kilocode_change
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
         return yield* Effect.gen(function* () {
-          yield* Effect.gen(function* () {
+          // kilocode_change start - publish retry state consistently for provider and empty-response retries
+          const retries = { provider: 0 }
+          const setRetry = (info: {
+            attempt: number
+            message: string
+            action?: SessionRetry.Retryable["action"]
+            next: number
+          }) => {
+            return status.set(ctx.sessionID, {
+              type: "retry",
+              attempt: info.attempt,
+              message: info.message,
+              action: info.action,
+              next: info.next,
+            })
+          }
+
+          const request = () =>
+            Effect.gen(function* () {
+              ctx.currentText = undefined
+              ctx.reasoningMap = {}
+              yield* status.set(ctx.sessionID, { type: "busy" })
+              ctx.step = { reasoning: false, text: false, tool: false }
+              const stream = llm.stream({
+                ...streamInput,
+                preflight: !ctx.assistantMessage.summary,
+              })
+
+              yield* stream.pipe(
+                Stream.tap((event) => handleEvent(event)),
+                Stream.takeUntil(() => ctx.needsCompaction),
+                Stream.runDrain,
+              )
+            }).pipe(
+              Effect.onInterrupt(() =>
+                Effect.gen(function* () {
+                  aborted = true
+                  ac.abort() // kilocode_change — also abort offline handler
+                  if (!ctx.assistantMessage.error) {
+                    yield* halt(new DOMException("Aborted", "AbortError"))
+                  }
+                }),
+              ),
+              Effect.catchCauseIf(
+                (cause) => !Cause.hasInterruptsOnly(cause),
+                (cause) => Effect.fail(Cause.squash(cause)),
+              ),
+              Effect.retry(
+                SessionRetry.policy({
+                  provider: input.model.providerID,
+                  parse: retryParse,
+                  ...KiloSessionProcessor.retryOpts({
+                    sessionID: ctx.sessionID,
+                    abort: ac.signal,
+                    set: status.set,
+                    used: retries.provider,
+                  }),
+                  set: (info) => {
+                    if (info.attempt > 0) retries.provider += 1
+                    return setRetry(info)
+                  },
+                }),
+              ),
+            )
+
+          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (baseline: Set<string>) {
+            yield* Effect.forEach(
+              Object.values(ctx.toolcalls),
+              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
+              { concurrency: "unbounded" },
+            )
+            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            yield* Effect.forEach(
+              parts.filter((part) => !baseline.has(part.id)),
+              (part) =>
+                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
+              { concurrency: 1 },
+            )
             ctx.currentText = undefined
             ctx.reasoningMap = {}
-            yield* status.set(ctx.sessionID, { type: "busy" })
-            // kilocode_change start
-            ctx.step = { reasoning: false, text: false, tool: false }
-            const stream = llm.stream({
-              ...streamInput,
-              preflight: !ctx.assistantMessage.summary,
-            })
-            // kilocode_change end
+            ctx.toolcalls = {}
+            ctx.toolmeta = {}
+            ctx.assistantMessage.finish = undefined
+          })
 
-            yield* stream.pipe(
-              Stream.tap((event) => handleEvent(event)),
-              Stream.takeUntil(() => ctx.needsCompaction),
-              Stream.runDrain,
-            )
-          }).pipe(
-            Effect.onInterrupt(() =>
-              Effect.gen(function* () {
-                aborted = true
-                ac.abort() // kilocode_change — also abort offline handler
-                if (!ctx.assistantMessage.error) {
-                  yield* halt(new DOMException("Aborted", "AbortError"))
-                }
+          const recover = () => {
+            const baseline = new Set<string>()
+            return KiloSessionProcessor.recover({
+              run: Effect.fn("SessionProcessor.incompleteAttempt")(function* () {
+                baseline.clear()
+                for (const part of yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+                  Effect.provideService(Database.Service, database),
+                ))
+                  baseline.add(part.id)
+                attempt = KiloSessionProcessor.attempt()
+                yield* request()
               }),
-            ),
-            Effect.catchCauseIf(
-              (cause) => !Cause.hasInterruptsOnly(cause),
-              (cause) => Effect.fail(Cause.squash(cause)),
-            ),
-            Effect.retry(
-              SessionRetry.policy({
-                provider: input.model.providerID,
-                parse,
-                // kilocode_change start
-                ...KiloSessionProcessor.retryOpts({ sessionID: ctx.sessionID, abort: ac.signal, set: status.set }),
-                // kilocode_change end
-                set: (info) => {
-                  // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-                  const event = flags.experimentalEventSystem
-                    ? events.publish(SessionEvent.Retried, {
-                        sessionID: ctx.sessionID,
-                        attempt: info.attempt,
-                        error: {
-                          message: info.message,
-                          isRetryable: true,
-                        },
-                        timestamp: DateTime.makeUnsafe(Date.now()),
-                      })
-                    : Effect.void
-                  return event.pipe(
-                    Effect.andThen(
-                      status.set(ctx.sessionID, {
-                        type: "retry",
-                        attempt: info.attempt,
-                        message: info.message,
-                        action: info.action,
-                        next: info.next,
-                      }),
-                    ),
-                  )
-                },
-              }),
-            ),
-            Effect.catch(halt),
-            Effect.ensuring(cleanup()),
-          )
+              replayable: () =>
+                KiloSessionProcessor.replayable({
+                  finish: attempt.finish,
+                  text: attempt.text,
+                  reasoning: attempt.reasoning,
+                  tool: attempt.tool,
+                  usage: attempt.usage,
+                }),
+              discard: () => discard(baseline),
+              set: setRetry,
+            })
+          }
+
+          yield* recover().pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
+          // kilocode_change end
 
           if (ctx.needsCompaction) return "compact"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"
@@ -1080,22 +1063,24 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(Snapshot.defaultLayer),
-    Layer.provide(Agent.defaultLayer),
-    Layer.provide(LLM.defaultLayer),
-    Layer.provide(Permission.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(SessionSummary.defaultLayer),
-    Layer.provide(SessionStatus.defaultLayer),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(Bus.layer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(RuntimeFlags.defaultLayer),
-    Layer.provide(EventV2Bridge.defaultLayer),
-  ),
-)
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [
+    Session.node,
+    Config.node,
+    Snapshot.node,
+    Agent.node,
+    LLM.node,
+    Permission.node,
+    Plugin.node,
+    SessionSummary.node,
+    SessionStatus.node,
+    Image.node,
+    EventV2Bridge.node,
+    Database.node,
+    RuntimeFlags.node, // kilocode_change
+  ],
+})
 
 export * as SessionProcessor from "./processor"

@@ -1,4 +1,4 @@
-import type { FillInAtCursorSuggestion, MatchingSuggestionResult } from "../types"
+import type { FillInAtCursorSuggestion, MatchingSuggestionResult, PendingRequest } from "../types"
 
 export interface MatchingSuggestionWithFillIn extends MatchingSuggestionResult {
   fillInAtCursor: FillInAtCursorSuggestion
@@ -12,12 +12,14 @@ const MAX_DEBOUNCE_DELAY_MS = 1000
  * Searches from most recent to least recent.
  */
 export function findMatchingSuggestion(
+  scope: string,
   prefix: string,
   suffix: string,
   suggestionsHistory: FillInAtCursorSuggestion[],
 ): MatchingSuggestionWithFillIn | null {
   for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
     const fillInAtCursor = suggestionsHistory[i]!
+    if (scope !== fillInAtCursor.scope) continue
 
     if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
       return { text: fillInAtCursor.text, matchType: "exact", fillInAtCursor }
@@ -38,6 +40,19 @@ export function findMatchingSuggestion(
       const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
       return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion", fillInAtCursor }
     }
+  }
+  return null
+}
+
+export function findCoveringPendingRequest(
+  scope: string,
+  prefix: string,
+  suffix: string,
+  requests: PendingRequest[],
+): PendingRequest | null {
+  for (const request of requests) {
+    if (scope !== request.scope || suffix !== request.suffix) continue
+    if (prefix.startsWith(request.prefix)) return request
   }
   return null
 }

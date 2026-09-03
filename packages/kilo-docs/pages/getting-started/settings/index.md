@@ -27,6 +27,14 @@ This is especially useful for complex configuration like custom model definition
 
 ## Managing Settings
 
+Kilo reads JSONC config from a **global** location (`~/.config/kilo/kilo.jsonc`) and from your **project** (`kilo.jsonc`, or `.kilo/kilo.jsonc`). All clients — CLI, VS Code, and JetBrains — read the same files.
+
+If `kilo.json` or the legacy `opencode.json`, `opencode.jsonc`, or `config.json` files exist in the same locations, Kilo reads and deep-merges them as well. Clearing a setting in the Settings UI (for example, setting a model back to "Not set") removes it from every config file that contains it.
+
+{% callout type="warning" %}
+**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+{% /callout %}
+
 {% tabs %}
 {% tab label="VSCode" %}
 
@@ -59,6 +67,18 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Prompt-Training Model Visibility
+
+Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.
+
+You can also enable it in `kilo.jsonc`:
+
+```json
+{
+  "hide_prompt_training_models": true
+}
+```
+
 ### Reasoning Blocks
 
 Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
@@ -84,6 +104,10 @@ Valid values are `expanded` and `collapsed`.
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+### Web Search
+
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
 
 ### Export and Import
 
@@ -141,62 +165,13 @@ For **session** export and import, use the CLI commands:
 - `kilo import` -- import session data
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Kilo Code allows you to manage your configuration settings effectively through export, import, and reset options. These features are useful for backing up your setup, sharing configurations with others, or restoring default settings if needed.
-
-You can find these options at the bottom of the Kilo Code settings page, accessible via the gear icon ({% codicon name="gear" /%}) in the Kilo Code chat view.
-
-{% image src="/docs/img/settings-management/settings-management.png" alt="Export, Import, and Reset buttons in Kilo Code settings" width="800" caption="Export, Import, and Reset buttons" /%}
-
-### Export Settings
-
-Clicking the **Export** button saves your current Kilo Code settings to a JSON file.
-
-- **What's Exported:** The file includes your configured API Provider Profiles and Global Settings (UI preferences, mode configurations, context settings, etc.).
-- **Security Warning:** The exported JSON file contains **all** your configured API Provider Profiles and Global Settings. Crucially, this includes **API keys in plaintext**. Treat this file as highly sensitive. Do not share it publicly or with untrusted individuals, as it grants access to your API accounts.
-- **Process:**
-  1.  Click **Export**.
-  2.  A file save dialog appears, suggesting `kilo-code-settings.json` as the filename (usually in your `~/Documents` folder).
-  3.  Choose a location and save the file.
-
-This creates a backup of your configuration or a file you can share.
-
-### Import Settings
-
-Clicking the **Import** button allows you to load settings from a previously exported JSON file.
-
-- **Process:**
-  1.  Click **Import**.
-  2.  A file open dialog appears. Select the `kilo-code-settings.json` file (or similarly named file) you want to import.
-  3.  Kilo Code reads the file, validates its contents against the expected schema, and applies the settings.
-- **Merging:** Importing settings **merges** the configurations. It adds new API profiles and updates existing ones and global settings based on the file content. It does **not** delete configurations present in your current setup but missing from the imported file.
-- **Validation:** Only valid settings matching the internal schema can be imported, preventing configuration errors. A success notification appears upon completion.
-
-### Reset Settings
-
-Clicking the **Reset** button completely clears all Kilo Code configuration data and returns the extension to its default state. This is a destructive action intended for troubleshooting or starting fresh.
-
-- **Warning:** This action is **irreversible**. It permanently deletes all API configurations (including keys stored in secret storage), custom modes, global settings, and task history.
-
-- **Process:**
-  1.  Click the red **Reset** button.
-  2.  A confirmation dialog appears, warning that the action cannot be undone.
-  3.  Click "Yes" to confirm.
-
-- **What is Reset:**
-  - **API Provider Profiles:** All configurations are deleted from settings and secret storage.
-  - **Global Settings:** All preferences (UI, modes, approvals, browser, etc.) are reset to defaults.
-  - **Custom Modes:** All user-defined modes are deleted.
-  - **Secret Storage:** All API keys and other secrets managed by Kilo Code are cleared.
-  - **Task History:** The current task stack is cleared.
-
-- **Result:** Kilo Code returns to its initial state, as if freshly installed, with default settings and no user configurations.
-
-Use this option only if you are certain you want to remove all Kilo Code data or if instructed during troubleshooting. Consider exporting your settings first if you might want to restore them later.
-
-{% /tab %}
 {% /tabs %}
+
+## Sandbox
+
+On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** settings tab. The sandbox is disabled by default. When enabled, it limits agent filesystem writes and can block outbound network access from model-originated tools. Windows users do not see these settings because Windows sandboxing is not supported.
+
+See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructions, the exact filesystem and network boundaries, and platform limitations.
 
 ## Experimental Features
 
@@ -211,6 +186,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -218,7 +194,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 ```json
 {
   "experimental": {
-    "codebase_search": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
@@ -232,60 +207,26 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 {% /tab %}
 {% tab label="CLI" %}
 
-The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, telemetry, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+The CLI does not expose these options through an IDE settings panel. Configure model behavior, permissions, telemetry, and other advanced options directly in JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
 Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in `kilo.jsonc` to opt out. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the environment, the CLI also exports OpenTelemetry traces and logs to that OTLP HTTP endpoint.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-{% callout type="info" %}
-These features are experimental and may change in future releases. They provide advanced control over Kilo Code's behavior for specific use cases.
-{% /callout %}
-
-### Concurrent File Edits
-
-When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit one file at a time.
-
-**When to disable:**
-
-- Working with less capable models that struggle with complex multi-file operations
-- You want more granular control over file modifications
-- Debugging issues with file editing behavior
-
-**Default:** Enabled
-
-### Power Steering
-
-When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This leads to stronger adherence to role definitions and custom instructions, but will use more tokens per message.
-
-**When to enable:**
-
-- Working with custom modes that have specific role definitions
-- You need stricter adherence to custom instructions
-- The model is deviating from the intended mode behavior
-
-**Trade-off:** Increased token usage per message in exchange for better mode adherence.
-
-**Default:** Disabled
-
-Learn more about [Custom Modes](/docs/customize/custom-modes) and how Power Steering can improve mode behavior.
-
-### File Read Auto-Truncate Threshold
-
-This setting controls the number of lines read from a file in one batch. To manage large files and reduce context/resource usage, adjust the `File read auto-truncate threshold` setting.
-
-**When to adjust:**
-
-- Working with very large files that consume too much context
-- Need to improve performance when reading large files
-- Want to reduce token usage for file operations
-
-**Trade-off:** Lower values can improve performance when working with very large files, but may require more read operations to access the full file content.
-
-**Default:** Set in Advanced Settings
-
-You can find this setting in the Kilo Code settings under 'Advanced Settings'.
-
-{% /tab %}
 {% /tabs %}
+
+### Kilo Swarm
+
+Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+
+Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+
+Use it when agents can benefit from discoveries during work:
+
+- **Search races:** agents try independent approaches to the same problem and share useful findings.
+- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+
+Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+
+All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.

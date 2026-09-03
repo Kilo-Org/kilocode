@@ -4,9 +4,9 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
-import { resolveTreeSitterEnv } from "./cli-resources"
+import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
-import { parseServerPort } from "./server-utils"
+import { scanServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -15,9 +15,10 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+const STARTUP_OUTPUT_LIMIT = 1024
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
-type ServerExitListener = (code: number | null) => void
+type ServerExitListener = (code: number | null, signal: NodeJS.Signals | null) => void
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -29,7 +30,12 @@ export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | und
 }
 
 export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, KILO_DISABLE_CHANNEL_DB: "true" }
+  return {
+    ...env,
+    KILO_DISABLE_CHANNEL_DB: "true",
+    // VS Code does not consume the backend's file.watcher.updated events.
+    KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
+  }
 }
 
 export class ServerManager {
@@ -39,6 +45,7 @@ export class ServerManager {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly onExit?: ServerExitListener,
+    private readonly env?: () => Promise<Record<string, string>>,
   ) {}
 
   /**
@@ -84,6 +91,7 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[Kilo New] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
+    const extraEnv = await this.env?.()
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
@@ -94,6 +102,10 @@ export class ServerManager {
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
       fs.mkdirSync(spawnCwd, { recursive: true })
       const indexingEnv = resolveIndexingEnv(folders)
+      const localCli =
+        this.context.extensionMode === vscode.ExtensionMode.Development ||
+        fs.existsSync(path.join(this.context.extensionPath, "bin", ".cli-version"))
+      const bwrapEnv = process.env.KILO_BWRAP_PATH ? {} : resolveLocalBwrapEnv(this.context.extensionPath, localCli)
       // TLS / corporate-proxy support:
       //   - Default NODE_USE_SYSTEM_CA=1 so the bundled Bun CLI trusts the OS
       //     trust store (Windows cert store, macOS keychain, Linux /etc/ssl).
@@ -127,6 +139,9 @@ export class ServerManager {
           // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
           MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
+          // The CLI watches this PID and exits if the extension host is hard-killed without a
+          // chance to run dispose(), so it is never orphaned. See parent-watchdog.ts.
+          KILO_PARENT_PID: String(process.pid),
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension",
@@ -138,9 +153,12 @@ export class ServerManager {
           KILO_MACHINE_ID: vscode.env.machineId,
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
+          KILOCODE_VERSION: this.context.extension.packageJSON.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
+          ...bwrapEnv,
+          ...extraEnv,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
@@ -148,13 +166,16 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      let output = ""
       const stderrLines: string[] = []
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
-        const output = data.toString()
-        console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
+        const chunk = data.toString()
+        console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", chunk)
 
-        const port = parseServerPort(output)
+        const state = scanServerPort(output, chunk, STARTUP_OUTPUT_LIMIT)
+        output = state.output
+        const port = state.port
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
@@ -168,25 +189,36 @@ export class ServerManager {
         stderrLines.push(errorOutput)
       })
 
-      serverProcess.on("error", (error) => {
-        console.error("[Kilo New] ServerManager: ❌ Process error:", error)
+      serverProcess.on("error", (err: NodeJS.ErrnoException) => {
+        console.error("[Kilo New] ServerManager: ❌ Process error:", err)
         if (!resolved) {
-          reject(error)
+          const spawnErr = err as NodeJS.ErrnoException & { spawnargs?: string[] }
+          const code = err.code || err.name || "UNKNOWN"
+          const header = t("server.spawnFailed", { code })
+          const lines = [
+            `Error: ${err.message}`,
+            ...(err.code ? [`Code: ${err.code}`] : []),
+            ...(err.errno !== undefined ? [`Errno: ${err.errno}`] : []),
+            ...(err.syscall ? [`Syscall: ${err.syscall}`] : []),
+            ...(err.path ? [`Path: ${err.path}`] : []),
+            ...(Array.isArray(spawnErr.spawnargs) ? [`Spawn args: ${JSON.stringify(spawnErr.spawnargs)}`] : []),
+          ]
+          const { userMessage, userDetails } = toErrorMessage(header, [...lines, ...stderrLines], cliPath)
+          reject(new ServerStartupError(userMessage, userDetails))
         }
       })
 
-      serverProcess.on("exit", (code) => {
-        console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
+      serverProcess.on("exit", (code, signal) => {
+        console.warn("[Kilo New] ServerManager: 🛑 Process exited:", { code, signal })
         if (this.instance?.process === serverProcess) {
           this.instance = null
-          this.onExit?.(code)
+          this.onExit?.(code, signal)
         }
         if (!resolved) {
-          const { userMessage, userDetails } = toErrorMessage(
-            t("server.processExited", { code: code ?? "null" }),
-            stderrLines,
-            cliPath,
-          )
+          const msg = signal
+            ? t("server.processSignaled", { signal })
+            : t("server.processExited", { code: code ?? "unknown" })
+          const { userMessage, userDetails } = toErrorMessage(msg, stderrLines, cliPath)
           reject(new ServerStartupError(userMessage, userDetails))
         }
       })

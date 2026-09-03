@@ -3,6 +3,7 @@ import type { AnnotationSide, DiffLineAnnotation, SelectedLineRange } from "@pie
 import { markdownCommentBlocks, type MarkdownRange } from "./markdown-comment-ranges"
 import type { AnnotationMeta } from "./review-annotations"
 import { annotationSelector, isAnnotationMutation } from "./markdown-annotation-mutation"
+import { markdownRenderedChildren } from "./markdown-rendered-children"
 
 type Insert = "after" | "list" | "table"
 
@@ -24,16 +25,6 @@ export interface MarkdownAnnotationLayerProps {
   onLineNumberClick: ((event: { annotationSide: AnnotationSide; lineNumber: number }) => void) | undefined
 }
 
-function children(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.children).filter((child): child is HTMLElement => {
-    if (!(child instanceof HTMLElement)) return false
-    if (child.classList.contains("am-markdown-inline-annotations")) return false
-    if (child.classList.contains("am-markdown-list-annotation")) return false
-    if (child.classList.contains("am-markdown-table-annotation")) return false
-    return true
-  })
-}
-
 function listItems(root: HTMLElement): HTMLElement[] {
   return Array.from(root.children).filter((child): child is HTMLElement => {
     if (!(child instanceof HTMLElement)) return false
@@ -49,7 +40,7 @@ function tableRows(root: HTMLElement): HTMLElement[] {
 }
 
 function anchors(root: HTMLElement, source: ReturnType<typeof markdownCommentBlocks>): Anchor[] {
-  const rendered = children(root)
+  const rendered = markdownRenderedChildren(root)
   const result: Anchor[] = []
   let index = 0
 
@@ -154,12 +145,16 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
     }
 
     const paneBox = pane.getBoundingClientRect()
+    let bottom = 0
     for (const anchor of list) {
       const box = anchor.element.getBoundingClientRect()
       const row = document.createElement("div")
       row.className = "am-markdown-target"
-      row.style.top = `${box.top - paneBox.top}px`
-      row.style.height = `${Math.max(20, box.height)}px`
+      const height = Math.max(20, box.height)
+      const top = Math.max(box.top - paneBox.top, bottom)
+      row.style.top = `${top}px`
+      row.style.height = `${height}px`
+      bottom = top + height
 
       if (props.enableGutterUtility) {
         const button = document.createElement("button")
@@ -188,7 +183,7 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
       layer.appendChild(row)
     }
 
-    observer?.observe(root, { childList: true, subtree: true })
+    observer?.observe(pane, { childList: true, subtree: true })
   }
 
   createEffect(() => {
@@ -204,14 +199,14 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
   })
 
   createEffect(() => {
-    const root = props.root()
-    if (!root) return
+    const pane = props.pane()
+    if (!pane) return
     observer?.disconnect()
     observer = new MutationObserver((mutations) => {
       if (mutations.every(isAnnotationMutation)) return
       schedule()
     })
-    observer.observe(root, { childList: true, subtree: true })
+    observer.observe(pane, { childList: true, subtree: true })
   })
 
   onCleanup(() => {

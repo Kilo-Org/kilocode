@@ -1,11 +1,13 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import type { AuthOAuthResult, Hooks } from "@kilocode/plugin"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
-import { optionalOmitUndefined } from "@opencode-ai/core/schema"
+import { optional } from "@opencode-ai/core/schema"
 import { Plugin } from "../plugin"
-import { ProviderID } from "./schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "effect"
+import { errorMessage } from "@/util/error" // kilocode_change
 
 // kilocode_change start
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -22,14 +24,14 @@ const TextPrompt = Schema.Struct({
   type: Schema.Literal("text"),
   key: Schema.String,
   message: Schema.String,
-  placeholder: optionalOmitUndefined(Schema.String),
-  when: optionalOmitUndefined(When),
+  placeholder: optional(Schema.String),
+  when: optional(When),
 })
 
 const SelectOption = Schema.Struct({
   label: Schema.String,
   value: Schema.String,
-  hint: optionalOmitUndefined(Schema.String),
+  hint: optional(Schema.String),
 })
 
 const SelectPrompt = Schema.Struct({
@@ -37,7 +39,7 @@ const SelectPrompt = Schema.Struct({
   key: Schema.String,
   message: Schema.String,
   options: Schema.Array(SelectOption),
-  when: optionalOmitUndefined(When),
+  when: optional(When),
 })
 
 const Prompt = Schema.Union([TextPrompt, SelectPrompt])
@@ -45,7 +47,7 @@ const Prompt = Schema.Union([TextPrompt, SelectPrompt])
 export class Method extends Schema.Class<Method>("ProviderAuthMethod")({
   type: Schema.Literals(["oauth", "api"]),
   label: Schema.String,
-  prompts: optionalOmitUndefined(Schema.Array(Prompt)),
+  prompts: optional(Schema.Array(Prompt)),
 }) {}
 
 export const Methods = Schema.Record(Schema.String, Schema.Array(Method))
@@ -70,11 +72,11 @@ export const CallbackInput = Schema.Struct({
 export type CallbackInput = Schema.Schema.Type<typeof CallbackInput>
 
 export class OauthMissing extends Schema.TaggedErrorClass<OauthMissing>()("ProviderAuthOauthMissing", {
-  providerID: ProviderID,
+  providerID: ProviderV2.ID,
 }) {}
 
 export class OauthCodeMissing extends Schema.TaggedErrorClass<OauthCodeMissing>()("ProviderAuthOauthCodeMissing", {
-  providerID: ProviderID,
+  providerID: ProviderV2.ID,
 }) {}
 
 export class OauthCallbackFailed extends Schema.TaggedErrorClass<OauthCallbackFailed>()(
@@ -95,29 +97,27 @@ export interface Interface {
   readonly methods: () => Effect.Effect<Methods>
   readonly authorize: (
     input: {
-      providerID: ProviderID
+      providerID: ProviderV2.ID
     } & AuthorizeInput,
   ) => Effect.Effect<Authorization | undefined, Error>
-  readonly callback: (input: { providerID: ProviderID } & CallbackInput) => Effect.Effect<void, Error>
+  readonly callback: (input: { providerID: ProviderV2.ID } & CallbackInput) => Effect.Effect<void, Error>
 }
 
 interface State {
-  hooks: Record<ProviderID, Hook>
-  pending: Map<ProviderID, AuthOAuthResult>
+  hooks: Record<ProviderV2.ID, Hook>
+  pending: Map<ProviderV2.ID, AuthOAuthResult>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ProviderAuth") {}
 
 export const use = serviceUse(Service)
 
-// kilocode_change start
-export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
-    const cache = yield* ModelCache.Service
-    // kilocode_change end
+    const cache = yield* ModelCache.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()
@@ -125,11 +125,11 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
           hooks: Record.fromEntries(
             Arr.filterMap(plugins, (x) =>
               x.auth?.provider !== undefined
-                ? Result.succeed([ProviderID.make(x.auth.provider), x.auth] as const)
+                ? Result.succeed([ProviderV2.ID.make(x.auth.provider), x.auth] as const)
                 : Result.failVoid,
             ),
           ),
-          pending: new Map<ProviderID, AuthOAuthResult>(),
+          pending: new Map<ProviderV2.ID, AuthOAuthResult>(),
         }
       }),
     )
@@ -168,7 +168,7 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
     })
 
     const authorize = Effect.fn("ProviderAuth.authorize")(function* (
-      input: { providerID: ProviderID } & AuthorizeInput,
+      input: { providerID: ProviderV2.ID } & AuthorizeInput,
     ) {
       const { hooks, pending } = yield* InstanceState.get(state)
       const method = hooks[input.providerID].methods[input.method]
@@ -183,7 +183,12 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
         }
       }
 
-      const result = yield* Effect.promise(() => method.authorize(input.inputs))
+      // kilocode_change start
+      const result = yield* Effect.tryPromise({
+        try: () => method.authorize(input.inputs),
+        catch: (err) => new Auth.AuthError({ message: errorMessage(err), cause: err }),
+      })
+      // kilocode_change end
       pending.set(input.providerID, result)
       return {
         url: result.url,
@@ -192,7 +197,9 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
       }
     })
 
-    const callback = Effect.fn("ProviderAuth.callback")(function* (input: { providerID: ProviderID } & CallbackInput) {
+    const callback = Effect.fn("ProviderAuth.callback")(function* (
+      input: { providerID: ProviderV2.ID } & CallbackInput,
+    ) {
       const pending = (yield* InstanceState.get(state)).pending
       const match = pending.get(input.providerID)
       if (!match) return yield* new OauthMissing({ providerID: input.providerID })
@@ -242,14 +249,6 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
   }),
 )
 
-// kilocode_change start
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer),
-  ),
-)
-// kilocode_change end
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [Auth.node, Plugin.node, ModelCache.node] }) // kilocode_change
 
 export * as ProviderAuth from "./auth"

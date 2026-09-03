@@ -12,4 +12,11 @@ describe("FreeModelDisclosure", () => {
     expect(FreeModelDisclosure.collectsData({ mayTrainOnYourPrompts: false })).toBe(false)
     expect(FreeModelDisclosure.collectsData({})).toBe(false)
   })
+
+  test("uses only explicit user BYOK metadata", () => {
+    expect(FreeModelDisclosure.byok).toBe("BYOK")
+    expect(FreeModelDisclosure.hasByok({ hasUserByokAvailable: true })).toBe(true)
+    expect(FreeModelDisclosure.hasByok({ hasUserByokAvailable: false })).toBe(false)
+    expect(FreeModelDisclosure.hasByok({})).toBe(false)
+  })
 })

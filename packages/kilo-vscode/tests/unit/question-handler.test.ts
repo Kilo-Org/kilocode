@@ -29,7 +29,7 @@ function ctx(
     dirs?: Map<string, string>
     extra?: string[]
     pending?: Record<string, QuestionRequest[]>
-    errors?: { list?: Record<string, unknown>; reply?: unknown; reject?: unknown }
+    errors?: { list?: Record<string, unknown>; reply?: unknown | unknown[]; reject?: unknown | unknown[] }
     changeOnList?: string
     removeOnList?: string
   } = {},
@@ -42,7 +42,11 @@ function ctx(
   const dirs = opts.dirs ?? new Map<string, string>()
   let revision = 0
   let changed = false
+  let reply = 0
+  let reject = 0
   const removed = new Set<string>()
+  const failure = (value: unknown | unknown[] | undefined, index: number) =>
+    Array.isArray(value) ? value[index] : value
   const client = {
     question: {
       list: async (args: { directory?: string }) => {
@@ -63,12 +67,14 @@ function ctx(
       },
       reply: async (args: unknown) => {
         replies.push(args)
-        if (opts.errors?.reply) throw opts.errors.reply
+        const error = failure(opts.errors?.reply, reply++)
+        if (error) throw error
         return { data: true }
       },
       reject: async (args: unknown) => {
         rejects.push(args)
-        if (opts.errors?.reject) throw opts.errors.reject
+        const error = failure(opts.errors?.reject, reject++)
+        if (error) throw error
         return { data: true }
       },
     },
@@ -167,31 +173,101 @@ describe("question handlers", () => {
     expect(messages).toContainEqual({ type: "questionResolved", requestID: "req-stale" })
   })
 
-  it("keeps fallback-directory 404s retryable while recovering the request route", async () => {
+  it("retries a reply through the recovered request directory", async () => {
     const error = new Error("Question request not found", {
       cause: { status: 404, body: { name: "NotFoundError" } },
     })
     const dir = "/workspace/.kilo/worktrees/origin"
-    const { fake, messages, questionDirs } = ctx({
+    const { fake, messages, replies, questionDirs } = ctx({
       tracked: ["ses-root"],
       extra: [dir],
       pending: { [dir]: [pending("req-misrouted", "ses-root")] },
-      errors: { reply: error },
+      errors: { reply: [error] },
     })
+    questionDirs.set("req-misrouted", "/workspace/.kilo/worktrees/stale")
+
+    const ok = await handleQuestionReply(fake, "req-misrouted", [["Continue"]], "ses-root")
+
+    expect(ok).toBe(true)
+    expect(replies).toEqual([
+      {
+        requestID: "req-misrouted",
+        answers: [["Continue"]],
+        directory: "/workspace/.kilo/worktrees/stale",
+      },
+      {
+        requestID: "req-misrouted",
+        answers: [["Continue"]],
+        directory: dir,
+      },
+    ])
+    expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-misrouted" })
+    expect(messages).not.toContainEqual({ type: "questionError", requestID: "req-misrouted" })
+    expect(messages).not.toContainEqual({
+      type: "questionRequest",
+      question: pending("req-misrouted", "ses-root"),
+    })
+    expect(questionDirs.has("req-misrouted")).toBe(false)
+  })
+
+  it("retries even when an unrelated directory fails to list", async () => {
+    const error = new Error("Question request not found", {
+      cause: { status: 404, body: { name: "NotFoundError" } },
+    })
+    const dir = "/workspace/.kilo/worktrees/origin"
+    const failing = "/workspace/.kilo/worktrees/failing"
+    const { fake, messages, replies, questionDirs } = ctx({
+      tracked: ["ses-root"],
+      extra: [dir, failing],
+      pending: { [dir]: [pending("req-misrouted", "ses-root")] },
+      errors: { list: { [failing]: new Error("temporary failure") }, reply: [error] },
+    })
+    questionDirs.set("req-misrouted", "/workspace/.kilo/worktrees/stale")
     const spy = spyOn(console, "error").mockImplementation(() => {})
 
     const ok = await handleQuestionReply(fake, "req-misrouted", [["Continue"]], "ses-root")
     spy.mockRestore()
 
-    expect(ok).toBe(false)
-    expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-misrouted" })
-    expect(messages).toContainEqual({ type: "questionError", requestID: "req-misrouted" })
-    expect(questionDirs.get("req-misrouted")).toBe(dir)
+    expect(ok).toBe(true)
+    expect(replies.map((args) => (args as { directory: string }).directory)).toEqual([
+      "/workspace/.kilo/worktrees/stale",
+      dir,
+    ])
+    expect(messages).not.toContainEqual({ type: "questionError", requestID: "req-misrouted" })
+    expect(questionDirs.has("req-misrouted")).toBe(false)
+  })
+
+  it("retries a reject through the recovered request directory", async () => {
+    const error = new Error("Question request not found", {
+      cause: { status: 404, body: { name: "NotFoundError" } },
+    })
+    const dir = "/workspace/.kilo/worktrees/origin"
+    const { fake, messages, rejects, questionDirs } = ctx({
+      tracked: ["ses-root"],
+      extra: [dir],
+      pending: { [dir]: [pending("req-misrouted", "ses-root")] },
+      errors: { reject: [error] },
+    })
+    questionDirs.set("req-misrouted", "/workspace/.kilo/worktrees/stale")
+
+    const ok = await handleQuestionReject(fake, "req-misrouted", "ses-root")
+
+    expect(ok).toBe(true)
+    expect(rejects).toEqual([
+      { requestID: "req-misrouted", directory: "/workspace/.kilo/worktrees/stale" },
+      { requestID: "req-misrouted", directory: dir },
+    ])
+    expect(messages).not.toContainEqual({ type: "questionError", requestID: "req-misrouted" })
+    expect(messages).not.toContainEqual({
+      type: "questionRequest",
+      question: pending("req-misrouted", "ses-root"),
+    })
+    expect(questionDirs.has("req-misrouted")).toBe(false)
   })
 
   it("removes a fallback question when recovery confirms it is stale", async () => {
     const error = new Error("Question request not found", {
-      cause: { status: 404, body: { _tag: "NotFound" } },
+      cause: { body: { _tag: "NotFound" } },
     })
     const { fake, messages } = ctx({ errors: { reject: error } })
 
@@ -204,7 +280,7 @@ describe("question handlers", () => {
 
   it("keeps fallback questions retryable when recovery is incomplete", async () => {
     const error = new Error("Question request not found", {
-      cause: { status: 404, body: { _tag: "NotFound" } },
+      cause: { body: { _tag: "NotFound" } },
     })
     const dir = "/workspace/.kilo/worktrees/failing"
     const { fake, messages } = ctx({
@@ -221,20 +297,25 @@ describe("question handlers", () => {
     expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-unknown" })
   })
 
-  it("keeps non-404 failures retryable", async () => {
-    const error = new Error("Internal server error", {
-      cause: { status: 500, body: { name: "InternalServerError" } },
+  it.each([500, 404])("keeps HTTP %s failures retryable without retrying the same directory", async (status) => {
+    const error = new Error("Question request failed", { cause: { status } })
+    const dir = "/workspace/.kilo/worktrees/origin"
+    const { fake, messages, rejects, questionDirs } = ctx({
+      extra: [dir],
+      pending: { [dir]: [pending("req-error", "ses-root")] },
+      errors: { reject: error },
     })
-    const { fake, messages, questionDirs } = ctx({ errors: { reject: error } })
     const spy = spyOn(console, "error").mockImplementation(() => {})
-    questionDirs.set("req-error", "/workspace/.kilo/worktrees/origin")
+    questionDirs.set("req-error", dir)
 
     const ok = await handleQuestionReject(fake, "req-error", "ses-root")
     spy.mockRestore()
 
     expect(ok).toBe(false)
-    expect(questionDirs.get("req-error")).toBe("/workspace/.kilo/worktrees/origin")
+    expect(rejects).toHaveLength(1)
+    expect(questionDirs.get("req-error")).toBe(dir)
     expect(messages).toContainEqual({ type: "questionError", requestID: "req-error" })
+    expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-error" })
   })
 })
 

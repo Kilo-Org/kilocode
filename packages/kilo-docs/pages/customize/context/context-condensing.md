@@ -217,73 +217,6 @@ If no compaction agent is set, the current session's model is used.
 | `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-## The Solution: Intelligent Condensing
-
-**Context Condensing** solves this problem by creating a concise summary of your conversation that captures:
-
-- The original task or goal
-- Key decisions made during the session
-- Important code changes and their context
-- Current progress and next steps
-
-This summary replaces the detailed conversation history, freeing up context window space while maintaining continuity in your work.
-
-## How Context Condensing Works
-
-### Automatic Triggering
-
-Kilo Code monitors your context usage and may suggest condensing when you approach the context window limit. You'll see a notification indicating that condensing is recommended.
-
-### Manual Condensing
-
-You can also trigger context condensing manually at any time using:
-
-- **Chat Command**: Type `/condense` in the chat
-- **Settings**: Access condensing options through the Context Condensing settings
-
-### The Condensing Process
-
-When condensing is triggered:
-
-1. **Analysis**: Kilo Code analyzes the entire conversation history
-2. **Summarization**: A summary is generated using the configured API, capturing essential context
-3. **Replacement**: The detailed history is replaced with the condensed summary
-4. **Continuation**: You can continue working with the freed-up context space
-
-## Configuration Options
-
-### API Configuration
-
-Context Condensing uses an AI model to generate summaries. You can configure which API to use for condensing operations:
-
-- Use the same API as your main coding assistant
-- Configure a separate, potentially more cost-effective API for condensing
-
-### Profile-Specific Settings
-
-You can configure context condensing thresholds and behavior on a per-profile basis, allowing different settings for different projects or use cases.
-
-## Troubleshooting
-
-### Context Condensing Error
-
-If you see a "Context Condensing Error" message:
-
-- Check your API configuration and ensure it's valid
-- Verify you have sufficient credits or API quota
-- Try using a different API for condensing operations
-
-### Summary Quality
-
-If the condensed summary doesn't capture important details:
-
-- Consider condensing earlier, before the conversation becomes too long
-- Use clear, specific language when describing your tasks
-- Important context can be reinforced after condensing by reminding Kilo Code of key details
-
-{% /tab %}
 {% /tabs %}
 
 ## Best Practices
@@ -316,5 +249,4 @@ The default of `~20K` is tuned to leave room for a full-size assistant response 
 ## Related Features
 
 - [AGENTS.md](/docs/customize/agents-md) - Persistent context storage across sessions
-- [Large Projects](/docs/customize/context/large-projects) - Managing context for large codebases
 - [Codebase Indexing](/docs/customize/context/codebase-indexing) - Efficient code search and retrieval

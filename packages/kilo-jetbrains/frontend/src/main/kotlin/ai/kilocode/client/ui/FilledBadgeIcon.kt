@@ -2,7 +2,6 @@ package ai.kilocode.client.ui
 
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import java.awt.Color
 import java.awt.Component
 import java.awt.Font
 import java.awt.Graphics
@@ -11,12 +10,19 @@ import java.awt.RenderingHints
 import java.awt.font.FontRenderContext
 import javax.swing.Icon
 
+/**
+ * A filled pill drawn as an icon so it can sit inside a label or a list-cell renderer.
+ *
+ * Owners keep an instance for as long as its text and style hold, so it has to stay correct across an
+ * IDE zoom. The geometry is measured per call, and [JBFont] re-derives its size from "Label.font" on
+ * read, so the pill and its text grow together.
+ */
 internal class FilledBadgeIcon(
     internal val text: String,
-    private val bg: Color,
-    private val fg: Color,
+    internal val style: UiStyle.Badge.Style,
     private val font: Font = JBFont.small(),
 ) : Icon {
+
     override fun getIconWidth(): Int {
         val width = font.getStringBounds(text, FontRenderContext(null, true, true)).width.toInt()
         return width + UiStyle.Gap.lg() * 2
@@ -29,9 +35,9 @@ internal class FilledBadgeIcon(
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g2.translate(x, y)
-            g2.color = bg
+            g2.color = style.bg()
             g2.fillRoundRect(0, 0, iconWidth, iconHeight, iconHeight, iconHeight)
-            g2.color = fg
+            g2.color = style.fg()
             g2.font = font
             val fm = g2.fontMetrics
             val base = (iconHeight + fm.ascent - fm.descent) / 2

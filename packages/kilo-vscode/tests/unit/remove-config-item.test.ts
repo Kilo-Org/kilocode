@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test"
-import { removeAgent, removeMcp, type RemoveConfigItemContext } from "../../src/kilo-provider/remove-config-item"
+import { removeMcp, type RemoveConfigItemContext } from "../../src/kilo-provider/remove-config-item"
 
 function context(opts: {
   project?: string
@@ -21,18 +21,6 @@ function context(opts: {
 }
 
 describe("remove config item adapter", () => {
-  it("removes agents from project and global scopes, then refreshes", async () => {
-    const remove = mock(async () => ({ success: true, slug: "reviewer" }))
-    const refresh = mock(async () => {})
-    const ctx = context({ project: "/repo", remove, refresh })
-
-    expect(await removeAgent(ctx, "reviewer")).toBe(true)
-    expect(remove).toHaveBeenCalledTimes(2)
-    expect(remove).toHaveBeenNthCalledWith(1, { id: "reviewer", type: "agent" }, "project", "/repo")
-    expect(remove).toHaveBeenNthCalledWith(2, { id: "reviewer", type: "agent" }, "global", "/repo")
-    expect(refresh).toHaveBeenCalledTimes(1)
-  })
-
   it("removes MCP servers globally when there is no project, then refreshes", async () => {
     const remove = mock(async () => ({ success: true, slug: "memory" }))
     const refresh = mock(async () => {})
@@ -45,11 +33,11 @@ describe("remove config item adapter", () => {
   })
 
   it("does not refresh when removal fails", async () => {
-    const remove = mock(async () => ({ success: false, slug: "reviewer" }))
+    const remove = mock(async () => ({ success: false, slug: "memory" }))
     const refresh = mock(async () => {})
     const ctx = context({ remove, refresh })
 
-    expect(await removeAgent(ctx, "reviewer")).toBe(false)
+    expect(await removeMcp(ctx, "memory")).toBe(false)
     expect(refresh).not.toHaveBeenCalled()
   })
 })

@@ -8,7 +8,7 @@ import org.gradle.api.Project
  *
  * The real value lives in the custom task classes this composite build
  * provides: [NormalizeOpenApiSpecTask], [FixGeneratedApiTask],
- * [PrepareLocalCliTask], and [CheckCliTask].
+ * [GenerateOpenApiSpecTask], and [WriteCliChecksumsTask].
  */
 class BuildTasksPlugin : Plugin<Project> {
     override fun apply(target: Project) {}

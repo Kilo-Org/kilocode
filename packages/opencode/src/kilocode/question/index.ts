@@ -3,6 +3,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionID } from "@/session/schema"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import type { Info } from "@/question"
 
 /**
  * Kilo-specific helpers for the shared `@/question` module.
@@ -13,6 +14,22 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
  */
 export namespace KiloQuestion {
   const log = Log.create({ service: "question" })
+
+  export function normalize(info: Info): Info {
+    const line = (value: string) => value.replace(/\s+/g, (space) => (/[\r\n]/.test(space) ? " " : space)).trim()
+    const text = (value: string) => value.replace(/\r\n/g, "\n").replace(/\r/g, " ")
+    return {
+      ...info,
+      ...(info.default == null ? {} : { default: line(info.default) }),
+      question: text(info.question),
+      header: line(info.header),
+      options: info.options.map((option) => ({
+        ...option,
+        label: line(option.label),
+        description: text(option.description),
+      })),
+    }
+  }
 
   /** Minimal entry shape both helpers need; matches `PendingEntry` in `@/question`. */
   type Entry = {
@@ -47,6 +64,17 @@ export namespace KiloQuestion {
           yield* Deferred.fail(entry.deferred, args.makeError())
         }
       })
+
+  /** Publishes the terminal event when a pending question effect is interrupted. */
+  export const finalize = <ID, Value>(input: {
+    pending: Map<ID, Value>
+    id: ID
+    publishRejected: () => Effect.Effect<void>
+  }) =>
+    Effect.gen(function* () {
+      if (!input.pending.delete(input.id)) return
+      yield* input.publishRejected()
+    })
 
   /**
    * Auto-dismiss when a newer prompt is already queued on this session — a

@@ -13,7 +13,7 @@ class MdViewLoggingTest : BasePlatformTestCase() {
             view.set("`x`")
 
             assertTrue(view.overrideSheet().contains("broken\\'font"))
-            assertTrue(view.html().contains("<code>"))
+            assertTrue(view.html().contains("<code style=\"color:"))
         } finally {
             Disposer.dispose(view)
         }

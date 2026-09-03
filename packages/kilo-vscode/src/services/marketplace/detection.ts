@@ -5,6 +5,10 @@ import { MarketplacePaths } from "./paths"
 
 type Entry = [string, { type: string }]
 
+function entry(id: string, type: "agent" | "mcp" | "skill"): Entry {
+  return [`${type}:${id}`, { type }]
+}
+
 export interface CliSkill {
   name: string
   location: string
@@ -52,7 +56,7 @@ export class InstallationDetector {
           ? !!workspace && this.isProjectSkill(s.location, workspace)
           : !workspace || !this.isProjectSkill(s.location, workspace),
       )
-      .map((s) => [s.name, { type: "skill" }])
+      .map((skill) => entry(skill.name, "skill"))
   }
 
   /** Scan .kilo/agents/*.md files to detect installed marketplace agents. */
@@ -60,7 +64,7 @@ export class InstallationDetector {
     const dir = this.paths.agentsDir(scope, workspace)
     try {
       const files = await fs.readdir(dir)
-      return files.filter((f) => f.endsWith(".md")).map((f) => [path.basename(f, ".md"), { type: "agent" }] as Entry)
+      return files.filter((file) => file.endsWith(".md")).map((file) => entry(path.basename(file, ".md"), "agent"))
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
         console.warn(`Failed to detect agent files from ${dir}:`, err)
@@ -78,13 +82,13 @@ export class InstallationDetector {
 
       if (parsed?.mcp && typeof parsed.mcp === "object") {
         for (const key of Object.keys(parsed.mcp)) {
-          entries.push([key, { type: "mcp" }])
+          entries.push(entry(key, "mcp"))
         }
       }
 
       if (parsed?.agent && typeof parsed.agent === "object") {
         for (const key of Object.keys(parsed.agent)) {
-          entries.push([key, { type: "agent" }])
+          entries.push(entry(key, "agent"))
         }
       }
 

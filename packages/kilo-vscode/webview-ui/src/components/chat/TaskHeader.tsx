@@ -8,7 +8,7 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -18,7 +18,12 @@ import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-uti
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { BackgroundAgents } from "./BackgroundAgents"
 import { ContextProgress } from "./ContextProgress"
+import { TaskUsage } from "./TaskUsage"
+import { TranscriptSearch } from "./TranscriptSearch"
+import { useTranscriptSearch } from "../../context/transcript-search"
+import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -30,6 +35,7 @@ interface TaskHeaderProps {
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const search = useTranscriptSearch()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
@@ -37,7 +43,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
-  const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
+  const money = createMemo(() => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }))
+  const fmt = (n: number) => money().format(n)
 
   const breakdown = () => session.costBreakdown()
 
@@ -68,7 +75,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
+  const tokens = createMemo(() => {
+    const usage = session.modelUsage()
+    return hasModelUsage(usage) ? tokenSummary(usage) : calcTokenUsage(session.visibleMessages())
+  })
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
@@ -77,12 +87,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     }
     return false
   })
-
-  const fmtNum = (n: number): string => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-    return String(n)
-  }
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
@@ -94,6 +98,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   }
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))
+
+  // "Kilo Code: Toggle Chat Search" (Command Palette) toggles the search
+  // bar from here rather than TranscriptSearch.tsx itself: that component
+  // only mounts once search.active() is already true (it's behind a
+  // <Show>), so it can never be what turns search on in the first place —
+  // and it also wouldn't exist anymore to react to a request to close it.
+  // TaskHeader is mounted the whole time there's an active chat, so it's
+  // the right place to react to the external toggle request.
+  const toggleSearch = () => (search.active() ? search.closeSearch() : search.setActive(true))
+  window.addEventListener("focusTranscriptSearch", toggleSearch)
+  onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+
+  // Whenever search closes via an explicit user action — the header toggle
+  // button, the command palette toggle above, the search bar's own "X", or
+  // Escape — send focus back to the chat input rather than leaving it
+  // stranded on whatever control was just clicked/removed. Watches
+  // `closeSignal` rather than `active()` transitions so that MessageList
+  // silently resetting the widget on a session/tab change (which also
+  // flips `active()` false) can't trigger this same aggressive restore and
+  // steal focus back from the tab strip's own focus handling. `defer: true`
+  // skips the initial run so mounting doesn't immediately steal focus.
+  createEffect(
+    on(
+      () => search.closeSignal(),
+      () => {
+        window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+      },
+      { defer: true },
+    ),
+  )
 
   const toggle = () => {
     const next = !expanded()
@@ -146,6 +180,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
 
   const revertTodo = (part: Part | undefined) => {
+    if (props.readonly) return
     if (session.status() !== "idle") return
     if (part?.type !== "tool") return
     if (!part.messageID) return
@@ -180,7 +215,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 startRename()
               }}
             >
-              <span data-slot="task-header-title-label">{title()}</span>
+              <span data-slot="task-header-title-label" dir="auto">
+                {title()}
+              </span>
             </span>
           </Show>
         </div>
@@ -215,6 +252,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             </Tooltip>
           </Show>
           <Show when={hasMessages()}>
+            <Tooltip value={language.t("chat.search.toggle")} placement="bottom">
+              <IconButton
+                icon="magnifying-glass"
+                size="small"
+                variant="ghost"
+                class="task-header-search-toggle"
+                data-active={search.active() ? "" : undefined}
+                onClick={toggleSearch}
+                aria-label={language.t("chat.search.toggle")}
+                aria-pressed={search.active()}
+              />
+            </Tooltip>
             <button
               data-slot="task-header-expand"
               onClick={toggle}
@@ -226,6 +275,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
       </div>
+      {/* Standalone search bar, directly under the header, so it has room for
+          the VS Code–style inline options and doesn't require the timeline
+          to be expanded. */}
+      <Show when={search.active()}>
+        <div data-component="task-header-search">
+          <TranscriptSearch />
+        </div>
+      </Show>
       {/* Expanded graph section: timeline + context bar + token breakdown */}
       <Show when={expanded() && hasTimeline()}>
         <div data-component="task-header-graph">
@@ -233,33 +290,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
-          <Show when={tokens()}>
-            {(tk) => (
-              <div class="task-header-tokens">
-                <span class="task-header-tokens-label">Tokens</span>
-                <Show when={tk().input > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-up" size="small" />
-                    {fmtNum(tk().input)}
-                  </span>
-                </Show>
-                <Show when={tk().output > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-down-to-line" size="small" />
-                    {fmtNum(tk().output)}
-                  </span>
-                </Show>
-                <Show when={tk().cached > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cached)}
-                  </span>
-                </Show>
-              </div>
-            )}
-          </Show>
+          <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
         </div>
       </Show>
+      <BackgroundAgents readonly={props.readonly} />
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
@@ -285,7 +319,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                   const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
                   return (
                     <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
-                      <Checkbox readOnly checked={todo.status === "completed"} onClick={() => revertTodo(part())}>
+                      <Checkbox
+                        readOnly
+                        checked={todo.status === "completed"}
+                        onClick={props.readonly ? undefined : () => revertTodo(part())}
+                      >
                         <span
                           data-slot="task-header-todo-content"
                           data-completed={todo.status === "completed" ? "" : undefined}

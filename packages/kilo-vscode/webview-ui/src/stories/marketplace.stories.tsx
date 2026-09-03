@@ -10,6 +10,8 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
 import { MarketplaceListView } from "../components/marketplace/MarketplaceListView"
 import { ItemCard } from "../components/marketplace/ItemCard"
+import { InstallModal } from "../components/marketplace/InstallModal"
+import { MarketplaceSessionProvider } from "../context/marketplace-session"
 import type {
   SkillMarketplaceItem,
   McpMarketplaceItem,
@@ -114,8 +116,9 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
     content:
       '{ "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" } }',
     parameters: [{ name: "GitHub Token", key: "GITHUB_TOKEN", placeholder: "ghp_xxxxxxxxxxxx" }],
+    suggest_for: { vscode_extension: ["github.vscode-pull-request-github"] },
     author: "Anthropic",
-    tags: ["version-control", "development"],
+    category: "development",
   },
   {
     type: "mcp",
@@ -143,7 +146,7 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
       },
     ],
     author: "Anthropic",
-    tags: ["database", "sql"],
+    category: "data",
   },
   {
     type: "mcp",
@@ -153,7 +156,7 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
     url: "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
     content: '{ "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "${ALLOWED_DIR}"] }',
     parameters: [{ name: "Allowed Directory", key: "ALLOWED_DIR", placeholder: "/path/to/directory" }],
-    tags: ["filesystem", "development"],
+    category: "development",
   },
   {
     type: "mcp",
@@ -165,7 +168,7 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
       '{ "command": "npx", "args": ["-y", "@modelcontextprotocol/server-slack"], "env": { "SLACK_TOKEN": "${SLACK_TOKEN}" } }',
     parameters: [{ name: "Slack Bot Token", key: "SLACK_TOKEN", placeholder: "xoxb-xxxxxxxxxxxx" }],
     author: "Anthropic",
-    tags: ["communication", "productivity"],
+    category: "productivity",
   },
   {
     type: "mcp",
@@ -176,7 +179,7 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
     content:
       '{ "command": "npx", "args": ["-y", "@modelcontextprotocol/server-brave-search"], "env": { "BRAVE_API_KEY": "${BRAVE_API_KEY}" } }',
     parameters: [{ name: "API Key", key: "BRAVE_API_KEY", placeholder: "BSA-xxxxxxxxxxxx" }],
-    tags: ["search", "web"],
+    category: "search",
   },
   {
     type: "mcp",
@@ -186,7 +189,7 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
     url: "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
     content: '{ "command": "npx", "args": ["-y", "@modelcontextprotocol/server-puppeteer"] }',
     prerequisites: ["Chrome or Chromium must be installed"],
-    tags: ["browser", "automation", "web"],
+    category: "web-automation",
   },
 ]
 
@@ -197,6 +200,7 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
     name: "Architect",
     description:
       "High-level system design and planning. Focuses on architecture decisions, component boundaries, and technical specifications without writing implementation code.",
+    suggest_for: { filename: ["*.architecture.md"] },
     content: {
       mode: "primary",
       description: "Stress-test technical designs and produce implementation-ready plans",
@@ -205,7 +209,7 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
       permission: { read: "allow", edit: "deny", bash: "deny", mcp: "deny", question: "allow" },
     },
     author: "Kilo",
-    tags: ["planning", "design"],
+    category: "development",
   },
   {
     type: "agent",
@@ -221,7 +225,7 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
       permission: { read: "allow", edit: "deny", bash: "allow", mcp: "deny", question: "allow" },
     },
     author: "Kilo",
-    tags: ["review", "quality"],
+    category: "development",
   },
   {
     type: "agent",
@@ -235,7 +239,7 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
       options: { displayName: "Documentation Writer" },
       permission: { read: "allow", edit: "allow", bash: "allow", mcp: "deny", question: "allow" },
     },
-    tags: ["documentation", "writing"],
+    category: "business",
   },
   {
     type: "agent",
@@ -251,7 +255,7 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
       permission: { read: "allow", edit: "allow", bash: "allow", mcp: "allow", question: "allow" },
     },
     author: "Community",
-    tags: ["testing", "methodology"],
+    category: "development",
   },
   {
     type: "agent",
@@ -265,25 +269,37 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
       options: { displayName: "Debugger" },
       permission: { read: "allow", edit: "allow", bash: "allow", mcp: "deny", question: "allow" },
     },
-    tags: ["debugging", "troubleshooting"],
+    category: "development",
   },
 ]
 
 const EMPTY_METADATA: MarketplaceInstalledMetadata = { project: {}, global: {} }
+const RELEVANCE = {
+  "agent:architect": { filename: ["*.architecture.md"] },
+  "mcp:github-mcp": { vscodeExtension: ["github.vscode-pull-request-github"] },
+}
 
 const PARTIAL_INSTALLED_SKILLS: MarketplaceInstalledMetadata = {
-  project: { "nextjs-developer": { type: "skill" } },
-  global: { "python-data-science": { type: "skill" } },
+  project: { "skill:nextjs-developer": { type: "skill" } },
+  global: { "skill:python-data-science": { type: "skill" } },
 }
 
 const PARTIAL_INSTALLED_MCPS: MarketplaceInstalledMetadata = {
-  project: { "github-mcp": { type: "mcp" } },
-  global: { "postgres-mcp": { type: "mcp" } },
+  project: { "mcp:github-mcp": { type: "mcp" } },
+  global: { "mcp:postgres-mcp": { type: "mcp" } },
 }
 
 const PARTIAL_INSTALLED_AGENTS: MarketplaceInstalledMetadata = {
-  project: { architect: { type: "agent" } },
-  global: { reviewer: { type: "agent" } },
+  project: { "agent:architect": { type: "agent" } },
+  global: { "agent:reviewer": { type: "agent" } },
+}
+
+const PARTIAL_INSTALLED_MIXED: MarketplaceInstalledMetadata = {
+  project: {
+    "agent:architect": { type: "agent" },
+    "mcp:github-mcp": { type: "mcp" },
+  },
+  global: { "skill:python-data-science": { type: "skill" } },
 }
 
 const noop = () => {}
@@ -292,18 +308,19 @@ const noop = () => {}
 // Stories
 // ---------------------------------------------------------------------------
 
-export const SkillsTabWithItems: Story = {
-  name: "Skills tab — with items",
+export const MixedListWithItems: Story = {
+  name: "Mixed list — categories and installed items",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
+      <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={MOCK_SKILLS}
-          metadata={EMPTY_METADATA}
+          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS]}
+          metadata={PARTIAL_INSTALLED_MIXED}
+          relevance={RELEVANCE}
           fetching={false}
-          type="skill"
-          searchPlaceholder="Search skills..."
-          emptyMessage="No skills found"
+          searchPlaceholder="Search marketplace..."
+          emptyMessage="No items found"
+          relevantEmptyMessage="No relevant marketplace items found for this workspace."
           onInstall={noop}
           onRemove={noop}
         />
@@ -312,18 +329,20 @@ export const SkillsTabWithItems: Story = {
   ),
 }
 
-export const SkillsTabWithInstalled: Story = {
-  name: "Skills tab — some installed",
+export const RelevantItems: Story = {
+  name: "Mixed list — relevant to workspace",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
+      <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={MOCK_SKILLS}
-          metadata={PARTIAL_INSTALLED_SKILLS}
+          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS]}
+          metadata={PARTIAL_INSTALLED_MIXED}
+          relevance={RELEVANCE}
           fetching={false}
-          type="skill"
-          searchPlaceholder="Search skills..."
-          emptyMessage="No skills found"
+          searchPlaceholder="Search marketplace..."
+          emptyMessage="No items found"
+          relevantEmptyMessage="No relevant marketplace items found for this workspace."
+          initialRelevant
           onInstall={noop}
           onRemove={noop}
         />
@@ -332,18 +351,19 @@ export const SkillsTabWithInstalled: Story = {
   ),
 }
 
-export const SkillsTabEmpty: Story = {
-  name: "Skills tab — empty state",
+export const EmptyList: Story = {
+  name: "Mixed list — empty state",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", height: "400px", overflow: "auto", padding: "12px" }}>
+      <div style={{ "max-height": "400px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
           items={[]}
           metadata={EMPTY_METADATA}
+          relevance={{}}
           fetching={false}
-          type="skill"
-          searchPlaceholder="Search skills..."
-          emptyMessage="No skills found"
+          searchPlaceholder="Search marketplace..."
+          emptyMessage="No items found"
+          relevantEmptyMessage="No relevant marketplace items found for this workspace."
           onInstall={noop}
           onRemove={noop}
         />
@@ -392,66 +412,6 @@ export const InstalledSkillCard: Story = {
 // MCP Stories
 // ---------------------------------------------------------------------------
 
-export const McpTabWithItems: Story = {
-  name: "MCP tab — with items",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={MOCK_MCPS}
-          metadata={EMPTY_METADATA}
-          fetching={false}
-          type="mcp"
-          searchPlaceholder="Search MCP servers..."
-          emptyMessage="No MCP servers found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-export const McpTabWithInstalled: Story = {
-  name: "MCP tab — some installed",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={MOCK_MCPS}
-          metadata={PARTIAL_INSTALLED_MCPS}
-          fetching={false}
-          type="mcp"
-          searchPlaceholder="Search MCP servers..."
-          emptyMessage="No MCP servers found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-export const McpTabEmpty: Story = {
-  name: "MCP tab — empty state",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "400px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={[]}
-          metadata={EMPTY_METADATA}
-          fetching={false}
-          type="mcp"
-          searchPlaceholder="Search MCP servers..."
-          emptyMessage="No MCP servers found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
 export const SingleMcpCard: Story = {
   name: "ItemCard — single MCP not installed",
   render: () => (
@@ -486,69 +446,22 @@ export const InstalledMcpCard: Story = {
   ),
 }
 
+export const InstallMcpModal: Story = {
+  name: "InstallModal — MCP explanation and destination",
+  render: () => (
+    <StoryProviders>
+      <MarketplaceSessionProvider>
+        <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
+          <InstallModal item={MOCK_MCPS[0]} onClose={noop} onInstallResult={noop} />
+        </div>
+      </MarketplaceSessionProvider>
+    </StoryProviders>
+  ),
+}
+
 // ---------------------------------------------------------------------------
 // Mode Stories
 // ---------------------------------------------------------------------------
-
-export const AgentsTabWithItems: Story = {
-  name: "Agents tab — with items",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={MOCK_AGENTS}
-          metadata={EMPTY_METADATA}
-          fetching={false}
-          type="agent"
-          searchPlaceholder="Search agents..."
-          emptyMessage="No agents found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-export const AgentsTabWithInstalled: Story = {
-  name: "Agents tab — some installed",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={MOCK_AGENTS}
-          metadata={PARTIAL_INSTALLED_AGENTS}
-          fetching={false}
-          type="agent"
-          searchPlaceholder="Search agents..."
-          emptyMessage="No agents found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-export const AgentsTabEmpty: Story = {
-  name: "Agents tab — empty state",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "400px", overflow: "auto", padding: "12px" }}>
-        <MarketplaceListView
-          items={[]}
-          metadata={EMPTY_METADATA}
-          fetching={false}
-          type="agent"
-          searchPlaceholder="Search agents..."
-          emptyMessage="No agents found"
-          onInstall={noop}
-          onRemove={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
 
 export const SingleAgentCard: Story = {
   name: "ItemCard — single agent not installed",

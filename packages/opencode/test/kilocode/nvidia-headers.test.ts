@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import path from "path"
 import { Effect, Layer } from "effect"
@@ -6,9 +7,8 @@ import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { Env } from "../../src/env"
 import { Provider } from "../../src/provider/provider"
-import { ProviderID } from "../../src/provider/schema"
-
-const it = testEffect(Layer.mergeAll(Provider.defaultLayer, Env.defaultLayer, CrossSpawnSpawner.defaultLayer))
+import { ProviderV2 } from "@opencode-ai/core/provider"
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Provider.node), AppNodeBuilder.build(Env.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 function withNvidiaKey<A, E, R>(self: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
@@ -25,7 +25,7 @@ it.live("nvidia provider includes KiloCode billing origin header", () =>
       Provider.Service.use((provider) =>
         Effect.gen(function* () {
           const providers = yield* provider.list()
-          const headers = providers[ProviderID.make("nvidia")].options.headers
+          const headers = providers[ProviderV2.ID.make("nvidia")].options.headers
 
           expect(headers["HTTP-Referer"]).toBe("https://kilo.ai/")
           expect(headers["X-Title"]).toBe("Kilo Code")
@@ -61,7 +61,7 @@ it.live("nvidia billing origin header can be overridden from config", () =>
         Provider.Service.use((provider) =>
           Effect.gen(function* () {
             const providers = yield* provider.list()
-            const headers = providers[ProviderID.make("nvidia")].options.headers
+            const headers = providers[ProviderV2.ID.make("nvidia")].options.headers
 
             expect(headers["HTTP-Referer"]).toBe("https://kilo.ai/")
             expect(headers["X-Title"]).toBe("Kilo Code")

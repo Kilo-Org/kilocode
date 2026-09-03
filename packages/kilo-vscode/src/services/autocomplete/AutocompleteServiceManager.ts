@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import * as vscode from "vscode"
-import { t } from "./shims/i18n"
+import { t } from "../i18n"
 import { TelemetryProxy, TelemetryEventName } from "../telemetry"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
@@ -11,10 +11,16 @@ import { disposeLog } from "./next-edit/log"
 import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
 import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
 import type { KiloConnectionService } from "../cli-backend"
-import { hasValidCredentials } from "./fim"
+import { hasValidCredentials, fimModel as notebookModel } from "./fim"
 import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
+
+export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector {
+  return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
+}
+
+export { notebookModel }
 
 export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean
@@ -68,9 +74,11 @@ export class AutocompleteServiceManager {
   public readonly nextEditProvider: NextEditInlineCompletionProvider
   public readonly nextEditSuggestionManager: NextEditSuggestionManager
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
+  private notebookCompletionProviderDisposable: vscode.Disposable | null = null
   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeEvent: (() => void) | null = null
+  private readonly config: vscode.Disposable
   // Resolved copy of the classic provider's ignore controller for synchronous
   // snippet filtering. Null until the async initialize() resolves.
   private ignoreControllerSync: { validateAccess(fsPath: string): boolean } | null = null
@@ -164,6 +172,12 @@ export class AutocompleteServiceManager {
       () => this.inlineCompletionProvider.resetBackoff(),
     )
 
+    this.config = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.new.language")) {
+        this.updateStatusBar()
+      }
+    })
+
     void this.load()
   }
 
@@ -177,7 +191,7 @@ export class AutocompleteServiceManager {
   public async load() {
     this.settings = readSettings()
 
-    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
+    this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -204,7 +218,9 @@ export class AutocompleteServiceManager {
     ) {
       if (this.inlineCompletionProviderKind === "next-edit") this.nextEditSuggestionManager.clear()
       this.inlineCompletionProviderDisposable?.dispose()
+      this.notebookCompletionProviderDisposable?.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.notebookCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
     }
 
@@ -216,7 +232,9 @@ export class AutocompleteServiceManager {
 
     if (!shouldBeRegistered) {
       this.inlineCompletionProviderDisposable!.dispose()
+      this.notebookCompletionProviderDisposable?.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.notebookCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
       return
     }
@@ -224,9 +242,15 @@ export class AutocompleteServiceManager {
     const provider: vscode.InlineCompletionItemProvider =
       desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider
     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-      { scheme: "file" },
+      selector(desiredKind),
       provider,
     )
+    if (desiredKind === "next-edit") {
+      this.notebookCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+        [{ scheme: "vscode-notebook-cell" }],
+        this.inlineCompletionProvider,
+      )
+    }
     this.inlineCompletionProviderKind = desiredKind
   }
 
@@ -452,6 +476,7 @@ export class AutocompleteServiceManager {
     this.unsubscribeState = null
     this.unsubscribeEvent?.()
     this.unsubscribeEvent = null
+    this.config.dispose()
 
     // Dispose inline completion provider registration
     if (this.inlineCompletionProviderDisposable) {
@@ -459,6 +484,8 @@ export class AutocompleteServiceManager {
       this.inlineCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
     }
+    this.notebookCompletionProviderDisposable?.dispose()
+    this.notebookCompletionProviderDisposable = null
 
     // Dispose inline completion provider resources
     this.inlineCompletionProvider.dispose()

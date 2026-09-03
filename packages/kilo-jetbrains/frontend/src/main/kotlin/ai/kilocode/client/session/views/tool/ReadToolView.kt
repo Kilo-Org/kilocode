@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -7,7 +8,7 @@ import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -17,10 +18,10 @@ import javax.swing.ScrollPaneConstants
 /** Renders read calls with secondary, borderless chrome. */
 class ReadToolView(
     tool: Tool,
-    openFile: (String) -> Unit = {},
+    openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
-) : SecondarySessionPartView(parts.header, parts.scroll(tool), expandable = false) {
+    ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, expandable = false) {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ
@@ -32,9 +33,6 @@ class ReadToolView(
     private var style = SessionEditorStyle.current()
 
     init {
-        parts.text?.let { selection?.register(it, this) }
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
-        parts.text?.text = preview(item)
         applyStyle(style)
         sync()
     }
@@ -71,11 +69,11 @@ class ReadToolView(
     @RequiresEdt
     internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
     @RequiresEdt
-    internal fun bodyFont() = parts.text?.font ?: style.transcriptFont
+    internal fun bodyFont() = style.transcriptFont
     @RequiresEdt
     internal fun bodyCreated() = parts.bodyCreated()
     @RequiresEdt
-    internal fun bodyWrap() = parts.text?.lineWrap ?: false
+    internal fun bodyWrap() = parts.text?.lineWrap == true
     @RequiresEdt
     internal fun bodyEditor() = parts.content?.editor
     @RequiresEdt
@@ -94,6 +92,8 @@ class ReadToolView(
     internal fun subtitleFont() = parts.sub.font
     @RequiresEdt
     internal fun linkHref() = parts.href
+    @RequiresEdt
+    internal fun linkTooltip() = parts.link.toolTipText
     @RequiresEdt
     internal fun openLink() = parts.openLink()
 
@@ -118,8 +118,8 @@ class ReadToolView(
         changed = setText(parts.title, title(item)) || changed
         changed = syncSubtitle() || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.fg()) || changed
-        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Colors.foreground()) || changed
+        changed = setForeground(parts.link, SessionUiStyle.Colors.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         parts.text?.let { changed = setForeground(it, bodyColor()) || changed }
@@ -128,24 +128,9 @@ class ReadToolView(
 
     private fun syncSubtitle(): Boolean {
         val target = target(item)?.takeIf { it.type == "file" }
-        if (target != null) {
-            var changed = false
-            if (parts.href != target.path) {
-                parts.href = target.path
-                changed = true
-            }
-            changed = setLinkText(parts, tail(target.path).ifBlank { target.path }) || changed
-            changed = show(parts, true) || changed
-            return changed
-        }
-
-        var changed = false
-        if (parts.href != null) {
-            parts.href = null
-            changed = true
-        }
+        if (target != null) return setFileTarget(parts, target.path, tail(target.path))
+        var changed = setFileTarget(parts, null, "")
         changed = setText(parts.sub, subtitle(item)) || changed
-        changed = show(parts, false) || changed
         return changed
     }
 
@@ -158,7 +143,7 @@ class ReadToolView(
         return true
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
 
     private fun bodyMaxHeight(): Int {
         val text = parts.text ?: return 0

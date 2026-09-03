@@ -1,10 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1": "Kilo Gateway 为您提供一组精选的可靠优化模型，专为编码代理设计。",
-  "provider.connect.kiloGateway.line2": "只需一个 API 密钥，您就可以使用 Claude、GPT、Gemini、GLM 等模型。",
-  "provider.connect.kiloGateway.visit.prefix": "访问 ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " 获取您的 API 密钥。",
   "provider.connect.kiloGateway.byok.prefix": "如需更多使用统计信息，请",
   "provider.connect.kiloGateway.byok.link": "通过 Kilo's Gateway 进行 BYOK",
   "provider.connect.kiloGateway.byok.suffix": "。",
@@ -22,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "通过智能路由统一访问 AI 模型",
 
   // Reasoning block label
-  "ui.permission.run": "运行",
   "ui.reasoning.label": "推理",
 
   // Marketplace
-  "marketplace.tab.skills": "技能",
-  "marketplace.tab.mcpServers": "MCP 服务器",
-  "marketplace.category.all": "全部",
-  "marketplace.placeholder": "待实现",
   "marketplace.card.installed": "已安装",
   "marketplace.card.install": "安装",
   "marketplace.card.remove": "移除",
@@ -40,6 +30,21 @@ export const dict = {
   "marketplace.install.scope": "作用域",
   "marketplace.install.scope.project": "项目",
   "marketplace.install.scope.global": "全局",
+  "marketplace.install.scope.project.description": "仅限此项目。安装的文件可以提交到版本控制并与你的团队共享。",
+  "marketplace.install.scope.global.description": "此计算机上的所有项目。存储在你的用户配置中。",
+  "marketplace.install.destination": "安装位置",
+  "marketplace.install.about.mcp": "MCP 服务器为 Kilo 提供用于处理外部服务或本地程序的额外工具。",
+  "marketplace.install.about.agent": "智能体会添加一个具有专属指令和权限的可复用角色。",
+  "marketplace.install.about.skill": "技能会添加特定任务的指令和资源，Kilo 可在需要时加载它们。",
+  "marketplace.install.mcp.warning":
+    "MCP 服务器可以运行本地命令或连接外部服务。除非你的权限允许自动使用，否则 Kilo 会在使用其工具前请求许可。",
+  "marketplace.install.project.warning":
+    "项目文件可能会提交到版本控制。除非配置引用了环境变量，否则不要在此处存储密钥。",
+  "marketplace.install.learnMore": "了解 Marketplace 安装的工作方式",
+  "marketplace.install.learnMcp": "详细了解 MCP",
+  "marketplace.install.installedAt": "已安装到 {{path}}",
+  "marketplace.intro": "为一个项目或所有项目安装可复用的智能体、技能和 MCP 工具。",
+  "marketplace.intro.learnMore": "关于 Marketplace",
   "marketplace.install.prerequisites": "先决条件",
   "marketplace.install.installing": "安装中...",
   "marketplace.install.cancel": "取消",
@@ -51,19 +56,17 @@ export const dict = {
   "marketplace.remove.confirm": "确定要移除此 {{type}} 吗？这会将其从你的 {{scope}} 配置中移除。",
   "marketplace.remove.cancel": "取消",
   "marketplace.remove.confirm.button": "移除",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "智能体",
   "marketplace.search": "搜索...",
   "marketplace.filter.all": "所有项目",
   "marketplace.filter.notInstalled": "未安装",
+  "marketplace.filter.relevant": "与我的工作区相关",
   "marketplace.empty": "未找到项目",
+  "marketplace.empty.relevant": "未找到与此工作区相关的市场项目。",
   "marketplace.badge.mcpServer": "MCP 服务器",
-  "marketplace.badge.mode": "模式",
   "marketplace.card.by": "作者：{{author}}",
   "marketplace.install.method": "安装方法",
   "marketplace.install.parameters": "参数",
   "marketplace.install.optional": "(可选)",
-  "marketplace.install.required": "{{name}} 是必填项",
   "marketplace.scope.project": "项目",
   "marketplace.scope.global": "全局",
   "marketplace.remove.type.mcp": "MCP 服务器",
@@ -89,6 +92,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "在具有干净上下文的新会话中实现",
   "plan.followup.answer.continue": "在此继续",
   "plan.followup.answer.continue.description": "在本会话中实现计划",
+  "plan.followup.answer.keepRefining": "继续完善",
+  "plan.followup.answer.keepRefining.description": "继续规划，暂不实现",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "快照速度较慢",
@@ -101,8 +106,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "在差异查看器中打开",
-  "ui.messagePart.shell.command": "命令",
-  "ui.messagePart.shell.output": "输出",
   "ui.messagePart.openInEditor": "在编辑器中打开",
 
   // Message feedback (thumbs up/down per assistant response)

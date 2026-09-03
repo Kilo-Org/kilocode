@@ -61,37 +61,6 @@
   color: var(--vscode-descriptionForeground);
 }
 
-/* Chat panel */
-.kiloclaw-chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-}
-
-/* Chat header */
-.kiloclaw-chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-  flex-shrink: 0;
-}
-
-.kiloclaw-chat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kiloclaw-chat-header-title {
-  font-size: var(--kilo-font-size-13);
-  font-weight: 500;
-  color: var(--vscode-foreground);
-}
-
 /* Status dots */
 .kiloclaw-dot {
   display: inline-block;
@@ -115,16 +84,6 @@
 
 .kiloclaw-dot-error {
   background: var(--vscode-editorError-foreground, #f14c4c);
-}
-
-/* Messages area */
-.kiloclaw-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .kiloclaw-empty {
@@ -456,17 +415,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* ── Dot states ────────────────────────────────────────────────────── */
-
-.kiloclaw-dot-idle {
-  background: var(--vscode-editorWarning-foreground, #cca700);
-}
-
-.kiloclaw-dot-unknown {
-  background: var(--vscode-descriptionForeground, #888);
-  opacity: 0.5;
 }
 
 /* ── Message bubble ─────────────────────────────────────────────────

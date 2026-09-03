@@ -57,6 +57,7 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
     "minWidth",
     "minHeight",
     "deferDismiss",
+    "class",
     "children",
   ])
 
@@ -113,6 +114,7 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
       overflowPadding={local.padding ?? 8}
       deferDismiss={local.deferDismiss}
       {...(rest as PopoverProps)}
+      class={`popup-selector${local.class ? ` ${local.class}` : ""}`}
       style={
         popoverW().width !== undefined
           ? { width: `${popoverW().width}px`, "max-width": `${popoverW().max}px` }

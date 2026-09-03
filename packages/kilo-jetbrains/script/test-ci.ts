@@ -3,7 +3,8 @@
 /**
  * CI test runner for the JetBrains plugin.
  *
- * Runs ./gradlew clean test --continue --no-build-cache --stacktrace so all modules run even when some fail,
+ * Runs ./gradlew clean test --continue --stacktrace --console=plain
+ * so all modules run even when some fail,
  * then collects per-module JUnit XML results into .artifacts/unit/junit.xml
  * so mikepenz/action-junit-report can find them at the standard path.
  * The generated OpenAPI client can otherwise restore stale compile outputs
@@ -20,7 +21,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 
 
 const root = join(import.meta.dir, "..")
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew"
-const args = ["clean", "test", "--continue", "--no-build-cache", "--stacktrace"]
+const args = ["clean", "test", "--continue", "--stacktrace", "--console=plain"]
 const cmd = process.platform === "win32" ? ["cmd.exe", "/c", gradlew, ...args] : [gradlew, ...args]
 const fallback = 45 * 60 * 1000
 const parsed = Number(process.env.KILO_JETBRAINS_TEST_TIMEOUT_MS ?? fallback)

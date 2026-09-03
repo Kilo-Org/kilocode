@@ -1,21 +1,22 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { NodeHttpServer, NodeServices } from "@effect/platform-node"
-import { PtyID } from "../../src/pty/schema"
+import { PtyID } from "@opencode-ai/core/pty/schema"
 import { Server } from "../../src/server/server"
 import { PtyPaths } from "../../src/server/routes/instance/httpapi/groups/pty"
-import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir, tmpdirScoped } from "../fixture/fixture"
 import { Config, Effect, Layer, Queue, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter, HttpServer } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
-import { Pty } from "../../src/pty"
+import { Pty } from "@opencode-ai/core/pty"
 import { testEffect } from "../lib/effect"
 
-void Log.init({ print: false })
-
 const testPty = process.platform === "win32" ? test.skip : test
+
+// kilocode_change start - route PTY tests must not compete with per-project indexing workers.
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
 
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -84,11 +85,18 @@ describe("pty HttpApi bridge", () => {
     expect(list.status).toBe(200)
     expect(await list.json()).toEqual([])
 
+    // kilocode_change start - test initial spawn dimensions
     const created = await app().request(PtyPaths.create, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 5"], title: "demo" }),
+      body: JSON.stringify({
+        command: "/usr/bin/env",
+        args: ["sh", "-c", "sleep 5"],
+        title: "demo",
+        size: { cols: 50, rows: 20 },
+      }),
     })
+    // kilocode_change end
     expect(created.status).toBe(200)
     const info = await created.json()
 
@@ -139,9 +147,71 @@ describe("pty HttpApi bridge", () => {
     })
   })
 
+  testPty("hides exited sessions on the legacy surface", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const headers = { "x-kilo-directory": tmp.path }
+    const created = await app().request(PtyPaths.create, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "exit 0"] }),
+    })
+    expect(created.status).toBe(200)
+    const info = await created.json()
+
+    // Exited sessions are retained by core for the canonical surface, but the legacy
+    // routes preserve pre-retention behavior: exited sessions are invisible here.
+    // kilocode_change start - exit propagation can exceed 5s on a loaded CI shard; the loop
+    // breaks as soon as the session disappears, so a generous deadline costs nothing when healthy.
+    const deadline = Date.now() + 30_000
+    // kilocode_change end
+    while (Date.now() < deadline) {
+      const found = await app().request(PtyPaths.get.replace(":ptyID", info.id), { headers })
+      if (found.status === 404) break
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+    const found = await app().request(PtyPaths.get.replace(":ptyID", info.id), { headers })
+    expect(found.status).toBe(404)
+
+    const list = await app().request(PtyPaths.list, { headers })
+    expect(list.status).toBe(200)
+    expect(await list.json()).toEqual([])
+  })
+
+  // kilocode_change start - location disposal must preserve the process-wide PTY registry.
+  testPty("preserves PTY sessions across legacy instance disposal", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const headers = { "x-kilo-directory": tmp.path }
+    const created = await app().request(PtyPaths.create, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 30"] }),
+    })
+    expect(created.status).toBe(200)
+    const info = await created.json()
+
+    try {
+      await disposeAllInstances()
+
+      const list = await app().request(PtyPaths.list, { headers })
+      expect(list.status).toBe(200)
+      expect(await list.json()).toEqual([info])
+    } finally {
+      await app().request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
+    }
+  })
+  // kilocode_change end
+
   test("returns 404 for missing PTY websocket before upgrade", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const response = await app().request(PtyPaths.connect.replace(":ptyID", PtyID.ascending()), {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+    expect(response.status).toBe(404)
+  })
+
+  test("returns 404 for missing PTY websocket before decoding cursor query", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const response = await app().request(`${PtyPaths.connect.replace(":ptyID", PtyID.ascending())}?cursor=a&cursor=b`, {
       headers: { "x-kilo-directory": tmp.path },
     })
     expect(response.status).toBe(404)
@@ -203,48 +273,70 @@ describe("pty HttpApi bridge", () => {
       message: `PTY session not found: ${missingID}`,
     })
   })
-  ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(
-    "serves PTY websocket output and input through Effect routes",
-    () =>
-      Effect.gen(function* () {
-        const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
-        const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
-          directoryHeader(dir),
-          HttpClientRequest.bodyJson({ command: "/bin/cat", title: "websocket" }),
-          Effect.flatMap(HttpClient.execute),
+  // kilocode_change start - portable coverage for the exact legacy routes used by regular Agent Manager terminals
+  effectIt.live("serves Agent Manager regular terminal create, resize, input, output, and remove routes", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
+      const child = [
+        'let input = ""',
+        "process.stdout.write(`READY:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}\\n`)",
+        'process.stdin.setEncoding("utf8")',
+        'process.stdin.on("data", (chunk) => {',
+        "  input += chunk",
+        '  if (input.includes("PING")) process.stdout.write("PONG\\n")',
+        "})",
+      ].join("\n")
+      const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({
+          command: process.execPath,
+          args: ["-e", child],
+          title: "websocket",
+          size: { cols: 80, rows: 24 },
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(created.status).toBe(200)
+      const info = yield* Schema.decodeUnknownEffect(Pty.Info)(yield* created.json)
+
+      const socket = yield* Socket.makeWebSocket(
+        `${(yield* serverUrl()).replace(/^http/, "ws")}${PtyPaths.connect.replace(":ptyID", info.id)}?cursor=0&directory=${encodeURIComponent(dir)}`,
+        { closeCodeIsError: () => false },
+      )
+      const messages = yield* Queue.unbounded<string>()
+      yield* socket
+        .runRaw((message) =>
+          Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
         )
-        expect(created.status).toBe(200)
-        const info = yield* Schema.decodeUnknownEffect(Pty.Info)(yield* created.json)
+        .pipe(Effect.catch(() => Effect.void))
+        .pipe(Effect.forkScoped)
+      const write = yield* socket.writer
 
-        const socket = yield* Socket.makeWebSocket(
-          `${(yield* serverUrl()).replace(/^http/, "ws")}${PtyPaths.connect.replace(":ptyID", info.id)}?cursor=-1&directory=${encodeURIComponent(dir)}`,
-          { closeCodeIsError: () => false },
-        )
-        const messages = yield* Queue.unbounded<string>()
-        yield* socket
-          .runRaw((message) =>
-            Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
-          )
-          .pipe(Effect.catch(() => Effect.void))
-          .pipe(Effect.forkScoped)
-        const write = yield* socket.writer
+      const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
+        Effect.gen(function* () {
+          const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
+          if (next.includes(expected)) return next
+          return yield* takeUntil(expected, next)
+        })
 
-        const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
-          Effect.gen(function* () {
-            const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
-            if (next.includes(expected)) return next
-            return yield* takeUntil(expected, next)
-          })
+      expect(yield* takeUntil("READY:")).toContain("READY:true:80x24")
+      const updated = yield* HttpClientRequest.put(PtyPaths.update.replace(":ptyID", info.id)).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({ size: { cols: 100, rows: 40 } }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(updated.status).toBe(200)
 
-        yield* write("ping-route\n")
-        expect(yield* takeUntil("ping-route")).toContain("ping-route")
-        yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
+      yield* write("PING\r")
+      expect(yield* takeUntil("PONG")).toContain("PONG")
+      yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
 
-        const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(
-          directoryHeader(dir),
-          HttpClient.execute,
-        )
-        expect(removed.status).toBe(200)
-      }),
+      const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(
+        directoryHeader(dir),
+        HttpClient.execute,
+      )
+      expect(removed.status).toBe(200)
+    }),
   )
+  // kilocode_change end
 })

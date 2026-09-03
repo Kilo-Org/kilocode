@@ -2,8 +2,8 @@ import { Effect } from "effect"
 import { effectCmd } from "../effect-cmd"
 import { Session } from "@/session/session"
 import { NotFoundError } from "@/storage/storage"
-import { Database } from "@/storage/db"
-import { SessionTable } from "../../session/session.sql"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import { Project } from "@/project/project"
 import { InstanceRef } from "@/effect/instance-ref"
 
@@ -80,9 +80,10 @@ export const StatsCommand = effectCmd({
   }),
 })
 
-const getAllSessions = Effect.sync(() =>
-  Database.use((db) => db.select().from(SessionTable).all()).map((row) => Session.fromRow(row)),
-)
+const getAllSessions = Effect.fnUntraced(function* () {
+  const { db } = yield* Database.Service
+  return (yield* db.select().from(SessionTable).all().pipe(Effect.orDie)).map((row) => Session.fromRow(row))
+})
 
 // kilocode_change start - expose Effect stats aggregation for Kilo regression coverage
 export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* (
@@ -92,7 +93,7 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
   currentProject?: Project.Info,
 ) {
   const svc = yield* Session.Service
-  const sessions = yield* getAllSessions
+  const sessions = yield* getAllSessions()
   const MS_IN_DAY = 24 * 60 * 60 * 1000
 
   const cutoffTime = (() => {

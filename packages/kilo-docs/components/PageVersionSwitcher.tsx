@@ -8,15 +8,10 @@ interface Props {
 export function PageVersionSwitcher({ platform }: Props) {
   if (!platform || platform === "all") return null
 
-  const legacy = platform === "legacy"
   return (
     <div className="version-banner">
-      <span className="version-banner-icon">{legacy ? "\u24D8" : "\u2728"}</span>
-      <span>
-        {legacy
-          ? "This page applies to the legacy VSCode extension."
-          : "This page applies to the current VSCode extension & CLI."}
-      </span>
+      <span className="version-banner-icon">{"\u2728"}</span>
+      <span>This page applies to the current VSCode extension & CLI.</span>
 
       <style jsx>{`
         .version-banner {

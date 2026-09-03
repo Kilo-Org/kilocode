@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway ให้คุณเข้าถึงชุดโมเดลที่คัดสรรมาอย่างดีและเชื่อถือได้สำหรับตัวแทนเขียนโค้ด",
-  "provider.connect.kiloGateway.line2":
-    "ด้วย API key เดียว คุณจะสามารถเข้าถึงโมเดลต่างๆ เช่น Claude, GPT, Gemini, GLM และอื่นๆ",
-  "provider.connect.kiloGateway.visit.prefix": "เยี่ยมชม ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " เพื่อรับ API key ของคุณ",
   "provider.connect.kiloGateway.byok.prefix": "สำหรับสถิติการใช้งานเพิ่มเติม โปรดใช้ ",
   "provider.connect.kiloGateway.byok.link": "BYOK ผ่าน Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": "",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "เข้าถึงโมเดล AI แบบรวมศูนย์พร้อมการกำหนดเส้นทางอัจฉริยะ",
 
   // Reasoning block label
-  "ui.permission.run": "เรียกใช้",
   "ui.reasoning.label": "การให้เหตุผล",
 
   // Marketplace
-  "marketplace.tab.skills": "ทักษะ",
-  "marketplace.tab.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "marketplace.category.all": "ทั้งหมด",
-  "marketplace.placeholder": "ยังไม่ได้ดำเนินการ",
   "marketplace.card.installed": "ติดตั้งแล้ว",
   "marketplace.card.install": "ติดตั้ง",
   "marketplace.card.remove": "ลบ",
@@ -42,6 +30,23 @@ export const dict = {
   "marketplace.install.scope": "ขอบเขต",
   "marketplace.install.scope.project": "โปรเจกต์",
   "marketplace.install.scope.global": "โกลบอล",
+  "marketplace.install.scope.project.description":
+    "เฉพาะโปรเจกต์นี้ ไฟล์ที่ติดตั้งสามารถเพิ่มลงในระบบควบคุมเวอร์ชันและแชร์กับทีมของคุณได้",
+  "marketplace.install.scope.global.description": "ทุกโปรเจกต์ในเครื่องนี้ จัดเก็บไว้ในการกำหนดค่าผู้ใช้ของคุณ",
+  "marketplace.install.destination": "ปลายทางการติดตั้ง",
+  "marketplace.install.about.mcp":
+    "เซิร์ฟเวอร์ MCP เพิ่มเครื่องมือให้ Kilo สำหรับทำงานกับบริการภายนอกหรือโปรแกรมในเครื่อง",
+  "marketplace.install.about.agent": "เอเจนต์เพิ่มบทบาทที่นำกลับมาใช้ใหม่ได้พร้อมคำสั่งและสิทธิ์ของตนเอง",
+  "marketplace.install.about.skill": "ทักษะเพิ่มคำสั่งและทรัพยากรเฉพาะงานที่ Kilo สามารถโหลดได้เมื่อจำเป็น",
+  "marketplace.install.mcp.warning":
+    "เซิร์ฟเวอร์ MCP สามารถเรียกใช้คำสั่งในเครื่องหรือเชื่อมต่อกับบริการภายนอกได้ Kilo จะขออนุญาตก่อนใช้เครื่องมือ เว้นแต่สิทธิ์ของคุณจะอนุญาตโดยอัตโนมัติ",
+  "marketplace.install.project.warning":
+    "ไฟล์โปรเจกต์อาจถูกเพิ่มลงในระบบควบคุมเวอร์ชัน อย่าเก็บข้อมูลลับไว้ที่นี่ เว้นแต่การกำหนดค่าจะอ้างอิงตัวแปรสภาพแวดล้อม",
+  "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
+  "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
+  "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
+  "marketplace.intro": "ติดตั้งเอเจนต์ ทักษะ และเครื่องมือ MCP ที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
+  "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
   "marketplace.install.prerequisites": "ข้อกำหนดเบื้องต้น",
   "marketplace.install.installing": "กำลังติดตั้ง...",
   "marketplace.install.cancel": "ยกเลิก",
@@ -54,19 +59,17 @@ export const dict = {
     "คุณแน่ใจหรือไม่ว่าต้องการลบ {{type}} นี้? สิ่งนี้จะลบออกจากการกำหนดค่า {{scope}} ของคุณ",
   "marketplace.remove.cancel": "ยกเลิก",
   "marketplace.remove.confirm.button": "ลบ",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "เอเจนต์",
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
   "marketplace.filter.notInstalled": "ยังไม่ได้ติดตั้ง",
+  "marketplace.filter.relevant": "เกี่ยวข้องกับพื้นที่ทำงานของฉัน",
   "marketplace.empty": "ไม่พบรายการ",
+  "marketplace.empty.relevant": "ไม่พบรายการในมาร์เก็ตเพลสที่เกี่ยวข้องกับพื้นที่ทำงานนี้",
   "marketplace.badge.mcpServer": "เซิร์ฟเวอร์ MCP",
-  "marketplace.badge.mode": "โหมด",
   "marketplace.card.by": "โดย {{author}}",
   "marketplace.install.method": "วิธีการติดตั้ง",
   "marketplace.install.parameters": "พารามิเตอร์",
   "marketplace.install.optional": "(ไม่บังคับ)",
-  "marketplace.install.required": "จำเป็นต้องใช้ {{name}}",
   "marketplace.scope.project": "โปรเจ็กต์",
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
@@ -92,6 +95,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
   "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
   "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
+  "plan.followup.answer.keepRefining": "ปรับแผนต่อ",
+  "plan.followup.answer.keepRefining.description": "วางแผนต่อโดยยังไม่ดำเนินการ",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "สแน็ปช็อตช้า",
@@ -106,8 +111,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
-  "ui.messagePart.shell.command": "คำสั่ง",
-  "ui.messagePart.shell.output": "ผลลัพธ์",
   "ui.messagePart.openInEditor": "เปิดในตัวแก้ไข",
 
   // Message feedback (thumbs up/down per assistant response)

@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import net from "node:net"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import * as Log from "@opencode-ai/core/util/log"
 import { Server } from "../../src/server/server"
 import { PtyPaths } from "../../src/server/routes/instance/httpapi/groups/pty"
 import { withTimeout } from "../../src/util/timeout"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-
-void Log.init({ print: false })
 
 const original = {
   KILO_SERVER_PASSWORD: Flag.KILO_SERVER_PASSWORD,
@@ -95,7 +94,7 @@ async function createCat(listener: Awaited<ReturnType<typeof startListener>>, di
     body: JSON.stringify({ command: "/bin/cat", title: "listen-smoke" }),
   })
   expect(response.status).toBe(200)
-  return (await response.json()) as { id: string }
+  return (await response.json()) as { id: string; pid: number } // kilocode_change
 }
 
 async function openSocket(url: URL) {
@@ -201,6 +200,9 @@ describe("HttpApi Server.listen", () => {
       stopped = true
       await withTimeout(closed, 5_000, "timed out waiting for websocket close")
       expect(ws.readyState).toBe(WebSocket.CLOSED)
+      // kilocode_change start - true server shutdown must terminate retained PTY processes.
+      expect(() => process.kill(info.pid, 0)).toThrow()
+      // kilocode_change end
 
       const restarted = await startListener()
       try {
@@ -309,6 +311,57 @@ describe("HttpApi Server.listen", () => {
     }
 
     expect(output).not.toContain("Sent HTTP response")
+  })
+
+  test("plugin client requests reuse the listening server instance", async () => {
+    await using tmp = await tmpdir({
+      init: async (directory) => {
+        const plugin = path.join(directory, "plugin.ts")
+        const initialized = path.join(directory, "initialized.txt")
+        const completed = path.join(directory, "completed.txt")
+        await Bun.write(
+          plugin,
+          [
+            "export default async function plugin(input) {",
+            `  await Bun.write(${JSON.stringify(initialized)}, (await Bun.file(${JSON.stringify(initialized)}).text().catch(() => "")) + "initialized\\n")`,
+            "  setTimeout(async () => {",
+            "    await input.client.config.get()",
+            `    await Bun.write(${JSON.stringify(completed)}, "completed")`,
+            "  }, 50)",
+            "  return {}",
+            "}",
+            "",
+          ].join("\n"),
+        )
+        await Bun.write(
+          path.join(directory, "opencode.json"),
+          JSON.stringify({ formatter: false, lsp: false, plugin: [pathToFileURL(plugin).href] }),
+        )
+        return { initialized, completed }
+      },
+    })
+    const previous = process.env.KILO_DISABLE_DEFAULT_PLUGINS
+    process.env.KILO_DISABLE_DEFAULT_PLUGINS = "1"
+    let listener: Awaited<ReturnType<typeof startListener>> | undefined
+    try {
+      listener = await startListener()
+      const response = await fetch(new URL("/config", listener.url), {
+        headers: { authorization: authorization(), "x-kilo-directory": tmp.path },
+      })
+      expect(response.status).toBe(200)
+      await withTimeout(
+        (async () => {
+          while (!(await Bun.file(tmp.extra.completed).exists())) await Bun.sleep(10)
+        })(),
+        5_000,
+        "timed out waiting for plugin client request",
+      )
+      expect(await Bun.file(tmp.extra.initialized).text()).toBe("initialized\n")
+    } finally {
+      if (listener) await stop(listener, "timed out cleaning up plugin client listener").catch(() => undefined)
+      if (previous === undefined) delete process.env.KILO_DISABLE_DEFAULT_PLUGINS
+      else process.env.KILO_DISABLE_DEFAULT_PLUGINS = previous
+    }
   })
 
   test("port 0 prefers 4096 when free", async () => {

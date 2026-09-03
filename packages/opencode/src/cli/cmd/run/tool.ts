@@ -25,6 +25,7 @@ import type { GrepTool } from "@/tool/grep"
 import type { InvalidTool } from "@/tool/invalid"
 import type { LspTool } from "@/tool/lsp"
 import type { PlanExitTool } from "@/tool/plan"
+import type { InteractiveTerminalTool } from "@/kilocode/tool/interactive-terminal" // kilocode_change
 import type { QuestionTool } from "@/tool/question"
 import type { ReadTool } from "@/tool/read"
 import type { SkillTool } from "@/tool/skill"
@@ -101,6 +102,7 @@ type ToolDefs = {
   task: typeof TaskTool
   todowrite: typeof TodoWriteTool
   question: typeof QuestionTool
+  interactive_terminal: typeof InteractiveTerminalTool // kilocode_change
   read: typeof ReadTool
   glob: typeof GlobTool
   grep: typeof GrepTool
@@ -423,6 +425,33 @@ function runQuestion(p: ToolProps<typeof QuestionTool>): ToolInline {
   }
 }
 
+// kilocode_change start
+function runInteractiveTerminal(p: ToolProps<typeof InteractiveTerminalTool>): ToolInline {
+  const command = p.input.command ?? ""
+  const description = p.input.description || command || "Interactive terminal"
+  return {
+    icon: "$",
+    title: description,
+    description: command && command !== description ? `$ ${command}` : undefined,
+  }
+}
+
+function scrollInteractiveTerminalStart(p: ToolProps<typeof InteractiveTerminalTool>) {
+  const command = p.input.command ?? ""
+  const description = p.input.description || command || "Interactive terminal"
+  return command && command !== description
+    ? `# Interactive terminal: ${description}\n$ ${command}`
+    : `# ${description}`
+}
+
+function scrollInteractiveTerminalFinal(p: ToolProps<typeof InteractiveTerminalTool>) {
+  if (p.metadata.closedBy === "user") return "interactive terminal closed by user"
+  if (p.metadata.closedBy === "abort") return "interactive terminal cancelled"
+  const code = p.metadata.exitCode
+  return typeof code === "number" ? `interactive terminal completed (exit ${code})` : "interactive terminal completed"
+}
+// kilocode_change end
+
 function runInvalid(p: ToolProps<typeof InvalidTool>): ToolInline {
   return {
     icon: "✗",
@@ -623,20 +652,18 @@ function snapQuestion(p: ToolProps<typeof QuestionTool>): ToolSnapshot {
 
 function scrollBashStart(p: ToolProps<typeof BashTool>): string {
   const cmd = p.input.command ?? ""
-  const desc = p.input.description || "Shell"
   const wd = p.input.workdir ?? ""
-  const dir = wd && wd !== "." ? toolPath(wd) : ""
-  if (cmd && desc === "Shell" && !dir) {
+  const formatted = wd && wd !== "." ? toolPath(wd) : ""
+  const dir = formatted === "." ? "" : formatted
+  if (cmd && !dir) {
     return `$ ${cmd}`
   }
 
-  const title = dir && !desc.includes(dir) ? `${desc} in ${dir}` : desc
-
   if (!cmd) {
-    return `# ${title}`
+    return dir ? `# Running in ${dir}` : ""
   }
 
-  return `# ${title}\n$ ${cmd}`
+  return `# Running in ${dir}\n$ ${cmd}`
 }
 
 function scrollBashProgress(p: ToolProps<typeof BashTool>): string {
@@ -968,11 +995,10 @@ function permList(p: ToolPermissionProps): ToolPermissionInfo {
 }
 
 function permBash(p: ToolPermissionProps<typeof BashTool>): ToolPermissionInfo {
-  const title = p.input.description || "Shell command"
   const cmd = p.input.command || ""
   return {
     icon: "#",
-    title,
+    title: "Shell command",
     lines: cmd ? [`$ ${cmd}`] : p.patterns.map((item) => `- ${item}`),
   }
 }
@@ -1134,6 +1160,19 @@ const TOOL_RULES = {
       final: scrollQuestionFinal,
     },
   },
+  // kilocode_change start
+  interactive_terminal: {
+    view: {
+      output: false,
+      final: true,
+    },
+    run: runInteractiveTerminal,
+    scroll: {
+      start: scrollInteractiveTerminalStart,
+      final: scrollInteractiveTerminalFinal,
+    },
+  },
+  // kilocode_change end
   read: {
     view: {
       output: false,

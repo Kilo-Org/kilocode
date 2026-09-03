@@ -15,6 +15,23 @@ export const dict: Record<string, string> = {
   "ui.sessionReview.largeDiff.title": "Diff too large to render",
   "ui.sessionReview.largeDiff.meta": "Limit: {{limit}} changed lines. Current: {{current}} changed lines.",
   "ui.sessionReview.largeDiff.renderAnyway": "Render anyway",
+  "ui.sessionReviewV2.expandMode": "Expand or collapse diff",
+  "ui.sessionReviewV2.filterFiles": "Filter files",
+  "ui.sessionReviewV2.toggleSidebar": "Toggle file tree",
+  "ui.sessionReviewV2.showAllLines": "Show all lines",
+  "ui.sessionReviewV2.hideNonDiffLines": "Hide non-diff lines",
+  "ui.sessionReviewV2.unifiedDiff": "Unified diff",
+  "ui.sessionReviewV2.splitDiff": "Split diff",
+  "ui.sessionReviewV2.previousFile": "Previous file",
+  "ui.sessionReviewV2.nextFile": "Next file",
+  "ui.sessionReviewV2.diffView": "Diff view",
+  "ui.sessionReviewV2.empty.noGit.title": "No tracked changes",
+  "ui.sessionReviewV2.empty.noGit.description": "Track, review, and undo changes in this project",
+  "ui.sessionReviewV2.empty.noGit.action": "Create Git repository",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Creating Git repository...",
+  "ui.sessionReviewV2.empty.changes.title": "No file changes yet",
+  "ui.sessionReviewV2.empty.changes.description": "Project changes will appear here",
+
   "ui.sessionReview.openFile": "Open file",
   "ui.sessionReview.selection.line": "line {{line}}",
   "ui.sessionReview.selection.lines": "lines {{start}}-{{end}}",
@@ -34,13 +51,16 @@ export const dict: Record<string, string> = {
   "ui.lineComment.editorLabel.prefix": "Commenting on ",
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Add comment",
+  "ui.lineComment.contextPlaceholder": "Add context for this change",
   "ui.lineComment.submit": "Comment",
+  "ui.lineComment.cancel": "Cancel",
 
   "ui.sessionTurn.steps.show": "Show steps",
   "ui.sessionTurn.steps.hide": "Hide steps",
   "ui.sessionTurn.summary.response": "Response",
   "ui.sessionTurn.diff.showMore": "Show more changes ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Changed",
+  "ui.sessionTurn.diffs.changed.one": "{{count}} Changed file",
+  "ui.sessionTurn.diffs.changed.other": "{{count}} Changed files",
   "ui.sessionTurn.diffs.showAll": "Show all",
   "ui.sessionTurn.diffs.showLess": "Show less",
   "ui.sessionTurn.diffs.more": "+{{count}} more files",
@@ -55,7 +75,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Free limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Subscribe to Kilo Go for reliable access to the best open-source models, starting at $5/month.",
+    "Subscribe to Kilo Go for reliable access to the best open-source models, starting at $5/month.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Subscribe",
   "dialog.usageExceeded.accountRateLimit.title": "Go limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -80,6 +100,15 @@ export const dict: Record<string, string> = {
   "ui.messagePart.diagnostic.error": "Error",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Read agent messages",
+  "ui.messagePart.board.all": "All agents",
+  "ui.messagePart.board.primary": "Primary agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} to {{to}}",
+  "ui.messagePart.board.empty": "No agent messages",
+  "ui.messagePart.board.stored": "Stored only. Delivery and reading are not confirmed.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -105,6 +134,25 @@ export const dict: Record<string, string> = {
   "ui.fileSearch.close": "Close search",
 
   "ui.messageNav.newMessage": "New message",
+
+  "ui.promptInput.noMatchingItems": "No matching items",
+  "ui.promptInput.commands": "Commands",
+  "ui.promptInput.dropFiles": "Drop files to attach",
+  "ui.promptInput.removeAttachment": "Remove attachment",
+  "ui.promptInput.label": "Prompt",
+  "ui.promptInput.placeholder.shell": "Enter shell command...",
+  "ui.promptInput.placeholder.normal": "Ask anything, {{slash}} for commands, {{at}} for context...",
+  "ui.promptInput.add": "Add images and files",
+  "ui.promptInput.attachments": "Images and files",
+  "ui.promptInput.context": "Context",
+  "ui.promptInput.shell": "Shell command",
+  "ui.promptInput.chooseAgent": "Choose agent",
+  "ui.promptInput.chooseModel": "Choose model",
+  "ui.promptInput.chooseVariant": "Choose model variant",
+  "ui.promptInput.send": "Send",
+  "ui.promptInput.stop": "Stop",
+
+  "ui.tabs.close": "Close tab",
 
   "ui.textField.copyToClipboard": "Copy to clipboard",
   "ui.textField.copyLink": "Copy link",
@@ -133,11 +181,13 @@ export const dict: Record<string, string> = {
   "ui.tool.task": "Task",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Web Search",
+  "ui.tool.websearch.provider": "{{provider}} Web Search",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "To-dos",
   "ui.tool.todos.read": "Read to-dos",
   "ui.tool.questions": "Questions",
+  "ui.tool.questions.numbered": "Questions {{number}}",
   "ui.tool.agent": "{{type}} Agent",
   "ui.tool.agent.default": "Agent",
   "ui.tool.skill": "Skill",
@@ -152,6 +202,8 @@ export const dict: Record<string, string> = {
   "ui.common.question.other": "questions",
 
   "ui.common.add": "Add",
+  "ui.common.clear": "Clear",
+  "ui.common.file": "File",
   "ui.common.back": "Back",
   "ui.common.cancel": "Cancel",
   "ui.common.confirm": "Confirm",
@@ -159,6 +211,7 @@ export const dict: Record<string, string> = {
   "ui.common.close": "Close",
   "ui.common.next": "Next",
   "ui.common.submit": "Submit",
+  "ui.common.showMore": "Show more",
 
   "ui.permission.deny": "Deny",
   "ui.permission.allowAlways": "Allow always",
@@ -168,6 +221,7 @@ export const dict: Record<string, string> = {
   "ui.message.collapse": "Collapse message",
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "Fork to new session",
   "ui.message.revertMessage": "Revert to here",
   "ui.message.copyResponse": "Copy response",
@@ -182,9 +236,12 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Created",
   "ui.patch.action.moved": "Moved",
   "ui.patch.action.patched": "Patched",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} answered",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(no answer)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(not answered)",
   "ui.question.multiHint": "Select all answers that apply",
   "ui.question.singleHint": "Select one answer",

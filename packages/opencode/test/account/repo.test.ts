@@ -1,20 +1,23 @@
 import { expect } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer, Option } from "effect"
+import { sql } from "drizzle-orm"
 
 import { AccountRepo } from "../../src/account/repo"
 import { AccessToken, AccountID, OrgID, RefreshToken } from "../../src/account/schema"
-import { Database } from "@/storage/db"
+import { Database } from "@opencode-ai/core/database/database"
 import { testEffect } from "../lib/effect"
 
 const truncate = Layer.effectDiscard(
-  Effect.sync(() => {
-    const db = Database.Client()
-    db.run(/*sql*/ `DELETE FROM account_state`)
-    db.run(/*sql*/ `DELETE FROM account`)
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db.run(sql`DELETE FROM account_state`)
+    yield* db.run(sql`DELETE FROM account`)
   }),
 )
+const truncateNode = LayerNode.make({ name: "truncate-account", layer: truncate, deps: [Database.node] })
 
-const it = testEffect(Layer.merge(AccountRepo.layer, truncate))
+const it = testEffect(LayerNode.compile(LayerNode.group([AccountRepo.node, truncateNode])))
 
 it.live("list returns empty when no accounts exist", () =>
   Effect.gen(function* () {

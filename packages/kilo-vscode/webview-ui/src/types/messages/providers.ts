@@ -16,9 +16,11 @@ export interface ProviderModel {
     input?: { text: boolean; image: boolean; audio: boolean; video: boolean; pdf: boolean }
   }
   options?: { description?: string }
+  autoRouting?: { models: string[] }
   recommendedIndex?: number
   isFree?: boolean
   mayTrainOnYourPrompts?: boolean
+  hasUserByokAvailable?: boolean
   terminalBench?: {
     overallScore: number
     avgAttemptCostUsd: number
@@ -50,6 +52,13 @@ export interface ModelSelection {
   providerID: string
   modelID: string
 }
+
+export interface ModelUsage {
+  count: number
+  lastUsed: number
+}
+
+export type ModelUsageMap = Record<string, ModelUsage>
 
 export type ProviderAuthState = "api" | "oauth" | "wellknown"
 

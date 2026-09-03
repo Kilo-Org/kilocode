@@ -1,10 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import type { GlobalEvent } from "@kilocode/sdk/v2/client"
-import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
+import { createDuplicateEventFilter, resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
+import type { SSEPayload as Payload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const noLookup = (_: string) => undefined
-
-type Payload = GlobalEvent["payload"]
 
 const message = {
   id: "m1",
@@ -158,9 +156,207 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(suggestion, noLookup)).toBe("s10")
   })
 
+  it("routes sandbox status events", () => {
+    const event = {
+      id: "e12",
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s11", directory: "/repo", enabled: true, available: true, version: 1 },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s11")
+  })
+
   it("returns undefined for global events", () => {
     const event = { id: "e12", type: "server.connected", properties: {} } satisfies Payload
 
     expect(resolveEventSessionId(event, noLookup)).toBeUndefined()
+  })
+})
+
+describe("createDuplicateEventFilter", () => {
+  it("drops a compatibility envelope only after its live event", () => {
+    const filter = createDuplicateEventFilter()
+    const live = {
+      id: "e13",
+      type: "message.part.updated",
+      properties: { sessionID: "s6", part, delta: "x" },
+    } satisfies Payload
+    expect(filter(live)).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "e13",
+          seq: 5,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it("keeps replay-only compatibility envelopes", () => {
+    const filter = createDuplicateEventFilter()
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "session.next.model.switched.1",
+          id: "e14",
+          seq: 6,
+          aggregateID: "s6",
+          data: { sessionID: "s6", messageID: "m1", model: { id: "test", providerID: "kilo" } },
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it("keeps session updates because the provider consumes their sync metadata", () => {
+    const filter = createDuplicateEventFilter()
+    const live = {
+      id: "e15",
+      type: "session.updated",
+      properties: { sessionID: "s6", info: { id: "s6", time: { created: 0, updated: 1 } } },
+    } as Payload
+    expect(filter(live)).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "session.updated.1",
+          id: "e15",
+          seq: 7,
+          aggregateID: "s6",
+          data: { sessionID: "s6", info: { id: "s6", time: { created: 0, updated: 1 } } },
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it("continues tracking new live events after the cap is reached", () => {
+    const filter = createDuplicateEventFilter()
+    for (let index = 0; index < 1024; index++) {
+      expect(
+        filter({
+          id: `live-${index}`,
+          type: "message.part.updated",
+          properties: { sessionID: "s6", part, delta: "x" },
+        }),
+      ).toBe(false)
+    }
+
+    expect(
+      filter({
+        id: "live-1024",
+        type: "message.part.updated",
+        properties: { sessionID: "s6", part, delta: "x" },
+      }),
+    ).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "live-1024",
+          seq: 9,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(true)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "live-0",
+          seq: 8,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "live-1024",
+          seq: 9,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it("forwards delayed envelopes for evicted IDs", () => {
+    const filter = createDuplicateEventFilter()
+    for (let index = 0; index < 1024; index++) {
+      expect(
+        filter({
+          id: `pending-${index}`,
+          type: "message.part.updated",
+          properties: { sessionID: "s6", part, delta: "x" },
+        }),
+      ).toBe(false)
+    }
+
+    expect(
+      filter({
+        id: "overflow",
+        type: "message.part.updated",
+        properties: { sessionID: "s6", part, delta: "x" },
+      }),
+    ).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "pending-0",
+          seq: 8,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "pending-1023",
+          seq: 9,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it("does not carry duplicate IDs between connections", () => {
+    const first = createDuplicateEventFilter()
+    const second = createDuplicateEventFilter()
+    const live = {
+      id: "connection-event",
+      type: "message.part.updated",
+      properties: { sessionID: "s6", part, delta: "x" },
+    } satisfies Payload
+
+    expect(first(live)).toBe(false)
+    expect(
+      second(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "connection-event",
+          seq: 11,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
   })
 })

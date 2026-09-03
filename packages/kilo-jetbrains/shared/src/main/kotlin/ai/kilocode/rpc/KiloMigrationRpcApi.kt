@@ -30,6 +30,9 @@ interface KiloMigrationRpcApi : RemoteApi<Unit> {
     /** Return the persisted migration status, or null if not yet set. */
     suspend fun status(): LegacyMigrationStatusDto?
 
+    /** Clear the persisted migration status so migration can be offered again. */
+    suspend fun resetStatus(): Boolean
+
     /** Detect legacy data and return a summary of what can be migrated. */
     suspend fun detect(): LegacyMigrationDetectionDto
 
@@ -39,9 +42,12 @@ interface KiloMigrationRpcApi : RemoteApi<Unit> {
     /** Mark migration as skipped. */
     suspend fun skip()
 
+    /** Resume app load without marking migration as completed. */
+    suspend fun resume()
+
     /** Mark migration as completed or completed with errors. */
     suspend fun finalize(status: LegacyMigrationStatusDto)
 
-    /** Clean up legacy data after migration. */
+    /** Clean up legacy data after migration. Deleting the legacy settings file marks migration completed. */
     suspend fun cleanup(targets: LegacyCleanupTargetsDto): LegacyCleanupReportDto
 }

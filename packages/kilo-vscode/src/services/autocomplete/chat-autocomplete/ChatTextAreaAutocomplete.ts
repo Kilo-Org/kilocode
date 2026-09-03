@@ -6,8 +6,7 @@ import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/usel
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
-import { generateFim, hasValidCredentials } from "../fim"
-import { getAutocompleteModel } from "../../../shared/autocomplete-models"
+import { generateFim, hasValidCredentials, fimModel as getChatAutocompleteModel } from "../fim"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
 interface ChatCompletionRequestMessage {
@@ -19,6 +18,8 @@ interface ChatCompletionRequestMessage {
 interface ChatCompletionResponseSender {
   postMessage(message: { type: "chatCompletionResult"; text: string; requestId: string }): void
 }
+
+export { getChatAutocompleteModel }
 
 /**
  * Chat textarea autocomplete with cached per-request objects.
@@ -77,7 +78,7 @@ export class ChatTextAreaAutocomplete {
 
   async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
     const cfg = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
-    const entry = getAutocompleteModel(cfg.get<string>("provider"), cfg.get<string>("model"))
+    const entry = getChatAutocompleteModel(cfg.get<string>("provider"), cfg.get<string>("model"))
     const startTime = Date.now()
 
     // Build context for telemetry

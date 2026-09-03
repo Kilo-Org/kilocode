@@ -12,13 +12,24 @@ Workflows (also called **slash commands** in the new extension) automate repetit
 
 ## Creating Workflows
 
-{% tabs %}
-{% tab label="VSCode" %}
-
 Workflows are Markdown files stored as **slash commands** in `.kilo/commands/`:
 
 - **Global commands**: `~/.config/kilo/commands/` (available in all projects)
 - **Project commands**: `[project]/.kilo/commands/` (project-specific)
+
+If `.kilo/commands/` is a symlink to a directory outside the project, allow that exact source in your global `~/.config/kilo/kilo.jsonc`:
+
+```jsonc
+{
+  "permission": {
+    "markdown_source": {
+      "/path/to/shared/commands/*": "allow"
+    }
+  }
+}
+```
+
+Project configuration cannot grant this permission. External command files remain untrusted: `{env:...}` substitutions are blocked and `{file:...}` substitutions remain confined to the project.
 
 ### Basic Setup
 
@@ -46,7 +57,14 @@ You are helping submit a pull request...
 | `description` | Shown in the command picker |
 | `agent` | Which agent to use when invoking this command |
 | `model` | Model override for this command |
+| `variant` | Reasoning effort variant override (for example `low` or `high`), for models that support variants |
 | `subtask` | When `true`, runs as a sub-agent session |
+
+### Model and Reasoning Variant
+
+Each workflow can run with its own model and reasoning effort variant. In the VS Code extension, open **Settings → Agent Behaviour → Workflows**, expand a workflow, and choose a model and variant. The selection is saved as a command override in your global config, so the workflow's template file stays unchanged.
+
+You can also set `model` and `variant` in the command's frontmatter or in the `command` section of `kilo.jsonc`.  A variant only applies when the selected model supports it — picking a different model clears a variant the new model does not offer.
 
 ### Workflow Capabilities
 
@@ -55,32 +73,6 @@ Workflows can leverage all built-in tools: `read`, `glob`, `grep`, `edit`, `writ
 ### Migration from Legacy Workflows
 
 The new extension automatically migrates legacy workflows from `.kilocode/workflows/` to the new command format on startup. You can also manually move files and remove the `.md` extension from invocations.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Workflows are markdown files stored in `.kilocode/workflows/`:
-
-- **Global workflows**: `~/.kilocode/workflows/` (available in all projects)
-- **Project workflows**: `[project]/.kilocode/workflows/` (project-specific)
-
-### Basic Setup
-
-1. Create a `.md` file with step-by-step instructions
-2. Save it in your workflows directory
-3. Type `/filename.md` to execute
-
-### Workflow Capabilities
-
-Workflows can leverage:
-
-- [Built-in tools](/docs/automate/tools): [`read_file()`](/docs/automate/tools/read-file), [`search_files()`](/docs/automate/tools/search-files), [`execute_command()`](/docs/automate/tools/execute-command)
-- CLI tools: `gh`, `docker`, `npm`, custom scripts
-- [MCP integrations](/docs/automate/mcp/overview): Slack, databases, APIs
-- [Agent switching](/docs/code-with-ai/agents/using-agents): [`new_task()`](/docs/automate/tools/new-task) for specialized contexts
-
-{% /tab %}
-{% /tabs %}
 
 ## Common Workflow Patterns
 
@@ -117,9 +109,6 @@ Workflows can leverage:
 
 Let's walk through creating a workflow for submitting a pull request.
 
-{% tabs %}
-{% tab label="VSCode" %}
-
 Create a file called `submit-pr.md` in your `.kilo/commands` directory:
 
 ```markdown
@@ -144,33 +133,6 @@ Parameters needed (ask if not provided):
 ```
 
 Trigger this workflow by typing `/submit-pr` in the chat.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Create a file called `submit-pr.md` in your `.kilocode/workflows` directory:
-
-```markdown
-# Submit PR Workflow
-
-You are helping submit a pull request. Follow these steps:
-
-1. First, use `search_files` to check for any TODO comments or console.log statements that shouldn't be committed
-2. Run tests using `execute_command` with `npm test` or the appropriate test command
-3. If tests pass, stage and commit changes with a descriptive commit message
-4. Push the branch and create a pull request using `gh pr create`
-5. Use `ask_followup_question` to get the PR title and description from the user
-
-Parameters needed (ask if not provided):
-
-- Branch name
-- Reviewers to assign
-```
-
-Trigger this workflow by typing `/submit-pr.md` in the chat.
-
-{% /tab %}
-{% /tabs %}
 
 Kilo Code will:
 

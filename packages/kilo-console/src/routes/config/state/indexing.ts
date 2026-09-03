@@ -1,4 +1,7 @@
 import type { IndexingConfig } from "@kilocode/sdk/v2/client"
+import { isFileExtension } from "@kilocode/kilo-indexing/file-extensions"
+
+export { parseFileExtensions } from "@kilocode/kilo-indexing/file-extensions"
 
 function record(input: unknown): input is Record<string, unknown> {
   return typeof input === "object" && input !== null && !Array.isArray(input)
@@ -26,6 +29,7 @@ export function merge(base: IndexingConfig | undefined, patch: IndexingConfig | 
 
 function prune(input: unknown): unknown {
   if (typeof input === "string") return input.trim() || undefined
+  if (Array.isArray(input)) return input.length > 0 ? input : undefined
   if (!record(input)) return input ?? undefined
   const entries = Object.entries(input).flatMap(([key, value]) => {
     const next = prune(value)
@@ -64,6 +68,9 @@ export function removed(before: IndexingConfig, after: IndexingConfig): string[]
 
 export function validate(input: IndexingConfig): string[] {
   const errors: string[] = []
+  if (input.fileExtensions?.some((item) => !isFileExtension(item))) {
+    errors.push("File extensions must contain only a name with an optional leading dot.")
+  }
   if (input.dimension !== undefined && input.dimension !== null) {
     if (!Number.isInteger(input.dimension) || input.dimension <= 0)
       errors.push("Vector dimension must be a positive integer.")

@@ -1,24 +1,22 @@
-import { createRequire } from "module"
 import { ConfigPlugin } from "@/config/plugin"
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { ensureAtomicChatPlugin, isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
-import { ensureIndexingPlugin, resolveIndexingPlugin } from "@/kilocode/indexing-feature"
+import { ensureIndexingPlugin, INDEXING_PLUGIN } from "@/kilocode/indexing-feature"
 
 type Log = {
   debug: (msg: string, data?: Record<string, unknown>) => void
 }
 
-const req = createRequire(import.meta.url)
-
 export namespace KilocodeDefaultPlugins {
-  export function apply<T extends { plugin?: ConfigPlugin.Spec[]; plugin_origins?: ConfigPlugin.Origin[] }>(
+  export function apply<T extends { plugin?: ConfigPluginV1.Spec[]; plugin_origins?: ConfigPlugin.Origin[] }>(
     cfg: T,
     opts: { disabled: boolean; log?: Log },
   ): T {
     let plugins = cfg.plugin ?? []
 
     if (!opts.disabled) {
-      plugins = ensureIndexingPlugin(plugins, resolveIndexingPlugin(req, opts.log))
+      plugins = ensureIndexingPlugin(plugins, INDEXING_PLUGIN)
       plugins = ensureAtomicChatPlugin(plugins)
     }
 

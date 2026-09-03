@@ -23,11 +23,24 @@ import { describe, test, expect } from "bun:test"
 import { Schema } from "effect"
 import fs from "node:fs"
 import path from "node:path"
-import { Option } from "../../src/question"
+import { Info, Option, Prompt } from "../../src/question"
 
-const SOURCE = path.resolve(import.meta.dir, "../../src/question/index.ts")
+const SOURCE = path.resolve(import.meta.dir, "../../../schema/src/v1/question.ts")
 
 describe("QuestionOption schema — Kilo-specific field contract", () => {
+  test("question defaults survive tool and wire schemas and omit undefined", () => {
+    const raw = {
+      question: "Choose a format",
+      header: "Format",
+      options: [{ label: "JSON", description: "Structured output" }],
+      default: "JSON",
+    }
+    for (const schema of [Info, Prompt]) {
+      expect(Schema.decodeUnknownSync(schema)(raw).default).toBe("JSON")
+      expect(Schema.encodeSync(schema)({ ...raw, default: undefined })).not.toHaveProperty("default")
+    }
+  })
+
   test("Option class accepts and round-trips the mode field", () => {
     const raw = { label: "Continue here", description: "Implement the plan in this session", mode: "code" }
     const decoded = Schema.decodeUnknownSync(Option)(raw)
@@ -56,14 +69,14 @@ describe("QuestionOption schema — Kilo-specific field contract", () => {
   // resolution that drops the fields is caught immediately.
   test("source declares mode as an optional field inside a kilocode_change block", () => {
     const src = fs.readFileSync(SOURCE, "utf-8")
-    expect(src).toMatch(/kilocode_change start[^\n]*hint to UI clients/)
+    expect(src).toMatch(/kilocode_change start[^\n]*localization and mode selection hints/)
     expect(src).toMatch(/mode:\s*Schema\.optional\(Schema\.String\)/)
     expect(src).toMatch(/kilocode_change end/)
   })
 
   test("source declares labelKey and descriptionKey inside a kilocode_change block", () => {
     const src = fs.readFileSync(SOURCE, "utf-8")
-    expect(src).toMatch(/kilocode_change start[^\n]*i18n keys/)
+    expect(src).toMatch(/kilocode_change start[^\n]*localization and mode selection hints/)
     expect(src).toMatch(/labelKey:\s*Schema\.optional\(Schema\.String\)/)
     expect(src).toMatch(/descriptionKey:\s*Schema\.optional\(Schema\.String\)/)
   })

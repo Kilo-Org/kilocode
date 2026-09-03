@@ -10,10 +10,14 @@ const STORIES = [
   { id: "profile--not-logged-in", name: "Profile / not logged in" },
   { id: "profile--logged-in-personal", name: "Profile / personal account" },
   { id: "profile--logged-in", name: "Profile / organization account" },
+  { id: "profile--organization-context", name: "Profile / selected organization" },
+  { id: "profile--stale-and-unavailable", name: "Profile / stale usage" },
+  { id: "profile--empty-usage", name: "Profile / empty usage" },
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
-  { id: "marketplace--skills-tab-empty", name: "Marketplace / skills empty state" },
-  { id: "marketplace--agents-tab-empty", name: "Marketplace / agents empty state" },
+  { id: "marketplace--empty-list", name: "Marketplace / empty state" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
+  { id: "agentmanager--side-terminal-panel-empty", name: "Agent Manager / side terminal" },
+  { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
 ]
 
 function url(id: string) {
@@ -48,6 +52,256 @@ test.describe("webview accessibility ratchet", () => {
       await scan(page)
     })
   }
+
+  test("Background agent summary and visible agents remain pointer-accessible", async ({ page }) => {
+    await page.setViewportSize({ width: 200, height: 720 })
+    await open(page, "chat--task-header-background-agents-200")
+
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    const list = agents.locator('[data-slot="task-header-todos-list"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await summary.click()
+    await expect(list).toBeVisible()
+    await summary.click()
+    await expect(list).toBeHidden()
+
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const item = agents.locator('[data-slot="task-header-agents-item"]').first()
+    await expect(item).toHaveAttribute("aria-hidden", "false")
+    await item.click()
+    await expect(list).toBeHidden()
+  })
+
+  test("Background agents preserve running spinners and collapse after completion", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await page.clock.install()
+    await page.clock.pauseAt(new Date())
+    await page.addInitScript(() => {
+      let revision = 0
+      Object.defineProperty(window, "acquireVsCodeApi", {
+        value: () => ({
+          getState: () => undefined,
+          setState: () => {},
+          postMessage: (message: { type: string; sessionID?: string; requestID?: string }) => {
+            if (message.type !== "requestBackgroundJobs") return
+            revision += 1
+            window.postMessage(
+              {
+                type: "backgroundJobsLoaded",
+                sessionID: message.sessionID,
+                requestID: message.requestID,
+                jobs: [
+                  {
+                    id: "job-spinner",
+                    type: "task",
+                    title: `Background agent ${revision}`,
+                    status: revision < 4 ? "running" : "completed",
+                    started_at: 1,
+                    metadata: { parentSessionId: message.sessionID, sessionId: "child-spinner", background: true },
+                  },
+                ],
+              },
+              "*",
+            )
+          },
+        }),
+      })
+    })
+    await open(page, "chat--task-header-background-agents-420")
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const toggle = agents.locator('[data-slot="task-header-agents-toggle"]')
+    const list = agents.locator('[data-slot="task-header-todos-list"]')
+    const preview = agents.locator('[data-slot="task-header-agents-item"]')
+    await toggle.click()
+    const row = list.locator('[data-slot="task-header-agent"]')
+    await expect(row).toContainText("Background agent 1")
+    const node = await row.elementHandle()
+    const spinner = await row.locator('[data-component="spinner"]').elementHandle()
+    expect(spinner).not.toBeNull()
+
+    for (const revision of [2, 3]) {
+      await page.clock.runFor(1000)
+      await expect(row).toContainText(`Background agent ${revision}`)
+      await expect(row).toHaveAttribute("data-status", "running")
+      expect(await node!.evaluate((node) => node.isConnected)).toBe(true)
+      expect(await spinner!.evaluate((node) => node.isConnected)).toBe(true)
+    }
+
+    await row.locator('[data-slot="task-header-agent-main"]').focus()
+    await page.clock.runFor(1000)
+    await expect(toggle).toHaveAttribute("aria-expanded", "false")
+    await expect(toggle).toBeFocused()
+    await expect(toggle).toHaveAccessibleName("1 background agent (Done)")
+    await expect(list).toBeHidden()
+    await expect(preview).toHaveAttribute("data-status", "completed")
+    await expect(preview).toHaveAttribute("aria-hidden", "false")
+    await expect(preview).toHaveAccessibleName("Open background agent: Background agent 4 (Done)")
+    await expect(preview).toHaveAttribute("title", "Open background agent: Background agent 4 (Done)")
+    await expect(preview.locator('[data-component="icon"]')).toBeVisible()
+    await expect(preview.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await toggle.click()
+    await expect(list).toBeVisible()
+    await expect(row).toHaveAttribute("data-status", "completed")
+    await expect(row.getByRole("button", { name: "Dismiss: Background agent 4", exact: true })).toBeVisible()
+    await page.clock.runFor(1000)
+    await expect(row).toContainText("Background agent 5")
+    await expect(toggle).toHaveAttribute("aria-expanded", "true")
+    await expect(list).toBeVisible()
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await toggle.click()
+    await page.setViewportSize({ width: 200, height: 720 })
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await expect(summary).toHaveText("1 background agent")
+    await expect(summary).toHaveAccessibleName("1 background agent (Done)")
+    await expect(summary.locator('[data-component="icon"]')).toBeVisible()
+    await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
+    await expect(preview).toHaveAttribute("aria-hidden", "true")
+  })
+
+  test("Background agent previews show all finished statuses and a compact summary", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "acquireVsCodeApi", {
+        value: () => ({
+          getState: () => undefined,
+          setState: () => {},
+          postMessage: (message: { type: string; sessionID?: string; requestID?: string }) => {
+            if (message.type !== "requestBackgroundJobs") return
+            window.postMessage(
+              {
+                type: "backgroundJobsLoaded",
+                sessionID: message.sessionID,
+                requestID: message.requestID,
+                jobs: [
+                  "completed",
+                  "cancelled",
+                  "error",
+                  ...(document.documentElement.dataset.running ? ["running"] : []),
+                ].map((status) => ({
+                  id: `job-${status}`,
+                  type: "task",
+                  title: `Background agent ${status}`,
+                  status,
+                  started_at: 1,
+                  metadata: { parentSessionId: message.sessionID, sessionId: `child-${status}`, background: true },
+                })),
+              },
+              "*",
+            )
+          },
+        }),
+      })
+    })
+    await open(page, "chat--task-header-background-agents-1280")
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const items = agents.locator('[data-slot="task-header-agents-item"]')
+    await expect(items).toHaveCount(3)
+    const clear = agents.getByRole("button", { name: "Clear finished", exact: true })
+    await expect(clear).toHaveText("")
+    await expect(clear).toHaveAttribute("title", "Clear finished")
+    for (const [status, label, icon] of [
+      ["completed", "Done", "circle-check"],
+      ["cancelled", "Cancelled", "circle-ban-sign"],
+      ["error", "Error", "warning"],
+    ] as const) {
+      const item = agents.locator(`[data-slot="task-header-agents-item"][data-status="${status}"]`)
+      const name = `Open background agent: Background agent ${status} (${label})`
+      await expect(item).toHaveAttribute("aria-hidden", "false")
+      await expect(item).toHaveText(`Background agent ${status}`)
+      await expect(item).toHaveAccessibleName(name)
+      await expect(item).toHaveAttribute("title", name)
+      await expect(item.locator('[data-component="icon"]')).toBeVisible()
+      await expect(item.locator('[data-component="icon"] use')).toHaveAttribute("href", `#opencode-icon-${icon}`)
+    }
+    await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
+
+    await page.setViewportSize({ width: 200, height: 720 })
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await expect(summary).toHaveText("3 background agents")
+    await expect(summary).toHaveAccessibleName("3 background agents (Error)")
+    await expect(agents.locator('[data-slot="task-header-agents-toggle"]')).toHaveAccessibleName(
+      "3 background agents (Error)",
+    )
+    await expect(summary.locator('[data-component="icon"]')).toBeVisible()
+    await expect(summary.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-warning")
+    await expect(agents.locator('[data-slot="task-header-agents-item"][aria-hidden="false"]')).toHaveCount(0)
+
+    await page.evaluate(() => {
+      document.documentElement.dataset.running = "true"
+    })
+    await page.setViewportSize({ width: 600, height: 720 })
+    await expect(items).toHaveCount(4)
+    await expect(items.first()).toHaveAttribute("data-status", "running")
+    await expect(items.first()).toHaveAttribute("aria-hidden", "false")
+    await expect(items.first().locator('[data-component="spinner"]')).toBeVisible()
+    await expect(agents.locator('[data-slot="task-header-agents-overflow"]')).toHaveAttribute("aria-hidden", "false")
+  })
+
+  test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const visibility = await page.locator("#storybook-root").evaluate((root) => {
+      const layout = document.createElement("div")
+      layout.className = "am-layout"
+      root.append(layout)
+      const names = ["assistant-message", "tool-trigger", "file", "code", "diff"]
+      const values = names.map((name) => {
+        const node = document.createElement("div")
+        node.dataset.component = name
+        layout.append(node)
+        return getComputedStyle(node).contentVisibility
+      })
+      layout.remove()
+      return values
+    })
+
+    expect(visibility).toEqual(["visible", "visible", "visible", "visible", "visible"])
+  })
+
+  test("Agent Manager avoids generated separator text in updating tool rows", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const content = await page.locator("#storybook-root").evaluate((root) => {
+      const layout = document.createElement("div")
+      layout.className = "am-layout"
+      const wrapper = document.createElement("div")
+      wrapper.dataset.component = "tool-part-wrapper"
+      wrapper.dataset.partType = "tool"
+      const collapsible = document.createElement("div")
+      collapsible.className = "tool-collapsible"
+      collapsible.dataset.component = "collapsible"
+      const title = document.createElement("span")
+      title.dataset.slot = "basic-tool-tool-title"
+      const subtitle = document.createElement("span")
+      subtitle.dataset.slot = "basic-tool-tool-subtitle"
+      collapsible.append(title, subtitle)
+      wrapper.append(collapsible)
+      layout.append(wrapper)
+      root.append(layout)
+      const value = getComputedStyle(subtitle, "::before").content
+      layout.remove()
+      return value
+    })
+
+    expect(content).toBe("none")
+  })
+
+  test("sidebar keeps transcript announcements while Agent Manager bounds them", async ({ page }) => {
+    await open(page, "chat--chat-view-with-messages")
+    await expect(page.locator(".message-list")).toHaveAttribute("role", "log")
+    await expect(page.locator(".message-list")).toHaveAttribute("aria-live", "polite")
+
+    await open(page, "chat--chat-view-agent-manager-completed")
+    await expect(page.locator(".message-list")).not.toHaveAttribute("role")
+    await expect(page.locator(".message-list")).not.toHaveAttribute("aria-live")
+    await expect(page.locator('.sr-only[role="status"]')).toHaveAttribute("aria-live", "polite")
+  })
 
   test("Profile login exposes a keyboard-operable named control", async ({ page }) => {
     await open(page, "profile--not-logged-in")
@@ -118,5 +372,54 @@ test.describe("webview accessibility ratchet", () => {
       page.getByText("Searches the local workspace, local sessions, worktrees, and their sessions", { exact: true }),
     ).toBeVisible()
     await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
+  })
+
+  test("Search lists do not select an unhighlighted result on Enter by default", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const input = page.getByPlaceholder("Search worktrees and sessions", { exact: true })
+    const row = page.locator('[data-slot="list-item"]').first()
+    const selected = page.locator('[data-slot="sidebar-search-selection"]')
+
+    await input.fill("Render")
+    await expect(row).toContainText("Render images in diff viewer")
+    await row.dispatchEvent("mousemove", { movementX: 1 })
+    await expect(row).toHaveAttribute("data-active", "true")
+    await row.dispatchEvent("mouseleave")
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+
+    await input.press("Enter")
+    await expect(selected).toHaveText("worktree:wt-search")
+    await expect(input).toBeFocused()
+  })
+
+  test("Session tab switcher restores chat focus after keyboard and mouse selection", async ({ page }) => {
+    await open(page, "session-tabs--switcher-open")
+
+    const input = page.getByPlaceholder("Search open tabs")
+    const prompt = page.getByRole("textbox", { name: "Chat input" })
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+    await expect(page.locator('[data-slot="list-item"][data-key="current"]')).toHaveAttribute("data-selected", "true")
+    await expect(page.locator('[data-slot="list-item"][data-key="refactor"]')).toHaveAttribute("data-selected", "false")
+    await input.press("ArrowDown")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
+
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await page.locator('[data-slot="list-item"][data-key="current"]').click()
+    await expect(prompt).toBeFocused()
+
+    // Enter without prior ArrowDown selects the first filtered result (noInitialSelection)
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await input.fill("Review")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
+  })
+
+  test("Search popovers expose accessible dialog names", async ({ page }) => {
+    for (const id of ["agentmanager--sidebar-search-open", "session-tabs--switcher-open"]) {
+      await open(page, id)
+      await expect(page.getByRole("dialog")).toHaveAccessibleName(/.+/)
+    }
   })
 })

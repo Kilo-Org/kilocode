@@ -1,15 +1,27 @@
 package ai.kilocode.client.app
 
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestLog
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlin.test.assertFailsWith
 
 @Suppress("UnstableApiUsage")
 class KiloSessionServiceTest : BasePlatformTestCase() {
@@ -96,6 +108,77 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
 
         assertEquals("Use a focused implementation plan", result)
         assertEquals(listOf("/workspace" to "make a plan"), rpc.enhancements)
+    }
+
+    fun `test events logs normal completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        rpc.eventFlow = { _, _ -> flowOf(ChatEventDto.TurnOpen("ses_test")) }
+
+        service.events("ses_test", "/test").toList()
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events start=true") })
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true cancelled=false") })
+    }
+
+    fun `test events logs cancelled completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        val job = launch { service.events("ses_test", "/test").collect {} }
+        assertTrue(log.awaitMessage { it.contains("route=client-events start=true") })
+
+        job.cancelAndJoin()
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true cancelled=true") })
+    }
+
+    fun `test events logs failed completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        rpc.eventFlow = { _, _ -> flow { throw IllegalStateException("stream failed") } }
+
+        assertFailsWith<IllegalStateException> {
+            service.events("ses_test", "/test").toList()
+        }
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true failed message=stream failed") })
+    }
+
+    fun `test activity snapshot carries every kind the backend reports`() = runBlocking(Dispatchers.Default) {
+        // A busy session the backend cannot place in a directory, so only the status map has it.
+        rpc.statuses.value = mapOf("ses_busy" to SessionStatusDto("busy"))
+        rpc.activity.value = mapOf(
+            "ses_failed" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+            "ses_asking" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
+        )
+        // Both maps feed the snapshot through separate collectors, so wait for each one.
+        service.statuses.first { it.isNotEmpty() }
+        service.activity.first { it.size == 2 }
+
+        assertEquals(
+            mapOf(
+                "ses_busy" to SessionActivityKind.RUNNING,
+                "ses_failed" to SessionActivityKind.ERROR,
+                "ses_asking" to SessionActivityKind.QUESTION,
+            ),
+            service.activitySnapshot(),
+        )
+    }
+
+    fun `test deleting a session prunes its lingering activity and status entries`() = runBlocking(Dispatchers.Default) {
+        rpc.statuses.value = mapOf("ses_asking" to SessionStatusDto("busy"))
+        rpc.activity.value = mapOf(
+            "ses_asking" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
+            "ses_failed" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+        )
+        service.activity.first { it.size == 2 }
+
+        // The backend keeps reporting the question/error for a deleted session, so the entry must be
+        // pruned locally or the badge lingers on every derived surface.
+        service.deleteSession("ses_asking", "/repo/wt")
+        service.activity.first { "ses_asking" !in it }
+
+        assertEquals(mapOf("ses_failed" to SessionActivityKind.ERROR), service.activitySnapshot())
     }
 
     private fun session(id: String, title: String) = SessionDto(

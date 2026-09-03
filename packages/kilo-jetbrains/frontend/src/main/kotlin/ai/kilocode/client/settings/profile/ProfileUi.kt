@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.profile
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -16,6 +17,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +29,8 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 internal const val DASHBOARD_URL = "https://app.kilo.ai/profile"
+internal const val TOP_UP_URL = "https://app.kilo.ai/credits"
+internal const val PASS_URL = "https://kilo.ai/pricing/kilo-pass"
 
 internal val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -62,6 +66,14 @@ internal class ProfileUi(
             telemetry("Dashboard Opened", mapOf("surface" to "settings"))
             browse(DASHBOARD_URL)
         },
+        topUp = {
+            telemetry("Credits Opened", mapOf("surface" to "settings"))
+            browse(TOP_UP_URL)
+        },
+        pass = {
+            telemetry("Kilo Pass Opened", mapOf("surface" to "settings"))
+            browse(PASS_URL)
+        },
         logout = ::logout,
         organization = ::organization,
         refresh = ::refreshProfile,
@@ -74,6 +86,7 @@ internal class ProfileUi(
     private var shown: Card? = null
 
     init {
+        border = JBUI.Borders.empty(0, UiStyle.Gap.xl(), 0, UiStyle.Gap.xl())
         cards.add(out, Card.LOGGED_OUT.name)
         cards.add(account, Card.LOGGED_IN.name)
         add(cards, BorderLayout.NORTH)
@@ -153,7 +166,7 @@ internal class ProfileUi(
         val p = prof
         // When loading/connecting and already showing the logged-in card, stay on it to
         // avoid focus loss during reconnects, initial loads, and org switches.
-        val transientLoad = s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
+        val transientLoad = s == KiloAppStatusDto.DOWNLOADING || s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
         if (transientLoad && shown == Card.LOGGED_IN) return Card.LOGGED_IN
         return when {
             s == KiloAppStatusDto.DISCONNECTED || transientLoad -> Card.LOGGED_OUT

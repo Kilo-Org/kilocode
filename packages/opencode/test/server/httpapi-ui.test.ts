@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto"
 import { describe, expect } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import * as Log from "@opencode-ai/core/util/log"
-import { ConfigProvider, Effect, Layer } from "effect"
+import { ConfigProvider, Effect, Layer, Option } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import {
   HttpClient,
   HttpClientRequest,
@@ -11,15 +11,13 @@ import {
   HttpServer,
   HttpServerResponse,
 } from "effect/unstable/http"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { ServerAuth } from "../../src/server/auth"
 import { authorizationRouterMiddleware } from "../../src/server/routes/instance/httpapi/middleware/authorization"
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { serveEmbeddedUIEffect, serveUIEffect } from "../../src/server/shared/ui"
 import { testEffect } from "../lib/effect"
-
-void Log.init({ print: false })
 
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -41,7 +39,15 @@ const testStateLayer = Layer.effectDiscard(
   }),
 )
 
-const it = testEffect(Layer.mergeAll(testStateLayer, AppFileSystem.defaultLayer, RuntimeFlags.layer()))
+const fsUtilLayer = AppNodeBuilder.build(FSUtil.node)
+const it = testEffect(Layer.mergeAll(testStateLayer, fsUtilLayer, RuntimeFlags.layer()))
+
+function authConfigLayer(input?: { password?: string; username?: string }) {
+  return ServerAuth.Config.configLayer({
+    password: input?.password === undefined ? Option.none() : Option.some(input.password),
+    username: input?.username ?? "opencode",
+  })
+}
 
 function restoreEnv(key: string, value: string | undefined) {
   if (value === undefined) {
@@ -55,12 +61,15 @@ function app(input?: { password?: string; username?: string }) {
   const handler = HttpRouter.toWebHandler(
     HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input?.password,
             KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ),
     ),
     { disableLogger: true },
@@ -89,7 +98,7 @@ function uiApp(input?: {
   const handler = HttpRouter.toWebHandler(
     HttpRouter.use((router) =>
       Effect.gen(function* () {
-        const fs = yield* AppFileSystem.Service
+        const fs = yield* FSUtil.Service
         const client = yield* HttpClient.HttpClient
         const flags = yield* RuntimeFlags.Service
         yield* router.add("*", "/*", (request) =>
@@ -97,18 +106,19 @@ function uiApp(input?: {
         )
       }),
     ).pipe(
-      Layer.provide(authorizationRouterMiddleware.layer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))),
+      Layer.provide(authorizationRouterMiddleware.layer.pipe(Layer.provide(authConfigLayer(input)))),
       Layer.provide([
-        AppFileSystem.defaultLayer,
+        fsUtilLayer,
         input?.client ?? httpClient(new Response("ui")),
         RuntimeFlags.layer({ disableEmbeddedWebUi: input?.disableEmbeddedWebUi ?? false }),
         HttpServer.layerServices,
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-            KILO_SERVER_PASSWORD: input?.password,
-            KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ]),
     ),
     { disableLogger: true },
@@ -133,7 +143,7 @@ function routeOrderingApp() {
   const handler = HttpRouter.toWebHandler(
     HttpRouter.use((router) =>
       Effect.gen(function* () {
-        const fs = yield* AppFileSystem.Service
+        const fs = yield* FSUtil.Service
         const client = yield* HttpClient.HttpClient
         const flags = yield* RuntimeFlags.Service
         yield* router.add("GET", "/session/:sessionID", () =>
@@ -145,7 +155,7 @@ function routeOrderingApp() {
       }),
     ).pipe(
       Layer.provide([
-        AppFileSystem.defaultLayer,
+        fsUtilLayer,
         RuntimeFlags.layer({ disableEmbeddedWebUi: true }),
         httpClient(new Response("ui"), (request) => {
           proxiedUrl = request.url
@@ -208,7 +218,7 @@ describe("HttpApi UI fallback", () => {
     Effect.gen(function* () {
       let readPath: string | undefined
 
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const response = yield* serveEmbeddedUIEffect(
         "/assets/app.js",
         {
@@ -235,7 +245,7 @@ describe("HttpApi UI fallback", () => {
     Effect.gen(function* () {
       const script = 'document.documentElement.dataset.theme = "dark"'
 
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const response = yield* serveEmbeddedUIEffect(
         "/",
         {
@@ -326,6 +336,20 @@ describe("HttpApi UI fallback", () => {
       expect(yield* Effect.promise(() => response.json())).toEqual({ error: "Not Found" })
       expect(proxied).toBe(false)
       // kilocode_change end
+    }),
+  )
+
+  it.live("accepts basic auth passwords containing colons for the web UI", () =>
+    Effect.gen(function* () {
+      const response = yield* uiApp({
+        password: "sec:ret",
+        username: "opencode",
+        disableEmbeddedWebUi: true,
+      }).request("/", {
+        headers: { authorization: `Basic ${btoa("opencode:sec:ret")}` },
+      })
+
+      expect(response.status).toBe(404) // kilocode_change - auth succeeds, but Kilo does not proxy a fallback UI
     }),
   )
 

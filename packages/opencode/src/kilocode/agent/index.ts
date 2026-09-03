@@ -2,20 +2,25 @@
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
+import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
 import type { Info as AgentInfo } from "../../agent/agent"
 import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 
-export const bash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "ask",
+const mermaidClients = new Set(["vscode", "jetbrains"])
+
+const readable: Record<string, "allow"> = {
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -44,6 +49,11 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
+}
+
+export const bash: Record<string, "allow" | "ask" | "deny"> = {
+  "*": "ask",
+  ...readable,
   "touch *": "allow",
   "mkdir *": "allow",
   "cp *": "allow",
@@ -58,34 +68,7 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
 
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
-  "cat *": "allow",
-  "head *": "allow",
-  "tail *": "allow",
-  "less *": "allow",
-  "ls *": "allow",
-  "tree *": "allow",
-  "pwd *": "allow",
-  "echo *": "allow",
-  "wc *": "allow",
-  "which *": "allow",
-  "type *": "allow",
-  "file *": "allow",
-  "diff *": "allow",
-  "du *": "allow",
-  "df *": "allow",
-  "date *": "allow",
-  "uname *": "allow",
-  "whoami *": "allow",
-  "printenv *": "allow",
-  "man *": "allow",
-  "grep *": "allow",
-  "rg *": "allow",
-  "ag *": "allow",
-  "sort *": "allow",
-  "uniq *": "allow",
-  "cut *": "allow",
-  "tr *": "allow",
-  "jq *": "allow",
+  ...readable,
   "git *": "deny",
   "git log *": "allow",
   "git show *": "allow",
@@ -108,27 +91,52 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+  // Everything below is a blocklist layered on the allowlist above: it catches ways
+  // an "allowed" read-only command can still write files, chain commands, or exec an
+  // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is
+  // OS-level sandboxing, not command-line string matching.
+  // `*` matches any run of characters (including spaces and empty), so each rule
+  // catches its operator anywhere. Broad forms subsume narrow ones: `*&*` covers
+  // `&&`, and `*>*` covers `>`, `>>`, `>|`, and `>(` in any spacing.
   "*\n*": "deny",
   "*<(*": "deny",
   "*|*": "deny",
   "*;*": "deny",
-  "*&&*": "deny",
   "*&*": "deny",
   "*$(*": "deny",
   "*`*": "deny",
   "*>*": "deny",
-  "* > *": "deny",
-  "*>>*": "deny",
-  "* >> *": "deny",
-  "*>|*": "deny",
-  "* >| *": "deny",
+  // Short -o is space-anchored (two forms) so it never matches filenames like
+  // `foo-o bar`; long flags use `*--flag*`, which is specific enough to bridge both
+  // "flag first" and "flag after args" positions in one rule.
   "sort -o *": "deny",
   "sort * -o *": "deny",
-  "sort --output*": "deny",
-  "sort * --output*": "deny",
+  "sort *--output*": "deny",
+  // Flags that make otherwise "read-only" commands exec an arbitrary program.
+  "sort *--compress-program*": "deny",
+  "sort *--files0-from*": "deny",
+  "rg *--pre *": "deny",
+  "rg *--pre=*": "deny",
+  "rg *--hostname-bin*": "deny",
+  "ag *--pager*": "deny",
+  "man *-P*": "deny",
+  "man *--pager*": "deny",
+  "man *-H*": "deny",
 }
 
-function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readOnlyBash,
+  // Explore runs as a delegated agent, so it cannot answer permission prompts.
+  "gh *": "deny",
+  // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
+  "find *": "deny",
+}
+
+function board(enabled: boolean): Record<string, "allow"> {
+  return enabled ? { board_read: "allow", board_post: "allow" } : {}
+}
+
+function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}, enabled = false) {
   return Permission.fromConfig({
     "*": "deny",
     bash: readOnlyBash,
@@ -145,12 +153,16 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
     },
     ...mcp,
+    ...board(enabled),
+    // After the MCP rules: a server named `agent`/`notebook` emits `agent_*`/`notebook_*`,
+    // which wildcard-match these tools and would otherwise reopen them.
+    ...guardedDenies,
+    task: "deny",
   })
 }
 
@@ -158,8 +170,93 @@ function denies(user: Permission.Ruleset) {
   return user.filter((rule) => rule.action === "deny")
 }
 
+function editRestrictions(rules: Permission.Ruleset) {
+  const edit = rules.filter((rule) => rule.permission === "edit")
+  return edit.filter((rule, index) => {
+    if (rule.action !== "deny") return false
+    if (rule.pattern !== "*") return true
+    // A wildcard before a later edit exception is an allowlist baseline. The
+    // plan guard supplies the source catch-all, so do not append it alone.
+    return !edit.slice(index + 1).some((next) => next.action !== "deny")
+  })
+}
+
+function restrictions(user: Permission.Ruleset) {
+  return [...user.filter((rule) => rule.action === "deny" && rule.permission !== "edit"), ...editRestrictions(user)]
+}
+
 function askEditGuard() {
   return Permission.fromConfig({ edit: "deny" })
+}
+
+// Tools that mutate the workspace or execute code. Config rules never widen these for a
+// read-only mode, whatever pattern they use: the config is partly machine-written, so an
+// "always allow" in code mode or the allow-everything toggle would otherwise hand ask and
+// plan the arbitrary execution reported in #12053. Opt a single mode in with
+// `agent.<name>.permission`, which merges after patchAgents in agent.ts.
+// Exported so KiloTask.inherited carries the same set into delegated sessions; a tool
+// guarded here but not there would be reachable again through a subagent.
+export const guarded = [
+  "bash",
+  "task",
+  "notebook_edit",
+  "notebook_execute",
+  "write",
+  "agent_manager",
+  "repo_clone",
+  "interactive_terminal",
+]
+
+// Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
+// in the guards, so they are denied there instead.
+const guardedDenies = Object.fromEntries(
+  guarded
+    .filter((permission) => permission !== "bash" && permission !== "task")
+    .map((permission) => [permission, "deny" as const]),
+)
+
+// Permissions no config rule may re-tune. `task` is excluded on purpose: Plan legitimately
+// delegates, so `task: "ask"` is honored while guardedDenies still blocks its one target.
+const sealed = guarded.filter((permission) => permission !== "task")
+
+// Reapplies the guard after `user`, in three layers:
+//   1. the catch-all deny (which keeps `*` rules from enabling unknown project/plugin
+//      tools) plus the read-only allowlist, or the deny would strand read/grep/plan_exit
+//   2. the user's rules re-expanded onto safe permissions by exact name, so global tuning
+//      still works without matching a custom tool
+//   3. the bash, MCP and guarded-deny ceilings
+// User denies still land last via denies()/restrictions().
+function baseline(
+  rules: Permission.Ruleset,
+  user: Permission.Ruleset,
+  mcp: Record<string, "allow" | "ask" | "deny"> = {},
+) {
+  const known = new Set(
+    rules
+      .map((rule) => rule.permission)
+      .filter((permission) => permission !== "*" && !Object.hasOwn(mcp, permission) && !sealed.includes(permission)),
+  )
+  return [
+    ...rules.filter((rule) => rule.permission === "*" || known.has(rule.permission)),
+    ...user.flatMap((rule) =>
+      [...known]
+        .filter((permission) => Wildcard.match(permission, rule.permission))
+        .map((permission) => ({ ...rule, permission })),
+    ),
+    ...rules.filter(
+      (rule) =>
+        rule.permission === "bash" ||
+        Object.hasOwn(mcp, rule.permission) ||
+        (rule.action === "deny" &&
+          guarded.includes(rule.permission) &&
+          // A blanket deny is an absolute ceiling. A deny aimed at one target — Plan's
+          // `task: { general: "deny" }` — is only a default, which the user may lift by
+          // naming that exact target, as upstream's per-subagent opt-in does. A wildcard
+          // never qualifies, so no catch-all reaches it.
+          (rule.pattern === "*" ||
+            !user.some((item) => item.permission === rule.permission && item.pattern === rule.pattern))),
+    ),
+  ]
 }
 
 // Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
@@ -180,13 +277,49 @@ function planEditGuard(worktree: string) {
   return Permission.fromConfig({ edit: planEditRules(worktree) })
 }
 
-function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+export function hardenPlan(
+  key: string,
+  item: { native?: boolean; permission: Permission.Ruleset },
+  worktree: string,
+  ...explicit: Permission.Ruleset[]
+) {
+  // Plan-mode edit restrictions are a ceiling for the built-in plan agent only.
+  // Custom agents named `architect` are governed by their own permission config;
+  // the previous name check appended the guard after their rules, so last-match-
+  // wins made their edit allows unreachable with no opt-out (#13581). A custom
+  // `agent.plan` config reuses the built-in object, so `native` stays true and
+  // the ceiling still applies there.
+  if (key !== "plan") return
+  if (item.native !== true) return
+  const edit = explicit.map(editRestrictions)
+  item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
+}
+
+export function hardenExplore(
+  key: string,
+  item: { permission: Permission.Ruleset },
+  ...explicit: Permission.Ruleset[]
+) {
+  if (key !== "explore") return
+  item.permission = Permission.merge(
+    item.permission,
+    Permission.fromConfig({ bash: exploreBash }),
+    // Hardening is a ceiling, so retain any stricter user-authored denies.
+    ...explicit.map(denies),
+  )
+}
+
+function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}, enabled = false) {
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    task: {
+      "*": "allow",
+      general: "deny",
+    },
     bash: readOnlyBash,
     read: {
       "*": "allow",
@@ -199,7 +332,6 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     list: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
@@ -207,6 +339,8 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     },
     edit: planEditRules(worktree),
     ...mcp,
+    ...board(enabled),
+    ...guardedDenies,
   })
 }
 
@@ -228,7 +362,17 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
-  const defaultsPatch = Permission.fromConfig({ bash, recall: "ask" })
+  const defaultsPatch = Permission.fromConfig({
+    bash,
+    ...board(cfg.experimental?.shared_agent_board === true),
+    recall: "ask",
+    ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
+      ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
+      : {}),
+    ...(Flag.KILO_CLIENT === "vscode" ? { browser_open: "ask" as const } : {}),
+    kilo_memory_recall: "ask",
+    kilo_memory_save: "ask",
+  })
   return { mcpRules, defaultsPatch }
 }
 
@@ -239,6 +383,10 @@ export function cacheKey(cfg: Config.Info) {
     mcp: cfg.mcp,
     mode: cfg.mode,
     permission: cfg.permission,
+    native_notebook_tools: cfg.experimental?.native_notebook_tools,
+    shared_agent_board: cfg.experimental?.shared_agent_board,
+    references: cfg.references,
+    reference: cfg.reference,
   })
 }
 
@@ -256,14 +404,26 @@ export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<stri
   return result
 }
 
-// Set displayName and deprecated from options after config item is processed.
+// Lift Kilo-internal metadata onto typed agent fields and remove it from `options`.
+// Older org modes and marketplace agents stored `displayName`/`source` inside the
+// `options` record, which is otherwise forwarded verbatim to the provider as request
+// parameters. Promoting then deleting them keeps `options` provider-clean at the source
+// (the request boundary still strips as a safety net).
 export function processConfigItem(item: {
   options: Record<string, unknown>
   displayName?: string
+  source?: string
   deprecated?: boolean
 }) {
-  if (item.options?.displayName && typeof item.options.displayName === "string") {
+  if (!item.displayName && typeof item.options?.displayName === "string") {
     item.displayName = item.options.displayName
+  }
+  if (!item.source && typeof item.options?.source === "string") {
+    item.source = item.options.source
+  }
+  if (item.options) {
+    delete item.options.displayName
+    delete item.options.source
   }
 }
 
@@ -302,7 +462,7 @@ export function telemetryOptions(_cfg: Config.Info) {
 // Patch the base agents map in-place with all kilo-specific changes:
 // - Rename build → code
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
-// - Patch explore with codebase_search and conditional prompt
+// - Patch explore permissions and prompt
 // - Patch appropriate agents with semantic_search
 // - Add debug, orchestrator, ask agents
 export function patchAgents(
@@ -311,6 +471,7 @@ export function patchAgents(
     {
       name: string
       displayName?: string
+      source?: string
       description?: string
       deprecated?: boolean
       mode: "subagent" | "primary" | "all"
@@ -334,6 +495,7 @@ export function patchAgents(
   worktree: string,
   whitelistedDirs: string[],
 ) {
+  const enabled = cfg.experimental?.shared_agent_board === true
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = {
@@ -351,23 +513,26 @@ export function patchAgents(
 
   // Patch plan mode
   if (agents.plan) {
+    const guard = planGuard(worktree, kilo.mcpRules, enabled)
     agents.plan = {
       ...agents.plan,
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
-        planGuard(worktree, kilo.mcpRules),
+        guard,
         user,
+        baseline(guard, user, kilo.mcpRules),
         planEditGuard(worktree),
-        denies(user),
+        restrictions(user),
       ),
     }
   }
 
-  // Patch explore with codebase_search and conditional prompt
+  // Patch explore permissions and prompt
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({
@@ -375,13 +540,12 @@ export function patchAgents(
           grep: "allow",
           glob: "allow",
           list: "allow",
-          bash: "allow",
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
-          codebase_search: "allow",
           semantic_search: "allow",
           read: "allow",
+          ...board(enabled),
           external_directory: {
             // Mirror upstream explore's shape: the outer "*": "deny" above wins
             // over defaults' external_directory rules via findLast, so re-apply
@@ -393,10 +557,11 @@ export function patchAgents(
           },
         }),
         user,
+        // Explore is always delegated, so user allows cannot make its shell writable.
+        Permission.fromConfig({ bash: exploreBash }),
+        denies(user),
       ),
-      prompt: cfg.experimental?.codebase_search
-        ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
-        : PROMPT_EXPLORE,
+      prompt: PROMPT_EXPLORE,
     }
   }
 
@@ -410,7 +575,7 @@ export function patchAgents(
       defaults,
       Permission.fromConfig({
         question: "allow",
-        suggest: "allow", // kilocode_change
+        suggest: "allow",
         plan_enter: "allow",
         semantic_search: "allow",
       }),
@@ -436,13 +601,13 @@ export function patchAgents(
         list: "allow",
         question: "allow",
         skill: "allow",
-        suggest: "allow", // kilocode_change
+        suggest: "allow",
         task: "allow",
         todoread: "allow",
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
-        codebase_search: "allow",
+        ...board(enabled),
         external_directory: {
           [Truncate.GLOB]: "allow",
         },
@@ -459,12 +624,25 @@ export function patchAgents(
   }
 
   // Add ask agent
+  const guard = askGuard(kilo.mcpRules, enabled)
   agents.ask = {
     name: "ask",
     description: "Get answers and explanations without making changes to the codebase.",
-    prompt: PROMPT_ASK,
+    prompt: mermaidClients.has(Flag.KILO_CLIENT)
+      ? PROMPT_ASK
+      : PROMPT_ASK.replace(
+          "- Use Mermaid diagrams when they help clarify your response",
+          "- Use plain-text or ASCII diagrams when they help clarify your response. The CLI cannot render Mermaid diagrams. Only provide Mermaid source when the user explicitly requests it",
+        ),
     options: {},
-    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
+    permission: Permission.merge(
+      defaults,
+      guard,
+      user,
+      baseline(guard, user, kilo.mcpRules),
+      askEditGuard(),
+      denies(user),
+    ),
     mode: "primary",
     native: true,
   }
@@ -478,16 +656,22 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
 })
 
 /**
- * Remove a custom agent by deleting its markdown source file and/or
- * removing it from legacy .kilocodemodes YAML files.
- * Scans all config directories for agent/mode .md files matching the name,
- * then also checks the .kilocodemodes files the ModesMigrator reads.
+ * Remove a custom agent by deleting its markdown source file, removing it from
+ * config-backed agent entries, and/or removing it from legacy .kilocodemodes YAML files.
+ * Scans the selected writable config scope, or every scope when none is selected.
  */
-export async function remove(input: { name: string; agent?: AgentInfo; dirs: string[]; directory: string }) {
+export async function remove(input: {
+  name: string
+  agent?: AgentInfo
+  dirs: string[]
+  directory: string
+  worktree?: string
+  scope?: "global" | "project"
+}) {
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
-  if (input.agent.options?.source === "organization")
+  if (input.agent.source === "organization" || input.agent.options?.source === "organization")
     throw new RemoveError({
       name: input.name,
       message: "cannot remove organization agent — manage it from the cloud dashboard",
@@ -495,10 +679,21 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
 
   const { unlink, writeFile } = await import("fs/promises")
   let found = false
+  const result = await KilocodeConfigSources.list({ directory: input.directory, worktree: input.worktree })
+  const sources = result.sources.filter((source) => !input.scope || source.scope === input.scope)
+  const roots = new Set(
+    sources.flatMap((source) => {
+      if (!source.path) return []
+      if (source.kind === "config-dir") return [source.path]
+      if (source.kind === "global-file") return [path.dirname(source.path)]
+      return []
+    }),
+  )
+  const dirs = input.scope ? input.dirs.filter((dir) => roots.has(dir)) : input.dirs
 
   // 1. Delete .md files from config directories
   const patterns = ["{agent,agents}/**/" + input.name + ".md", "{mode,modes}/" + input.name + ".md"]
-  for (const dir of input.dirs) {
+  for (const dir of dirs) {
     for (const pattern of patterns) {
       const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
       for (const file of matches) {
@@ -510,21 +705,30 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
     }
   }
 
+  if (await removeConfigAgent(input.name, sources)) found = true
+
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
   const { KilocodePaths } = await import("@/kilocode/paths")
   const os = await import("os")
   const matter = (await import("gray-matter")).default
   const home = os.default.homedir()
-  const modesFiles = [
-    path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocodemodes"),
-    path.join(input.directory, ".kilocodemodes"),
+  const legacy = [
+    {
+      scope: "global" as const,
+      file: path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+    },
+    {
+      scope: "global" as const,
+      file: path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
+    },
+    { scope: "global" as const, file: path.join(home, ".kilocodemodes") },
+    { scope: "project" as const, file: path.join(input.directory, ".kilocodemodes") },
   ]
 
-  for (const file of modesFiles) {
-    const modes = await ModesMigrator.readModesFile(file)
+  for (const item of legacy) {
+    if (input.scope && item.scope !== input.scope) continue
+    const modes = await ModesMigrator.readModesFile(item.file)
     if (!modes.length) continue
 
     const filtered = modes.filter((m: { slug: string }) => m.slug !== input.name)
@@ -535,9 +739,35 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
       .stringify("", { customModes: filtered })
       .replace(/^---\n/, "")
       .replace(/\n---\n?$/, "")
-    await writeFile(file, yaml)
+    await writeFile(item.file, yaml)
     found = true
   }
 
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
+}
+
+async function removeConfigAgent(name: string, sources: KilocodeConfigSources.Source[]) {
+  const files = sources
+    .filter((source) => source.exists && source.editable && source.path && source.kind.endsWith("-file"))
+    .map((source) => source.path!)
+  let found = false
+
+  for (const file of new Set(files)) {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) continue
+
+    const text = await cfg.text()
+    const root = parseJsonc(text)
+    if (!root?.agent || !Object.hasOwn(root.agent, name)) continue
+
+    const opts = { formattingOptions: { insertSpaces: true, tabSize: 2 } }
+    const next = applyEdits(text, modify(text, ["agent", name], undefined, opts))
+    const parsed = parseJsonc(next)
+    const final =
+      parsed.default_agent === name ? applyEdits(next, modify(next, ["default_agent"], undefined, opts)) : next
+    await Bun.write(file, final)
+    found = true
+  }
+
+  return found
 }

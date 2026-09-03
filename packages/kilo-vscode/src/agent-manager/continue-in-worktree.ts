@@ -8,8 +8,9 @@ import { recordForkHandoff } from "./fork-handoff"
 
 export interface ContinueContext {
   root: string
+  binary?: string
   getClient: () => KiloClient
-  createWorktreeOnDisk: (opts: { baseBranch: string }) => Promise<{
+  createWorktreeOnDisk: (opts: { baseBranch: string; baseRef: string }) => Promise<{
     worktree: { id: string }
     result: CreateWorktreeResult
   } | null>
@@ -31,7 +32,7 @@ export type StepResult<T> = { ok: true; value: T } | { ok: false; error: string 
 export async function abortSession(ctx: ContinueContext, sessionId: string): Promise<void> {
   try {
     const client = ctx.getClient()
-    await client.session.abort({ sessionID: sessionId }).catch((err) => {
+    await client.session.abort({ sessionID: sessionId }, { throwOnError: true }).catch((err) => {
       ctx.log("Session abort failed (may already be idle):", getErrorMessage(err))
     })
   } catch (err) {
@@ -42,7 +43,7 @@ export async function abortSession(ctx: ContinueContext, sessionId: string): Pro
 /** Capture git state from the workspace root. */
 export async function captureState(ctx: ContinueContext): Promise<StepResult<GitSnapshot>> {
   try {
-    const snapshot = await captureGitState(ctx.root, (...args) => ctx.log(...args))
+    const snapshot = await captureGitState(ctx.root, (...args) => ctx.log(...args), ctx.binary)
     return { ok: true, value: snapshot }
   } catch (err) {
     return { ok: false, error: `Failed to capture git state: ${getErrorMessage(err)}` }
@@ -53,8 +54,9 @@ export async function captureState(ctx: ContinueContext): Promise<StepResult<Git
 export async function prepareWorktree(
   ctx: ContinueContext,
   branch: string,
+  head: string,
 ): Promise<StepResult<{ worktreeId: string; result: CreateWorktreeResult }>> {
-  const created = await ctx.createWorktreeOnDisk({ baseBranch: branch })
+  const created = await ctx.createWorktreeOnDisk({ baseBranch: branch, baseRef: head })
   if (!created) return { ok: false, error: "Failed to create worktree" }
   await ctx.runSetupScript(created.result.path, created.result.branch, created.worktree.id)
   return { ok: true, value: { worktreeId: created.worktree.id, result: created.result } }
@@ -66,7 +68,7 @@ export async function transferState(
   snapshot: GitSnapshot,
   target: string,
 ): Promise<StepResult<void>> {
-  const applied = await applyGitState(snapshot, target, (...args) => ctx.log(...args))
+  const applied = await applyGitState(snapshot, target, (...args) => ctx.log(...args), ctx.binary)
   if (!applied.ok) {
     ctx.log("Git state transfer failed:", applied.error)
     return { ok: false, error: applied.error ?? "Failed to apply changes to worktree" }
@@ -150,7 +152,7 @@ export async function continueInWorktree(
   if (!captured.ok) return progress("error", undefined, captured.error)
 
   progress("creating", "Creating worktree...")
-  const prepared = await prepareWorktree(ctx, captured.value.branch)
+  const prepared = await prepareWorktree(ctx, captured.value.branch, captured.value.head)
   if (!prepared.ok) return progress("error", undefined, prepared.error)
 
   progress("transferring", "Transferring changes...")

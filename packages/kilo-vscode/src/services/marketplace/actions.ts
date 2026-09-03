@@ -2,6 +2,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend"
 import { retry } from "../cli-backend/retry"
+import { removeAgent } from "../agent-removal"
 import type { MarketplaceService } from "."
 import type {
   InstallMarketplaceItemOptions,
@@ -28,9 +29,10 @@ export async function fetchMarketplaceData(
   ctx: MarketplaceActionContext,
   project: string | undefined,
   dir: string | undefined,
+  roots: readonly vscode.Uri[],
 ): Promise<MarketplaceDataResponse> {
   const skills = dir ? await fetchSkills(ctx, dir) : undefined
-  return ctx.marketplace.fetchData(project, skills)
+  return ctx.marketplace.fetchData(project, skills, roots)
 }
 
 export async function installMarketplaceItem(
@@ -66,6 +68,12 @@ export async function removeMarketplaceItem(
   }
 
   try {
+    if (item.type === "agent") {
+      const target = scope === "project" ? project! : dir
+      const result = await removeAgent({ connection: ctx.connection, directory: target, name: item.id, scope })
+      if (result.success) await invalidate(ctx, scope, target)
+      return result
+    }
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, scope)
     const result = await ctx.marketplace.remove(item, scope, project)
     if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)

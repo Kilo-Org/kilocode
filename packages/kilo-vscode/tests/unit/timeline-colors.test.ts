@@ -48,7 +48,6 @@ describe("timeline colors", () => {
     expect(color(mkTool("grep"))).toBe(palette.read)
     expect(color(mkTool("ls"))).toBe(palette.read)
     expect(color(mkTool("diagnostics"))).toBe(palette.read)
-    expect(color(mkTool("warpgrep"))).toBe(palette.read)
   })
 
   it("classifies write tools as write color", () => {
@@ -104,5 +103,43 @@ describe("timeline labels", () => {
 
   it("returns 'Step finish' for step-finish", () => {
     expect(label(mkStepFinish())).toBe("Step finish")
+  })
+
+  it("includes model ID for step-finish with model", () => {
+    expect(
+      label(
+        {
+          ...mkStepFinish(),
+          model: { providerID: "kilo", modelID: "openai/gpt-5.5" },
+        },
+        {
+          id: "m1",
+          sessionID: "s1",
+          role: "assistant",
+          createdAt: "now",
+          providerID: "kilo",
+          modelID: "kilo-auto/efficient",
+        },
+      ),
+    ).toBe("Step finish · openai/gpt-5.5")
+  })
+
+  it("keeps step-finish unchanged for non-auto models", () => {
+    expect(
+      label(
+        {
+          ...mkStepFinish(),
+          model: { providerID: "kilo", modelID: "openai/gpt-5.5" },
+        },
+        {
+          id: "m1",
+          sessionID: "s1",
+          role: "assistant",
+          createdAt: "now",
+          providerID: "kilo",
+          modelID: "openai/gpt-5.5",
+        },
+      ),
+    ).toBe("Step finish")
   })
 })

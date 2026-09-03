@@ -98,4 +98,56 @@ class KiloBackendHttpClientsTest {
         KiloBackendHttpClients.shutdown(client)
         assertEquals(0, client.connectionPool.connectionCount())
     }
+
+    @Test
+    fun `cli download client keeps release download timeouts`() {
+        val client = KiloBackendHttpClients.cliDownload()
+        try {
+            assertEquals(30_000, client.connectTimeoutMillis)
+            assertEquals(120_000, client.readTimeoutMillis)
+            assertEquals(120_000, client.writeTimeoutMillis)
+            assertEquals(0, client.callTimeoutMillis)
+        } finally {
+            KiloBackendHttpClients.shutdown(client)
+        }
+    }
+
+    @Test
+    fun `model fetch client has bounded 15 second timeouts`() {
+        val client = KiloBackendHttpClients.modelFetch()
+        try {
+            assertEquals(15_000, client.connectTimeoutMillis)
+            assertEquals(15_000, client.readTimeoutMillis)
+            assertEquals(15_000, client.callTimeoutMillis)
+        } finally {
+            KiloBackendHttpClients.shutdown(client)
+        }
+    }
+
+    @Test
+    fun `bounded client applies per request timeout and preserves auth`() {
+        val pwd = "boundedpwd"
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("ok"))
+        server.start()
+
+        val client = KiloBackendHttpClients.api(pwd)
+        val bounded = KiloBackendHttpClients.bounded(client, 7)
+        try {
+            assertEquals(7_000, bounded.callTimeoutMillis)
+            assertEquals(7_000, bounded.readTimeoutMillis)
+            assertEquals(client.connectTimeoutMillis, bounded.connectTimeoutMillis)
+
+            val request = okhttp3.Request.Builder().url(server.url("/global/config")).build()
+            bounded.newCall(request).execute().use { response ->
+                assertEquals(200, response.code)
+            }
+            val recorded = server.takeRequest()
+            val expected = "Basic ${Base64.getEncoder().encodeToString("kilo:$pwd".toByteArray())}"
+            assertEquals(expected, recorded.getHeader("Authorization"))
+        } finally {
+            KiloBackendHttpClients.shutdown(client)
+            server.shutdown()
+        }
+    }
 }

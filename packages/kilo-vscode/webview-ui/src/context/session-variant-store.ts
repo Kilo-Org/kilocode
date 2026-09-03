@@ -1,5 +1,28 @@
 import type { ModelSelection } from "../types/messages"
 
+const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+// Variant names are non-empty, so this cannot collide with a provider variant.
+export const DEFAULT_VARIANT = ""
+
+/** Keep the selected effort when possible, falling back to the nearest known effort. */
+export function preserveVariant(current: string | undefined, variants: string[]) {
+  if (!current || variants.length === 0) return undefined
+  if (variants.includes(current)) return current
+
+  const rank = effort.indexOf(current)
+  if (rank === -1) return undefined
+
+  return variants
+    .map((value, index) => ({
+      value,
+      index,
+      rank: effort.indexOf(value),
+      distance: Math.abs(effort.indexOf(value) - rank),
+    }))
+    .filter((item) => effort.includes(item.value))
+    .sort((a, b) => a.distance - b.distance || b.rank - a.rank || a.index - b.index)[0]?.value
+}
+
 export function legacyVariantKey(sel: ModelSelection) {
   return `${sel.providerID}/${sel.modelID}`
 }
@@ -16,12 +39,36 @@ export function getVariant(
   variants: string[],
   agent: string,
   session?: string,
+  configured?: string,
 ) {
   if (variants.length === 0) return undefined
-  const key = variantKey(sel, agent, session)
-  const fallback = session ? store[variantKey(sel, agent)] : undefined
-  const stored = store[key] ?? fallback ?? store[legacyVariantKey(sel)]
-  return stored && variants.includes(stored) ? stored : variants[0]
+  const scoped = session ? store[variantKey(sel, agent, session)] : undefined
+  const preset = configured && variants.includes(configured) ? configured : undefined
+  const stored = scoped ?? preset ?? store[variantKey(sel, agent)] ?? store[legacyVariantKey(sel)]
+  if (stored === undefined || stored === DEFAULT_VARIANT) return undefined
+  return preserveVariant(stored, variants)
+}
+
+export function getAgentVariant(
+  store: Record<string, string>,
+  sel: ModelSelection,
+  model: { variants?: Record<string, unknown> } | undefined,
+  agent: string,
+  configured?: string,
+) {
+  if (!model?.variants) return undefined
+  return getVariant(store, sel, Object.keys(model.variants), agent, undefined, configured)
+}
+
+/**
+ * Next variant in the list, returning to the default after the last.
+ * An unknown or missing current value starts at the first variant.
+ */
+export function cycleVariant(current: string | undefined, variants: string[]) {
+  if (variants.length === 0) return undefined
+  const idx = current ? variants.indexOf(current) : -1
+  if (idx === variants.length - 1) return undefined
+  return variants[(idx + 1) % variants.length]
 }
 
 export function transferVariants(store: Record<string, string>, from: string, to: string) {

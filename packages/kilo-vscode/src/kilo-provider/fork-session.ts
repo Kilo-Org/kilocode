@@ -6,7 +6,7 @@ export interface ForkContext {
   connection: KiloConnectionService
   post: (message: { type: "error"; message: string }) => void
   register: (session: Session) => void
-  forked: (session: Session) => void
+  forked: (session: Session, sourceID: string) => void
   status: (sessionID: string) => SessionStatus["type"] | undefined
   directory: (sessionID: string) => string
 }
@@ -38,7 +38,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
       pushState: () => {},
       notifyForked: (session) => {
         ctx.register(session)
-        ctx.forked(session)
+        ctx.forked(session, sessionId)
       },
       registerSession: () => {},
       log: (...args) => console.log("[Kilo New] KiloProvider:", ...args),

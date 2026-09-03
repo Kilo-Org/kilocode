@@ -1,9 +1,11 @@
 // kilocode_change - new file
 import path from "path"
+import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "../../../src/kilocode/paths"
+import { tmpdir } from "../../fixture/fixture"
 
 describe("ConfigProtection.isRequest", () => {
   const config = path.resolve(Global.Path.config)
@@ -171,5 +173,142 @@ describe("ConfigProtection.isRequest", () => {
       patterns: ["src/index.ts"],
     })
     expect(result).toBe(false)
+  })
+
+  test("protects package lock files in project config directories", () => {
+    for (const file of [".kilo/package-lock.json", ".kilocode/package-lock.json"]) {
+      expect(ConfigProtection.isRequest({ permission: "edit", patterns: [file] })).toBe(true)
+    }
+  })
+
+  test("protects a combined source and config lockfile edit", () => {
+    expect(
+      ConfigProtection.isRequest({
+        permission: "edit",
+        patterns: ["src/app/layout.tsx", ".kilo/package-lock.json", ".kilocode/package-lock.json"],
+        metadata: {
+          filepath: "src/app/layout.tsx, .kilo/package-lock.json, .kilocode/package-lock.json",
+        },
+      }),
+    ).toBe(true)
+  })
+})
+
+describe("ConfigProtection.isGlobalSkillRequest", () => {
+  const roots = [Global.Path.config, ...KilocodePaths.globalDirs()]
+
+  test("allows one exact global skill subtree", () => {
+    for (const root of roots) {
+      const pattern = path.join(root, "skills", "axiom-sre", "*")
+      expect({
+        root,
+        result: ConfigProtection.isGlobalSkillRequest({
+          permission: "external_directory",
+          patterns: [pattern],
+        }),
+      }).toEqual({ root, result: true })
+    }
+  })
+
+  test("allows multiple paths within the same global skill", () => {
+    const root = path.join(roots[1], "skills", "axiom-sre")
+    const patterns = [path.join(root, "*"), path.join(root, "scripts", "*")]
+    expect(ConfigProtection.isGlobalSkillRequest({ permission: "external_directory", patterns })).toBe(true)
+    expect(ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns })).toMatch(
+      /\/skills\/axiom-sre\/\*$/,
+    )
+  })
+
+  test("rejects broad, mixed, edit, and mismatched requests", () => {
+    const root = path.join(roots[1], "skills")
+    const first = path.join(root, "axiom-sre", "*")
+    const second = path.join(root, "other", "*")
+    expect(
+      ConfigProtection.isGlobalSkillRequest({
+        permission: "external_directory",
+        patterns: [path.join(root, "*")],
+      }),
+    ).toBe(false)
+    expect(ConfigProtection.isGlobalSkillRequest({ permission: "external_directory", patterns: [first, second] })).toBe(
+      false,
+    )
+    expect(ConfigProtection.isGlobalSkillRequest({ permission: "edit", patterns: [first] })).toBe(false)
+    expect(ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns: [first] })).toBe(
+      first.replaceAll("\\", "/"),
+    )
+  })
+
+  test("rejects symlink escapes from a global skill", async () => {
+    const skills = path.join(Global.Path.config, "skills")
+    const outside = path.join(Global.Path.config, "outside")
+    const root = path.join(skills, "linked-skill")
+    const nested = path.join(skills, "nested-skill")
+    await fs.mkdir(outside, { recursive: true })
+    await fs.mkdir(nested, { recursive: true })
+    const type = process.platform === "win32" ? "junction" : "dir"
+    await fs.symlink(outside, root, type)
+    await fs.symlink(outside, path.join(nested, "link"), type)
+
+    try {
+      expect(
+        ConfigProtection.globalSkillPattern({
+          permission: "external_directory",
+          patterns: [path.join(root, "*")],
+        }),
+      ).toBeUndefined()
+      expect(
+        ConfigProtection.globalSkillPattern({
+          permission: "external_directory",
+          patterns: [path.join(nested, "link", "*")],
+        }),
+      ).toBeUndefined()
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+      await fs.rm(nested, { recursive: true, force: true })
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  test("canonicalizes aliases to the physical global skill root", async () => {
+    await using globalTmp = await tmpdir()
+    await using aliasTmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    const skill = path.join(globalTmp.path, "skills", "canonical-skill")
+    const alias = path.join(aliasTmp.path, "alias")
+    await fs.mkdir(skill, { recursive: true })
+    await fs.symlink(skill, alias, process.platform === "win32" ? "junction" : "dir")
+
+    try {
+      const request = { permission: "external_directory", patterns: [path.join(alias, "*")] }
+      const pattern = ConfigProtection.globalSkillPattern(request)
+      expect(pattern).toMatch(/\/skills\/canonical-skill\/\*$/)
+      expect(pattern).not.toContain(aliasTmp.path.replaceAll("\\", "/"))
+      expect(ConfigProtection.isRequest(request)).toBe(true)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await fs.rm(alias, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects glob characters in the canonical rule", async () => {
+    await using tmp = await tmpdir()
+    const prev = process.env.XDG_CONFIG_HOME
+    const root = path.join(tmp.path, "profile[")
+    const skill = path.join(root, "kilo", "skills", "unsafe-root")
+    process.env.XDG_CONFIG_HOME = root
+    await fs.mkdir(skill, { recursive: true })
+
+    try {
+      expect(
+        ConfigProtection.globalSkillPattern({
+          permission: "external_directory",
+          patterns: [path.join(skill, "*")],
+        }),
+      ).toBeUndefined()
+    } finally {
+      if (prev === undefined) delete process.env.XDG_CONFIG_HOME
+      else process.env.XDG_CONFIG_HOME = prev
+    }
   })
 })

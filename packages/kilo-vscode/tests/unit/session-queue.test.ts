@@ -4,10 +4,19 @@ import {
   messageTurns,
   partitionTurns,
   queuedUserMessageIDs,
+  removeQueuedMessage,
   stableMessageTurns,
   visibleMessages,
+  visibleParts,
+  type RevertBoundary,
 } from "../../webview-ui/src/context/session-queue"
-import type { Message, SessionStatusInfo } from "../../webview-ui/src/types/messages"
+import type {
+  ExtensionMessage,
+  Message,
+  Part,
+  SessionStatusInfo,
+  WebviewMessage,
+} from "../../webview-ui/src/types/messages"
 
 const base = {
   sessionID: "session",
@@ -30,10 +39,12 @@ const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): M
   ...opts,
 })
 
-const layout = (messages: Message[], status: SessionStatusInfo, boundary?: string) => {
+const part = (id: string, messageID: string): Part => ({ id, messageID, type: "text", text: id })
+
+const layout = (messages: Message[], status: SessionStatusInfo, revert?: RevertBoundary) => {
   const active = activeUserMessageID(messages, status)
   return partitionTurns(
-    messageTurns(messages, boundary),
+    messageTurns(messages, revert),
     new Set(active ? [active] : []),
     new Set(queuedUserMessageIDs(messages, status)),
   )
@@ -97,10 +108,53 @@ describe("queuedUserMessageIDs", () => {
     expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 
-  it("returns no queued messages while idle", () => {
+  it("returns no queued messages while idle without submitting flag", () => {
     const messages = [user("message_1"), user("message_2")]
 
     expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
+
+  it("queues follow-ups while idle when submitting is true", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(queuedUserMessageIDs(messages, { type: "idle" }, undefined, true)).toEqual(["message_2"])
+  })
+})
+
+describe("activeUserMessageID", () => {
+  it("returns undefined while idle and not submitting", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" })).toBeUndefined()
+  })
+
+  it("returns the pending user message while idle when submitting is true", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_1")
+  })
+
+  it("returns the next pending user message after finished turn when submitting is true", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop", time: { created: 1, completed: 2 } }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_3")
+  })
+})
+
+describe("active queued status boundary", () => {
+  it("keeps the active assistant status visible when a follow-up is queued", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 })
 
@@ -292,7 +346,7 @@ describe("partitionTurns", () => {
 
   it("does not render an active turn hidden by a revert boundary", () => {
     const messages = [user("message_1"), assistant("message_2", "message_1", { finish: "stop" }), user("message_3")]
-    const result = layout(messages, { type: "busy" }, "message_3")
+    const result = layout(messages, { type: "busy" }, { messageID: "message_3" })
 
     expect(result.virtual.map((turn) => turn.user.id)).toEqual(["message_1"])
     expect(result.direct).toEqual([])
@@ -394,7 +448,45 @@ describe("messageTurns", () => {
       assistant("message_4", "message_3"),
     ]
 
-    expect(messageTurns(messages, "message_3").map((turn) => turn.user.id)).toEqual(["message_1"])
+    expect(messageTurns(messages, { messageID: "message_3" }).map((turn) => turn.user.id)).toEqual(["message_1"])
+  })
+
+  it("keeps the part-boundary assistant and hides later provider errors", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      assistant("message_3", "message_1", { error: { name: "ProviderError" } }),
+      assistant("message_4", "message_1", { error: { name: "ProviderError" } }),
+    ]
+    const turns = messageTurns(messages, { messageID: "message_2", partID: "part_2" })
+
+    expect(turns).toHaveLength(1)
+    expect(turns[0]?.assistant.map((msg) => msg.id)).toEqual(["message_2"])
+  })
+
+  it("applies assistant boundaries by id when messages arrive out of order", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_4", "message_1", { error: { name: "ProviderError" } }),
+      assistant("message_2", "message_1"),
+    ]
+    const turns = messageTurns(messages, { messageID: "message_2", partID: "part_2" })
+
+    expect(turns[0]?.assistant.map((msg) => msg.id)).toEqual(["message_2"])
+  })
+})
+
+describe("visibleParts", () => {
+  it("keeps only parts before the active part boundary", () => {
+    const parts = [part("part_1", "message_2"), part("part_2", "message_2"), part("part_3", "message_2")]
+
+    expect(visibleParts("message_2", parts, { messageID: "message_2", partID: "part_2" })).toEqual([parts[0]])
+  })
+
+  it("fails closed when the boundary part is unavailable", () => {
+    const parts = [part("part_1", "message_2")]
+
+    expect(visibleParts("message_2", parts, { messageID: "message_2", partID: "part_missing" })).toEqual([])
   })
 })
 
@@ -407,7 +499,10 @@ describe("visibleMessages", () => {
       assistant("message_4", "message_3"),
     ]
 
-    expect(visibleMessages(messages, "message_3").map((msg) => msg.id)).toEqual(["message_1", "message_2"])
+    expect(visibleMessages(messages, { messageID: "message_3" }).map((msg) => msg.id)).toEqual([
+      "message_1",
+      "message_2",
+    ])
   })
 
   it("keeps leading partial assistant output", () => {
@@ -544,5 +639,59 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
+})
+
+describe("queued deletion cleanup", () => {
+  const setup = (timeout = 10_000) => {
+    const listeners = new Set<(message: ExtensionMessage) => void>()
+    const sent: WebviewMessage[] = []
+    const promise = removeQueuedMessage(
+      {
+        onMessage: (handler) => {
+          listeners.add(handler)
+          return () => {
+            listeners.delete(handler)
+          }
+        },
+        postMessage: (message) => {
+          sent.push(message)
+        },
+      },
+      "session",
+      "message",
+      timeout,
+    )
+    return {
+      promise,
+      listeners,
+      sent,
+      emit: (message: ExtensionMessage) => listeners.forEach((handler) => handler(message)),
+    }
+  }
+
+  it.each([true, false])("settles only the matching acknowledgment: %p", async (success) => {
+    const state = setup()
+    const request = state.sent.at(0)
+    if (request?.type !== "deleteMessage") throw new Error("Missing deletion request")
+    state.emit({ type: "connectionState", state: "connecting" })
+    state.emit({ ...request, type: "deleteMessageResult", requestID: "unrelated", success: true })
+    expect(state.listeners.size).toBe(1)
+    state.emit({ ...request, type: "deleteMessageResult", success })
+    expect(await state.promise).toBe(success)
+    expect(state.listeners.size).toBe(0)
+  })
+
+  const interruptions: Array<ExtensionMessage | undefined> = [
+    undefined,
+    { type: "connectionState", state: "disconnected" },
+    { type: "connectionState", state: "error" },
+    { type: "sessionDeleted", sessionID: "session" },
+  ]
+  it.each(interruptions)("releases the waiter and listener after timeout or interruption: %p", async (message) => {
+    const state = setup(1)
+    if (message) state.emit(message)
+    expect(await state.promise).toBe(false)
+    expect(state.listeners.size).toBe(0)
   })
 })

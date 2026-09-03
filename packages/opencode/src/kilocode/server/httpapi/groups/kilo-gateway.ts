@@ -21,21 +21,32 @@ export const Profile = Schema.Struct({
   email: Schema.String,
   name: Schema.optional(Schema.String),
   organizations: Schema.optional(Schema.Array(Organization)),
+  selectedOrganizationId: Schema.optional(Schema.String),
+  hasPersonalAccount: Schema.optional(Schema.Boolean),
 })
 
 export const Balance = Schema.Struct({
   balance: Schema.Finite,
 })
 
+export const KiloPassState = Schema.Struct({
+  currentPeriodBaseCreditsUsd: Schema.Finite,
+  currentPeriodUsageUsd: Schema.Finite,
+  currentPeriodBonusCreditsUsd: Schema.Finite,
+  nextBillingAt: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
 export const ProfileWithBalance = Schema.Struct({
   profile: Profile,
   balance: Schema.NullOr(Balance),
+  kiloPass: Schema.NullOr(KiloPassState),
   currentOrgId: Schema.NullOr(Schema.String),
 })
 
 export const AuthStatus = Schema.Struct({
   authenticated: Schema.Boolean,
   type: Schema.optional(Schema.Literals(["api", "oauth"])),
+  organizationId: Schema.optional(Schema.String),
 })
 
 export const NotificationAction = Schema.Struct({
@@ -111,6 +122,11 @@ export const CloudSessions = Schema.Struct({
 export const CloudSessionImportBody = Schema.Struct({
   sessionId: Schema.String,
 })
+
+export class CloudSessionImportError extends Schema.ErrorClass<CloudSessionImportError>("CloudSessionImportError")(
+  { error: Schema.String },
+  { httpApiStatus: 500 },
+) {}
 
 const GroupEntry = Schema.Union([
   Schema.String,
@@ -197,6 +213,17 @@ export const TranscriptionResponse = Schema.Struct({
   usage: Schema.optional(Schema.Unknown),
 })
 
+export const ImageModel = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  description: Schema.optional(Schema.String),
+})
+
+export const TranscriptionModel = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+})
+
 const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
 
 export const CloudMessage = Schema.StructWithRest(
@@ -250,6 +277,8 @@ export const KiloGatewayPaths = {
   fim: `${root}/fim`,
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
+  imageModels: `${root}/models/images`,
+  transcriptionModels: `${root}/models/transcriptions`,
   notifications: `${root}/notifications`,
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
@@ -333,6 +362,28 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             description: "Proxy an audio transcription request to the Kilo Gateway",
           }),
         ),
+        HttpApiEndpoint.get("imageModels", KiloGatewayPaths.imageModels, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(ImageModel), "Image-capable model list"),
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.images",
+            summary: "Image generation models",
+            description: "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+          }),
+        ),
+        HttpApiEndpoint.get("transcriptionModels", KiloGatewayPaths.transcriptionModels, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(TranscriptionModel), "Speech-to-text model list"),
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.transcriptions",
+            summary: "Speech-to-text models",
+            description: "List transcription-capable models from the Kilo Gateway catalog",
+          }),
+        ),
         HttpApiEndpoint.get("notifications", KiloGatewayPaths.notifications, {
           query: WorkspaceRoutingQuery,
           success: described(Schema.Array(Notification), "Notifications list"),
@@ -413,7 +464,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           query: WorkspaceRoutingQuery,
           payload: CloudSessionImportBody,
           success: described(CloudSessionData.fields.info, "Imported session info"),
-          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized, HttpApiError.NotFound],
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized, HttpApiError.NotFound, CloudSessionImportError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "kilo.cloud.session.import",

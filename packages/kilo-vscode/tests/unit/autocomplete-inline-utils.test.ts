@@ -6,11 +6,14 @@ import {
   shouldShowOnlyFirstLine,
   getFirstLine,
   calcDebounceDelay,
+  findCoveringPendingRequest,
 } from "../../src/services/autocomplete/classic-auto-complete/inline-utils"
-import type { FillInAtCursorSuggestion } from "../../src/services/autocomplete/types"
+import type { FillInAtCursorSuggestion, PendingRequest } from "../../src/services/autocomplete/types"
 
-function makeSuggestion(prefix: string, text: string, suffix = ""): FillInAtCursorSuggestion {
-  return { prefix, suffix, text }
+const scope = "file:///workspace/file.ts"
+
+function makeSuggestion(prefix: string, text: string, suffix = "", value = scope): FillInAtCursorSuggestion {
+  return { scope: value, prefix, suffix, text }
 }
 
 describe("countLines", () => {
@@ -89,45 +92,67 @@ describe("shouldShowOnlyFirstLine", () => {
 
 describe("findMatchingSuggestion", () => {
   it("returns null for empty history", () => {
-    expect(findMatchingSuggestion("prefix", "suffix", [])).toBeNull()
+    expect(findMatchingSuggestion(scope, "prefix", "suffix", [])).toBeNull()
   })
 
   it("returns exact match", () => {
     const hist = [makeSuggestion("hello ", "world")]
-    const result = findMatchingSuggestion("hello ", "", hist)
+    const result = findMatchingSuggestion(scope, "hello ", "", hist)
     expect(result?.matchType).toBe("exact")
     expect(result?.text).toBe("world")
   })
 
   it("returns partial_typing match when user typed beginning of suggestion", () => {
     const hist = [makeSuggestion("he", "llo world")]
-    const result = findMatchingSuggestion("hell", "", hist)
+    const result = findMatchingSuggestion(scope, "hell", "", hist)
     expect(result?.matchType).toBe("partial_typing")
     expect(result?.text).toBe("o world")
   })
 
   it("returns backward_deletion match when user deleted chars", () => {
     const hist = [makeSuggestion("hello world", "more", "suffix")]
-    const result = findMatchingSuggestion("hello", "suffix", hist)
+    const result = findMatchingSuggestion(scope, "hello", "suffix", hist)
     expect(result?.matchType).toBe("backward_deletion")
     expect(result?.text).toBe(" worldmore")
   })
 
   it("prefers most recent suggestion (searches from end)", () => {
     const hist = [makeSuggestion("prefix", "old suggestion"), makeSuggestion("prefix", "new suggestion")]
-    const result = findMatchingSuggestion("prefix", "", hist)
+    const result = findMatchingSuggestion(scope, "prefix", "", hist)
     expect(result?.text).toBe("new suggestion")
   })
 
   it("returns null when no match found", () => {
     const hist = [makeSuggestion("different", "no match")]
-    expect(findMatchingSuggestion("unrelated", "suffix", hist)).toBeNull()
+    expect(findMatchingSuggestion(scope, "unrelated", "suffix", hist)).toBeNull()
   })
 
   it("does not match empty suggestion text for partial_typing", () => {
     const hist = [makeSuggestion("prefix", "")]
-    const result = findMatchingSuggestion("prefix more", "", hist)
+    const result = findMatchingSuggestion(scope, "prefix more", "", hist)
     expect(result).toBeNull()
+  })
+
+  it("does not reuse suggestions from another scope", () => {
+    const hist = [makeSuggestion("value = ", "first()", "", "vscode-notebook-cell:notebook.ipynb#cell-a")]
+    const result = findMatchingSuggestion("vscode-notebook-cell:notebook.ipynb#cell-b", "value = ", "", hist)
+    expect(result).toBeNull()
+  })
+})
+
+describe("findCoveringPendingRequest", () => {
+  function request(value: string): PendingRequest {
+    return { scope: value, prefix: "pri", suffix: "", promise: Promise.resolve() }
+  }
+
+  it("reuses forward-typing requests within the same scope", () => {
+    const pending = request(scope)
+    expect(findCoveringPendingRequest(scope, "print", "", [pending])).toBe(pending)
+  })
+
+  it("does not reuse requests from another scope", () => {
+    const pending = request("vscode-notebook-cell:notebook.ipynb#cell-a")
+    expect(findCoveringPendingRequest("vscode-notebook-cell:notebook.ipynb#cell-b", "print", "", [pending])).toBeNull()
   })
 })
 
@@ -138,21 +163,21 @@ describe("applyFirstLineOnly", () => {
 
   it("returns empty result unchanged", () => {
     const hist = [makeSuggestion("p", "")]
-    const result = findMatchingSuggestion("p", "", hist)!
+    const result = findMatchingSuggestion(scope, "p", "", hist)!
     const applied = applyFirstLineOnly(result, "p")
     expect(applied?.text).toBe("")
   })
 
   it("truncates to first line when mid-line suggestion", () => {
     const hist = [makeSuggestion("function foo() { return ", "x\n  const y = 1\n}")]
-    const result = findMatchingSuggestion("function foo() { return ", "", hist)!
+    const result = findMatchingSuggestion(scope, "function foo() { return ", "", hist)!
     const applied = applyFirstLineOnly(result, "function foo() { return ")
     expect(applied?.text).toBe("x")
   })
 
   it("preserves full multi-line suggestion when starting with newline", () => {
     const hist = [makeSuggestion("foo", "\n  const x = 1\n  const y = 2")]
-    const result = findMatchingSuggestion("foo", "", hist)!
+    const result = findMatchingSuggestion(scope, "foo", "", hist)!
     const applied = applyFirstLineOnly(result, "foo")
     expect(applied?.text).toBe("\n  const x = 1\n  const y = 2")
   })

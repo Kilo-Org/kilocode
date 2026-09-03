@@ -1,11 +1,12 @@
 import {
   GatewayError,
   fetchCloudSession,
-  fetchCloudSessionForImport,
+  fetchKiloImageModels,
+  fetchKiloTranscriptionModels,
   getCloudSessions,
   getOrganizationId,
   getToken,
-  importSessionToDb,
+  normalizeClawStatus,
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
@@ -16,6 +17,7 @@ import {
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
+  fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
@@ -28,21 +30,19 @@ import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Database } from "@opencode-ai/core/database/database"
+import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
-import { EffectBridge } from "@/effect/bridge"
-import { Bus } from "@/bus"
-import { Identifier } from "@/id/id"
+import { Config } from "@/config/config"
+import { organization as catalogOrganization } from "@/kilocode/provider/catalog"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { Storage } from "@/storage/storage"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { MessageTable, PartTable, SessionTable } from "@/session/session.sql"
-import { Session } from "@/session/session"
-import { Database } from "@/storage/db"
-import { Storage } from "@/storage/storage"
-import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
-import { baseKey } from "../../../session-portability/cumulative-diff"
-import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
+import { AudioTranscriptionsBody, ClawStatus, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -58,26 +58,40 @@ function logError(route: string, err: unknown) {
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
+    const config = yield* Config.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const events = yield* EventV2Bridge.Service
+    const database = yield* Database.Service
+    const storage = yield* Storage.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const currentOrgId = info.accountId ?? null
-      const [profile, balance] = yield* Effect.tryPromise({
-        try: () => Promise.all([fetchProfile(info.access), fetchBalance(info.access, currentOrgId ?? undefined)]),
+      const [profile, balance, kiloPass] = yield* Effect.tryPromise({
+        try: () =>
+          Promise.all([
+            fetchProfile(info.access),
+            fetchBalance(info.access, currentOrgId ?? undefined, log),
+            fetchKiloPassState(info.access),
+          ]),
         catch: () => new HttpApiError.BadRequest({}),
       })
-      return { profile, balance, currentOrgId }
+      return { profile, balance, kiloPass, currentOrgId }
     })
 
     const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const cfg = yield* config.get()
+      const organizationId = catalogOrganization(cfg.provider?.kilo?.options, info)
       const type = getToken(info) && (info?.type === "api" || info?.type === "oauth") ? info.type : undefined
-      if (!type) return { authenticated: false }
-      return { authenticated: true, type }
+      return {
+        authenticated: !!type,
+        ...(type ? { type } : {}),
+        ...(organizationId == null ? {} : { organizationId }),
+      }
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
@@ -306,16 +320,25 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const notifications = Effect.fn("KiloGatewayHttpApi.notifications")(function* () {
+      // Locally-detected notice about leftover opencode config; appended so it reuses each client's dismissal path.
+      const notice = KilocodeConfig.opencodeConfigNotification({
+        directory: Instance.directory,
+        worktree: Instance.worktree,
+        scanProject: !Flag.KILO_DISABLE_PROJECT_CONFIG,
+      })
+      const append = <T>(list: T[]) => (notice ? [...list, notice] : list)
+
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       const token = getToken(info)
-      if (!token) return []
+      if (!token) return append([])
 
-      return yield* Effect.promise(() =>
+      const cloud = yield* Effect.promise(() =>
         fetchKilocodeNotifications({
           kilocodeToken: token,
           kilocodeOrganizationId: getOrganizationId(info),
         }),
       )
+      return append(cloud)
     })
 
     const organization = Effect.fn("KiloGatewayHttpApi.organization")(function* (ctx) {
@@ -354,7 +377,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: async () => {
           const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
           if (!response.ok) throw new GatewayError(await response.text(), response.status)
-          return Schema.decodeUnknownPromise(ClawStatus)(await response.json())
+          return Schema.decodeUnknownPromise(ClawStatus)(normalizeClawStatus(await response.json()))
         },
         catch: (err) => err,
       }).pipe(
@@ -431,82 +454,89 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const cloudSessionImport = Effect.fn("KiloGatewayHttpApi.cloudSessionImport")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-
-      const fetched = yield* Effect.tryPromise({
-        try: () => fetchCloudSessionForImport(token, ctx.payload.sessionId),
-        catch: (err) => err,
-      }).pipe(
-        Effect.catch((err) =>
-          Effect.sync(() => {
-            logError("cloud/session/import", err)
-            return undefined
-          }),
-        ),
+      // Load the helper lazily: a static top-level import pulls the HTTP
+      // handler graph into the remote-sender module graph and breaks the
+      // create_session test's module init. Run the helper's Effect on the
+      // request Effect (yield*) so the request-scoped InstanceRef/WorkspaceRef
+      // reach the persistence path instead of the AppRuntime default context.
+      const { CloudSessionImportInProcess } = yield* Effect.promise(() =>
+        import("@/kilocode/server/import-cloud-session-in-process"),
       )
-      if (!fetched) return jsonError("Internal error", 500)
-      if (!fetched.ok) return jsonError(fetched.error, fetched.status)
-      if (!fetched.data?.info?.id) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      const outcome = yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
+        Effect.provideService(Auth.Service, auth),
+        Effect.provideService(EventV2Bridge.Service, events),
+        Effect.provideService(Database.Service, database),
+        Effect.provideService(Storage.Service, storage),
+        Effect.match({
+          onFailure: (err) => {
+            if (err instanceof CloudSessionImportInProcess.Unauthorized) return { tag: "unauthorized" as const }
+            if (err instanceof CloudSessionImportInProcess.Upstream) {
+              return { tag: "upstream" as const, error: err.error, status: err.status }
+            }
+            if (err instanceof CloudSessionImportInProcess.BadRequest) return { tag: "badrequest" as const }
+            return { tag: "internal" as const }
+          },
+          onSuccess: (session) => ({ tag: "ok" as const, session }),
+        }),
+      )
+      switch (outcome.tag) {
+        case "unauthorized":
+          return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+        case "upstream":
+          return jsonError(outcome.error, outcome.status)
+        case "badrequest":
+          return yield* Effect.fail(new HttpApiError.BadRequest({}))
+        case "internal":
+          return yield* Effect.fail(new CloudSessionImportError({ error: "Internal error" }))
+        case "ok":
+          return outcome.session
+      }
+    })
 
-      const diffs = extractSessionDiffs(fetched.data)
-      const bridge = yield* EffectBridge.make()
-      return yield* Effect.tryPromise({
+    const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
+      const info = yield* proxyAuth()
+      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const result = yield* Effect.tryPromise({
         try: () =>
-          bridge.promise(
-            Effect.gen(function* () {
-              if (diffs.length > 0) {
-                yield* Effect.try({
-                  try: () => restoreSessionDiffs({ directory: Instance.directory, diffs }),
-                  catch: (err) => err,
-                }).pipe(
-                  Effect.catch((err) =>
-                    Effect.sync(() => {
-                      logError("cloud/session/import/restore", err)
-                      return undefined
-                    }),
-                  ),
-                )
-              }
-
-              const imported = yield* Effect.sync(() =>
-                importSessionToDb(fetched.data, {
-                  Database,
-                  Instance,
-                  SessionTable,
-                  MessageTable,
-                  PartTable,
-                  SessionToRow: Session.toRow,
-                  Bus: {
-                    publish: (_event, payload) =>
-                      Bus.publish(Instance.current, Session.Event.Created, payload as never),
-                  },
-                  SessionCreatedEvent: Session.Event.Created,
-                  Identifier,
-                }),
-              )
-
-              if (diffs.length > 0) {
-                yield* Storage.Service.use((storage) =>
-                  Effect.all([
-                    storage.write(baseKey(imported.id), diffs),
-                    storage.write(["session_diff", imported.id], diffs),
-                  ]),
-                ).pipe(
-                  Effect.catch((err) =>
-                    Effect.sync(() => {
-                      logError("cloud/session/import/diff", err)
-                    }),
-                  ),
-                )
-              }
-
-              return imported
-            }),
-          ),
+          fetchKiloImageModels({
+            kilocodeToken: info.token,
+            kilocodeOrganizationId: info.organizationId,
+          }),
         catch: () => new HttpApiError.BadRequest({}),
       })
+
+      if (result.error) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.models
+    })
+
+    const transcriptionModels = Effect.fn("KiloGatewayHttpApi.transcriptionModels")(function* () {
+      const info = yield* proxyAuth()
+      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          fetchKiloTranscriptionModels({
+            kilocodeToken: info.token,
+            kilocodeOrganizationId: info.organizationId,
+          }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.models
     })
 
     return handlers
@@ -516,6 +546,8 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("fim", fim)
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
+      .handle("imageModels", imageModels)
+      .handle("transcriptionModels", transcriptionModels)
       .handle("notifications", notifications)
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)

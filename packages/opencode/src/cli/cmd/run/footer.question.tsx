@@ -14,6 +14,7 @@
 // This component just renders it and dispatches keyboard events.
 /** @jsxImportSource @opentui/solid */
 import type { TextareaRenderable } from "@opentui/core"
+import type { ScrollBoxRenderable } from "@opentui/core" // kilocode_change
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
@@ -40,6 +41,8 @@ import {
   questionTabs,
   questionTotal,
 } from "./question.shared"
+import { questionAdvance } from "@/kilocode/cli/cmd/run/question.shared" // kilocode_change
+import { footerWidthPolicy } from "./footer.width"
 import type { RunFooterTheme } from "./theme"
 import type { QuestionReject, QuestionReply } from "./types"
 
@@ -50,7 +53,7 @@ export function RunQuestionBody(props: {
   onReject: (input: QuestionReject) => void | Promise<void>
 }) {
   const dims = useTerminalDimensions()
-  const [state, setState] = createSignal(createQuestionBodyState(props.request.id))
+  const [state, setState] = createSignal(createQuestionBodyState(props.request.id, props.request.questions.at(0))) // kilocode_change
   const single = createMemo(() => questionSingle(props.request))
   const confirm = createMemo(() => questionConfirm(props.request, state()))
   const info = createMemo(() => questionInfo(props.request, state()))
@@ -58,14 +61,14 @@ export function RunQuestionBody(props: {
   const other = createMemo(() => questionOther(props.request, state()))
   const picked = createMemo(() => questionPicked(state()))
   const disabled = createMemo(() => state().submitting)
-  const narrow = createMemo(() => dims().width < 80)
+  const narrow = createMemo(() => footerWidthPolicy(dims().width).dialog.narrow)
   const verb = createMemo(() => {
     if (confirm()) {
       return "submit"
     }
 
     if (info()?.multiple) {
-      return "toggle"
+      return "next" // kilocode_change
     }
 
     if (single()) {
@@ -75,13 +78,31 @@ export function RunQuestionBody(props: {
     return "confirm"
   })
   let area: TextareaRenderable | undefined
+  // kilocode_change start
+  let scroll: ScrollBoxRenderable | undefined
+  createEffect(() => {
+    const selected = state().selected
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!scroll || scroll.isDestroyed || state().selected !== selected) return
+        const option = scroll
+          .getChildren()
+          .at(0)
+          ?.getChildren()
+          .filter((child) => child.visible)
+          .at(selected)
+        if (option) scroll.scrollChildIntoView(option.id)
+      })
+    })
+  })
+  // kilocode_change end
 
   createEffect(() => {
-    setState((prev) => questionSync(prev, props.request.id))
+    setState((prev) => questionSync(prev, props.request.id, props.request.questions.at(0))) // kilocode_change
   })
 
   const setTab = (tab: number) => {
-    setState((prev) => questionSetTab(prev, tab))
+    setState((prev) => questionSetTab(prev, tab, props.request.questions.at(tab))) // kilocode_change
   }
 
   const move = (dir: -1 | 1) => {
@@ -177,10 +198,6 @@ export function RunQuestionBody(props: {
         return
       }
 
-      if (event.name === "return" && !event.shift && !event.ctrl && !event.meta) {
-        saveCustom()
-        event.preventDefault()
-      }
       return
     }
 
@@ -216,6 +233,30 @@ export function RunQuestionBody(props: {
       }
       return
     }
+
+    // kilocode_change start - space toggles a multiple-choice option, enter advances
+    if (info()?.multiple) {
+      if (event.name === "space") {
+        select()
+        event.preventDefault()
+        return
+      }
+
+      if (event.name === "return") {
+        const next = questionAdvance(cur, props.request)
+        if (next.state !== cur) {
+          setState(next.state)
+        }
+
+        if (next.reply) {
+          void beginReply(next.reply)
+        }
+
+        event.preventDefault()
+        return
+      }
+    }
+    // kilocode_change end
 
     const total = questionTotal(props.request, cur)
     const max = Math.min(total, 9)
@@ -271,9 +312,8 @@ export function RunQuestionBody(props: {
   })
 
   return (
-    <box id="run-direct-footer-question-body" width="100%" height="100%" flexDirection="column">
+    <box width="100%" height="100%" flexDirection="column">
       <box
-        id="run-direct-footer-question-panel"
         flexDirection="column"
         gap={1}
         paddingLeft={1}
@@ -284,14 +324,13 @@ export function RunQuestionBody(props: {
         backgroundColor={props.theme.surface}
       >
         <Show when={!single()}>
-          <box id="run-direct-footer-question-tabs" flexDirection="row" gap={1} paddingLeft={1} flexShrink={0}>
+          <box flexDirection="row" gap={1} paddingLeft={1} flexShrink={0}>
             <For each={props.request.questions}>
               {(item, index) => {
                 const active = () => state().tab === index()
                 const answered = () => (state().answers[index()]?.length ?? 0) > 0
                 return (
                   <box
-                    id={`run-direct-footer-question-tab-${index()}`}
                     paddingLeft={1}
                     paddingRight={1}
                     backgroundColor={active() ? props.theme.highlight : props.theme.surface}
@@ -307,7 +346,6 @@ export function RunQuestionBody(props: {
               }}
             </For>
             <box
-              id="run-direct-footer-question-tab-confirm"
               paddingLeft={1}
               paddingRight={1}
               backgroundColor={confirm() ? props.theme.highlight : props.theme.surface}
@@ -369,6 +407,7 @@ export function RunQuestionBody(props: {
 
             <box flexGrow={1} flexShrink={1}>
               <scrollbox
+                ref={(el) => (scroll = el) /* kilocode_change */}
                 width="100%"
                 height="100%"
                 verticalScrollbarOptions={{
@@ -385,7 +424,6 @@ export function RunQuestionBody(props: {
                       const hit = () => state().answers[state().tab]?.includes(item.label) ?? false
                       return (
                         <box
-                          id={`run-direct-footer-question-option-${index()}`}
                           flexDirection="column"
                           gap={0}
                           onMouseOver={() => {
@@ -431,7 +469,6 @@ export function RunQuestionBody(props: {
 
                   <Show when={questionCustom(props.request, state())}>
                     <box
-                      id="run-direct-footer-question-option-custom"
                       flexDirection="column"
                       gap={0}
                       onMouseOver={() => {
@@ -483,7 +520,6 @@ export function RunQuestionBody(props: {
                       >
                         <box paddingLeft={3}>
                           <textarea
-                            id="run-direct-footer-question-custom"
                             width="100%"
                             minHeight={1}
                             maxHeight={4}
@@ -496,6 +532,7 @@ export function RunQuestionBody(props: {
                             focusedBackgroundColor={props.theme.surface}
                             cursorColor={props.theme.text}
                             focused={!disabled()}
+                            onSubmit={saveCustom}
                             onContentChange={() => {
                               if (!area || area.isDestroyed || disabled()) {
                                 return
@@ -520,7 +557,6 @@ export function RunQuestionBody(props: {
       </box>
 
       <box
-        id="run-direct-footer-question-actions"
         flexDirection={narrow() ? "column" : "row"}
         flexShrink={0}
         gap={1}
@@ -566,6 +602,13 @@ export function RunQuestionBody(props: {
                 <text fg={props.theme.text}>
                   {"↑↓"} <span style={{ fg: props.theme.muted }}>select</span>
                 </text>
+                {/* kilocode_change start - multiple-choice questions toggle with space */}
+                <Show when={info()?.multiple}>
+                  <text fg={props.theme.text}>
+                    space <span style={{ fg: props.theme.muted }}>toggle</span>
+                  </text>
+                </Show>
+                {/* kilocode_change end */}
               </Show>
               <text fg={props.theme.text}>
                 enter <span style={{ fg: props.theme.muted }}>{verb()}</span>

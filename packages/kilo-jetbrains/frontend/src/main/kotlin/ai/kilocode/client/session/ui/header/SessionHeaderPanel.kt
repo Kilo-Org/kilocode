@@ -19,6 +19,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.SwingTextTrimmer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
@@ -40,6 +41,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
+    private val readonly: Boolean = false,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -52,7 +54,15 @@ class SessionHeaderPanel(
         internal const val EXPANDED_KEY = "kilo.session.header.expanded"
     }
 
-    private val title = JBLabel()
+    private val title = JBLabel().apply {
+        putClientProperty(SwingTextTrimmer.KEY, SwingTextTrimmer.ELLIPSIS_AT_RIGHT)
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                toggle()
+            }
+        })
+    }
     private val cost = JBLabel()
     private val context = JBLabel()
     private val todos = JBLabel()
@@ -66,6 +76,7 @@ class SessionHeaderPanel(
         addActionListener { controller.compact() }
     }
     private val expand = JBLabel().apply {
+        border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         toolTipText = KiloBundle.message("session.header.expand")
         accessibleContext.accessibleName = KiloBundle.message("session.header.expand")
@@ -102,9 +113,6 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
-    private val center = BorderLayoutPanel().apply {
-        border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, 0)
-    }
     private val right = Stack.horizontal()
         .next(cost)
         .gap(UiStyle.Gap.xl())
@@ -159,10 +167,9 @@ class SessionHeaderPanel(
         isOpaque = true
         updateUI()
 
-        center.add(title, BorderLayout.CENTER)
-        center.add(right, BorderLayout.EAST)
         top.add(expand, BorderLayout.WEST)
-        top.add(center, BorderLayout.CENTER)
+        top.add(title, BorderLayout.CENTER)
+        top.add(right, BorderLayout.EAST)
         add(top, BorderLayout.NORTH)
         timeline.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
@@ -206,6 +213,8 @@ class SessionHeaderPanel(
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.RevertChanged,
+                is SessionModelEvent.QueueChanged,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared,
@@ -250,7 +259,8 @@ class SessionHeaderPanel(
         setTokens(header.tokens)
         syncTodos(header.todos.items)
 
-        compact.isEnabled = header.canCompact
+        compact.isVisible = !readonly
+        compact.isEnabled = !readonly && header.canCompact
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()
         if (viewport.isVisible != timeline.isVisible) viewport.isVisible = timeline.isVisible
@@ -261,19 +271,18 @@ class SessionHeaderPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        background = bg
         foreground = style.editorForeground
-        top.background = style.editorBackground
+        top.background = bg
         top.isOpaque = true
         top.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm())
-        center.background = style.editorBackground
-        center.isOpaque = true
-        right.background = style.editorBackground
-        tokens.background = style.editorBackground
-        todoRow.background = style.editorBackground
-        todoBox.background = style.editorBackground
-        body.background = style.editorBackground
-        viewport.background = style.editorBackground
+        right.background = bg
+        tokens.background = bg
+        todoRow.background = bg
+        todoBox.background = bg
+        body.background = bg
+        viewport.background = bg
         title.font = style.boldFont
         title.foreground = style.editorForeground
         cost.font = style.regularFont
@@ -300,6 +309,8 @@ class SessionHeaderPanel(
     }
 
     internal fun titleText(): String = title.text
+
+    internal fun titleLabel() = title
 
     internal fun costText(): String = costValue
 
@@ -337,6 +348,8 @@ class SessionHeaderPanel(
     internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
+
+    internal fun rightPanel() = right
 
     internal fun expandButton() = expand
 

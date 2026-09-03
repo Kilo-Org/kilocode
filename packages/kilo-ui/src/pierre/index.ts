@@ -10,7 +10,9 @@ import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/u
 
 export { styleVariables }
 
-export const LINE_DIFF_TYPE = "char" as const
+// Character matching fragments inserted identifiers when they share letters with
+// existing symbols. Word-alt keeps those logical additions visually intact.
+export const LINE_DIFF_TYPE = "word-alt" as const
 
 // Pierre 1.1 treats its changed-line override properties as tint targets. Apply
 // Kilo semantic surfaces at the computed row level so host diff colors stay final.
@@ -51,11 +53,15 @@ type DiffShared<T> = FileDiffOptions<T> & {
   commentedLines?: SelectedLineRange[]
   onLineNumberSelectionEnd?: (selection: SelectedLineRange | null) => void
   onRendered?: () => void
+  visible?: boolean
   // When false, render the supplied diff once instead of row-virtualizing it.
   // Callers should supply hunk-bounded `fileDiff`/`patch` data for large source
   // files so eager rendering does not expand full before/after content.
   // Defaults to virtualized.
   virtualized?: boolean
+  // Stable rendered-content identity used to preserve deferred height when a
+  // surrounding row virtualizer unmounts and later re-creates this diff.
+  sizeKey?: object
   class?: string
   classList?: ComponentProps<"div">["classList"]
 }

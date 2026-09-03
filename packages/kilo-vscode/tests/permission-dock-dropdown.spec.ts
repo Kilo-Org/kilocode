@@ -211,6 +211,21 @@ test.describe("Permission Dock Dropdown — external directory", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
+    const text = "Access External Directory /Users/developer/projects/kilo-bench/dashboard/app/routes/*"
+    const hint = page.locator('[data-slot="permission-hint"]')
+    await expect(hint).toHaveText(text)
+    await expect(hint).toHaveAttribute("title", text)
+    expect(
+      await hint.evaluate((node) => node.scrollWidth > node.clientWidth || node.scrollHeight > node.clientHeight),
+    ).toBe(false)
+
+    const rule = page.locator('[data-slot="permission-rule"]')
+    await expect(rule).toHaveText(text)
+    await expect(rule).toHaveAttribute("title", text)
+    expect(
+      await rule.evaluate((node) => node.scrollWidth > node.clientWidth || node.scrollHeight > node.clientHeight),
+    ).toBe(false)
+
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "external-dir-expanded-pending.png"])
   })

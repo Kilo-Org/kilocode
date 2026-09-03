@@ -8,9 +8,44 @@ on:
   workflow_dispatch:
 
 jobs:
+  # kilocode_change start
+  changes:
+    name: detect typecheck changes
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
+    outputs:
+      javascript: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.javascript }}
+      jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}
+    steps:
+      - name: Checkout repository
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/checkout@v6
+
+      - name: Detect typecheck changes
+        if: github.event_name != 'workflow_dispatch'
+        id: filter
+        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
+        with:
+          predicate-quantifier: every
+          filters: |
+            javascript:
+              - '**'
+              - '!.changeset/**'
+              - '!.kilo/plans/**'
+              - '!packages/kilo-jetbrains/**'
+            jetbrains:
+              - '**'
+              - '!.changeset/**'
+              - '!.kilo/plans/**'
+              - '!packages/opencode/**'
+              - '!packages/kilo-vscode/**'
+              - '!packages/kilo-docs/**'
+  # kilocode_change end
+
   typecheck-js:
     name: typecheck-js
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: changes # kilocode_change
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.javascript == 'true' # kilocode_change
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
@@ -29,7 +64,9 @@ jobs:
   # kilocode_change start
   typecheck-jetbrains:
     name: typecheck-jetbrains
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.jetbrains == 'true'
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -54,16 +91,30 @@ jobs:
 
   required:
     name: typecheck
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     needs:
       - typecheck-js
+      - changes
       - typecheck-jetbrains
     if: always()
     steps:
       - name: Verify typecheck jobs passed
         run: |
+          echo "changes=${{ needs.changes.result }}"
+          echo "javascript=${{ needs.changes.outputs.javascript }}"
           echo "typecheck-js=${{ needs.typecheck-js.result }}"
           echo "typecheck-jetbrains=${{ needs.typecheck-jetbrains.result }}"
-          test "${{ needs.typecheck-js.result }}" = "success"
-          test "${{ needs.typecheck-jetbrains.result }}" = "success"
+          test "${{ needs.changes.result }}" = "success"
+          if [ "${{ needs.changes.outputs.javascript }}" = "true" ]; then
+            test "${{ needs.typecheck-js.result }}" = "success"
+          else
+            test "${{ needs.changes.outputs.javascript }}" = "false"
+            test "${{ needs.typecheck-js.result }}" = "skipped"
+          fi
+          if [ "${{ needs.changes.outputs.jetbrains }}" = "true" ]; then
+            test "${{ needs.typecheck-jetbrains.result }}" = "success"
+          else
+            test "${{ needs.changes.outputs.jetbrains }}" = "false"
+            test "${{ needs.typecheck-jetbrains.result }}" = "skipped"
+          fi
   # kilocode_change end

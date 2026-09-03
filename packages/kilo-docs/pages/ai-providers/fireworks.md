@@ -19,14 +19,6 @@ Fireworks AI is a high-performance platform for running AI models that offers fa
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "Fireworks AI" from the "API Provider" dropdown.
-3. **Enter API Key:** Paste your Fireworks AI API key into the "Fireworks AI API Key" field.
-4. **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Fireworks AI and enter your API key.
@@ -70,5 +62,5 @@ Then set your default model:
 ## Tips and Notes
 
 - **Performance:** Fireworks AI is optimized for speed and offers excellent performance for both chat and completion tasks.
-- **Pricing:** Refer to the [Fireworks AI Pricing](https://fireworks.ai/pricing) page for current pricing information.
+- **Pricing:** Refer to the [Fireworks AI Pricing](https://docs.fireworks.ai/serverless/pricing) page for current pricing information.
 - **Rate Limits:** Fireworks AI has usage-based rate limits. Monitor your usage in the dashboard and consider upgrading your plan if needed.

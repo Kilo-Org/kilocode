@@ -12,16 +12,19 @@ export const EnvSchema = z
   .trim()
   .regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
 
-const VariantConfigSchema = z.object({
-  enable_thinking: z.boolean().optional(),
-  thinking: z.object({ type: z.enum(["enabled", "disabled", "adaptive"]) }).optional(),
-  reasoning_split: z.boolean().optional(),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).optional(),
-  effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
-  chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
-})
+const VariantConfigSchema = z.record(z.string(), z.unknown())
 
 export type VariantConfig = z.infer<typeof VariantConfigSchema>
+
+// Mirror the CLI provider schema so the UI preserves hand-written configs.
+const ModalitySchema = z.enum(["text", "audio", "image", "video", "pdf"])
+
+const ModelModalitiesSchema = z.object({
+  input: z.array(ModalitySchema).optional(),
+  output: z.array(ModalitySchema).optional(),
+})
+
+export type ModelModalities = z.infer<typeof ModelModalitiesSchema>
 
 export const CustomProviderConfigSchema = z
   .object({
@@ -47,6 +50,7 @@ export const CustomProviderConfigSchema = z
           .object({
             name: z.string().trim().min(1).max(200),
             reasoning: z.boolean().optional(),
+            modalities: ModelModalitiesSchema.optional(),
             variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
           })
           .strict(),
@@ -63,7 +67,10 @@ export type SanitizedProviderConfig = {
     baseURL: string
     headers?: Record<string, string>
   }
-  models: Record<string, { name: string; reasoning?: true; variants?: Record<string, VariantConfig> }>
+  models: Record<
+    string,
+    { name: string; reasoning?: true; modalities?: ModelModalities; variants?: Record<string, VariantConfig> }
+  >
 }
 
 export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
@@ -134,6 +141,7 @@ export function normalizeCustomProviderConfig(
         {
           name: model.name.trim(),
           ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(model.modalities ? { modalities: model.modalities } : {}),
           ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
         },
       ]),
@@ -159,6 +167,7 @@ type ProviderPatch = Omit<SanitizedProviderConfig, "models"> & {
     null | {
       name: string
       reasoning?: true | null
+      modalities?: ModelModalities | null
       variants?: Record<string, VariantConfig | VariantPatch | null>
     }
   >
@@ -208,6 +217,7 @@ export function withCustomProviderDeletions(existing: unknown, next: SanitizedPr
       ...newModel,
       ...(variants ? { variants } : {}),
       ...(oldModel.reasoning !== undefined && newModel.reasoning === undefined ? { reasoning: null } : {}),
+      ...(oldModel.modalities !== undefined && newModel.modalities === undefined ? { modalities: null } : {}),
     }
   }
 

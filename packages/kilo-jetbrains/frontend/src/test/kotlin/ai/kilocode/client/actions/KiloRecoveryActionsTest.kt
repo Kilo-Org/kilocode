@@ -1,35 +1,54 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.SetupScriptTargetDto
+import ai.kilocode.rpc.dto.WorktreeDto
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Suppress("UnstableApiUsage")
 class KiloRecoveryActionsTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
     private lateinit var rpc: FakeWorkspaceRpcApi
+    private lateinit var appRpc: FakeAppRpcApi
 
     override fun setUp() {
         super.setUp()
         scope = CoroutineScope(SupervisorJob())
         rpc = FakeWorkspaceRpcApi()
+        appRpc = FakeAppRpcApi()
+        ApplicationManager.getApplication().replaceService(
+            KiloAppService::class.java,
+            KiloAppService(scope, appRpc),
+            testRootDisposable,
+        )
         ApplicationManager.getApplication().replaceService(
             KiloWorkspaceService::class.java,
             KiloWorkspaceService(scope, rpc),
@@ -63,18 +82,73 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertTrue("Reinstall should force-enable recovery action", event.presentation.isEnabled)
     }
 
-    fun `test cli group has visible menu text`() {
+    fun `test restart action adds core suffix in connection retry popup`() {
+        val action = RestartKiloAction()
+        val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
+
+        update(action, event)
+
+        assertEquals("Restart Core", event.presentation.text)
+    }
+
+    fun `test reinstall action adds core suffix in connection retry popup`() {
+        val action = ReinstallKiloAction()
+        val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
+
+        update(action, event)
+
+        assertEquals("Reinstall Core", event.presentation.text)
+    }
+
+    fun `test core group has visible menu text and info action`() {
         val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
 
-        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"CLI\" popup=\"true\">"))
+        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
+        assertTrue(xml.contains("<reference ref=\"Kilo.CoreInfo\"/>"))
         assertTrue(xml.contains("<group id=\"Kilo.OpenConfigGroup\" text=\"Config Files\" popup=\"true\">"))
         assertTrue(xml.contains("<reference ref=\"Kilo.OpenConfigGroup\"/>"))
         assertFalse(xml.contains("<action id=\"Kilo.ShowProfile\""))
         assertFalse(xml.contains("<reference ref=\"Kilo.ShowProfile\"/>"))
+
+        // The setup-script action lives only in the worktree row menu, not the tool-window popup.
+        val settingsGroupStart = xml.indexOf("<group id=\"Kilo.SettingsGroup\">")
+        val settingsGroupEnd = xml.indexOf("</group>", settingsGroupStart)
+        assertFalse(xml.substring(settingsGroupStart, settingsGroupEnd).contains("Kilo.OpenSetupScript"))
+    }
+
+    fun `test core info action shows version and architecture`() {
+        appRpc.cliVersion = "1.2.3"
+        appRpc.cliPlatform = "darwin-arm64"
+        ApplicationManager.getApplication().executeOnPooledThread {
+            runBlocking { app().coreInfo() }
+        }.get()
+        val action = CoreInfoAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabled)
+        assertTrue(event.presentation.isVisible)
+        assertEquals("Core v1.2.3 • Architecture: darwin-arm64", event.presentation.text)
+    }
+
+    fun `test core info action marks bundled core`() {
+        appRpc.cliVersion = "1.2.3"
+        appRpc.cliPlatform = "darwin-arm64"
+        appRpc.cliBundled = true
+        ApplicationManager.getApplication().executeOnPooledThread {
+            runBlocking { app().coreInfo() }
+        }.get()
+        val action = CoreInfoAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertEquals("Bundled Core v1.2.3 • Architecture: darwin-arm64", event.presentation.text)
     }
 
     fun `test local config action says open when target exists`() {
@@ -107,6 +181,53 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(0, rpc.localConfigPathCalls)
     }
 
+    fun `test local config action refreshes missing target in background`() {
+        rpc.localConfigPath = "/test/.kilo/kilo.jsonc"
+        rpc.localConfigDisplayPath = "/test/.kilo/kilo.jsonc"
+        rpc.localConfigExists = true
+        val call = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeLocalConfigTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenLocalConfigAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabled)
+        assertEquals("Open: local ...", event.presentation.text)
+        await(call)
+        assertEquals(1, rpc.localConfigPathCalls)
+
+        gate.complete(Unit)
+        service().localConfig["/test"] = ConfigTargetDto("/test/.kilo/kilo.jsonc", "/test/.kilo/kilo.jsonc", true)
+
+        val next = event(action, workspace = workspace("/test"))
+        update(action, next)
+
+        assertEquals("Open: local /test/.kilo/kilo.jsonc", next.presentation.text)
+    }
+
+    fun `test local config action dedupes in flight refresh`() {
+        val gate = CompletableDeferred<Unit>()
+        val call = CompletableDeferred<Unit>()
+        val action = OpenLocalConfigAction()
+        rpc.beforeLocalConfigTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+
+        update(action, event(action, workspace = workspace("/test")))
+        await(call)
+        update(action, event(action, workspace = workspace("/test")))
+
+        assertEquals(1, rpc.localConfigPathCalls)
+
+        gate.complete(Unit)
+    }
+
     fun `test global config action says open when target exists`() {
         rpc.globalConfigPath = "/config/kilo.jsonc"
         rpc.globalConfigDisplayPath = "~/.config/kilo/kilo.jsonc"
@@ -135,6 +256,52 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(0, rpc.globalConfigPathCalls)
     }
 
+    fun `test global config action refreshes missing target in background`() {
+        rpc.globalConfigPath = "/config/kilo.jsonc"
+        rpc.globalConfigDisplayPath = "/config/kilo.jsonc"
+        rpc.globalConfigExists = true
+        val call = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeGlobalConfigTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenGlobalConfigAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertEquals("Open: global ...", event.presentation.text)
+        await(call)
+        assertEquals(1, rpc.globalConfigPathCalls)
+
+        gate.complete(Unit)
+        cacheGlobal(ConfigTargetDto("/config/kilo.jsonc", "/config/kilo.jsonc", true))
+
+        val next = event(action)
+        update(action, next)
+
+        assertEquals("Open: global /config/kilo.jsonc", next.presentation.text)
+    }
+
+    fun `test global config action dedupes in flight refresh`() {
+        val gate = CompletableDeferred<Unit>()
+        val call = CompletableDeferred<Unit>()
+        rpc.beforeGlobalConfigTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenGlobalConfigAction()
+
+        update(action, event(action))
+        await(call)
+        update(action, event(action))
+
+        assertEquals(1, rpc.globalConfigPathCalls)
+
+        gate.complete(Unit)
+    }
+
     fun `test local config action disables without directory`() {
         val action = OpenLocalConfigAction()
         val event = event(action)
@@ -145,10 +312,135 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(0, rpc.localConfigPathCalls)
     }
 
-    private fun event(action: AnAction, workspace: Workspace? = null): AnActionEvent {
+    fun `test setup script action says open when target exists`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Open Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action says create when target is missing`() {
+        rpc.setupScriptExists = false
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", false)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Create Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action refreshes missing target in background`() {
+        rpc.setupScriptExists = true
+        val call = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeSetupScriptTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        // No cached target yet: defaults to the "Open" wording, same as a resolved existing script.
+        assertEquals("Open Worktree Setup", event.presentation.text)
+        await(call)
+        assertEquals(1, rpc.setupScriptTargetCalls.size)
+
+        // The fake reads setupScriptExists after the gate, so flipping it here makes the released
+        // background lookup cache "missing" itself. Writing the cache from the test instead would
+        // race that write and lose whenever the coroutine resumed first.
+        rpc.setupScriptExists = false
+        gate.complete(Unit)
+        assertTrue("background refresh never cached the resolved target", cached("/test") { !it.exists })
+
+        val next = event(action, workspace = workspace("/test"))
+        update(action, next)
+
+        assertEquals("Create Worktree Setup", next.presentation.text)
+    }
+
+    fun `test setup script action disables without directory`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action hides on the main worktree row`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"), worktree = WorktreeDto("/test", "main", "main", "/test", main = true))
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test setup script action visible on a non-main worktree row`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(
+            action,
+            workspace = workspace("/test"),
+            worktree = WorktreeDto("/test/.kilo/worktrees/feature-x", "feature-x", "feature-x", "/test/.kilo/worktrees/feature-x"),
+        )
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test settings popup group updates recursively in background`() {
+        val group = DefaultActionGroup()
+        val wrapped = KiloSettingsAction.popupGroup(group)
+
+        assertEquals(ActionUpdateThread.BGT, wrapped.actionUpdateThread)
+    }
+
+    fun `test settings action prewarms config targets`() {
+        val action = KiloSettingsAction()
+
+        runBlocking {
+            KiloSettingsAction.refreshConfigTargets(event(action, workspace = workspace("/test")), service()).forEach { it.join() }
+        }
+
+        assertEquals(1, rpc.localConfigPathCalls)
+        assertEquals(1, rpc.globalConfigPathCalls)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test workspace creation prewarms config targets`() {
+        val local = CompletableDeferred<Unit>()
+        val global = CompletableDeferred<Unit>()
+        rpc.beforeLocalConfigTarget = { local.complete(Unit) }
+        rpc.beforeGlobalConfigTarget = { global.complete(Unit) }
+
+        service().workspace("/test")
+
+        await(local)
+        await(global)
+        assertEquals(1, rpc.localConfigPathCalls)
+        assertEquals(1, rpc.globalConfigPathCalls)
+    }
+
+    private fun event(action: AnAction, workspace: Workspace? = null, place: String = "", worktree: WorktreeDto? = null): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         presentation.isEnabled = false
-        return AnActionEvent.createFromDataContext("", presentation, context(workspace))
+        return AnActionEvent.createFromDataContext(place, presentation, context(workspace, worktree))
     }
 
     private fun update(action: AnAction, event: AnActionEvent) {
@@ -157,7 +449,21 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         }.get()
     }
 
+    private fun await(signal: CompletableDeferred<Unit>) = runBlocking {
+        withTimeout(5_000) { signal.await() }
+    }
+
+    /** Waits for the background setup-script lookup to publish a target matching [want]. */
+    private fun cached(dir: String, want: (SetupScriptTargetDto) -> Boolean): Boolean = runBlocking {
+        withTimeoutOrNull(5_000) {
+            while (service().setupScript[dir]?.let(want) != true) delay(5)
+            true
+        } == true
+    }
+
     private fun service(): KiloWorkspaceService = ApplicationManager.getApplication().getService(KiloWorkspaceService::class.java)
+
+    private fun app(): KiloAppService = ApplicationManager.getApplication().getService(KiloAppService::class.java)
 
     private fun cacheGlobal(target: ConfigTargetDto) {
         val field = KiloWorkspaceService::class.java.getDeclaredField("globalConfig")
@@ -165,11 +471,12 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         field.set(service(), target)
     }
 
-    private fun context(workspace: Workspace?): DataContext {
+    private fun context(workspace: Workspace?, worktree: WorktreeDto? = null): DataContext {
         return DataContext { id ->
             when (id) {
                 SessionManager.WORKSPACE_KEY.name -> workspace
                 CommonDataKeys.PROJECT.name -> project.takeIf { workspace != null }
+                WorktreeDataKeys.WORKTREE.name -> worktree
                 else -> null
             }
         }
@@ -180,6 +487,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
             dir,
             MutableStateFlow(KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)),
             reload = {},
+            refreshConfigFiles = {},
         )
     }
 }

@@ -23,6 +23,11 @@ export const ItemCard = (props: Props) => {
   const scopes = () => installedScopes(props.item.id, props.item.type, props.metadata)
   const installed = () => scopes().length > 0
   const name = () => props.displayName ?? props.item.name
+  const type = () => {
+    if (props.item.type === "mcp") return t("marketplace.badge.mcpServer")
+    if (props.item.type === "agent") return t("marketplace.remove.type.agent")
+    return t("marketplace.remove.type.skill")
+  }
   const [expanded, setExpanded] = createSignal(false)
   const [clamped, setClamped] = createSignal(false)
   let ref: HTMLParagraphElement | undefined
@@ -44,6 +49,7 @@ export const ItemCard = (props: Props) => {
               {name()}
             </span>
           </Show>
+          <Tag class={`marketplace-badge-type marketplace-type-${props.item.type}`}>{type()}</Tag>
         </div>
         <Show when={props.item.author}>
           <span class="marketplace-card-author">

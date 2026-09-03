@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
-import { SdkSSEAdapter } from "../../src/services/cli-backend/sdk-sse-adapter"
+import { SdkSSEAdapter, type SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 type Opts = {
+  headers?: Record<string, string>
   onSseError?: (error: unknown) => void
   signal?: AbortSignal
 }
@@ -29,6 +30,23 @@ function event() {
   }
 }
 
+function sync() {
+  return {
+    directory: "/repo",
+    payload: {
+      type: "sync",
+      id: "evt_part",
+      syncEvent: {
+        type: "message.part.removed.1",
+        id: "evt_part",
+        seq: 3,
+        aggregateID: "sessionID",
+        data: { sessionID: "session", messageID: "message", partID: "part" },
+      },
+    },
+  }
+}
+
 function wait(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
@@ -39,6 +57,29 @@ function aborted(signal?: AbortSignal) {
 }
 
 describe("SdkSSEAdapter", () => {
+  it("normalizes nested sync envelopes at the SSE boundary", async () => {
+    const adapter = new SdkSSEAdapter(
+      client(async function* (opts) {
+        expect(opts.headers).toEqual({ "x-kilo-sse-skip-fork-sync": "1" })
+        yield sync()
+        await aborted(opts.signal)
+      }),
+    )
+    const received = new Promise<SSEPayload>((resolve) => adapter.onEvent(resolve))
+
+    adapter.connect()
+
+    expect(await received).toEqual({
+      type: "sync",
+      name: "message.part.removed.1",
+      id: "evt_part",
+      seq: 3,
+      aggregateID: "sessionID",
+      data: { sessionID: "session", messageID: "message", partID: "part" },
+    })
+    adapter.disconnect()
+  })
+
   it("reports connected only after the first SSE event arrives", async () => {
     let release = () => {}
     const gate = new Promise<void>((resolve) => {

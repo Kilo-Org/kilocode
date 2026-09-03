@@ -3,16 +3,21 @@ import {
   addExceptionPatch,
   clearGroupedPatch,
   clearWildcardPatch,
+  DEFAULT_RULES,
+  effectiveConfigLevel,
   inheritedWildcard,
   mostRestrictive,
   permissionExceptions,
   removeExceptionPatch,
+  ruleset,
   setExceptionPatch,
   setGroupedPatch,
   setWildcardPatch,
   wildcardAction,
   effectiveRuleLevel,
 } from "../../webview-ui/src/components/settings/permission-utils"
+import { ConfigState } from "../../webview-ui/src/utils/config-utils"
+import { WORK_STYLE_PRESETS } from "../../src/shared/work-style-presets"
 import type { PermissionRule, PermissionRuleItem } from "../../webview-ui/src/types/messages"
 
 describe("effectiveRuleLevel", () => {
@@ -45,6 +50,58 @@ describe("effectiveRuleLevel", () => {
   })
 })
 
+describe("Auto-Approve onboarding state", () => {
+  const permission = WORK_STYLE_PRESETS["human-in-the-loop"].config.permission ?? {}
+
+  it("reflects onboarding permissions in Auto-Approve", () => {
+    expect(effectiveConfigLevel(permission, "edit")).toBe("ask")
+    expect(effectiveConfigLevel(permission, "bash")).toBe("ask")
+    expect(effectiveConfigLevel(permission, "glob")).toBe("allow")
+    expect(effectiveConfigLevel(permission, "grep")).toBe("allow")
+  })
+
+  it("keeps an Auto-Approve change selected after saving", () => {
+    const state = new ConfigState()
+    state.handleConfigLoaded({ permission })
+
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("ask")
+
+    state.updateConfig({ permission: { edit: "allow" } })
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("allow")
+    expect(state.draft).toEqual({ permission: { edit: "allow" } })
+
+    state.saveConfig()
+    state.handleConfigUpdated(state.config)
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("allow")
+    expect(state.dirty).toBe(false)
+  })
+})
+
+describe("ruleset", () => {
+  it("preserves backend defaults when config only customizes bash", () => {
+    const rules = [...DEFAULT_RULES, ...ruleset({ bash: { "*": "ask", "git status *": "allow" } })]
+
+    expect(effectiveRuleLevel(rules, "edit")).toBe("allow")
+    expect(effectiveRuleLevel(rules, "external_directory")).toBe("ask")
+    expect(effectiveRuleLevel(rules, "bash")).toBe("ask")
+    expect(effectiveRuleLevel(rules, "doom_loop")).toBe("ask")
+  })
+
+  it("applies top-level wildcards and direct rules in config order", () => {
+    const broadLast = [...DEFAULT_RULES, ...ruleset({ edit: "allow", "*": "ask" })]
+    const directLast = [...DEFAULT_RULES, ...ruleset({ "*": "ask", edit: "allow" })]
+
+    expect(effectiveRuleLevel(broadLast, "edit")).toBe("ask")
+    expect(effectiveRuleLevel(directLast, "edit")).toBe("allow")
+  })
+
+  it("skips config delete sentinels", () => {
+    expect(ruleset({ edit: null, bash: { "*": null, "git status *": "allow" } })).toEqual([
+      { permission: "bash", pattern: "git status *", action: "allow" },
+    ])
+  })
+})
+
 describe("PermissionEditor inherited wildcard state", () => {
   it("distinguishes inherited defaults from explicit wildcard rules", () => {
     expect(wildcardAction(undefined, "ask")).toBe("ask")
@@ -68,6 +125,7 @@ describe("PermissionEditor patch generation", () => {
   })
 
   it("preserves exceptions when changing wildcard overrides", () => {
+    expect(setWildcardPatch(undefined, "edit", "ask")).toEqual({ edit: "ask" })
     expect(setWildcardPatch({ "*": "deny", "src/**": "allow", "dist/**": null }, "edit", "ask")).toEqual({
       edit: { "*": "ask", "src/**": "allow" },
     })

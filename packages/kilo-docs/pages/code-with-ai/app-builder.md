@@ -5,6 +5,10 @@ description: "Build complete applications with Kilo Code"
 
 # App Builder
 
+{% callout type="warning" title="App Builder is deprecated" %}
+App Builder is deprecated and no longer available to new users. Only existing users who previously used App Builder can still access it.
+{% /callout %}
+
 Kilo's **App Builder** lets you create end-to-end applications through natural language conversation. Describe what you want to build, watch it come to life in a real-time preview, and deploy directly from your Kilo dashboard. No local environment setup required.
 
 ---

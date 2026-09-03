@@ -1,12 +1,7 @@
-/**
- * Tests for redirect loop detection in previous-docs-redirects.js
- *
- * This test suite verifies that the redirect configuration has no loops:
- * 1. Direct loops: A path redirecting to itself (source === destination)
- * 2. Indirect loops: A chain of redirects leading back to a starting point (A → B → C → A)
- */
-
-import { expect, describe, it } from "vitest"
+import fs from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { describe, expect, it } from "vitest"
 import redirects from "../previous-docs-redirects.js"
 
 interface Redirect {
@@ -16,120 +11,132 @@ interface Redirect {
   permanent?: boolean
 }
 
+const entries = redirects as Redirect[]
+const pages = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../pages")
+const archive = "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/"
+
 describe("previous-docs-redirects", () => {
-  describe("direct loop detection", () => {
-    it("should not have any redirects where source equals destination", () => {
-      const directLoops: Redirect[] = []
+  it("has unique sources", () => {
+    const seen = new Set<string>()
+    const duplicates = new Set<string>()
 
-      for (const redirect of redirects as Redirect[]) {
-        if (redirect.source === redirect.destination) {
-          directLoops.push(redirect)
-        }
-      }
+    for (const redirect of entries) {
+      if (seen.has(redirect.source)) duplicates.add(redirect.source)
+      seen.add(redirect.source)
+    }
 
-      if (directLoops.length > 0) {
-        const loopDetails = directLoops.map((r) => `  - "${r.source}" redirects to itself`).join("\n")
-        expect.fail(`Found ${directLoops.length} direct redirect loop(s):\n${loopDetails}`)
-      }
-    })
+    expect([...duplicates]).toEqual([])
   })
 
-  describe("indirect loop detection", () => {
-    it("should not have any redirect chains that form a cycle", () => {
-      // Build a map of source -> destination for quick lookup
-      // Note: We only consider exact path matches, not wildcard patterns like :path*
-      // Also skip direct loops (source === destination) as they're caught by the direct loop test
-      const redirectMap = new Map<string, string>()
-
-      for (const redirect of redirects as Redirect[]) {
-        // Skip wildcard redirects as they don't form exact chains
-        // Skip direct loops as they're caught by the direct loop test
-        if (
-          !redirect.source.includes(":") &&
-          !redirect.source.includes("*") &&
-          redirect.source !== redirect.destination
-        ) {
-          redirectMap.set(redirect.source, redirect.destination)
-        }
-      }
-
-      const cycles: string[][] = []
-
-      /**
-       * Detects if following redirects from a starting path leads back to any path in the chain.
-       * Uses a visited set to track the current chain and detect cycles.
-       */
-      function detectCycle(startPath: string): string[] | null {
-        const visited = new Set<string>()
-        const chain: string[] = [startPath]
-        let currentPath = startPath
-
-        while (redirectMap.has(currentPath)) {
-          const nextPath = redirectMap.get(currentPath)!
-
-          if (visited.has(nextPath)) {
-            // Found a cycle - return the chain from the cycle start
-            const cycleStartIndex = chain.indexOf(nextPath)
-            if (cycleStartIndex !== -1) {
-              return [...chain.slice(cycleStartIndex), nextPath]
-            }
-            return null
-          }
-
-          visited.add(currentPath)
-          chain.push(nextPath)
-          currentPath = nextPath
-        }
-
-        return null
-      }
-
-      // Check each redirect source for potential cycles
-      for (const source of redirectMap.keys()) {
-        const cycle = detectCycle(source)
-        if (cycle) {
-          // Avoid duplicate cycle reports by checking if we've already found this cycle
-          const cycleKey = [...cycle].sort().join(" -> ")
-          const isDuplicate = cycles.some((existingCycle) => [...existingCycle].sort().join(" -> ") === cycleKey)
-          if (!isDuplicate) {
-            cycles.push(cycle)
-          }
-        }
-      }
-
-      if (cycles.length > 0) {
-        const cycleDetails = cycles.map((cycle) => `  - ${cycle.join(" → ")}`).join("\n")
-        expect.fail(`Found ${cycles.length} indirect redirect cycle(s):\n${cycleDetails}`)
-      }
-    })
+  it("has valid redirect objects", () => {
+    for (const redirect of entries) {
+      expect(redirect.source).toMatch(/^\//)
+      expect(redirect.destination).toMatch(/^(?:\/|https:\/\/)/)
+      expect(redirect.basePath).toBe(false)
+      expect(redirect.permanent).toBe(true)
+    }
   })
 
-  describe("redirect structure validation", () => {
-    it("should have valid redirect objects with required properties", () => {
-      const invalidRedirects: { index: number; issues: string[] }[] = []
+  it("preserves wildcard parameters", () => {
+    for (const redirect of entries) {
+      const params = redirect.source.match(/:[A-Za-z]+\*/g) ?? []
+      for (const param of params) expect(redirect.destination).toContain(param)
+    }
+  })
 
-      ;(redirects as Redirect[]).forEach((redirect, index) => {
-        const issues: string[] = []
+  it("has no direct or indirect cycles", () => {
+    const exact = new Map(
+      entries
+        .filter((redirect) => !redirect.source.includes(":") && redirect.source !== redirect.destination)
+        .map((redirect) => [redirect.source, redirect.destination]),
+    )
 
-        if (typeof redirect.source !== "string" || redirect.source.trim() === "") {
-          issues.push("missing or invalid 'source' property")
-        }
+    for (const source of exact.keys()) {
+      const seen = new Set([source])
+      const chain = [source]
+      let current = source
 
-        if (typeof redirect.destination !== "string" || redirect.destination.trim() === "") {
-          issues.push("missing or invalid 'destination' property")
-        }
-
-        if (issues.length > 0) {
-          invalidRedirects.push({ index, issues })
-        }
-      })
-
-      if (invalidRedirects.length > 0) {
-        const details = invalidRedirects
-          .map((r) => `  - Redirect at index ${r.index}: ${r.issues.join(", ")}`)
-          .join("\n")
-        expect.fail(`Found ${invalidRedirects.length} invalid redirect(s):\n${details}`)
+      while (exact.has(current)) {
+        current = exact.get(current)!
+        chain.push(current)
+        expect(seen.has(current), `Redirect cycle: ${chain.join(" -> ")}`).toBe(false)
+        seen.add(current)
       }
-    })
+    }
+  })
+
+  it("points internal destinations at existing pages", () => {
+    for (const redirect of entries) {
+      const destination = redirect.destination.split("#", 1)[0]
+      if (!destination.startsWith("/docs") || destination.includes(":")) continue
+
+      const route = destination.replace(/^\/docs\/?/, "")
+      const candidates = route
+        ? [path.join(pages, `${route}.md`), path.join(pages, route, "index.md")]
+        : [path.join(pages, "index.md")]
+      expect(candidates.some((candidate) => fs.existsSync(candidate)), `${redirect.source} -> ${destination}`).toBe(true)
+    }
+  })
+
+  it("redirects removed legacy routes directly to the archive", () => {
+    const expected = new Map([
+      [
+        "/docs/getting-started/settings/auto-cleanup",
+        `${archive}getting-started/settings/auto-cleanup.md`,
+      ],
+      ["/docs/advanced-usage/large-projects", `${archive}customize/context/large-projects.md`],
+      ["/docs/features/tools/read-file", `${archive}automate/tools/read-file.md`],
+      ["/docs/providers/claude-code", `${archive}ai-providers/claude-code.md`],
+      ["/docs/jetbrains-troubleshooting", `${archive}getting-started/troubleshooting/jetbrains.md`],
+    ])
+    const actual = new Map(entries.map((redirect) => [redirect.source, redirect.destination]))
+
+    for (const [source, destination] of expected) expect(actual.get(source)).toBe(destination)
+  })
+
+  it("keeps aliases for current pages on the active docs site", () => {
+    const expected = new Map([
+      ["/docs/providers", "/docs/ai-providers"],
+      ["/docs/providers/:path*", "/docs/ai-providers/:path*"],
+      ["/docs/providers/openai-codex", "/docs/ai-providers/openai-chatgpt-plus-pro"],
+      ["/docs/basic-usage/using-modes", "/docs/code-with-ai/agents/using-agents"],
+      ["/docs/features/slash-commands", "/docs/customize/workflows"],
+      ["/docs/features/slash-commands/workflows", "/docs/customize/workflows"],
+      ["/docs/features/custom-instructions", "/docs/customize/custom-instructions"],
+      ["/docs/advanced-usage/custom-instructions", "/docs/customize/custom-instructions"],
+      ["/docs/advanced-usage/custom-rules", "/docs/customize/custom-rules"],
+      ["/docs/features/skills", "/docs/customize/skills"],
+      ["/docs/features/shell-integration", "/docs/automate/extending/shell-integration"],
+    ])
+    const actual = new Map(entries.map((redirect) => [redirect.source, redirect.destination]))
+
+    for (const [source, destination] of expected) expect(actual.get(source)).toBe(destination)
+  })
+
+  it("orders exact provider routes before the provider wildcard", () => {
+    const wildcard = entries.findIndex((redirect) => redirect.source === "/docs/providers/:path*")
+    const exact = [
+      "/docs/providers",
+      "/docs/providers/claude-code",
+      "/docs/providers/glama",
+      "/docs/providers/human-relay",
+      "/docs/providers/virtual-quota-fallback",
+      "/docs/providers/vscode-lm",
+      "/docs/providers/openai-codex",
+    ]
+
+    expect(wildcard).toBeGreaterThan(-1)
+    for (const source of exact) {
+      const index = entries.findIndex((redirect) => redirect.source === source)
+      expect(index, source).toBeGreaterThan(-1)
+      expect(index, source).toBeLessThan(wildcard)
+    }
+  })
+
+  it("uses well-formed GitHub Markdown destinations", () => {
+    for (const redirect of entries) {
+      if (!redirect.destination.startsWith(archive)) continue
+      expect(redirect.destination).toMatch(/\.md(?:#.*)?$/)
+    }
   })
 })

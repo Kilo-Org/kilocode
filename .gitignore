@@ -27,6 +27,8 @@ storybook-static
 .turbo
 **/.serena
 .serena/
+**/.omo
+.omo/
 /result
 refs
 Session.vim
@@ -57,6 +59,7 @@ tsconfig.tsbuildinfo
 .kilo/yarn.lock
 .kilo/node_modules
 .kilo/plans/*upstream-merge-report-*.md
+**/.kilo/jetbrains.json
 .kilocode/.gitignore
 .kilocode/package.json
 .kilocode/package-lock.json
@@ -64,6 +67,11 @@ tsconfig.tsbuildinfo
 .kilocode/bun.lock
 .kilocode/yarn.lock
 .kilocode/node_modules
+
+# Runtime-generated per-directory TUI config (e.g. written by `PATCH /tui/config`
+# during local testing); should never be committed.
+packages/*/.kilo/tui.json
+packages/*/.kilo/tui.jsonc
 
 # Test Artifacts
 packages/app/.artifacts/

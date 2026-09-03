@@ -19,8 +19,12 @@ describe("BackgroundProcessTool", () => {
   test("validates action-specific required fields", () => {
     expect(accepts({ action: "list" })).toBe(true)
     expect(accepts({ action: "start", command: "bun run dev", ready: { pattern: "ready" } })).toBe(true)
+    expect(accepts({ action: "start", command: "bun run dev", inherit: true })).toBe(true)
+    expect(accepts({ action: "start", command: "bun run dev", persistent: true })).toBe(true)
+    expect(accepts({ action: "start", command: "bun run dev", inherit: true, persistent: true })).toBe(false)
     expect(accepts({ action: "start" })).toBe(false)
     expect(accepts({ action: "stop", id: "bgp01" })).toBe(true)
+    expect(accepts({ action: "stop", id: "bgp01", persistent: true })).toBe(false)
     expect(accepts({ action: "stop" })).toBe(false)
   })
 })

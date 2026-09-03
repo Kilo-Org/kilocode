@@ -1,17 +1,24 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.awt.image.BufferedImage
+import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
@@ -21,7 +28,7 @@ import javax.swing.RepaintManager
  */
 @Suppress("UnstableApiUsage")
 class TurnViewTest : BasePlatformTestCase() {
-    private val openFile: (String) -> Unit = {}
+    private val openFile: SessionFileOpener = { _, _ -> }
 
     // ------ TurnView ------
 
@@ -83,6 +90,32 @@ class TurnViewTest : BasePlatformTestCase() {
         assertEquals("user#u1, assistant#a1", tv.dump())
     }
 
+    fun `test modified files card stays last in turn`() {
+        val tv = TurnView("u1", openFile)
+        tv.addMessage(msg("u1", "user"))
+
+        tv.setDiffs(listOf(diff("src/A.kt")))
+
+        val card = tv.components.last() as ModifiedFilesView
+        assertTrue(card.isVisible)
+
+        tv.addMessage(msg("a1", "assistant"))
+
+        assertSame(card, tv.components.last())
+        assertEquals(listOf("u1", "a1"), tv.messageIds())
+    }
+
+    fun `test modified files card hides for empty diffs`() {
+        val tv = TurnView("u1", openFile)
+
+        tv.setDiffs(listOf(diff("src/A.kt")))
+        val card = tv.components.last() as ModifiedFilesView
+
+        tv.setDiffs(emptyList())
+
+        assertFalse(card.isVisible)
+    }
+
     // ------ MessageView ------
 
     fun `test new MessageView is empty`() {
@@ -111,14 +144,22 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse(mv.isOpaque)
     }
 
-    fun `test user message uses standard outline color`() {
+    // An empty user message is a bare turn anchor with no parts. It must paint nothing: painting the
+    // prompt surface on its ~1px-tall bounds would leave a thin light stripe at the top of the turn.
+    fun `test empty user message paints no prompt surface stripe`() {
         val mv = MessageView(msg("u1", "user"), openFile)
-        mv.setSize(120, 48)
-        val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
+        mv.setSize(120, 4)
+        val image = BufferedImage(120, 4, BufferedImage.TYPE_INT_ARGB)
 
-        mv.paint(image.createGraphics())
+        val g = image.createGraphics()
+        mv.paint(g)
+        g.dispose()
 
-        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
+        for (x in 0 until 120) {
+            for (y in 0 until 4) {
+                assertEquals("pixel ($x,$y) must stay transparent", 0, (image.getRGB(x, y) ushr 24) and 0xff)
+            }
+        }
     }
 
     fun `test assistant message remains borderless`() {
@@ -293,6 +334,20 @@ class TurnViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test setDiffOpener rebinds edit tool parts built before wiring`() {
+        // The transcript builds the MessageView (and its EditToolView) before the session-level
+        // opener is known, exactly like history load. Rebinding must reach the existing part.
+        val message = msg("a1", "assistant").also { it.parts["t1"] = editTool() }
+        val mv = MessageView(message, openFile)
+
+        val fired = mutableListOf<List<DiffFileDto>>()
+        mv.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        openDiffButton(mv).doClick()
+
+        assertEquals(1, fired.single().size)
+    }
+
     fun `test MessageView pre-populates parts from Message on creation`() {
         val message = msg("a1", "assistant")
         val text = ai.kilocode.client.session.model.Text("p1").also { it.content.append("preloaded") }
@@ -322,8 +377,8 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test consecutive messages use shared compact gap`() {
-        val tv = TurnView("u1", openFile)
-        tv.addMessage(msg("u1", "user").also { msg ->
+        val tv = TurnView("a1", openFile)
+        tv.addMessage(msg("a1", "assistant").also { msg ->
             msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         })
         tv.addMessage(msg("a2", "assistant").also { msg ->
@@ -332,7 +387,7 @@ class TurnViewTest : BasePlatformTestCase() {
 
         tv.setSize(400, 300)
         tv.doLayout()
-        val first = tv.messageView("u1")!!
+        val first = tv.messageView("a1")!!
         val second = tv.messageView("a2")!!
 
         assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())
@@ -342,6 +397,23 @@ class TurnViewTest : BasePlatformTestCase() {
 
     private fun msg(id: String, role: String): Message =
         Message(MessageDto(id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0)))
+
+    private fun diff(path: String) = DiffFileDto(path, additions = 2, deletions = 1, patch = PATCH)
+
+    private fun editTool() = Tool("t1", "edit", toolKind("edit")).also {
+        it.state = ToolExecState.COMPLETED
+        it.title = "src/App.kt"
+        it.input = mapOf("filePath" to "/repo/src/App.kt")
+        it.metadata = mapOf("filediff" to buildJsonObject {
+            put("file", "src/App.kt")
+            put("additions", 2)
+            put("deletions", 1)
+            put("patch", PATCH)
+        }.toString())
+    }
+
+    private fun openDiffButton(view: MessageView): AbstractButton =
+        (view.part("t1") as EditToolView).copyToolbar as AbstractButton
 
     private fun reasoning(id: String, content: String) = Reasoning(id).also {
         it.done = false
@@ -373,5 +445,17 @@ class TurnViewTest : BasePlatformTestCase() {
             if (invalidComponent in watched) invalid.add(invalidComponent)
             super.addInvalidComponent(invalidComponent)
         }
+    }
+
+    private companion object {
+        val PATCH = """
+            diff --git a/src/A.kt b/src/A.kt
+            --- a/src/A.kt
+            +++ b/src/A.kt
+            @@ -1,1 +1,2 @@
+            -old
+            +new
+            +more
+        """.trimIndent()
     }
 }

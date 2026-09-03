@@ -1,3 +1,39 @@
+import { type ParsedMemoryCommand } from "../../utils/memory-command"
+
+export type SandboxDefaultState = {
+  desired: boolean
+  enabled: boolean
+  available: boolean
+  reason?: string
+  revision: number
+}
+
+export type SandboxState = {
+  sessionID: string
+  enabled: boolean
+  available: boolean
+  reason?: string
+  version: number
+  directory: string
+  revision: number
+}
+
+export function applySandboxState(current: SandboxState | undefined, next: SandboxState) {
+  if (!current) return next
+  const same = current.sessionID === next.sessionID && current.directory === next.directory
+  if (same && current.version > next.version) return current
+  if (same && current.version === next.version && current.revision > next.revision) return current
+  if (!same && current.revision > next.revision) return current
+  return next
+}
+
+export function applySandboxStates(current: Record<string, SandboxState>, next: SandboxState) {
+  const previous = current[next.sessionID]
+  const state = applySandboxState(previous, next)
+  if (state === previous) return current
+  return { ...current, [next.sessionID]: state }
+}
+
 export function fileName(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "")
   return normalized.split("/").pop() ?? normalized
@@ -115,4 +151,16 @@ export function isQuestioning(blocked: boolean, questions: number): boolean {
 export function isPathMention(text: string): boolean {
   const path = text.replace(/^@/, "")
   return path !== "terminal" && path !== "git-changes"
+}
+
+/**
+ * The text that should remain in the prompt input after a memory command is
+ * submitted. No-argument memory operations (e.g. rebuild, on, status, inspect)
+ * typed with trailing free text (e.g. "/memory rebuild hello") keep that text in
+ * the input instead of discarding it; the parser reports the unconsumed
+ * remainder as `rest`. Argument-taking operations (remember, correct, forget,
+ * auto, purge) consume their text, so nothing remains.
+ */
+export function memoryRest(cmd: ParsedMemoryCommand): string {
+  return "rest" in cmd ? (cmd.rest ?? "") : ""
 }

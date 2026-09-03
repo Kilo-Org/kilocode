@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.models
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -118,6 +119,19 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
 
         rpc.configUpdateGate?.complete(Unit)
         flushUntil { rpc.configPatches.isNotEmpty() }
+        edt { assertSelected(panel, "kilo/new") }
+    }
+
+    fun `test stale config update result keeps applied selection visible`() {
+        val panel = requireUi()
+        rpc.configUpdateReturnStale = true
+
+        edt {
+            select(panel, "new")
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() && !edt { panel.modified() } }
         edt { assertSelected(panel, "kilo/new") }
     }
 
@@ -310,13 +324,21 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test settings picker keeps model attachment metadata`() {
+        val panel = requireUi()
+
+        edt {
+            assertTrue(pickers(panel).first().selectedForTest()?.attachment == true)
+        }
+    }
+
     private fun providers(): ProvidersDto = ProvidersDto(
         providers = listOf(
             ProviderDto(
                 id = "kilo",
                 name = "Kilo",
                 models = mapOf(
-                    "old" to ModelDto(id = "old", name = "Old"),
+                    "old" to ModelDto(id = "old", name = "Old", attachment = true),
                     "new" to ModelDto(id = "new", name = "New"),
                 ),
             ),
@@ -344,16 +366,11 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
 
     private fun requireUi(): ModelsSettingsUi = requireNotNull(ui)
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(20) {
-            delay(100)
+        repeat(200) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents() }
             if (done()) return@runBlocking
         }

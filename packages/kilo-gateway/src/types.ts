@@ -27,10 +27,19 @@ export interface KilocodeProfile {
   email: string
   name?: string
   organizations?: Organization[]
+  selectedOrganizationId?: string
+  hasPersonalAccount?: boolean
 }
 
 export interface KilocodeBalance {
   balance: number
+}
+
+export interface KiloPassState {
+  currentPeriodBaseCreditsUsd: number
+  currentPeriodUsageUsd: number
+  currentPeriodBonusCreditsUsd: number
+  nextBillingAt?: string | null
 }
 
 export interface PollOptions<T> {
@@ -165,9 +174,7 @@ export interface ProviderInfo {
 }
 
 export type KiloProvider = Provider & {
-  alibaba(modelId: string): LanguageModel
   anthropic(modelId: string): LanguageModel
-  mistral(modelId: string): LanguageModel
   openai(modelId: string): LanguageModel
   openaiCompatible(modelId: string): LanguageModel
 }

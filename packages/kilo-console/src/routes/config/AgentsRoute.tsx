@@ -265,7 +265,10 @@ export function AgentBuilderRoute() {
                       onInput={(event) => state.setDesc(event.currentTarget.value)}
                     />
                   </FieldCard>
-                  <FieldCard label="Mode">
+                  <FieldCard
+                    label="Mode"
+                    description="Primary agents can run sessions directly; subagents are delegated to by other agents."
+                  >
                     <CustomSelect
                       label="Agent mode"
                       value={state.mode()}
@@ -323,6 +326,7 @@ export function AgentBuilderRoute() {
                 <div class="ui-form agent-builder-form">
                   <FieldCard
                     label="Model"
+                    description="Leave unset to inherit the default model, or choose one to pin this agent to a specific model."
                     actions={
                       <>
                         <Show when={!state.locked() && state.model()}>

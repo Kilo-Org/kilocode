@@ -5,9 +5,10 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.SessionDto
-import com.intellij.openapi.application.ApplicationManager
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ class HistoryController(
     private val deleted: (String) -> Unit = {},
     private val gitUrlProvider: () -> String? = { resolveGitRemoteUrl(workspace.directory) },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
+    private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     companion object {
         const val CLOUD_LIMIT = 50
@@ -62,7 +64,7 @@ class HistoryController(
         reloadCloud()
     }
 
-    internal fun activity() = sessions.activity()
+    internal fun activity() = sessions.activitySnapshot()
 
     fun reloadLocal() {
         edt { local.start() }
@@ -208,7 +210,7 @@ class HistoryController(
         if (resolved) return gitUrl
         return lock.withLock {
             if (resolved) return@withLock gitUrl
-            val url = withContext(Dispatchers.IO) {
+            val url = withContext(io) {
                 gitUrlProvider()
             }
             // Write gitUrl directly (volatile) so it is visible before EDT callbacks fire.
@@ -218,15 +220,6 @@ class HistoryController(
             url
         }
     }
-}
-
-private fun edt(block: () -> Unit) {
-    val app = ApplicationManager.getApplication()
-    if (app.isDispatchThread) {
-        block()
-        return
-    }
-    app.invokeLater(block)
 }
 
 private fun localItem(session: SessionDto) = LocalHistoryItem(session)

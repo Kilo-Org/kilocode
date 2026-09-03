@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { t } from "./shims/i18n"
+import { t } from "../i18n"
 import type { AutocompleteStatusBarStateProps } from "./types"
 import { humanFormatSessionCost, formatTime } from "./statusbar-utils"
 

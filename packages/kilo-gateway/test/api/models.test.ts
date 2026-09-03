@@ -1,7 +1,7 @@
 // Verifies fetchKiloModels typed result and 401 fallback behaviour.
 
-import { test, expect } from "bun:test"
-import { fetchKiloModels } from "../../src/api/models.js"
+import { test, expect, spyOn } from "bun:test"
+import { fetchKiloModels, fetchKiloTranscriptionModels } from "../../src/api/models.js"
 
 const VALID_RESPONSE = JSON.stringify({
   data: [
@@ -17,6 +17,7 @@ const VALID_RESPONSE = JSON.stringify({
       supported_parameters: ["tools", "temperature"],
       isFree: false,
       mayTrainOnYourPrompts: true,
+      hasUserByokAvailable: true,
     },
   ],
 })
@@ -36,6 +37,25 @@ const VALID_BENCH_RESPONSE = JSON.stringify({
       terminalBench: {
         overallScore: 0.551,
         avgAttemptCostUsd: 53.37,
+      },
+    },
+  ],
+})
+
+const VALID_AUTO_ROUTING_RESPONSE = JSON.stringify({
+  data: [
+    {
+      id: "kilo-auto/efficient",
+      name: "Kilo Auto Efficient",
+      context_length: 128000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["tools", "temperature"],
+      autoRouting: {
+        models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
       },
     },
   ],
@@ -93,7 +113,6 @@ test("falls back to public endpoint on 401 and returns models", async () => {
 
   const result = await fetchKiloModels({
     kilocodeToken: "expired-token",
-    kilocodeOrganizationId: "org-123",
   })
 
   ;(globalThis as any).fetch = orig
@@ -101,6 +120,36 @@ test("falls back to public endpoint on 401 and returns models", async () => {
   expect(callCount).toBe(2)
   expect(result.error).toBeUndefined()
   expect(Object.keys(result.models).length).toBeGreaterThan(0)
+})
+
+test.each([
+  { kilocodeToken: "expired-token", kilocodeOrganizationId: "org-123" },
+  { kilocodeOrganizationId: "org-123" },
+  { kilocodeToken: "expired-token", baseURL: "https://api.kilo.ai/api/organizations/org-123" },
+  { kilocodeToken: "expired-token", baseURL: "https://gateway.test/api/organizations/org-123" },
+  { kilocodeToken: "https://gateway.test/api/organizations/org-token:expired-token" },
+  {
+    kilocodeToken: "https://gateway.test/api/organizations/org-token:expired-token",
+    baseURL: "https://api.kilo.ai/api/openrouter",
+  },
+])("never retries an organization-scoped 401 against the public catalog: %j", async (options) => {
+  const fetch = spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }))
+  try {
+    expect(await fetchKiloModels(options)).toEqual({ models: {}, error: { kind: "unauthorized", status: 401 } })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  } finally {
+    fetch.mockRestore()
+  }
+})
+
+test("preserves a successful empty organization catalog", async () => {
+  const fetch = spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ data: [] }))
+  try {
+    expect(await fetchKiloModels({ kilocodeToken: "token", kilocodeOrganizationId: "org-123" })).toEqual({ models: {} })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  } finally {
+    fetch.mockRestore()
+  }
 })
 
 test("returns error with kind=network on fetch exception", async () => {
@@ -148,6 +197,7 @@ test("returns models without error on success", async () => {
   expect(result.models["test/model-a"]).toMatchObject({
     isFree: false,
     mayTrainOnYourPrompts: true,
+    hasUserByokAvailable: true,
   })
 })
 
@@ -169,6 +219,26 @@ test("preserves Terminal Bench metadata as a dedicated model field", async () =>
   expect(result.models["test/model-a"].terminalBench).toEqual({
     overallScore: 0.551,
     avgAttemptCostUsd: 53.37,
+  })
+})
+
+test("preserves Auto Efficient routing metadata as a dedicated model field", async () => {
+  const orig = globalThis.fetch
+  stubFetch(
+    async () =>
+      new Response(VALID_AUTO_ROUTING_RESPONSE, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models["kilo-auto/efficient"].autoRouting).toEqual({
+    models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
   })
 })
 
@@ -206,4 +276,201 @@ test("returns error with kind=schema when response body is invalid JSON", async 
 
   expect(result.models).toEqual({})
   expect(result.error?.kind).toBe("schema")
+})
+
+const MIXED_MODALITY_RESPONSE = JSON.stringify({
+  data: [
+    {
+      id: "openrouter/auto",
+      name: "Auto Router",
+      context_length: 2000000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text", "image"],
+        output_modalities: ["text", "image"],
+      },
+      supported_parameters: ["tools", "temperature"],
+    },
+    {
+      id: "openrouter/auto-beta",
+      name: "Auto Router (Beta)",
+      context_length: 2000000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text", "image"],
+        output_modalities: ["text", "image"],
+      },
+      supported_parameters: ["tools", "temperature"],
+    },
+    {
+      id: "black-forest-labs/flux-1.1-pro",
+      name: "FLUX 1.1 Pro",
+      context_length: 4096,
+      max_completion_tokens: 4096,
+      architecture: {
+        input_modalities: ["text", "image"],
+        output_modalities: ["image"],
+      },
+      supported_parameters: ["tools"],
+    },
+    {
+      id: "test/no-tools",
+      name: "No Tools Model",
+      context_length: 128000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["temperature"],
+    },
+    {
+      id: "test/model-a",
+      name: "Test Model A",
+      context_length: 128000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["tools", "temperature"],
+    },
+  ],
+})
+
+test("keeps image-output models with tools and drops models without tools", async () => {
+  const orig = globalThis.fetch
+  stubFetch(
+    async () =>
+      new Response(MIXED_MODALITY_RESPONSE, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models["openrouter/auto"]).toBeDefined()
+  expect(result.models["openrouter/auto-beta"]).toBeDefined()
+  expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeDefined()
+  expect(result.models["test/model-a"]).toBeDefined()
+  expect(result.models["test/no-tools"]).toBeUndefined()
+})
+
+test("fetches and filters the transcription catalog", async () => {
+  const orig = globalThis.fetch
+  const calls: string[] = []
+  stubFetch(async (input) => {
+    calls.push(String(input))
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: "fish-audio/transcribe-1",
+            name: "Fish Audio: Transcribe 1",
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )
+  })
+
+  const result = await fetchKiloTranscriptionModels({ kilocodeToken: "token" })
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models).toEqual([
+    {
+      id: "fish-audio/transcribe-1",
+      name: "Fish Audio: Transcribe 1",
+    },
+  ])
+  expect(calls[0]).toContain("/api/gateway/transcription-models")
+})
+
+test("keeps organization catalog errors from silently falling back to personal models", async () => {
+  const orig = globalThis.fetch
+  const calls: string[] = []
+  const headers: Headers[] = []
+  stubFetch(async (input, init) => {
+    calls.push(String(input))
+    headers.push(new Headers(init?.headers))
+    return new Response("Forbidden", { status: 403 })
+  })
+
+  const result = await fetchKiloTranscriptionModels({ kilocodeToken: "token", kilocodeOrganizationId: "org-1" })
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.models).toEqual([])
+  expect(result.error?.kind).toBe("unauthorized")
+  expect(calls).toHaveLength(1)
+  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(headers[0]?.get("X-KILOCODE-ORGANIZATIONID")).toBe("org-1")
+})
+
+test("omits cost when pricing contains negative values (dynamic/auto-routed pricing)", async () => {
+  const orig = globalThis.fetch
+  stubFetch(
+    async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: "openrouter/auto",
+              name: "Auto Router",
+              context_length: 128000,
+              max_completion_tokens: 16384,
+              architecture: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+              },
+              supported_parameters: ["tools"],
+              pricing: {
+                prompt: "-1",
+                completion: "-1",
+              },
+            },
+            {
+              id: "test/fixed-price",
+              name: "Fixed Price Model",
+              context_length: 128000,
+              max_completion_tokens: 16384,
+              architecture: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+              },
+              supported_parameters: ["tools"],
+              pricing: {
+                prompt: "0.000003",
+                completion: "0.000015",
+                input_cache_read: "0.0000003",
+                input_cache_write: "-1",
+              },
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models["openrouter/auto"]).toBeDefined()
+  expect(result.models["openrouter/auto"].cost).toBeUndefined()
+  expect(result.models["test/fixed-price"].cost).toEqual({
+    input: 3,
+    output: 15,
+    cache_read: 0.3,
+  })
 })

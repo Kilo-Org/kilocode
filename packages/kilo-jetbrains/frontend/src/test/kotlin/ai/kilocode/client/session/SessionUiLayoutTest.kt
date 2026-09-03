@@ -1,36 +1,86 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.KiloDiffEditorService
+import ai.kilocode.client.diff.openKiloDiff
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.telemetry.KiloTelemetryService
+import ai.kilocode.client.vfs.KiloVirtualFile
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.util.Disposer
+import com.intellij.ui.components.JBLabel
+import java.awt.Component
+import java.awt.Container
+import java.awt.event.MouseEvent
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
+import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.SessionView
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
+import ai.kilocode.client.ui.layout.Align
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBScrollPane
+import java.awt.Dimension
 import javax.swing.JLayeredPane
+import javax.swing.JPanel
+import javax.swing.SwingUtilities
+import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
+
+    /** The worktree RPC installed by [dock], so branch/PR lookups can be asserted. */
+    private lateinit var worktree: FakeWorktreeRpcApi
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetGithub()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test root contains content overlay and blocker layers`() {
         val root = find<SessionRootPanel>(ui)
@@ -45,16 +95,92 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(root.blocker.isVisible)
     }
 
-    fun `test bottom stack contains connection and prompt only`() {
+    fun `test session surfaces use session background from initial render`() {
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        val root = find<SessionRootPanel>(ui)
+        val pane = scrollComponent() as JBScrollPane
+
+        // One opaque backdrop, self-rendered from the theme at first paint (no applyStyle push).
+        assertTrue(root.isOpaque)
+        assertEquals(bg, root.background)
+        // Intermediate containers stay transparent over that single backdrop.
+        assertFalse(root.content.isOpaque)
+        assertFalse(pane.isOpaque)
+        assertFalse(pane.viewport.isOpaque)
+
+        showMessages()
+
+        val messages = find<SessionMessageListPanel>(ui)
+        assertFalse(messages.isOpaque)
+        assertEquals(bg, root.background)
+    }
+
+    fun `test prompt is docked and connection is overlaid`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
-        assertSame(root.content, stack.parent)
-        assertSame(stack, connection.parent)
+        // Prompt sits inside an Align inside the bottom Stack container, which is docked SOUTH.
+        assertTrue(prompt.parent is Align)
+        assertSame(root.content, prompt.parent.parent.parent)
+        assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
-        assertEquals(listOf(connection, prompt), stack.components.toList())
+        assertFalse(root.content.components.contains(connection))
+    }
+
+    fun `test dock is docked between scroll pane and prompt`() {
+        val prompt = find<PromptPanel>(ui)
+        val dock = find<BranchDock>(ui)
+
+        // Dock and the aligned prompt share the bottom container; the dock comes first (above prompt).
+        val container = dock.parent
+        assertSame(container, prompt.parent.parent)
+        assertTrue(container.getComponentZOrder(dock) < container.getComponentZOrder(prompt.parent))
+    }
+
+    fun `test readonly session omits dock`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+
+        assertNull(find(ui, BranchDock::class.java))
+    }
+
+    fun `test dock absent when manager disables branch dock`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val showsBranchDock: Boolean get() = false
+        }
+        ui = newUi(manager = owner)
+        settle()
+
+        assertNull(find(ui, BranchDock::class.java))
+    }
+
+    fun `test transcript uses larger standard gap before prompts after first item`() {
+        val panel = SessionLayoutPanel(gap = SessionUiStyle.SessionLayout.GAP).apply {
+            setSize(400, 300)
+            add(Row(SessionView.Kind.UserPrompt))
+            add(Row(SessionView.Kind.Default))
+            add(Row(SessionView.Kind.UserPrompt))
+        }
+
+        panel.doLayout()
+
+        assertEquals(0, panel.getComponent(0).y)
+        assertEquals(SessionUiStyle.SessionLayout.GAP, panel.getComponent(1).y - panel.getComponent(0).bounds.maxY.toInt())
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP),
+            panel.getComponent(2).y - panel.getComponent(1).bounds.maxY.toInt(),
+        )
     }
 
     fun `test drop overlay is attached under root overlay layer`() {
@@ -71,6 +197,413 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val drop = find<SessionDropOverlay>(ui)
 
         assertNull(drop.dropTarget)
+    }
+
+    fun `test dock hides while a turn runs`() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        controller().model.setState(SessionState.Busy("running"))
+
+        assertFalse(dock.isVisible)
+
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertTrue(dock.isVisible)
+    }
+
+    fun `test dock move delegates to manager without progress state`() {
+        val calls = mutableListOf<Pair<String?, String>>()
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String?, directory: String) {
+                calls += sessionId to directory
+            }
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        dock.triggerMove()
+
+        assertEquals(listOf("ses_test" to "/test"), calls)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test dock move forwards a null session for a new session with local changes`() {
+        val calls = mutableListOf<Pair<String?, String>>()
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String?, directory: String) {
+                calls += sessionId to directory
+            }
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        // A brand-new sidebar session has no id until its first prompt, but the local changes alone
+        // are worth moving: the worktree gets the changes and starts its own session.
+        ui = newUi(manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+
+        dock.triggerMove()
+
+        assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
+    }
+
+    fun `test editor tab host leaves the dock without a header row`() {
+        // The worktree editor tab reports the branch, its PR, and its counts in its own header, so its
+        // dock is the action row alone -- mirrors WorktreeSessionEditorManager's base tab.
+        installEditorTabWorktree()
+        workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+        assertFalse(find<PrHeaderView>(dock).isVisible)
+    }
+
+    fun `test editor tab dock keeps the prompt's readable width`() {
+        installEditorTabWorktree()
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+        layout()
+        // The base helper only walks the prompt's own path down the bottom column; the dock sits in its
+        // own alignment wrapper beside it.
+        layoutAll(ui)
+
+        val dock = find<BranchDock>(ui)
+        val prompt = find<PromptPanel>(ui)
+        assertTrue(dock.isVisible)
+        assertEquals(prompt.width, dock.width)
+        assertTrue("dock must not run the full editor width", dock.width < ui.width)
+        assertEquals(
+            SwingUtilities.convertPoint(prompt, 0, 0, ui).x,
+            SwingUtilities.convertPoint(dock, 0, 0, ui).x,
+        )
+    }
+
+    private fun editorTabOwner() = object : SessionManager {
+        override fun newSession() {}
+        override fun showHistory(back: (() -> Unit)?) {}
+        override fun openSession(ref: SessionRef) {}
+        override val hostedInEditorTab: Boolean get() = true
+        override val supportsMoveToWorktree: Boolean get() = true
+        override fun moveToWorktree(sessionId: String?, directory: String) {}
+    }
+
+    private fun layoutAll(root: Component) {
+        root.doLayout()
+        if (root is Container) root.components.forEach(::layoutAll)
+    }
+
+    private fun installEditorTabWorktree() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(
+                branch = "main",
+                availability = GhAvailability.OK,
+                pr = WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7", "Title"),
+            )
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+    }
+
+    fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {
+        val worktree = FakeWorktreeRpcApi().apply { branchThrows = IllegalStateException("backend down") }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        // An empty status DTO would default to GhAvailability.OK and offer worktree actions against
+        // a directory whose git state is unknown, so a failure must leave the dock untouched.
+        assertFalse(find<BranchDock>(ui).isVisible)
+    }
+
+    fun `test dock branch changes refresh on finish and revert`() {
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        val badge = find<ChangesPanel>(ui)
+
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertEquals(2 to 1, stats(badge))
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/B.kt", 4, 3))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertEquals(4 to 3, stats(badge))
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/C.kt", 1, 0))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.TurnEnded(Outcome.INCOMPLETE, "unknown"))
+        settle()
+
+        assertEquals(1 to 0, stats(badge))
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/D.kt", 5, 2))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Error("failed"))
+        settle()
+
+        assertEquals(5 to 2, stats(badge))
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/E.kt", 1, 0))
+        controller().model.setRevert(SessionRevertDto("msg1", "part1", diff = "patch"))
+        settle()
+
+        assertEquals(1 to 0, stats(badge))
+    }
+
+    fun `test dock fetches stats only and does not display local changes`() {
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panels = components(dock).filterIsInstance<ChangesPanel>()
+
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertTrue(dock.newWorktreeEnabled())
+        assertEquals(1, dock.changeCount())
+        assertTrue(panels.none { it.isVisible })
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+        assertEquals(listOf(false), workspaceRpc.localDiffPatchCalls)
+
+        workspaceRpc.branchDiffs.addAll(listOf(DiffFileDto("src/Base.kt", 2, 1), DiffFileDto("src/Rename.kt", 0, 0)))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertTrue(panels.all { it.isVisible })
+        assertTrue(panels.all { stats(it) == (2 to 1) })
+        assertEquals(1, dock.changeCount())
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+        assertEquals(listOf(false, false), workspaceRpc.localDiffPatchCalls)
+    }
+
+    fun `test dock resolves the pull request while the github integration is on`() {
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals(listOf("/test" to true), worktree.branchCalls)
+        assertTrue(dock.isVisible)
+        // Read by the PR badge and by the pull-request context-menu actions.
+        assertEquals(7, ui.pr?.number)
+    }
+
+    fun `test dock resolves the branch without gh while the github integration is off`() {
+        KiloPluginSettings.setGithub(false)
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals("the backend must be told not to spawn gh", listOf("/test" to false), worktree.branchCalls)
+        // Git-backed dock content and worktree actions are unaffected by the GitHub setting.
+        assertTrue(dock.isVisible)
+        assertTrue(dock.newWorktreeEnabled())
+        assertEquals(1, dock.changeCount())
+        // Nothing PR-shaped survives.
+        assertNull(ui.pr)
+    }
+
+    fun `test committed-only summary does not enable empty-session worktree actions`() {
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        val dock = dock()
+
+        assertTrue(dock.isVisible)
+        assertTrue(find<ChangesPanel>(dock).isVisible)
+        assertEquals(2 to 1, stats(find<ChangesPanel>(dock)))
+        assertEquals(0, dock.changeCount())
+        assertFalse(dock.moveEnabled())
+        assertFalse(dock.newWorktreeEnabled())
+    }
+
+    fun `test local actions update independently while committed summary is loading`() {
+        val gate = CompletableDeferred<Unit>()
+        workspaceRpc.beforeBranchDiff = { gate.await() }
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+
+        assertFalse(panel.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+        assertTrue(workspaceRpc.branchDiffCalls.isNotEmpty())
+        assertEquals(listOf("/test"), workspaceRpc.localDiffCalls)
+
+        gate.complete(Unit)
+        settle()
+
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(1, dock.changeCount())
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test committed summary updates independently while local actions are loading`() {
+        val gate = CompletableDeferred<Unit>()
+        workspaceRpc.beforeLocalDiff = { gate.await() }
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+
+        assertTrue(panel.isVisible)
+        assertEquals(2 to 1, stats(panel))
+        assertFalse(dock.moveEnabled())
+        assertEquals(0, dock.changeCount())
+
+        gate.complete(Unit)
+        settle()
+
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(1, dock.changeCount())
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test refresh failures clear only their comparison state`() {
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+        workspaceRpc.beforeBranchDiff = { error("branch unavailable") }
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertFalse(panel.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+
+        workspaceRpc.beforeBranchDiff = null
+        workspaceRpc.beforeLocalDiff = { error("local unavailable") }
+        controller().model.setRevert(SessionRevertDto("msg1"))
+        settle()
+
+        assertTrue(panel.isVisible)
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(0, dock.changeCount())
+        assertFalse(dock.moveEnabled())
+        assertFalse(dock.newWorktreeEnabled())
+    }
+
+    fun `test unavailable worktree actions avoid local comparison requests`() {
+        settle()
+        assertTrue(workspaceRpc.localDiffCalls.isEmpty())
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        controller().model.setRevert(SessionRevertDto("msg1"))
+        settle()
+
+        assertTrue(workspaceRpc.localDiffCalls.isEmpty())
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+    }
+
+    fun `test disposed session cancels independent comparison requests`() {
+        val gate = CompletableDeferred<Unit>()
+        val base = CompletableDeferred<Unit>()
+        val local = CompletableDeferred<Unit>()
+        workspaceRpc.beforeBranchDiff = {
+            try {
+                gate.await()
+            } finally {
+                base.complete(Unit)
+            }
+        }
+        workspaceRpc.beforeLocalDiff = {
+            try {
+                gate.await()
+            } finally {
+                local.complete(Unit)
+            }
+        }
+        val dock = dock()
+        assertTrue(workspaceRpc.branchDiffCalls.isNotEmpty())
+        assertTrue(workspaceRpc.localDiffCalls.isNotEmpty())
+        Disposer.dispose(ui)
+        settle()
+        assertTrue(base.isCompleted)
+        assertTrue(local.isCompleted)
+        gate.complete(Unit)
+        settle()
+        assertEquals(0, dock.changeCount())
+        assertFalse(find<ChangesPanel>(dock).isVisible)
+    }
+
+    fun `test session summary uses common normalized base editor identity`() {
+        workspaceRpc.branchName = "feature/topic"
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        val dock = dock()
+        ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, workspaces, testRootDisposable)
+        ApplicationManager.getApplication().replaceService(KiloAppService::class.java, app, testRootDisposable)
+        ApplicationManager.getApplication()
+            .replaceService(KiloTelemetryService::class.java, KiloTelemetryService(scope, appRpc), testRootDisposable)
+        project.replaceService(KiloSessionService::class.java, sessions, testRootDisposable)
+        project.replaceService(KiloDiffEditorService::class.java, KiloDiffEditorService(project, scope), testRootDisposable)
+        val manager = FileEditorManager.getInstance(project)
+        try {
+            val panel = components(dock).filterIsInstance<ChangesPanel>().last()
+            val event = MouseEvent(panel, MouseEvent.MOUSE_CLICKED, 0, 0, 1, 1, 1, false, MouseEvent.BUTTON1)
+            panel.mouseListeners.forEach { it.mouseClicked(event) }
+            settle()
+            val file = manager.openFiles.filterIsInstance<KiloVirtualFile>().single()
+            assertEquals("branch", file.path.params["source"])
+            assertEquals("/test", file.path.params["directory"])
+            assertEquals("feature/topic", file.path.params["branch"])
+            assertEquals(KiloDiffComparison.BASE.title("feature/topic"), file.name)
+            assertFalse(file.path.params.containsKey("sessionId"))
+            assertFalse(file.path.params.containsKey("token"))
+
+            openKiloDiff(project, "/test/./", KiloDiffComparison.BASE, "feature/topic")
+            assertSame(file, manager.openFiles.filterIsInstance<KiloVirtualFile>().single())
+        } finally {
+            manager.openFiles.forEach { manager.closeFile(it) }
+        }
     }
 
     fun `test prompt file drag leave does not immediately hide drop overlay`() {
@@ -111,6 +644,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active views are children of message list panel`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -120,6 +654,25 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertSame(messages, qv.parent)
         assertSame(messages, pv.parent)
+    }
+
+    fun `test readonly session omits prompt and active reply views`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        layoutReadonly()
+
+        assertNull(find(ui, PromptPanel::class.java))
+        assertNull(find(ui, QuestionView::class.java))
+        assertNull(find(ui, PermissionView::class.java))
+        assertSame(scrollComponent(), ui.defaultFocusedComponent)
+        assertTrue(find<SessionMessageListPanel>(ui).parent != null)
     }
 
     fun `test header is docked above shared scroll pane and hidden while empty`() {
@@ -140,60 +693,133 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 
-    fun `test connection panel uses stack width and sits above prompt`() {
+    fun `test revert sync preserves active prompt draft`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        val msg = message("u1")
+        model.upsertMessage(msg)
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+        prompt.setText("unsent draft")
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("unsent draft", prompt.text())
+    }
+
+    fun `test revert sync restores prompt when empty`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("rolled back prompt", prompt.text())
+    }
+
+    fun `test connection panel overlays above prompt with transparent inset`() {
+        val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
         showConnection()
         layout()
+        val point = promptPoint(root, prompt)
+        val gap = SessionUiStyle.View.contentGap()
 
         assertTrue(connection.isVisible)
-        assertEquals(0, connection.x)
-        assertEquals(stack.width, connection.width)
-        assertEquals(prompt.width, connection.width)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertSame(root.overlay, connection.parent)
+        assertEquals(point.x + gap, connection.x)
+        assertEquals(prompt.width - gap * 2, connection.width)
+        assertEquals(bottomTop(root, prompt) - gap, connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel remains anchored above prompt`() {
+        val root = find<SessionRootPanel>(ui)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            "line 1\nline 2",
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel is capped to transcript height`() {
+        ui.setSize(800, 260)
+        layout()
+        val root = find<SessionRootPanel>(ui)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            lines(60),
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+        val pane = connection.components.filterIsInstance<JBScrollPane>().single()
+        pane.doLayout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(0, connection.y)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertTrue(pane.viewport.extentSize.height < pane.viewport.view.preferredSize.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
         layout()
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val top = connection.y
+        val root = find<SessionRootPanel>(ui)
+        // Anchored above the bottom container, not at a fixed y: a pending question makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(questionStateChanged())
         layout()
 
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
-        assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
     fun `test connection panel is unaffected by active permission view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
         layout()
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val top = connection.y
+        val root = find<SessionRootPanel>(ui)
+        // Anchored above the bottom container, not at a fixed y: a pending permission makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(permissionStateChanged())
         layout()
 
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
-        assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
     fun `test active question view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -207,6 +833,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active permission view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -281,25 +908,27 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
-    fun `test retry status renders in loading panel instead of message body`() {
+    fun `test retry status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
-        controller().model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Cannot connect to API", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("The usage limit has been reached (attempt 4)", panel.progress.labelText())
 
         controller().model.setState(SessionState.Idle)
         layout()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertSame(panel, scrollView())
+        assertFalse(panel.progress.isVisible)
     }
 
-    fun `test offline status renders in loading panel with fallback`() {
+    fun `test offline status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
@@ -307,12 +936,133 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Offline("", requestId = "req1"))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Connection offline", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("Connection offline", panel.progress.labelText())
     }
 
-    fun `test empty explicit session id shows message body`() {
+    fun `test busy progress footer uses transcript foreground`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Busy("Considering next steps..."))
+        layout()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        assertTrue(panel.progress.isVisible)
+        assertEquals(SessionEditorStyle.current().editorForeground, panel.progress.labelForeground())
+    }
+
+
+    fun `test rollback keeps transcript and shows inline progress`() {
+        showMessages()
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg1")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("p_msg1", "msg1", "text", "hello")))
+        settle()
+        layout()
+        val panel = find<SessionMessageListPanel>(ui)
+        assertSame(panel, scrollView())
+        val gate = CompletableDeferred<Unit>()
+        rpc.revertGate = gate
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().revert("msg1")
+        }
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        val progress = find<RevertProgress>(panel.findMessage("msg1")!!)
+        assertNotNull(progress)
+
+        gate.complete(Unit)
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+    }
+
+    fun `test cancel revert clears inline rollback progress`() {
+        showMessages()
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg1")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("p_msg1", "msg1", "text", "hello")))
+        settle()
+        val gate = CompletableDeferred<Unit>()
+        rpc.revertGate = gate
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().revert("msg1")
+        }
+        settle()
+        layout()
+        val panel = find<SessionMessageListPanel>(ui)
+        assertSame(panel, scrollView())
+        assertNotNull(find<RevertProgress>(panel.findMessage("msg1")!!))
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().cancelRevert()
+        }
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+        assertTrue(rpc.reverts.isEmpty())
+        gate.complete(Unit)
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+        assertTrue(rpc.reverts.isEmpty())
+    }
+
+    fun `test retry before transcript shows loading panel`() {
+        ui = newUi(displayMs = 1_000)
+
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
+        layout()
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+    }
+
+    fun `test retry offline churn retains transcript panel and footer`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        val progress = panel.progress
+        val count = panel.componentCount
+
+        repeat(100) { i ->
+            controller().model.setState(SessionState.Retry("Rate limited", attempt = i + 1, next = 0L))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Offline("Connection offline", requestId = "req$i"))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Idle)
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertFalse(panel.progress.isVisible)
+        }
+    }
+
+    fun `test empty explicit session id shows empty panel`() {
         rpc.recent.add(session("ses_recent"))
         settle()
         rpc.recentCalls.clear()
@@ -320,8 +1070,9 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         ui = newUi(id = "ses_test")
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
-        assertNull(find(ui, EmptySessionPanel::class.java))
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
+        assertNull(find(ui, SessionMessageListPanel::class.java))
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -341,7 +1092,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -362,7 +1114,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -495,7 +1248,24 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(overlay.isVisible)
     }
 
-    fun `test explicit session does not show overlay`() {
+    fun `test account overlay stays hidden when prompt races empty history load`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        ui = newUi(id = "ses_test")
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller().prompt("hello")
+        }
+        gate.complete(Unit)
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+    }
+
+    fun `test non-empty explicit session does not show overlay`() {
+        rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -520,10 +1290,73 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(root.overlay.width - overlay.width - right, overlay.x)
     }
 
+    // Reassigns [ui] without disposing the previous instance first, matching every other `ui =
+    // newUi(...)` swap in this file: SessionController.dispose() cancels the shared `scope`, which
+    // would kill every later coroutine (including the replacement UI's own branch/local refresh)
+    // launched on that same scope for the rest of the test.
+    private fun dock(pr: WorktreePrDto? = null): BranchDock {
+        val fake = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "feature/topic", availability = GhAvailability.OK, pr = pr)
+        }
+        worktree = fake
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, fake), testRootDisposable)
+        // The UI built in setUp launched its own branch lookup before this fake existed, and it
+        // resolves the service inside the coroutine — so it lands on the fake whenever the shared
+        // dispatcher gets to it after the swap. Drain it here and drop what it recorded so the
+        // assertions below only see the lookup made by the UI under test.
+        settle()
+        fake.branchCalls.clear()
+        ui = newUi(manager = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override val supportsNewWorktree: Boolean get() = true
+        })
+        settle()
+        return find(ui)
+    }
+
+    private fun stats(panel: ChangesPanel): Pair<Int, Int> {
+        val labels = components(panel).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text.orEmpty() }
+        val added = labels.firstOrNull { it.startsWith("+") }?.drop(1)?.toIntOrNull() ?: 0
+        val removed = labels.firstOrNull { it.startsWith("-") }?.drop(1)?.toIntOrNull() ?: 0
+        return added to removed
+    }
+
+    private fun components(root: Component): List<Component> =
+        listOf(root) + (root as? Container)?.components?.flatMap(::components).orEmpty()
+
     private fun dropCard(drop: SessionDropOverlay) = drop.components
         .single()
         .let { it as javax.swing.JComponent }
         .components
         .single()
         .let { it as javax.swing.JComponent }
+
+    private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
+        SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    // Top of the bottom container (branch dock + prompt) in overlay coordinates. The connection
+    // banner anchors above this so it floats over the dock rather than covering it.
+    private fun bottomTop(root: SessionRootPanel, prompt: PromptPanel): Int {
+        val container = prompt.parent.parent
+        return SwingUtilities.convertPoint(container.parent, container.x, container.y, root.overlay).y
+    }
+
+    private fun layoutReadonly() {
+        ui.doLayout()
+        val root = find<SessionRootPanel>(ui)
+        root.doLayout()
+        root.content.doLayout()
+        scrollComponent().doLayout()
+        (scrollView() as? java.awt.Container)?.doLayout()
+    }
+
+    private fun lines(count: Int) = (1..count).joinToString("\n") { "line $it" }
+
+    private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
+        override fun getPreferredSize() = Dimension(100, 10)
+    }
 }
