@@ -2,6 +2,7 @@ import {
   InputRenderable,
   RGBA,
   ScrollBoxRenderable,
+  TextareaRenderable, // kilocode_change - dialog filter keeps home/end text movement
   TextAttributes,
   type KeyEvent,
   type Renderable,
@@ -11,7 +12,7 @@ import { useTheme, selectedForeground } from "../context/theme"
 import { entries, filter, flatMap, groupBy, pipe } from "remeda"
 import { batch, createEffect, createMemo, createSignal, For, Show, type JSX, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import { useTerminalDimensions } from "@opentui/solid"
+import { useRenderer, useTerminalDimensions } from "@opentui/solid" // kilocode_change - renderer gates list jump keys while an input is focused
 import * as fuzzysort from "fuzzysort"
 import { isDeepEqual } from "remeda"
 import { useDialog, type DialogContext } from "./dialog"
@@ -225,6 +226,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   })
 
   const dimensions = useTerminalDimensions()
+  const renderer = useRenderer() // kilocode_change - gate list jump keys while an input is focused
   const height = createMemo(() => Math.min(rows(), Math.floor(dimensions().height / 2) - 6))
 
   const selected = createMemo(() => flat()[store.selected])
@@ -475,9 +477,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           "dialog.select.next",
           "dialog.select.page_up",
           "dialog.select.page_down",
-          "dialog.select.home",
-          "dialog.select.end",
-          "dialog.select.submit",
+          "dialog.select.submit", // kilocode_change - home/end stay with the focused input
         ]),
         ...visible.flatMap((item) => tuiConfig.keybinds.get(item.command)),
         ...(visible.length
@@ -503,6 +503,14 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       ],
     }
   })
+
+  // kilocode_change start - keep home/end text movement while editing the dialog
+  // filter; they only jump the list when no editable input is focused.
+  useBindings(() => ({
+    enabled: () => !(renderer.currentFocusedEditor instanceof TextareaRenderable),
+    bindings: tuiConfig.keybinds.gather("dialog.select", ["dialog.select.home", "dialog.select.end"]),
+  }))
+  // kilocode_change end
 
   let scroll: ScrollBoxRenderable | undefined
   const ref: DialogSelectRef<T> = {
