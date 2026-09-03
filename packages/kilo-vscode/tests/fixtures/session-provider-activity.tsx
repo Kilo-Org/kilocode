@@ -58,6 +58,7 @@ const { LanguageContext } = await import("../../webview-ui/src/context/language"
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession, useSessionVisibility } = await import("../../webview-ui/src/context/session")
+const { initialMessage } = await import("../../webview-ui/agent-manager/initial-message")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
@@ -359,6 +360,89 @@ try {
   assert.equal(value.selected(), null)
   value.sendMessage("initial pending")
   assert.equal(requests().length, 0)
+
+  for (const variant of ["high", "", undefined]) {
+    const id = `initial-${variant ?? "default"}`
+    const request = initialMessage({
+      type: "agentManager.sendInitialMessage",
+      projectId: "background-project",
+      sessionId: id,
+      text: "Initial worktree prompt",
+      providerID: "unloaded",
+      modelID: "unloaded",
+      agent: variant === undefined ? undefined : "ask",
+      variant,
+      files: [{ mime: "image/png", url: "data:image/png;base64,cHJvbXB0", filename: "prompt.png" }],
+      browserFeedback: { version: 1, references: [{ id: "element", sessionId: id, selector: "button" }] },
+    })
+    assert(request)
+    value.setCurrentSessionID("root")
+    value.submit(request)
+    const sent = requests().at(-1)
+    assert(sent?.type === "sendMessage" && sent.messageID)
+    assert.deepEqual(sent, { ...request, messageID: sent.messageID })
+    assert.equal(value.currentSessionID(), "root")
+    assert.equal(value.isSubmitting(id), true)
+    const optimistic = unwrap(value.allMessages()[id]?.at(0))
+    assert.equal(optimistic?.id, sent.messageID)
+    const parts = structuredClone(unwrap(value.getParts(sent.messageID)))
+    assert.equal(parts.length, 2)
+    assert.equal(parts.find((part) => part.type === "text")?.text, request.text)
+    assert.equal(parts.at(1)?.type, "file")
+
+    await emit({ type: "messagesLoaded", sessionID: id, messages: [], mode: "replace" })
+    assert.equal(value.allMessages()[id]?.at(0)?.id, sent.messageID)
+    assert.deepEqual(structuredClone(unwrap(value.getParts(sent.messageID))), parts)
+    if (variant === undefined) {
+      await emit({ ...sent, type: "sendMessageFailed", error: "Test send failed" })
+      assert.equal(value.allMessages()[id]?.length, 0)
+      assert.equal(value.getParts(sent.messageID).length, 0)
+      assert.equal(value.isSubmitting(id), false)
+    } else {
+      await emit({ type: "messageCreated", message: optimistic })
+      assert.equal(value.allMessages()[id]?.length, 1)
+      assert.deepEqual(structuredClone(unwrap(value.getParts(sent.messageID))), parts)
+      for (const [index, part] of parts.entries()) {
+        await emit({
+          type: "partUpdated",
+          sessionID: id,
+          messageID: sent.messageID,
+          part: { ...part, id: `${id}-part-${index}` },
+        })
+      }
+      assert.deepEqual(
+        value.getParts(sent.messageID).map((part) => part.id),
+        [`${id}-part-0`, `${id}-part-1`],
+      )
+      const response = {
+        id: `${id}-response`,
+        sessionID: id,
+        role: "assistant",
+        parentID: sent.messageID,
+        createdAt: info(id).createdAt,
+        time: { created: 1, completed: 2 },
+        finish: "tool-calls",
+      }
+      await emit({ type: "messagesLoaded", sessionID: id, messages: [optimistic, response] })
+      assert.equal(value.isSubmitting(id), true)
+      const completed =
+        variant === "high"
+          ? { ...response, finish: "stop" }
+          : { ...response, finish: undefined, time: undefined, error: { name: "UnknownError" } }
+      const history = { type: "messagesLoaded", sessionID: id, messages: [optimistic, completed], mode: "reconcile" }
+      await emit(history)
+      assert.equal(value.isSubmitting(id), false)
+      value.submit({ ...request, text: "Queued follow-up" })
+      const queued = requests().at(-1)
+      assert(queued?.type === "sendMessage")
+      await emit(history)
+      assert.equal(value.isSubmitting(id), true)
+      await emit({ ...queued, type: "sendMessageFailed", error: "Test send failed" })
+      assert.equal(value.isSubmitting(id), false)
+    }
+    value.releaseSession(id)
+  }
+  value.setCurrentSessionID(undefined)
   await emit({ type: "agentsLoaded", agents: [{ name: "code" }, { name: "ask" }], defaultAgent: "code" })
   await emit({ type: "recentsLoaded", recents: [auto, first, external] })
   await catalog("org-a", [first.modelID, recommended.modelID, auto.modelID], recommended.modelID)
