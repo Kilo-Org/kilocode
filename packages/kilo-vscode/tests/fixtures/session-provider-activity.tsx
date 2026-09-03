@@ -4,9 +4,15 @@ import type { ModelSelection, WebviewMessage } from "../../webview-ui/src/types/
 
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
+Object.defineProperty(window.document, "hasFocus", { value: () => true })
 const sent: WebviewMessage[] = []
 const api = {
-  postMessage: (message: WebviewMessage) => sent.push(message),
+  postMessage: (message: WebviewMessage) => {
+    sent.push(message)
+    if (message.type === "acknowledgeSession") {
+      queueMicrotask(() => post({ ...message, type: "sessionAcknowledged" }))
+    }
+  },
   getState: () => undefined,
   setState: () => {},
 }
@@ -39,6 +45,7 @@ Object.assign(globalThis, {
 
 const { render } = await import("solid-js/web")
 const { For, Show, createEffect, createSignal } = await import("solid-js")
+const { unwrap } = await import("solid-js/store")
 const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
 const { SubagentPanel } = await import("../../webview-ui/agent-manager/SubagentPanel")
 const { DragDropProvider, SortableProvider } = await import("@thisbeyond/solid-dnd")
@@ -49,7 +56,7 @@ const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
-const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
+const { SessionProvider, useSession, useSessionVisibility } = await import("../../webview-ui/src/context/session")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
@@ -93,11 +100,20 @@ const ref = { value: undefined as ReturnType<typeof useSession> | undefined }
 const observed: (ModelSelection | null)[] = []
 const [operation, setOperation] = createSignal(false)
 const [run, setRun] = createSignal(false)
+const [inspected, setInspected] = createSignal(["task-child", "task-grand"])
 const [inspector, setInspector] = createSignal(false)
 const [composer, setComposer] = createSignal(false)
 const [active, setActive] = createSignal("task-child")
+const [review, setReview] = createSignal(false)
+const [sharing, setSharing] = createSignal(false)
+const peer = { value: undefined as ReturnType<typeof useSession> | undefined }
+const Peer = () => {
+  peer.value = useSession()
+  return null
+}
 const Probe = () => {
   const session = useSession()
+  useSessionVisibility(() => (review() ? undefined : session.currentSessionID()))
   ref.value = session
   createEffect(() => observed.push(session.selected()))
   const ids = ["root", "background"]
@@ -118,6 +134,11 @@ const Probe = () => {
   } as Parameters<typeof renderTab>[1]
   return (
     <DragDropProvider>
+      <Show when={sharing()}>
+        <SessionProvider>
+          <Peer />
+        </SessionProvider>
+      </Show>
       <SortableProvider ids={ids}>
         <For each={ids}>{(id) => renderTab(id, deps)}</For>
       </SortableProvider>
@@ -157,9 +178,9 @@ const Probe = () => {
       />
       <Show when={inspector()}>
         <SubagentPanel
-          tabs={() => ["task-child", "task-grand"].map((id) => ({ id, title: id }))}
+          tabs={() => inspected().map((id) => ({ id, title: id }))}
           active={active}
-          visible={() => true}
+          visible={() => inspector() && inspected().length > 0}
           nextKeybind=""
           closeKeybind=""
           onSelect={setActive}
@@ -211,8 +232,8 @@ const settle = async () => {
   await Promise.resolve()
   await window.happyDOM.waitUntilComplete()
 }
-const emit = async (data: unknown) => {
-  post(structuredClone(data))
+const emit = async (data: { type: string; [key: string]: unknown }) => {
+  post(structuredClone(data.type === "sessionTurnClosed" ? { eventID: crypto.randomUUID(), ...data } : data))
   await settle()
 }
 const state = (id: string) => {
@@ -800,7 +821,13 @@ try {
   await settle()
   await catalog("org-a", [recommended.modelID], recommended.modelID)
 
+  setSharing(true)
+  await settle()
+  await emit({ type: "sessionsLoaded", sessions: unwrap(value.sessions()) })
   value.setCurrentSessionID("root")
+  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed", eventID: "seeded" })
+  await check("root", "done")
+  await emit({ type: "webviewActiveChanged", active: true })
   await check("root", "idle")
   await check("background", "idle")
   for (const update of [setOperation, setRun]) {
@@ -922,13 +949,29 @@ try {
   await check("root", "idle")
   assert.equal(value.suggestions().length, 0)
 
+  await emit({ type: "webviewActiveChanged", active: true })
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "completed", parentID: "root" })
   await check("task-child", "done")
   await check("root", "idle")
+  setInspected(["task-grand", "task-child"])
+  await check("task-child", "done")
+  setInspected(["task-child"])
+  await check("task-child", "done")
+  setInspected(["task-child", "task-grand"])
+  await check("task-child", "done")
+  setActive("task-grand")
+  await settle()
+  const tab = host.querySelector<HTMLElement>('[data-tab-id="task-child"] [role="tab"]')
+  assert(tab)
+  tab.click()
+  await check("task-child", "idle")
+  assert.equal(peer.value?.activityFor("task-child"), "idle")
+  await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "completed", parentID: "root" })
+  await check("task-child", "done")
   setInspector(false)
   await settle()
   setInspector(true)
-  await check("task-child", "done")
+  await check("task-child", "idle")
   assert.equal(value.currentSessionID(), "root")
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "error", parentID: "root" })
   await check("task-child", "error")
@@ -1134,6 +1177,72 @@ try {
       true,
     )
   }
+
+  // "done" clears when the user switches TO that tab (the focus transition);
+  // an unresolved attention state ("waiting") never clears on focus.
+  await emit({ type: "sessionStatus", sessionID: "background", status: "idle" })
+  await emit({ type: "sessionTurnClosed", sessionID: "background", reason: "completed" })
+  await check("background", "done")
+  assert.equal(value.currentSessionID(), "root")
+  value.selectSession("background")
+  await check("background", "idle")
+  assert.equal(value.closeReason(), "completed")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+
+  setReview(true)
+  await settle()
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "review-completed",
+    reason: "completed",
+  })
+  await check("background", "done")
+  setReview(false)
+  await check("background", "idle")
+  assert.equal(value.currentSessionID(), "background")
+  assert.equal(value.closeReason(), "completed")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "review-completed",
+    reason: "completed",
+  })
+  await check("background", "idle")
+
+  await emit({ type: "webviewActiveChanged", active: false })
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "next-completed",
+    reason: "completed",
+  })
+  await emit({ type: "sessionAcknowledged", sessionID: "background", eventID: "review-completed" })
+  await check("background", "done")
+  value.selectSession("root")
+  value.selectSession("background")
+  await check("background", "done")
+  await emit({ type: "webviewActiveChanged", active: true })
+  await check("background", "idle")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+
+  await emit({
+    type: "questionRequest",
+    question: {
+      id: "attention",
+      sessionID: "background",
+      questions: [{ question: "Continue?", header: "Confirm", options: [] }],
+    },
+  })
+  await check("background", "waiting")
+  value.setCurrentSessionID("root")
+  await settle()
+  value.setCurrentSessionID("background")
+  await check("background", "waiting")
+  await emit({ type: "questionResolved", requestID: "attention" })
+  value.setCurrentSessionID("root")
+  await settle()
 
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })

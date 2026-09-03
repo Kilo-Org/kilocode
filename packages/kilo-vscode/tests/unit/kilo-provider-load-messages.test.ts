@@ -212,6 +212,7 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
+    onSessionAcknowledged: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
     onFavoritesChanged: () => () => undefined,

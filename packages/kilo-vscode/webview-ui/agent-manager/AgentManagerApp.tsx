@@ -67,7 +67,7 @@ import { ImageModelsProvider } from "../src/context/image-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { MemoryProvider } from "../src/context/memory"
-import { SessionProvider, useSession } from "../src/context/session"
+import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { DiffStyleProvider, useDiffStyle } from "../src/context/diff-style"
 import { ProviderShell } from "../src/context/provider-shell"
@@ -905,6 +905,7 @@ const AgentManagerContent: Component = () => {
     ),
   )
   reportVisibleSession(vscode, visibleSession)
+  useSessionVisibility(visibleSession)
   const worktreeLabel = (wt: WorktreeState): string =>
     wt.label || firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
   const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
