@@ -795,14 +795,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "When enabled, the AI agent can interact with web pages — navigating, clicking, typing, and taking screenshots. A Chrome window will open so you can watch the agent work.",
+    "Configure the browser runtime used by the experimental Agent Manager browser. The page preview stays in Agent Manager.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
+  "settings.browser.enable.description": "Enable the session-scoped Agent Manager browser for local applications.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
-    "Use your installed Chrome browser instead of a separate Chromium instance.",
+    "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
+  "settings.browser.headless.description":
+    "Agent Manager always runs the browser headlessly. The page preview appears in the Browser panel.",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
@@ -844,6 +845,9 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Share a board between a main session and its task subagents, including nested subagents. Use it for parallel solution attempts or complementary work, not every task.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
@@ -873,6 +877,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
+  "settings.experimental.taskModelSelection.description":
+    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -1151,59 +1158,14 @@ export const dict = {
   "question.summary": "{{n}} of {{total}} questions",
   "common.review": "Review",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrate from Legacy Version",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
   "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
   "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
-
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
-  "migration.whatsNew.features.performance.title": "Faster Agent Performance",
-  "migration.whatsNew.features.performance.detail":
-    "Parallel tool calls and subagents let your agent tackle more at once — so you spend less time watching and more time shipping.",
-  "migration.whatsNew.features.interface.title": "Streamlined Interface",
-  "migration.whatsNew.features.interface.detail": "Fewer distractions, easier and quicker to read.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
-  "migration.whatsNew.features.agentManager.detail":
-    "A unified interface for running multiple agents in parallel, each on its own worktree — monitor progress, switch context, and review changes in one place.",
-  "migration.whatsNew.features.foundation.title": "Shared Foundation",
-  "migration.whatsNew.features.foundation.detail":
-    "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
-  "migration.whatsNew.blogLink": "Read the full announcement",
-  "migration.whatsNew.docsLink": "What's new & FAQ",
-  "migration.whatsNew.continue": "Continue",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrate Your Settings",
-  "migration.migrate.subtitle": "We found settings from your previous installation. Here's what we can bring over.",
+  "migration.roo.button": "Import Sessions",
+  "migration.roo.empty": "No Roo Code sessions found.",
   "migration.migrate.selectLabel": "Select what to migrate",
   "migration.migrate.chatHistory": "Chat Sessions & History",
-  "migration.migrate.button": "Migrate Settings",
-  "migration.migrate.skip": "Skip",
-  "migration.migrate.keysDetected": "{{count}} keys detected",
-  "migration.migrate.serversConfigured": "{{count}} server(s) configured",
-  "migration.migrate.modesFound": "{{count}} mode(s) found",
   "migration.migrate.sessionsDetected": "{{count}} sessions detected",
-  "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Provider API Keys",
-  "migration.select.mcpServers": "MCP Servers",
-  "migration.select.customModes": "Custom Modes / Agents",
-  "migration.select.defaultModel": "Default Model",
-  "migration.select.autoApproval": "Auto-Approval",
-  "migration.select.language": "UI Language",
-  "migration.select.autocomplete": "Autocomplete Settings",
-
-  // Migrate — completion
   "migration.complete.summary": "{{success}} of {{total}} items migrated successfully.",
-  "migration.complete.cleanup": "Remove legacy settings data",
-  "migration.complete.cleanupDescription":
-    "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
   "migration.error.continue": "Continue",
   "migration.sessionSummary.title": "Summary:",
@@ -1235,7 +1197,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Unknown date",
   "migration.sessionFormat.unknown": "Unknown",
   "migration.sessionFormat.unknownError": "Unknown error",
-  // legacy-migration end
 
   "error.details.show": "Details",
 
@@ -1245,6 +1206,7 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",
   "task.backgroundAgents.open": "Open background agent",
+  "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
   "task.backgroundAgents.waiting": "A background agent needs your input",
@@ -1258,6 +1220,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Cancelled",
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Background agent",
+  "task.backgroundAgents.stopAll": "Stop all ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",

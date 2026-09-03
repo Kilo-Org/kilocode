@@ -857,6 +857,9 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Надайте спільну дошку головному сеансу та його субагентам, які виконують завдання, включно з вкладеними субагентами. Використовуйте її для паралельних спроб знайти розв'язання або взаємодоповнювальної роботи, а не для кожного завдання.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
@@ -884,6 +887,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1138,59 +1144,16 @@ export const dict = {
   "question.summary": "{{n}} з {{total}} питань",
   "common.review": "Переглянути",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Перенести зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.title": "Перенесення зі старої версії",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Перенести налаштування з попередньої версії Kilo Code, включаючи API-ключі провайдерів та стандартну модель.",
   "settings.aboutKiloCode.rooImport.description": "Імпортувати історію розмов з інсталяції Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Імпортувати сесії з Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Що нового в Kilo Code",
-  "migration.whatsNew.badge": "Бета",
-  "migration.whatsNew.subtitle": "Ми відбудували розширення на більш швидкій та ефективній основі.",
-  "migration.whatsNew.features.performance.title": "Швидша продуктивність агента",
-  "migration.whatsNew.features.performance.detail":
-    "Паралельні виклики інструментів і підагенти дозволяють агенту робити більше одночасно — щоб ви більше створювали, а менше спостерігали.",
-  "migration.whatsNew.features.interface.title": "Спрощений інтерфейс",
-  "migration.whatsNew.features.interface.detail": "Менше відволікань, легше і швидше читати.",
-  "migration.whatsNew.features.agentManager.title": "Менеджер агентів",
-  "migration.whatsNew.features.agentManager.detail":
-    "Єдиний інтерфейс для запуску кількох агентів паралельно, кожен у власному робочому дереві — стежте за прогресом, перемикайте контекст і переглядайте зміни з одного місця.",
-  "migration.whatsNew.features.foundation.title": "Спільна основа",
-  "migration.whatsNew.features.foundation.detail":
-    "Малий та ефективний ядерний модуль у кожному продукті Kilo. Знайомий досвід незалежно від того, як ви вважаєте за краще працювати.",
-  "migration.whatsNew.blogLink": "Читати повне оголошення",
-  "migration.whatsNew.docsLink": "Що нового та часті запитання",
-  "migration.whatsNew.continue": "Продовжити",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Перенесіть свої налаштування",
-  "migration.migrate.subtitle": "Ми знайшли налаштування з попередньої версії. Ось що можна перенести.",
+  "migration.roo.button": "Імпортувати сесії",
+  "migration.roo.empty": "Сесій Roo Code не знайдено.",
   "migration.migrate.selectLabel": "Вибрати для перенесення",
   "migration.migrate.chatHistory": "Сесії чату та історія",
-  "migration.migrate.button": "Перенести налаштування",
-  "migration.migrate.skip": "Пропустити",
-  "migration.migrate.keysDetected": "Виявлено {{count}} ключів",
-  "migration.migrate.serversConfigured": "Налаштовано {{count}} серверів",
-  "migration.migrate.modesFound": "Знайдено {{count}} режимів",
-  "migration.migrate.nothingToMigrate": "У старих налаштуваннях нічого для перенесення не знайдено.",
-
-  // Migrate — item labels
-  "migration.select.providers": "API-ключі провайдерів",
-  "migration.select.mcpServers": "MCP-сервери",
-  "migration.select.customModes": "Власні режими / агенти",
-  "migration.select.defaultModel": "Стандартна модель",
-  "migration.select.autoApproval": "Автоматичне схвалення",
-  "migration.select.language": "Мова інтерфейсу",
-  "migration.select.autocomplete": "Налаштування автодоповнення",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} з {{total}} елементів успішно перенесено.",
-  "migration.complete.cleanup": "Видалити старі дані налаштувань",
-  "migration.complete.cleanupDescription":
-    "Це видалить старі налаштування зі сховища VS Code. Ви не зможете повторно запустити це перенесення.",
   "migration.complete.done": "Готово",
   "migration.migrate.sessionsDetected": "Знайдено {{count}} сесій",
   "migration.error.continue": "Продовжити",
@@ -1224,7 +1187,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Невідома дата",
   "migration.sessionFormat.unknown": "Невідомо",
   "migration.sessionFormat.unknownError": "Невідома помилка",
-  // legacy-migration end
 
   "error.details.show": "Деталі",
 
@@ -1234,6 +1196,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
   "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
+  "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
@@ -1246,6 +1209,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Скасовано",
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
+  "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

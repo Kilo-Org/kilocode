@@ -7,6 +7,7 @@ import { createContext, useContext, onCleanup, ParentComponent, createSignal } f
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
+import { protect } from "../utils/webview-message"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -36,6 +37,7 @@ interface VSCodeContextValue {
   getState: <T>() => T | undefined
   setState: <T>(state: T) => void
   sidebarSide: () => "left" | "right" | undefined
+  active: () => boolean
   getModelSelectorExpanded: () => boolean
   setModelSelectorExpanded: (value: boolean) => void
 }
@@ -43,6 +45,7 @@ interface VSCodeContextValue {
 const VSCodeContext = createContext<VSCodeContextValue>()
 
 export const VSCodeProvider: ParentComponent = (props) => {
+  const release = protect()
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const copies = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
@@ -87,16 +90,19 @@ export const VSCodeProvider: ParentComponent = (props) => {
   }
 
   window.addEventListener("message", messageListener)
+  const [active, setActive] = createSignal(false)
   const reportFocus = () => api.postMessage({ type: "webviewFocusChanged", focused: document.hasFocus() })
   window.addEventListener("focus", reportFocus)
   window.addEventListener("blur", reportFocus)
   reportFocus()
   handlers.add((message) => {
     if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)
+    if (message?.type === "webviewActiveChanged") setActive(message.active)
   })
   api.postMessage({ type: "requestModelSelectorExpanded" })
 
   onCleanup(() => {
+    release()
     window.removeEventListener("message", messageListener)
     window.removeEventListener("focus", reportFocus)
     window.removeEventListener("blur", reportFocus)
@@ -117,6 +123,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
     getState: <T,>() => api.getState() as T | undefined,
     setState: <T,>(state: T) => api.setState(state),
     sidebarSide: side,
+    active,
     getModelSelectorExpanded: expanded,
     setModelSelectorExpanded: (value: boolean) => {
       setExpanded(value)
