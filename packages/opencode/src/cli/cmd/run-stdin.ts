@@ -11,26 +11,54 @@
 // against a silence timer and proceed without the append if the timer wins.
 // When stdin is the sole input, keep the upstream wait-for-EOF semantics.
 //
-// A dangling read after the timer wins is harmless: the run proceeds and
-// src/index.ts exits hard when the session ends.
+// Promise.race does not cancel its loser, so the timer aborts the read. The
+// default reader consumes an abortable stdin stream and cancels it on abort:
+// a producer that keeps writing after the timeout is then bounded by the pipe
+// buffer instead of growing process memory until the session ends. The race
+// is already settled at that point, so a late failure cannot surface as an
+// unhandled rejection.
 
 export async function readPipedStdin(opts: {
   bound: boolean
   timeoutMs?: number
-  read?: () => Promise<string | undefined>
+  read?: (signal: AbortSignal) => Promise<string | undefined>
 }): Promise<string | undefined> {
-  const read = opts.read ?? (() => Bun.stdin.text())
-  if (!opts.bound) return await read()
+  const read = opts.read ?? readStdin
+  if (!opts.bound) return await read(new AbortController().signal)
   const timeoutMs = opts.timeoutMs ?? 1000
+  const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
-      read(),
+      read(controller.signal),
       new Promise<undefined>((resolve) => {
-        timer = setTimeout(() => resolve(undefined), timeoutMs)
+        timer = setTimeout(() => {
+          controller.abort()
+          resolve(undefined)
+        }, timeoutMs)
       }),
     ])
   } finally {
     if (timer !== undefined) clearTimeout(timer)
+  }
+}
+
+// Piped stdin as one string, or undefined when aborted. Cancelling the reader
+// stops Bun from buffering later pipe data into the abandoned read.
+async function readStdin(signal: AbortSignal): Promise<string | undefined> {
+  const reader = Bun.stdin.stream().getReader()
+  const aborted = new Promise<undefined>((resolve) => {
+    signal.addEventListener("abort", () => resolve(undefined), { once: true })
+  })
+  const decoder = new TextDecoder()
+  const parts: string[] = []
+  for (;;) {
+    const next = await Promise.race([reader.read(), aborted])
+    if (next === undefined) {
+      await reader.cancel()
+      return undefined
+    }
+    if (next.done) return parts.join("") + decoder.decode()
+    parts.push(decoder.decode(next.value, { stream: true }))
   }
 }
