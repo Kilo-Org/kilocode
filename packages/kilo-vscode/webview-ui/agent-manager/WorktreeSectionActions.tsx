@@ -7,8 +7,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { WorktreeCreate, type WorktreeCreateProps } from "./ProjectActions"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { SidebarSearchItem } from "./sidebar-search"
-import { CaffeinationButton } from "./CaffeinationButton"
-import type { CaffeinationState } from "../src/types/messages"
+import { Caffeination } from "./Caffeination"
 import { label } from "../src/utils/session-activity"
 
 interface WorktreeSectionActionsProps extends WorktreeCreateProps {
@@ -18,8 +17,6 @@ interface WorktreeSectionActionsProps extends WorktreeCreateProps {
   onRef: (ref: SidebarSearchMenuRef) => void
   onSelect: (item: SidebarSearchItem) => void
   onShortcuts: () => void
-  caffeination: () => CaffeinationState
-  onToggleCaffeination: () => void
   onSettings: () => void
   onHistory: () => void
 }
@@ -56,7 +53,7 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
         />
       </TooltipKeybind>
     </Show>
-    <CaffeinationButton t={props.t} state={props.caffeination} onToggle={props.onToggleCaffeination} />
+    <Caffeination t={props.t} />
     <Show when={props.git}>
       <Tooltip value={props.t("session.showHistory")} placement="bottom">
         <IconButton

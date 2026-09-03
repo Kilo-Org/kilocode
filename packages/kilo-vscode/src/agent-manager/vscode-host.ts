@@ -149,7 +149,10 @@ export class VscodeHost implements Host {
           if (typeof message.enabled === "boolean") await this.caffeination?.setEnabled(message.enabled)
           return null
         }
-        if (message.type === "agentManager.requestState") snapshot()
+        if (message.type === "agentManager.requestCaffeination") {
+          snapshot()
+          return null
+        }
         return opts.onBeforeMessage(message)
       },
     })

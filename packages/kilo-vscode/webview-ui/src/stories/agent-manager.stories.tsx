@@ -1909,8 +1909,6 @@ export const MultiProjectSidebar: Story = {
             bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
             t={t}
             onSearchRef={() => {}}
-            caffeination={() => ({ enabled: false, active: false, available: true })}
-            onToggleCaffeination={() => {}}
             onShortcuts={() => {}}
             onHistory={() => {}}
           />

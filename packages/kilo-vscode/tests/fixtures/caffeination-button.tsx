@@ -1,8 +1,9 @@
 import assert from "node:assert/strict"
 import { Window } from "happy-dom"
-import type { CaffeinationState } from "../../webview-ui/src/types/messages"
+import type { CaffeinationState, WebviewMessage } from "../../webview-ui/src/types/messages"
 
-const window = new Window()
+const window = new Window({ url: "https://kilo.test" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
 Object.assign(globalThis, {
   window,
   document: window.document,
@@ -10,6 +11,7 @@ Object.assign(globalThis, {
   HTMLElement: window.HTMLElement,
   Element: window.Element,
   Node: window.Node,
+  MessageEvent: window.MessageEvent,
   MutationObserver: window.MutationObserver,
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
@@ -49,6 +51,49 @@ try {
   assert.equal(button.disabled, true)
   button.click()
   assert.deepEqual(clicks, [true])
+
+  const { post } = await import("../../webview-ui/src/utils/webview-message")
+  const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
+  const { Caffeination } = await import("../../webview-ui/agent-manager/Caffeination")
+  const messages: WebviewMessage[] = []
+  Object.defineProperty(globalThis, "acquireVsCodeApi", {
+    value: () => ({
+      postMessage: (message: WebviewMessage) => {
+        messages.push(message)
+        if (message.type === "agentManager.requestCaffeination") {
+          post({ type: "agentManager.caffeination", enabled: true, active: false, available: true })
+        }
+      },
+      getState: () => undefined,
+      setState: () => {},
+    }),
+  })
+  const host = document.createElement("div")
+  document.body.append(host)
+  const release = render(
+    () => (
+      <VSCodeProvider>
+        <Caffeination t={() => "Keep computer awake"} />
+      </VSCodeProvider>
+    ),
+    host,
+  )
+  try {
+    await Promise.resolve()
+    assert(messages.some((message) => message.type === "agentManager.requestCaffeination"))
+    const control = host.querySelector("button")
+    assert(control)
+    assert.equal(control.getAttribute("aria-pressed"), "true")
+    assert.equal(control.disabled, false)
+    control.click()
+    assert.deepEqual(messages.at(-1), { type: "agentManager.setCaffeination", enabled: false })
+    post({ type: "agentManager.caffeination", enabled: false, active: true, available: false, error: "Cleanup failed" })
+    assert.equal(control.disabled, false)
+    control.click()
+    assert.deepEqual(messages.at(-1), { type: "agentManager.setCaffeination", enabled: false })
+  } finally {
+    release()
+  }
 } finally {
   dispose()
   await window.happyDOM.close()

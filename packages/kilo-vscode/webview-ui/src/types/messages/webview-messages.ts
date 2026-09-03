@@ -1013,6 +1013,10 @@ export interface SetSidebarCollapsedRequest {
   collapsed: boolean
 }
 
+export interface RequestCaffeinationMessage {
+  type: "agentManager.requestCaffeination"
+}
+
 export interface SetCaffeinationRequest {
   type: "agentManager.setCaffeination"
   enabled: boolean
@@ -1678,6 +1682,7 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest
+  | RequestCaffeinationMessage
   | SetCaffeinationRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest

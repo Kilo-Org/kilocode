@@ -16,7 +16,6 @@ import type {
   SectionState,
   WorktreeGitStats,
   WorktreeState,
-  CaffeinationState,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import type { SidebarSearchItem } from "./sidebar-search"
@@ -63,8 +62,6 @@ export interface SidebarBodyProps {
   onNewWorktree: () => void
   onNewSection: () => void
   onShortcuts: () => void
-  caffeination: () => CaffeinationState
-  onToggleCaffeination: () => void
   onHistory: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
@@ -198,8 +195,6 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onNew={props.onNewWorktree}
               onSection={props.onNewSection}
               onShortcuts={props.onShortcuts}
-              caffeination={props.caffeination}
-              onToggleCaffeination={props.onToggleCaffeination}
               onHistory={props.onHistory}
               onSettings={() =>
                 vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.projectId })

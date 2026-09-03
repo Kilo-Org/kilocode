@@ -17,7 +17,6 @@ import {
 } from "solid-js"
 import type {
   AgentManagerRepoInfoMessage,
-  AgentManagerCaffeinationMessage,
   AgentManagerSidebarTarget,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
@@ -43,7 +42,6 @@ import type {
   SessionCreatedMessage,
   TerminalDestination,
   TerminalFont,
-  CaffeinationState,
 } from "../src/types/messages"
 import { historyRowActions as historyRowActionsFactory } from "./history-actions"
 import { readFontSize } from "../src/font-size"
@@ -268,15 +266,6 @@ const AgentManagerContent: Component = () => {
   const setStaleWorktreeIds: Setter<Set<string>> = (v) => registry.active().setStaleWorktreeIds(v)
   /** True while the ⌘/Ctrl jump modifier is held — reveals the ⌘1-9 badges on all sidebar items. */
   const [held, setHeld] = createSignal(false)
-  const [caffeination, setCaffeination] = createSignal<CaffeinationState>({
-    enabled: false,
-    active: false,
-    available: false,
-  })
-  const toggleCaffeination = () => {
-    const state = caffeination()
-    vscode.postMessage({ type: "agentManager.setCaffeination", enabled: !(state.enabled || state.active) })
-  }
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -1435,11 +1424,6 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
-      if (msg.type === "agentManager.caffeination") {
-        const ev = msg as AgentManagerCaffeinationMessage
-        setCaffeination(ev)
-      }
-
       clearFailedDelete(msg, registry)
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
@@ -2352,8 +2336,6 @@ const AgentManagerContent: Component = () => {
             onShortcuts={handleShowKeyboardShortcuts}
             onHistory={openHistory}
             shortcutMap={projectShortcutMap}
-            caffeination={caffeination}
-            onToggleCaffeination={toggleCaffeination}
             activityFor={activity.project}
             sessionActivity={session.activityFor}
           />
@@ -2382,8 +2364,6 @@ const AgentManagerContent: Component = () => {
             onNewWorktree={showNewWorktreeDialog}
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
-            caffeination={caffeination}
-            onToggleCaffeination={toggleCaffeination}
             onHistory={() => openHistory()}
             projectId={activeProjectId()}
             sections={sections}

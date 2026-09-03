@@ -23,8 +23,7 @@ import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
-import { CaffeinationButton } from "./CaffeinationButton"
-import type { CaffeinationState } from "../src/types/messages"
+import { Caffeination } from "./Caffeination"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -61,8 +60,6 @@ interface Props {
   onShortcuts: () => void
   onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
-  caffeination: () => CaffeinationState
-  onToggleCaffeination: () => void
 }
 
 export const ProjectList: Component<Props> = (props) => {
@@ -194,7 +191,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
-          <CaffeinationButton t={props.t} state={props.caffeination} onToggle={props.onToggleCaffeination} />
+          <Caffeination t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}

@@ -782,6 +782,10 @@ interface SetSidebarCollapsedIn {
   collapsed: boolean
 }
 
+interface RequestCaffeinationIn {
+  type: "agentManager.requestCaffeination"
+}
+
 interface SetCaffeinationIn {
   type: "agentManager.setCaffeination"
   enabled: boolean
@@ -1208,6 +1212,7 @@ export type AgentManagerInMessage =
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn
+  | RequestCaffeinationIn
   | SetCaffeinationIn
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
