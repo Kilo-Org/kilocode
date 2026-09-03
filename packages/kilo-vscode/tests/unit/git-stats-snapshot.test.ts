@@ -138,6 +138,25 @@ describe("GitStatsSnapshot", () => {
     })
   })
 
+  it("skips extra metadata reads for empty and oversized files", async () => {
+    await repo(async (dir, base) => {
+      const snapshots = new GitStatsSnapshot(new GitOps({ log: () => undefined }))
+      const files = ["empty.txt", "large.txt"]
+      await fs.writeFile(path.join(dir, "empty.txt"), "")
+      await fs.writeFile(path.join(dir, "large.txt"), Buffer.alloc(1_000_001, 0x61))
+      const stat = spyOn(fs, "lstat")
+      try {
+        expect(await snapshots.diff(dir, base, files)).toEqual({ files: 2, additions: 0, deletions: 0 })
+        expect(stat).toHaveBeenCalledTimes(2)
+        await fs.writeFile(path.join(dir, "empty.txt"), "one\n")
+        await fs.writeFile(path.join(dir, "large.txt"), "two\nthree\n")
+        expect(await snapshots.diff(dir, base, files)).toEqual({ files: 2, additions: 3, deletions: 0 })
+      } finally {
+        stat.mockRestore()
+      }
+    })
+  })
+
   it("bounds concurrent untracked file probes", async () => {
     await repo(async (dir, base) => {
       const snapshots = new GitStatsSnapshot(new GitOps({ log: () => undefined }))

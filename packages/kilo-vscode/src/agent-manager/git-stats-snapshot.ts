@@ -119,7 +119,7 @@ function records(raw: Buffer): { branch: string; head: string; paths: PathState[
 }
 
 function stamp(stat: BigIntStats): string {
-  return `${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`
+  return [stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeNs, stat.ctimeNs].join(":")
 }
 
 async function fingerprint(dir: string, raw: Buffer, paths: PathState[]): Promise<string | undefined> {
@@ -164,12 +164,12 @@ export async function lines(file: string): Promise<number> {
       cache.delete(file)
       return 0
     }
+    if (stat.size === 0n || stat.size > MAX_BYTES) return 0
     const key = stamp(stat)
     const hit = cache.get(file)
     if (hit?.stamp === key) return hit.count
 
     const count = await (async () => {
-      if (stat.size === 0n || stat.size > MAX_BYTES) return 0
       if (await binaryFile(file)) return 0
       const content = stat.isSymbolicLink() ? await fs.readlink(file) : await fs.readFile(file, "utf8")
       if (!content) return 0
