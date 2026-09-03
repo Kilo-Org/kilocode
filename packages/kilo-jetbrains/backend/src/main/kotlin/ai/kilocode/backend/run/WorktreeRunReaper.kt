@@ -5,8 +5,8 @@ import com.intellij.execution.process.OSProcessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
+import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 /**
  * Best-effort cleanup for a worktree's forked application process once its
@@ -46,6 +46,22 @@ internal object WorktreeRunReaper {
      */
     private val BOUNDARY = Regex("[/\\\\:;,\\s'\"]")
 
+    /**
+     * How much earlier than the caller's reference point a process may report having started and still
+     * count as started after it.
+     *
+     * Process start times come from the OS, not from the JVM clock, and the two do not agree to the
+     * instant. macOS reports milliseconds where `Instant.now()` carries microseconds; Linux derives the
+     * value from boot time plus scheduler ticks, and boot time is only readable in whole seconds, so a
+     * process can report having started a second before a reference instant taken moments earlier.
+     * Without slack such an application is silently never reaped — which is precisely how this feature
+     * passed on macOS and failed on Linux CI.
+     *
+     * The guard exists to spare processes that predate the run entirely, and those are typically minutes
+     * old, so a few seconds of tolerance does not weaken it.
+     */
+    private val CLOCK_SLACK: Duration = Duration.ofSeconds(3)
+
     data class Entry(val pid: Long, val executable: String, val commandLine: String, val start: Instant?)
 
     /**
@@ -62,17 +78,14 @@ internal object WorktreeRunReaper {
 
     /**
      * Pids in [entries] that are [worktree]'s forked application: a `java`/`javaw` process whose
-     * command line references the worktree path, started at or after [since] (entries whose start time
-     * could not be determined are not excluded on that basis alone), not the IDE's own process, and not
-     * on the long-lived-daemon [DENYLIST].
+     * command line references the worktree path, started no earlier than [since] give or take
+     * [CLOCK_SLACK] (entries whose start time could not be determined are not excluded on that basis
+     * alone), not the IDE's own process, and not on the long-lived-daemon [DENYLIST].
      */
     fun match(worktree: String, since: Instant, entries: List<Entry>): List<Long> {
         val self = ProcessHandle.current().pid()
         val needle = normalize(worktree)
-        // The OS reports process start times in milliseconds while Instant.now() carries microseconds,
-        // so an application that started within the same millisecond as the caller's reference point
-        // would compare as older than it and never be reaped.
-        val floor = since.truncatedTo(ChronoUnit.MILLIS)
+        val floor = since.minus(CLOCK_SLACK)
         // Everything referencing the worktree, before the java/daemon/start-time filters — the useful
         // view when a forked application was expected but nothing was reaped.
         LOG.debug {

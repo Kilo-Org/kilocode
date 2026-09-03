@@ -73,21 +73,23 @@ class WorktreeRunReaperTest {
     }
 
     @Test
-    fun `includes a process whose reported start is only sub-millisecond older`() {
-        // The OS reports start times in milliseconds; Instant.now() carries microseconds. Comparing the
-        // two directly would drop an application that started in the same millisecond as the reference.
+    fun `includes a process the os reports as started slightly before the reference`() {
+        // OS start times do not agree with the JVM clock to the instant: macOS reports milliseconds
+        // against microsecond references, and Linux derives the value from whole-second boot time, so a
+        // process started moments after the reference can report a time just before it.
         val since = Instant.parse("2026-01-01T10:00:00.191056Z")
         val cmd = "java -cp $worktree/build/classes Main"
-        val entry = entry(pid = 100, exe = "java", cmd = cmd, start = Instant.parse("2026-01-01T10:00:00.191Z"))
-        assertEquals(listOf(100L), WorktreeRunReaper.match(worktree, since, listOf(entry)))
+        val slightly = listOf("2026-01-01T10:00:00.191Z", "2026-01-01T09:59:59.200Z")
+            .mapIndexed { i, at -> entry(pid = 100L + i, exe = "java", cmd = cmd, start = Instant.parse(at)) }
+        assertEquals(listOf(100L, 101L), WorktreeRunReaper.match(worktree, since, slightly))
     }
 
     @Test
-    fun `still excludes a process from an earlier millisecond`() {
+    fun `still excludes a process that clearly predates the reference`() {
         val since = Instant.parse("2026-01-01T10:00:00.191056Z")
         val cmd = "java -cp $worktree/build/classes Main"
-        val entry = entry(pid = 100, exe = "java", cmd = cmd, start = Instant.parse("2026-01-01T10:00:00.190Z"))
-        assertEquals(emptyList(), WorktreeRunReaper.match(worktree, since, listOf(entry)))
+        val entry = entry(pid = 100, exe = "java", cmd = cmd, start = Instant.parse("2026-01-01T09:59:50Z"))
+        assertEquals(emptyList(), WorktreeRunReaper.match(worktree, since, entries = listOf(entry)))
     }
 
     @Test
@@ -137,7 +139,10 @@ class WorktreeRunReaperTest {
     @Test
     fun `scan and match find a real jvm started for the worktree`() = runBlocking {
         val dir = Files.createTempDirectory("kilo-reaper-wt").toString()
-        val since = Instant.now().minusSeconds(1)
+        // Deliberately no slack of its own: the reference is taken before the process starts, exactly as
+        // the manager takes it, so this covers the OS-vs-JVM clock disagreement on every platform. An
+        // earlier version subtracted a second here and passed on Linux while the manager's tests failed.
+        val since = Instant.now()
         val app = StubbornJvm.start(dir)
         try {
             val entries = WorktreeRunReaper.scan()
