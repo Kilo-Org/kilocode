@@ -324,10 +324,16 @@ class WorktreeRunManager internal constructor(
         val next = readAction { produce(manager, settings, key.worktree, repo, label) } ?: return null
         if (entry != null) handlers[key]?.let { handler ->
             LOG.info("worktree run: stopping replaced clone before restart config=${key.id} worktree=${key.worktree}")
+            // Identify the outgoing run's application before the replacement can start one of its own:
+            // both occupy this same key, so once the replacement is running no later scan could tell
+            // them apart. Only pays for a process scan when a source edit actually replaced a clone.
+            val doomed = if (entry.reapable) {
+                WorktreeRunReaper.match(key.worktree, entry.start, WorktreeRunReaper.scan())
+            } else {
+                emptyList()
+            }
             ExecutionManagerImpl.stopProcess(handler)
-            // Reap against the replaced clone's own start: the new entry's start is later than the old
-            // application's, so once it is in place that process could never be matched again.
-            arm(key, entry.start)
+            arm(key, doomed)
         }
         return Entry(next.settings, print, next.dropped, reapable = true).also { clones[key] = it }
     }
@@ -405,7 +411,7 @@ class WorktreeRunManager internal constructor(
             // a delegated bootRun/run is) since 4.8, so this SIGTERMs a delegated app's forked JVM in
             // the common case; arm() is the fallback for when it does not.
             ExecutionManagerImpl.stopProcess(handler)
-            clones[key]?.takeIf { it.reapable }?.let { arm(key, it.start) }
+            clones[key]?.takeIf { it.reapable }?.let { arm(key, handler, it.start) }
             return true
         }
         // No live handler: either unknown, or its app JVM outlived it and arm() is already tracking
@@ -418,10 +424,8 @@ class WorktreeRunManager internal constructor(
     }
 
     /**
-     * Best-effort cleanup once [key]'s [ProcessHandler] is gone: waits briefly in case the platform's
-     * own cancel is still landing, then SIGTERMs (never force-kills — that is [stop]'s job on a second
-     * call) any app process [WorktreeRunReaper] can match to this worktree since [since], tracks it as
-     * an orphan row so the popup can offer Kill, and clears the row once the process actually exits.
+     * Stop path: once [handler] has let go of [key], SIGTERMs (never force-kills — that is [stop]'s job
+     * on a second call) any app process [WorktreeRunReaper] can match to this worktree since [since].
      *
      * Attribution is by worktree path, not by pid lineage — the application's parent is the build
      * daemon, not the IDE — so it cannot tell one config's application from another's. It therefore
@@ -429,10 +433,9 @@ class WorktreeRunManager internal constructor(
      * an application the user is still using. A live delegated run always has a handler for as long as
      * its application runs, because the build that forked it blocks.
      */
-    private fun arm(key: Key, since: Instant) {
+    private fun arm(key: Key, handler: ProcessHandler, since: Instant) {
         cs.launch {
-            awaitHandlersGone(listOf(key), HANDLER_WAIT_MS)
-            if (handlers[key] != null) {
+            if (!awaitGone(key, handler)) {
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
                 return@launch
             }
@@ -452,15 +455,54 @@ class WorktreeRunManager internal constructor(
                 )
                 return@launch
             }
-            LOG.info("worktree run: reaping orphans config=${key.id} worktree=${key.worktree} pids=$matches")
-            WorktreeRunReaper.terminate(matches, force = false)
-            orphans[key] = matches.toSet()
-            sync()
-            while (!WorktreeRunReaper.allDead(matches)) delay(REAP_POLL_INTERVAL_MS)
-            LOG.info("worktree run: orphans exited config=${key.id} worktree=${key.worktree} pids=$matches")
-            orphans.remove(key)
-            sync()
+            reap(key, matches)
         }
+    }
+
+    /**
+     * Replace path: [doomed] was scanned before the replacement clone could start, so every pid in it
+     * belongs to the run being replaced. That identity is what makes this variant safe without any of
+     * the stop path's guards — and it must not wait on a process handler the way [arm] does, because
+     * the replacement immediately occupies this same [key]: "no handler here" would never come true,
+     * and treating the replacement as a failed stop is exactly what abandons the outgoing application.
+     */
+    private fun arm(key: Key, doomed: List<Long>) {
+        if (doomed.isEmpty()) return
+        cs.launch {
+            // Give the build's own cancellation the same grace the stop path allows, in case it takes
+            // its application down without help. Signalling an already-dying process would be harmless
+            // anyway; reap() filters the dead and waits out the rest.
+            delay(HANDLER_WAIT_MS)
+            val alive = doomed.filterNot { WorktreeRunReaper.allDead(listOf(it)) }
+            if (alive.isEmpty()) {
+                LOG.info("worktree run: replaced run's app process already exited config=${key.id}")
+                return@launch
+            }
+            reap(key, alive)
+        }
+    }
+
+    /** SIGTERM, publish a killable orphan row, and keep it until every pid is gone. */
+    private suspend fun reap(key: Key, pids: List<Long>) {
+        LOG.info("worktree run: reaping orphans config=${key.id} worktree=${key.worktree} pids=$pids")
+        WorktreeRunReaper.terminate(pids, force = false)
+        orphans[key] = pids.toSet()
+        sync()
+        while (!WorktreeRunReaper.allDead(pids)) delay(REAP_POLL_INTERVAL_MS)
+        LOG.info("worktree run: orphans exited config=${key.id} worktree=${key.worktree} pids=$pids")
+        orphans.remove(key)
+        sync()
+    }
+
+    /**
+     * Waits until [handler] no longer occupies [key], returning whether it let go. A *replacement*
+     * handler on the same key counts as gone: the stop being waited on succeeded, and treating the new
+     * run as a failed stop is what would abandon the outgoing application.
+     */
+    private suspend fun awaitGone(key: Key, handler: ProcessHandler): Boolean {
+        val end = System.nanoTime() + HANDLER_WAIT_MS * 1_000_000
+        while (handlers[key] === handler && System.nanoTime() < end) delay(REAP_POLL_INTERVAL_MS)
+        return handlers[key] !== handler
     }
 
     private suspend fun awaitHandlersGone(keys: Collection<Key>, timeoutMs: Long) {

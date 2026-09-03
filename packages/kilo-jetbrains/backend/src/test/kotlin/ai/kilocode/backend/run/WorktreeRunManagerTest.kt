@@ -446,12 +446,9 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
         // A real JVM referencing this worktree whose shutdown hook never finishes: SIGTERM leaves it
         // running, so the popup's Kill escalation is what stops it.
-        val app = StubbornJvm.start(wt)
+        val app = StubbornJvm.stubborn(wt)
         try {
-            val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
-            val handler = NopProcessHandler().also { it.startNotify() }
-            project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
-                .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+            start(clone)
             assertFalse(mgr.states.value.single().orphan)
 
             assertTrue(mgr.stop(settings.uniqueID, wt))
@@ -487,16 +484,10 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertTrue(mgr.run(stopped.uniqueID, wt).ok)
         assertTrue(mgr.run(kept.uniqueID, wt).ok)
 
-        val app = StubbornJvm.start(wt)
+        // Ignores SIGTERM, so if reaping were wrongly attributed the row would linger and be visible.
+        val app = StubbornJvm.stubborn(wt)
         try {
-            val handlers = launched.map { clone ->
-                val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
-                NopProcessHandler().also {
-                    it.startNotify()
-                    project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
-                        .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, it)
-                }
-            }
+            val handlers = launched.map { start(it) }
             assertEquals(2, mgr.states.value.size)
 
             assertTrue(mgr.stop(stopped.uniqueID, wt))
@@ -519,9 +510,10 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     }
 
     /**
-     * Editing the source configuration replaces the cached clone. The replaced clone's process is
-     * stopped, and its application must be reaped against the *old* clone's start time — the new entry
-     * starts later than that application, so once it is in place nothing could match the process again.
+     * Editing the source configuration replaces the cached clone. The replaced run's application must
+     * still be reaped even though the replacement immediately occupies the very same key: waiting for
+     * "no handler on this key" would never observe that, and a scan taken afterwards could not tell the
+     * outgoing application from the incoming one.
      */
     fun testReplacingACloneStillReapsTheOldRunsAppProcess() = runBlocking {
         val type = register(paramsType("kilo.test.params.replaced"))
@@ -532,23 +524,26 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertTrue(mgr.run(settings.uniqueID, wt).ok)
         val first = launched.single()
 
+        // Exits on SIGTERM, so the process dying is itself the evidence that the reap ran. A
+        // SIGTERM-ignoring app would only show up as an orphan row, which stays hidden while the
+        // replacement is live and would let a broken implementation recover once it goes away.
         val app = StubbornJvm.start(wt)
         try {
-            val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), first, project)
-            val handler = NopProcessHandler().also { it.startNotify() }
-            project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
-                .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+            // A handler that ignores destroy, so the replacement provably takes over the key while the
+            // outgoing one is still registered — the ordering that used to abandon the application.
+            // With a handler that terminates promptly the race is timing-dependent and hides the bug.
+            start(first, StubbornHandler())
 
             // Editing the source changes its fingerprint, so the next run builds a fresh clone.
             config.programParameters = "--changed"
             assertTrue(mgr.run(settings.uniqueID, wt).ok)
-            assertNotSame(first, launched.last())
+            val second = launched.last()
+            assertNotSame(first, second)
+            start(second, NopProcessHandler())
 
-            await("replaced run stopped") { handler.isProcessTerminated }
-            await("old app process reaped", REAP_WAIT_NANOS, { mgr.states.value }) {
-                mgr.states.value.singleOrNull()?.orphan == true
-            }
-            assertTrue(mgr.states.value.single().killable)
+            // The outgoing run's application was identified before the replacement could start one, so
+            // it is reaped despite the replacement now holding the same key.
+            await("outgoing app terminated", REAP_WAIT_NANOS) { !app.isAlive }
         } finally {
             app.destroyForcibly()
         }
@@ -629,6 +624,18 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     }
 
     private fun manager() = WorktreeRunManager(project, cs) { launched += it }
+
+    /** Publishes the platform's `processStarted` for [clone], as a real launch would. */
+    private fun <T : ProcessHandler> start(clone: RunnerAndConfigurationSettings, handler: T): T {
+        val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+        return handler.also {
+            it.startNotify()
+            project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+                .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, it)
+        }
+    }
+
+    private fun start(clone: RunnerAndConfigurationSettings) = start(clone, NopProcessHandler())
 
     private fun <T : ConfigurationType> register(type: T): T {
         ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
