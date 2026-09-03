@@ -9,7 +9,7 @@ import type { Semaphore } from "./semaphore"
 import {
   parsePRResult,
   checkStatus,
-  commentsSig,
+  signature,
   formatCheckDuration,
   parseComments,
   parseReviewers,
@@ -281,9 +281,7 @@ export class PRStatusPoller {
         files: pr.files,
       }
 
-      const comments = threads?.comments
-      const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
-      const hash = `${worktreeId}:${pr.url}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${threads?.unresolvedThreads ?? ""}:${commentsSig(comments?.comments)}`
+      const hash = signature(status)
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 

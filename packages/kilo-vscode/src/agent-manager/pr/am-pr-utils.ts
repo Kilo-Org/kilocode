@@ -182,6 +182,28 @@ export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRSta
   }
 }
 
+export function signature(pr: PRStatus): string {
+  return JSON.stringify({
+    url: pr.url,
+    number: pr.number,
+    title: pr.title,
+    state: pr.state,
+    review: pr.review,
+    checks: {
+      status: pr.checks.status,
+      passed: pr.checks.passed,
+      total: pr.checks.total,
+    },
+    reviewers: pr.reviewers.map((r) => ({ login: r.login, state: r.state })),
+    body: pr.body ?? "",
+    comments: {
+      total: pr.comments?.total ?? null,
+      unresolved: pr.unresolvedThreads ?? null,
+      signature: commentsSig(pr.comments?.comments),
+    },
+  })
+}
+
 /**
  * Signature of the comment threads, for poll deduplication. Thread and
  * unresolved counts alone hide edits and new replies, which the panel renders.
