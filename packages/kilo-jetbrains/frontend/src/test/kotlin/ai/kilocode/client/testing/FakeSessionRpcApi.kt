@@ -135,6 +135,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
     var createThrows: Exception? = null
 
+    /** Fork call tracking. [forked] is what [fork] returns; when null it derives one from the source. */
+    val forks = mutableListOf<ForkCall>()
+    var forked: SessionDto? = null
+    var forkThrows: Exception? = null
+
+    data class ForkCall(val id: String, val directory: String, val messageId: String?)
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
@@ -148,6 +154,14 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         creates++
         createThrows?.let { throw it }
         return session
+    }
+
+    override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
+        assertNotEdt("fork")
+        forks.add(ForkCall(id, directory, messageId))
+        forkThrows?.let { throw it }
+        val source = listed.firstOrNull { it.id == id } ?: session
+        return forked ?: source.copy(id = "${id}_fork", directory = directory, title = "${source.title} (fork #1)")
     }
 
     override suspend fun list(directory: String): SessionListDto {

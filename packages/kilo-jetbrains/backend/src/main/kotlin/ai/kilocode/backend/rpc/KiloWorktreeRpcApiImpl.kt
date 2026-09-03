@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
@@ -314,7 +315,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             // A session-less move transfers changes only: nothing to fork, so no FORKING stage.
             val forked = sessionId?.let { id ->
                 emit(MoveProgressDto(MoveStage.FORKING))
-                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(id, worktree.path) }
+                withContext(Dispatchers.IO) {
+                    val app = service<KiloBackendAppService>()
+                    app.sessions.fork(id, worktree.path).also {
+                        // Same handoff every fork path records: the session moved directory, and the
+                        // copied context still names the old one.
+                        ForkHandoff.record(app.chat, it.id, worktree.path)
+                    }
+                }
             }
             leftover = null
             LOG.info("worktree move done: worktree=${worktree.path} session=${forked?.id}")

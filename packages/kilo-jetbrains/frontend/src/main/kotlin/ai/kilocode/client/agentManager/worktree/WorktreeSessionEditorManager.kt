@@ -20,6 +20,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
@@ -100,6 +101,9 @@ open class WorktreeSessionEditorManager(
     override val showsBranchDock: Boolean get() = base()
     override val supportsNewWorktree: Boolean get() = base()
     override val supportsMoveToWorktree: Boolean get() = base()
+    // Unlike the worktree flows above, forking is a plain session copy: it works from a linked
+    // worktree's own tab as well as the base checkout's.
+    override val supportsFork: Boolean get() = true
     override val hostedInEditorTab: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
@@ -236,6 +240,28 @@ open class WorktreeSessionEditorManager(
                 if (currentUi() == null) showBlank()
                 onListChanged?.invoke()
             }
+        }
+    }
+
+    /**
+     * Copies [id]'s history into a new session in this worktree and opens it.
+     *
+     * Nothing here touches the session list's visibility: the forked row goes into the same list
+     * model every other creation path writes to, and [WorktreeSessionEditorPanel] applies its own
+     * promotion rule from there.
+     */
+    @RequiresEdt
+    override fun forkSession(id: String, messageId: String?, surface: String) {
+        if (id.isBlank() || id == NEW || id in deleting) return
+        Telemetry.send("Session Forked", mapOf("surface" to surface, "message" to (messageId != null).toString()))
+        val name = title(id)
+        list.fork(id, messageId) { forked, err ->
+            onListChanged?.invoke()
+            if (forked == null) {
+                notify(KiloBundle.message("worktree.session.fork.failed.title", name), err)
+                return@fork
+            }
+            openSession(SessionRef.Local(forked))
         }
     }
 

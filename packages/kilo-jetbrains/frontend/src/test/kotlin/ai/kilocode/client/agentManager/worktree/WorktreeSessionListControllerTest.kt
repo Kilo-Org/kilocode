@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.FakeSessionRpcApi.ForkCall
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
@@ -82,6 +83,48 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertEquals("ses_test", created?.id)
         assertEquals("ses_test", controller.model.getElementAt(0).id)
         assertTrue(controller.sessions().any { it.id == "existing" })
+    }
+
+    fun `test fork prepends the forked session and keeps the source row`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+
+        var forked: SessionDto? = null
+        controller.fork("ses_1", null) { session, _ -> forked = session }
+        drain()
+
+        assertEquals(ForkCall("ses_1", dir, null), rpc.forks.single())
+        assertEquals("ses_1_fork", forked?.id)
+        assertEquals("ses_1_fork", controller.model.getElementAt(0).id)
+        assertNotNull(controller.session("ses_1"))
+    }
+
+    fun `test fork forwards the message id for a per-message fork`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+
+        controller.fork("ses_1", "msg_7") { _, _ -> }
+        drain()
+
+        assertEquals(ForkCall("ses_1", dir, "msg_7"), rpc.forks.single())
+    }
+
+    fun `test fork failure reports the error and leaves the model alone`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+        rpc.forkThrows = RuntimeException("fork unavailable")
+
+        var forked: SessionDto? = session("sentinel", "Sentinel")
+        var err: String? = null
+        controller.fork("ses_1", null) { session, message -> forked = session; err = message }
+        drain()
+
+        assertNull(forked)
+        assertEquals("fork unavailable", err)
+        assertEquals(listOf("ses_1"), controller.sessions().map { it.id })
     }
 
     fun `test delete removes the session and reports success`() {

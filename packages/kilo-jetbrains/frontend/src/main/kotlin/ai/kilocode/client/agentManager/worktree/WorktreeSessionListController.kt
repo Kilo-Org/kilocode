@@ -88,6 +88,32 @@ class WorktreeSessionListController(
         }
     }
 
+    /**
+     * Forks [id] into this list's directory, optionally truncating at [messageId].
+     *
+     * The forked session is inserted at the head the same way [create] does. That optimistic insert
+     * is what lets the panel's own promotion rule react right away instead of waiting for the CLI's
+     * `session.created` to arrive through [COALESCE_MS]; the later reload is idempotent.
+     */
+    fun fork(id: String, messageId: String?, done: (SessionDto?, String?) -> Unit) {
+        cs.launch {
+            try {
+                val session = service.fork(id, dir, messageId)
+                edt {
+                    val keep = (0 until model.size)
+                        .map { model.getElementAt(it) }
+                        .filter { it.id != session.id }
+                    model.replaceAll(listOf(session) + keep)
+                    done(session, null)
+                    capture("Worktree Session Forked", mapOf("sessionId" to session.id, "message" to (messageId != null).toString()))
+                }
+            } catch (e: Exception) {
+                LOG.warn("worktree session fork failed id=$id dir=$dir message=${e.message}", e)
+                edt { done(null, e.message) }
+            }
+        }
+    }
+
     fun delete(id: String, done: (Boolean, String?) -> Unit) {
         if (id.isBlank()) return edt { done(false, "Missing session id") }
         cs.launch {

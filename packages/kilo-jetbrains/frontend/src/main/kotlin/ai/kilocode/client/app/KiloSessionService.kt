@@ -163,6 +163,18 @@ class KiloSessionService internal constructor(
         return session
     }
 
+    /**
+     * Fork session [id] into [dir], copying its history into a new session. With [messageId] the
+     * fork truncates at that message. Caller awaits the result.
+     */
+    suspend fun fork(id: String, dir: String, messageId: String? = null): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session fork=true message=${messageId != null} dir=${ChatLogSummary.dir(dir)}")
+        val session = call { fork(id, dir, messageId) }
+        log.info("${ChatLogSummary.sid(session.id)} kind=session fork=true ok=true forkedFrom=${ChatLogSummary.sid(id)}")
+        refresh(dir)
+        return session
+    }
+
     /** Delete a session. */
     fun delete(id: String, dir: String) {
         cs.launch {
