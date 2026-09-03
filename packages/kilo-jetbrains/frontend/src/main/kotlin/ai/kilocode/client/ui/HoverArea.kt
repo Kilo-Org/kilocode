@@ -101,23 +101,19 @@ internal class HoverArea @RequiresEdt constructor(val content: Component) : JPan
         sync()
     }
 
-    /** The hover tooltip, mirrored onto the content so the whole pill answers rather than only its text. */
-    @RequiresEdt
-    fun tooltip(text: String?) {
-        val next = text?.takeIf { it.isNotBlank() }
-        visit(this) { if (it is JComponent && it.toolTipText != next) it.toolTipText = next }
-        describe(next)
-    }
-
     /**
-     * What a screen reader announces for the area. Separate from [tooltip] for content that already reads
-     * as a sentence on screen: the area is the push button now, not the label inside it, so it needs the
-     * name — but a tooltip repeating text the user can already see is noise.
+     * The hover tooltip, mirrored onto the content so the whole pill answers rather than only its text.
+     *
+     * [name] is what a screen reader announces, defaulting to the tooltip. Pass the visible text instead
+     * wherever the tooltip is only a click hint: the area is the push button now rather than the label
+     * inside it, so announcing "Click to open" alone would lose what is being opened.
      */
     @RequiresEdt
-    fun describe(text: String?) {
-        val name = text?.takeIf { it.isNotBlank() }?.let { StringUtil.stripHtml(it, " ") }
-        if (getAccessibleContext().accessibleName != name) getAccessibleContext().accessibleName = name
+    fun tooltip(text: String?, name: String? = text) {
+        val tip = text?.takeIf { it.isNotBlank() }
+        visit(this) { if (it is JComponent && it.toolTipText != tip) it.toolTipText = tip }
+        val label = name?.takeIf { it.isNotBlank() }?.let { StringUtil.stripHtml(it, " ") }
+        if (getAccessibleContext().accessibleName != label) getAccessibleContext().accessibleName = label
     }
 
     @RequiresEdt

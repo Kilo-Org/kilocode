@@ -121,6 +121,22 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         assertEquals(3, lines.size)
         assertTrue("every line must read as clickable, got $lines", edt { lines.all { it.cursor.type == Cursor.HAND_CURSOR } })
 
+        // Each line already states its verdict, so the tooltip carries only the click hint. Repeating
+        // "2 of 5 checks failed" over a line that reads exactly that tells the user nothing.
+        assertEquals(
+            listOf(
+                "<html>Click to open the pull request conversation in your browser.</html>",
+                "<html>Click to open the pull request in your browser.</html>",
+                "<html>Click to open the checks in your browser.</html>",
+            ),
+            edt { lines.map { it.toolTipText } },
+        )
+        // Announced by its sentence rather than by the hint, which alone would not say what opens.
+        assertEquals(
+            listOf("3 of 8 review conversations unresolved", "Review approved", "2 of 5 checks failed"),
+            edt { lines.map { it.accessibleContext.accessibleName } },
+        )
+
         edt { lines.forEach { click(it) } }
 
         // The popup is the one surface that says "2 of 5 checks failed" in words, so that line goes to the
@@ -128,11 +144,23 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         assertEquals(
             listOf(
                 "https://example.test/pr/7",
-                "https://example.test/pr/7/checks",
                 "https://example.test/pr/7",
+                "https://example.test/pr/7/checks",
             ),
             browser.urls,
         )
+    }
+
+    fun `test the tooltip covers the whole line, not just its text`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)), "feature-x", null) }
+
+        // The pill is the click target, so a tooltip only on the label would go quiet over the padding the
+        // user is just as likely to be pointing at.
+        val line = edt { hovers(body).single() }
+        val label = edt { components(line).filterIsInstance<JBLabel>().single() }
+        assertEquals(edt { line.toolTipText }, edt { label.toolTipText })
     }
 
     fun `test a hidden verdict line is not a click target`() {
@@ -207,13 +235,14 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
                 .filterIsInstance<JBLabel>()
                 .single { it.text == "3 of 8 review conversations unresolved" }
 
-            // The state pill and the title share the first line; everything else gets its own.
+            // The state pill and the title share the first line; everything else gets its own, in the same
+            // order as the glyph strip above them.
             assertTrue(kotlin.math.abs(middle(body, badge) - middle(body, title)) <= 2)
             assertTrue(bottom(body, title) <= top(body, rule))
             assertTrue(bottom(body, rule) <= top(body, changes))
-            assertTrue(bottom(body, changes) <= top(body, review))
+            assertTrue(bottom(body, changes) <= top(body, comments))
+            assertTrue(bottom(body, comments) <= top(body, review))
             assertTrue(bottom(body, review) <= top(body, checks))
-            assertTrue(bottom(body, checks) <= top(body, comments))
             // One row for every counter, committed and uncommitted alike.
             val counters = components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }
             assertEquals(listOf("1 file", "+2", "2", "3 files", "-4", "+9"), counters.map { it.text })

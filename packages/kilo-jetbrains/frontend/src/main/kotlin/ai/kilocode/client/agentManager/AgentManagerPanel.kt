@@ -729,17 +729,20 @@ class AgentManagerPanel(
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
 
         /**
-         * Review verdict, CI verdict, then unresolved review conversations, on the title line so they stay
+         * Unresolved review conversations, review verdict, then CI verdict, on the title line so they stay
          * readable without hovering the row. All three are glyphs rather than pills: they are the states a
          * reviewer scans a worktree list for, and GitHub's own icons say it faster than words at this size.
-         * The conversation glyph is the one that carries a number, because "someone is waiting on a reply"
-         * is not worth acting on until you know whether that is one comment or twelve.
+         *
+         * Conversations lead because they are the one entry that needs a person: a build result and a review
+         * verdict are outcomes to read, while an unresolved thread is somebody waiting on a reply. The glyph
+         * carries a number for the same reason — "waiting on a reply" is not worth acting on until you know
+         * whether that is one comment or twelve.
          */
         override val badges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
-                return listOfNotNull(reviewBadge(p), checksBadge(p), commentsBadge(p))
+                return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
             }
 
         private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {

@@ -108,8 +108,16 @@ internal fun held(next: BranchStatusDto, previous: BranchStatusDto?): BranchStat
  * Tooltip for a PR pill that shows its own number and state, such as the one on a worktree row. Only
  * the click hint: repeating "Open #8" under a pill that reads "#8" tells the user nothing.
  */
-internal fun openTooltip(): String =
-    XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message("worktree.pr.tooltip.open")))
+internal fun openTooltip(): String = hint("worktree.pr.tooltip.open")
+
+/** The checks click hint alone, for a surface that already states the verdict in words. */
+internal fun checksOpenTooltip(): String = hint("worktree.pr.checks.tooltip.open")
+
+/** The conversation click hint alone, for a surface that already states the count in words. */
+internal fun commentsOpenTooltip(): String = hint("worktree.pr.comments.tooltip.open")
+
+private fun hint(key: String): String =
+    XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message(key)))
 
 /**
  * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out

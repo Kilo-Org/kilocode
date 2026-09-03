@@ -50,25 +50,25 @@ internal class PrHeaderView @RequiresEdt constructor(
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
     private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
-    // Review verdict, CI verdict, then unresolved review conversations, between the state pill and the
+    // Unresolved review conversations, review verdict, then CI verdict, between the state pill and the
     // title: the same order and the same glyphs the worktree rows show, so a header and its row do not
     // disagree about what a PR is waiting on.
+    private val comments = JBLabel()
     private val review = JBLabel()
     private val checks = JBLabel()
-    private val comments = JBLabel()
     // Every element of the header opens something in the browser, so every element gets the standard
     // hover pill. Without it the state pill, the title, and the verdicts read as static text that
     // happens to change the cursor, while the changes summary beside them lights up on hover.
     private val statusArea = HoverArea(status)
     private val titleArea = HoverArea(title)
+    private val commentsArea = HoverArea(comments)
     private val reviewArea = HoverArea(review)
     private val checksArea = HoverArea(checks)
-    private val commentsArea = HoverArea(comments)
     private val statusPane = Stack.horizontal(UiStyle.Gap.xs())
         .next(statusArea)
+        .next(commentsArea)
         .next(reviewArea)
         .next(checksArea)
-        .next(commentsArea)
     // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
     // just the changes summary, so an always-visible separator would dangle with nothing after it.
     private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
@@ -103,12 +103,12 @@ internal class PrHeaderView @RequiresEdt constructor(
         statusPane.border = JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
         status.isVisible = false
         statusArea.isVisible = false
+        comments.isVisible = false
+        commentsArea.isVisible = false
         review.isVisible = false
         reviewArea.isVisible = false
         checks.isVisible = false
         checksArea.isVisible = false
-        comments.isVisible = false
-        commentsArea.isVisible = false
         title.isOpaque = false
         title.isVisible = false
         titleArea.isVisible = false
@@ -133,14 +133,17 @@ internal class PrHeaderView @RequiresEdt constructor(
     }
 
     /**
-     * The conversation count is the one glyph carrying text. Styled like the ahead/behind counters in the
-     * changes summary beside it — same font, same foreground, and the same tight gap between glyph and
-     * figure, since the two read as one token rather than an icon with a caption.
+     * The conversation count is the one glyph carrying text. Sized and spaced like the ahead/behind counters
+     * in the changes summary beside it — the tight gap keeps glyph and figure reading as one token rather
+     * than an icon with a caption.
+     *
+     * Ordinary label foreground rather than the secondary tone the summary uses: the count is a figure meant
+     * to be read, and the muted blend left it fainter than the neutral glyph in front of it.
      */
     @RequiresEdt
     private fun syncCommentsStyle() {
         comments.font = style.smallFont
-        comments.foreground = SessionUiStyle.Text.Secondary.foreground()
+        comments.foreground = UIUtil.getLabelForeground()
         comments.iconTextGap = UiStyle.Gap.xs()
     }
 
@@ -202,8 +205,6 @@ internal class PrHeaderView @RequiresEdt constructor(
     @RequiresEdt
     private fun syncVerdicts(pull: WorktreePrDto?) {
         runs = pull?.let(::checksUrl)
-        val verdict = glyph(reviewArea, review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, url)
-        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, runs)
         val talk = glyph(
             commentsArea,
             comments,
@@ -212,7 +213,9 @@ internal class PrHeaderView @RequiresEdt constructor(
             url,
             pull?.let { commentsCount(it.comments) }.orEmpty(),
         )
-        if (verdict || build || talk) changed()
+        val verdict = glyph(reviewArea, review, pull?.let { PrIcons.review(it.review) }, pull?.let { reviewTooltip(it.review) }, url)
+        val build = glyph(checksArea, checks, pull?.let { PrIcons.checks(it.checks) }, pull?.let { checksTooltip(it.checks) }, runs)
+        if (talk || verdict || build) changed()
     }
 
     /**

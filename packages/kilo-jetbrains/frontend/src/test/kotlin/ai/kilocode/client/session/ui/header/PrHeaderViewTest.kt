@@ -73,14 +73,14 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt {
             val badge = badge(view)
+            val comments = glyph(view, PrIcons.comments)
             val review = glyph(view, PrIcons.reviewApproved)
             val checks = glyph(view, PrIcons.checksFailed)
-            val comments = glyph(view, PrIcons.comments)
-            // State, review, run, conversations, then the title: the same reading order the rows use.
-            assertTrue(right(view, badge) <= left(view, review))
+            // State, conversations, review, run, then the title: the same reading order the rows use.
+            assertTrue(right(view, badge) <= left(view, comments))
+            assertTrue(right(view, comments) <= left(view, review))
             assertTrue(right(view, review) <= left(view, checks))
-            assertTrue(right(view, checks) <= left(view, comments))
-            assertTrue(right(view, comments) <= left(view, title(view)))
+            assertTrue(right(view, checks) <= left(view, title(view)))
             assertEquals("<html>Review approved</html>", review.toolTipText)
             // The glyph cannot say how many failed, so the tooltip has to.
             assertEquals(
@@ -105,17 +105,17 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
 
+        edt { click(glyph(view, PrIcons.comments)) }
         edt { click(glyph(view, PrIcons.reviewApproved)) }
         edt { click(glyph(view, PrIcons.checksFailed)) }
-        edt { click(glyph(view, PrIcons.comments)) }
 
         // Someone clicking a red build wants the log, not the conversation. The threads themselves are
         // listed on the conversation tab, so the comment glyph goes back there.
         assertEquals(
             listOf(
                 "https://github.com/kilo/test/pull/123",
-                "https://github.com/kilo/test/pull/123/checks",
                 "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123/checks",
             ),
             browser.urls,
         )
@@ -152,17 +152,11 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt { areas.forEach { click(it) } }
 
-        // Four open the conversation and one opens the checks tab, in header order.
-        assertEquals(
-            listOf(
-                "https://github.com/kilo/test/pull/123",
-                "https://github.com/kilo/test/pull/123",
-                "https://github.com/kilo/test/pull/123/checks",
-                "https://github.com/kilo/test/pull/123",
-                "https://github.com/kilo/test/pull/123",
-            ),
-            browser.urls,
-        )
+        // Every area opens something, and exactly one of them is the checks tab — someone clicking a red
+        // build wants the log. Which area that is, is asserted by glyph rather than by tree order.
+        assertEquals(5, browser.urls.size)
+        assertEquals(1, browser.urls.count { it == "https://github.com/kilo/test/pull/123/checks" })
+        assertEquals(4, browser.urls.count { it == "https://github.com/kilo/test/pull/123" })
     }
 
     fun `test the title opens the pull request`() {

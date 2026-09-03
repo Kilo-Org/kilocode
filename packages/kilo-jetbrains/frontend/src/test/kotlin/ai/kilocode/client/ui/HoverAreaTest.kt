@@ -166,16 +166,24 @@ class HoverAreaTest : BasePlatformTestCase() {
         assertEquals(2, hits)
     }
 
-    fun `test the accessible name comes from the tooltip and survives a description`() {
+    fun `test the accessible name defaults to the tooltip`() {
         val area = edt { HoverArea(JBLabel("3")).also { it.action = {} } }
 
         edt { area.tooltip("<html>3 of 8 review conversations unresolved</html>") }
+
+        // Stripped of its markup, because a screen reader should not read out the tags.
         assertEquals("3 of 8 review conversations unresolved", edt { area.accessibleContext.accessibleName })
         assertEquals("<html>3 of 8 review conversations unresolved</html>", edt { area.toolTipText })
+    }
 
-        // Content that already reads as a sentence on screen gets the name without the duplicate tooltip.
-        edt { area.describe("4 checks passed") }
+    fun `test a click hint tooltip can be announced by the visible text instead`() {
+        val area = edt { HoverArea(JBLabel("4 checks passed")).also { it.action = {} } }
+
+        edt { area.tooltip("<html>Click to open the checks in your browser.</html>", name = "4 checks passed") }
+
+        // The hint alone would announce that something opens without saying what.
         assertEquals("4 checks passed", edt { area.accessibleContext.accessibleName })
+        assertEquals("<html>Click to open the checks in your browser.</html>", edt { area.toolTipText })
     }
 
     fun `test the tooltip reaches the content so the whole pill answers`() {

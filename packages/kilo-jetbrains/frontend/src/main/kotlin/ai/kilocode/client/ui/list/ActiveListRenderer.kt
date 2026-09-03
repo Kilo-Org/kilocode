@@ -277,9 +277,10 @@ internal class ActiveListRenderer(
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
-        // The same muted color the description line and the trailing text use, so a labelled glyph reads
-        // as secondary next to the title it trails, on a selected row as much as an unselected one.
-        syncBadges(value, weak)
+        // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
+        // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
+        // aware, so a highlighted row does not leave the count dark on dark blue.
+        syncBadges(value, fg)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
@@ -531,7 +532,7 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
         private set
 
     /**
-     * [color] is the row's muted foreground, applied only to a labelled glyph. A pill paints its own text
+     * [color] is the row's text foreground, applied only to a labelled glyph. A pill paints its own text
      * inside [FilledBadgeIcon], and a bare glyph has no text to color; a labelled glyph does, and a
      * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
      * in, so a count would otherwise be unreadable on a selected row.
@@ -546,10 +547,10 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
         val label = if (badge.icon != null) badge.text else ""
         if (text != label) text = label
         if (label.isNotBlank()) {
-            // Font, foreground, and gap all match the ahead/behind counters in ChangesPanel: a glyph with a
-            // figure beside it reads as one token, and a default label gap pulls the two apart into an icon
-            // with a caption. Re-read rather than assigned once, because updateUI puts the LaF defaults
-            // back on an IDE zoom; the comparisons make that the only time this writes.
+            // Font and gap match the ahead/behind counters in ChangesPanel: a glyph with a figure beside it
+            // reads as one token, and a default label gap pulls the two apart into an icon with a caption.
+            // Re-read rather than assigned once, because updateUI puts the LaF defaults back on an IDE
+            // zoom; the comparisons make that the only time this writes.
             val small = JBFont.small()
             if (font != small) font = small
             val gap = UiStyle.Gap.xs()
