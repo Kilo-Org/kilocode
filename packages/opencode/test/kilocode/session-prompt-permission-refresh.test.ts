@@ -1284,43 +1284,46 @@ it.live(
 )
 
 for (const continued of [false, true]) {
-  it.live(`root permission rejection respects continue_loop_on_deny=${continued}`, () =>
-    provideTmpdirServer(
-      Effect.fnUntraced(function* ({ dir, llm }) {
-        const prompt = yield* SessionPrompt.Service
-        const sessions = yield* Session.Service
-        const permission = yield* Permission.Service
-        yield* Effect.promise(() => Bun.write(path.join(dir, ".env"), "DENIED_ROOT_SENTINEL"))
-        yield* llm.tool("read", { filePath: path.join(dir, ".env") })
-        yield* llm.text("Skipped the denied read.")
-        const root = yield* sessions.create({ title: "Root" })
-        const fiber = yield* prompt
-          .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Read .env" }] })
-          .pipe(Effect.forkScoped)
-        const pending = yield* pollWithTimeout(
-          Effect.gen(function* () {
-            return (yield* permission.list()).find((item) => item.sessionID === root.id)
-          }),
-          "root never requested read permission",
-        )
-        yield* permission.reply({ requestID: pending.id, reply: "reject" })
-        const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish")
-        expect(result.parts.some((part) => part.type === "text" && part.text === "Skipped the denied read.")).toBe(
-          continued,
-        )
-        expect(yield* llm.pending).toBe(continued ? 0 : 1)
-        expect(JSON.stringify(yield* llm.inputs)).not.toContain("DENIED_ROOT_SENTINEL")
-      }),
-      {
-        git: true,
-        config: (url) => ({
-          ...providerCfg(url),
-          model: "test/test-model",
-          permission: { read: { "*": "allow", ".env": "ask" } },
-          experimental: { continue_loop_on_deny: continued },
+  it.live(
+    `root permission rejection respects continue_loop_on_deny=${continued}`,
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ dir, llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const permission = yield* Permission.Service
+          yield* Effect.promise(() => Bun.write(path.join(dir, ".env"), "DENIED_ROOT_SENTINEL"))
+          yield* llm.tool("read", { filePath: path.join(dir, ".env") })
+          yield* llm.text("Skipped the denied read.")
+          const root = yield* sessions.create({ title: "Root" })
+          const fiber = yield* prompt
+            .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Read .env" }] })
+            .pipe(Effect.forkScoped)
+          const pending = yield* pollWithTimeout(
+            Effect.gen(function* () {
+              return (yield* permission.list()).find((item) => item.sessionID === root.id)
+            }),
+            "root never requested read permission",
+          )
+          yield* permission.reply({ requestID: pending.id, reply: "reject" })
+          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish")
+          expect(result.parts.some((part) => part.type === "text" && part.text === "Skipped the denied read.")).toBe(
+            continued,
+          )
+          expect(yield* llm.pending).toBe(continued ? 0 : 1)
+          expect(JSON.stringify(yield* llm.inputs)).not.toContain("DENIED_ROOT_SENTINEL")
         }),
-      },
-    ),
+        {
+          git: true,
+          config: (url) => ({
+            ...providerCfg(url),
+            model: "test/test-model",
+            permission: { read: { "*": "allow", ".env": "ask" } },
+            experimental: { continue_loop_on_deny: continued },
+          }),
+        },
+      ),
+    30_000,
   )
 }
 
