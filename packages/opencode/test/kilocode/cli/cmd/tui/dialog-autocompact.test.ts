@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   AUTOCOMPACT_PRESETS,
+  currentOption,
   parsePercent,
   saveThreshold,
   thresholdLabel,
@@ -60,11 +61,42 @@ describe("autocompact thresholdLabel", () => {
   })
 })
 
+describe("autocompact currentOption", () => {
+  test("a preset number returns itself", () => {
+    expect(currentOption(80)).toBe(80)
+    for (const preset of AUTOCOMPACT_PRESETS) {
+      expect(currentOption(preset)).toBe(preset)
+    }
+  })
+
+  test("a non-preset number returns custom", () => {
+    expect(currentOption(72.5)).toBe("custom")
+    expect(currentOption(75)).toBe("custom")
+  })
+
+  test("null and undefined return off", () => {
+    expect(currentOption(null)).toBe("off")
+    expect(currentOption(undefined)).toBe("off")
+  })
+})
+
 describe("autocompact thresholdOptions", () => {
   test("lists one option per preset and always offers custom and off", () => {
     const options = thresholdOptions(undefined)
     expect(options.map((option) => option.value)).toEqual([...AUTOCOMPACT_PRESETS, "custom", "off"])
     expect(options.every((option) => option.category === "Threshold")).toBe(true)
+  })
+
+  test("a custom current value retitles the custom row with the value", () => {
+    const custom = thresholdOptions(72.5).find((option) => option.value === "custom")
+    expect(custom?.title).toBe("Custom (72.5%)")
+  })
+
+  test("a preset or absent current value keeps the plain custom title", () => {
+    for (const current of [80, undefined, null]) {
+      const custom = thresholdOptions(current).find((option) => option.value === "custom")
+      expect(custom?.title).toBe("Custom…")
+    }
   })
 
   test("marks exactly the current preset", () => {

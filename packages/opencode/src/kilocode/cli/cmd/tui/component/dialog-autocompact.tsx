@@ -53,6 +53,16 @@ export function thresholdLabel(percent: number | null | undefined): string {
   return "Only when full"
 }
 
+/**
+ * Map a threshold value to the menu option that represents it:
+ * a preset number returns itself, any other number returns `"custom"`,
+ * and `null`/`undefined` return `"off"`.
+ */
+export function currentOption(current: number | null | undefined): number | "custom" | "off" {
+  if (current === null || current === undefined) return "off"
+  return AUTOCOMPACT_PRESETS.includes(current) ? current : "custom"
+}
+
 /** Menu options: presets, a custom entry, and the default "off" entry. */
 export function thresholdOptions(current: number | null | undefined): DialogSelectOption<number | "custom" | "off">[] {
   const options: DialogSelectOption<number | "custom" | "off">[] = AUTOCOMPACT_PRESETS.map((preset) => ({
@@ -61,7 +71,8 @@ export function thresholdOptions(current: number | null | undefined): DialogSele
     category: "Threshold",
     description: preset === current ? "(current)" : undefined,
   }))
-  options.push({ value: "custom", title: "Custom…", category: "Threshold" })
+  const customTitle = currentOption(current) === "custom" ? `Custom (${current}%)` : "Custom…"
+  options.push({ value: "custom", title: customTitle, category: "Threshold" })
   const off = current === null || current === undefined
   options.push({
     value: "off",
@@ -128,6 +139,7 @@ export function DialogAutocompact() {
     <DialogSelect
       title="Auto-Compact Threshold"
       options={thresholdOptions(current())}
+      current={currentOption(current())}
       skipFilter
       onSelect={async (option) => {
         const value = option.value
