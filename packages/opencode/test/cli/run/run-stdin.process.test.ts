@@ -1,3 +1,4 @@
+// kilocode_change - new file
 // Subprocess regression tests for the piped-stdin read of `kilo run`.
 //
 // Root cause: loadInput() awaited `Bun.stdin.text()` unbounded. With a

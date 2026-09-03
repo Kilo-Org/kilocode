@@ -271,7 +271,7 @@ export function withCliFixture<A, E>(
       }
     })
 
-    const runArgs = (message: string | undefined, opts?: RunOpts) => {
+    const runArgs = (message: string | undefined, opts?: RunOpts) => { // kilocode_change - accepts undefined message for stdin-only runs
       const argv: string[] = ["run"]
       if (opts?.printLogs) argv.push("--print-logs")
       argv.push("--model", opts?.model ?? testModelID)
@@ -301,7 +301,7 @@ export function withCliFixture<A, E>(
       return spawn(runArgs(message, opts), runOpts(opts))
     }
 
-    const startRun = Effect.fn("opencode.startRun")(function* (message: string | undefined, opts?: RunOpts) {
+    const startRun = Effect.fn("opencode.startRun")(function* (message: string | undefined, opts?: RunOpts) { // kilocode_change - accepts undefined message for stdin-only runs
       const start = Date.now()
       const options = runOpts(opts)
       // kilocode_change start - stdin "pipe" lets a test hold the child's stdin

@@ -1,3 +1,4 @@
+// kilocode_change - new file
 // Unit tests for readPipedStdin — the bounded piped-stdin read used by
 // `kilo run`'s loadInput(). The read is injected so the tests never touch the
 // real process stdin; the never-resolving read reproduces the held-open pipe

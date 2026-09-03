@@ -1,4 +1,6 @@
-// kilocode_change - bounded piped-stdin read for headless `kilo run`
+// kilocode_change - new file
+//
+// Bounded piped-stdin read for headless `kilo run`.
 //
 // `loadInput()` in run.ts consumes non-TTY stdin as prompt input. When a
 // launcher keeps the write end of the stdin pipe open (the workflow driver's
