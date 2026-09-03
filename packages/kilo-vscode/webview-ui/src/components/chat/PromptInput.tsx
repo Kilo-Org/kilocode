@@ -133,6 +133,7 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   boxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -331,8 +332,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
       if (props.worktree !== true) hidden.add("review worktree")
+      if (!props.onUpdateBase || props.worktree !== true) hidden.add("update-from-base")
       return hidden
     },
+    undefined,
+    undefined,
+    [
+      {
+        name: "update-from-base",
+        description: "Ask the worktree agent to fetch and merge its saved base branch",
+        hints: [],
+        action: () => props.onUpdateBase?.(),
+        enabled: () => props.worktree === true && server.isConnected() && !locked() && !props.blocked?.(),
+      },
+    ],
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -1341,7 +1354,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched && !data && !browserData) {
       const args = draft.slice(cmdMatch![0].length).trim()
-      session.sendCommand(
+      const accepted = session.sendCommand(
         matched.name,
         args,
         sel?.providerID,
@@ -1356,8 +1369,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           variant: matched.variant,
         },
       )
+      if (!accepted) return
     } else {
-      session.sendMessage(
+      const accepted = session.sendMessage(
         message,
         sel?.providerID,
         sel?.modelID,
@@ -1368,6 +1382,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         origin ?? null,
         browserData,
       )
+      if (!accepted) return
     }
 
     drafts.delete(key)

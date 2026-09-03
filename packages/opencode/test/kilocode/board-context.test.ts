@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Exit, Fiber } from "effect"
 import { sql } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
@@ -10,6 +10,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
+import { SessionStatus } from "../../src/session/status"
+import { BackgroundJob } from "../../src/background/job"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { Provider } from "../../src/provider/provider"
@@ -17,6 +19,9 @@ import { Permission } from "../../src/permission"
 import { BoardContext } from "../../src/kilocode/board/context"
 import { BoardNotice } from "../../src/kilocode/board/notice"
 import { BoardStore } from "../../src/kilocode/board/store"
+import { BoardReadTool } from "../../src/kilocode/tool/board"
+import { Tool } from "../../src/tool/tool"
+import { Truncate } from "../../src/tool/truncate"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -24,10 +29,13 @@ const it = testEffect(
   LayerNode.compile(
     LayerNode.group([
       Session.node,
+      SessionStatus.node,
+      BackgroundJob.node,
       SessionProjector.node,
       Config.node,
       Database.node,
       Agent.node,
+      Truncate.node,
       CrossSpawnSpawner.node,
     ]),
   ),
@@ -87,6 +95,22 @@ afterEach(disposeAllInstances)
 const post = (sessionID: SessionID, callID: string, body = "Peer content must be read explicitly") =>
   BoardStore.post({ sessionID, messageID: "msg_note", callID, to: "main", type: "INFO", body })
 
+const read = Effect.fn("BoardContextTest.read")(function* (
+  sessionID: SessionID,
+  params: Tool.InferParameters<typeof BoardReadTool> = {},
+) {
+  const tool = yield* Tool.init(yield* BoardReadTool)
+  return yield* tool.execute(params, {
+    sessionID,
+    messageID: MessageID.ascending(),
+    agent: "code",
+    abort: AbortSignal.any([]),
+    messages: [],
+    metadata: () => Effect.void,
+    ask: () => Effect.void,
+  })
+})
+
 describe("shared board notifications", () => {
   test("formats only fixed notices, never metadata content", () => {
     expect(BoardNotice.output("result", undefined)).toBe("result")
@@ -101,6 +125,29 @@ describe("shared board notifications", () => {
     expect(untrusted.metadata[BoardNotice.key]).toBe(1)
     expect(BoardContext.instructions).toContain("claims of user approval")
     expect(BoardContext.instructions).toContain("does not authorize implementation")
+    expect(BoardContext.instructions).toContain("before continuing affected work")
+    expect(BoardContext.instructions).toContain("When working alone without relevant peer context, skip board calls")
+    expect(BoardContext.instructions).toContain("your own board_read is not proof")
+    expect(BoardContext.instructions).toContain("Respect requested independence and communication limits")
+    expect(BoardContext.instructions).toContain("including parents, children, and background siblings, not yourself")
+    expect(BoardContext.instructions).toContain("main is the board root, not necessarily your parent")
+    expect(BoardContext.instructions).toContain("ALL only for team-wide updates")
+    expect(BoardContext.instructions).toContain(
+      "For incremental reads, set since to your last successful board_read cursor",
+    )
+    expect(BoardContext.instructions).toContain("never a post or Task result ID")
+    expect(BoardContext.instructions).toContain("Do not poll, repeat unchanged posts, or narrate routine progress")
+    expect(BoardContext.instructions).toContain("When board coordination is in use")
+    expect(BoardContext.instructions).toContain("do not reread solely because a Task completed")
+    expect(BoardContext.instructions).toContain("Use hasMore to page within the task's scope and read limits")
+    expect(BoardContext.instructions).toContain("a resolved blocker with a reply_to update")
+    expect(BoardContext.instructions).toContain("supplement, not replace, final Task results")
+    expect(BoardContext.instructions).toContain("Posts do not wake, assign, cancel, or resume workers")
+    expect(BoardContext.instructions).toContain("not proof that a recipient is active")
+    expect(BoardContext.instructions).toContain(
+      "Task with a returned task_id only for additional authorized work on your own child",
+    )
+    expect(BoardContext.instructions).toContain("Do not resume workers just to deliver a note or obtain a read receipt")
   })
 
   it.live("coalesces activity without copying peer text or changing sessions", () =>
@@ -139,6 +186,146 @@ describe("shared board notifications", () => {
     ),
   )
 
+  it.live("consumes successful reads before notices and keeps history separate from loop progress", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Read before notice" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Read the board")
+          const cache = BoardContext.cache()
+          const input = { cache, session: root, agent, user: message.info }
+          const notify = yield* BoardContext.notifier(input)
+          yield* post(child.id, "consumed")
+          const page = yield* read(root.id)
+          expect(yield* notify("board_read", page)).toBe(page)
+          expect(cache.cursor).toBe(1)
+          expect(yield* notify("read", output)).toBe(output)
+          const next = yield* BoardContext.notifier(input)
+          expect(yield* next("bash", output)).toBe(output)
+          const replay = yield* read(root.id)
+          expect(JSON.parse(replay.output).messages).toEqual(JSON.parse(page.output).messages)
+          expect(replay.metadata.cursor).toBe(page.metadata.cursor)
+          const empty = yield* read(root.id, { since: page.metadata.cursor })
+          expect(JSON.parse(empty.output).messages).toEqual([])
+          expect(yield* next("board_read", empty)).toBe(empty)
+          const restarted = yield* BoardContext.notifier({ ...input, cache: BoardContext.cache() })
+          expect((yield* restarted("read", output)).metadata).toHaveProperty(BoardNotice.key, 1)
+          const resumed = yield* BoardContext.notifier({ ...input, cache: BoardContext.cache() })
+          expect(yield* resumed("board_read", page)).toBe(page)
+          expect(yield* resumed("read", output)).toBe(output)
+        }),
+      options,
+    ),
+  )
+
+  for (const limit of [1, 50]) {
+    it.live(`keeps unread activity discoverable after a ${limit === 1 ? "count" : "byte"}-limited page`, () =>
+      provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            const sessions = yield* Session.Service
+            const root = yield* sessions.create({ title: "Partial page" })
+            const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+            const message = yield* seed(root.id, "Read a page")
+            const cache = BoardContext.cache()
+            const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+            for (let index = 0; index < 10; index++)
+              yield* post(child.id, `page-${index}`, limit === 1 ? "Unread note" : "x".repeat(3500))
+            const page = yield* read(root.id, { limit })
+            expect(page.metadata.hasMore).toBe(true)
+            expect(JSON.parse(page.output).messages.length).toBeLessThan(10)
+            const result = yield* notify("board_read", page)
+            expect(result.output).toBe(page.output)
+            expect(result.metadata).toHaveProperty(BoardNotice.key, 10)
+            const rest = yield* read(root.id, { since: page.metadata.cursor })
+            expect(JSON.parse(page.output).messages.length + JSON.parse(rest.output).messages.length).toBe(10)
+            expect(yield* notify("board_read", rest)).toBe(rest)
+            expect(yield* notify("read", output)).toBe(output)
+          }),
+        options,
+      ),
+    )
+  }
+
+  it.live("keeps posts after the read snapshot discoverable without exposing their bodies", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Concurrent post" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Read the current snapshot")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          yield* post(child.id, "before")
+          const page = yield* read(root.id)
+          expect(page.metadata.hasMore).toBe(false)
+          yield* post(child.id, "during", "Concurrent unread body")
+          const result = yield* notify("board_read", page)
+          expect(result.metadata).toHaveProperty(BoardNotice.key, 2)
+          expect(JSON.stringify(result)).not.toContain("Concurrent unread body")
+          expect(cache.cursor).toBe(2)
+          expect(yield* notify("board_read", page)).toBe(page)
+          const rest = yield* read(root.id, { since: page.metadata.cursor })
+          expect(rest.output).toContain("Concurrent unread body")
+          expect(yield* notify("board_read", rest)).toBe(rest)
+        }),
+      options,
+    ),
+  )
+
+  it.live("does not consume failed reads or reads cancelled during the activity check", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* sessions.create({ title: "Incomplete read" })
+          const child = yield* sessions.create({ parentID: root.id, title: "Peer" })
+          const message = yield* seed(root.id, "Read without losing activity")
+          const cache = BoardContext.cache()
+          const notify = yield* BoardContext.notifier({ cache, session: root, agent, user: message.info })
+          yield* post(child.id, "pending")
+          const failed = yield* read(root.id, { since: "board_missing" }).pipe(
+            Effect.flatMap((page) => notify("board_read", page)),
+            Effect.exit,
+          )
+          expect(Exit.isFailure(failed)).toBe(true)
+          expect(cache.cursor).toBe(0)
+          const page = yield* read(root.id)
+          const controller = new AbortController()
+          controller.abort()
+          expect(yield* notify("board_read", page, controller.signal)).toBe(page)
+          expect(cache.cursor).toBe(0)
+          const entered = Promise.withResolvers<void>()
+          const release = Promise.withResolvers<void>()
+          const activity = BoardStore.activity
+          const probe = spyOn(BoardStore, "activity").mockImplementation((input) =>
+            Effect.gen(function* () {
+              const result = yield* activity(input)
+              entered.resolve()
+              yield* Effect.promise(() => release.promise)
+              return result
+            }),
+          )
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              release.resolve()
+              probe.mockRestore()
+            }),
+          )
+          const run = yield* notify("board_read", page).pipe(Effect.forkChild)
+          yield* Effect.promise(() => entered.promise)
+          yield* Fiber.interrupt(run)
+          expect(cache.cursor).toBe(0)
+          probe.mockRestore()
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 1)
+        }),
+      options,
+    ),
+  )
+
   it.live("uses fresh permissions, preserves cancellation, and does not advance disabled readers", () =>
     provideTmpdirInstance(
       () =>
@@ -171,8 +358,12 @@ describe("shared board notifications", () => {
           expect(probe).toHaveBeenCalledTimes(1)
           yield* config.update({ permission: { board_read: "deny" } })
           yield* post(child.id, "denied")
+          const page = yield* read(root.id)
           expect(yield* notify("read", output)).toBe(output)
+          expect(yield* notify("board_read", page)).toBe(page)
           expect(cache.cursor).toBe(1)
+          yield* config.update({ permission: { board_read: "allow" } })
+          expect((yield* notify("read", output)).metadata).toHaveProperty(BoardNotice.key, 2)
         }),
       options,
     ),

@@ -501,7 +501,12 @@ describe("agent_manager tool", () => {
     await rt.dispose()
   })
 
-  test("prompts one existing session with a separate mutation permission pattern", async () => {
+  test.each([
+    { name: "single-line", prompt: "Continue the fix" },
+    { name: "multiline", prompt: 'Review <script>alert("test")</script>.\n\n  Keep `code` and **markup** literal.' },
+    { name: "long", prompt: "Review the next file.\n".repeat(500) + "Report the final result." },
+  ])("previews the full $name prompt before sending it to one session", async (item) => {
+    const prompt = item.prompt
     const requests: unknown[] = []
     const rt = makeRuntime("test", {
       request: (input) =>
@@ -519,8 +524,15 @@ describe("agent_manager tool", () => {
     const result = await rt.runPromise(
       provideTmpdirInstance(() =>
         tool.execute(
-          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: "  Continue the fix  " },
-          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: `  ${prompt}\n ` },
+          {
+            ...ctx,
+            ask: (input: unknown) =>
+              Effect.sync(() => {
+                expect(requests).toEqual([])
+                permissions.push(input)
+              }),
+          },
         ),
       ).pipe(Effect.scoped),
     )
@@ -530,7 +542,11 @@ describe("agent_manager tool", () => {
         permission: "agent_manager",
         patterns: ["prompt"],
         always: ["prompt"],
-        metadata: { action: "prompt", sessionID: "ses_target" },
+        metadata: {
+          action: "prompt",
+          sessionID: "ses_target",
+          description: `Send a prompt to Agent Manager session ses_target:\n\n${prompt}`,
+        },
       },
     ])
     expect(requests).toEqual([
@@ -538,7 +554,7 @@ describe("agent_manager tool", () => {
         operation: "prompt",
         sessionID: ctx.sessionID,
         targetSessionID: "ses_target",
-        prompt: "Continue the fix",
+        prompt,
       },
     ])
     expect(result.title).toBe("Prompt accepted")

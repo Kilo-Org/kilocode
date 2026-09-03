@@ -67,6 +67,19 @@ describe("activities", () => {
     expect(activities({ ...input, outcomes: { ...input.outcomes, root: { reason: "completed" } } }).root).toBe("done")
   })
 
+  it("hides acknowledged completion without changing other activity", () => {
+    const input = {
+      parents,
+      statuses: {},
+      outcomes: { root: { reason: "completed", seen: true }, child: { reason: "error", seen: true } },
+      blocked: [],
+      disconnected: false,
+    }
+    expect(activities(input)).toEqual({ root: "idle", child: "error" })
+    expect(activities({ ...input, blocked: ["root"] }).root).toBe("waiting")
+    expect(input.outcomes.root.reason).toBe("completed")
+  })
+
   it("shows disconnected active sessions as errors without changing idle or completed sessions", () => {
     const input = {
       parents,

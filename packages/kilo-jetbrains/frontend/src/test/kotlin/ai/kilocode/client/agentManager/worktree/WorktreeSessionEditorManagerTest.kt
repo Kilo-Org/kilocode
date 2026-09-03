@@ -11,6 +11,7 @@ import ai.kilocode.client.onboarding.FakeOnboardingController
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -173,6 +174,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     }
 
     fun `test deleting shown session removes it and falls back to next session`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
         val first = session("ses_1", updated = 3.0)
         val second = session("ses_2", updated = 2.0)
         rpc.listed += first
@@ -186,8 +189,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf(DIR to "ses_1", DIR to "ses_2"), created)
+        assertEquals(setOf(first.id), edt { manager.deleting() })
+        gate.complete(Unit)
         waitUntil { manager.deleting().isEmpty() }
         assertEquals(listOf(first.id to DIR), rpc.deletes.toList())
+        assertTrue(notified.toString(), notified.isEmpty())
     }
 
     fun `test deleting middle shown session falls back to next visible session`() {
@@ -406,7 +412,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
                     workspace,
                     sessions,
                     app,
-                    coroutines.scope,
+                    SessionUiFactory(coroutines.scope).scope(),
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
@@ -450,7 +456,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private fun flush() = coroutines.drain()
 
     private fun waitUntil(block: () -> Boolean) {
-        assertTrue(coroutines.pumpUntil { edt(block) })
+        val done = coroutines.pumpUntil { edt(block) }
+        assertTrue("created=$created, deletes=${rpc.deletes}, notified=$notified", done)
     }
 
     private fun useInactiveDisposeTimeout() {

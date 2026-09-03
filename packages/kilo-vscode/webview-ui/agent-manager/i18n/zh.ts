@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "从 Agent Manager 移除",
   "agentManager.project.missing": "未找到仓库",
   "agentManager.notGitRepo": "不是 git 仓库",
+
+  "agentManager.updateBase.title": "从基础分支更新",
+  "agentManager.updateBase.selectWorktree": "请先选择一个受管理的 worktree。",
+
   "agentManager.worktree.settings": "Worktree 设置",
   "agentManager.worktree.new": "新建 Worktree",
   "agentManager.worktree.setupScript": "Worktree 设置脚本",

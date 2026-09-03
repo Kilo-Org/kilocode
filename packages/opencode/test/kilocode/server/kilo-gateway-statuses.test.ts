@@ -1,11 +1,14 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeHttpServer } from "@effect/platform-node"
 import { Database } from "@opencode-ai/core/database/database"
-import { describe, expect } from "bun:test"
+import * as Log from "@opencode-ai/core/util/log"
+import { describe, expect, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { Auth } from "../../../src/auth"
+import type { Config } from "../../../src/config/config"
+import { TestConfig } from "../../fixture/config"
 import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
 import { InstanceStore } from "../../../src/project/instance-store"
@@ -23,9 +26,14 @@ import {
 import { testEffect } from "../../lib/effect"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
+const state: { info: Auth.Info | undefined; config: Config.Info } = {
+  info: new Auth.Api({ type: "api", key: "test-token" }),
+  config: {},
+}
 const auth = Layer.mock(Auth.Service)({
-  get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+  get: () => Effect.sync(() => state.info),
 })
+const config = TestConfig.layer({ get: () => Effect.sync(() => state.config) })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
@@ -53,6 +61,7 @@ const layer = HttpRouter.serve(
       passthroughInstanceContext,
       testWorkspaceRouting,
       auth,
+      config,
       store,
       cache,
       session,
@@ -65,7 +74,7 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (url: string) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
@@ -75,7 +84,7 @@ function stub(run: () => Response | Promise<Response>) {
       if (url.startsWith("http://127.0.0.1:") && headers.get("authorization") !== "Bearer test-token") {
         return original(input, init)
       }
-      return run()
+      return run(url)
     },
     { preconnect: original.preconnect },
   )
@@ -95,6 +104,66 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  const error = new Error("ConnectionRefused")
+  for (const failure of [
+    {
+      name: "network error",
+      run: () => Promise.reject(error),
+      message: "Error fetching balance",
+      extra: { error },
+    },
+    {
+      name: "HTTP error",
+      run: () => new Response(null, { status: 503 }),
+      message: "Failed to fetch balance",
+      extra: { status: 503 },
+    },
+    {
+      name: "invalid JSON",
+      run: () => new Response("invalid"),
+      message: "Error fetching balance",
+      extra: { error: expect.any(SyntaxError) },
+    },
+  ]) {
+    it.live(`keeps balance failures out of the terminal: ${failure.name}`, () =>
+      Effect.gen(function* () {
+        const previous = state.info
+        const spies = yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            state.info = new Auth.Oauth({ type: "oauth", access: "test-token", refresh: "", expires: 0 })
+            return {
+              console: spyOn(console, "warn").mockImplementation(() => {}),
+              log: spyOn(Log.create({ service: "kilo-gateway" }), "warn").mockImplementation(() => {}),
+            }
+          }),
+          (spies) =>
+            Effect.sync(() => {
+              state.info = previous
+              spies.console.mockRestore()
+              spies.log.mockRestore()
+            }),
+        )
+        yield* stub((url) => {
+          if (new URL(url).pathname === "/api/profile/balance") return failure.run()
+          if (new URL(url).pathname === "/api/profile") return Response.json({ email: "test@example.com" })
+          return Response.json({ subscription: null })
+        })
+
+        const response = yield* HttpClient.get(KiloGatewayPaths.profile)
+
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toMatchObject({
+          profile: { email: "test@example.com" },
+          balance: null,
+          kiloPass: null,
+          currentOrgId: null,
+        })
+        expect(spies.console).not.toHaveBeenCalled()
+        expect(spies.log.mock.calls).toEqual([[failure.message, failure.extra]])
+      }),
+    )
+  }
+
   it.live("reports locally stored API authentication without a Gateway request", () =>
     Effect.gen(function* () {
       yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))
@@ -105,6 +174,69 @@ describe("Kilo gateway HttpApi statuses", () => {
       expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
     }),
   )
+
+  for (const context of [
+    { name: "config", config: true, organization: "org-config" },
+    { name: "oauth", config: true, oauth: true, organization: "org-oauth" },
+    { name: "env", config: true, oauth: true, env: true, organization: "org-env" },
+    { name: "url", url: true, organization: "org-url" },
+    { name: "oauth over url", url: true, oauth: true, organization: "org-oauth" },
+    { name: "env over url", url: true, oauth: true, env: true, organization: "org-env" },
+    { name: "personal" },
+    { name: "anonymous", anonymous: true, env: true, organization: "org-env" },
+    { name: "anonymous config", anonymous: true, config: true, organization: "org-config" },
+    { name: "anonymous url", anonymous: true, url: true, organization: "org-url" },
+    { name: "anonymous-personal", anonymous: true },
+  ] satisfies {
+    name: string
+    config?: boolean
+    oauth?: boolean
+    env?: boolean
+    url?: boolean
+    anonymous?: boolean
+    organization?: string
+  }[]) {
+    it.live(`reports ${context.name} organization context locally without secrets`, () =>
+      Effect.gen(function* () {
+        const previous = { ...state }
+        const env = process.env.KILO_ORG_ID
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            state.config = context.config
+              ? { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
+              : context.url
+                ? { provider: { kilo: { options: { baseURL: "https://gateway.test/api/organizations/org-url" } } } }
+                : {}
+            state.info = context.anonymous
+              ? undefined
+              : new Auth.Oauth({
+                  type: "oauth",
+                  access: "test-token",
+                  refresh: "private-refresh",
+                  expires: Date.now() + 3600000,
+                  ...(context.oauth ? { accountId: "org-oauth" } : {}),
+                })
+            if (context.env) process.env.KILO_ORG_ID = "org-env"
+            else delete process.env.KILO_ORG_ID
+          }),
+          () =>
+            Effect.sync(() => {
+              Object.assign(state, previous)
+              if (env === undefined) delete process.env.KILO_ORG_ID
+              else process.env.KILO_ORG_ID = env
+            }),
+        )
+        yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))
+        const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          authenticated: !context.anonymous,
+          ...(!context.anonymous ? { type: "oauth" } : {}),
+          ...(context.organization ? { organizationId: context.organization } : {}),
+        })
+      }),
+    )
+  }
 
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {
