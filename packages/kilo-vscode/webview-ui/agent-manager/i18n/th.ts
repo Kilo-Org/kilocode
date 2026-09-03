@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
+
+  "agentManager.updateBase.title": "อัปเดตจากฐาน",
+  "agentManager.updateBase.selectWorktree": "เลือก worktree ที่มีการจัดการก่อน",
+
   "agentManager.worktree.settings": "ตั้งค่า Worktree",
   "agentManager.worktree.new": "Worktree ใหม่",
   "agentManager.worktree.setupScript": "สคริปต์ตั้งค่า Worktree",

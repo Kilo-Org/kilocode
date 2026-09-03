@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Repository niet gevonden",
   "agentManager.notGitRepo": "Geen git repository",
 
+  "agentManager.updateBase.title": "Bijwerken vanuit de basis",
+  "agentManager.updateBase.selectWorktree": "Selecteer eerst een beheerde worktree.",
+
   "agentManager.worktree.settings": "Worktree instellingen",
   "agentManager.worktree.new": "Nieuwe worktree",
   "agentManager.worktree.setupScript": "Worktree setup script",

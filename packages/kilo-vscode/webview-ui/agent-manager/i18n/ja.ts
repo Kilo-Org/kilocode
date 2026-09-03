@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
+
+  "agentManager.updateBase.title": "ベースから更新",
+  "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
+
   "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",

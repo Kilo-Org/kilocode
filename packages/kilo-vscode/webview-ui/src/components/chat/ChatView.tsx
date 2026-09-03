@@ -39,6 +39,7 @@ interface ChatViewProps {
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   promptBoxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -404,6 +405,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 suggesting={suggesting}
                 questioning={questioning}
                 worktree={props.worktree}
+                onUpdateBase={props.onUpdateBase}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
                 worktrees={props.worktrees}

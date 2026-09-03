@@ -1,4 +1,4 @@
-import { Show, createSignal } from "solid-js"
+import { Show, createSignal, type JSX } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
@@ -14,7 +14,15 @@ interface IntroProps {
   onDismiss: () => void
 }
 
-export function createIntro(opts: { reveal: () => void; focus: () => void }) {
+export function createIntro(opts: {
+  base: () => string
+  git: () => boolean
+  onCreateWorktree: () => void
+  onSelectSession?: (id: string) => void
+  onShowHistory?: () => void
+  reveal: () => void
+  focus: () => void
+}) {
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
     (window as { KILO_AGENT_MANAGER_INTRO_DISMISSED?: boolean }).KILO_AGENT_MANAGER_INTRO_DISMISSED === true,
@@ -23,7 +31,7 @@ export function createIntro(opts: { reveal: () => void; focus: () => void }) {
     setDismissed(value)
     vscode.postMessage({ type: "agentManager.setIntroDismissed", dismissed: value })
   }
-  return {
+  const state = {
     visible: () => !dismissed(),
     open: () => {
       opts.reveal()
@@ -35,15 +43,28 @@ export function createIntro(opts: { reveal: () => void; focus: () => void }) {
       opts.focus()
     },
   }
+  return {
+    ...state,
+    render: (): JSX.Element => (
+      <AgentManagerEmptyState
+        base={opts.base()}
+        git={opts.git()}
+        intro={state}
+        onCreateWorktree={opts.onCreateWorktree}
+        onSelectSession={opts.onSelectSession}
+        onShowHistory={opts.onShowHistory}
+      />
+    ),
+  }
 }
 
 interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
-  intro: ReturnType<typeof createIntro>
+  intro: Pick<ReturnType<typeof createIntro>, "visible" | "open" | "dismiss">
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
 }
 
-export function AgentManagerEmptyState(props: EmptyProps) {
+function AgentManagerEmptyState(props: EmptyProps) {
   const { t } = useLanguage()
   return (
     <Show

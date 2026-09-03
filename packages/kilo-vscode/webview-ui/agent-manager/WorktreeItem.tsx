@@ -82,6 +82,7 @@ interface WorktreeItemProps {
   onRemoveStale: () => void
   onCopyPath: () => void
   onOpen: () => void
+  onUpdateBase?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -557,6 +558,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 </span>
               </Show>
             </ContextMenu.Item>
+            <Show when={props.onUpdateBase && !props.stale}>
+              <ContextMenu.Item onSelect={() => props.onUpdateBase?.()}>
+                <Icon name="branch" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.updateBase.title")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Item onSelect={() => props.onCopyPath()}>
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>

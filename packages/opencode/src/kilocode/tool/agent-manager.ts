@@ -281,18 +281,23 @@ export const AgentManagerTool = Tool.define<
               }
             }
             if (params.action === "prompt") {
+              const prompt = params.prompt.trim()
               yield* ctx.ask({
                 permission: "agent_manager",
                 patterns: ["prompt"],
                 always: ["prompt"],
-                metadata: { action: "prompt", sessionID: params.sessionID },
+                metadata: {
+                  action: "prompt",
+                  sessionID: params.sessionID,
+                  description: `Send a prompt to Agent Manager session ${params.sessionID}:\n\n${prompt}`,
+                },
               })
               const result = yield* run(
                 host.request({
                   operation: "prompt",
                   sessionID: ctx.sessionID,
                   targetSessionID: params.sessionID,
-                  prompt: params.prompt.trim(),
+                  prompt,
                 }),
                 ctx.abort,
               )

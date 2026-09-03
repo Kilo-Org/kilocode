@@ -12,7 +12,7 @@ import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
 import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
-import { AgentManagerEmptyState, createIntro } from "../../agent-manager/intro/AgentManagerIntro"
+import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -146,7 +146,15 @@ export default meta
 type Story = StoryObj
 
 function IntroductionPreview(props: { skipped?: boolean }) {
-  const intro = createIntro({ reveal: () => {}, focus: () => {} })
+  const intro = createIntro({
+    base: () => "main",
+    git: () => true,
+    onCreateWorktree: () => {},
+    onSelectSession: () => {},
+    onShowHistory: () => {},
+    reveal: () => {},
+    focus: () => {},
+  })
   if (props.skipped) intro.dismiss()
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
   const session = {
@@ -166,18 +174,7 @@ function IntroductionPreview(props: { skipped?: boolean }) {
       },
     ],
   }
-  return (
-    <SessionContext.Provider value={session}>
-      <AgentManagerEmptyState
-        base="main"
-        git
-        intro={intro}
-        onCreateWorktree={() => {}}
-        onSelectSession={() => {}}
-        onShowHistory={() => {}}
-      />
-    </SessionContext.Provider>
-  )
+  return <SessionContext.Provider value={session}>{intro.render()}</SessionContext.Provider>
 }
 
 export const Introduction: Story = {
