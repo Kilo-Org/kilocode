@@ -44,8 +44,12 @@ test(
     const child = spawn(process.execPath, [childPath], { stdio: ["pipe", "pipe", "pipe"] })
 
     let epipe = false
+    const epipeHit = Promise.withResolvers<void>()
     child.stdin?.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EPIPE") epipe = true
+      if (err.code === "EPIPE") {
+        epipe = true
+        epipeHit.resolve()
+      }
     })
     let out = ""
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -72,6 +76,11 @@ test(
 
     await new Promise<void>((resolve) => child.on("exit", () => resolve()))
     clearInterval(writer)
+
+    // The final EPIPE lands asynchronously: the child's exit closes the pipe
+    // read end, then the parent's pending write flush fails. Give that error
+    // event a bounded window so the assertion below does not race it.
+    await Promise.race([epipeHit.promise, Bun.sleep(250)])
 
     expect(stderr).toBe("")
     expect(written).toBe(64 * 1024 * 1024)
