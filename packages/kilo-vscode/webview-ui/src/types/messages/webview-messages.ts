@@ -1520,6 +1520,7 @@ export interface DismissAgentMigrationBannerMessage {
 
 export type WebviewMessage =
   | { type: "sessionActivity"; state: Activity }
+  | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage

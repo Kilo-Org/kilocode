@@ -68,6 +68,7 @@ export interface SessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
 
   activityFor: (sessionID: string | undefined) => Activity
+  acknowledge: (sessionID: string) => void
   inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
