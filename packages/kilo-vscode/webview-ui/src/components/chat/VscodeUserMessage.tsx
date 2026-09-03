@@ -1,10 +1,12 @@
 import { createMemo, Show, type Component } from "solid-js"
 import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { partFeedback } from "../../../../src/shared/browser-feedback"
+import { imageMime } from "../../../../src/shared/image-data-url"
 import type { Message, Part, TextPart } from "../../types/messages"
 import { BrowserReferences } from "./BrowserReferences"
 import { ReviewComments } from "./ReviewComments"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 
 interface VscodeUserMessageProps {
   message: Message
@@ -21,6 +23,7 @@ interface VscodeUserMessageProps {
 
 export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
   const language = useLanguage()
+  const vscode = useVSCode()
   const text = createMemo(() => props.parts.find((part): part is TextPart => part.type === "text" && !part.synthetic))
   const feedback = createMemo(() => {
     const part = text()
@@ -60,6 +63,14 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       onDelete={props.onDelete}
       onFork={props.onFork}
       onRevert={props.onRevert}
+      onImageClick={(dataUrl, filename) => {
+        // Only claim the click when the host can decode the image; anything
+        // else (remote URLs, non-base64 data URLs) keeps the modal fallback
+        // rather than opening nothing at all.
+        if (!imageMime(dataUrl)) return false
+        vscode.postMessage({ type: "previewImage", dataUrl, filename: filename || "image" })
+        return true
+      }}
     />
   )
 }
