@@ -532,6 +532,7 @@ export function patchAgents(
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({
