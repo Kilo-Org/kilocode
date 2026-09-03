@@ -319,6 +319,11 @@ export interface OpenCloudSessionMessage {
   sessionId: string
 }
 
+export interface OpenSessionMessage {
+  type: "openSession"
+  sessionID: string
+}
+
 export interface SelectKiloModelMessage {
   type: "selectKiloModel"
   modelID?: string
@@ -753,7 +758,10 @@ export interface NotificationSettingsLoadedMessage {
   type: "notificationSettingsLoaded"
   settings: {
     attentionEnabled: boolean
+    attentionNotifications: boolean
+    attentionWindowsNotifications: boolean
     attentionSound: string
+    windowsNotificationsAvailable: boolean
   }
 }
 
@@ -1612,6 +1620,7 @@ export type ExtensionMessage =
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
   | OpenCloudSessionMessage
+  | OpenSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
   | AgentManagerImportResultMessage

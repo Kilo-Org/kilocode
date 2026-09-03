@@ -1698,6 +1698,10 @@ export class AgentManagerProvider implements Disposable {
     return this.panel?.active === true
   }
 
+  public getActiveSessionId(): string | undefined {
+    return this.activeSessionId
+  }
+
   private async waitForPanel(panel: PanelContext, promise: Promise<void>): Promise<boolean> {
     const done = promise.then(() => true)
     let sub: Disposable | undefined
