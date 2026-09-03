@@ -2,6 +2,7 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
@@ -10,10 +11,10 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.RelativeFont
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
@@ -49,6 +50,15 @@ import javax.swing.SwingConstants
  * is handed).
  */
 private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
+/**
+ * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
+ *
+ * On by default. Off leaves the cut exposed, which is legible but reads as the end of the text rather than
+ * the middle of it — the escape hatch for a surface where the fade is wrong, such as a theme that paints a
+ * row background the renderer cannot name.
+ */
+private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
 
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
@@ -92,7 +102,7 @@ internal class ActiveListRenderer(
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
-    private val title = SimpleColoredComponent()
+    private val title = FadeText()
     private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val secondary = Stack.horizontal(UiStyle.Gap.md())
@@ -108,7 +118,14 @@ internal class ActiveListRenderer(
     // the group stretched across the row instead, which lands its badges on the same trailing edge as
     // the metrics and secondary badges below them.
     private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
-    private val desc = JBLabel()
+    // Carries the description as a [FadeText] rather than the JBLabel it used to be, so both lines of a
+    // row clip the same way: cut and faded, not ellipsed through the label UI. The internal padding and
+    // border a colored component ships with are cleared to keep the label's own geometry, which would
+    // otherwise indent the line by a few pixels and grow every row.
+    private val desc = FadeText().apply {
+        ipad = JBUI.emptyInsets()
+        myBorder = null
+    }
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
     private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
@@ -269,16 +286,20 @@ internal class ActiveListRenderer(
         gap = false
         layers.isVisible = true
 
+        // Text that runs out of room is cut and faded rather than ellipsed, so the row spends every pixel
+        // it has on the text itself. The fade blends into whatever the row painted behind the line, read
+        // back off [wrap] so it cannot drift from the selection color the row actually filled.
+        val backdrop = if (activeListFade()) wrap.selectionColor ?: wrap.background else null
+        title.backdrop = backdrop
+        desc.backdrop = backdrop
+
         title.clear()
         // Bold carries most rows by default: the description under it and the icon beside it both
         // render in the muted secondary color, so cfg.title separates the two lines when enabled.
         val style = if (cfg.title == ActiveListWeight.BOLD) SimpleTextAttributes.STYLE_BOLD else SimpleTextAttributes.STYLE_PLAIN
-        // Clipped with an ellipsis rather than cut mid-glyph. A squeezed row already sacrifices title text
-        // to keep its badges, and a title that stops mid-word reads as the name of the thing rather than a
-        // truncation of it — the description line under it has always ellipsed, being a JBLabel.
-        title.appendWithClipping(value.title, SimpleTextAttributes(style, titleFg), CLIPPER)
+        title.append(value.title, SimpleTextAttributes(style, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
-            title.appendWithClipping("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES, CLIPPER)
+            title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
         // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
         // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
@@ -290,14 +311,14 @@ internal class ActiveListRenderer(
         icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
-        desc.text = note
+        desc.clear()
+        if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
         desc.isVisible = note.isNotBlank()
         desc.border = if (cfg.descriptionIndent && desc.isVisible) {
             JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
         } else {
             JBUI.Borders.empty()
         }
-        desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
         metrics.isEnabled = list.isEnabled && !value.disabled
         metrics.update(data)
@@ -448,18 +469,6 @@ internal class ActiveListRenderer(
         for (i in visible.indices) {
             (cells.getComponent(i) as ActiveListActionCell).update(visible[i])
         }
-    }
-
-    private companion object {
-        /**
-         * The platform's ellipsis clipper, applied to every title fragment.
-         *
-         * [SimpleColoredComponent] hard-clips by default, unlike the [JBLabel] carrying the description
-         * line, so a squeezed title stopped mid-glyph while the line under it ellipsed. Only the fragment
-         * that runs out of room can ellipse — a later one starts past the component edge and is not painted
-         * — which is the same text a hard clip dropped anyway.
-         */
-        val CLIPPER = SimpleColoredComponent.DefaultFragmentTextClipper.INSTANCE
     }
 }
 

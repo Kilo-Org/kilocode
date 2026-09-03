@@ -28,6 +28,8 @@ import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.installBrowser
+import ai.kilocode.client.testing.rowLines
+import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListBadgeCell
@@ -66,7 +68,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -255,9 +256,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         @Suppress("UNCHECKED_CAST")
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<Any?> }
         val title = edt {
-            val row = list.model.getElementAt(0)
+            val row = list.model.getElementAt(0) as ActiveListItem
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, false)
-            components(comp).filterIsInstance<SimpleColoredComponent>().single()
+            rowTitle(comp)
         }
         val iter = title.iterator()
         iter.next()
@@ -895,7 +896,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
             assertEquals(
                 listOf("3 files", "-1", "+2"),
-                components(renderer).filterIsInstance<JBLabel>().filter { it.isVisible && !it.text.isNullOrEmpty() && it.text != row(panel, 0).description }
+                components(renderer).filterIsInstance<JBLabel>().filter { it.isVisible && !it.text.isNullOrEmpty() }
                     .map { it.text },
             )
 
@@ -1161,7 +1162,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(renderer)
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
             val bounds = list.getCellBounds(0, 0)
             // Line one, clear of the title, and above the PR number on line two.
@@ -1411,8 +1412,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
-            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == row.description }
-            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val (title, desc) = rowLines(renderer)
             val origin = SwingUtilities.convertPoint(desc, 0, 0, renderer)
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
             val bounds = list.getCellBounds(0, 0)
