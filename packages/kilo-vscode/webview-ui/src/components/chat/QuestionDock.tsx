@@ -239,7 +239,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const onKey = (e: KeyboardEvent) => {
     if (
       single() &&
-      question()?.default !== undefined &&
+      question()?.options.some((opt) => opt.label === question()?.default) &&
       isEnterKeyCommitNotIme(e) &&
       !e.metaKey &&
       !e.ctrlKey &&

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
+import { createSignal } from "solid-js"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
 import { RunQuestionBody } from "@/cli/cmd/run/footer.question"
 import { RUN_THEME_FALLBACK } from "@/cli/cmd/run/theme"
@@ -66,6 +67,63 @@ describe("question defaults", () => {
     const reset = questionSync(moved, "question-2", question)
     expect(reset.selected).toBe(1)
     expect(reset.answers).toEqual([])
+  })
+
+  test("direct question body reveals off-screen defaults and follows navigation and resets", async () => {
+    const [ask, setAsk] = createSignal({
+      ...request,
+      questions: [
+        {
+          ...question,
+          options: Array.from({ length: 9 }, (_, index) => ({
+            label: `Option ${index + 1}`,
+            description: `Description ${index + 1}`,
+          })),
+          default: "Option 9",
+          custom: false,
+        },
+      ],
+    })
+    const replies: unknown[] = []
+    const app = await testRender(
+      () => (
+        <RunQuestionBody
+          request={ask()}
+          theme={RUN_THEME_FALLBACK.footer}
+          onReply={(input) => {
+            replies.push(input)
+          }}
+          onReject={() => {}}
+        />
+      ),
+      { width: 100, height: 16 },
+    )
+
+    try {
+      await app.renderOnce()
+      await app.renderOnce()
+      expect(app.captureCharFrame()).toContain("Option 9")
+      expect(app.captureCharFrame()).toContain("Description 9")
+      expect(replies).toEqual([])
+
+      app.mockInput.pressKey("j")
+      await app.renderOnce()
+      await app.renderOnce()
+      expect(app.captureCharFrame()).toContain("Option 1")
+      app.mockInput.pressEnter()
+      await app.renderOnce()
+      expect(replies).toEqual([{ requestID: request.id, answers: [["Option 1"]] }])
+
+      setAsk({ ...ask(), id: "question-2" })
+      await app.renderOnce()
+      await app.renderOnce()
+      expect(app.captureCharFrame()).toContain("Option 9")
+      app.mockInput.pressEnter()
+      await app.renderOnce()
+      expect(replies.at(-1)).toEqual({ requestID: "question-2", answers: [["Option 9"]] })
+    } finally {
+      app.renderer.destroy()
+    }
   })
 
   test("direct question body accepts the default on Enter", async () => {

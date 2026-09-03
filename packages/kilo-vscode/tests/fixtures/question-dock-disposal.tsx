@@ -171,6 +171,11 @@ for (const question of [
   if (root.querySelector('button[data-picked="true"]')) throw new Error("Unexpected default selection")
   const button = root.querySelector<HTMLButtonElement>('[data-slot="question-footer-actions"] button')
   if (!button?.disabled) throw new Error("Unanswered question enabled submission")
+  const option = root.querySelector<HTMLButtonElement>('[data-slot="question-option"]')
+  if (!option) throw new Error("Question option missing")
+  option.click()
+  option.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  if (!root.querySelector('[data-component="question-dock"]')) throw new Error("Ignored default changed Enter behavior")
   setActive(undefined)
 }
 dispose()

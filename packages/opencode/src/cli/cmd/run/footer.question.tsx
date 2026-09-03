@@ -14,6 +14,7 @@
 // This component just renders it and dispatches keyboard events.
 /** @jsxImportSource @opentui/solid */
 import type { TextareaRenderable } from "@opentui/core"
+import type { ScrollBoxRenderable } from "@opentui/core" // kilocode_change
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
@@ -76,6 +77,24 @@ export function RunQuestionBody(props: {
     return "confirm"
   })
   let area: TextareaRenderable | undefined
+  // kilocode_change start
+  let scroll: ScrollBoxRenderable | undefined
+  createEffect(() => {
+    const selected = state().selected
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!scroll || scroll.isDestroyed || state().selected !== selected) return
+        const option = scroll
+          .getChildren()
+          .at(0)
+          ?.getChildren()
+          .filter((child) => child.visible)
+          .at(selected)
+        if (option) scroll.scrollChildIntoView(option.id)
+      })
+    })
+  })
+  // kilocode_change end
 
   createEffect(() => {
     setState((prev) => questionSync(prev, props.request.id, props.request.questions.at(0))) // kilocode_change
@@ -363,6 +382,7 @@ export function RunQuestionBody(props: {
 
             <box flexGrow={1} flexShrink={1}>
               <scrollbox
+                ref={(el) => (scroll = el) /* kilocode_change */}
                 width="100%"
                 height="100%"
                 verticalScrollbarOptions={{
