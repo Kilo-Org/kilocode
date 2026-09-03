@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
 
+  "agentManager.updateBase.title": "به‌روزرسانی از پایه",
+  "agentManager.updateBase.selectWorktree": "ابتدا یک worktree تحت مدیریت انتخاب کنید.",
+
   "agentManager.worktree.settings": "تنظیمات Worktree",
   "agentManager.worktree.new": "Worktree جدید",
   "agentManager.worktree.setupScript": "اسکریپت راه‌اندازی Worktree",
@@ -208,6 +211,8 @@ export const dict = {
   "agentManager.pr.comment.title": "نظرات",
   "agentManager.pr.copyLink": "کپی پیوند PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} حل‌نشده",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} گفت‌وگوی حل‌نشده در بررسی",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} گفت‌وگوی حل‌نشده در بررسی",
   "agentManager.pr.comment.resolvedGroup": "حل‌شده ({{count}})",
   "agentManager.pr.comment.sendAll": "ارسال {{count}} مورد حل‌نشده به عامل",
   "agentManager.pr.comment.sendAllToTerminal": "ارسال {{count}} مورد حل‌نشده به ترمینال",

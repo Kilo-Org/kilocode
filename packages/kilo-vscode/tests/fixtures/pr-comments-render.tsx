@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { Window } from "happy-dom"
+import type { PRStatus } from "../../webview-ui/src/types/messages"
 
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
@@ -40,7 +41,10 @@ const { MarkedProvider } = await import("@kilocode/kilo-ui/context/marked")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
 const { PRComments } = await import("../../webview-ui/agent-manager/pr/PRComments")
-const { createSignal } = await import("solid-js")
+const { Show, createRoot, createSignal } = await import("solid-js")
+const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
+const { createPRNavigation, PRPanelHost } = await import("../../webview-ui/agent-manager/pr/PRPanelHost")
+const { commentState, patchCommentState } = await import("../../webview-ui/agent-manager/pr/pr-comment-state")
 
 const root = document.createElement("div")
 const colors = document.createElement("style")
@@ -234,3 +238,134 @@ assert.equal(revived.get("PRRT_done")?.querySelector(".am-pr-comment-head")?.get
 assert.match(second.textContent ?? "", /second paragraph only shows when expanded/)
 assert.match(second.textContent ?? "", /Sent/)
 disposeSecond()
+
+const base: PRStatus = {
+  number: 42,
+  title: "Review navigation",
+  url: "https://github.com/example/repo/pull/42",
+  state: "open",
+  review: null,
+  checks: { status: "success", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
+  additions: 1,
+  deletions: 0,
+  files: 1,
+}
+const [badge, setBadge] = createSignal(base)
+const [project, setProject] = createSignal("project-a")
+const [selection, setSelection] = createSignal<string | null>("local")
+const [visible, setVisible] = createSignal(false)
+const clicked: string[] = []
+const target = { projectId: "project-b", worktreeId: "wt-navigation" }
+const navigation = createRoot((dispose) => ({
+  ...createPRNavigation({
+    project,
+    active: project,
+    selection,
+    select: () => clicked.push("select"),
+    visible,
+    open: () => setVisible(true),
+    refresh: () => clicked.push("refresh"),
+  }),
+  dispose,
+}))
+const noop = () => undefined
+let jumps = 0
+window.HTMLElement.prototype.scrollIntoView = () => {
+  jumps++
+}
+patchCommentState(target.worktreeId, () => ({ open: false }))
+const release = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <MarkedProvider>
+          <WorktreeItem
+            worktree={{
+              id: target.worktreeId,
+              branch: "feature",
+              path: "/repo/feature",
+              parentBranch: "main",
+              createdAt: "2026-09-03",
+            }}
+            label="Feature"
+            active={false}
+            pendingDelete={false}
+            busy={false}
+            activity="idle"
+            stale={false}
+            sessions={1}
+            grouped={false}
+            groupStart={false}
+            groupEnd={false}
+            groupSize={0}
+            renaming={false}
+            renameValue=""
+            closeKeybind=""
+            openKeybind=""
+            pr={badge()}
+            onOpenComments={() => navigation.open(target)}
+            onOpenPR={() => clicked.push("external")}
+            onClick={() => clicked.push("row")}
+            onDelete={noop}
+            onStartRename={noop}
+            onRenameInput={noop}
+            onCommitRename={noop}
+            onCancelRename={noop}
+            onRemoveStale={noop}
+            onCopyPath={noop}
+            onOpen={noop}
+          />
+          <Show when={visible()}>
+            <PRPanelHost
+              pr={badge()}
+              projectId={project()}
+              worktreeId={target.worktreeId}
+              jump={navigation.jump()}
+              onJump={navigation.complete}
+              onClose={() => setVisible(false)}
+            />
+          </Show>
+        </MarkedProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  second,
+)
+const indicator = () => second.querySelector<HTMLButtonElement>(".am-pr-badge-comments")
+assert.equal(indicator(), null)
+setBadge({ ...base, unresolvedThreads: 1 })
+assert.equal(indicator()?.getAttribute("aria-label"), "1 unresolved review thread")
+indicator()!.click()
+setProject(target.projectId)
+assert.equal(visible(), false)
+setSelection(target.worktreeId)
+await window.happyDOM.waitUntilComplete()
+assert.equal(visible(), true)
+assert.deepEqual(clicked, ["select", "refresh"])
+assert.equal(jumps, 0)
+setBadge({
+  ...base,
+  unresolvedThreads: 1,
+  comments: {
+    total: 1,
+    unresolved: 1,
+    comments: [{ id: "feedback", author: "reviewer", body: "Fix this", resolved: false }],
+  },
+})
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).open, true)
+assert.equal(jumps, 1)
+indicator()!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(jumps, 2)
+setBadge((prev) => ({ ...prev, title: "Updated" }))
+await window.happyDOM.waitUntilComplete()
+assert.equal(jumps, 2)
+second.querySelector<HTMLElement>(".am-pr-badge-number")!.click()
+assert.equal(clicked.at(-1), "external")
+assert.ok(!clicked.includes("row"))
+setBadge((prev) => ({ ...prev, unresolvedThreads: 0 }))
+assert.equal(indicator(), null)
+release()
+navigation.dispose()

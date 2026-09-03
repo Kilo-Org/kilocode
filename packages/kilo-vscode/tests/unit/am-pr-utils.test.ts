@@ -7,9 +7,10 @@ import {
   ghErrorReason,
   parseComments,
   parseReviewers,
+  signature,
 } from "../../src/agent-manager/pr/am-pr-utils"
 import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/pr/am-pr-types"
-import type { PRComment } from "../../src/agent-manager/types"
+import type { PRComment, PRStatus } from "../../src/agent-manager/types"
 
 // --- parsePRResult ---
 
@@ -414,6 +415,33 @@ describe("parseComments", () => {
       },
     ]
     expect(parseComments(threads)[0]?.line).toBe(42)
+  })
+})
+
+describe("PR signature", () => {
+  const pr: PRStatus = {
+    number: 42,
+    url: "https://github.com/x/y/pull/42",
+    title: 'A:B "review"',
+    body: "C:D\nE",
+    state: "open",
+    review: null,
+    checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
+    reviewers: [{ login: "alice", state: "pending" }],
+    additions: 1,
+    deletions: 0,
+    files: 1,
+  }
+
+  it("keeps free text and reviewer fields separate in the snapshot", () => {
+    expect(signature({ ...pr, reviewers: [{ login: "alice", state: "approved" }] })).not.toBe(signature(pr))
+    expect(signature({ ...pr, title: "A:B", body: "C" })).not.toBe(signature({ ...pr, title: "A", body: "B:C" }))
+  })
+
+  it("deduplicates unchanged PRs and distinguishes unknown and updated thread counts", () => {
+    expect(signature(structuredClone(pr))).toBe(signature(pr))
+    expect(signature({ ...pr, unresolvedThreads: 0 })).not.toBe(signature(pr))
+    expect(signature({ ...pr, unresolvedThreads: 3 })).not.toBe(signature({ ...pr, unresolvedThreads: 0 }))
   })
 })
 

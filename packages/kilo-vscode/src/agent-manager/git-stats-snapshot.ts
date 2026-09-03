@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import { LRUCache } from "lru-cache"
 import { binaryFile } from "../diff/shared/binary"
 import { resolveInside } from "../diff/shared/path"
+import { serialize } from "../util/serialize"
 import type { GitOps } from "./GitOps"
 import { Semaphore } from "./semaphore"
 
@@ -119,7 +120,7 @@ function records(raw: Buffer): { branch: string; head: string; paths: PathState[
 }
 
 function stamp(stat: BigIntStats): string {
-  return [stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeNs, stat.ctimeNs].join(":")
+  return serialize([stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeNs, stat.ctimeNs])
 }
 
 async function fingerprint(dir: string, raw: Buffer, paths: PathState[]): Promise<string | undefined> {

@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
+  "agentManager.updateBase.title": "Оновити з базової гілки",
+  "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
+
   "agentManager.worktree.settings": "Налаштування робочого дерева",
   "agentManager.worktree.new": "Нове робоче дерево",
   "agentManager.worktree.setupScript": "Скрипт налаштування робочого дерева",
@@ -213,6 +216,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Коментарі",
   "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
+  "agentManager.pr.comment.unresolvedThread": "Невирішене обговорення рев'ю: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Невирішені обговорення рев'ю: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",
   "agentManager.pr.comment.sendAllToTerminal": "Надіслати {{count}} невирішених до терміналу",

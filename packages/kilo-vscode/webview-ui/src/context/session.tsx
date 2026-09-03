@@ -48,6 +48,7 @@ import type {
   ExtensionMessage,
   FileAttachment,
   SendMessageFailedMessage,
+  SendMessageRequest,
   McpStatusEntry,
   MessageLoadMode,
   ToolPart,
@@ -1231,6 +1232,22 @@ export const SessionProvider: ParentComponent = (props) => {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
 
+    if (submissionMap[sessionID]) {
+      for (const message of messages) {
+        if (message.role !== "assistant" || !message.parentID) continue
+        if (pendingSubmissions.get(message.parentID) !== sessionID) continue
+        if (
+          !message.error &&
+          (typeof message.time?.completed !== "number" ||
+            !message.finish ||
+            message.finish === "tool-calls" ||
+            message.finish === "unknown")
+        )
+          continue
+        finishSubmission(message.parentID)
+      }
+    }
+
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
@@ -1776,6 +1793,7 @@ export const SessionProvider: ParentComponent = (props) => {
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
+          suggested: suggestions().map((item) => item.sessionID),
           disconnected: disconnected(),
         }),
       ),
@@ -2079,6 +2097,17 @@ export const SessionProvider: ParentComponent = (props) => {
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
+  function submit(input: SendMessageRequest) {
+    const messageID = input.messageID ?? Identifier.ascending("message")
+    const scope = input.draftID ?? input.sessionID
+    if (scope) {
+      clearClose(scope)
+      addOptimistic(scope, messageID, input.text, input.files, input.review, input.browserFeedback)
+      startSubmission(scope, messageID)
+    }
+    vscode.postMessage({ ...input, messageID })
+  }
+
   function available(selection: ModelSelection | null): selection is ModelSelection {
     const resolved = resolveModelSelection({ ...environment(), override: selection })
     if (selection && resolved?.providerID === selection.providerID && resolved.modelID === selection.modelID)
@@ -2143,9 +2172,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const scope = effectiveDraftID ?? sid
     if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
-      clearClose(scope)
-      addOptimistic(scope, messageID, text, files, review, browserFeedback)
-      startSubmission(scope, messageID)
       if (!sid && (!draftID || draftSessionID() === scope)) {
         setUserClearedSession(false)
         setDraftSessionID(scope)
@@ -2153,7 +2179,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     const agent = promptAgent(scope)
 
-    vscode.postMessage({
+    submit({
       type: "sendMessage",
       text,
       messageID,
@@ -2914,6 +2940,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revertSession,
     unrevertSession,
     deleteQueuedMessage,
+    submit,
     sendMessage,
     sendCommand,
     abort,

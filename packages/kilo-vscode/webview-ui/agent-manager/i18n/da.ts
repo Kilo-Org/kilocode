@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke fundet",
   "agentManager.notGitRepo": "Ikke et git-repository",
+
+  "agentManager.updateBase.title": "Opdater fra base",
+  "agentManager.updateBase.selectWorktree": "Vælg først et administreret worktree.",
+
   "agentManager.worktree.settings": "Worktree-indstillinger",
   "agentManager.worktree.new": "Nyt Worktree",
   "agentManager.worktree.setupScript": "Worktree-opsætningsscript",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Kommentarer",
   "agentManager.pr.copyLink": "Kopiér PR-link",
   "agentManager.pr.comment.unresolvedCount": "{{count}} uløste",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} uløst review-tråd",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} uløste review-tråde",
   "agentManager.pr.comment.resolvedGroup": "Løste ({{count}})",
   "agentManager.pr.comment.sendAll": "Send {{count}} uløste til agenten",
   "agentManager.pr.comment.sendAllToTerminal": "Send {{count}} uløste til terminalen",

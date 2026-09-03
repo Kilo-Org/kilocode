@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
+
+  "agentManager.updateBase.title": "อัปเดตจากฐาน",
+  "agentManager.updateBase.selectWorktree": "เลือก worktree ที่มีการจัดการก่อน",
+
   "agentManager.worktree.settings": "ตั้งค่า Worktree",
   "agentManager.worktree.new": "Worktree ใหม่",
   "agentManager.worktree.setupScript": "สคริปต์ตั้งค่า Worktree",
@@ -198,6 +202,8 @@ export const dict = {
   "agentManager.pr.comment.title": "ความคิดเห็น",
   "agentManager.pr.copyLink": "คัดลอกลิงก์ PR",
   "agentManager.pr.comment.unresolvedCount": "ยังไม่แก้ไข {{count}} รายการ",
+  "agentManager.pr.comment.unresolvedThread": "เธรดการตรวจสอบที่ยังไม่แก้ไข {{count}} รายการ",
+  "agentManager.pr.comment.unresolvedThreads": "เธรดการตรวจสอบที่ยังไม่แก้ไข {{count}} รายการ",
   "agentManager.pr.comment.resolvedGroup": "แก้ไขแล้ว ({{count}})",
   "agentManager.pr.comment.sendAll": "ส่งความคิดเห็นที่ยังไม่แก้ไข {{count}} รายการไปยังเอเจนต์",
   "agentManager.pr.comment.sendAllToTerminal": "ส่งความคิดเห็นที่ยังไม่แก้ไข {{count}} รายการไปยังเทอร์มินัล",

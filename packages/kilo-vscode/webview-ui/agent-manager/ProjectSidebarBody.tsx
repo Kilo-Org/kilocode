@@ -24,6 +24,7 @@ import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
+import { useBaseUpdate } from "./update-from-base"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
@@ -63,6 +64,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -70,6 +72,7 @@ interface Props {
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
     createEffect(() => {
@@ -309,8 +312,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
             selectAfterDelete(worktree.id)
           }}
+          onUpdateBase={() =>
+            updateBase(
+              worktree.id,
+              props.project.id,
+              state()?.sessions.find(
+                (item) => item.worktreeId === worktree.id && item.id === props.currentSessionID?.(),
+              )?.id,
+            )
+          }
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
+          onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
           onOpenPR={() => {
             const url = props.prs?.[worktree.id]?.url
             post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })

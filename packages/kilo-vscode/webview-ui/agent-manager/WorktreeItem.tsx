@@ -63,6 +63,7 @@ interface WorktreeItemProps {
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
+  onOpenComments?: () => void
   /** Available sections for the "Move to Section" submenu. */
   sections?: SectionState[]
   /** ID of the section this worktree currently belongs to (for disabling current item). */
@@ -81,6 +82,7 @@ interface WorktreeItemProps {
   onRemoveStale: () => void
   onCopyPath: () => void
   onOpen: () => void
+  onUpdateBase?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -155,7 +157,7 @@ function RunBadge(props: { status?: RunStatus }) {
 export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const { t } = useLanguage()
   const [hovered, setHovered] = createSignal(false)
-  const [overClose, setOverClose] = createSignal(false)
+  const [overAction, setOverAction] = createSignal(false)
   const state = () => strongest([props.activity, props.busy || props.runStatus?.state === "running" ? "busy" : "idle"])
   const blocked = () =>
     props.busy ||
@@ -192,7 +194,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
           closeDelay={0}
           placement="right-start"
           gutter={8}
-          open={hovered() && !overClose() && !props.pendingDelete}
+          open={hovered() && !overAction() && !props.pendingDelete}
           onOpenChange={(open) => setHovered(open)}
           trigger={
             <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
@@ -312,8 +314,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                         <Show when={!blocked() && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
-                            onMouseEnter={() => setOverClose(true)}
-                            onMouseLeave={() => setOverClose(false)}
+                            onMouseEnter={() => setOverAction(true)}
+                            onMouseLeave={() => setOverAction(false)}
                           >
                             <TooltipKeybind
                               title={t("agentManager.worktree.delete")}
@@ -349,6 +351,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                     >
                       {(pr) => {
                         const indicator = () => prBadgeIndicator(pr())
+                        const count = () => pr().unresolvedThreads ?? pr().comments?.unresolved ?? 0
+                        const tooltip = () =>
+                          t(
+                            count() === 1
+                              ? "agentManager.pr.comment.unresolvedThread"
+                              : "agentManager.pr.comment.unresolvedThreads",
+                            { count: count() },
+                          )
                         return (
                           <span
                             class="am-pr-badge"
@@ -385,6 +395,27 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                                 />
                               </Match>
                             </Switch>
+                            <Show when={count() > 0}>
+                              <Tooltip value={tooltip()} placement="top">
+                                <Button
+                                  class="am-pr-badge-comments"
+                                  variant="ghost"
+                                  size="small"
+                                  aria-label={tooltip()}
+                                  onMouseEnter={() => setOverAction(true)}
+                                  onMouseLeave={() => setOverAction(false)}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    setHovered(false)
+                                    props.onOpenComments?.()
+                                  }}
+                                >
+                                  <Icon name="speech-bubble" size="small" />
+                                  <span>{count()}</span>
+                                </Button>
+                              </Tooltip>
+                            </Show>
                           </span>
                         )
                       }}
@@ -556,6 +587,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 </span>
               </Show>
             </ContextMenu.Item>
+            <Show when={props.onUpdateBase && !props.stale}>
+              <ContextMenu.Item onSelect={() => props.onUpdateBase?.()}>
+                <Icon name="branch" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.updateBase.title")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Item onSelect={() => props.onCopyPath()}>
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>
