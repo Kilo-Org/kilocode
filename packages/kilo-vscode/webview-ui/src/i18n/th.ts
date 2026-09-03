@@ -852,6 +852,9 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "แชร์กระดานระหว่างเซสชันหลักกับเอเจนต์ย่อยที่รับมอบหมายงานจากเซสชันนั้น รวมถึงเอเจนต์ย่อยที่ซ้อนกัน ใช้สำหรับการลองแก้ปัญหาแบบขนานหรืองานที่เสริมกัน ไม่ใช่สำหรับทุกงาน",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
   "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
   "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
@@ -879,6 +882,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
+  "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
+  "settings.experimental.taskModelSelection.description":
+    "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1143,58 +1149,16 @@ export const dict = {
   "question.summary": "{{n}} จาก {{total}} คำถาม",
   "common.review": "ตรวจสอบ",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "ย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
-  "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
   "settings.aboutKiloCode.rooImport.description": "นำเข้าประวัติการสนทนาจากการติดตั้ง Roo Code",
   "settings.aboutKiloCode.rooImport.button": "นำเข้าเซสชันจาก Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
-  "migration.whatsNew.subtitle": "เราได้สร้างส่วนขยายใหม่บนรากฐานที่เร็วและมีประสิทธิภาพมากขึ้น",
-  "migration.whatsNew.features.performance.title": "ประสิทธิภาพเอเจนต์ที่เร็วขึ้น",
-  "migration.whatsNew.features.performance.detail":
-    "การเรียกเครื่องมือแบบขนานและเอเจนต์ย่อยช่วยให้เอเจนต์ของคุณจัดการได้มากขึ้นในครั้งเดียว — คุณจึงใช้เวลารอน้อยลงและส่งงานได้มากขึ้น",
-  "migration.whatsNew.features.interface.title": "อินเทอร์เฟซที่กระชับ",
-  "migration.whatsNew.features.interface.detail": "สิ่งรบกวนน้อยลง อ่านง่ายและรวดเร็วขึ้น",
-  "migration.whatsNew.features.agentManager.title": "ตัวจัดการตัวแทน",
-  "migration.whatsNew.features.agentManager.detail":
-    "อินเทอร์เฟซรวมสำหรับการเรียกใช้เอเจนต์หลายตัวพร้อมกัน แต่ละตัวบน worktree ของตัวเอง — ติดตามความคืบหน้า สลับบริบท และตรวจสอบการเปลี่ยนแปลงได้ในที่เดียว",
-  "migration.whatsNew.features.foundation.title": "รากฐานที่ใช้ร่วมกัน",
-  "migration.whatsNew.features.foundation.detail":
-    "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Kilo ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
-  "migration.whatsNew.blogLink": "อ่านประกาศฉบับเต็ม",
-  "migration.whatsNew.docsLink": "มีอะไรใหม่และคำถามที่พบบ่อย",
-  "migration.whatsNew.continue": "ดำเนินการต่อ",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "ย้ายการตั้งค่าของคุณ",
-  "migration.migrate.subtitle": "เราพบการตั้งค่าจากการติดตั้งก่อนหน้านี้ของคุณ นี่คือสิ่งที่เราสามารถนำมาได้",
+  "migration.roo.button": "นำเข้าเซสชัน",
+  "migration.roo.empty": "ไม่พบเซสชัน Roo Code",
   "migration.migrate.selectLabel": "เลือกสิ่งที่จะย้าย",
   "migration.migrate.chatHistory": "เซสชันแชทและประวัติ",
-  "migration.migrate.button": "ย้ายการตั้งค่า",
-  "migration.migrate.skip": "ข้าม",
-  "migration.migrate.keysDetected": "ตรวจพบ {{count}} คีย์",
-  "migration.migrate.serversConfigured": "กำหนดค่า {{count}} เซิร์ฟเวอร์",
-  "migration.migrate.modesFound": "พบ {{count}} โหมด",
-  "migration.migrate.nothingToMigrate": "ไม่พบสิ่งที่จะย้ายในการตั้งค่าดั้งเดิม",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "คีย์ API ของผู้ให้บริการ",
-  "migration.select.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "migration.select.customModes": "โหมดที่กำหนดเอง / เอเจนต์",
-  "migration.select.defaultModel": "โมเดลเริ่มต้น",
-  "migration.select.autoApproval": "การอนุมัติอัตโนมัติ",
-  "migration.select.language": "ภาษาของ UI",
-  "migration.select.autocomplete": "การตั้งค่าการเติมข้อความอัตโนมัติ",
 
   // Migrate — completion
   "migration.complete.summary": "ย้ายข้อมูลสำเร็จ {{success}} จาก {{total}} รายการ",
-  "migration.complete.cleanup": "ลบข้อมูลการตั้งค่าเดิม",
-  "migration.complete.cleanupDescription":
-    "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
   "migration.migrate.sessionsDetected": "ตรวจพบ {{count}} เซสชัน",
   "migration.error.continue": "ดำเนินการต่อ",
@@ -1228,7 +1192,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "ไม่ทราบวันที่",
   "migration.sessionFormat.unknown": "ไม่ทราบ",
   "migration.sessionFormat.unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
-  // legacy-migration end
 
   "error.details.show": "รายละเอียด",
 
@@ -1238,6 +1201,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
   "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
+  "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
@@ -1250,6 +1214,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "ยกเลิกแล้ว",
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
+  "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",

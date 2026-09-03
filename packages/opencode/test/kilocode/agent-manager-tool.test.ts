@@ -1,6 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Queue, Schema } from "effect"
+import { Cause, Effect, Exit, Layer, ManagedRuntime, Queue, Schema } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -220,8 +220,58 @@ describe("agent_manager tool", () => {
     // The advertised bounds on tasks must survive being made nullable.
     const tasks = schema.properties?.tasks
     expect(typeof tasks === "object" ? tasks.anyOf?.[0] : undefined).toEqual(
-      expect.objectContaining({ minItems: 1, maxItems: 20 }),
+      expect.objectContaining({ type: "array", minItems: 1, maxItems: 20 }),
     )
+    expect(typeof tasks === "object" ? tasks.anyOf : undefined).toHaveLength(2)
+  })
+
+  test.each(["local", "worktree"])("decodes JSON-encoded tasks for %s sessions", (mode) => {
+    const tasks = [
+      { prompt: 'Check "quoted" text\nC:\\repo', name: "Encoded" },
+      { name: "Prepared", model: null },
+    ]
+    expect(Schema.decodeUnknownSync(Params)({ mode, tasks: JSON.stringify(tasks), action: null })).toEqual({
+      mode,
+      tasks,
+    })
+  })
+
+  test("rejects invalid JSON-encoded tasks before permission or event publication", async () => {
+    const tool: Tool.Def = await init()
+    const permissions: unknown[] = []
+    const events: AgentManagerStart[] = []
+    await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) => events.push(item.properties))
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          for (const tasks of [
+            "[",
+            "null",
+            "{}",
+            '"[]"',
+            "[]",
+            "[null]",
+            "[{}]",
+            JSON.stringify([{ prompt: 42 }]),
+            JSON.stringify([{ name: "Prepared", model: "test/reasoning/model" }]),
+            JSON.stringify(Array.from({ length: 21 }, () => ({ prompt: "Fix" }))),
+          ]) {
+            const result = yield* tool
+              .execute(
+                { mode: "local", tasks },
+                { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+              )
+              .pipe(Effect.exit)
+            expect(Exit.isFailure(result)).toBe(true)
+            if (Exit.isFailure(result)) expect(Cause.squash(result.cause)).toBeInstanceOf(Tool.InvalidArgumentsError)
+          }
+        }),
+      ).pipe(Effect.scoped),
+    )
+    expect(permissions).toEqual([])
+    expect(events).toEqual([])
   })
 
   test("keeps session ID validation local", () => {
@@ -451,7 +501,12 @@ describe("agent_manager tool", () => {
     await rt.dispose()
   })
 
-  test("prompts one existing session with a separate mutation permission pattern", async () => {
+  test.each([
+    { name: "single-line", prompt: "Continue the fix" },
+    { name: "multiline", prompt: 'Review <script>alert("test")</script>.\n\n  Keep `code` and **markup** literal.' },
+    { name: "long", prompt: "Review the next file.\n".repeat(500) + "Report the final result." },
+  ])("previews the full $name prompt before sending it to one session", async (item) => {
+    const prompt = item.prompt
     const requests: unknown[] = []
     const rt = makeRuntime("test", {
       request: (input) =>
@@ -469,8 +524,15 @@ describe("agent_manager tool", () => {
     const result = await rt.runPromise(
       provideTmpdirInstance(() =>
         tool.execute(
-          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: "  Continue the fix  " },
-          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: `  ${prompt}\n ` },
+          {
+            ...ctx,
+            ask: (input: unknown) =>
+              Effect.sync(() => {
+                expect(requests).toEqual([])
+                permissions.push(input)
+              }),
+          },
         ),
       ).pipe(Effect.scoped),
     )
@@ -480,7 +542,11 @@ describe("agent_manager tool", () => {
         permission: "agent_manager",
         patterns: ["prompt"],
         always: ["prompt"],
-        metadata: { action: "prompt", sessionID: "ses_target" },
+        metadata: {
+          action: "prompt",
+          sessionID: "ses_target",
+          description: `Send a prompt to Agent Manager session ses_target:\n\n${prompt}`,
+        },
       },
     ])
     expect(requests).toEqual([
@@ -488,7 +554,7 @@ describe("agent_manager tool", () => {
         operation: "prompt",
         sessionID: ctx.sessionID,
         targetSessionID: "ses_target",
-        prompt: "Continue the fix",
+        prompt,
       },
     ])
     expect(result.title).toBe("Prompt accepted")
@@ -644,8 +710,9 @@ describe("agent_manager tool", () => {
     expect(task?.variant).toBe("high")
   })
 
-  test("publishes validated model and variant selections", async () => {
-    const tool = await init()
+  test.each(["array", "JSON-encoded"])("publishes validated selections from %s tasks", async (encoding) => {
+    const tool: Tool.Def = await init()
+    const tasks = [{ prompt: "Fix issue", model: "test/reasoning/model", variant: "high" }]
 
     const event = await runtime.runPromise(
       provideTmpdirInstance(() =>
@@ -660,7 +727,7 @@ describe("agent_manager tool", () => {
           yield* tool.execute(
             {
               mode: "local",
-              tasks: [{ prompt: "Fix issue", model: "test/reasoning/model", variant: "high" }],
+              tasks: encoding === "array" ? tasks : JSON.stringify(tasks),
             },
             { ...ctx, ask: () => Effect.void },
           )

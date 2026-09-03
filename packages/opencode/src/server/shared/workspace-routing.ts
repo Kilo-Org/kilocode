@@ -22,6 +22,7 @@ export function getWorkspaceRouteSessionID(url: URL) {
   if (url.pathname === "/session/viewed") return null // kilocode_change - Kilo static route is not a session ID
 
   const id =
+    url.pathname.match(/^\/kilocode\/session\/([^/]+)\/drain$/)?.[1] ?? // kilocode_change
     url.pathname.match(/^\/session\/([^/]+)(?:\/|$)/)?.[1] ??
     url.pathname.match(/^\/experimental\/session\/([^/]+)\/background$/)?.[1]
   if (!id) return null

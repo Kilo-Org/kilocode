@@ -1,4 +1,5 @@
 import * as path from "path"
+import { imageMime } from "./shared/image-data-url"
 
 const IMAGE_PREVIEW_ID = "imagePreview.previewEditor"
 const PREVIEW_DIR = "image-preview"
@@ -11,14 +12,10 @@ type Preview = {
 }
 
 export function parseImage(dataUrl: string, filename: string): Preview | null {
-  const sep = dataUrl.indexOf(",")
-  if (sep === -1) return null
-
-  const head = dataUrl.slice(0, sep)
-  const mime = head.match(/^data:(image\/[A-Za-z0-9.+-]+);base64$/)?.[1]
+  const mime = imageMime(dataUrl)
   if (!mime) return null
 
-  const data = parseBase64(dataUrl.slice(sep + 1))
+  const data = parseBase64(dataUrl.slice(dataUrl.indexOf(",") + 1))
   if (!data) return null
 
   const ext = getExt(mime)

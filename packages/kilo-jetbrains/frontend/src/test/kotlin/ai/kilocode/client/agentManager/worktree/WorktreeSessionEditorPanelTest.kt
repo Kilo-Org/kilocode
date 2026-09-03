@@ -1,27 +1,58 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.KiloDiffEditorService
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.replaceService
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.DataKey
@@ -94,12 +125,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     private fun view(
         stored: Boolean? = null,
         load: ((Boolean?) -> Unit) -> Unit = { done -> done(stored) },
+        target: Project? = null,
+        parent: Disposable = testRootDisposable,
     ): WorktreeSessionEditorPanel = edt {
         WorktreeSessionEditorPanel(
-            testRootDisposable,
+            parent,
             manager,
             controller,
             workspace,
+            project = target,
             confirm = { _, _, run -> run() },
             load = load,
             save = { saves += it },
@@ -731,6 +765,143 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertSame(workspace, sink.workspace)
     }
 
+    fun `test project status delivers base and dirty independently and stops after disposal`() {
+        val stats = Channel<WorktreeStatsListDto>(Channel.UNLIMITED)
+        val dirty = Channel<WorktreeDirtyListDto>(Channel.UNLIMITED)
+        val api = object : KiloWorktreeRpcApi by FakeWorktreeRpcApi() {
+            override suspend fun stats(directory: String): WorktreeStatsListDto = stats.receive()
+            override suspend fun dirty(directory: String): WorktreeDirtyListDto = dirty.receive()
+        }
+        val (status, timers) = edt { status(api) }
+        val owner = Disposer.newDisposable(testRootDisposable, "status header")
+        val view = view(target = project, parent = owner)
+        val summary = edt { components(view).filterIsInstance<ChangesPanel>().single() }
+        val nodes = edt { components(summary) }
+        val handle = edt { status.attach() }
+        try {
+            timers.advanceBy(300)
+            stats.trySend(WorktreeStatsListDto(listOf(WorktreeStatsDto(DIR, files = 2, additions = 5, base = "origin/main")))).getOrThrow()
+            await(summary, listOf("2 files", "+5"))
+            dirty.trySend(WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 1, additions = 7)))).getOrThrow()
+            await(summary, listOf("1 file", "+7", "2 files", "+5"))
+
+            edt { status.refreshStats() }
+            timers.advanceBy(300)
+            dirty.trySend(WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 3, deletions = 4)))).getOrThrow()
+            await(summary, listOf("3 files", "-4", "2 files", "+5"))
+            stats.trySend(WorktreeStatsListDto(listOf(WorktreeStatsDto(DIR, files = 1, behind = 2, base = "origin/trunk")))).getOrThrow()
+            await(summary, listOf("3 files", "-4", "2", "1 file"))
+
+            edt { status.refreshStats() }
+            timers.advanceBy(300)
+            dirty.trySend(WorktreeDirtyListDto()).getOrThrow()
+            await(summary, listOf("2", "1 file"))
+            stats.trySend(WorktreeStatsListDto()).getOrThrow()
+            await(summary, emptyList())
+            edt {
+                assertFalse(summary.isVisible)
+                assertEquals(nodes, components(summary))
+                assertFalse(manager.showsBranchDock)
+                Disposer.dispose(owner)
+                status.refreshStats()
+            }
+            timers.advanceBy(300)
+            val next = WorktreeStatsDto(DIR, files = 9)
+            stats.trySend(WorktreeStatsListDto(listOf(next))).getOrThrow()
+            dirty.trySend(WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 8)))).getOrThrow()
+            assertTrue(coroutines.pumpUntil { status.stats.value[DIR] == next && status.dirty.value[DIR]?.files == 8 })
+            assertTrue(edt { labels(summary).isEmpty() })
+        } finally {
+            edt {
+                Disposer.dispose(owner)
+                handle.close()
+            }
+            stats.close()
+            dirty.close()
+        }
+    }
+
+    fun `test worktree header opens distinct reusable comparison tabs with actual branch name`() {
+        val rpc = FakeWorktreeRpcApi().apply {
+            statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(DIR, files = 2)))
+            dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 1)))
+        }
+        val (_, timers) = edt { status(rpc) }
+        val workspace = FakeWorkspaceRpcApi().apply { branchName = "feature/topic" }
+        val app = FakeAppRpcApi().apply { state.value = KiloAppStateDto(KiloAppStatusDto.READY) }
+        ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(coroutines.scope, workspace), testRootDisposable)
+        ApplicationManager.getApplication().replaceService(KiloAppService::class.java, KiloAppService(coroutines.scope, app), testRootDisposable)
+        project.replaceService(KiloSessionService::class.java, sessions, testRootDisposable)
+        project.replaceService(KiloDiffEditorService::class.java, KiloDiffEditorService(project, coroutines.scope), testRootDisposable)
+        val view = view(target = project)
+        val summary = edt { components(view).filterIsInstance<ChangesPanel>().single() }
+        val editors = FileEditorManager.getInstance(project)
+        try {
+            timers.advanceBy(300)
+            await(summary, listOf("1 file", "2 files"))
+            edt {
+                click(components(summary).filterIsInstance<JBLabel>().single { it.text == "1 file" })
+                click(components(summary).filterIsInstance<JBLabel>().single { it.text == "2 files" })
+            }
+            assertTrue(coroutines.pumpUntil { edt { editors.openFiles.size == 2 } })
+            edt {
+                val files = editors.openFiles.filterIsInstance<KiloVirtualFile>()
+                assertEquals(setOf("branch", "local"), files.map { it.path.params["source"] }.toSet())
+                files.forEach { file ->
+                    assertEquals(KiloDiffEditorKind.ID, file.path.kind)
+                    assertEquals(DIR, file.path.params["directory"])
+                    assertEquals("feature/topic", file.path.params["branch"])
+                    assertFalse(file.path.params.containsKey("sessionId"))
+                    assertFalse(file.path.params.containsKey("token"))
+                    val comparison = KiloDiffComparison.entries.single { it.source == file.path.params["source"] }
+                    assertEquals(comparison.title("feature/topic"), file.name)
+                    openKiloDiff(project, "$DIR/./", comparison, "feature/topic")
+                    assertSame(file, editors.openFiles.filterIsInstance<KiloVirtualFile>().single { it.path.params["source"] == comparison.source })
+                }
+                assertFalse(manager.showsBranchDock)
+            }
+            val gate = CompletableDeferred<Unit>()
+            workspace.beforeBranchName = { gate.await() }
+            edt {
+                editors.openFiles.forEach { editors.closeFile(it) }
+                click(components(summary).filterIsInstance<JBLabel>().single { it.text == "1 file" })
+            }
+            flush()
+            edt { Disposer.dispose(view) }
+            gate.complete(Unit)
+            flush()
+            assertTrue(edt { editors.openFiles.isEmpty() })
+        } finally {
+            edt {
+                editors.openFiles.forEach { editors.closeFile(it) }
+                service<KiloEditorKindRegistry>().unregister(KiloDiffEditorKind.ID)
+                KiloVirtualFileSystem.getInstance().clear()
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun status(rpc: KiloWorktreeRpcApi): Pair<WorktreeStatusService, TestUiTimers> {
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        ApplicationManager.getApplication().replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
+        val timers = TestUiTimers()
+        val status = WorktreeStatusService(project, coroutines.scope, timers)
+        project.replaceService(WorktreeStatusService::class.java, status, testRootDisposable)
+        return status to timers
+    }
+
+    private fun await(summary: ChangesPanel, expected: List<String>) {
+        val arrived = coroutines.pumpUntil { edt { labels(summary) == expected } }
+        assertTrue("Expected $expected, last header ${edt { labels(summary) }}", arrived)
+    }
+
+    @RequiresEdt
+    private fun labels(root: java.awt.Component): List<String> {
+        if (!root.isVisible) return emptyList()
+        if (root is JBLabel) return listOfNotNull(root.text)
+        return if (root is Container) root.components.flatMap(::labels) else emptyList()
+    }
+
     private fun session(id: String, updated: Double) = SessionDto(
         id = id,
         projectID = "proj_test",
@@ -755,6 +926,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
+    @RequiresEdt
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
         fun visit(item: java.awt.Component) {
@@ -793,6 +965,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         return components(root).filterIsInstance<ActionButton>().firstOrNull { it.presentation.text == text }?.isVisible == true
     }
 
+    @RequiresEdt
     private fun click(target: javax.swing.JComponent) {
         target.setSize(target.preferredSize)
         val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)

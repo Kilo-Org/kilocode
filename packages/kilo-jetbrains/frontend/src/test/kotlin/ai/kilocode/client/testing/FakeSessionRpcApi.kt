@@ -4,7 +4,6 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -19,6 +18,7 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CompletableDeferred
@@ -69,6 +69,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var cloudCursor: String? = null
     var importedCloudSession = session
 
+    /** Share/unshare call tracking and behaviour. */
+    val shares = mutableListOf<Triple<String, String, Boolean>>()
+    var shareUrl = "https://app.kilo.ai/s/token"
+    var shareThrows: Exception? = null
+
     /** Push chat events here; tests collect from [events]. */
     val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 64, replay = 64)
 
@@ -111,7 +116,6 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val messageDeletes = mutableListOf<MessageDeleteCall>()
     var messageDeleteResult = true
     val unreverts = mutableListOf<Pair<String, String>>()
-    val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
@@ -187,6 +191,23 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         }
         return session.copy(id = id, title = title)
     }
+
+    override suspend fun share(id: String, directory: String): SessionDto {
+        assertNotEdt("share")
+        shares.add(Triple(id, directory, true))
+        shareThrows?.let { throw it }
+        return current(id).copy(share = SessionShareDto(shareUrl))
+    }
+
+    override suspend fun unshare(id: String, directory: String): SessionDto {
+        assertNotEdt("unshare")
+        shares.add(Triple(id, directory, false))
+        shareThrows?.let { throw it }
+        return current(id).copy(share = null)
+    }
+
+    private fun current(id: String): SessionDto =
+        listed.firstOrNull { it.id == id } ?: session.copy(id = id)
 
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
         assertNotEdt("cloudSessions")
@@ -308,11 +329,6 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> {
         assertNotEdt("events")
         return eventFlow?.invoke(id, directory) ?: events
-    }
-
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) {
-        assertNotEdt("updateConfig")
-        configs.add(directory to config)
     }
 
     var replyPermissionThrows: Exception? = null

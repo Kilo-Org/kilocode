@@ -236,11 +236,12 @@ function newest(paths: string[]) {
 // ---------------------------------------------------------------------------
 
 async function compile() {
-  if (!shouldBuild) {
+  if (!shouldBuild && existsSync(join(root, "dist", "extension.js"))) {
     console.log("[launch] Skipping build (--no-build)")
     return
   }
 
+  if (!shouldBuild) console.log("[launch] dist/extension.js is missing in this worktree, building first...")
   await ensureDependencies()
   console.log("[launch] Building extension...")
   await $`bun run build:launch`.cwd(root).env(cleanEnv(process.env))

@@ -19,6 +19,8 @@ import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
@@ -54,6 +56,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -85,6 +88,7 @@ export class VscodeHost implements Host {
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -101,6 +105,9 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
@@ -131,7 +138,11 @@ export class VscodeHost implements Host {
     }
     provider.setRemoteService(this.remoteService)
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (msg) => {
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -242,6 +253,10 @@ export class VscodeHost implements Host {
 
   multiProject(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
+  }
+
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
 
   readProjects(): unknown {

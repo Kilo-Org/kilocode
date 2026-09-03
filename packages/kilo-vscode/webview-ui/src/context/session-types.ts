@@ -1,5 +1,6 @@
 import type { Accessor } from "solid-js"
 import type { ReviewMessageData } from "../../../src/shared/review-comments"
+import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import type {
   AgentInfo,
   ContextUsage,
@@ -17,6 +18,7 @@ import type {
   SessionStatus,
   SessionStatusInfo,
   SkillInfo,
+  SendMessageRequest,
   SuggestionRequest,
   TodoItem,
   ToolPart,
@@ -67,6 +69,7 @@ export interface SessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
 
   activityFor: (sessionID: string | undefined) => Activity
+  acknowledge: (sessionID: string) => void
   inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
@@ -75,6 +78,8 @@ export interface SessionContextValue {
   // Tool parts for a specific session, maintained incrementally for streaming views
   getSessionToolParts: (sessionID: string) => ToolPart[]
   getSessionToolCount: (sessionID: string) => number
+  dismissedBackgroundJobs: (sessionID: string) => ReadonlySet<string>
+  dismissBackgroundJobs: (sessionID: string, ids: string[]) => void
 
   // Hidden after model changes so switching models can clear stale provider errors
   // without removing messages and their checkpoint restore actions.
@@ -159,7 +164,8 @@ export interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
-  deleteQueuedMessage: (sessionID: string, messageID: string) => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
+  submit: (input: SendMessageRequest) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -169,7 +175,8 @@ export interface SessionContextValue {
     context?: string,
     review?: ReviewMessageData,
     origin?: string | null,
-  ) => void
+    browserFeedback?: BrowserFeedbackData,
+  ) => boolean
   sendCommand: (
     command: string,
     args: string,
@@ -180,7 +187,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string },
-  ) => void
+  ) => boolean
   abort: () => void
   compact: () => void
   respondToPermission: (

@@ -170,7 +170,7 @@ export type PartComponent = Component<MessagePartProps>
 
 export const PART_MAPPING: Record<string, PartComponent | undefined> = {}
 
-function relativizeProjectPath(path: string, directory?: string) {
+export function relativizeProjectPath(path: string, directory?: string) {
   if (!path) return ""
   if (!directory) return path
   if (directory === "/") return path
@@ -752,9 +752,12 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  edit?: { label: string; onClick: () => void; disabled?: boolean }
+  queuedDisabled?: boolean
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
+  onImageClick?: (url: string, filename?: string) => boolean
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -816,6 +819,7 @@ export function UserMessageDisplay(props: {
   })
 
   const openImagePreview = (url: string, alt?: string) => {
+    if (props.onImageClick?.(url, alt)) return
     dialog.show(() => <ImagePreview src={url} alt={alt} />)
   }
 
@@ -835,6 +839,7 @@ export function UserMessageDisplay(props: {
           icon="close-small"
           size="normal"
           variant="ghost"
+          disabled={props.queuedDisabled}
           onMouseDown={(e) => e.preventDefault()}
           onClick={(event) => {
             event.stopPropagation()
@@ -843,6 +848,28 @@ export function UserMessageDisplay(props: {
           aria-label={i18n.t("ui.message.deleteQueued")}
         />
       </Tooltip>
+    </Show>
+  )
+
+  const Edit = () => (
+    <Show when={props.edit}>
+      {(edit) => (
+        <Tooltip value={edit().label} placement="right" gutter={4}>
+          <IconButton
+            data-slot="user-message-edit"
+            icon="edit"
+            size="small"
+            variant="ghost"
+            disabled={props.queuedDisabled || edit().disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.stopPropagation()
+              edit().onClick()
+            }}
+            aria-label={edit().label}
+          />
+        </Tooltip>
+      )}
     </Show>
   )
 
@@ -885,6 +912,7 @@ export function UserMessageDisplay(props: {
         <Show when={!text() && !props.header && props.queued}>
           <div data-slot="user-message-queued-indicator">
             <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Edit />
             <Delete />
           </div>
         </Show>
@@ -900,6 +928,7 @@ export function UserMessageDisplay(props: {
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Edit />
                   <Delete />
                 </div>
               </GrowBox>
@@ -1133,10 +1162,104 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
+function BoardRoute(props: { from?: unknown; to?: unknown; fromLabel?: unknown; toLabel?: unknown }) {
+  const i18n = useI18n()
+  const text = (value: unknown) => (typeof value === "string" ? value : "")
+  const from = () => text(props.from)
+  const to = () => text(props.to)
+  const label = (id: string, value: unknown) => {
+    if (id === "ALL") return i18n.t("ui.messagePart.board.all")
+    const title = text(value)
+    if (title.trim()) return title
+    if (id === "main") return i18n.t("ui.messagePart.board.primary")
+    return id ? `${i18n.t("ui.messagePart.board.agent")} · ${id.slice(-8)}` : i18n.t("ui.messagePart.board.agent")
+  }
+  const sender = () => label(from(), props.fromLabel)
+  const recipient = () => label(to(), props.toLabel)
+  const detail = (title: string, id: string) => (
+    <div data-slot="board-route-detail">
+      <span>{title}</span>
+      <Show when={id}>
+        <code>{id}</code>
+      </Show>
+    </div>
+  )
+  return (
+    <span
+      data-component="board-route"
+      data-broadcast={to() === "ALL"}
+      role="group"
+      aria-label={i18n.t("ui.messagePart.board.route", { from: sender(), to: recipient() })}
+    >
+      <Icon name="task" size="small" />
+      <Tooltip
+        class="board-route-member board-route-sender"
+        contentClass="board-route-tooltip"
+        value={detail(sender(), from())}
+      >
+        {sender()}
+      </Tooltip>
+      <Icon name="arrow-right" size="small" />
+      <span data-slot="board-route-recipient-icon" data-broadcast={to() === "ALL"}>
+        <Icon name="task" size="small" />
+        <Show when={to() === "ALL"}>
+          <Icon name="task" size="small" />
+        </Show>
+      </span>
+      <Tooltip
+        class="board-route-member board-route-recipient"
+        contentClass="board-route-tooltip"
+        value={detail(recipient(), to())}
+      >
+        {recipient()}
+      </Tooltip>
+    </span>
+  )
+}
+
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
   const i18n = useI18n()
+  const board = () => props.tool === "board_post" || props.tool === "board_read"
+  const record = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value)
+  const result = createMemo(() => {
+    if (!board() || !props.output) return undefined
+    try {
+      const value: unknown = JSON.parse(props.output)
+      return record(value) ? value : undefined
+    } catch {
+      return undefined
+    }
+  })
+  const messages = createMemo(() => {
+    const data = result()
+    if (!data) return undefined
+    const rows = props.tool === "board_post" ? [data] : data.messages
+    if (!Array.isArray(rows)) return undefined
+    const items = rows.filter(
+      (item): item is Record<string, unknown> & { body: string; from: string; to: string } =>
+        record(item) && typeof item.body === "string" && typeof item.from === "string" && typeof item.to === "string",
+    )
+    return items.length === rows.length ? items : undefined
+  })
+  const trigger = () => {
+    if (props.tool === "board_post")
+      return (
+        <BoardRoute
+          from={props.metadata.from ?? result()?.from}
+          to={props.metadata.to ?? result()?.to ?? props.input.to}
+          fromLabel={props.metadata.fromLabel ?? result()?.fromLabel}
+          toLabel={props.metadata.toLabel ?? result()?.toLabel}
+        />
+      )
+    if (props.tool === "board_read") {
+      const rows = messages()
+      return { title: i18n.t("ui.messagePart.board.read"), subtitle: rows ? String(rows.length) : undefined }
+    }
+    return { title: props.tool, subtitle: subtitle(), args: inputArgs() }
+  }
   const labelKeys = ["description", "query", "url", "filePath", "path", "pattern", "name"]
   const skipKeys = new Set(labelKeys)
 
@@ -1176,27 +1299,20 @@ function McpTool(props: ToolProps) {
   return (
     <Show
       when={!props.hideDetails}
-      fallback={
-        <BasicTool
-          hideDetails
-          icon="mcp"
-          status={props.status}
-          trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
-        />
-      }
+      fallback={<BasicTool hideDetails icon={board() ? "task" : "mcp"} status={props.status} trigger={trigger()} />}
     >
       <BasicTool
-        icon="mcp"
+        icon={board() ? "task" : "mcp"}
         status={props.status}
         tool={props.tool}
         partID={props.partID}
         callID={props.callID}
-        trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
+        trigger={trigger()}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         locked={props.locked}
       >
-        <Show when={formatted()}>
+        <Show when={!messages() && formatted()}>
           {(text) => (
             <>
               <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
@@ -1206,7 +1322,7 @@ function McpTool(props: ToolProps) {
             </>
           )}
         </Show>
-        <Show when={formattedOutput()}>
+        <Show when={!messages() && formattedOutput()}>
           {(text) => (
             <>
               <Show when={formatted()}>
@@ -1217,6 +1333,35 @@ function McpTool(props: ToolProps) {
                 <Markdown text={text()} />
               </div>
             </>
+          )}
+        </Show>
+        <Show when={messages()}>
+          {(rows) => (
+            <div data-component="board-messages">
+              <Show
+                when={rows().length}
+                fallback={<span data-slot="board-message-note">{i18n.t("ui.messagePart.board.empty")}</span>}
+              >
+                <For each={rows()}>
+                  {(message) => (
+                    <div data-slot="board-message">
+                      <Show when={props.tool === "board_read"}>
+                        <BoardRoute {...message} />
+                      </Show>
+                      <div data-slot="board-message-body">
+                        <Markdown text={message.body} />
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Show>
+              <Show when={props.tool === "board_post" && props.status === "completed"}>
+                <span data-slot="board-message-note">{i18n.t("ui.messagePart.board.stored")}</span>
+              </Show>
+              <Show when={typeof result()?.warning === "string" && String(result()?.warning)}>
+                {(warning) => <span data-slot="board-message-note">{warning()}</span>}
+              </Show>
+            </div>
           )}
         </Show>
       </BasicTool>

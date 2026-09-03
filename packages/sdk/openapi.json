@@ -2789,7 +2789,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["git", "branch"]
+              "enum": ["git", "branch", "last-commit"]
             },
             "required": true
           },
@@ -7319,6 +7319,22 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "queued",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "enum": ["true", "false"]
+                }
+              ]
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -7504,6 +7520,16 @@
             "in": "query",
             "schema": {
               "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["session", "tree"],
+              "description": "Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues."
             },
             "required": false
           }
@@ -13510,6 +13536,9 @@
                     "type": {
                       "type": "string",
                       "enum": ["api", "oauth"]
+                    },
+                    "organizationId": {
+                      "type": "string"
                     }
                   },
                   "required": ["authenticated"],
@@ -15180,6 +15209,98 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resumeSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session/{sessionID}/drain": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.drainSession",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session work drained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Session work drained"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+        "summary": "Wait for session completion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["token"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.drainSession({\n  ...\n})"
           }
         ]
       }
@@ -16966,6 +17087,207 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.anacondaDesktop.sync({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/migrate/sessions": {
+      "post": {
+        "tags": ["migrate"],
+        "operationId": "kilocode.migrate.sessions",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session migration result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeMigrateSessionsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "MigrateFailedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrateFailedError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.",
+        "summary": "Migrate external sessions into Kilo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cwd": {
+                    "type": "string"
+                  },
+                  "formats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["claude", "codex"]
+                    }
+                  },
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "agent": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "force": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.migrate.sessions({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/migrate/sessions/discover": {
+      "post": {
+        "tags": ["migrate"],
+        "operationId": "kilocode.migrate.discover",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovered migratable sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeMigrateSessionsDiscoverResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "MigrateFailedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrateFailedError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.",
+        "summary": "Discover migratable external session transcripts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cwd": {
+                    "type": "string"
+                  },
+                  "formats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["claude", "codex"]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.migrate.discover({\n  ...\n})"
           }
         ]
       }
@@ -26670,6 +26992,12 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionDrained1"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrainInterrupted1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -27025,6 +27353,12 @@
           },
           {
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrained"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrainInterrupted"
           },
           {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
@@ -29819,6 +30153,10 @@
           "multiple": {
             "type": "boolean"
           },
+          "default": {
+            "type": "string",
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown."
+          },
           "questionKey": {
             "type": "string"
           },
@@ -30222,6 +30560,12 @@
               },
               {
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionDrained"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionDrainInterrupted"
               },
               {
                 "type": "object",
@@ -33279,6 +33623,63 @@
                 "additionalProperties": false
               },
               {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.drained"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    },
+                    "required": ["sessionID", "token"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.drain.interrupted"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      }
+                    },
+                    "required": ["sessionID"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
@@ -34780,10 +35181,16 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
+              "task_model_selection": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
               "openTelemetry": {
+                "type": "boolean"
+              },
+              "shared_agent_board": {
                 "type": "boolean"
               },
               "primary_tools": {
@@ -40274,6 +40681,159 @@
         "required": ["operation", "message"],
         "additionalProperties": false
       },
+      "KilocodeMigrateSessionsMigrated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Source session UUID."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex"],
+            "description": "Source transcript format."
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "boolean",
+            "description": "True when the source had already been migrated and this call did nothing."
+          },
+          "error": {
+            "type": "string"
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Human-readable reasons for content that could not be migrated."
+          }
+        },
+        "required": ["id", "format", "skipped", "dropped"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsResult": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeMigrateSessionsMigrated"
+            },
+            "description": "Per-source outcomes, most recently modified source first."
+          },
+          "migrated": {
+            "type": "number",
+            "description": "Number of sources migrated by this call."
+          },
+          "skipped": {
+            "type": "number",
+            "description": "Number of sources skipped because they had already been migrated."
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Reasons transcripts were found but could not be previewed or migrated."
+          }
+        },
+        "required": ["sessions", "migrated", "skipped", "dropped"],
+        "additionalProperties": false
+      },
+      "MigrateFailedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsModel": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          }
+        },
+        "required": ["providerID", "modelID"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsDiscovered": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Session UUID parsed from the transcript filename."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex"],
+            "description": "Detected transcript format."
+          },
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the JSONL transcript on the CLI host."
+          },
+          "mtime": {
+            "type": "number",
+            "description": "Last-modified time (epoch ms)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Source harness major version."
+          },
+          "title": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "number",
+            "description": "Number of user + assistant steps in the transcript."
+          },
+          "model": {
+            "$ref": "#/components/schemas/KilocodeMigrateSessionsModel"
+          },
+          "sessionID": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "format", "path", "mtime", "version", "messages"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsDiscoverResult": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeMigrateSessionsDiscovered"
+            },
+            "description": "Discovered migratable sessions, most recently modified first."
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Human-readable reasons for transcripts that were found but could not be previewed."
+          }
+        },
+        "required": ["sessions", "dropped"],
+        "additionalProperties": false
+      },
       "KilocodeSessionImportResult": {
         "type": "object",
         "properties": {
@@ -41116,6 +41676,12 @@
           },
           {
             "$ref": "#/components/schemas/GlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/SessionDrained"
+          },
+          {
+            "$ref": "#/components/schemas/SessionDrainInterrupted"
           }
         ]
       },
@@ -46303,6 +46869,61 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrainInterrupted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -55263,6 +55884,107 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "SessionDrainInterrupted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -58434,6 +59156,63 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSessionDrained1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrainInterrupted1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventMemoryStatus1": {
         "type": "object",
         "properties": {
@@ -59602,6 +60381,10 @@
     {
       "name": "anaconda-desktop",
       "description": "Local Anaconda Desktop provider setup routes."
+    },
+    {
+      "name": "migrate",
+      "description": "Kilo routes for migrating sessions from other coding agents into Kilo."
     },
     {
       "name": "network",

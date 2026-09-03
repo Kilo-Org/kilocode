@@ -7,7 +7,6 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -1472,6 +1471,38 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.parseSession(raw)
             assertEquals("ses_min", result.id)
             assertNull(result.summary)
+            assertNull(result.share)
+        }
+
+        @Test
+        fun `parseSession - reads the share url`() {
+            val raw = """{
+                "id": "ses_shared",
+                "projectID": "proj_1",
+                "directory": "/tmp",
+                "title": "Shared",
+                "version": "1",
+                "time": { "created": 0.0, "updated": 0.0 },
+                "share": { "url": "https://app.kilo.ai/s/tok" }
+            }"""
+
+            assertEquals("https://app.kilo.ai/s/tok", KiloCliDataParser.parseSession(raw).share?.url)
+        }
+
+        @Test
+        fun `parseSession - ignores a blank or absent share url`() {
+            fun session(share: String) = """{
+                "id": "ses_x",
+                "projectID": "proj_1",
+                "directory": "/tmp",
+                "title": "T",
+                "version": "1",
+                "time": { "created": 0.0, "updated": 0.0 }
+                $share
+            }"""
+
+            assertNull(KiloCliDataParser.parseSession(session(""", "share": { "url": "" }""")).share)
+            assertNull(KiloCliDataParser.parseSession(session(""", "share": {}""")).share)
         }
 
         // ---- parseMessages ----
@@ -2274,29 +2305,6 @@ class KiloCliDataParserTest {
             assertEquals("""{"messageID":"m\"\\1","partID":"p\"\\1"}""", result)
         }
 
-        // ---- buildConfigPartial ----
-
-        @Test
-        fun `buildConfigPartial - model only`() {
-            val result = KiloCliDataParser.buildConfigPartial(ConfigUpdateDto(model = "anthropic/claude-4"))
-            assertEquals("""{"model":"anthropic/claude-4"}""", result)
-        }
-
-        @Test
-        fun `buildConfigPartial - agent and temperature`() {
-            val result = KiloCliDataParser.buildConfigPartial(
-                ConfigUpdateDto(agent = "code", temperature = 0.7)
-            )
-            assertTrue(result.contains(""""default_agent":"code""""))
-            assertTrue(result.contains(""""agent":{"code":{"temperature":0.7}}"""))
-        }
-
-        @Test
-        fun `buildConfigPartial - empty update`() {
-            val result = KiloCliDataParser.buildConfigPartial(ConfigUpdateDto())
-            assertEquals("{}", result)
-        }
-
         @Test
         fun `buildConfigPatch - top-level model set`() {
             val patch = ConfigPatchDto(values = linkedMapOf("model" to "anthropic/claude"))
@@ -2436,12 +2444,6 @@ class KiloCliDataParserTest {
         fun `buildConfigPatch - escapes special characters`() {
             val patch = ConfigPatchDto(values = linkedMapOf("model" to "kilo/a\\b\"c"))
             assertEquals("{\"model\":\"kilo/a\\\\b\\\"c\"}", KiloCliDataParser.buildConfigPatch(patch))
-        }
-
-        @Test
-        fun `buildConfigPartial - temperature without agent defaults to ask`() {
-            val result = KiloCliDataParser.buildConfigPartial(ConfigUpdateDto(temperature = 0.5))
-            assertTrue(result.contains(""""agent":{"ask":{"temperature":0.5}}"""))
         }
 
         // ---- buildPermissionReplyJson ----

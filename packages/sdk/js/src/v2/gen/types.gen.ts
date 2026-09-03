@@ -95,6 +95,8 @@ export type Event =
   | EventServerConnected1
   | EventGlobalDisposed1
   | EventGlobalConfigUpdated1
+  | EventSessionDrained1
+  | EventSessionDrainInterrupted1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -214,6 +216,8 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
+  | EventSessionDrained
+  | EventSessionDrainInterrupted
 
 export type QuestionReplied = {
   sessionID: string
@@ -1136,6 +1140,10 @@ export type QuestionInfo = {
    */
   options: Array<QuestionOption>
   multiple?: boolean
+  /**
+   * Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.
+   */
+  default?: string
   questionKey?: string
   headerKey?: string
   custom?: boolean
@@ -1272,6 +1280,8 @@ export type GlobalEvent = {
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
+    | EventSessionDrained
+    | EventSessionDrainInterrupted
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2157,6 +2167,21 @@ export type GlobalEvent = {
           [key: string]: unknown
         }
       }
+    | {
+        id: string
+        type: "session.drained"
+        properties: {
+          sessionID: string
+          token: string
+        }
+      }
+    | {
+        id: string
+        type: "session.drain.interrupted"
+        properties: {
+          sessionID: string
+        }
+      }
     | SyncEventSessionCreated
     | SyncEventSessionUpdated
     | SyncEventSessionDeleted
@@ -2680,8 +2705,10 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    task_model_selection?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
+    shared_agent_board?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
@@ -4456,6 +4483,98 @@ export type AnacondaDesktopOperationError = {
   message: string
 }
 
+export type KilocodeMigrateSessionsMigrated = {
+  /**
+   * Source session UUID.
+   */
+  id: string
+  /**
+   * Source transcript format.
+   */
+  format: "claude" | "codex"
+  sessionID?: string
+  messageID?: string
+  messages?: number
+  /**
+   * True when the source had already been migrated and this call did nothing.
+   */
+  skipped: boolean
+  error?: string
+  /**
+   * Human-readable reasons for content that could not be migrated.
+   */
+  dropped: Array<string>
+}
+
+export type KilocodeMigrateSessionsResult = {
+  /**
+   * Per-source outcomes, most recently modified source first.
+   */
+  sessions: Array<KilocodeMigrateSessionsMigrated>
+  /**
+   * Number of sources migrated by this call.
+   */
+  migrated: number
+  /**
+   * Number of sources skipped because they had already been migrated.
+   */
+  skipped: number
+  /**
+   * Reasons transcripts were found but could not be previewed or migrated.
+   */
+  dropped: Array<string>
+}
+
+export type MigrateFailedError = {
+  message: string
+}
+
+export type KilocodeMigrateSessionsModel = {
+  providerID: string
+  modelID: string
+}
+
+export type KilocodeMigrateSessionsDiscovered = {
+  /**
+   * Session UUID parsed from the transcript filename.
+   */
+  id: string
+  /**
+   * Detected transcript format.
+   */
+  format: "claude" | "codex"
+  /**
+   * Absolute path to the JSONL transcript on the CLI host.
+   */
+  path: string
+  /**
+   * Last-modified time (epoch ms).
+   */
+  mtime: number
+  /**
+   * Source harness major version.
+   */
+  version: number
+  title?: string
+  /**
+   * Number of user + assistant steps in the transcript.
+   */
+  messages: number
+  model?: KilocodeMigrateSessionsModel
+  sessionID?: string
+}
+
+export type KilocodeMigrateSessionsDiscoverResult = {
+  /**
+   * Discovered migratable sessions, most recently modified first.
+   */
+  sessions: Array<KilocodeMigrateSessionsDiscovered>
+  /**
+   * Human-readable reasons for transcripts that were found but could not be previewed.
+   */
+  dropped: Array<string>
+}
+
 export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
@@ -4739,6 +4858,8 @@ export type V2Event =
   | ServerConnected
   | GlobalDisposed
   | GlobalConfigUpdated
+  | SessionDrained
+  | SessionDrainInterrupted
 
 export type V2EventStream = string
 
@@ -6226,6 +6347,23 @@ export type EventGlobalConfigUpdated = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventSessionDrained = {
+  id: string
+  type: "session.drained"
+  properties: {
+    sessionID: string
+    token: string
+  }
+}
+
+export type EventSessionDrainInterrupted = {
+  id: string
+  type: "session.drain.interrupted"
+  properties: {
+    sessionID: string
   }
 }
 
@@ -9203,6 +9341,41 @@ export type GlobalConfigUpdated = {
   }
 }
 
+export type SessionDrained = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.drained"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+    token: string
+  }
+}
+
+export type SessionDrainInterrupted = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.drain.interrupted"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -10221,6 +10394,23 @@ export type EventGlobalConfigUpdated1 = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventSessionDrained1 = {
+  id: string
+  type: "session.drained"
+  properties: {
+    sessionID: string
+    token: string
+  }
+}
+
+export type EventSessionDrainInterrupted1 = {
+  id: string
+  type: "session.drain.interrupted"
+  properties: {
+    sessionID: string
   }
 }
 
@@ -11616,7 +11806,7 @@ export type VcsDiffData = {
   query: {
     directory?: string
     workspace?: string
-    mode: "git" | "branch"
+    mode: "git" | "branch" | "last-commit"
     context?: number
   }
   url: "/vcs/diff"
@@ -13449,6 +13639,7 @@ export type SessionDeleteMessageData = {
   query?: {
     directory?: string
     workspace?: string
+    queued?: boolean | "true" | "false"
   }
   url: "/session/{sessionID}/message/{messageID}"
 }
@@ -13561,6 +13752,10 @@ export type SessionAbortData = {
   query?: {
     directory?: string
     workspace?: string
+    /**
+     * Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.
+     */
+    scope?: "session" | "tree"
   }
   url: "/session/{sessionID}/abort"
 }
@@ -16029,6 +16224,7 @@ export type KiloAuthStatusResponses = {
   200: {
     authenticated: boolean
     type?: "api" | "oauth"
+    organizationId?: string
   }
 }
 
@@ -16626,6 +16822,42 @@ export type KilocodeResumeSessionResponses = {
 }
 
 export type KilocodeResumeSessionResponse = KilocodeResumeSessionResponses[keyof KilocodeResumeSessionResponses]
+
+export type KilocodeDrainSessionData = {
+  body?: {
+    token: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session/{sessionID}/drain"
+}
+
+export type KilocodeDrainSessionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type KilocodeDrainSessionError = KilocodeDrainSessionErrors[keyof KilocodeDrainSessionErrors]
+
+export type KilocodeDrainSessionResponses = {
+  /**
+   * Session work drained
+   */
+  200: boolean
+}
+
+export type KilocodeDrainSessionResponse = KilocodeDrainSessionResponses[keyof KilocodeDrainSessionResponses]
 
 export type KilocodeHeapSnapshotData = {
   body?: never
@@ -17362,6 +17594,80 @@ export type AnacondaDesktopSyncResponses = {
 }
 
 export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
+
+export type KilocodeMigrateSessionsData = {
+  body?: {
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+    ids?: Array<string>
+    agent?: string
+    model?: string
+    force?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/migrate/sessions"
+}
+
+export type KilocodeMigrateSessionsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * MigrateFailedError
+   */
+  422: MigrateFailedError
+}
+
+export type KilocodeMigrateSessionsError = KilocodeMigrateSessionsErrors[keyof KilocodeMigrateSessionsErrors]
+
+export type KilocodeMigrateSessionsResponses = {
+  /**
+   * Session migration result
+   */
+  200: KilocodeMigrateSessionsResult
+}
+
+export type KilocodeMigrateSessionsResponse = KilocodeMigrateSessionsResponses[keyof KilocodeMigrateSessionsResponses]
+
+export type KilocodeMigrateDiscoverData = {
+  body?: {
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/migrate/sessions/discover"
+}
+
+export type KilocodeMigrateDiscoverErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * MigrateFailedError
+   */
+  422: MigrateFailedError
+}
+
+export type KilocodeMigrateDiscoverError = KilocodeMigrateDiscoverErrors[keyof KilocodeMigrateDiscoverErrors]
+
+export type KilocodeMigrateDiscoverResponses = {
+  /**
+   * Discovered migratable sessions
+   */
+  200: KilocodeMigrateSessionsDiscoverResult
+}
+
+export type KilocodeMigrateDiscoverResponse = KilocodeMigrateDiscoverResponses[keyof KilocodeMigrateDiscoverResponses]
 
 export type NetworkListData = {
   body?: never

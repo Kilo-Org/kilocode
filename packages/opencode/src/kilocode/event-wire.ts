@@ -1,5 +1,7 @@
 import { DateTime, Schema } from "effect"
 
+export const copied = Symbol("copied")
+
 const codec = (schema: Schema.Top) => schema as Schema.Codec<unknown, unknown>
 
 function wire(value: unknown): unknown {
