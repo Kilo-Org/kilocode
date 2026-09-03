@@ -98,8 +98,16 @@ test("home/end keys move the text cursor in a dialog filter input", async () => 
 
     await app.mockInput.typeText("Alpha")
     await wait(() => input.plainText === "Alpha")
+    let settled = -1
+    await wait(() => {
+      const count = moves.length
+      if (count !== settled) {
+        settled = count
+        return false
+      }
+      return true
+    })
     await app.flush()
-    await Bun.sleep(60)
     expect(input.cursorOffset).toBe(5)
     const beforeEditing = moves.length
 
