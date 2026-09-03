@@ -864,6 +864,9 @@ export const dict = {
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Deel een bord tussen een hoofdsessie en de subagenten die haar taken uitvoeren, inclusief geneste subagenten. Gebruik het voor parallelle oplossingspogingen of werkzaamheden die elkaar aanvullen, niet voor elke taak.",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",

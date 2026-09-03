@@ -857,6 +857,9 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "메인 세션과 해당 세션의 작업을 맡은 하위 에이전트(중첩된 하위 에이전트 포함)가 보드를 공유합니다. 모든 작업에 사용하지 말고, 해결책을 병렬로 시도하거나 서로 보완하는 작업을 수행할 때 사용하세요.",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",

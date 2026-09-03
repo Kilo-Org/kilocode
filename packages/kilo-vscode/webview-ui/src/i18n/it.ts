@@ -741,6 +741,9 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Condividi una board tra una sessione principale e i suoi sotto-agenti incaricati dei task, inclusi quelli annidati. Usala per tentativi di soluzione in parallelo o attività complementari, non per ogni task.",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
   "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
   "settings.experimental.imageGenerationModel.placeholder": "Predefinito (Auto Router)",

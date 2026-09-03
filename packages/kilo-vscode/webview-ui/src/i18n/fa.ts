@@ -850,6 +850,9 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "یک برد را بین یک جلسهٔ اصلی و عامل‌های فرعی مسئول وظایف آن، از جمله عامل‌های فرعی تودرتو، به اشتراک بگذارید. از آن برای تلاش‌های موازی جهت یافتن راه‌حل یا کارهای مکمل استفاده کنید، نه برای هر وظیفه.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",

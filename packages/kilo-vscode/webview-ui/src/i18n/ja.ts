@@ -860,6 +860,9 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "メインセッションと、そのタスクを担当するサブエージェント（ネストされたサブエージェントを含む）の間でボードを共有します。すべてのタスクで使うのではなく、並行して解決策を試す場合や、互いに補完し合う作業に使用してください。",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",

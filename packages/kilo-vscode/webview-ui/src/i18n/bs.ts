@@ -867,6 +867,9 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Dijelite ploču između glavne sesije i njenih podagenata za zadatke, uključujući ugniježđene podagente. Koristite je za paralelne pokušaje rješavanja problema ili rad na zadacima koji se međusobno nadopunjuju, a ne za svaki zadatak.",
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",

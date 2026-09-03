@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "08cfecbf-f95d-404b-a76a-2afc564baa8b",
+  "id": "fcf518b9-c8bc-4ee5-8e68-2608bffcef43",
   "prevIds": [
-    "f14a9b18-8207-487e-a3d3-227e629ba9ad"
+    "08cfecbf-f95d-404b-a76a-2afc564baa8b"
   ],
   "ddl": [
     {
@@ -36,6 +36,14 @@
     },
     {
       "name": "event",
+      "entityType": "tables"
+    },
+    {
+      "name": "kilo_board_message",
+      "entityType": "tables"
+    },
+    {
+      "name": "kilo_board",
       "entityType": "tables"
     },
     {
@@ -541,6 +549,196 @@
       "name": "data",
       "entityType": "columns",
       "table": "event"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "board_root_session_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sender_session_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recipient",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reply_to",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_message_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_call_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "root_session_id",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "objective",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "objective_message_id",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "next_seq",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "message_count",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "message_bytes",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "kilo_board"
     },
     {
       "type": "text",
@@ -1529,6 +1727,36 @@
     },
     {
       "columns": [
+        "board_root_session_id"
+      ],
+      "tableTo": "kilo_board",
+      "columnsTo": [
+        "root_session_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_kilo_board_message_board_root_session_id_kilo_board_root_session_id_fk",
+      "entityType": "fks",
+      "table": "kilo_board_message"
+    },
+    {
+      "columns": [
+        "root_session_id"
+      ],
+      "tableTo": "session",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_kilo_board_root_session_id_session_id_fk",
+      "entityType": "fks",
+      "table": "kilo_board"
+    },
+    {
+      "columns": [
         "project_id"
       ],
       "tableTo": "project",
@@ -1775,6 +2003,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "kilo_board_message_pk",
+      "table": "kilo_board_message",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "root_session_id"
+      ],
+      "nameExplicit": false,
+      "name": "kilo_board_pk",
+      "table": "kilo_board",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "permission_pk",
       "table": "permission",
       "entityType": "pks"
@@ -1890,6 +2136,24 @@
       "name": "event_aggregate_type_seq_idx",
       "entityType": "indexes",
       "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "board_root_session_id",
+          "isExpression": false
+        },
+        {
+          "value": "seq",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "kilo_board_message_board_seq_idx",
+      "entityType": "indexes",
+      "table": "kilo_board_message"
     },
     {
       "columns": [
