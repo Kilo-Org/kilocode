@@ -324,19 +324,39 @@ class WorktreeRunManager internal constructor(
         val next = readAction { produce(manager, settings, key.worktree, repo, label) } ?: return null
         if (entry != null) handlers[key]?.let { handler ->
             LOG.info("worktree run: stopping replaced clone before restart config=${key.id} worktree=${key.worktree}")
-            // Identify the outgoing run's application before the replacement can start one of its own:
-            // both occupy this same key, so once the replacement is running no later scan could tell
-            // them apart. Only pays for a process scan when a source edit actually replaced a clone.
-            val doomed = if (entry.reapable) {
-                WorktreeRunReaper.match(key.worktree, entry.start, WorktreeRunReaper.scan())
-            } else {
-                emptyList()
-            }
+            val doomed = doomed(key, entry)
             ExecutionManagerImpl.stopProcess(handler)
             arm(key, doomed)
         }
         return Entry(next.settings, print, next.dropped, reapable = true).also { clones[key] = it }
     }
+
+    /**
+     * The outgoing run's application, identified before its replacement can start one of its own —
+     * both occupy the same [key], so once the replacement is running no later scan could tell them
+     * apart. Only pays for a process scan when a source edit actually replaced a live clone.
+     *
+     * Empty when another run is live in the same worktree, because
+     * [WorktreeRunReaper.match] is worktree-wide: a sibling started after [entry] was created is in
+     * its result too, and signalling somebody else's application is worse than leaving this one
+     * behind. That is the same tradeoff [stop] makes for the same reason.
+     */
+    private suspend fun doomed(key: Key, entry: Entry): List<Long> {
+        if (!entry.reapable) return emptyList()
+        val siblings = siblings(key)
+        if (siblings.isNotEmpty()) {
+            LOG.info(
+                "worktree run: not identifying config=${key.id}'s app process in ${key.worktree};" +
+                    " cannot tell it apart while ${siblings.map { it.id }} still run there",
+            )
+            return emptyList()
+        }
+        return WorktreeRunReaper.match(key.worktree, entry.start, WorktreeRunReaper.scan())
+    }
+
+    /** Other keys with a live process in the same worktree as [key]. */
+    private fun siblings(key: Key): List<Key> =
+        handlers.keys.filter { it != key && pathKey(it.worktree) == pathKey(key.worktree) }
 
     /**
      * Direct transplant first ([WorktreeRunAdapter] — external-system + CLI-style configs);
@@ -439,11 +459,11 @@ class WorktreeRunManager internal constructor(
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
                 return@launch
             }
-            val others = handlers.keys.filter { it != key && pathKey(it.worktree) == pathKey(key.worktree) }
-            if (others.isNotEmpty()) {
+            val siblings = siblings(key)
+            if (siblings.isNotEmpty()) {
                 LOG.info(
                     "worktree run: not reaping config=${key.id} worktree=${key.worktree};" +
-                        " cannot attribute an app process while ${others.map { it.id }} still run there",
+                        " cannot attribute an app process while ${siblings.map { it.id }} still run there",
                 )
                 return@launch
             }
@@ -460,11 +480,12 @@ class WorktreeRunManager internal constructor(
     }
 
     /**
-     * Replace path: [doomed] was scanned before the replacement clone could start, so every pid in it
-     * belongs to the run being replaced. That identity is what makes this variant safe without any of
-     * the stop path's guards — and it must not wait on a process handler the way [arm] does, because
-     * the replacement immediately occupies this same [key]: "no handler here" would never come true,
-     * and treating the replacement as a failed stop is exactly what abandons the outgoing application.
+     * Replace path: [doomed] came from [doomed], which already applied the sibling guard and scanned
+     * before the replacement could start, so the set is settled by the time this runs.
+     *
+     * It must not wait on a process handler the way the stop-path [arm] does, because the replacement
+     * immediately occupies this same [key]: "no handler here" would never come true, and treating the
+     * replacement as a failed stop is exactly what abandons the outgoing application.
      */
     private fun arm(key: Key, doomed: List<Long>) {
         if (doomed.isEmpty()) return

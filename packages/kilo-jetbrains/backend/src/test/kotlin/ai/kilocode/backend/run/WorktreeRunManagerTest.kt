@@ -56,6 +56,12 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
         /** Reaping forks `ps` and polls every 500 ms, so it needs a wider watchdog than a state change. */
         private const val REAP_WAIT_NANOS = 30_000_000_000L
+
+        /**
+         * Outlasts the manager's own reap grace period, for the one assertion that has to prove a
+         * signal never arrives. Asserting an absence has no state transition to wait for.
+         */
+        private const val REAP_GRACE_MS = 4_500L
     }
 
     private lateinit var cs: CoroutineScope
@@ -544,6 +550,42 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             // The outgoing run's application was identified before the replacement could start one, so
             // it is reaped despite the replacement now holding the same key.
             await("outgoing app terminated", REAP_WAIT_NANOS) { !app.isAlive }
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
+    /**
+     * Editing one config must not signal a sibling's application. Identification is worktree-wide, so a
+     * sibling started after the edited config's clone was created lands in the same candidate set —
+     * leaving the outgoing application behind is the lesser evil, exactly as on the stop path.
+     */
+    fun testReplacingACloneLeavesASiblingRunsAppAlone() = runBlocking {
+        val type = register(paramsType("kilo.test.params.sibling"))
+        val api = add(type, "api")
+        val worker = add(type, "worker")
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-sibling-wt").toString()
+        assertTrue(mgr.run(api.uniqueID, wt).ok)
+        val first = launched.single()
+        assertTrue(mgr.run(worker.uniqueID, wt).ok)
+
+        // Exits on SIGTERM, so an unwanted reap would be visible as the process disappearing.
+        val app = StubbornJvm.start(wt)
+        try {
+            start(first, StubbornHandler())
+            start(launched.last(), NopProcessHandler())
+            assertEquals(2, mgr.states.value.size)
+
+            // Editing the api config replaces its clone while the worker is still running.
+            (api.configuration as ParamsConfig).programParameters = "--changed"
+            assertTrue(mgr.run(api.uniqueID, wt).ok)
+
+            // The decision not to identify anything is made synchronously inside run(), so no reap is
+            // pending by this point; the wait only proves nothing arrives late.
+            Thread.sleep(REAP_GRACE_MS)
+            assertTrue("sibling's app process must survive an unrelated config edit", app.isAlive)
+            assertTrue(mgr.states.value.none { it.orphan })
         } finally {
             app.destroyForcibly()
         }
