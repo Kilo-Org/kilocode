@@ -90,21 +90,14 @@ export const VSCodeProvider: ParentComponent = (props) => {
   }
 
   window.addEventListener("message", messageListener)
-  const [ready, setReady] = createSignal(false)
-  const [active, setActive] = createSignal(document.hasFocus())
-  const reportFocus = () => {
-    setActive(document.hasFocus())
-    api.postMessage({ type: "webviewFocusChanged", focused: active() })
-  }
+  const [active, setActive] = createSignal(false)
+  const reportFocus = () => api.postMessage({ type: "webviewFocusChanged", focused: document.hasFocus() })
   window.addEventListener("focus", reportFocus)
   window.addEventListener("blur", reportFocus)
   reportFocus()
   handlers.add((message) => {
     if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)
-    if (message?.type === "webviewActiveChanged") {
-      setActive(message.active)
-      setReady(true)
-    }
+    if (message?.type === "webviewActiveChanged") setActive(message.active)
   })
   api.postMessage({ type: "requestModelSelectorExpanded" })
 
@@ -130,7 +123,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
     getState: <T,>() => api.getState() as T | undefined,
     setState: <T,>(state: T) => api.setState(state),
     sidebarSide: side,
-    active: () => ready() && active(),
+    active,
     getModelSelectorExpanded: expanded,
     setModelSelectorExpanded: (value: boolean) => {
       setExpanded(value)

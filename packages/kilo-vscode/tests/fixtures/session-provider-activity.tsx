@@ -4,7 +4,8 @@ import type { ModelSelection, WebviewMessage } from "../../webview-ui/src/types/
 
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
-Object.defineProperty(window.document, "hasFocus", { value: () => true })
+const focused = { value: true }
+Object.defineProperty(window.document, "hasFocus", { value: () => focused.value })
 const sent: WebviewMessage[] = []
 const api = {
   postMessage: (message: WebviewMessage) => {
@@ -231,6 +232,18 @@ const dispose = render(
 const settle = async () => {
   await Promise.resolve()
   await window.happyDOM.waitUntilComplete()
+}
+const focus = async (value: boolean) => {
+  focused.value = value
+  window.dispatchEvent(new window.Event(value ? "focus" : "blur"))
+  await settle()
+  assert.deepEqual(
+    sent.findLast((message) => message.type === "webviewFocusChanged"),
+    {
+      type: "webviewFocusChanged",
+      focused: value,
+    },
+  )
 }
 const emit = async (data: { type: string; [key: string]: unknown }) => {
   post(structuredClone(data.type === "sessionTurnClosed" ? { eventID: crypto.randomUUID(), ...data } : data))
@@ -1211,6 +1224,13 @@ try {
   })
   await check("background", "idle")
 
+  await emit({ type: "sessionTurnClosed", sessionID: "background", reason: "completed" })
+  await check("background", "done")
+  await focus(false)
+  await check("background", "done")
+  await focus(true)
+  await check("background", "done")
+
   await emit({ type: "webviewActiveChanged", active: false })
   await emit({
     type: "sessionTurnClosed",
@@ -1222,6 +1242,8 @@ try {
   await check("background", "done")
   value.selectSession("root")
   value.selectSession("background")
+  await focus(false)
+  await focus(true)
   await check("background", "done")
   await emit({ type: "webviewActiveChanged", active: true })
   await check("background", "idle")
