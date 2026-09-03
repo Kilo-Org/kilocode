@@ -944,6 +944,23 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test header reports the local changes of a checkout with no base stats`() {
+        // The base checkout holds the branch the worktrees are compared against, so stats() reports
+        // nothing for it and the header's only counts are the uncommitted ones from dirty(). This is
+        // where those counts belong -- the base tab's dock stays the action row alone.
+        val rpc = FakeWorktreeRpcApi().apply {
+            dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 2, additions = 129)))
+        }
+        val (_, timers) = edt { status(rpc) }
+        val view = view(target = project)
+        val summary = edt { components(view).filterIsInstance<ChangesPanel>().single() }
+
+        timers.advanceBy(300)
+
+        await(summary, listOf("2 files", "+129"))
+        assertTrue(edt { summary.isVisible })
+    }
+
     @RequiresEdt
     private fun status(rpc: KiloWorktreeRpcApi): Pair<WorktreeStatusService, TestUiTimers> {
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)

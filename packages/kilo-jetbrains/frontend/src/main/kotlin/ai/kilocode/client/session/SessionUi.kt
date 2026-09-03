@@ -503,14 +503,14 @@ class SessionUi(
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
             val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
-            // Editor-tab hosts that show the dock (the worktree editor) already have their own
-            // branch/PR header at the top of the tab, so the dock's header summarizes the local
-            // changes those committed counts leave out instead.
+            // Editor-tab hosts that show the dock (the worktree editor) report the branch, its PR, and
+            // its changes in their own header at the top of the tab, so their dock is the action row
+            // alone rather than a second place those counts appear.
             dock = BranchDock(
                 openDiff = ::openBranchChanges,
                 onMove = move,
                 onNewWorktree = newWorktree,
-                onLocal = if (owner?.hostedInEditorTab == true) ::openLocalChanges else null,
+                header = owner?.hostedInEditorTab != true,
             )
         }
 
@@ -1099,17 +1099,6 @@ class SessionUi(
         if (disposed || project.isDisposed) return
         refreshBranchChanges()
         openBranchDiff()
-    }
-
-    /**
-     * Opens the local (uncommitted) diff editor. Reached from the dock's local changes summary, which
-     * only the hosts whose own header already carries the branch and its PR show.
-     */
-    @RequiresEdt
-    private fun openLocalChanges() {
-        if (disposed || project.isDisposed) return
-        refreshBranchChanges()
-        openKiloDiff(project, workspace.directory, KiloDiffComparison.LOCAL, parent = this)
     }
 
     /** Starts the Move to Worktree flow for the current session through the side-panel manager. */

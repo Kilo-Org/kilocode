@@ -31,16 +31,13 @@ internal class BranchDock @RequiresEdt constructor(
     private val onNewWorktree: (() -> Unit)? = null,
     titleStyle: Int = SimpleTextAttributes.STYLE_PLAIN,
     /**
-     * When set, the header row summarizes the uncommitted local changes and opens them on click,
-     * instead of showing the branch's pull request. For a host whose own header already carries the
-     * branch and its PR (the worktree editor tab): what that header does not show is the local set,
-     * which is exactly what a move would carry.
+     * Whether the dock carries the branch's pull request and its changes summary above the action row.
+     * A host whose own header already shows the branch, its PR, and its counts (the worktree editor
+     * tab) takes just the action row, and leaves that reporting to the header it already has.
      */
-    private val onLocal: (() -> Unit)? = null,
+    private val header: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, UiDataProvider {
-    // A compact summary cannot say which comparison its counts came from, so the header's click has to
-    // match the set it was fed: the local diff when it carries the local set, the base diff otherwise.
-    private val core = PrHeaderView(titleStyle = titleStyle, mode = ChangesPanel.Mode.COMPACT, openDiff = onLocal ?: openDiff)
+    private val core = PrHeaderView(titleStyle = titleStyle, mode = ChangesPanel.Mode.COMPACT, openDiff = openDiff)
     private val changes = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = openDiff)
     private val group = DefaultActionGroup().apply {
         ActionManager.getInstance().getAction("Kilo.Chat.NewWorktree")?.let { add(it) }
@@ -52,7 +49,7 @@ internal class BranchDock @RequiresEdt constructor(
         .next(changes.align(HAlign.CENTER, VAlign.CENTER))
         .align(HAlign.CENTER, VAlign.CENTER)
     private var files = emptyList<DiffFileDto>()
-    private var locals = emptyList<DiffFileDto>()
+    private var local = 0
     private var branch: BranchStatusDto? = null
     private var hasMessages = false
     private var hasSession = false
@@ -93,8 +90,8 @@ internal class BranchDock @RequiresEdt constructor(
 
     @RequiresEdt
     fun setLocal(files: List<DiffFileDto>) {
-        if (locals == files) return
-        locals = files
+        if (local == files.size) return
+        local = files.size
         sync()
     }
 
@@ -133,7 +130,7 @@ internal class BranchDock @RequiresEdt constructor(
     fun moveEnabled(): Boolean = onMove != null && dockActive()
 
     @RequiresEdt
-    fun changeCount(): Int = locals.size
+    fun changeCount(): Int = local
 
     @RequiresEdt
     fun hasSession(): Boolean = hasSession
@@ -145,7 +142,7 @@ internal class BranchDock @RequiresEdt constructor(
     fun triggerMove() = onMove?.invoke() ?: Unit
 
     @RequiresEdt
-    private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || locals.isNotEmpty())
+    private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || local > 0)
 
     private fun gitAvailable(): Boolean {
         val branch = branch ?: return false
@@ -154,34 +151,19 @@ internal class BranchDock @RequiresEdt constructor(
 
     @RequiresEdt
     private fun sync() {
-        val name = branch?.branch.orEmpty()
+        // A header-less host treats the branch as having no PR, so the PR row never shows and never
+        // takes the place of the action row below it.
+        val pull = branch?.pr?.takeIf { header }
         val count = files.size
         val additions = files.sumOf { it.additions }
         val deletions = files.sumOf { it.deletions }
-        // A local-summary host feeds the header the uncommitted set alone: its base counts already sit
-        // in that host's own header, and a PR row here would only repeat what it shows too.
-        val pull = if (onLocal == null) branch?.pr else null
-        if (onLocal == null) {
-            core.update(count, additions, deletions, pull, name)
-        } else {
-            core.update(
-                files = 0,
-                additions = 0,
-                deletions = 0,
-                pull = null,
-                name = name,
-                localFiles = locals.size,
-                localAdditions = locals.sumOf { it.additions },
-                localDeletions = locals.sumOf { it.deletions },
-            )
-        }
+        core.update(count, additions, deletions, pull, branch?.branch.orEmpty())
         changes.update(count, additions, deletions)
-        val head = pull != null || (onLocal != null && locals.isNotEmpty() && gitAvailable())
-        if (core.isVisible != head) core.isVisible = head
+        if (core.isVisible != (pull != null)) core.isVisible = pull != null
         val visible = pull == null && gitAvailable() && !busy &&
             (files.isNotEmpty() || hasMessages || newWorktreeEnabled() || moveEnabled())
         if (actionRow.isVisible != visible) actionRow.isVisible = visible
-        val next = head || visible
+        val next = pull != null || visible
         if (isVisible != next) isVisible = next
         syncToolbar()
         revalidate()

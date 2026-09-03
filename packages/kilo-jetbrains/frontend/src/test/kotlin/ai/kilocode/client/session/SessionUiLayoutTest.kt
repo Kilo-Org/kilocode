@@ -281,9 +281,9 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
     }
 
-    fun `test editor tab host trades the dock's PR row for a local changes summary`() {
-        // The worktree editor already shows the branch and its PR in its own tab header, so its dock
-        // summarizes the local changes instead -- mirrors WorktreeSessionEditorManager's base tab.
+    fun `test editor tab host leaves the dock without a header row`() {
+        // The worktree editor tab reports the branch, its PR, and its counts in its own header, so its
+        // dock is the action row alone -- mirrors WorktreeSessionEditorManager's base tab.
         installEditorTabWorktree()
         workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
         rpc.history.addAll(history(1))
@@ -291,15 +291,10 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         settle()
 
         val dock = find<BranchDock>(ui)
-        val core = find<PrHeaderView>(dock)
         assertTrue(dock.isVisible)
         assertTrue(dock.moveEnabled())
         assertEquals(1, dock.changeCount())
-        assertTrue(core.isVisible)
-        assertEquals(
-            listOf("1 file", "-1", "+2"),
-            components(core).filterIsInstance<JBLabel>().filter { it.isVisible && it.text.isNotBlank() }.map { it.text },
-        )
+        assertFalse(find<PrHeaderView>(dock).isVisible)
     }
 
     fun `test editor tab dock keeps the prompt's readable width`() {

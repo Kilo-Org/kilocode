@@ -25,8 +25,6 @@ import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
 import java.awt.Point
-import java.awt.event.InputEvent
-import java.awt.event.MouseEvent
 import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
@@ -321,52 +319,35 @@ class BranchDockTest : BasePlatformTestCase() {
         assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
     }
 
-    // ---- local summary header (worktree editor: branch and PR shown by the tab's own header) ----
+    // ---- header=false (worktree editor: branch, PR, and counts shown by the tab's own header) ----
 
-    fun `test local summary header shows the uncommitted counts`() {
-        val dock = dockLocal()
-        edt {
-            dock.setBranch(BranchStatusDto(branch = "main", availability = GhAvailability.OK))
-            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1), DiffFileDto("src/B.kt", 3, 0)))
-        }
-
-        val core = edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }
-        assertTrue(edt { core.isVisible })
-        assertTrue(edt { dock.isVisible })
-        assertEquals(listOf("2 files", "-1", "+5"), edt { shown(core) })
-    }
-
-    fun `test local summary header ignores base changes and the PR`() {
-        val dock = dockLocal()
+    fun `test header false hides the PR row and its changes summary`() {
+        val dock = dockNoHeader()
         edt {
             dock.setBranch(prBranch())
             dock.setChanges(listOf(DiffFileDto("base.kt", 11, 3)))
+            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
         }
 
-        // Only the local set reaches this header, so committed work leaves it empty and the PR row
-        // never takes the action row's place.
         val core = edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }
         assertFalse(edt { core.isVisible })
-        assertTrue(edt { dock.isVisible })
     }
 
-    fun `test local summary header opens the local diff on click`() {
-        var opened = 0
-        val dock = edt { BranchDock(openDiff = { fail("base diff must not open from a local summary") }, onMove = {}, onLocal = { opened++ }) }
+    fun `test header false keeps the dock hidden while busy even with a PR`() {
+        // With header=true (test dock keeps PR row while session is busy) the PR keeps the dock
+        // visible through a busy session; header=false has no PR row to fall back on, so busy hides
+        // it exactly like a PR-less branch.
+        val dock = dockNoHeader()
         edt {
-            dock.setBranch(BranchStatusDto(branch = "main", availability = GhAvailability.OK))
-            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
-            dock.setSize(500, dock.preferredSize.height)
-            layout(dock)
+            dock.setBranch(prBranch())
+            dock.setHasMessages(true)
+            dock.setBusy(true)
         }
-
-        edt { click(edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }) }
-
-        assertEquals(1, opened)
+        assertFalse(edt { dock.isVisible })
     }
 
-    fun `test local summary header shows the action row for a branch with a PR`() {
-        val dock = dockLocalWithNewWorktree()
+    fun `test header false shows the action row for a branch with a PR`() {
+        val dock = dockWithNewWorktreeNoHeader()
         edt {
             dock.setBranch(prBranch())
             dock.setHasMessages(true)
@@ -374,21 +355,8 @@ class BranchDockTest : BasePlatformTestCase() {
         assertTrue(edt { dock.isVisible })
         assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
         assertTrue(update(ChatNewWorktreeAction(), dock).isVisible)
-    }
-
-    fun `test local summary header survives a busy session`() {
-        // The PR row keeps a busy dock visible (test dock keeps PR row while session is busy); the
-        // local summary is the same kind of standing information, so it does too.
-        val dock = dockLocal()
-        edt {
-            dock.setBranch(prBranch())
-            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
-            dock.setHasMessages(true)
-            dock.setBusy(true)
-        }
-
-        assertTrue(edt { dock.isVisible })
-        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+        val core = edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }
+        assertFalse(edt { core.isVisible })
     }
 
     fun `test PR and standalone paths use compact retained summaries`() {
@@ -411,25 +379,10 @@ class BranchDockTest : BasePlatformTestCase() {
 
     private fun dockWithNewWorktree(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}) }
 
-    private fun dockLocal(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onLocal = {}) }
+    private fun dockNoHeader(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, header = false) }
 
-    private fun dockLocalWithNewWorktree(): BranchDock =
-        edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}, onLocal = {}) }
-
-    @RequiresEdt
-    private fun shown(root: Component): List<String> =
-        components(root).filterIsInstance<JBLabel>().filter { it.isVisible && it.text.isNotBlank() }.map { it.text }
-
-    @RequiresEdt
-    private fun click(root: Component) {
-        val target = components(root).filterIsInstance<ChangesPanel>().single { generateSequence(it as Component) { item -> item.parent }.all { item -> item.isVisible } }
-        val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)
-        listOf(
-            MouseEvent(target, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), InputEvent.BUTTON1_DOWN_MASK, point.x, point.y, 1, false, MouseEvent.BUTTON1),
-            MouseEvent(target, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, point.x, point.y, 1, false, MouseEvent.BUTTON1),
-            MouseEvent(target, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, point.x, point.y, 1, false, MouseEvent.BUTTON1),
-        ).forEach(target::dispatchEvent)
-    }
+    private fun dockWithNewWorktreeNoHeader(): BranchDock =
+        edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}, header = false) }
 
     private fun prBranch() = BranchStatusDto(
         branch = "feature-x",
