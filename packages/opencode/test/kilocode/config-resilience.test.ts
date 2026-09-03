@@ -369,7 +369,10 @@ Broken command`,
   test("collects warnings for invalid schema in .kilo directory config", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
-        await Filesystem.write(path.join(dir, ".kilo", "kilo.json"), JSON.stringify({ unknownField: true }))
+        await Filesystem.write(
+          path.join(dir, ".kilo", "kilo.json"),
+          JSON.stringify({ model: "test/model", unknownField: true }),
+        )
       },
     })
 
@@ -379,10 +382,38 @@ Broken command`,
         const cfg = await load()
         const warns = await warnings()
 
-        expect(cfg).toBeDefined()
-        expect(warns.some((w) => w.path.includes("kilo.json") && w.message.includes("invalid"))).toBe(true)
+        expect(cfg.model).toBe("test/model")
+        expect(
+          warns.some(
+            (w) => w.path.includes("kilo.json") && w.message.includes("invalid") && w.message.includes("unknownField"),
+          ),
+        ).toBe(true)
       },
     })
+  })
+
+  test.serial("collects warnings for unknown fields in KILO_CONFIG_CONTENT", async () => {
+    const prior = process.env.KILO_CONFIG_CONTENT
+    process.env.KILO_CONFIG_CONTENT = JSON.stringify({ model: "test/model", unknownField: true })
+    await using tmp = await tmpdir({ git: true })
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const cfg = await load()
+          const warns = await warnings()
+
+          expect(cfg.model).toBe("test/model")
+          expect(
+            warns.some((warning) => warning.path === "KILO_CONFIG_CONTENT" && warning.message.includes("unknownField")),
+          ).toBe(true)
+        },
+      })
+    } finally {
+      if (prior === undefined) delete process.env.KILO_CONFIG_CONTENT
+      else process.env.KILO_CONFIG_CONTENT = prior
+    }
   })
 
   test("returns empty warnings when config is valid", async () => {

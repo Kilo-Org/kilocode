@@ -490,7 +490,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/",
+            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
             "X-Title": "Kilo Code", // kilocode_change
             "X-Source": "kilo", // kilocode_change
           },
@@ -501,7 +501,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/",
+            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -511,7 +511,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/",
+            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
             "X-Title": "Kilo Code", // kilocode_change
             "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
           },
@@ -522,7 +522,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://kilo.ai/",
+            "http-referer": "https://kilo.ai/", // kilocode_change
             "x-title": "Kilo Code", // kilocode_change
           },
         },
@@ -637,7 +637,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/",
+            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -895,7 +895,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/",
+            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
             "X-Title": "Kilo Code", // kilocode_change
           },
         },

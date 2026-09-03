@@ -113,6 +113,73 @@ describe("markdown substitutions", () => {
 })
 
 describe("global config updates", () => {
+  test("preserves known global fields and warns for unknown fields", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "test/model", unknownField: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(config.model).toBe("test/model")
+          expect(
+            warnings.some((warning) => warning.path.endsWith("kilo.json") && warning.message.includes("unknownField")),
+          ).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("preserves unknown global JSON fields while returning normalized config", async () => {
+    await using global = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = global.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(global.path, {
+        model: "test/before",
+        future: { enabled: true },
+        experimental: { future_flag: { value: 1 } },
+      })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const result = await saveGlobal({ model: "test/after" })
+          const saved = await Bun.file(path.join(global.path, "kilo.json")).json()
+
+          expect(saved).toMatchObject({
+            model: "test/after",
+            future: { enabled: true },
+            experimental: { future_flag: { value: 1 } },
+          })
+          expect(result.info.model).toBe("test/after")
+          expect(Object.hasOwn(result.info, "future")).toBe(false)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("marks only sandbox updates for live policy refresh", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()

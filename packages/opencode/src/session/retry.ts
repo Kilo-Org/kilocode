@@ -25,8 +25,10 @@ export type Retryable = {
 
 export const RETRY_INITIAL_DELAY = 2000
 export const RETRY_BACKOFF_FACTOR = 2
+export const RETRY_JITTER_FACTOR = 0.25
 export const RETRY_MAX_DELAY_NO_HEADERS = 30_000 // 30 seconds
 export const RETRY_MAX_DELAY = 2_147_483_647 // max 32-bit signed integer for setTimeout
+export const RETRY_MAX_RETRIES = 5
 
 const RETRYABLE_MESSAGE_PATTERNS = [
   /\b(?:429|500|502|503|504|524)\b/i, // kilocode_change
@@ -41,7 +43,7 @@ function cap(ms: number) {
   return Math.min(ms, RETRY_MAX_DELAY)
 }
 
-export function delay(attempt: number, error?: SessionV1.APIError) {
+export function delay(attempt: number, error?: SessionV1.APIError, random = Math.random()) {
   if (error) {
     const headers = error.data.responseHeaders
     if (headers) {
@@ -67,11 +69,16 @@ export function delay(attempt: number, error?: SessionV1.APIError) {
         }
       }
 
-      return cap(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1))
+      return cap(exponential(attempt, random))
     }
   }
 
-  return cap(Math.min(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1), RETRY_MAX_DELAY_NO_HEADERS))
+  return cap(Math.min(exponential(attempt, random), RETRY_MAX_DELAY_NO_HEADERS))
+}
+
+function exponential(attempt: number, random: number) {
+  const base = RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1)
+  return Math.ceil(base + base * RETRY_JITTER_FACTOR * random)
 }
 
 // kilocode_change - Kilo does not emit OpenCode Go actions
@@ -136,6 +143,7 @@ export function policy(opts: {
   offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
   // kilocode_change end
 }) {
+  const state = { offline: 0 } // kilocode_change
   return Schedule.fromStepWithMetadata(
     Effect.succeed((meta: Schedule.InputMetadata<unknown>) => {
       // kilocode_change start — enforce retry limit
@@ -157,20 +165,25 @@ export function policy(opts: {
           if (result !== "retry") {
             return yield* Cause.done(meta.attempt)
           }
+          state.offline += 1
           yield* opts.set({ attempt: 0, message: "Reconnected", next: Date.now() })
           return [0, Duration.zero] as [number, Duration.Duration]
         }
         // kilocode_change end
 
-        const wait = delay(meta.attempt, SessionV1.APIError.isInstance(error) ? error : undefined)
+        // kilocode_change start
+        const attempt = opts.limit === undefined ? meta.attempt - state.offline : meta.attempt
+        if (opts.limit === undefined && attempt > RETRY_MAX_RETRIES) return yield* Cause.done(attempt)
+        // kilocode_change end
+        const wait = delay(attempt, SessionV1.APIError.isInstance(error) ? error : undefined) // kilocode_change
         const now = yield* Clock.currentTimeMillis
         yield* opts.set({
-          attempt: meta.attempt,
+          attempt, // kilocode_change
           message: retry.message,
           action: retry.action,
           next: now + wait,
         })
-        return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
+        return [attempt, Duration.millis(wait)] as [number, Duration.Duration] // kilocode_change
       })
     }),
   )
