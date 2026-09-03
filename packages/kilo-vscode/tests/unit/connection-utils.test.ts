@@ -114,6 +114,16 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(event, noLookup)).toBe("s3")
   })
 
+  it("routes activity-only updates to their owning session", () => {
+    const event = {
+      id: "e-working",
+      type: "session.working",
+      properties: { sessionID: "s-working", status: { type: "idle", working: true } },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s-working")
+  })
+
   it("routes transient message deltas", () => {
     const event = {
       id: "e7",

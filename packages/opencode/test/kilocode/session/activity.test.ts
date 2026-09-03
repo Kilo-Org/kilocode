@@ -1,7 +1,8 @@
 import { expect } from "bun:test"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { Deferred, Effect, Fiber, Schema, Stream } from "effect"
+import { EventManifest } from "@opencode-ai/schema/event-manifest"
+import { Deferred, Effect, Fiber, Schema } from "effect"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { disposeInstance } from "@/effect/instance-registry"
@@ -46,7 +47,23 @@ const waiting = (status: SessionStatus.Interface, id: SessionID, value: boolean)
     `session did not become working=${value}`,
   )
 
-it.effect("keeps the working field optional on every status variant", () =>
+const observe = (id: SessionID) =>
+  Effect.gen(function* () {
+    const events = yield* EventV2Bridge.Service
+    const seen = { status: [] as SessionStatus.Info[], working: [] as SessionStatus.Info[] }
+    const off = yield* events.listen((event) =>
+      Effect.sync(() => {
+        if (event.type !== SessionStatus.Event.Status.type && event.type !== SessionStatus.Event.Working.type) return
+        const data = Schema.decodeUnknownSync(SessionStatus.Event.Status.data)(event.data)
+        if (data.sessionID !== id) return
+        seen[event.type === SessionStatus.Event.Status.type ? "status" : "working"].push(data.status)
+      }),
+    )
+    yield* Effect.addFinalizer(() => off)
+    return seen
+  })
+
+it.effect("keeps the working field optional and registers a separate activity event", () =>
   Effect.sync(() => {
     const encode = Schema.encodeSync(SessionStatus.Info)
     expect(encode({ type: "busy" })).toEqual({ type: "busy" })
@@ -56,23 +73,19 @@ it.effect("keeps the working field optional on every status variant", () =>
     expect(
       encode({ type: "offline", requestID: QuestionID.make("que_network"), message: "offline", working: true }).working,
     ).toBe(true)
+    expect(SessionStatus.Event.Working.type).toBe("session.working")
+    expect(EventManifest.Latest.get("session.working")).toBe(SessionStatus.Event.Working)
+    expect(EventManifest.ServerDefinitions.map((event) => event.type)).not.toContain("session.working")
+    const data = { sessionID: SessionID.make("ses_working"), status: { type: "idle", working: true } as const }
+    expect(Schema.encodeSync(SessionStatus.Event.Working.data)(data)).toEqual(data)
   }),
 )
 
-it.instance("overlays snapshot/SSE while keeping internal get/list and project stores raw", () =>
+it.instance("publishes idle activity without lifecycle events or raw status changes", () =>
   Effect.gen(function* () {
     const status = yield* SessionStatus.Service
-    const events = yield* EventV2Bridge.Service
     const id = SessionID.make("ses_idle_work")
-    const seen: SessionStatus.Info[] = []
-    yield* events.subscribe(SessionStatus.Event.Status).pipe(
-      Stream.runForEach((event) =>
-        Effect.sync(() => {
-          if (event.data.sessionID === id) seen.push(event.data.status)
-        }),
-      ),
-      Effect.forkChild({ startImmediately: true }),
-    )
+    const seen = yield* observe(id)
     expect(yield* info(status, id)).toEqual({ type: "idle" })
     const gate = yield* Deferred.make<void>()
     const fiber = yield* Activity.run(id, Deferred.await(gate), "job").pipe(
@@ -85,17 +98,58 @@ it.instance("overlays snapshot/SSE while keeping internal get/list and project s
     expect((yield* SessionStatus.snapshot(status)).get(id)).toEqual({ type: "idle", working: true })
     expect((yield* SessionStatus.listAll()).has(id)).toBe(false)
     yield* Activity.flush
-    expect(seen.at(-1)).toEqual({ type: "idle", working: true })
+    expect(seen.working).toEqual([{ type: "idle", working: true }])
+    expect(seen.status).toEqual([])
     yield* Deferred.succeed(gate, undefined)
     yield* Fiber.join(fiber)
     yield* Activity.flush
     expect((yield* SessionStatus.snapshot(status)).has(id)).toBe(false)
     expect(yield* info(status, id)).toEqual({ type: "idle" })
-    expect(seen.at(-1)).toEqual({ type: "idle", working: false })
+    expect(seen.working).toEqual([
+      { type: "idle", working: true },
+      { type: "idle", working: false },
+    ])
+    expect(seen.status).toEqual([])
     yield* status.set(id, { type: "busy" })
     expect(yield* info(status, id)).toEqual({ type: "busy" })
     expect((yield* SessionStatus.listAll()).get(id)).toEqual({ type: "busy" })
     yield* status.set(id, { type: "idle" })
+    yield* Activity.flush
+    expect(seen.status).toEqual([{ type: "busy" }, { type: "idle" }])
+    expect(seen.working).toHaveLength(2)
+  }),
+)
+
+it.instance("decorates real status emissions without emitting status for working transitions", () =>
+  Effect.gen(function* () {
+    const status = yield* SessionStatus.Service
+    const id = SessionID.make("ses_working_transitions")
+    const seen = yield* observe(id)
+    yield* status.get(id)
+    yield* Activity.run(
+      id,
+      Effect.gen(function* () {
+        yield* status.set(id, { type: "busy" })
+        yield* Activity.flush
+        expect(seen.status).toEqual([{ type: "busy", working: true }])
+        yield* Activity.wait(
+          Effect.gen(function* () {
+            yield* Activity.flush
+            expect(seen.working.at(-1)).toEqual({ type: "busy", working: false })
+            expect(seen.status).toEqual([{ type: "busy", working: true }])
+          }),
+        )
+        yield* Activity.flush
+        expect(seen.working.at(-1)).toEqual({ type: "busy", working: true })
+        expect(seen.status).toEqual([{ type: "busy", working: true }])
+      }),
+    )
+    yield* status.set(id, { type: "idle" })
+    yield* Activity.flush
+    expect(seen.status).toEqual([
+      { type: "busy", working: true },
+      { type: "idle", working: false },
+    ])
   }),
 )
 

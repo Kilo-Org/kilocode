@@ -3,7 +3,10 @@ import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
 
 type Status = Pick<SessionStatus, "type" | "working">
-type Update = Extract<SSEPayload, { type: "session.status" | "session.idle" | "session.deleted" | "session.error" }>
+type Update = Extract<
+  SSEPayload,
+  { type: "session.status" | "session.working" | "session.idle" | "session.deleted" | "session.error" }
+>
 type Request = { events: Update[]; promise: Promise<void> }
 type State = { values: Map<string, Status>; request?: Request }
 
@@ -16,10 +19,14 @@ function working(status: Status): boolean {
   return status.working ?? (status.type === "busy" || status.type === "retry")
 }
 
+function activity(event: SSEPayload): event is Extract<Update, { type: "session.status" | "session.working" }> {
+  return event.type === "session.status" || event.type === "session.working"
+}
+
 function apply(values: Map<string, Status>, event: Update): void {
   const id = event.properties.sessionID ?? (event.type === "session.deleted" ? event.properties.info?.id : undefined)
   if (!id) return
-  if (event.type === "session.status") {
+  if (activity(event)) {
     const status: Status = event.properties.status
     if (working(status)) {
       values.set(id, status)
@@ -115,7 +122,7 @@ export function feed(opts: {
         return
       }
       if (
-        event.type !== "session.status" &&
+        !activity(event) &&
         event.type !== "session.idle" &&
         event.type !== "session.deleted" &&
         event.type !== "session.error"
@@ -123,7 +130,7 @@ export function feed(opts: {
         return
       if (directory) dirs.set(resolve(directory), directory)
       if (!opts.watching()) return
-      if (!directory && event.type === "session.status" && working(event.properties.status)) {
+      if (!directory && activity(event) && working(event.properties.status)) {
         clear()
         void sync()
         return

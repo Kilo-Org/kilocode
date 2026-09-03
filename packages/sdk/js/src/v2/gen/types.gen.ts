@@ -81,6 +81,7 @@ export type Event =
   | EventProjectUpdated1
   | EventSessionStatus1
   | EventSessionIdle1
+  | EventSessionWorking1
   | EventQuestionAsked1
   | EventQuestionReplied1
   | EventQuestionRejected1
@@ -202,6 +203,7 @@ export type Event =
   | EventProjectUpdated
   | EventSessionStatus
   | EventSessionIdle
+  | EventSessionWorking
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
@@ -1270,6 +1272,7 @@ export type GlobalEvent = {
     | EventProjectUpdated
     | EventSessionStatus
     | EventSessionIdle
+    | EventSessionWorking
     | EventQuestionAsked
     | EventQuestionReplied
     | EventQuestionRejected
@@ -2058,6 +2061,14 @@ export type GlobalEvent = {
         type: "session.idle"
         properties: {
           sessionID: string
+        }
+      }
+    | {
+        id: string
+        type: "session.working"
+        properties: {
+          sessionID: string
+          status: SessionStatus
         }
       }
     | {
@@ -4848,6 +4859,7 @@ export type V2Event =
   | ProjectUpdated
   | SessionStatus2
   | SessionIdle
+  | SessionWorking
   | QuestionAsked
   | QuestionReplied2
   | QuestionRejected2
@@ -6226,6 +6238,15 @@ export type EventSessionIdle = {
   type: "session.idle"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWorking = {
+  id: string
+  type: "session.working"
+  properties: {
+    sessionID: string
+    status: SessionStatus
   }
 }
 
@@ -9131,6 +9152,24 @@ export type SessionIdle = {
   }
 }
 
+export type SessionWorking = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.working"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+    status: SessionStatus
+  }
+}
+
 export type QuestionAsked = {
   id: string
   metadata?: {
@@ -10273,6 +10312,15 @@ export type EventSessionIdle1 = {
   type: "session.idle"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWorking1 = {
+  id: string
+  type: "session.working"
+  properties: {
+    sessionID: string
+    status: SessionStatus
   }
 }
 

@@ -105,10 +105,15 @@ function snapshot(statuses: Record<string, SessionStatus["type"] | Status> = {})
   )
 }
 
-function status(sessionID: string, type: SessionStatus["type"], working?: boolean): SSEPayload {
+function status(
+  sessionID: string,
+  type: SessionStatus["type"],
+  working?: boolean,
+  event: "session.status" | "session.working" = "session.status",
+): SSEPayload {
   return {
     id: crypto.randomUUID(),
-    type: "session.status",
+    type: event,
     properties: { sessionID, status: { type, working } as SessionStatus },
   }
 }
@@ -159,6 +164,33 @@ describe("CaffeinationService", () => {
     await test.service.dispose()
   })
 
+  it("applies activity-only events without changing runner status", async () => {
+    const test = setup({ [root]: snapshot({ one: { type: "busy", working: true } }) })
+    await test.service.setEnabled(true)
+    test.connection.emit(status("one", "busy", false, "session.working"), root)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    test.connection.emit(status("one", "idle", true, "session.working"), root)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(true)
+    test.connection.emit(status("one", "idle", false, "session.working"), root)
+    await Bun.sleep(0)
+    expect(test.driver.held).toBe(false)
+    await test.service.dispose()
+  })
+
+  it("replays activity-only updates over a stale status snapshot", async () => {
+    const test = setup()
+    const gate = Promise.withResolvers<Reply<Snapshot>>()
+    test.connection.statuses = () => gate.promise
+    const enabled = test.service.setEnabled(true)
+    test.connection.emit(status("one", "busy", false, "session.working"), root)
+    gate.resolve({ data: snapshot({ one: { type: "busy", working: true } }) })
+    await enabled
+    expect(test.driver.starts).toBe(0)
+    await test.service.dispose()
+  })
+
   it("includes backend directories observed while disabled and newly observed live directories", async () => {
     const test = setup({ [tree]: snapshot({ one: "busy" }) })
     test.connection.emit(status("one", "busy"), tree)
@@ -194,7 +226,7 @@ describe("CaffeinationService", () => {
         test.connection.data[source] = test.connection.data[target] = snapshot({
           parent: { type: "busy", working: false },
         })
-        test.connection.emit(status("background", "idle", false), target)
+        test.connection.emit(status("background", "idle", false, "session.working"), target)
         await Bun.sleep(0)
         expect(test.service.getState().active).toBe(false)
         expect(test.driver.held).toBe(false)

@@ -26950,6 +26950,9 @@
             "$ref": "#/components/schemas/EventSessionIdle1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionWorking1"
+          },
+          {
             "$ref": "#/components/schemas/EventQuestionAsked1"
           },
           {
@@ -27311,6 +27314,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionIdle"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionWorking"
           },
           {
             "$ref": "#/components/schemas/EventQuestionAsked"
@@ -30532,6 +30538,9 @@
                 "$ref": "#/components/schemas/EventSessionIdle"
               },
               {
+                "$ref": "#/components/schemas/EventSessionWorking"
+              },
+              {
                 "$ref": "#/components/schemas/EventQuestionAsked"
               },
               {
@@ -33251,6 +33260,35 @@
                       }
                     },
                     "required": ["sessionID"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.working"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "status": {
+                        "$ref": "#/components/schemas/SessionStatus"
+                      }
+                    },
+                    "required": ["sessionID", "status"],
                     "additionalProperties": false
                   }
                 },
@@ -41648,6 +41686,9 @@
             "$ref": "#/components/schemas/SessionIdle"
           },
           {
+            "$ref": "#/components/schemas/SessionWorking"
+          },
+          {
             "$ref": "#/components/schemas/QuestionAsked"
           },
           {
@@ -46517,6 +46558,34 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWorking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.working"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "status": {
+                "$ref": "#/components/schemas/SessionStatus"
+              }
+            },
+            "required": ["sessionID", "status"],
             "additionalProperties": false
           }
         },
@@ -55321,6 +55390,57 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionWorking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.working"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "status": {
+                "$ref": "#/components/schemas/SessionStatus"
+              }
+            },
+            "required": ["sessionID", "status"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionAsked": {
         "type": "object",
         "properties": {
@@ -58785,6 +58905,35 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionWorking1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.working"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "status": {
+                "$ref": "#/components/schemas/SessionStatus"
+              }
+            },
+            "required": ["sessionID", "status"],
             "additionalProperties": false
           }
         },

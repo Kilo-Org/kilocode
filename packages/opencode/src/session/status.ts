@@ -61,7 +61,7 @@ export const layer = Layer.effect(
       // kilocode_change start
       Effect.fn("SessionStatus.state")(function* () {
         const data = new Map<SessionID, Info>()
-        yield* Activity.bind(data, (sessionID, status) => events.publish(Event.Status, { sessionID, status }))
+        yield* Activity.bind(data, (sessionID, status) => events.publish(Event.Working, { sessionID, status }))
         return data
       }),
       // kilocode_change end
