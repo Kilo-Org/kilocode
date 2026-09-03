@@ -124,6 +124,41 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
     private fun layout(rows: Array<AnAction>): List<String> =
         rows.map { if (it is Separator) it.text ?: "---" else it.templateText.orEmpty() }
 
+    fun testDelegatedConfigDescribesItsBuildSystem() {
+        val direct = RunConfigDto("id1", "dev", "Gradle")
+        val delegated = RunConfigDto("id2", "HvApiGatewayApp", "Spring Boot", via = "Gradle")
+        val group = WorktreeRunPopup.group(listOf(direct, delegated), null, emptyList(), {}, {}, {}, {}, false, {})
+        val rows = group.getChildren(null)
+
+        assertEquals("Gradle", description(rows[0]))
+        assertEquals(KiloBundle.message("worktree.run.via", "Spring Boot", "Gradle"), description(rows[1]))
+    }
+
+    fun testOrphanRowOffersKillWithoutAnOutputRow() {
+        // The Run tab is already gone for an orphan, so there is no console to show — only Kill.
+        val cfg = RunConfigDto("id1", "HvApiGatewayApp", "Spring Boot", via = "Gradle")
+        val state = RunStateDto("id1", "app [wt]", "/wt", RunProcessState.STOPPING, killable = true, orphan = true)
+        val stops = mutableListOf<RunStateDto>()
+        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, { stops += it }, {}, {}, false, {})
+        val rows = group.getChildren(null)
+
+        assertEquals(
+            listOf(
+                KiloBundle.message("worktree.run.section.running"),
+                KiloBundle.message("worktree.run.kill", "app [wt]"),
+                KiloBundle.message("worktree.run.section.start"),
+                "HvApiGatewayApp",
+                "---",
+                KiloBundle.message("worktree.run.open.frame"),
+            ),
+            layout(rows),
+        )
+        assertTrue(enabled(rows[1]))
+
+        perform(rows[1])
+        assertEquals(listOf(state), stops)
+    }
+
     fun testStoppingOffersKillForKillableProcess() {
         val cfg = RunConfigDto("id1", "dev", "Shell Script")
         val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING, killable = true)
@@ -147,6 +182,8 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         action.update(e)
         return e.presentation.isEnabled
     }
+
+    private fun description(action: AnAction): String? = action.templatePresentation.description
 
     private fun perform(action: AnAction) {
         action.actionPerformed(event(action))

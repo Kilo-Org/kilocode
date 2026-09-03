@@ -1,14 +1,19 @@
 package ai.kilocode.backend.run
 
+import ai.kilocode.backend.testing.PlainApplicationConfig
+import ai.kilocode.backend.testing.PlainApplicationType
+import ai.kilocode.backend.testing.StubbornJvm
 import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.execution.BeforeRunTask
 import com.intellij.execution.CommonProgramRunConfigurationParameters
 import com.intellij.execution.ExecutionManager
+import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.ConfigurationPerRunnerSettings
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.ConfigurationTypeBase
 import com.intellij.execution.configurations.ModuleBasedConfiguration
@@ -24,12 +29,16 @@ import com.intellij.execution.process.NopProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
+import com.intellij.openapi.externalSystem.ExternalSystemModulePropertyManager
 import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.task.ExecuteRunConfigurationTask
+import com.intellij.task.ProjectTask
+import com.intellij.task.ProjectTaskRunner
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +53,9 @@ import java.nio.file.Path
 class WorktreeRunManagerTest : BasePlatformTestCase() {
     private companion object {
         private const val WAIT_NANOS = 10_000_000_000L
+
+        /** Reaping forks `ps` and polls every 500 ms, so it needs a wider watchdog than a state change. */
+        private const val REAP_WAIT_NANOS = 30_000_000_000L
     }
 
     private lateinit var cs: CoroutineScope
@@ -68,12 +80,14 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
-    fun testConfigsListsOnlySupportedTypes() {
+    fun testConfigsListsOnlySupportedTypes() = runBlocking {
         val params = register(paramsType("kilo.test.params.list"))
         val plain = register(plainType("kilo.test.plain.list"))
         val moduled = register(moduleType("kilo.test.module.list"))
         add(params, "dev")
         add(plain, "app")
+        // A module-based config with no module set is not linked to any external system, so it is
+        // still absent from the list — the delegated path needs a real Gradle/Maven-imported module.
         add(moduled, "mod")
 
         val configs = manager().configs().configs
@@ -82,6 +96,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertFalse("app" in names)
         assertFalse("mod" in names)
         assertEquals("Kilo Params kilo.test.params.list", configs.first { it.name == "dev" }.type)
+        assertNull(configs.first { it.name == "dev" }.via)
     }
 
     fun testRunTransplantsAndCachesClone() = runBlocking {
@@ -161,6 +176,102 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertNotNull(mgr.run("no-such-id", "/tmp/wt").error)
         assertNotNull(mgr.run(settings.uniqueID, "/tmp/wt").error)
         assertTrue(launched.isEmpty())
+    }
+
+    fun testModuleBasedConfigIsListedAndDelegatedToItsBuildSystem() = runBlocking {
+        // A Spring Boot / Application style config: module-based, so the adapter refuses to transplant
+        // it (its classpath comes from the main checkout's module). The platform's own delegation
+        // pipeline runs it as a build-system task instead, which resolves the classpath in the worktree.
+        link()
+        val settings = add(register(moduleType("kilo.test.module.delegated")), "HvApiGatewayApp")
+        (settings.configuration as ModuleParamsConfig).setModule(module)
+        val runner = delegatingRunner()
+        val mgr = manager()
+        val repo = requireNotNull(project.basePath)
+        val wt = "$repo/.kilo/worktrees/spring-wt"
+
+        val listed = mgr.configs().configs.single { it.name == "HvApiGatewayApp" }
+        assertEquals(ProjectSystemId("GRADLE").readableName, listed.via)
+
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        // The clone the delegation produced is what runs, not a transplant of the source config.
+        val clone = launched.single()
+        assertSame(runner.produced, clone)
+        val cfg = clone.configuration as ExternalSystemRunConfiguration
+        assertEquals("HvApiGatewayApp [spring-wt]", clone.name)
+        assertEquals(Path.of("$wt/api-gateway").toString(), cfg.settings.externalProjectPath)
+        assertEquals(listOf(":api-gateway:bootRun"), cfg.settings.taskNames)
+        assertEquals(wt, cfg.settings.env[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals(repo, cfg.settings.env[WorktreeRunAdapter.REPO_ENV])
+        assertEquals("false", cfg.settings.env[WorktreeRunAdapter.DEBUGGER_ENV])
+        assertTrue(cfg.beforeRunTasks.isEmpty())
+        assertFalse(cfg.isAllowRunningInParallel)
+        assertTrue(clone.isActivateToolWindowBeforeRun)
+
+        // The provider saw a clone whose working directory was already rebased, so any init script it
+        // generates from it points at the worktree, not the main checkout.
+        val seen = requireNotNull(runner.seen) as ModuleParamsConfig
+        assertNotSame(settings.configuration, seen)
+        assertEquals(Path.of("$wt/nested").toString(), seen.workingDirectory)
+        assertEquals(wt, seen.envs[WorktreeRunAdapter.WORKTREE_ENV])
+
+        // Re-running reuses the derived settings instance, so the platform restarts it instead of
+        // starting a second process; the init script rides along as user data on that instance.
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        assertSame(clone, launched[1])
+        assertEquals(1, runner.calls)
+    }
+
+    fun testDeclinedFrameworkConfigStillRunsAsAPlainApplicationAndWarns() = runBlocking {
+        // The Spring Boot case: the framework's own provider declines (its "Run using Gradle" advanced
+        // setting is off by default), so the config is copied into a plain application the generic
+        // provider accepts. It runs, and the settings that could not come along are reported.
+        link()
+        applicationType()
+        val settings = add(register(moduleType("kilo.test.module.fallback")), "HvApiGatewayApp")
+        val source = settings.configuration as ModuleParamsConfig
+        source.setModule(module)
+        source.main = "com.example.HvApiGatewayApp"
+        source.profiles = "dev"
+        // Accepts only the plain application copy, exactly like GradleApplicationEnvironmentProvider's
+        // `javaClass ==` match rejecting a framework subclass.
+        val runner = delegatingRunner(accept = { it is PlainApplicationConfig })
+        val mgr = manager()
+        val wt = "${requireNotNull(project.basePath)}/.kilo/worktrees/fallback-wt"
+
+        val result = mgr.run(settings.uniqueID, wt)
+        assertNull(result.error)
+        assertTrue(result.ok)
+        assertEquals(ModuleParamsConfig.PROFILES_OPTION, result.warning)
+        // Asked twice: once with the framework config, then with the plain copy carrying its main class.
+        assertEquals(2, runner.calls)
+        assertEquals("com.example.HvApiGatewayApp", (runner.seen as PlainApplicationConfig).main)
+        assertEquals("HvApiGatewayApp [fallback-wt]", launched.single().name)
+
+        // A re-run reuses the cached reduced clone, so the caveat is reported again rather than only once.
+        assertEquals(ModuleParamsConfig.PROFILES_OPTION, mgr.run(settings.uniqueID, wt).warning)
+        assertEquals(2, runner.calls)
+    }
+
+    fun testDeclinedDelegationTellsTheUserWhatToDoAboutIt() = runBlocking {
+        // What a Spring Boot config does out of the box: its Gradle provider declines because the
+        // per-framework "Run using Gradle" advanced setting is off, so no runner produces anything.
+        link()
+        val settings = add(register(moduleType("kilo.test.module.nodelegate")), "app")
+        (settings.configuration as ModuleParamsConfig).setModule(module)
+
+        val result = manager().run(settings.uniqueID, "/tmp/kilo-nodelegate-wt")
+        assertFalse(result.ok)
+        assertEquals("Gradle declined to run 'app' — ${WorktreeRunDelegate.DECLINED_HINT}", result.error)
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testUnsupportedConfigErrorNamesTheReason() = runBlocking {
+        val settings = add(register(plainType("kilo.test.plain.reason")), "app")
+
+        val result = manager().run(settings.uniqueID, "/tmp/kilo-reason-wt")
+        assertFalse(result.ok)
+        assertEquals("cannot run 'app' in a worktree: not module-based (PlainConfig)", result.error)
     }
 
     fun testTopicTracksStateStopAndTerminate() = runBlocking {
@@ -301,6 +412,51 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertFalse(mgr.stop(settings.uniqueID, wt))
     }
 
+    /**
+     * The delegated-run failure mode this exists for: the platform's Stop cancels the Gradle build and
+     * its process handler goes away, but the app JVM that build forked keeps running against the
+     * worktree — holding its port with nothing in the IDE able to stop it. The manager must SIGTERM it
+     * (graceful: a real app runs its shutdown hooks), keep a Kill row for it while it is alive, and
+     * force-kill on the next click.
+     */
+    fun testOrphanedAppProcessIsReapedAndStaysKillable() = runBlocking {
+        val type = register(paramsType("kilo.test.params.orphan"))
+        val settings = add(type, "srv")
+        val mgr = manager()
+        // A unique real directory, so the reaper's command-line match cannot hit anything else.
+        val wt = Files.createTempDirectory("kilo-orphan-wt").toString()
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        val clone = launched.single()
+
+        // A real JVM referencing this worktree whose shutdown hook never finishes: SIGTERM leaves it
+        // running, so the popup's Kill escalation is what stops it.
+        val app = StubbornJvm.start(wt)
+        try {
+            val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+            val handler = NopProcessHandler().also { it.startNotify() }
+            project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+                .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+            assertFalse(mgr.states.value.single().orphan)
+
+            assertTrue(mgr.stop(settings.uniqueID, wt))
+            await("orphan row", REAP_WAIT_NANOS, { mgr.states.value }) { mgr.states.value.singleOrNull()?.orphan == true }
+            val row = mgr.states.value.single()
+            assertEquals(clone.name, row.name)
+            assertEquals(wt, row.worktree)
+            assertEquals(RunProcessState.STOPPING, row.state)
+            // The popup offers Kill for an orphan even though an external-system handler never could.
+            assertTrue(row.killable)
+
+            // Kill: this app ignores SIGTERM, so only the escalation stops it.
+            assertTrue(mgr.stop(settings.uniqueID, wt))
+            await("app process killed", REAP_WAIT_NANOS) { !app.isAlive }
+            await("orphan row cleared", REAP_WAIT_NANOS, { mgr.states.value }) { mgr.states.value.isEmpty() }
+            assertFalse(mgr.stop(settings.uniqueID, wt))
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
     fun testCloneNameUsesStoredWorktreeLabel() = runBlocking {
         val type = register(paramsType("kilo.test.params.label"))
         val settings = add(type, "dev")
@@ -362,11 +518,15 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     /**
      * Termination goes through the platform's `stopProcess`, which runs off the calling thread, so
      * assertions wait for the observable outcome instead of assuming it already happened.
+     *
+     * [budget] exists for the orphan path only: reaping forks `ps` and polls on a fixed interval, so
+     * under a loaded suite it legitimately needs longer than a handler state change. [detail] is
+     * reported on failure, which is what tells a reap that found nothing apart from a slow one.
      */
-    private fun await(what: String, cond: () -> Boolean) {
-        val end = System.nanoTime() + WAIT_NANOS
+    private fun await(what: String, budget: Long = WAIT_NANOS, detail: () -> Any? = { null }, cond: () -> Boolean) {
+        val end = System.nanoTime() + budget
         while (!cond()) {
-            check(System.nanoTime() < end) { "timed out waiting for $what" }
+            check(System.nanoTime() < end) { "timed out waiting for $what${detail()?.let { " (last: $it)" } ?: ""}" }
             Thread.sleep(1)
         }
     }
@@ -377,6 +537,26 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
         return type
     }
+
+    /** Marks the test module as imported by Gradle, which is what makes a config delegable. */
+    private fun link() {
+        ExternalSystemModulePropertyManager.getInstance(module).setExternalId(ProjectSystemId("GRADLE"))
+    }
+
+    /**
+     * Registers a real [ProjectTaskRunner] on the real EP, standing in for `GradleProjectTaskRunner`:
+     * it turns the run configuration into an external-system task execution the way the Gradle
+     * provider does — root project path from the main checkout, fully qualified task path.
+     */
+    private fun delegatingRunner(accept: (RunProfile) -> Boolean = { true }): DelegatingRunner {
+        val root = "${requireNotNull(project.basePath)}/api-gateway"
+        val runner = DelegatingRunner(root, ":api-gateway:bootRun", esType("kilo.test.es.delegated"), accept)
+        register(runner.type)
+        ProjectTaskRunner.EP_NAME.point.registerExtension(runner, testRootDisposable)
+        return runner
+    }
+
+    private fun applicationType() = register(PlainApplicationType())
 
     private fun add(type: ConfigurationTypeBase, name: String): RunnerAndConfigurationSettings {
         val manager = RunManager.getInstance(project)
@@ -465,11 +645,16 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
-    /** Module-based + params: must be excluded — it would run main-checkout classes. */
-    private class ModuleParamsConfig(project: Project, factory: ConfigurationFactory, name: String) :
+    /**
+     * Module-based + params: a Spring Boot / Application shaped config. The adapter must not transplant
+     * it — its classpath would come from the main checkout — so it goes through the delegated path.
+     */
+    private open class ModuleParamsConfig(project: Project, factory: ConfigurationFactory, name: String) :
         ModuleBasedConfiguration<RunConfigurationModule, Any>(name, RunConfigurationModule(project), factory),
         CommonProgramRunConfigurationParameters {
-        private var dir: String? = null
+        var main: String? = null
+        var profiles: String? = null
+        private var dir: String? = "\$PROJECT_DIR\$/nested"
         private var params: String? = null
         private var env: MutableMap<String, String> = mutableMapOf()
         private var parent = true
@@ -503,7 +688,64 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
 
         override fun isPassParentEnvs(): Boolean = parent
+
+        /**
+         * Persist the custom fields so the manager's fingerprint sees source edits, like real configs.
+         * The JVM option tags use the platform's own names so a plain application copy can read them
+         * back, and [PROFILES_OPTION] stands in for framework state that no plain copy can hold.
+         */
+        override fun writeExternal(element: Element) {
+            super.writeExternal(element)
+            element.setAttribute("kiloEnv", env.toSortedMap().toString())
+            main?.let { element.addContent(PlainApplicationConfig.option(PlainApplicationConfig.MAIN_CLASS, it)) }
+            dir?.let { element.addContent(PlainApplicationConfig.option(PlainApplicationConfig.WORKING_DIR, it)) }
+            profiles?.let { element.addContent(PlainApplicationConfig.option(PROFILES_OPTION, it)) }
+        }
+
+        companion object {
+            /** Stands in for Spring Boot's active profiles. */
+            const val PROFILES_OPTION = "ACTIVE_PROFILES"
+        }
     }
+
+    /**
+     * Stands in for `GradleProjectTaskRunner`: builds an external-system run configuration for the
+     * given task path, recording the run profile it was handed so tests can prove the manager passes a
+     * worktree-rebased clone rather than the user's own configuration.
+     */
+    private class DelegatingRunner(
+        private val root: String,
+        private val task: String,
+        val type: ConfigurationTypeBase,
+        private val accept: (RunProfile) -> Boolean,
+    ) : ProjectTaskRunner() {
+        var seen: RunProfile? = null
+        var produced: RunnerAndConfigurationSettings? = null
+        var calls = 0
+
+        // Abstract in the platform base class. The manager deliberately never consults canRun — a
+        // worktree run has no non-delegated fallback — so the value is irrelevant here.
+        @Suppress("removal", "OVERRIDE_DEPRECATION")
+        override fun canRun(projectTask: ProjectTask): Boolean = false
+
+        override fun createExecutionEnvironment(
+            project: Project,
+            task: ExecuteRunConfigurationTask,
+            executor: Executor?,
+        ): ExecutionEnvironment? {
+            calls++
+            seen = task.runProfile
+            if (!accept(task.runProfile)) return null
+            val settings = RunManager.getInstance(project).createConfiguration("delegated", type.configurationFactories[0])
+            val config = settings.configuration as ExternalSystemRunConfiguration
+            config.settings.externalProjectPath = root
+            config.settings.taskNames = listOf(this.task)
+            produced = settings
+            return ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), settings, project)
+        }
+    }
+
+
 
     private class StubTask : BeforeRunTask<StubTask>(KEY) {
         companion object {

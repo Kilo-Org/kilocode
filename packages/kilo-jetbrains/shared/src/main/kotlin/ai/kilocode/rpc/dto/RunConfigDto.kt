@@ -7,6 +7,9 @@ data class RunConfigDto(
     val id: String,   // RunnerAndConfigurationSettings.uniqueID — stable per project
     val name: String, // configuration display name
     val type: String, // configuration type display name
+    // How the worktree run is executed when it is not a direct transplant, e.g. "Gradle". Null for
+    // configs the adapter transplants directly (external-system configs, CLI-style params configs).
+    val via: String? = null,
 )
 
 @Serializable
@@ -31,10 +34,18 @@ data class RunStateDto(
     // False for Gradle and other external-system runs: their handler only cancels the build
     // through the tooling API and never signals the forked process, so there is nothing to kill.
     val killable: Boolean = false,
+    // True when this row is backed by a scanned orphan process rather than a live ProcessHandler —
+    // the external-system handler already terminated, but its forked app JVM is still alive. There
+    // is no Run tab behind it, so the popup must not offer "Show Output".
+    val orphan: Boolean = false,
 )
 
 @Serializable
 data class RunResultDto(
     val ok: Boolean = false,
     val error: String? = null,
+    // Set when the run started but not exactly as configured — currently only when a framework's own
+    // build-system integration declined the configuration and it had to run as a plain JVM
+    // application, dropping the framework-specific settings named here (e.g. Spring Boot profiles).
+    val warning: String? = null,
 )

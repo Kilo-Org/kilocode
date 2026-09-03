@@ -46,16 +46,21 @@ internal object WorktreeRunPopup {
                         enabled = !terminating || state.killable,
                     ) { stop(state) },
                 )
-                group.add(
-                    action(KiloBundle.message("worktree.run.output", state.name), AllIcons.Debugger.Console) { output(state) },
-                )
+                // An orphan row is a process the backend found still alive after its Run tab was gone,
+                // so there is no console to bring to the front.
+                if (!state.orphan) {
+                    group.add(
+                        action(KiloBundle.message("worktree.run.output", state.name), AllIcons.Debugger.Console) { output(state) },
+                    )
+                }
             }
             group.addSeparator(KiloBundle.message("worktree.run.section.start"))
         }
         val running = states.map { it.id }.toSet()
         for (cfg in configs) {
             val icon = if (cfg.id in running) ExecutionUtil.getLiveIndicator(AllIcons.Actions.Execute) else AllIcons.Actions.Execute
-            group.add(action(cfg.name, icon, description = cfg.type) { run(cfg) })
+            val text = cfg.via?.let { KiloBundle.message("worktree.run.via", cfg.type, it) } ?: cfg.type
+            group.add(action(cfg.name, icon, description = text) { run(cfg) })
         }
         if (configs.isEmpty()) {
             group.add(action(error ?: KiloBundle.message("worktree.run.empty"), null, enabled = false) {})
