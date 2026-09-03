@@ -113,10 +113,16 @@ describe("shared board tools", () => {
             type: "INFO" as const,
             body: "ROOT_NOTE",
             from: "forged-sender",
+            fromLabel: "Forged sender title",
+            toLabel: "Forged recipient title",
             sessionID: other.session.id,
           }
           const result = yield* post.execute(params, ctx)
           expect(JSON.parse(result.output)).toMatchObject({ from: "main", to: "ALL", type: "INFO", body: "ROOT_NOTE" })
+          expect(result.metadata).toMatchObject({ from: "main", fromLabel: "Root", to: "ALL", truncated: false })
+          expect(JSON.parse(result.output).fromLabel).toBe("Root")
+          expect(JSON.parse(result.output)).not.toHaveProperty("toLabel")
+          expect(result.metadata).not.toHaveProperty("toLabel")
           const repeated = yield* post.execute(params, ctx)
           expect(repeated.metadata.id).toBe(result.metadata.id)
           yield* BoardStore.post({
@@ -147,6 +153,8 @@ describe("shared board tools", () => {
           const read = yield* Tool.init(yield* BoardReadTool)
           const params = { to: "ALL", type: "INFO" as const, body: "Top-level note" }
           const initial = yield* post.execute(params, ctx)
+          expect(initial.metadata.availability.total).toBe(0)
+          expect(JSON.parse(initial.output)).not.toHaveProperty("warning")
           for (const value of ["", " \t ", null, undefined]) {
             const result = yield* post.execute({ ...params, reply_to: value }, ctx)
             expect(result.metadata.id).toBe(initial.metadata.id)
@@ -178,7 +186,7 @@ describe("shared board tools", () => {
     ),
   )
 
-  it.live("warns only for known inactive task recipients without resuming them", () =>
+  it.live("reports invocation state and post-time availability without resuming recipients", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -189,13 +197,37 @@ describe("shared board tools", () => {
           const child = yield* sessions.create({ parentID: root.session.id, title: "Worker" })
           const ctx = yield* context(root.session.id, root.message)
           const post = yield* Tool.init(yield* BoardPostTool)
+          const read = yield* Tool.init(yield* BoardReadTool)
           const send = (to: string, call: string) =>
             post.execute({ to, type: "INFO", body: "Follow-up work" }, { ...ctx, callID: call })
+          const observed = Effect.gen(function* () {
+            const result = yield* read.execute({}, ctx)
+            expect(result.metadata.participants).toEqual(JSON.parse(result.output).participants)
+            expect(result.metadata.observedAt).toBe(JSON.parse(result.output).observedAt)
+            return result.metadata.participants.find((item) => item.sessionID === child.id)?.state
+          })
 
-          expect(JSON.parse((yield* send(child.id, "unknown")).output)).not.toHaveProperty("warning")
-          expect(JSON.parse((yield* send("main", "main")).output)).not.toHaveProperty("warning")
+          const unknown = yield* send(child.id, "unknown")
+          expect(unknown.metadata).toMatchObject({ fromLabel: root.session.title, toLabel: child.title })
+          expect(JSON.parse(unknown.output)).toMatchObject({ fromLabel: root.session.title, toLabel: child.title })
+          expect(unknown.metadata.availability).toMatchObject({ total: 1, active: 0, inactive: 0, unknown: 1 })
+          expect(JSON.parse(unknown.output).warning).toContain("Availability was unknown")
+          expect(yield* observed).toBe("unknown")
+          const self = yield* send("main", "main")
+          expect(self.metadata.availability).toMatchObject({ total: 0, active: 0 })
+          expect(JSON.parse(self.output)).not.toHaveProperty("warning")
+          const own = yield* post.execute(
+            { to: child.id, type: "INFO", body: "Note to self" },
+            yield* context(child.id, MessageID.ascending()),
+          )
+          expect(own.metadata.availability.total).toBe(0)
+          expect(JSON.parse(own.output)).not.toHaveProperty("warning")
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
-          expect(JSON.parse((yield* send(child.id, "running")).output)).not.toHaveProperty("warning")
+          const running = yield* send(child.id, "running")
+          expect(JSON.parse(running.output)).not.toHaveProperty("warning")
+          expect(JSON.parse(running.output).receipt).toContain("does not confirm delivery, reading, or action")
+          expect(running.metadata.availability).toMatchObject({ total: 1, active: 1, inactive: 0, unknown: 0 })
+          expect(yield* observed).toBe("running")
           yield* jobs.cancel(child.id)
 
           for (const state of ["cancelled", "error", "completed"] as const) {
@@ -212,8 +244,11 @@ describe("shared board tools", () => {
             expect(JSON.parse(result.output)).toMatchObject({
               to: child.id,
               body: "Follow-up work",
-              warning: "Stored only; resume the task to request work.",
+              availability: { total: 1, active: 0, inactive: 1, unknown: 0 },
             })
+            expect(JSON.parse(result.output).warning).toContain("finished invocations at this post attempt")
+            expect(yield* observed).toBe(state)
+            expect(result.metadata.availability).toEqual(JSON.parse(result.output).availability)
             expect((yield* send(child.id, state)).metadata.id).toBe(result.metadata.id)
             expect(yield* jobs.get(child.id)).toEqual(before)
             expect((yield* status.get(child.id)).type).toBe("idle")
@@ -221,7 +256,18 @@ describe("shared board tools", () => {
             expect(history.messages.filter((message) => message.id === result.metadata.id)).toHaveLength(1)
             expect(history.messages.some((message) => Object.hasOwn(message, "warning"))).toBe(false)
           }
-          expect(JSON.parse((yield* send("ALL", "broadcast")).output)).not.toHaveProperty("warning")
+          yield* status.set(root.session.id, { type: "busy" })
+          const broadcast = yield* send("ALL", "broadcast")
+          expect(broadcast.metadata.availability).toMatchObject({ total: 1, active: 0, inactive: 1, unknown: 0 })
+          expect(JSON.parse(broadcast.output).warning).toContain("No other recipients were active at this post attempt")
+          expect((yield* jobs.get(child.id))?.status).toBe("completed")
+          yield* status.set(root.session.id, { type: "idle" })
+          const missing = yield* sessions.create({ parentID: root.session.id, title: "Unknown worker" })
+          const mixed = yield* send("ALL", "mixed")
+          expect(mixed.metadata.availability).toMatchObject({ total: 2, active: 0, inactive: 1, unknown: 1 })
+          expect(JSON.parse(mixed.output).warning).toContain("Availability was unknown")
+          expect(JSON.parse(mixed.output).warning).not.toContain("No other recipients were active")
+          yield* sessions.remove(missing.id)
 
           for (const value of [
             { type: "busy" },
@@ -232,11 +278,13 @@ describe("shared board tools", () => {
             yield* status.set(child.id, state)
             expect(JSON.parse((yield* send(child.id, state.type)).output)).not.toHaveProperty("warning")
             expect(yield* status.get(child.id)).toEqual(state)
+            expect(String(yield* observed)).toBe(state.type)
           }
           yield* status.set(child.id, { type: "idle" })
           yield* jobs.start({ id: child.id, type: "other", run: Effect.succeed("Done") })
           yield* jobs.wait({ id: child.id, timeout: 1_000 })
-          expect(JSON.parse((yield* send(child.id, "other")).output)).not.toHaveProperty("warning")
+          expect((yield* send(child.id, "other")).metadata.availability.unknown).toBe(1)
+          expect(yield* observed).toBe("unknown")
           expect(yield* sessions.messages({ sessionID: child.id })).toEqual([])
         }),
       options,

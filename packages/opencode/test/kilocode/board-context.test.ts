@@ -10,6 +10,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
+import { SessionStatus } from "../../src/session/status"
+import { BackgroundJob } from "../../src/background/job"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { Provider } from "../../src/provider/provider"
@@ -27,6 +29,8 @@ const it = testEffect(
   LayerNode.compile(
     LayerNode.group([
       Session.node,
+      SessionStatus.node,
+      BackgroundJob.node,
       SessionProjector.node,
       Config.node,
       Database.node,
@@ -177,7 +181,9 @@ describe("shared board notifications", () => {
           expect(yield* notify("read", output)).toBe(output)
           const next = yield* BoardContext.notifier(input)
           expect(yield* next("bash", output)).toBe(output)
-          expect(yield* read(root.id)).toEqual(page)
+          const replay = yield* read(root.id)
+          expect(JSON.parse(replay.output).messages).toEqual(JSON.parse(page.output).messages)
+          expect(replay.metadata.cursor).toBe(page.metadata.cursor)
           const empty = yield* read(root.id, { since: page.metadata.cursor })
           expect(JSON.parse(empty.output).messages).toEqual([])
           expect(yield* next("board_read", empty)).toBe(empty)

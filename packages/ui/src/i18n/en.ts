@@ -100,6 +100,15 @@ export const dict: Record<string, string> = {
   "ui.messagePart.diagnostic.error": "Error",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Read agent messages",
+  "ui.messagePart.board.all": "All agents",
+  "ui.messagePart.board.primary": "Primary agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} to {{to}}",
+  "ui.messagePart.board.empty": "No agent messages",
+  "ui.messagePart.board.stored": "Stored only. Delivery and reading are not confirmed.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
