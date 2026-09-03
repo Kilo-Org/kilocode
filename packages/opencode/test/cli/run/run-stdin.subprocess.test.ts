@@ -8,9 +8,8 @@
 // exit). The timer now aborts the read and cancels the stdin stream, so the
 // same write volume must leave the child's RSS flat.
 //
-// node:child_process (not Bun.spawn) so the EPIPE from writing into the
-// cancelled stdin arrives as a catchable error event instead of killing the
-// harness.
+// node:child_process (not Bun.spawn) so a write into the full or dead pipe
+// surfaces as a catchable stream error instead of killing the harness.
 import { afterAll, expect, test } from "bun:test"
 import { spawn } from "node:child_process"
 import { mkdtempSync, rmSync } from "node:fs"
@@ -43,14 +42,12 @@ test(
     )
     const child = spawn(process.execPath, [childPath], { stdio: ["pipe", "pipe", "pipe"] })
 
-    let epipe = false
-    const epipeHit = Promise.withResolvers<void>()
-    child.stdin?.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EPIPE") {
-        epipe = true
-        epipeHit.resolve()
-      }
-    })
+    // A write into the full or dead pipe fails asynchronously: the child's
+    // exit closes the read end while the harness still holds backed-up
+    // writes. Bun 1.4 delivers that as EPIPE, 1.3.14 swallows it. Either way
+    // it is the expected consequence of the cancel, so this handler only
+    // keeps the stream error from killing the harness.
+    child.stdin?.on("error", () => {})
     let out = ""
     child.stdout?.on("data", (chunk: Buffer) => {
       out += chunk.toString()
@@ -61,8 +58,8 @@ test(
     })
 
     // Write 64MB while the child sits past its 200ms silence timer. Once the
-    // read is cancelled the pipe rejects further writes, so writes may stop
-    // landing; the harness must still attempt the full volume.
+    // read is cancelled the pipe stays full, so the writes stop landing in
+    // child memory; the harness must still attempt the full volume.
     let written = 0
     const chunk = Buffer.alloc(1024 * 1024, 0x61)
     const writer = setInterval(() => {
@@ -77,14 +74,8 @@ test(
     await new Promise<void>((resolve) => child.on("exit", () => resolve()))
     clearInterval(writer)
 
-    // The final EPIPE lands asynchronously: the child's exit closes the pipe
-    // read end, then the parent's pending write flush fails. Give that error
-    // event a bounded window so the assertion below does not race it.
-    await Promise.race([epipeHit.promise, Bun.sleep(250)])
-
     expect(stderr).toBe("")
     expect(written).toBe(64 * 1024 * 1024)
-    expect(epipe).toBe(true)
 
     const result: { value: string | undefined; atTimer: number; after: number } = JSON.parse(out)
     expect(result.value).toBeUndefined()
