@@ -292,7 +292,7 @@ export const dict = {
   "agentManager.intro.stage4.text":
     "Pide al agente de cada worktree que abra un pull request. O usa Apply en el panel de diff para copiar los cambios a Local.",
   "agentManager.intro.conflictText":
-    "Pide al agente del worktree que fusione su rama base original y resuelva los conflictos, y luego revisa el resultado. Evita git stash: los stashes se comparten entre worktrees.",
+    "Usa /update-from-base en el chat del worktree para pedir al agente que obtenga y fusione su rama base guardada. Revisa cómo se han resuelto los conflictos. Evita git stash: los stashes se comparten entre worktrees.",
   "agentManager.intro.prDetection":
     "Las insignias de PR se actualizan automáticamente para cada rama de worktree (se requiere iniciar sesión en GitHub CLI).",
   "agentManager.intro.checksRunning": "Comprobaciones en curso",

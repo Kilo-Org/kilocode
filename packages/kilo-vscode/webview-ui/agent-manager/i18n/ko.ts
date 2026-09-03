@@ -276,7 +276,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "변경 사항이 충돌하면",
   "agentManager.intro.conflictText":
-    "worktree의 에이전트에게 원래 base branch를 병합하고 충돌을 해결하도록 요청한 다음 결과를 검토하세요. git stash는 worktree 간에 공유되므로 사용하지 마세요.",
+    "worktree 채팅에서 /update-from-base를 사용해 에이전트에게 해당 worktree의 저장된 base branch를 가져와 병합하도록 요청하세요. 충돌이 해결되었다면 그 내용을 검토하세요. stash는 worktree 간에 공유되므로 git stash 사용을 피하세요.",
   "agentManager.intro.stage1.title": "내 저장소",
   "agentManager.intro.stage1.text": "로컬 파일은 변경되지 않습니다",
   "agentManager.intro.stage2.title": "예: 두 작업을 병렬로",

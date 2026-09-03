@@ -284,7 +284,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Als wijzigingen conflicteren",
   "agentManager.intro.conflictText":
-    "Vraag de agent in de worktree om zijn oorspronkelijke basisbranch te mergen en conflicten op te lossen, en controleer daarna het resultaat. Vermijd git stash: stashes worden gedeeld tussen worktrees.",
+    "Gebruik /update-from-base in de worktree-chat om de agent te vragen de opgeslagen basisbranch op te halen en te mergen. Controleer hoe eventuele conflicten zijn opgelost. Vermijd git stash: stashes worden gedeeld tussen worktrees.",
   "agentManager.intro.stage1.title": "Je repository",
   "agentManager.intro.stage1.text": "Lokale bestanden blijven ongewijzigd",
   "agentManager.intro.stage2.title": "Voorbeeld: twee taken parallel",

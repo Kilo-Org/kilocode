@@ -291,7 +291,7 @@ export const dict = {
   "agentManager.intro.stage4.text":
     "各 worktree のエージェントに pull request を開くよう依頼します。または差分パネルで Apply を使い、変更を Local にコピーします。",
   "agentManager.intro.conflictText":
-    "worktree のエージェントに元のベースブランチをマージして競合を解決するよう依頼し、その後結果を確認してください。git stash は worktree 間で共有されるため、使用は避けてください。",
+    "worktree のチャットで /update-from-base を使い、保存されているベースブランチをフェッチしてマージするようエージェントに依頼してください。競合が解決された場合は、その内容を確認してください。stash は worktree 間で共有されるため、git stash の使用は避けてください。",
   "agentManager.intro.prDetection":
     "PR バッジは各 worktree ブランチで自動的に更新されます（GitHub CLI へのサインインが必要です）。",
   "agentManager.intro.checksRunning": "チェック実行中",

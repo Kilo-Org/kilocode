@@ -287,7 +287,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Якщо зміни конфліктують",
   "agentManager.intro.conflictText":
-    "Попросіть агента в worktree злити його початкову базову гілку та вирішити конфлікти, а потім перегляньте результат. Уникайте git stash: stash є спільним для worktree.",
+    "Використайте /update-from-base у чаті worktree, щоб попросити агента отримати та злити збережену базову гілку цього worktree. Перевірте результати вирішення конфліктів. Уникайте git stash: записи stash є спільними для всіх worktree.",
   "agentManager.intro.stage1.title": "Ваш репозиторій",
   "agentManager.intro.stage1.text": "Локальні файли залишаються без змін",
   "agentManager.intro.stage2.title": "Приклад: два завдання паралельно",

@@ -289,7 +289,7 @@ export const dict = {
   "agentManager.intro.stage4.text":
     "Ask the agent in each worktree to open a pull request. Or use Apply in the diff panel to copy changes to Local.",
   "agentManager.intro.conflictText":
-    "Ask the agent in the worktree to merge its original base branch and resolve conflicts, then review the result. Avoid git stash: stashes are shared across worktrees.",
+    "Use /update-from-base in the worktree chat to ask the agent to fetch and merge its saved base branch. Review any conflict resolutions. Avoid git stash: stashes are shared across worktrees.",
   "agentManager.intro.prDetection":
     "PR badges update automatically for each worktree branch (GitHub CLI sign-in required).",
   "agentManager.intro.checksRunning": "Checks running",

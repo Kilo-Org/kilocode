@@ -280,7 +280,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Se as alterações entrarem em conflito",
   "agentManager.intro.conflictText":
-    "Peça ao agente no worktree para mesclar sua branch base original e resolver os conflitos, depois revise o resultado. Evite git stash: os stashes são compartilhados entre os worktrees.",
+    "Use /update-from-base no chat do worktree para pedir ao agente que busque e mescle sua branch base salva. Revise as resoluções de conflitos. Evite git stash: os stashes são compartilhados entre os worktrees.",
   "agentManager.intro.stage1.title": "Seu repositório",
   "agentManager.intro.stage1.text": "Os arquivos locais permanecem inalterados",
   "agentManager.intro.stage2.title": "Exemplo: duas tarefas em paralelo",

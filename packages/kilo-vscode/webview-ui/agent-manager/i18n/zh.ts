@@ -270,7 +270,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "如果更改发生冲突",
   "agentManager.intro.conflictText":
-    "请让 worktree 中的代理合并其原始基础分支并解决冲突，然后检查结果。请避免使用 git stash，因为 stash 会在 worktree 之间共享。",
+    "请在 worktree 聊天中使用 /update-from-base，让代理获取并合并该 worktree 已保存的基础分支。请检查所有冲突的解决结果。请避免使用 git stash，因为 stash 会在 worktree 之间共享。",
   "agentManager.intro.stage1.title": "你的仓库",
   "agentManager.intro.stage1.text": "本地文件保持不变",
   "agentManager.intro.stage2.title": "示例：两个任务并行",

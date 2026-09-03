@@ -277,7 +277,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Hvis endringer kommer i konflikt",
   "agentManager.intro.conflictText":
-    "Be agenten i worktree-et om å slå sammen den opprinnelige base-branchen og løse konflikter, og gå deretter gjennom resultatet. Unngå git stash: stash deles mellom worktrees.",
+    "Bruk /update-from-base i worktree-chatten for å be agenten om å hente og slå sammen den lagrede base-branchen. Gå gjennom eventuelle konfliktløsninger. Unngå git stash: stash deles mellom worktrees.",
   "agentManager.intro.stage1.title": "Ditt repositorium",
   "agentManager.intro.stage1.text": "Lokale filer forblir uendret",
   "agentManager.intro.stage2.title": "Eksempel: to oppgaver parallelt",

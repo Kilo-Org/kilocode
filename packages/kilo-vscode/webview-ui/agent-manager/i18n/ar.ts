@@ -275,7 +275,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "طلب سحب",
   "agentManager.intro.graph.conflict": "إذا تعارضت التغييرات",
   "agentManager.intro.conflictText":
-    "اطلب من الوكيل في worktree دمج فرعه الأساسي الأصلي وحل التعارضات، ثم راجع النتيجة. تجنب git stash: فعمليات stash مشتركة بين worktrees.",
+    "استخدم /update-from-base في دردشة worktree لتطلب من الوكيل جلب فرعه الأساسي المحفوظ ودمجه. راجع نتائج حل أي تعارضات. تجنب git stash: فعمليات stash مشتركة بين worktrees.",
   "agentManager.intro.stage1.title": "مستودعك",
   "agentManager.intro.stage1.text": "تبقى الملفات المحلية دون تغيير",
   "agentManager.intro.stage2.title": "مثال: مهمتان بالتوازي",

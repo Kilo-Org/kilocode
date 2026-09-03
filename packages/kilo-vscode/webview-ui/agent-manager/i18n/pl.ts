@@ -278,7 +278,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Jeśli zmiany powodują konflikt",
   "agentManager.intro.conflictText":
-    "Poproś agenta w worktree o scalenie jego oryginalnej gałęzi bazowej i rozwiązanie konfliktów, a następnie przejrzyj wynik. Unikaj git stash: stash jest współdzielony między worktree.",
+    "Użyj /update-from-base na czacie worktree, aby poprosić agenta o pobranie i scalenie zapisanej gałęzi bazowej tego worktree. Przejrzyj wszystkie rozwiązania konfliktów. Unikaj git stash: stashe są współdzielone między worktree.",
   "agentManager.intro.stage1.title": "Twoje repozytorium",
   "agentManager.intro.stage1.text": "Lokalne pliki pozostają niezmienione",
   "agentManager.intro.stage2.title": "Przykład: dwa zadania równolegle",

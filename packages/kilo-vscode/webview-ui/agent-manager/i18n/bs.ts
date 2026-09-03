@@ -278,7 +278,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Ako se promjene sukobe",
   "agentManager.intro.conflictText":
-    "Zamolite agenta u worktree-u da spoji svoju originalnu osnovnu granu i riješi konflikte, a zatim pregledajte rezultat. Izbjegavajte git stash: stash-ovi se dijele između worktree-a.",
+    "Koristite /update-from-base u chatu worktree-a da zamolite agenta da preuzme i spoji njegovu sačuvanu osnovnu granu. Pregledajte sva rješenja konflikata. Izbjegavajte git stash: stash-ovi se dijele između worktree-a.",
   "agentManager.intro.stage1.title": "Vaš repozitorij",
   "agentManager.intro.stage1.text": "Lokalne datoteke ostaju nepromijenjene",
   "agentManager.intro.stage2.title": "Primjer: dva zadatka paralelno",

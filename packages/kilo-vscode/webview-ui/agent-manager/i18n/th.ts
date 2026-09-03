@@ -273,7 +273,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "หากการเปลี่ยนแปลงขัดแย้งกัน",
   "agentManager.intro.conflictText":
-    "ขอให้ agent ใน worktree merge base branch เดิมของตนและแก้ไขความขัดแย้ง จากนั้นตรวจสอบผลลัพธ์ หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
+    "ใช้ /update-from-base ในแชทของ worktree เพื่อขอให้ agent fetch และ merge base branch ที่บันทึกไว้สำหรับ worktree นั้น ตรวจสอบผลการแก้ไขความขัดแย้ง หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
   "agentManager.intro.stage1.title": "repository ของคุณ",
   "agentManager.intro.stage1.text": "ไฟล์ในเครื่องจะไม่เปลี่ยนแปลง",
   "agentManager.intro.stage2.title": "ตัวอย่าง: สองงานทำพร้อมกัน",

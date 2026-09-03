@@ -287,7 +287,7 @@ export const dict = {
   "agentManager.intro.graph.pr": "Pull request",
   "agentManager.intro.graph.conflict": "Değişiklikler çakışırsa",
   "agentManager.intro.conflictText":
-    "worktree'deki ajandan özgün temel dalını birleştirmesini ve çakışmaları çözmesini isteyin, ardından sonucu inceleyin. git stash kullanmaktan kaçının: stash'ler worktree'ler arasında paylaşılır.",
+    "Worktree sohbetinde /update-from-base kullanarak ajandan kayıtlı temel dalını getirip birleştirmesini isteyin. Çakışma çözümlerini gözden geçirin. git stash kullanmaktan kaçının: stash'ler worktree'ler arasında paylaşılır.",
   "agentManager.intro.stage1.title": "Deponuz",
   "agentManager.intro.stage1.text": "Yerel dosyalar değişmeden kalır",
   "agentManager.intro.stage2.title": "Örnek: iki görev paralel",
