@@ -565,6 +565,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.updateFromBase", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "updateFromBase" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.openPR", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openPR" })
     }),

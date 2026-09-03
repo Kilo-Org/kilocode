@@ -19,6 +19,9 @@ export const dict = {
   "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
 
+  "agentManager.updateBase.title": "به‌روزرسانی از پایه",
+  "agentManager.updateBase.selectWorktree": "ابتدا یک worktree تحت مدیریت انتخاب کنید.",
+
   "agentManager.worktree.settings": "تنظیمات Worktree",
   "agentManager.worktree.new": "Worktree جدید",
   "agentManager.worktree.setupScript": "اسکریپت راه‌اندازی Worktree",
@@ -208,6 +211,8 @@ export const dict = {
   "agentManager.pr.comment.title": "نظرات",
   "agentManager.pr.copyLink": "کپی پیوند PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} حل‌نشده",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} گفت‌وگوی حل‌نشده در بررسی",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} گفت‌وگوی حل‌نشده در بررسی",
   "agentManager.pr.comment.resolvedGroup": "حل‌شده ({{count}})",
   "agentManager.pr.comment.sendAll": "ارسال {{count}} مورد حل‌نشده به عامل",
   "agentManager.pr.comment.sendAllToTerminal": "ارسال {{count}} مورد حل‌نشده به ترمینال",
@@ -269,4 +274,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "برای بازیابی وضعیت PR، دستور 'gh auth login' را در ترمینال اجرا کنید.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI نصب نشده است",
   "agentManager.pr.error.gh_missing.description": "برای فعال کردن وضعیت PR، GitHub CLI را نصب کنید.",
+  "agentManager.intro.title": "وظایف موازی. worktreeهای جدا.",
+  "agentManager.intro.subtitle":
+    "worktree برای هر وظیفه یک پوشه و شاخه جداست. عامل‌ها بدون ویرایش فایل‌های یکسان کنار هم کار می‌کنند.",
+  "agentManager.intro.graph.agent": "عامل Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "اگر تغییرات تعارض داشته باشند",
+  "agentManager.intro.conflictText":
+    "از عامل در worktree بخواهید شاخهٔ پایهٔ اصلی خود را merge کند و تعارض‌ها را حل کند، سپس نتیجه را بررسی کنید. از git stash پرهیز کنید: stashها بین worktreeها مشترک هستند.",
+  "agentManager.intro.stage1.title": "مخزن شما",
+  "agentManager.intro.stage1.text": "فایل‌های محلی بدون تغییر می‌مانند",
+  "agentManager.intro.stage2.title": "مثال: دو وظیفه به‌صورت موازی",
+  "agentManager.intro.stage2.text":
+    "هر دو worktree متعلق به این مخزن هستند. برای مخزن دیگر، پروژه دیگری را انتخاب کنید.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "پوشه و شاخه اختصاصی",
+  "agentManager.intro.stage4.title": "هر زمان آماده بودید تغییرات را برگردانید",
+  "agentManager.intro.stage4.text": "از عامل بخواهید pull request باز کند، یا از Apply در پنل diff استفاده کنید.",
+  "agentManager.intro.prDetection":
+    "نشان‌های PR برای هر branch در worktree به‌طور خودکار به‌روزرسانی می‌شوند (ورود به GitHub CLI لازم است).",
+  "agentManager.intro.checksRunning": "بررسی‌ها در حال اجرا هستند",
+  "agentManager.intro.approved": "تأییدشده",
+  "agentManager.intro.create": "ایجاد worktree",
+  "agentManager.intro.guide": "راهنما را بخوانید",
+  "agentManager.intro.dismiss": "رد کردن مقدمه",
+  "agentManager.intro.reopen": "Agent Manager چگونه کار می‌کند",
 }
