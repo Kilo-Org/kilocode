@@ -14,6 +14,7 @@ test("coffee button is named and keeps cleanup retries available", async () => {
     external: ["happy-dom"],
     format: "esm",
     platform: "node",
+    loader: { ".css": "empty" },
     logLevel: "silent",
     alias: {
       "solid-js": path.join(solid, "dist/solid.js"),

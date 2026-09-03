@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
 
@@ -38,13 +39,30 @@ export function feed(opts: {
 }) {
   const dirs = new Map<string, string>()
   const states = new Map<string, State>()
+  const aliases = new Map<string, string>()
+  const resolve = (dir: string): string => {
+    const path = key(dir)
+    const prior = aliases.get(path)
+    if (prior) return prior
+    if (!opts.watching()) return path
+    try {
+      const id = key(realpathSync.native(dir))
+      aliases.set(path, id)
+      aliases.set(id, id)
+      return id
+    } catch {
+      aliases.set(path, path)
+      return path
+    }
+  }
   const publish = () => opts.post([...states.values()].some((state) => state.values.size > 0))
   const clear = () => {
     states.clear()
+    aliases.clear()
     publish()
   }
   const get = (dir: string, force = false): State => {
-    const id = key(dir)
+    const id = resolve(dir)
     const prior = states.get(id)
     const state: State = prior ?? { values: new Map() }
     states.set(id, state)
@@ -72,6 +90,9 @@ export function feed(opts: {
     for (const dir of opts.paths()) {
       if (dir) dirs.set(key(dir), dir)
     }
+    const paths = [...dirs.values()]
+    dirs.clear()
+    for (const dir of paths) dirs.set(resolve(dir), dir)
     await Promise.all([...dirs.values()].map((dir) => get(dir, true).request?.promise))
   }
   return {
@@ -79,8 +100,16 @@ export function feed(opts: {
     clear,
     event(event: SSEPayload, directory?: string): void {
       if (event.type === "server.instance.disposed") {
-        const id = key(event.properties.directory)
-        dirs.delete(id)
+        const path = key(event.properties.directory)
+        const id = resolve(event.properties.directory)
+        for (const [entry, dir] of dirs) {
+          if (entry !== id && key(dir) !== path) continue
+          dirs.delete(entry)
+          states.delete(entry)
+        }
+        for (const [alias, target] of aliases) {
+          if (target === id) aliases.delete(alias)
+        }
         states.delete(id)
         publish()
         return
@@ -92,7 +121,7 @@ export function feed(opts: {
         event.type !== "session.error"
       )
         return
-      if (directory) dirs.set(key(directory), directory)
+      if (directory) dirs.set(resolve(directory), directory)
       if (!opts.watching()) return
       if (!directory && event.type === "session.status" && working(event.properties.status)) {
         clear()
@@ -108,6 +137,7 @@ export function feed(opts: {
     dispose(): void {
       states.clear()
       dirs.clear()
+      aliases.clear()
     },
   }
 }

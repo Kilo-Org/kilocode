@@ -3,6 +3,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
 import type { CaffeinationState } from "../src/types/messages"
+import "./CaffeinationButton.css"
 
 interface Props {
   t: LanguageContextValue["t"]
@@ -25,7 +26,8 @@ export const CaffeinationButton: Component<Props> = (props) => {
       <IconButton
         icon="coffee"
         size="small"
-        variant={props.state().active ? "primary" : "ghost"}
+        variant="ghost"
+        classList={{ "am-caffeination-active": props.state().active }}
         aria-label={label()}
         aria-pressed={props.state().enabled || props.state().active}
         disabled={!props.state().available && !props.state().enabled && !props.state().active}

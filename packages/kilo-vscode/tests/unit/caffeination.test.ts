@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test"
+import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 import type { ConnectionState } from "../../src/services/cli-backend/connection-service"
 import type { SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
@@ -116,6 +119,15 @@ function setup(data: Record<string, Snapshot> = {}, driver = new Driver()) {
   return { connection, driver, service: new CaffeinationService(connection, driver) }
 }
 
+async function aliases() {
+  const dir = await mkdtemp(path.join(tmpdir(), "kilo-caffeination-alias-"))
+  const real = path.join(dir, "real")
+  const alias = path.join(dir, "alias")
+  await mkdir(real)
+  await symlink(real, alias, process.platform === "win32" ? "junction" : "dir")
+  return { dir, real: await realpath(real), alias }
+}
+
 describe("CaffeinationService", () => {
   it("defaults off without power, network, or reconnect work", async () => {
     const test = setup({ [root]: snapshot({ one: "busy" }) })
@@ -163,6 +175,103 @@ describe("CaffeinationService", () => {
     await Bun.sleep(0)
     expect(test.service.getState().active).toBe(false)
     await test.service.dispose()
+  })
+
+  it.each(["alias", "real"] as const)(
+    "releases rehydrated %s snapshots from the other symlink spelling",
+    async (route) => {
+      const paths = await aliases()
+      const source = paths[route]
+      const target = route === "alias" ? paths.real : paths.alias
+      const rows = snapshot({ parent: { type: "busy", working: false }, background: { type: "idle", working: true } })
+      const test = setup({ [source]: rows, [target]: rows })
+      test.connection.dirs = [source]
+      try {
+        await test.service.setEnabled(true)
+        await test.service.setEnabled(false)
+        await test.service.setEnabled(true)
+        expect(test.driver.held).toBe(true)
+        test.connection.data[source] = test.connection.data[target] = snapshot({
+          parent: { type: "busy", working: false },
+        })
+        test.connection.emit(status("background", "idle", false), target)
+        await Bun.sleep(0)
+        expect(test.service.getState().active).toBe(false)
+        expect(test.driver.held).toBe(false)
+        expect(test.connection.calls).toEqual([source, source])
+      } finally {
+        await test.service.dispose()
+        await rm(paths.dir, { recursive: true, force: true })
+      }
+    },
+  )
+
+  it("keeps equal session IDs isolated across real directories", async () => {
+    const paths = await aliases()
+    const other = path.join(paths.dir, "other")
+    await mkdir(other)
+    const test = setup({ [paths.alias]: snapshot({ one: "busy" }), [other]: snapshot({ one: "busy" }) })
+    test.connection.dirs = [paths.alias, other]
+    try {
+      await test.service.setEnabled(true)
+      test.connection.emit(status("one", "busy", false), paths.real)
+      await Bun.sleep(0)
+      expect(test.driver.held).toBe(true)
+      test.connection.emit(status("one", "busy", false), other)
+      await Bun.sleep(0)
+      expect(test.driver.held).toBe(false)
+    } finally {
+      await test.service.dispose()
+      await rm(paths.dir, { recursive: true, force: true })
+    }
+  })
+
+  it("removes a deleted directory through its cached canonical alias", async () => {
+    const paths = await aliases()
+    const test = setup({ [paths.alias]: snapshot({ one: "busy" }) })
+    test.connection.dirs = [paths.alias]
+    try {
+      await test.service.setEnabled(true)
+      const gate = Promise.withResolvers<Reply<Snapshot>>()
+      test.connection.statuses = () => gate.promise
+      const refresh = test.service.refresh()
+      await rm(paths.real, { recursive: true })
+      test.connection.dirs = []
+      test.connection.emit({ id: "disposed", type: "server.instance.disposed", properties: { directory: paths.real } })
+      gate.resolve({ data: snapshot({ one: "busy" }) })
+      await refresh
+      expect(test.driver.held).toBe(false)
+      expect(test.connection.calls).toHaveLength(2)
+      await test.service.refresh()
+      expect(test.connection.calls).toHaveLength(2)
+    } finally {
+      await test.service.dispose()
+      await rm(paths.dir, { recursive: true, force: true })
+    }
+  })
+
+  it("resolves a retargeted alias after reset instead of caching disabled observations", async () => {
+    const paths = await aliases()
+    const other = path.join(paths.dir, "other")
+    await mkdir(other)
+    const test = setup({ [paths.alias]: snapshot({ one: "busy" }) })
+    test.connection.dirs = [paths.alias]
+    try {
+      await test.service.setEnabled(true)
+      await test.service.setEnabled(false)
+      test.connection.emit(status("one", "busy"), paths.alias)
+      expect(test.connection.calls).toEqual([paths.alias])
+      await rm(paths.alias)
+      await symlink(other, paths.alias, process.platform === "win32" ? "junction" : "dir")
+      await test.service.setEnabled(true)
+      test.connection.emit(status("one", "busy", false), await realpath(other))
+      await Bun.sleep(0)
+      expect(test.driver.held).toBe(false)
+      expect(test.connection.calls).toEqual([paths.alias, paths.alias])
+    } finally {
+      await test.service.dispose()
+      await rm(paths.dir, { recursive: true, force: true })
+    }
   })
 
   it("routes equivalent directory spellings to the same status feed", async () => {
