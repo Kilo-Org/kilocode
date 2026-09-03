@@ -1072,6 +1072,51 @@ export const PRBadgeNoReview: Story = {
   ),
 }
 
+export const PRBadgeUnresolved: Story = {
+  name: "PR Badge - unresolved review threads",
+  render: () => (
+    <StoryProviders noPadding>
+      <WorktreeItem
+        {...defaultProps}
+        label="Cache change badge file reads"
+        subtitle="fix/change-badge-reads"
+        stats={baseStats}
+        active
+        pr={{ ...basePR, unresolvedThreads: 3 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="Update authentication"
+        subtitle="feat/authentication"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8595, review: "approved", unresolvedThreads: 12 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="Improve settings"
+        subtitle="feat/settings"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8596, state: "draft", unresolvedThreads: 1 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="All feedback resolved"
+        subtitle="fix/resolved-feedback"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8597, unresolvedThreads: 0 }}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeUnresolved200: Story = {
+  ...PRBadgeUnresolved,
+  name: "PR Badge - unresolved review threads, narrow",
+}
+
 export const PRBadgeApprovedChecksFailing: Story = {
   name: "PR Badge — approved but checks failing",
   render: () => (

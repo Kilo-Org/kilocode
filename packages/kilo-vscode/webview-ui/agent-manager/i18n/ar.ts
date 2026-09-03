@@ -200,6 +200,8 @@ export const dict = {
   "agentManager.pr.comment.title": "التعليقات",
   "agentManager.pr.copyLink": "نسخ رابط PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} غير محلولة",
+  "agentManager.pr.comment.unresolvedThread": "نقاش مراجعة غير محلول: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "نقاشات مراجعة غير محلولة: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "تم الحل ({{count}})",
   "agentManager.pr.comment.sendAll": "إرسال {{count}} غير محلولة إلى الوكيل",
   "agentManager.pr.comment.sendAllToTerminal": "إرسال {{count}} غير محلولة إلى الطرفية",

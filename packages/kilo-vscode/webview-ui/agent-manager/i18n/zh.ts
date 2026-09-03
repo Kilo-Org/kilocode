@@ -196,6 +196,8 @@ export const dict = {
   "agentManager.pr.comment.title": "评论",
   "agentManager.pr.copyLink": "复制 PR 链接",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 个未解决",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} 个未解决的审查讨论串",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} 个未解决的审查讨论串",
   "agentManager.pr.comment.resolvedGroup": "已解决 ({{count}})",
   "agentManager.pr.comment.sendAll": "将 {{count}} 个未解决评论发送给代理",
   "agentManager.pr.comment.sendAllToTerminal": "将 {{count}} 个未解决评论发送到终端",

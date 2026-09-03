@@ -203,6 +203,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Komentari",
   "agentManager.pr.copyLink": "Kopiraj PR vezu",
   "agentManager.pr.comment.unresolvedCount": "{{count}} neriješenih",
+  "agentManager.pr.comment.unresolvedThread": "Neriješena diskusija u pregledu: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Neriješene diskusije u pregledu: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Riješeno ({{count}})",
   "agentManager.pr.comment.sendAll": "Pošalji {{count}} neriješenih agentu",
   "agentManager.pr.comment.sendAllToTerminal": "Pošalji {{count}} neriješenih terminalu",

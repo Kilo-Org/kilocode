@@ -196,6 +196,8 @@ export const dict = {
   "agentManager.pr.comment.title": "留言",
   "agentManager.pr.copyLink": "複製 PR 連結",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 個未解決",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} 個未解決的審查討論串",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} 個未解決的審查討論串",
   "agentManager.pr.comment.resolvedGroup": "已解決 ({{count}})",
   "agentManager.pr.comment.sendAll": "將 {{count}} 個未解決留言傳送給代理",
   "agentManager.pr.comment.sendAllToTerminal": "將 {{count}} 個未解決留言傳送到終端機",

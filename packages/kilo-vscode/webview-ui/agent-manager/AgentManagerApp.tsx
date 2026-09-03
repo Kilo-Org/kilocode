@@ -17,6 +17,7 @@ import {
 } from "solid-js"
 import type {
   AgentManagerRepoInfoMessage,
+  AgentManagerSidebarTarget,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
   ExtensionMessage,
@@ -174,7 +175,7 @@ import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanelCache } from "./DiffPanelCache"
-import { PRPanelHost } from "./pr/PRPanelHost"
+import { createPRNavigation, PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -267,11 +268,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const activateSelection = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    comments.cancel()
+    vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
+  }
   const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
-    vscode.postMessage({
-      type: "agentManager.activateSelection",
-      target: { projectId, kind: "worktree", worktreeId },
-    }),
+    activateSelection({ projectId, kind: "worktree", worktreeId }),
   )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
@@ -313,6 +315,7 @@ const AgentManagerContent: Component = () => {
     setHistorySwitches([])
   }
   const openHistory = (pid?: string) => {
+    comments.cancel()
     const scoped = pid !== undefined && multiProject()
     if (scoped && (currentProjectId() !== pid || historySwitches().length > 0))
       setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
@@ -320,10 +323,7 @@ const AgentManagerContent: Component = () => {
     setHistory(true)
     if (scoped) {
       // Activate the target so the session store and pick routing use that project.
-      vscode.postMessage({
-        type: "agentManager.activateSelection",
-        target: { projectId: pid, kind: "local" },
-      } as never)
+      activateSelection({ projectId: pid, kind: "local" })
     }
   }
   const [reviewActive, setReviewActive] = createSignal(false)
@@ -631,6 +631,30 @@ const AgentManagerContent: Component = () => {
     metrics.track("open_pull_request", "keyboard_shortcut")
     togglePRPanel()
   }
+  const comments = createPRNavigation({
+    project: currentProjectId,
+    active: activeProjectId,
+    selection,
+    select: (target) => {
+      if (multiProject() && target.projectId) {
+        activateSelection({ projectId: target.projectId, kind: "worktree", worktreeId: target.worktreeId })
+        return
+      }
+      if (selection() !== target.worktreeId) selectWorktree(target.worktreeId)
+    },
+    visible: () => panels.selected() === SidePanel.PR && !history() && !reviewActive(),
+    open: () => {
+      closeHistory()
+      if (reviewActive()) closeReviewTab()
+      panels.open(SidePanel.PR)
+    },
+    refresh: (target) =>
+      vscode.postMessage({
+        type: "agentManager.refreshPR",
+        projectId: target.projectId,
+        worktreeId: target.worktreeId,
+      }),
+  })
 
   const runWorktree = (id: string, destination: TerminalDestination) => {
     const state = runStatuses()[id]?.state ?? "idle"
@@ -988,7 +1012,7 @@ const AgentManagerContent: Component = () => {
       selection,
       currentSessionID: session.currentSessionID,
     },
-    (target) => vscode.postMessage({ type: "agentManager.activateSelection", target }),
+    activateSelection,
     scrollIntoView,
   )
 
@@ -2304,6 +2328,8 @@ const AgentManagerContent: Component = () => {
             mode={mode}
             defaultBase={defaultBase}
             onCreate={creation.schedule}
+            onSelect={activateSelection}
+            onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
@@ -2321,6 +2347,7 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
+            onOpenComments={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
             activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}
             localStats={localStats}
@@ -2655,6 +2682,8 @@ const AgentManagerContent: Component = () => {
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
                         sessionId={diffCtx()}
+                        jump={comments.jump()}
+                        onJump={comments.complete}
                         onClose={() => panels.close(SidePanel.PR)}
                       />
                     </Show>

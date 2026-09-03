@@ -207,6 +207,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Kommentare",
   "agentManager.pr.copyLink": "PR-Link kopieren",
   "agentManager.pr.comment.unresolvedCount": "{{count}} ungelöst",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} ungelöster Review-Thread",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} ungelöste Review-Threads",
   "agentManager.pr.comment.resolvedGroup": "Gelöst ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} ungelöste an Agent senden",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} ungelöste an das Terminal senden",

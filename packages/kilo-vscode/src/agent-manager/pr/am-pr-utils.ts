@@ -174,9 +174,12 @@ export function ghErrorReason(message: string): string {
  * the open comment list in the panel while the user is reading it.
  */
 export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
-  if (next.comments || !prev?.comments) return next
-  if (prev.number !== next.number) return next
-  return { ...next, comments: prev.comments }
+  if (!prev || prev.number !== next.number || prev.url !== next.url) return next
+  return {
+    ...next,
+    comments: next.comments ?? prev.comments,
+    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? prev.unresolvedThreads,
+  }
 }
 
 /**

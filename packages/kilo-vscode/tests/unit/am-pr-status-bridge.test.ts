@@ -22,6 +22,22 @@ const pr: PRStatus = {
   files: 0,
 }
 
+function page(nodes: unknown[], total = nodes.length, cursor?: string) {
+  return {
+    data: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            nodes,
+            totalCount: total,
+            pageInfo: { hasNextPage: cursor !== undefined, endCursor: cursor ?? null },
+          },
+        },
+      },
+    },
+  }
+}
+
 function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
   const sent: AgentManagerOutMessage[] = []
   const opened: string[] = []
@@ -68,6 +84,10 @@ describe("PRStatusPoller batched GitHub queries", () => {
     internal.target = () => tree
     internal.gh = async (args) => {
       calls.push(args)
+      if (args[0] === "repo") {
+        return { stdout: JSON.stringify({ owner: { login: "example" }, name: root.slice(1) }), stderr: "" }
+      }
+      if (args[0] === "api") return { stdout: JSON.stringify(page([])), stderr: "" }
       return {
         stdout: JSON.stringify({
           number: root === "/alpha" ? 1 : tree.branch === "HEAD" ? (tree.path.endsWith("one") ? 3 : 4) : 2,
@@ -90,9 +110,10 @@ describe("PRStatusPoller batched GitHub queries", () => {
     tree.path = "/beta/two"
     await internal.fetchOne("wt1")
 
-    expect(calls).toHaveLength(4)
-    expect(calls.every((args) => args[0] === "pr" && args[1] === "view")).toBe(true)
-    expect(calls[0]?.at(-1)).toContain("statusCheckRollup,reviewRequests,reviews")
+    const lookups = calls.filter((args) => args[0] === "pr")
+    expect(lookups).toHaveLength(4)
+    expect(lookups.every((args) => args[1] === "view")).toBe(true)
+    expect(lookups.at(0)?.at(-1)).toContain("statusCheckRollup,reviewRequests,reviews")
     expect(values.map((item) => item.number)).toEqual([1, 2, 3, 4])
     expect(values[0]?.checks.passed).toBe(1)
     expect(values[0]?.reviewers).toEqual([{ login: "reviewer", avatar: undefined, state: "pending" }])
@@ -130,6 +151,83 @@ describe("PRStatusPoller batched GitHub queries", () => {
       expect(calls[3]?.at(-1)).toContain("statusCheckRollup")
     },
   )
+})
+
+describe("PRStatusPoller unresolved threads", () => {
+  it.each([false, true])("paginates and refreshes counts with optional comments (active: %s)", async (active) => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const internal = bridge.poller as unknown as {
+      fetchOne: (id: string) => Promise<void>
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    const calls: string[][] = []
+    const nodes = Array.from({ length: 102 }, (_, index) => ({
+      id: `thread${index}`,
+      isResolved: index < 100,
+      isOutdated: index === 100,
+      comments: { nodes: index === 101 ? [] : [{ id: `comment${index}`, body: "Reviewed" }] },
+    }))
+    nodes.at(100)?.comments.nodes.push({ id: "reply", body: "Agreed" })
+    internal.gh = async (args) => {
+      if (args[0] === "repo") return { stdout: JSON.stringify({ owner: { login: "x" }, name: "y" }), stderr: "" }
+      if (args[0] === "pr") {
+        return { stdout: JSON.stringify({ ...pr, statusCheckRollup: [], reviewRequests: [], reviews: [] }), stderr: "" }
+      }
+      calls.push(args)
+      const after = args.includes("cursor=next")
+      const batch = nodes.slice(after ? 100 : 0, after ? undefined : 100)
+      const data = page(
+        active ? batch : batch.map((node) => ({ isResolved: node.isResolved })),
+        102,
+        after ? undefined : "next",
+      )
+      return { stdout: JSON.stringify(data), stderr: "" }
+    }
+    if (active) bridge.poller.setActiveWorktreeId("wt1")
+    await internal.fetchOne("wt1")
+    const status = bridge.snapshot().get("wt1")
+    expect(status?.unresolvedThreads).toBe(2)
+    expect(calls).toHaveLength(2)
+    expect(calls.at(1)).toContain("cursor=next")
+    for (const args of calls) {
+      const query = args.find((arg) => arg.startsWith("query=")) ?? ""
+      expect(query.includes("comments(first: 10)")).toBe(active)
+      expect(query.includes("body")).toBe(active)
+    }
+    if (active) {
+      expect(status?.comments).toMatchObject({ total: 102, unresolved: 2 })
+      expect(status?.comments?.comments).toHaveLength(101)
+      expect(status?.comments?.comments.at(-1)).toMatchObject({ body: "Reviewed", replies: [{ body: "Agreed" }] })
+    }
+    if (!active) expect(status?.comments).toBeUndefined()
+    sent.length = 0
+    for (const node of nodes) node.isResolved = true
+    await internal.fetchOne("wt1")
+    expect(sent).toEqual([expect.objectContaining({ pr: expect.objectContaining({ unresolvedThreads: 0 }) })])
+  })
+
+  it("leaves the count unknown when a later page fails", async () => {
+    const { bridge, sent, worktrees } = harness()
+    worktrees.at(0)!.path = process.cwd()
+    const internal = bridge.poller as unknown as {
+      fetchOne: (id: string) => Promise<void>
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    internal.gh = async (args) => {
+      if (args[0] === "repo") return { stdout: JSON.stringify({ owner: { login: "x" }, name: "y" }), stderr: "" }
+      if (args[0] === "pr") {
+        return { stdout: JSON.stringify({ ...pr, statusCheckRollup: [], reviewRequests: [], reviews: [] }), stderr: "" }
+      }
+      if (args.includes("cursor=next")) throw new Error("Rate limited")
+      return { stdout: JSON.stringify(page([{ isResolved: false }], 2, "next")), stderr: "" }
+    }
+    await internal.fetchOne("wt1")
+    expect(sent).toHaveLength(1)
+    const status = bridge.snapshot().get("wt1")
+    expect(status?.number).toBe(pr.number)
+    expect(status?.unresolvedThreads).toBeUndefined()
+  })
 })
 
 describe("PRStatusBridge.handleMessage openPR", () => {

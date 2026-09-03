@@ -213,6 +213,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Коментарі",
   "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
+  "agentManager.pr.comment.unresolvedThread": "Невирішене обговорення рев'ю: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Невирішені обговорення рев'ю: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",
   "agentManager.pr.comment.sendAllToTerminal": "Надіслати {{count}} невирішених до терміналу",
