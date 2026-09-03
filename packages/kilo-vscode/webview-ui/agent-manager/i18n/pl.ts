@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Usuń z Agent Manager",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
+
+  "agentManager.updateBase.title": "Aktualizuj z bazy",
+  "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
+
   "agentManager.worktree.settings": "Ustawienia Worktree",
   "agentManager.worktree.new": "Nowy Worktree",
   "agentManager.worktree.setupScript": "Skrypt konfiguracji Worktree",
