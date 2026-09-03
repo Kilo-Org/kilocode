@@ -1,6 +1,6 @@
 import { createMemo, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
   AgentManagerStateMessage,
   AgentProjectSnapshot,
@@ -54,6 +54,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
+  onHelp: () => void
   onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -198,6 +199,15 @@ export const ProjectList: Component<Props> = (props) => {
               onClick={props.onShortcuts}
             />
           </TooltipKeybind>
+          <Tooltip value={props.t("agentManager.intro.reopen")} placement="bottom">
+            <IconButton
+              icon="help"
+              size="small"
+              variant="ghost"
+              aria-label={props.t("agentManager.intro.reopen")}
+              onClick={props.onHelp}
+            />
+          </Tooltip>
         </>
       }
       onAdd={() => vscode.postMessage({ type: "agentManager.addProject" })}

@@ -275,4 +275,32 @@ export const dict = {
     "PR durumunu geri yüklemek için terminalinizde 'gh auth login' komutunu çalıştırın.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI yüklü değil",
   "agentManager.pr.error.gh_missing.description": "PR durumunu etkinleştirmek için GitHub CLI'yi yükleyin.",
+  "agentManager.intro.title": "Agentları paralel çalıştırın, her biri kendi dalında",
+  "agentManager.intro.subtitle":
+    "Her worktree, bu deponun kendi dalındaki ayrı bir kopyasıdır. Agentlar orada aynı anda çalışır ve yerel klasörünüz değişmeden kalır.",
+  "agentManager.intro.graph.agent": "agent",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "çakışma",
+  "agentManager.intro.conflictText":
+    "worktree'deki ajandan özgün temel dalını birleştirmesini ve çakışmaları çözmesini isteyin, ardından sonucu inceleyin. git stash kullanmaktan kaçının: stash'ler worktree'ler arasında paylaşılır.",
+  "agentManager.intro.stage1.title": "Sizin dalınız",
+  "agentManager.intro.stage1.text":
+    "\"Yerel\", the base branch üzerindeki normal çalışma alanı klasörünüzdür. Worktree, aynı deponun .kilo/worktrees/<name> içindeki, kendi dalında bulunan ikinci bir checkout'udur. Bir worktree'deki değişiklikler yerel dosyalarınıza veya mevcut dalınıza dokunmaz.",
+  "agentManager.intro.stage2.title": "İşi dağıtın",
+  "agentManager.intro.stage2.text":
+    "Her görev için bir worktree oluşturun. Her worktree kendi dalını ve kendi agent oturumunu alır. Bir prompt'u en fazla 4 farklı şekilde çalıştırıp en iyi sonucu tutmak için Yeni Worktree penceresindeki Sürümler seçeneğini kullanın.",
+  "agentManager.intro.stage3.title": "Paralel agentlar",
+  "agentManager.intro.stage3.text":
+    "Agentlar aynı anda çalışır ve birbirlerinin dosyalarının üzerine yazamaz. Her birini kendi sekmesinden izleyin, diff'i kontrol edin ve uygulamayı worktree'nin terminalinden çalıştırın.",
+  "agentManager.intro.stage4.title": "İşi geri getirin",
+  "agentManager.intro.stage4.text":
+    "Diff panelini açın ve bir worktree'nin değişikliklerini yerel dalınıza kopyalamak için Apply kullanın. Ya da dalı push edin ve oturum terminalinden bir PR açın. İki worktree aynı kodu değiştirdiyse, ikinci birleştirilen çakışma yaşar: o worktree'deki agent'tan önce the base branch dalını birleştirmesini isteyin. Bir worktree içinde hiçbir zaman git stash kullanmayın.",
+  "agentManager.intro.prDetection":
+    "PR rozetleri her worktree branch'i için otomatik güncellenir (GitHub CLI oturumu açmanız gerekir).",
+  "agentManager.intro.checksRunning": "Kontroller çalışıyor",
+  "agentManager.intro.approved": "Onaylandı",
+  "agentManager.intro.create": "İlk worktree'nizi oluşturun",
+  "agentManager.intro.guide": "Kılavuzu okuyun",
+  "agentManager.intro.dismiss": "Anladım",
+  "agentManager.intro.reopen": "Agent Manager nasıl çalışır",
 }

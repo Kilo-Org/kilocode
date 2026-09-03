@@ -267,4 +267,32 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Execute 'gh auth login' no terminal para restaurar o status do PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI não instalado",
   "agentManager.pr.error.gh_missing.description": "Instale o GitHub CLI para habilitar o status do PR.",
+  "agentManager.intro.title": "Execute agentes em paralelo, cada um em sua própria branch",
+  "agentManager.intro.subtitle":
+    "Cada worktree é uma cópia separada deste repositório em sua própria branch. Os agentes trabalham lá ao mesmo tempo, e sua pasta local permanece intacta.",
+  "agentManager.intro.graph.agent": "agente",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "conflito",
+  "agentManager.intro.conflictText":
+    "Peça ao agente no worktree para mesclar sua branch base original e resolver os conflitos, depois revise o resultado. Evite git stash: os stashes são compartilhados entre os worktrees.",
+  "agentManager.intro.stage1.title": "Sua branch",
+  "agentManager.intro.stage1.text":
+    '"Local" é sua pasta de trabalho normal em the base branch. Um worktree é um segundo checkout do mesmo repositório em .kilo/worktrees/<name>, em sua própria branch. Alterações em um worktree não afetam seus arquivos locais nem sua branch atual.',
+  "agentManager.intro.stage2.title": "Distribuir",
+  "agentManager.intro.stage2.text":
+    "Crie um worktree por tarefa. Cada worktree recebe sua própria branch e sua própria sessão de agente. Use Versões no diálogo Novo Worktree para executar um prompt de até 4 formas e manter o melhor resultado.",
+  "agentManager.intro.stage3.title": "Agentes em paralelo",
+  "agentManager.intro.stage3.text":
+    "Os agentes executam ao mesmo tempo e não podem sobrescrever os arquivos uns dos outros. Acompanhe cada um em sua aba, verifique o diff e execute o app pelo terminal do worktree.",
+  "agentManager.intro.stage4.title": "Trazer o trabalho de volta",
+  "agentManager.intro.stage4.text":
+    "Abra o painel de diff e use Apply para copiar as alterações de um worktree para sua branch local. Ou faça push da branch e abra um PR pelo terminal da sessão. Se dois worktrees alteraram o mesmo código, o segundo a fazer merge terá conflitos: peça ao agente desse worktree para fazer merge de the base branch primeiro. Nunca use git stash dentro de um worktree.",
+  "agentManager.intro.prDetection":
+    "Os badges de PR são atualizados automaticamente para cada branch de worktree (é necessário iniciar sessão no GitHub CLI).",
+  "agentManager.intro.checksRunning": "Verificações em andamento",
+  "agentManager.intro.approved": "Aprovado",
+  "agentManager.intro.create": "Crie seu primeiro worktree",
+  "agentManager.intro.guide": "Ler o guia",
+  "agentManager.intro.dismiss": "Entendi",
+  "agentManager.intro.reopen": "Como o Agent Manager funciona",
 }

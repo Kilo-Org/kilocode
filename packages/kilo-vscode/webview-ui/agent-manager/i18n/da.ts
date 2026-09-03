@@ -267,4 +267,32 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Kør 'gh auth login' i din terminal for at gendanne PR-status.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI er ikke installeret",
   "agentManager.pr.error.gh_missing.description": "Installer GitHub CLI for at aktivere PR-status.",
+  "agentManager.intro.title": "Kør agenter parallelt, hver på sin egen branch",
+  "agentManager.intro.subtitle":
+    "Hvert worktree er en separat kopi af dette repository på sin egen branch. Agenter arbejder der samtidig, og din lokale mappe forbliver uændret.",
+  "agentManager.intro.graph.agent": "agent",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "konflikt",
+  "agentManager.intro.conflictText":
+    "Bed agenten i worktree om at flette sin oprindelige base-branch og løse konflikter, og gennemgå derefter resultatet. Undgå git stash: stash deles mellem worktrees.",
+  "agentManager.intro.stage1.title": "Din branch",
+  "agentManager.intro.stage1.text":
+    '"Lokal" er din normale arbejdsmappe på the base branch. Et worktree er et andet checkout af det samme repository i .kilo/worktrees/<name>, på sin egen branch. Ændringer i et worktree rører ikke dine lokale filer eller din nuværende branch.',
+  "agentManager.intro.stage2.title": "Fordel arbejdet",
+  "agentManager.intro.stage2.text":
+    "Opret ét worktree pr. opgave. Hvert worktree får sin egen branch og sin egen agentsession. Brug Versioner i dialogen Ny Worktree til at køre én prompt på op til 4 måder og beholde det bedste resultat.",
+  "agentManager.intro.stage3.title": "Agenter parallelt",
+  "agentManager.intro.stage3.text":
+    "Agenter kører samtidig og kan ikke overskrive hinandens filer. Følg hver enkelt fra dens tab, tjek diffen og kør appen fra worktree'ets terminal.",
+  "agentManager.intro.stage4.title": "Hent arbejdet tilbage",
+  "agentManager.intro.stage4.text":
+    "Åbn diff-panelet og brug Apply til at kopiere et worktrees ændringer til din lokale branch. Eller push branchen og åbn en PR fra sessionens terminal. Hvis to worktrees har ændret den samme kode, får det andet konflikter ved merge: bed agenten i det worktree om at merge the base branch først. Brug aldrig git stash i et worktree.",
+  "agentManager.intro.prDetection":
+    "PR-badges opdateres automatisk for hver worktree-branch (login til GitHub CLI kræves).",
+  "agentManager.intro.checksRunning": "Kontroller kører",
+  "agentManager.intro.approved": "Godkendt",
+  "agentManager.intro.create": "Opret dit første worktree",
+  "agentManager.intro.guide": "Læs guiden",
+  "agentManager.intro.dismiss": "Forstået",
+  "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
 }

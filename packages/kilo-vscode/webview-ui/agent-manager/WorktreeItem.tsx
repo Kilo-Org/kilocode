@@ -22,6 +22,7 @@ import { parseBindingTokens } from "./keybind-tokens"
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 interface WorktreeItemProps {
+  preview?: boolean
   worktree: WorktreeState
   /** Stable composite ID used by multi-project sidebar bodies. */
   sidebarId?: string
@@ -204,7 +205,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.sidebarId ?? props.worktree.id}
+                data-sidebar-id={props.preview ? undefined : (props.sidebarId ?? props.worktree.id)}
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>

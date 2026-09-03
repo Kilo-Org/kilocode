@@ -47,6 +47,7 @@ interface ChatViewProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
+  introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
@@ -368,6 +369,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               suggestions={standaloneSuggestions}
               readonly={props.readonly}
               emptyState={props.emptyState}
+              introduction={props.introduction}
               announce={isSidebar()}
               sessionID={pendingSessionID}
             />

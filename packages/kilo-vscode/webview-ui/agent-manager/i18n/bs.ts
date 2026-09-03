@@ -265,4 +265,32 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Pokrenite 'gh auth login' u terminalu da vratite status PR-a.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI nije instaliran",
   "agentManager.pr.error.gh_missing.description": "Instalirajte GitHub CLI da omogućite status PR-a.",
+  "agentManager.intro.title": "Pokrenite agente paralelno, svaki na vlastitoj grani",
+  "agentManager.intro.subtitle":
+    "Svaki worktree je zasebna kopija ovog repozitorija na vlastitoj grani. Agenti tamo rade istovremeno, a vaš lokalni folder ostaje netaknut.",
+  "agentManager.intro.graph.agent": "agent",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "konflikt",
+  "agentManager.intro.conflictText":
+    "Zamolite agenta u worktree-u da spoji svoju originalnu osnovnu granu i riješi konflikte, a zatim pregledajte rezultat. Izbjegavajte git stash: stash-ovi se dijele između worktree-a.",
+  "agentManager.intro.stage1.title": "Vaša grana",
+  "agentManager.intro.stage1.text":
+    '"Lokalno" je vaš uobičajeni radni folder na the base branch. Worktree je drugi checkout istog repozitorija u .kilo/worktrees/<name>, na vlastitoj grani. Promjene u worktree-u ne diraju vaše lokalne datoteke ni vašu trenutnu granu.',
+  "agentManager.intro.stage2.title": "Razgranajte rad",
+  "agentManager.intro.stage2.text":
+    "Kreirajte jedan worktree po zadatku. Svaki worktree dobija vlastitu granu i vlastitu sesiju agenta. Koristite Verzije u dijalogu Novi worktree da jedan prompt pokrenete na do 4 načina i zadržite najbolji rezultat.",
+  "agentManager.intro.stage3.title": "Agenti paralelno",
+  "agentManager.intro.stage3.text":
+    "Agenti rade istovremeno i ne mogu prepisati datoteke jedni drugima. Pratite svakog iz njegovog taba, provjerite diff i pokrenite aplikaciju iz terminala tog worktree-a.",
+  "agentManager.intro.stage4.title": "Vratite rad nazad",
+  "agentManager.intro.stage4.text":
+    "Otvorite diff panel i koristite Apply da kopirate promjene iz worktree-a na svoju lokalnu granu. Ili pushajte granu i otvorite PR iz terminala sesije. Ako su dva worktree-a promijenila isti kod, drugi koji se spaja ima konflikte: zamolite agenta u tom worktree-u da prvo spoji the base branch. Nikada ne koristite git stash unutar worktree-a.",
+  "agentManager.intro.prDetection":
+    "PR oznake se automatski ažuriraju za svaki worktree branch (potrebna je prijava u GitHub CLI).",
+  "agentManager.intro.checksRunning": "Provjere u toku",
+  "agentManager.intro.approved": "Odobreno",
+  "agentManager.intro.create": "Kreirajte svoj prvi worktree",
+  "agentManager.intro.guide": "Pročitajte vodič",
+  "agentManager.intro.dismiss": "Razumijem",
+  "agentManager.intro.reopen": "Kako radi Agent Manager",
 }

@@ -263,4 +263,31 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "PR 상태를 복원하려면 터미널에서 'gh auth login'을 실행하세요.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI가 설치되지 않음",
   "agentManager.pr.error.gh_missing.description": "PR 상태를 활성화하려면 GitHub CLI를 설치하세요.",
+  "agentManager.intro.title": "각각 자체 브랜치에서 에이전트를 병렬로 실행",
+  "agentManager.intro.subtitle":
+    "각 worktree는 이 저장소를 자체 브랜치에 별도로 복사한 것입니다. 에이전트는 그곳에서 동시에 작업하며, 로컬 폴더는 그대로 유지됩니다.",
+  "agentManager.intro.graph.agent": "에이전트",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "충돌",
+  "agentManager.intro.conflictText":
+    "worktree의 에이전트에게 원래 base branch를 병합하고 충돌을 해결하도록 요청한 다음 결과를 검토하세요. git stash는 worktree 간에 공유되므로 사용하지 마세요.",
+  "agentManager.intro.stage1.title": "내 브랜치",
+  "agentManager.intro.stage1.text":
+    '"로컬"은 the base branch에 있는 일반 워크스페이스 폴더입니다. worktree는 같은 저장소를 .kilo/worktrees/<name>에 자체 브랜치로 두 번째 체크아웃한 것입니다. worktree의 변경은 로컬 파일이나 현재 브랜치에 영향을 주지 않습니다.',
+  "agentManager.intro.stage2.title": "작업 분산",
+  "agentManager.intro.stage2.text":
+    "작업마다 worktree를 하나씩 만드세요. 각 worktree는 자체 브랜치와 자체 에이전트 세션을 갖습니다. 새 워크트리 대화 상자의 버전을 사용하면 하나의 프롬프트를 최대 4가지 방식으로 실행하고 가장 좋은 결과를 남길 수 있습니다.",
+  "agentManager.intro.stage3.title": "에이전트 병렬 실행",
+  "agentManager.intro.stage3.text":
+    "에이전트는 동시에 실행되며 서로의 파일을 덮어쓸 수 없습니다. 각 에이전트를 탭에서 따라가고, diff를 확인하고, worktree의 터미널에서 앱을 실행하세요.",
+  "agentManager.intro.stage4.title": "작업 가져오기",
+  "agentManager.intro.stage4.text":
+    "diff 패널을 열고 Apply로 worktree의 변경사항을 로컬 브랜치에 복사하세요. 또는 세션 터미널에서 브랜치를 푸시하고 PR을 여세요. 두 worktree가 같은 코드를 변경했다면 나중에 병합하는 쪽에 충돌이 발생합니다. 해당 worktree의 에이전트에게 먼저 the base branch를 병합하도록 요청하세요. worktree 안에서는 절대 git stash를 사용하지 마세요.",
+  "agentManager.intro.prDetection": "각 worktree 브랜치의 PR 배지가 자동으로 업데이트됩니다(GitHub CLI 로그인 필요).",
+  "agentManager.intro.checksRunning": "검사 실행 중",
+  "agentManager.intro.approved": "승인됨",
+  "agentManager.intro.create": "첫 worktree 만들기",
+  "agentManager.intro.guide": "가이드 읽기",
+  "agentManager.intro.dismiss": "확인",
+  "agentManager.intro.reopen": "Agent Manager 작동 방식",
 }

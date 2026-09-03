@@ -61,6 +61,7 @@ export interface SidebarBodyProps {
   onNewSection: () => void
   onShortcuts: () => void
   onHistory: () => void
+  onHelp: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]
@@ -193,6 +194,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onSection={props.onNewSection}
               onShortcuts={props.onShortcuts}
               onHistory={props.onHistory}
+              onHelp={props.onHelp}
               onSettings={() =>
                 vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.projectId })
               }

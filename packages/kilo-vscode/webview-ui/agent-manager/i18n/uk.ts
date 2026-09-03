@@ -275,4 +275,32 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Виконайте 'gh auth login' у терміналі, щоб відновити статус PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI не встановлено",
   "agentManager.pr.error.gh_missing.description": "Встановіть GitHub CLI, щоб увімкнути статус PR.",
+  "agentManager.intro.title": "Запускайте агентів паралельно, кожного у власній гілці",
+  "agentManager.intro.subtitle":
+    "Кожен worktree є окремою копією цього репозиторію у власній гілці. Агенти працюють там одночасно, а ваша локальна папка залишається недоторканою.",
+  "agentManager.intro.graph.agent": "агент",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "конфлікт",
+  "agentManager.intro.conflictText":
+    "Попросіть агента в worktree злити його початкову базову гілку та вирішити конфлікти, а потім перегляньте результат. Уникайте git stash: stash є спільним для worktree.",
+  "agentManager.intro.stage1.title": "Ваша гілка",
+  "agentManager.intro.stage1.text":
+    '"Локальний" означає вашу звичайну робочу папку на the base branch. Worktree є другим checkout того самого репозиторію в .kilo/worktrees/<name>, у власній гілці. Зміни у worktree не торкаються ваших локальних файлів і поточної гілки.',
+  "agentManager.intro.stage2.title": "Розподіліть задачі",
+  "agentManager.intro.stage2.text":
+    "Створіть один worktree на задачу. Кожен worktree отримує власну гілку та власну сесію агента. Використовуйте Версії в діалозі Нове робоче дерево, щоб запустити один промпт до 4 способами й залишити найкращий результат.",
+  "agentManager.intro.stage3.title": "Агенти паралельно",
+  "agentManager.intro.stage3.text":
+    "Агенти працюють одночасно й не можуть перезаписати файли один одного. Стежте за кожним на його вкладці, перевіряйте diff і запускайте застосунок з термінала worktree.",
+  "agentManager.intro.stage4.title": "Поверніть роботу назад",
+  "agentManager.intro.stage4.text":
+    "Відкрийте панель diff і використайте Apply, щоб скопіювати зміни worktree у вашу локальну гілку. Або надішліть гілку й відкрийте PR з термінала сесії. Якщо два worktree змінили той самий код, другий під час злиття матиме конфлікти: попросіть агента в цьому worktree спочатку злити the base branch. Ніколи не використовуйте git stash усередині worktree.",
+  "agentManager.intro.prDetection":
+    "Бейджі PR автоматично оновлюються для кожної гілки worktree (потрібен вхід у GitHub CLI).",
+  "agentManager.intro.checksRunning": "Перевірки виконуються",
+  "agentManager.intro.approved": "Схвалено",
+  "agentManager.intro.create": "Створіть свій перший worktree",
+  "agentManager.intro.guide": "Читати посібник",
+  "agentManager.intro.dismiss": "Зрозуміло",
+  "agentManager.intro.reopen": "Як працює Agent Manager",
 }

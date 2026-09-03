@@ -74,6 +74,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { AgentManagerEmptyState, createIntro } from "./intro/AgentManagerIntro"
 import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
@@ -1918,6 +1919,52 @@ const AgentManagerContent: Component = () => {
       vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
     }
   }
+  const selectChatSession = (id: string) => {
+    if (addSessionToCurrentWorktree(id)) return
+    if (localSessionIDs().includes(id)) {
+      session.selectSession(id)
+      if (selection() === null) setSelection(LOCAL)
+      requestChatFocus()
+      return
+    }
+    // Navigate to owning worktree instead of forcing into local mode
+    if (worktreeSessionIds().has(id)) {
+      const ms = managedSessions().find((s) => s.id === id)
+      if (ms?.worktreeId) {
+        selectWorktree(ms.worktreeId)
+        session.selectSession(id)
+        setReviewActive(false)
+        requestChatFocus()
+        return
+      }
+    }
+    openLocally(id)
+  }
+
+  const intro = createIntro({
+    reveal: () => {
+      const id = session.currentSessionID() ?? activePendingId()
+      if (!id || session.messages().length || session.loading() || readOnly() || settingUpSelection()) {
+        selectLocal()
+        addPendingTab()
+      }
+      closeHistory()
+      terms.setActiveId(undefined)
+      setReviewActive(false)
+    },
+    focus: requestChatFocus,
+  })
+  const chatEmptyState = () => (
+    <AgentManagerEmptyState
+      base={repoDefaultBranch()}
+      git={isGitRepo()}
+      intro={intro}
+      onCreateWorktree={showNewWorktreeDialog}
+      onSelectSession={selectChatSession}
+      onShowHistory={() => openHistory()}
+    />
+  )
+
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
     const msg = { type: "agentManager.forkSession" as const, sessionId, ...(messageId ? { messageId } : {}) }
@@ -2301,6 +2348,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            onHelp={intro.open}
             onHistory={openHistory}
             shortcutMap={projectShortcutMap}
             activityFor={activity.project}
@@ -2331,6 +2379,7 @@ const AgentManagerContent: Component = () => {
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
             onHistory={() => openHistory()}
+            onHelp={intro.open}
             projectId={activeProjectId()}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
@@ -2507,28 +2556,10 @@ const AgentManagerContent: Component = () => {
                 <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
                   <ChatView
                     worktrees={references}
-                    onSelectSession={(id) => {
-                      if (addSessionToCurrentWorktree(id)) return
-                      if (localSessionIDs().includes(id)) {
-                        session.selectSession(id)
-                        if (selection() === null) setSelection(LOCAL)
-                        requestChatFocus()
-                        return
-                      }
-                      // Navigate to owning worktree instead of forcing into local mode
-                      if (worktreeSessionIds().has(id)) {
-                        const ms = managedSessions().find((s) => s.id === id)
-                        if (ms?.worktreeId) {
-                          selectWorktree(ms.worktreeId)
-                          session.selectSession(id)
-                          setReviewActive(false)
-                          requestChatFocus()
-                          return
-                        }
-                      }
-                      openLocally(id)
-                    }}
+                    onSelectSession={selectChatSession}
                     onShowHistory={() => openHistory()}
+                    emptyState={chatEmptyState}
+                    introduction={intro.visible()}
                     onForkMessage={readOnly() ? undefined : handleForkSession}
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}

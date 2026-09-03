@@ -272,4 +272,32 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Voer 'gh auth login' uit in je terminal om de PR-status te herstellen.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI niet geïnstalleerd",
   "agentManager.pr.error.gh_missing.description": "Installeer de GitHub CLI om de PR-status in te schakelen.",
+  "agentManager.intro.title": "Voer agents parallel uit, elk op een eigen branch",
+  "agentManager.intro.subtitle":
+    "Elke worktree is een aparte kopie van deze repository op een eigen branch. Agents werken daar tegelijkertijd, en je lokale map blijft onaangeroerd.",
+  "agentManager.intro.graph.agent": "agent",
+  "agentManager.intro.graph.pr": "PR",
+  "agentManager.intro.graph.conflict": "conflict",
+  "agentManager.intro.conflictText":
+    "Vraag de agent in de worktree om zijn oorspronkelijke basisbranch te mergen en conflicten op te lossen, en controleer daarna het resultaat. Vermijd git stash: stashes worden gedeeld tussen worktrees.",
+  "agentManager.intro.stage1.title": "Jouw branch",
+  "agentManager.intro.stage1.text":
+    '"Lokaal" is je normale werkmap op the base branch. Een worktree is een tweede checkout van dezelfde repository in .kilo/worktrees/<name>, op een eigen branch. Wijzigingen in een worktree raken je lokale bestanden of je huidige branch niet.',
+  "agentManager.intro.stage2.title": "Verdeel het werk",
+  "agentManager.intro.stage2.text":
+    "Maak één worktree per taak. Elke worktree krijgt een eigen branch en een eigen agentsessie. Gebruik Versies in het dialoogvenster Nieuwe worktree om één prompt op maximaal 4 manieren uit te voeren en het beste resultaat te houden.",
+  "agentManager.intro.stage3.title": "Agents parallel",
+  "agentManager.intro.stage3.text":
+    "Agents draaien tegelijkertijd en kunnen elkaars bestanden niet overschrijven. Volg elke agent vanuit zijn tab, controleer de diff en start de app vanuit de terminal van de worktree.",
+  "agentManager.intro.stage4.title": "Haal het werk terug",
+  "agentManager.intro.stage4.text":
+    "Open het diff-paneel en gebruik Apply om de wijzigingen van een worktree naar je lokale branch te kopiëren. Of push de branch en open een PR vanuit de terminal van de sessie. Als twee worktrees dezelfde code hebben gewijzigd, krijgt de tweede bij het mergen conflicten: vraag de agent in die worktree om eerst the base branch te mergen. Gebruik nooit git stash in een worktree.",
+  "agentManager.intro.prDetection":
+    "PR-badges worden automatisch bijgewerkt voor elke worktree-branch (aanmelden bij GitHub CLI vereist).",
+  "agentManager.intro.checksRunning": "Controles worden uitgevoerd",
+  "agentManager.intro.approved": "Goedgekeurd",
+  "agentManager.intro.create": "Maak je eerste worktree",
+  "agentManager.intro.guide": "Lees de handleiding",
+  "agentManager.intro.dismiss": "Begrepen",
+  "agentManager.intro.reopen": "Hoe Agent Manager werkt",
 }
