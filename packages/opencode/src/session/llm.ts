@@ -30,6 +30,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
+import { KiloMinimal } from "@/kilocode/session/minimal"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
@@ -117,6 +118,7 @@ const live: Layer.Layer<
         { concurrency: "unbounded" },
       )
       const isWorkflow = language instanceof GitLabWorkflowLanguageModel
+      const minimal = KiloMinimal.enabled(cfg, input.agent) // kilocode_change
       const base = yield* LLMRequestPrep.prepare({
         ...input,
         provider: item,
@@ -124,10 +126,13 @@ const live: Layer.Layer<
         plugin,
         flags,
         isWorkflow,
+        minimal, // kilocode_change
       })
 
       // kilocode_change start - compact at the configured threshold before contacting the provider
-      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
+      const tools = yield* Effect.promise(() =>
+        KiloToolSchema.sanitize(minimal ? KiloMinimal.tools(base.tools) : base.tools),
+      )
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
       const estimated: ModelMessage[] =
         isOpenaiOauth || isWorkflow

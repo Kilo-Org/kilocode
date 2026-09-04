@@ -882,6 +882,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
+  "settings.experimental.minimalMode.title": "حالت Minimal",
+  "settings.experimental.minimalMode.description":
+    "یک حالت ساده برای مدل‌های محلی یا کوچک‌تر با پرامپت‌های کوتاه و ابزارهای اصلی اضافه می‌کند. Minimal را در انتخابگر حالت انتخاب کنید. قوانین پروژه و مجوزها فعال می‌مانند.",
   "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
   "settings.experimental.taskModelSelection.description":
     "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",

@@ -916,6 +916,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
+  "settings.experimental.minimalMode.title": "Minimal-Modus",
+  "settings.experimental.minimalMode.description":
+    "Fügt einen minimalen Modus für lokale oder kleinere Modelle mit kompakten Prompts und grundlegenden Tools hinzu. Wählen Sie Minimal in der Modusauswahl. Projektregeln und Berechtigungen bleiben aktiv.",
   "settings.experimental.taskModelSelection.title": "Task-Subagent-Modellauswahl",
   "settings.experimental.taskModelSelection.description":
     "Erlaubt die explizite Auswahl von Modell, Anbieter und Schlussfolgerungsaufwand für Task-Subagenten.",

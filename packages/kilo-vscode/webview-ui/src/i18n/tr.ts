@@ -886,6 +886,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
+  "settings.experimental.minimalMode.title": "Minimal modu",
+  "settings.experimental.minimalMode.description":
+    "Yerel veya daha küçük modeller için kısa istemler ve temel araçlar içeren minimal bir mod ekler. Mod seçicisinden Minimal'i seçin. Proje kuralları ve izinler etkin kalır.",
   "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
   "settings.experimental.taskModelSelection.description":
     "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",

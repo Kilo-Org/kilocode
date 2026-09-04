@@ -854,6 +854,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
+  "settings.experimental.minimalMode.title": "Tryb Minimal",
+  "settings.experimental.minimalMode.description":
+    "Dodaje tryb minimalny dla lokalnych lub mniejszych modeli z krótkimi promptami i podstawowymi narzędziami. Wybierz Minimal w selektorze trybów. Reguły projektu i uprawnienia pozostają aktywne.",
   "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
   "settings.experimental.taskModelSelection.description":
     "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",

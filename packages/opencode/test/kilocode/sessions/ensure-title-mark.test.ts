@@ -260,10 +260,10 @@ const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config
   )
 })
 
-const useServerConfig = Effect.fn("test.useServerConfig")(function* () {
+const useServerConfig = Effect.fn("test.useServerConfig")(function* (minimal = false) {
   const { directory: dir } = yield* TestInstance
   const llm = yield* TestLLMServer
-  yield* writeConfig(dir, providerCfg(llm.url))
+  yield* writeConfig(dir, { ...providerCfg(llm.url), experimental: { minimal_mode: minimal } })
   return { dir, llm }
 })
 
@@ -392,6 +392,45 @@ it.instance(
       for (const call of hooks.setTitleCalls) {
         expect(consumeAutoTitle(chat.id, call.title)).toBe(false)
       }
+    }),
+  30_000,
+)
+
+it.instance(
+  "Minimal clears auto-title marks when its deterministic title write fails",
+  () =>
+    Effect.gen(function* () {
+      resetHooks()
+      yield* installHooks()
+      const { llm } = yield* useServerConfig(true)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({})
+      const title = "Fix the parser"
+
+      hooks.failSetTitle = true
+      const release = yield* Deferred.make<void>()
+      yield* llm.hold("assistant reply", deferredAsPromise(release))
+      const fiber = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "minimal",
+          model: ref,
+          parts: [{ type: "text", text: `${title}\nPreserve the API.` }],
+        })
+        .pipe(Effect.forkChild)
+
+      yield* pollWithTimeout(
+        Effect.sync(() => (hooks.setTitleCalls.some((call) => call.title === title) ? true : undefined)),
+        "Minimal never attempted its deterministic title write",
+        "15 seconds",
+      )
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(fiber)
+
+      expect(consumeAutoTitle(chat.id, title)).toBe(false)
+      expect(Session.isDefaultTitle((yield* sessions.get(chat.id)).title)).toBe(true)
+      expect(yield* llm.calls).toBe(1)
     }),
   30_000,
 )

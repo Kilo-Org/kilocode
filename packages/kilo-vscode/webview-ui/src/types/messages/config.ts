@@ -53,6 +53,7 @@ export interface ExperimentalConfig {
   image_generation?: boolean
   shared_agent_board?: boolean
   image_generation_model?: string
+  minimal_mode?: boolean
   task_model_selection?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string

@@ -35181,6 +35181,9 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
+              "minimal_mode": {
+                "type": "boolean"
+              },
               "task_model_selection": {
                 "type": "boolean"
               },

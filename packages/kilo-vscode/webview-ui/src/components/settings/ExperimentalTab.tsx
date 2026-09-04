@@ -244,6 +244,24 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.minimalMode.title")}
+          description={language.t("settings.experimental.minimalMode.description")}
+        >
+          <Switch
+            checked={experimental().minimal_mode ?? false}
+            onChange={(checked) =>
+              updateConfig({
+                experimental: { ...experimental(), minimal_mode: checked },
+                ...(!checked && config().default_agent === "minimal" ? { default_agent: null } : {}),
+              })
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.minimalMode.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.taskModelSelection.title")}
           description={language.t("settings.experimental.taskModelSelection.description")}
         >
