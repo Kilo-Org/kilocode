@@ -24,23 +24,67 @@ export type WorktreeReference = {
   disabled: boolean
 }
 
+export const PAST_CHATS_MENTION = "past-chats"
+
+const terminal = {
+  result: {
+    type: "terminal",
+    value: TERMINAL_MENTION,
+    label: "Terminal",
+    description: "Active terminal output",
+  },
+  aliases: [],
+  gate: null,
+} as const
+
+const changes = {
+  result: {
+    type: "git-changes",
+    value: GIT_CHANGES_MENTION,
+    label: "Git changes",
+    description: "Current session/worktree changes",
+  },
+  aliases: [],
+  gate: "git",
+} as const
+
+const chats = {
+  result: {
+    type: "past-chats",
+    value: PAST_CHATS_MENTION,
+    label: "Past chats",
+    description: "Search previous sessions",
+  },
+  aliases: ["sessions", "history"],
+  gate: null,
+} as const
+
+const worktrees = {
+  result: { type: "worktrees", value: "worktrees" },
+  aliases: ["branches", "search worktrees"],
+  gate: "worktrees",
+} as const
+
+const picker = {
+  result: {
+    type: "file-picker",
+    value: "file-picker",
+    label: "Browse files...",
+    description: "Select a file outside the workspace",
+  },
+  aliases: [],
+  gate: null,
+} as const
+
+const entries = [terminal, changes, chats, worktrees, picker] as const
+type MentionEntry = (typeof entries)[number]["result"]
+
 export type MentionResult =
-  | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
-  | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
-  | { type: "past-chats"; value: typeof PAST_CHATS_MENTION; label: string; description: string }
+  | MentionEntry
   | { type: "file"; value: string }
   | { type: "opened-file"; value: string }
   | { type: "folder"; value: string }
-  | { type: "file-picker"; value: "file-picker"; label: string; description: string }
   | { type: "session"; value: string; session: SessionSearchItem }
-  | { type: "worktrees"; value: "worktrees" }
-
-export const PAST_CHATS_MENTION = "past-chats"
-const PAST_CHATS_ALIASES = ["past chats", "past", "chats", "sessions", "session", "history"]
-const WORKTREE_ALIASES = ["worktrees", "branches", "search worktrees"]
-const TERMINAL_ALIASES = [TERMINAL_MENTION]
-const GIT_CHANGES_ALIASES = [GIT_CHANGES_MENTION, "git"]
-const FILE_PICKER_ALIASES = ["browse files", "browse", "file picker"]
 
 /**
  * Compare mention labels and queries on equal footing: case-insensitive, with
@@ -55,35 +99,11 @@ function normalize(value: string): string {
     .trim()
 }
 
-export const TERMINAL_RESULT: MentionResult = {
-  type: "terminal",
-  value: TERMINAL_MENTION,
-  label: "Terminal",
-  description: "Active terminal output",
-}
-
-export const GIT_CHANGES_RESULT: MentionResult = {
-  type: "git-changes",
-  value: GIT_CHANGES_MENTION,
-  label: "Git changes",
-  description: "Current session/worktree changes",
-}
-
-export const FILE_PICKER_RESULT: MentionResult = {
-  type: "file-picker",
-  value: "file-picker",
-  label: "Browse files...",
-  description: "Select a file outside the workspace",
-}
-
-export const PAST_CHATS_RESULT: MentionResult = {
-  type: "past-chats",
-  value: PAST_CHATS_MENTION,
-  label: "Past chats",
-  description: "Search previous sessions",
-}
-
-export const WORKTREES_RESULT: MentionResult = { type: "worktrees", value: "worktrees" }
+export const TERMINAL_RESULT = terminal.result
+export const GIT_CHANGES_RESULT = changes.result
+export const FILE_PICKER_RESULT = picker.result
+export const PAST_CHATS_RESULT = chats.result
+export const WORKTREES_RESULT = worktrees.result
 
 /**
  * Whether the query spells out the Browse files entry rather than just leaving
@@ -99,15 +119,8 @@ export function filePickerNamed(query: string): boolean {
   return score(query, FILE_PICKER_RESULT) >= FLOOR
 }
 
-/**
- * The entries the menu always knows about, as opposed to the files and chats a
- * query finds. They only form a group of their own on an empty `@`, which lists
- * the menu rather than answering a query.
- */
-const MENTION_ENTRIES = new Set(["terminal", "git-changes", "past-chats", "worktrees", "file-picker"])
-
 export function isMentionEntry(item: MentionResult): boolean {
-  return MENTION_ENTRIES.has(item.type)
+  return entries.some((entry) => entry.result.type === item.type)
 }
 
 /** Score of a query that matched nothing, which sorts below every real match. */
@@ -124,17 +137,18 @@ const FLOOR = 0.7
 
 /** Everything a result answers to, so one query can be scored against them all. */
 function labels(item: MentionResult): string[] {
-  if (item.type === "terminal") return [item.label, ...TERMINAL_ALIASES]
-  if (item.type === "git-changes") return [item.label, ...GIT_CHANGES_ALIASES]
-  if (item.type === "past-chats") return [item.label, ...PAST_CHATS_ALIASES]
-  if (item.type === "file-picker") return [item.label, ...FILE_PICKER_ALIASES]
-  if (item.type === "worktrees") return WORKTREE_ALIASES
+  const entry = entries.find((candidate) => candidate.result.type === item.type)
+  if (entry) return [...("label" in item ? [item.label] : []), item.value, ...entry.aliases]
   if (item.type === "session") return [item.session.title, item.session.worktreeName ?? ""].filter(Boolean)
   return [item.value]
 }
 
 function score(query: string, item: MentionResult): number {
-  const best = labels(item).reduce((top, label) => Math.max(top, fuzzysort.single(query, label)?.score ?? MISS), MISS)
+  const value = normalize(query)
+  const best = labels(item).reduce(
+    (top, label) => Math.max(top, fuzzysort.single(value, normalize(label))?.score ?? MISS),
+    MISS,
+  )
   // A Browse files the query ignores is the last resort of the list, below even
   // the files the search returned that the query does not literally spell.
   if (item.type === "file-picker" && best === MISS) return MISS - 1
@@ -187,22 +201,15 @@ export function buildMentionResults(
   worktrees = false,
   sessions: MentionResult[] = [],
 ): MentionResult[] {
-  const references: MentionResult[] = worktrees ? [WORKTREES_RESULT] : []
+  const gates = { git, worktrees }
+  const references = entries.filter((entry) => entry.gate === null || gates[entry.gate]).map((entry) => entry.result)
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
     if (item.type === "opened-file") return { type: "opened-file", value: item.path }
     return { type: "file", value: item.path }
   })
-  return rankMentionResults(query, [
-    TERMINAL_RESULT,
-    ...(git ? [GIT_CHANGES_RESULT] : []),
-    PAST_CHATS_RESULT,
-    ...references,
-    FILE_PICKER_RESULT,
-    ...sessions,
-    ...results,
-  ])
+  return rankMentionResults(query, [...references, ...sessions, ...results])
 }
 
 export function filterSessions(sessions: SessionSearchItem[], query: string) {
