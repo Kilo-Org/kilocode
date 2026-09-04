@@ -67,6 +67,16 @@ describe("PR review comment markdown", () => {
     expect(text).not.toContain("(line")
   })
 
+  it("formats review state when present", () => {
+    const approved = formatReviewCommentsMarkdown([pr({ file: undefined, line: undefined, reviewState: "approved" })])
+    expect(approved).toContain("PR review (approved) by @alice:")
+
+    const changes = formatReviewCommentsMarkdown([
+      pr({ file: undefined, line: undefined, reviewState: "changes_requested" }),
+    ])
+    expect(changes).toContain("PR review (changes requested) by @alice:")
+  })
+
   it("marks outdated threads", () => {
     expect(formatReviewCommentsMarkdown([pr({ outdated: true })])).toContain("by @alice (outdated):")
   })
@@ -87,7 +97,7 @@ describe("PR review comment metadata", () => {
   it("round-trips through the message body", () => {
     const data = {
       version: 1 as const,
-      comments: [pr({ diffHunk: "@@ -1 +1 @@", replies: [{ author: "bob", body: "ok" }] })],
+      comments: [pr({ diffHunk: "@@ -1 +1 @@", reviewState: "approved", replies: [{ author: "bob", body: "ok" }] })],
     }
     const text = `${formatReviewCommentsMarkdown(data.comments)}\n\nplease fix these`
     const view = partReview(reviewMetadata(data), text)

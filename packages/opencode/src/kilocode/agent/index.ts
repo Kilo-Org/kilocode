@@ -18,6 +18,8 @@ import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 
+const mermaidClients = new Set(["vscode", "jetbrains"])
+
 const readable: Record<string, "allow"> = {
   "cat *": "allow",
   "head *": "allow",
@@ -277,11 +279,18 @@ function planEditGuard(worktree: string) {
 
 export function hardenPlan(
   key: string,
-  item: { permission: Permission.Ruleset },
+  item: { native?: boolean; permission: Permission.Ruleset },
   worktree: string,
   ...explicit: Permission.Ruleset[]
 ) {
-  if (key !== "plan" && key !== "architect") return
+  // Plan-mode edit restrictions are a ceiling for the built-in plan agent only.
+  // Custom agents named `architect` are governed by their own permission config;
+  // the previous name check appended the guard after their rules, so last-match-
+  // wins made their edit allows unreachable with no opt-out (#13581). A custom
+  // `agent.plan` config reuses the built-in object, so `native` stays true and
+  // the ceiling still applies there.
+  if (key !== "plan") return
+  if (item.native !== true) return
   const edit = explicit.map(editRestrictions)
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
@@ -523,6 +532,7 @@ export function patchAgents(
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({
@@ -618,7 +628,12 @@ export function patchAgents(
   agents.ask = {
     name: "ask",
     description: "Get answers and explanations without making changes to the codebase.",
-    prompt: PROMPT_ASK,
+    prompt: mermaidClients.has(Flag.KILO_CLIENT)
+      ? PROMPT_ASK
+      : PROMPT_ASK.replace(
+          "- Use Mermaid diagrams when they help clarify your response",
+          "- Use plain-text or ASCII diagrams when they help clarify your response. The CLI cannot render Mermaid diagrams. Only provide Mermaid source when the user explicitly requests it",
+        ),
     options: {},
     permission: Permission.merge(
       defaults,

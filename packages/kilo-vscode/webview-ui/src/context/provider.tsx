@@ -4,7 +4,7 @@
  * Selection is now per-session — see session.tsx.
  */
 
-import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
+import { batch, createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
@@ -20,6 +20,8 @@ interface ProviderContextValue {
   providers: Accessor<Record<string, Provider>>
   connected: Accessor<string[]>
   defaults: Accessor<Record<string, string>>
+  organizationId: Accessor<string | null | undefined>
+  ready: Accessor<boolean>
   defaultSelection: Accessor<ModelSelection>
   models: Accessor<EnrichedModel[]>
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
@@ -36,6 +38,8 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [providers, setProviders] = createSignal<Record<string, Provider>>({})
   const [connected, setConnected] = createSignal<string[]>([])
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
+  const [organizationId, setOrganizationId] = createSignal<string | null>()
+  const [ready, setReady] = createSignal(false)
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
   const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
@@ -55,16 +59,36 @@ export const ProviderProvider: ParentComponent = (props) => {
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     handleEndpointsMessage(message)
     handleWorkspaceConfigMessage(message)
-    if (message.type !== "providersLoaded") {
+    if (message.type === "providersLoading") {
+      batch(() => {
+        setReady(false)
+        setOrganizationId(undefined)
+        setProviders((prev) => {
+          const next = { ...prev }
+          delete next.kilo
+          return next
+        })
+        setDefaults((prev) => {
+          const next = { ...prev }
+          delete next.kilo
+          return next
+        })
+        setConnected((prev) => prev.filter((id) => id !== "kilo"))
+      })
       return
     }
+    if (message.type !== "providersLoaded") return
 
-    setProviders(message.providers)
-    setConnected(message.connected)
-    setDefaults(message.defaults)
-    setDefaultSelection(message.defaultSelection)
-    setAuthMethods(message.authMethods)
-    setAuthStates(message.authStates)
+    batch(() => {
+      setProviders(message.providers)
+      setConnected(message.connected)
+      setDefaults(message.defaults)
+      setOrganizationId(message.ready === false ? undefined : (message.organizationId ?? null))
+      setReady(message.ready ?? true)
+      setDefaultSelection(message.defaultSelection)
+      setAuthMethods(message.authMethods)
+      setAuthStates(message.authStates)
+    })
   })
 
   onCleanup(unsubscribe)
@@ -97,6 +121,8 @@ export const ProviderProvider: ParentComponent = (props) => {
     providers,
     connected,
     defaults,
+    organizationId,
+    ready,
     defaultSelection,
     models,
     findModel,

@@ -95,6 +95,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Mempertimbangkan langkah selanjutnya",
 
   "ui.messagePart.diagnostic.error": "Kesalahan",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Baca pesan agen",
+  "ui.messagePart.board.all": "Semua agen",
+  "ui.messagePart.board.primary": "Agen utama",
+  "ui.messagePart.board.agent": "Agen",
+  "ui.messagePart.board.route": "{{from}} ke {{to}}",
+  "ui.messagePart.board.empty": "Tidak ada pesan agen",
+  "ui.messagePart.board.stored": "Hanya disimpan. Pengiriman dan pembacaan belum dikonfirmasi.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Sunting",
   "ui.messagePart.title.write": "Tulis",
   "ui.messagePart.option.typeOwnAnswer": "Ketik jawaban Anda sendiri",

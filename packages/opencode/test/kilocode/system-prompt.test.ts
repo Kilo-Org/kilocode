@@ -7,6 +7,8 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderTest } from "../fake/provider"
+import { patchAgents } from "../../src/kilocode/agent"
+import PROMPT_ASK from "../../src/agent/prompt/ask.txt"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
 import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
@@ -131,6 +133,38 @@ describe("SystemPrompt.provider", () => {
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_CODEX])
     })
+  })
+})
+
+describe("Ask diagram guidance", () => {
+  test.each([
+    [undefined, false],
+    ["cli", false],
+    ["acp", false],
+    ["unknown", false],
+    ["vscode", true],
+    ["jetbrains", true],
+  ] as const)("matches rendering support for %s", (client, mermaid) => {
+    const previous = process.env.KILO_CLIENT
+    try {
+      if (client === undefined) delete process.env.KILO_CLIENT
+      if (client !== undefined) process.env.KILO_CLIENT = client
+      const agents: Parameters<typeof patchAgents>[0] = {}
+      patchAgents(agents, [], [], {}, { mcpRules: {}, defaultsPatch: [] }, "/repo", [])
+      const prompt = agents.ask.prompt
+      expect(prompt).toContain("You are in Ask mode")
+      expect(prompt).toContain("You must NOT modify files")
+      if (mermaid) {
+        expect(prompt).toBe(PROMPT_ASK)
+        return
+      }
+      expect(prompt).not.toContain("Use Mermaid diagrams")
+      expect(prompt).toContain("Use plain-text or ASCII diagrams")
+      expect(prompt).toContain("cannot render Mermaid")
+    } finally {
+      if (previous === undefined) delete process.env.KILO_CLIENT
+      if (previous !== undefined) process.env.KILO_CLIENT = previous
+    }
   })
 })
 

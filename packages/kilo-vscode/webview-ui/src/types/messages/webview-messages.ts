@@ -868,6 +868,11 @@ export interface AgentManagerCopyToClipboardRequest {
   text: string
 }
 
+export interface AgentManagerSetIntroDismissedRequest {
+  type: "agentManager.setIntroDismissed"
+  dismissed: boolean
+}
+
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
   type: "copyToClipboard"
@@ -1546,7 +1551,9 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | import("./agent-manager").BaseUpdateRequest
   | { type: "sessionActivity"; state: Activity }
+  | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage
@@ -1689,6 +1696,7 @@ export type WebviewMessage =
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | AgentManagerCopyToClipboardRequest
+  | AgentManagerSetIntroDismissedRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest

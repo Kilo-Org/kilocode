@@ -285,18 +285,43 @@
   min-width: 0;
 }
 
+.am-pr-comment-tags {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .am-pr-comment-tag {
   font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   border: 1px solid var(--vscode-panel-border);
   border-radius: 3px;
   padding: 1px 4px;
-  margin-left: auto;
   flex-shrink: 0;
+}
+
+.am-pr-comment-head > .am-pr-comment-tag {
+  margin-left: auto;
 }
 
 .am-pr-comment-tag-sent {
   color: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-pr-comment-tag-approved {
+  color: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-pr-comment-tag-changes {
+  color: var(--vscode-testing-iconFailed, #f87171);
+}
+
+.am-pr-comment-time {
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker);
+  flex-shrink: 0;
 }
 
 .am-pr-comment-body {

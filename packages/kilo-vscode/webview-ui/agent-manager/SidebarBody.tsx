@@ -28,6 +28,7 @@ import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
+import { useBaseUpdate } from "./update-from-base"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -44,6 +45,7 @@ export interface SidebarBodyProps {
   currentSessionID: () => string | undefined
   selectLocal: () => void
   selectWorktree: (id: string) => void
+  onOpenComments?: (id: string) => void
   activityFor: (id: string | null) => Activity
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
@@ -96,6 +98,7 @@ export interface SidebarBodyProps {
 /** Legacy single-project sidebar body: local repo, worktrees, unassigned sessions. */
 export const SidebarBody: Component<SidebarBodyProps> = (props) => {
   const vscode = useVSCode()
+  const updateBase = useBaseUpdate()
   const localState = () => props.activityFor(null)
 
   return (
@@ -331,6 +334,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
+                                onOpenComments={() => props.onOpenComments?.(wt.id)}
                                 onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
                                   const url = props.prStatuses()[wt.id]?.url
                                   vscode.postMessage({
@@ -359,6 +363,13 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onCommitRename={() => commitRename(wt.id)}
                                 onCancelRename={cancelRename}
                                 onRemoveStale={() => props.confirmRemoveStaleWorktree(wt.id)}
+                                onUpdateBase={() =>
+                                  updateBase(
+                                    wt.id,
+                                    props.projectId,
+                                    wtSessions().find((item) => item.id === props.currentSessionID())?.id,
+                                  )
+                                }
                                 onCopyPath={() => navigator.clipboard.writeText(wt.path)}
                                 onOpen={props.track("open_worktree_window", "worktree_menu", () =>
                                   vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id }),

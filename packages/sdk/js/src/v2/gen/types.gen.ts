@@ -1140,6 +1140,10 @@ export type QuestionInfo = {
    */
   options: Array<QuestionOption>
   multiple?: boolean
+  /**
+   * Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.
+   */
+  default?: string
   questionKey?: string
   headerKey?: string
   custom?: boolean
@@ -16220,6 +16224,7 @@ export type KiloAuthStatusResponses = {
   200: {
     authenticated: boolean
     type?: "api" | "oauth"
+    organizationId?: string
   }
 }
 

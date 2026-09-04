@@ -49,47 +49,30 @@ export type WorktreeDiffEntry = SnapshotFileDiff & {
 // PR status types
 // ---------------------------------------------------------------------------
 
-export type PRState = "open" | "draft" | "merged" | "closed"
-export type ReviewDecision = "approved" | "changes_requested" | "pending"
-export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
-export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
+import type {
+  PRState,
+  ReviewDecision,
+  CheckStatus,
+  AggregateCheckStatus,
+  PRCheck,
+  PRCommentReply,
+  PRComment,
+  ReviewerState,
+  PRReviewer,
+  PRConversationComment,
+} from "../../webview-ui/agent-manager/pr/pr-types"
 
-export interface PRCheck {
-  name: string
-  status: CheckStatus
-  url?: string
-  duration?: string
-}
-
-export interface PRCommentReply {
-  author: string
-  body: string
-}
-
-export interface PRComment {
-  id: string
-  threadId: string
-  author: string
-  avatar?: string
-  body: string
-  file?: string
-  line?: number
-  url?: string
-  resolved: boolean
-  outdated: boolean
-  createdAt?: number
-  diffHunk?: string
-  /** Lines after the commented line, read from the worktree: a hunk has none. */
-  after?: string[]
-  replies?: PRCommentReply[]
-}
-
-export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
-
-export interface PRReviewer {
-  login: string
-  avatar?: string
-  state: ReviewerState
+export type {
+  PRState,
+  ReviewDecision,
+  CheckStatus,
+  AggregateCheckStatus,
+  PRCheck,
+  PRCommentReply,
+  PRComment,
+  ReviewerState,
+  PRReviewer,
+  PRConversationComment,
 }
 
 export interface PRStatus {
@@ -108,11 +91,13 @@ export interface PRStatus {
     checks: PRCheck[]
   }
   reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
@@ -1154,6 +1139,7 @@ interface BrowserRequestIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | import("../../webview-ui/src/types/messages/agent-manager").BaseUpdateRequest
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn

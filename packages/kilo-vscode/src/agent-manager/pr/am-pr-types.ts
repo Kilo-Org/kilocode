@@ -33,6 +33,23 @@ export interface GhReview {
   state?: string
 }
 
+export interface GhConversationComment {
+  id: string
+  author?: GhAuthor & { __typename?: string }
+  body?: string
+  createdAt?: string
+  url?: string
+}
+
+export interface GhReviewWithBody {
+  id: string
+  author?: GhAuthor & { __typename?: string }
+  body?: string
+  state?: string
+  submittedAt?: string
+  url?: string
+}
+
 export interface PRResult {
   number: number
   title: string

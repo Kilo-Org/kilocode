@@ -10,7 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { isTextControl } from "../../utils/focus"
+import { hasPopup, isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -30,6 +30,7 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { RoutingSelector } from "../shared/RoutingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
+import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -42,6 +43,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
@@ -134,6 +136,7 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   boxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -174,6 +177,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <Icon name="history" class="file-mention-icon" />
         <span class="file-mention-name">{item.label}</span>
         <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
       </>
     )
   if (item.type === "file-picker")
@@ -238,6 +251,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+
+  /**
+   * True after the last menu entry of a bare `@`, which lists the entries above
+   * the files. A query ranks entries among the results it finds, so there is no
+   * group boundary left to draw.
+   */
+  const divides = (index: number) => {
+    if (mention.mentionQuery()) return false
+    const items = mention.mentionResults()
+    const item = items.at(index)
+    const next = items.at(index + 1)
+    return item !== undefined && next !== undefined && isMentionEntry(item) && !isMentionEntry(next)
+  }
 
   const boxKey = () => props.boxId ?? "prompt:default"
   const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
@@ -332,8 +358,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
       if (props.worktree !== true) hidden.add("review worktree")
+      if (!props.onUpdateBase || props.worktree !== true) hidden.add("update-from-base")
       return hidden
     },
+    undefined,
+    undefined,
+    [
+      {
+        name: "update-from-base",
+        description: "Ask the worktree agent to fetch and merge its saved base branch",
+        hints: [],
+        action: () => props.onUpdateBase?.(),
+        enabled: () => props.worktree === true && server.isConnected() && !locked() && !props.blocked?.(),
+      },
+    ],
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -477,7 +515,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
     const ownsFocus = () => {
       const active = document.activeElement
-      return active !== textareaRef && isTextControl(active)
+      return hasPopup() || (active !== textareaRef && isTextControl(active))
     }
     const focus = () => {
       if (defer() || ownsFocus()) return
@@ -1342,7 +1380,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched && !data && !browserData) {
       const args = draft.slice(cmdMatch![0].length).trim()
-      session.sendCommand(
+      const accepted = session.sendCommand(
         matched.name,
         args,
         sel?.providerID,
@@ -1357,8 +1395,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           variant: matched.variant,
         },
       )
+      if (!accepted) return
     } else {
-      session.sendMessage(
+      const accepted = session.sendMessage(
         message,
         sel?.providerID,
         sel?.modelID,
@@ -1369,6 +1408,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         origin ?? null,
         browserData,
       )
+      if (!accepted) return
     }
 
     drafts.delete(key)
@@ -1470,7 +1510,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     >
                       <MentionItemContent item={item} />
                     </div>
-                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                    <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
                   </>

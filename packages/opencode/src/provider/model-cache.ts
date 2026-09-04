@@ -4,6 +4,7 @@ import { Context, Deferred, Duration, Effect, Exit, Layer, Schema, Scope } from 
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
+import { compatible, organization, token } from "@/kilocode/provider/catalog"
 import type { Provider } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -50,22 +51,6 @@ export interface Interface {
 }
 
 export class Service extends Context.Service<Service, Interface>()("@kilocode/ModelCache") {}
-
-/**
- * Config-level Kilo Gateway settings layered over the stored/env credentials,
- * for catalog and endpoint requests alike. The organization follows the same
- * precedence as the gateway requests themselves: an explicit kilo.json value,
- * then KILO_ORG_ID, then the signed-in session's organization — so the catalogs
- * describe the organization the requests are actually sent to.
- */
-export function kiloConfigOptions(config: Config.Info, info: Auth.Info | undefined, env = process.env): Options {
-  const opts = config.provider?.kilo?.options
-  const org = opts?.kilocodeOrganizationId || env.KILO_ORG_ID || (info?.type === "oauth" ? info.accountId : undefined)
-  return {
-    ...(opts?.baseURL ? { baseURL: opts.baseURL } : {}),
-    ...(org ? { kilocodeOrganizationId: org } : {}),
-  }
-}
 
 const log = Log.create({ service: "model-cache" })
 const ttl = Duration.minutes(5)
@@ -143,22 +128,15 @@ export const layer: Layer.Layer<
 
       if (providerID === "kilo") {
         const item = config.provider?.[providerID]
-        if (item?.options?.apiKey) options.kilocodeToken = item.options.apiKey
-        if (item?.options?.kilocodeOrganizationId) options.kilocodeOrganizationId = item.options.kilocodeOrganizationId
-
         const info = yield* auth.get(providerID)
-        if (info?.type === "api") options.kilocodeToken = info.key
-        if (info?.type === "oauth") {
-          options.kilocodeToken = info.access
-          if (info.accountId) options.kilocodeOrganizationId = info.accountId
-        }
-
-        if (process.env.KILO_API_KEY) options.kilocodeToken = process.env.KILO_API_KEY
-        if (process.env.KILO_ORG_ID) options.kilocodeOrganizationId = process.env.KILO_ORG_ID
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+        options.kilocodeOrganizationId = organization(item?.options, info)
+        options.kilocodeToken = token(item?.options, info)
         log.debug("auth options resolved", {
           providerID,
           hasToken: !!options.kilocodeToken,
           hasOrganizationId: !!options.kilocodeOrganizationId,
+          hasBaseURL: !!options.baseURL,
         })
       }
 
@@ -200,25 +178,13 @@ export const layer: Layer.Layer<
 
     const load = Effect.fn("ModelCache.load")(function* (providerID: string, options: Options) {
       const resolved = yield* resolveOptions(providerID)
-      return yield* fetchModels(providerID, { ...resolved, ...options })
+      const input = { ...resolved, ...options }
+      if (providerID === "kilo" && !compatible(input)) return { models: {}, error: { kind: "schema" as const } }
+      return yield* fetchModels(providerID, input)
     })
 
     const options = Effect.fn("ModelCache.options")(function* (providerID: string) {
-      const resolved = yield* resolveOptions(providerID)
-      if (providerID !== "kilo") return resolved
-      const overrides = yield* Effect.gen(function* () {
-        const config = yield* cfg.get()
-        const info = yield* auth.get(providerID)
-        return kiloConfigOptions(config, info)
-      }).pipe(
-        Effect.catchCause((cause) =>
-          Effect.sync(() => {
-            log.warn("config options failed", { providerID, cause })
-            return {} as Options
-          }),
-        ),
-      )
-      return { ...resolved, ...overrides }
+      return yield* resolveOptions(providerID)
     })
 
     const key = (providerID: string, options?: Options) => {

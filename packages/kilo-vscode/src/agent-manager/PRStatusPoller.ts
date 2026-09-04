@@ -1,7 +1,7 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, PRReviewer } from "./types"
+import type { PRStatus, PRCheck, PRReviewer, PRConversationComment } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
@@ -9,13 +9,21 @@ import type { Semaphore } from "./semaphore"
 import {
   parsePRResult,
   checkStatus,
-  commentsSig,
+  signature,
   formatCheckDuration,
   parseComments,
+  parseConversation,
   parseReviewers,
   summarize,
 } from "./pr/am-pr-utils"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
+import type {
+  PRResult,
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "./pr/am-pr-types"
 import { withContext } from "./pr/pr-comment-context"
 
 interface PRStatusPollerOptions {
@@ -260,9 +268,9 @@ export class PRStatusPoller {
         return
       }
 
-      const [checks, reviewers, comments] = await Promise.all([
+      const [checks, reviewers, threads] = await Promise.all([
         ...this.extras(pr, wt.path),
-        this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
+        this.fetchThreads(pr.number, wt.path, this.activeWorktreeId === worktreeId),
       ])
       if (this.stale(generation)) return
 
@@ -275,16 +283,13 @@ export class PRStatusPoller {
         review: pr.review,
         checks,
         reviewers,
-        ...(comments && {
-          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments },
-        }),
+        ...threads,
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
       }
 
-      const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
-      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}:${commentsSig(comments?.comments)}`
+      const hash = signature(status)
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
@@ -483,65 +488,138 @@ export class PRStatusPoller {
    * Undefined on failure, never an empty thread list: the panel keeps the
    * comments it already shows instead of collapsing the section mid-review.
    */
-  private async fetchComments(
+  private async fetchThreads(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; comments: PRComment[] } | undefined> {
+    full: boolean,
+  ): Promise<Pick<PRStatus, "comments" | "unresolvedThreads" | "conversation"> | undefined> {
     try {
       const repo = await this.getRepoInfo(cwd)
-      const query = `query($owner: String!, $repo: String!, $number: Int!) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $number) {
-            reviewThreads(first: 100) {
-              totalCount
-              nodes {
-                id
-                isResolved
-                isOutdated
-                comments(first: 10) {
-                  nodes {
-                    id
-                    author { login avatarUrl }
-                    body
-                    path
-                    line
-                    originalLine
-                    url
-                    createdAt
-                    diffHunk
-                  }
-                }
+      const fields = full
+        ? `id
+           isOutdated
+           comments(first: 10) {
+             nodes {
+               id
+               author { login avatarUrl }
+               body
+               path
+               line
+               originalLine
+               url
+               createdAt
+               diffHunk
+             }
+           }`
+        : ""
+      const extra = full
+        ? `comments(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               createdAt
+               url
+             }
+           }
+           reviews(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               state
+               submittedAt
+               url
+             }
+           }`
+        : ""
+      const nodes: GhThread[] = []
+      const cursors = new Set<string>()
+      let cursor: string | undefined
+      let conversation: PRConversationComment[] | undefined
+      while (true) {
+        const query = `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $number) {
+              reviewThreads(first: 100, after: $cursor) {
+                totalCount
+                pageInfo { hasNextPage endCursor }
+                nodes { isResolved ${fields} }
               }
+              ${cursor ? "" : extra}
             }
           }
+        }`
+        const { stdout } = await this.gh(
+          [
+            "api",
+            "graphql",
+            "-f",
+            `query=${query}`,
+            "-F",
+            `owner=${repo.owner}`,
+            "-F",
+            `repo=${repo.name}`,
+            "-F",
+            `number=${prNumber}`,
+            ...(cursor ? ["-f", `cursor=${cursor}`] : []),
+          ],
+          { cwd, timeout: 15_000 },
+        )
+        const page = threads(stdout)
+        nodes.push(...page.nodes)
+        if (full && !conversation) {
+          conversation = parseConversationPayload(stdout)
         }
-      }`
-
-      const { stdout } = await this.gh(
-        [
-          "api",
-          "graphql",
-          "-f",
-          `query=${query}`,
-          "-F",
-          `owner=${repo.owner}`,
-          "-F",
-          `repo=${repo.name}`,
-          "-F",
-          `number=${prNumber}`,
-        ],
-        { cwd, timeout: 15_000 },
-      )
-      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const threads = pr?.reviewThreads
-      const comments = await withContext(cwd, parseComments((threads?.nodes ?? []) as GhThread[]))
-      const totalCount = threads?.totalCount ?? comments.length
-      return { total: totalCount, unresolved: comments.filter((c) => !c.resolved).length, comments }
+        if (!page.pageInfo.hasNextPage) {
+          if (nodes.length !== page.totalCount) throw new Error("Incomplete PR review threads")
+          const unresolved = nodes.filter((node) => !node.isResolved).length
+          if (!full) return { unresolvedThreads: unresolved }
+          const comments = await withContext(cwd, parseComments(nodes))
+          return {
+            unresolvedThreads: unresolved,
+            comments: { total: page.totalCount, unresolved, comments },
+            conversation,
+          }
+        }
+        const next = page.pageInfo.endCursor
+        if (typeof next !== "string" || !next || cursors.has(next)) throw new Error("Invalid PR review thread cursor")
+        cursors.add(next)
+        cursor = next
+      }
     } catch (err) {
-      this.options.log("Failed to fetch PR comments:", err)
+      this.options.log("Failed to fetch PR review threads:", err)
       return undefined
     }
   }
+}
+
+function threads(json: string) {
+  const result = JSON.parse(json) as {
+    errors?: unknown[]
+    data?: {
+      repository?: {
+        pullRequest?: {
+          reviewThreads?: {
+            totalCount: number
+            pageInfo: { hasNextPage: boolean; endCursor?: string | null }
+            nodes: GhThread[]
+          }
+        }
+      }
+    }
+  }
+  const page = result.data?.repository?.pullRequest?.reviewThreads
+  if (result.errors?.length || !page || !Array.isArray(page.nodes) || !Number.isInteger(page.totalCount)) {
+    throw new Error("Invalid PR review threads response")
+  }
+  if (
+    typeof page.pageInfo?.hasNextPage !== "boolean" ||
+    page.nodes.some((node) => typeof node?.isResolved !== "boolean")
+  ) {
+    throw new Error("Incomplete PR review threads response")
+  }
+  return page
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */
@@ -561,4 +639,13 @@ async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Pr
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, thunks.length) }, () => run()))
   return results
+}
+
+function parseConversationPayload(stdout: string): PRConversationComment[] | undefined {
+  const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+  if (!pr) return undefined
+  return parseConversation(
+    (pr.comments?.nodes ?? []) as GhConversationComment[],
+    (pr.reviews?.nodes ?? []) as GhReviewWithBody[],
+  )
 }

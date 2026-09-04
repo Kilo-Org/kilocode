@@ -151,15 +151,15 @@ export function useSlashCommand(
       hints: ["code-review", "diff"],
       nested: true,
     },
-    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
-    { name: "review staged", description: "Review staged changes only", hints: [] },
-    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
-    { name: "review branch", description: "Review current branch against base branch", hints: [] },
     {
       name: "review worktree",
       description: "Review committed and uncommitted worktree changes against its base",
       hints: [],
     },
+    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
+    { name: "review staged", description: "Review staged changes only", hints: [] },
+    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
+    { name: "review branch", description: "Review current branch against base branch", hints: [] },
     {
       name: "review quick",
       description: "Fast single-pass review with minimal token usage",
@@ -392,7 +392,7 @@ export function useSlashCommand(
       setIndex((i) => Math.max(i - 1, 0))
       return true
     }
-    if (e.key === "Enter" || e.key === "Tab") {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
       const cmd = filtered[index()]
       if (!cmd) return false
       e.preventDefault()

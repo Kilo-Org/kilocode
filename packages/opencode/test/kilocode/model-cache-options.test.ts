@@ -1,8 +1,8 @@
 // kilocode_change - new file
 // ModelCache.options resolves the credentials, organization and gateway URL that
-// Kilo catalog requests (models and endpoints alike) use. The organization
-// follows the request precedence: kilo.json, then KILO_ORG_ID, then the stored
-// session.
+// Kilo catalog requests (models and endpoints alike) use, with the credential
+// precedence shared by every Kilo Gateway request: environment, then the stored
+// session, then kilo.json.
 
 import { afterEach, beforeEach, expect } from "bun:test"
 import { Effect, Layer } from "effect"
@@ -59,7 +59,7 @@ it.live("resolves the stored session token and organization", () =>
   }),
 )
 
-it.live("config base URL and organization win over the stored session", () =>
+it.live("carries the configured gateway URL; the stored session's organization wins over the config", () =>
   Effect.gen(function* () {
     const config = {
       provider: {
@@ -71,7 +71,7 @@ it.live("config base URL and organization win over the stored session", () =>
     )
     expect(options).toEqual({
       kilocodeToken: "session-token",
-      kilocodeOrganizationId: "org-config",
+      kilocodeOrganizationId: "org-session",
       baseURL: "https://gateway.example.com",
     })
   }),
@@ -85,24 +85,13 @@ it.live("KILO_ORG_ID wins over the stored session's organization", () =>
   }),
 )
 
-it.live("config organization wins over KILO_ORG_ID", () =>
-  Effect.gen(function* () {
-    process.env.KILO_ORG_ID = "org-env"
-    const config = { provider: { kilo: { options: { kilocodeOrganizationId: "org-config" } } } }
-    const options = yield* ModelCache.Service.use((cache) => cache.options("kilo")).pipe(
-      Effect.provide(layer(oauth, config)),
-    )
-    expect(options).toEqual({ kilocodeToken: "session-token", kilocodeOrganizationId: "org-config" })
-  }),
-)
-
 it.live("config-only credentials are used without a stored session", () =>
   Effect.gen(function* () {
-    const config = { provider: { kilo: { options: { apiKey: "config-key" } } } }
+    const config = { provider: { kilo: { options: { apiKey: "config-key", kilocodeOrganizationId: "org-config" } } } }
     const options = yield* ModelCache.Service.use((cache) => cache.options("kilo")).pipe(
       Effect.provide(layer(undefined, config)),
     )
-    expect(options).toEqual({ kilocodeToken: "config-key" })
+    expect(options).toEqual({ kilocodeToken: "config-key", kilocodeOrganizationId: "org-config" })
   }),
 )
 

@@ -12,7 +12,7 @@ import { Show } from "solid-js"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
 import type { TerminalDestination } from "../../src/types/messages/agent-manager"
 
@@ -39,20 +39,22 @@ export const TerminalDestinationButton: Component<Props> = (props) => {
   )
   return (
     <div class="am-split-button">
-      <TooltipKeybind title={t("agentManager.tab.terminal")} keybind={props.keybind()} placement="bottom">
+      <TooltipKeybind title={t("agentManager.tab.terminal")} keybind={props.keybind()} placement="bottom" openDelay={0}>
         <IconButton
           icon="console"
           size="small"
           variant="ghost"
-          label={t("agentManager.tab.openTerminal")}
+          aria-label={t("agentManager.tab.openTerminal")}
           class={props.active() ? "am-tab-diff-btn-active" : ""}
           onClick={props.onOpen}
         />
       </TooltipKeybind>
       <DropdownMenu gutter={4} placement="bottom-end">
-        <DropdownMenu.Trigger class="am-split-arrow" aria-label={t("agentManager.terminal.destination")}>
-          <Icon name="chevron-down" size="small" />
-        </DropdownMenu.Trigger>
+        <Tooltip value={t("agentManager.terminal.destination")} placement="bottom" openDelay={0}>
+          <DropdownMenu.Trigger class="am-split-arrow" aria-label={t("agentManager.terminal.destination")}>
+            <Icon name="chevron-down" size="small" />
+          </DropdownMenu.Trigger>
+        </Tooltip>
         <DropdownMenu.Portal>
           <DropdownMenu.Content class="am-split-menu">
             {item("vscode", t("agentManager.terminal.openInVscode"))}

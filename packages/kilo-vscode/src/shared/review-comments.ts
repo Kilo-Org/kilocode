@@ -22,6 +22,7 @@ export interface PRReviewCommentData {
   line?: number
   diffHunk?: string
   outdated?: boolean
+  reviewState?: string
   replies?: PRReviewReply[]
 }
 
@@ -68,9 +69,10 @@ function quote(value: string): string {
 }
 
 function formatPR(comment: PRReviewCommentData): string {
+  const kind = comment.reviewState ? `PR review (${comment.reviewState.replace("_", " ")})` : "PR comment"
   const at = comment.file
-    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, PR comment`
-    : "PR comment"
+    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, ${kind}`
+    : kind
   const lines = [`${at} by @${comment.author}${comment.outdated ? " (outdated)" : ""}:`]
   if (comment.diffHunk) lines.push(...fenced(comment.diffHunk))
   lines.push(comment.body)
@@ -156,6 +158,8 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
   const line = optionalLine(item.line)
   if (file === false || hunk === false || line === false) return undefined
   if (item.outdated !== undefined && typeof item.outdated !== "boolean") return undefined
+  const reviewState = optional(item.reviewState, 64)
+  if (reviewState === false) return undefined
 
   const replies = item.replies === undefined ? undefined : parseReplies(item.replies)
   if (item.replies !== undefined && !replies) return undefined
@@ -169,6 +173,7 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
     line,
     diffHunk: hunk,
     outdated: item.outdated,
+    reviewState: reviewState || undefined,
     replies,
   }
 }
