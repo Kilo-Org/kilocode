@@ -23,8 +23,10 @@ const archMap = {
   arm: "arm",
 }
 
-const platform = platformMap[os.platform()] ?? os.platform()
-const arch = archMap[os.arch()] ?? os.arch()
+// kilocode_change start - test hooks for CI environment simulation
+const platform = process.env.KILO_TEST_PLATFORM ?? (platformMap[os.platform()] ?? os.platform())
+const arch = process.env.KILO_TEST_ARCH ?? (archMap[os.arch()] ?? os.arch())
+// kilocode_change end
 const base = `@kilocode/cli-${platform}-${arch}`
 const sourceBinary = platform === "windows" ? "kilo.exe" : "kilo"
 const targetBinary = path.join(__dirname, "bin", ".kilo")
@@ -79,6 +81,7 @@ function supportsAvx2() {
 
 function isMusl() {
   if (platform !== "linux") return false
+  if (process.env.KILO_TEST_IS_MUSL !== undefined) return process.env.KILO_TEST_IS_MUSL === "true" // kilocode_change
 
   try {
     if (fs.existsSync("/etc/alpine-release")) return true
@@ -171,6 +174,8 @@ function copyBinary(source) {
 // kilocode_change end
 
 function verifyBinary() {
+  if (process.env.KILO_TEST_BINARY_WORKS !== undefined) return process.env.KILO_TEST_BINARY_WORKS === "true" // kilocode_change
+  
   const result = childProcess.spawnSync(targetBinary, ["--version"], {
     stdio: ["ignore", "pipe", "pipe"], // kilocode_change - capture output to surface errors
     windowsHide: true,
