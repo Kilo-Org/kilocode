@@ -1,5 +1,9 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
 import com.intellij.openapi.options.ConfigurationException
@@ -12,15 +16,22 @@ import javax.swing.JComponent
 
 class AdvancedConfigurableTest : BasePlatformTestCase() {
     private lateinit var settings: KiloLogSettingsService
+    private lateinit var coroutines: TestCoroutines
+    private lateinit var appRpc: FakeAppRpcApi
+    private lateinit var app: KiloAppService
 
     override fun setUp() {
         super.setUp()
         settings = KiloLogSettingsService()
         LogConfig.apply(null, null, null)
+        coroutines = TestCoroutines()
+        appRpc = FakeAppRpcApi()
+        app = KiloAppService(coroutines.scope, appRpc)
     }
 
     override fun tearDown() {
         try {
+            coroutines.close()
             LogConfig.apply(null, null, null)
         } finally {
             super.tearDown()
@@ -102,7 +113,54 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    private fun configurable() = AdvancedConfigurable(settings) { it.applyLocal() }
+    fun `test createComponent fetches and renders the index worktrees toggle`() {
+        appRpc.indexWorktrees = true
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent()
+            coroutines.pumpUntil { toggle(root as Container).isSelected }
+            assertTrue(toggle(root as Container).isSelected)
+            assertFalse(cfg.isModified)
+        }
+    }
+
+    fun `test isModified tracks index worktrees toggle`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent()
+            coroutines.pumpUntil { !toggle(root as Container).isSelected }
+            toggle(root as Container).isSelected = true
+            assertTrue(cfg.isModified)
+        }
+    }
+
+    fun `test apply persists index worktrees only when changed`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent()
+            coroutines.pumpUntil { !toggle(root as Container).isSelected }
+
+            cfg.apply()
+            coroutines.drain()
+
+            assertEquals(emptyList<Boolean>(), appRpc.indexWorktreesSaves)
+
+            toggle(root as Container).isSelected = true
+            cfg.apply()
+
+            coroutines.pumpUntil { appRpc.indexWorktreesSaves.isNotEmpty() }
+            assertEquals(listOf(true), appRpc.indexWorktreesSaves)
+            assertFalse(cfg.isModified)
+        }
+    }
+
+    private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { coroutines.scope }
+
+    private fun toggle(root: Container): SettingsToggle = toggles(root).single()
+
+    private fun toggles(root: Container): List<SettingsToggle> = buildList {
+        collect(root) { if (it is SettingsToggle) add(it) }
+    }
 
     private fun links(root: Container): List<ActionLink> = buildList {
         collect(root) { if (it is ActionLink) add(it) }

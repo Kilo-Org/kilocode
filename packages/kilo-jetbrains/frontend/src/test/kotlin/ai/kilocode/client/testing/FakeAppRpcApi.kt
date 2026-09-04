@@ -179,6 +179,20 @@ class FakeAppRpcApi : KiloAppRpcApi {
         logConfigs.add(config)
     }
 
+    var indexWorktrees = false
+    val indexWorktreesSaves = mutableListOf<Boolean>()
+
+    override suspend fun indexWorktrees(): Boolean {
+        assertNotEdt("indexWorktrees")
+        return indexWorktrees
+    }
+
+    override suspend fun setIndexWorktrees(value: Boolean) {
+        assertNotEdt("setIndexWorktrees")
+        indexWorktrees = value
+        indexWorktreesSaves.add(value)
+    }
+
     var backendLog: LogFileDto? = null
 
     override suspend fun backendLogFile(): LogFileDto? {
