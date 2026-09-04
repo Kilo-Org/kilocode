@@ -1,5 +1,12 @@
 export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
 
+export interface BaseUpdateRequest {
+  type: "agentManager.updateFromBase"
+  projectId?: string
+  worktreeId: string
+  sessionId?: string
+}
+
 export interface TerminalFont {
   fontFamily: string
   fontSize: number
@@ -83,6 +90,7 @@ export interface PRStatus {
     checks: PRCheck[]
   }
   reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number

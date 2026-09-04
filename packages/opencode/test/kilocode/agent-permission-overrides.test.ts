@@ -642,6 +642,82 @@ test("marketplace architect honors plan allow after wildcard edit deny", async (
   expect(Permission.evaluate("glob", "*", architect!.permission).action).toBe("allow")
 })
 
+// A custom agent whose name collides with `architect` must keep its own edit
+// permission. The previous name check appended the plan-mode edit guard after the
+// agent's rules, so last-match-wins made its `*.md` allows unreachable (#13581).
+test("custom architect agent keeps its own edit rules instead of plan hardening", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: {
+              "*": "ask",
+              "*.md": "allow",
+              "**/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(architect!.name).toBe("architect")
+  // No plan guard may be appended after the agent's own rules.
+  expect(
+    architect!.permission.some((rule) => rule.permission === "edit" && rule.pattern === "*" && rule.action === "deny"),
+  ).toBe(false)
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("ask")
+  expect(Permission.evaluate("edit", "docs/notes/test.md", architect!.permission).action).toBe("allow")
+})
+
+test("custom architect agent is not plan-hardened by name", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: "allow",
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("allow")
+  expect(Permission.evaluate("edit", ".kilo/plans/fix.md", architect!.permission).action).toBe("allow")
+})
+
+// A custom `agent.plan` config reuses the built-in plan object, so it stays native
+// and the plan-mode ceiling keeps applying instead of being replaced by the user
+// rules. Custom-plan replacement is out of scope for the #13581 fix.
+test("custom agent.plan config stays native and plan-hardened", async () => {
+  const plan = await get(
+    {
+      agent: {
+        plan: {
+          mode: "primary",
+          permission: {
+            edit: {
+              "*": "allow",
+              "**/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+    "plan",
+  )
+  expect(plan).toBeDefined()
+  expect(plan!.native).toBe(true)
+  expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
+  expect(Permission.evaluate("edit", ".kilo/plans/fix.md", plan!.permission).action).toBe("allow")
+})
+
 test("non-planning agents retain per-agent edit permissions", async () => {
   const code = await get(
     {

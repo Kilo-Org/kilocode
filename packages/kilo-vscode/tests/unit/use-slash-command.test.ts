@@ -1,11 +1,16 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { useSlashCommand } from "../../webview-ui/src/hooks/useSlashCommand"
+import { useSlashCommand, type SlashCommandEntry } from "../../webview-ui/src/hooks/useSlashCommand"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 function setup(
   sandbox: () => void,
-  options: { enabled?: () => boolean; exclude?: () => Set<string>; include?: Set<string> } = {},
+  options: {
+    enabled?: () => boolean
+    exclude?: () => Set<string>
+    include?: Set<string>
+    extra?: SlashCommandEntry[]
+  } = {},
 ) {
   const sent: WebviewMessage[] = []
   const handlers = new Set<(message: ExtensionMessage) => void>()
@@ -22,6 +27,8 @@ function setup(
       { action: sandbox, enabled: options.enabled ?? (() => true) },
       options.exclude,
       options.include,
+      undefined,
+      options.extra,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -29,6 +36,71 @@ function setup(
   }
   return { ...root, fire, sent }
 }
+
+describe("worktree update slash action", () => {
+  it("uses the current worktree selection and preserves text after the action", () => {
+    const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          action: () => {
+            state.sent = state.selected
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, "/update-from-base".length)
+    state.selected = "second"
+    const entry = ctx.slash.results().find((item) => item.name === "update-from-base")!
+    ctx.slash.select(entry, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe("second")
+    expect(state.text).toBe(" keep this draft")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it("keeps the draft when a worktree action becomes unavailable", () => {
+    const state = { text: "/update-from-base", sent: false }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          enabled: () => false,
+          action: () => {
+            state.sent = true
+          },
+        },
+      ],
+    })
+    const textarea = { value: state.text } as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe(false)
+    expect(state.text).toBe("/update-from-base")
+    ctx.dispose()
+  })
+
+  it("hides the worktree action in Local and other prompt surfaces", () => {
+    const ctx = setup(() => {}, {
+      extra: [{ name: "update-from-base", hints: [], action: () => {} }],
+      exclude: () => new Set(["update-from-base"]),
+    })
+    ctx.slash.onInput("/update-from-base", 17)
+    expect(ctx.slash.results()).toEqual([])
+    ctx.dispose()
+  })
+})
 
 describe("useSlashCommand sandbox action", () => {
   it("supports the singular model alias", () => {

@@ -12,7 +12,7 @@ import { DataBridge } from "../src/App"
 import { ChatView } from "../src/components/chat"
 import { ActivityIcon } from "../src/components/shared/ActivityIcon"
 import { useLanguage } from "../src/context/language"
-import { SessionProvider, useSession } from "../src/context/session"
+import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
 import { description, label, type Activity } from "../src/utils/session-activity"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
@@ -136,6 +136,7 @@ const SubagentContent: Component<Props & { activity: (id: string) => Activity }>
 
 export const SubagentPanel: Component<Props> = (props) => {
   const session = useSession()
+  useSessionVisibility(() => (props.visible() ? props.active() : undefined))
   return (
     <SessionProvider>
       <SubagentContent {...props} activity={session.activityFor} />
