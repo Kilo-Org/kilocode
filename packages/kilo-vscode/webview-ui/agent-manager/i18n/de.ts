@@ -225,6 +225,11 @@ export const dict = {
   "agentManager.pr.comment.openOnGitHub": "Auf GitHub öffnen",
   "agentManager.pr.comment.resolveFailed": "Konnte nicht aufgelöst werden. {{error}}",
   "agentManager.pr.comment.unresolveFailed": "Auflösung konnte nicht aufgehoben werden. {{error}}",
+  "agentManager.pr.conversation.title": "PR-Kommentare",
+  "agentManager.pr.conversation.dismiss": "Verwerfen",
+  "agentManager.pr.conversation.restore": "Wiederherstellen",
+  "agentManager.pr.conversation.sendAll": "{{count}} an Agent senden",
+  "agentManager.pr.conversation.sendAllToTerminal": "{{count}} an das Terminal senden",
   "agentManager.review.collapsedOnly": "{{count}} eingeklappt",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} eingeklappt, {{large}} groß",
   "agentManager.review.largeFileCollapsed": "Große Datei (eingeklappt)",
@@ -281,7 +286,6 @@ export const dict = {
     "Ein Worktree ist ein separater Ordner und Branch für eine Aufgabe. Ihre Agenten können nebeneinander arbeiten, ohne dieselben Dateien zu ändern.",
   "agentManager.intro.graph.agent": "Kilo-Agent",
   "agentManager.intro.graph.pr": "Pull Request",
-  "agentManager.intro.graph.conflict": "Bei Konflikten",
   "agentManager.intro.stage1.title": "Ihr Repository",
   "agentManager.intro.stage1.text": "Lokale Dateien bleiben unverändert",
   "agentManager.intro.stage2.title": "Beispiel: zwei Aufgaben parallel",
@@ -292,8 +296,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Änderungen zurückholen, wenn Sie bereit sind",
   "agentManager.intro.stage4.text":
     "Bitten Sie den Agenten in jedem Worktree, einen Pull Request zu öffnen. Oder verwenden Sie Apply im Diff-Panel, um Änderungen nach Local zu kopieren.",
-  "agentManager.intro.conflictText":
-    "Bitten Sie den Agenten im Worktree, seinen ursprünglichen Basis-Branch zu mergen und Konflikte zu lösen, und prüfen Sie anschließend das Ergebnis. Vermeiden Sie git stash: Stashes werden zwischen Worktrees geteilt.",
+  "agentManager.intro.updateTitle": "Konflikte mit Kilo lösen",
+  "agentManager.intro.updateText":
+    "Bevor Sie Änderungen auf Local anwenden oder einen Pull Request mergen, führen Sie /update-from-base in der Sitzung dieses Worktrees aus. Kilo mergt die neuesten Änderungen des Basis-Branches und löst Konflikte zuerst in diesem Worktree.",
   "agentManager.intro.prDetection":
     "PR-Abzeichen werden für jeden Worktree-Branch automatisch aktualisiert (GitHub CLI-Anmeldung erforderlich).",
   "agentManager.intro.checksRunning": "Prüfungen laufen",

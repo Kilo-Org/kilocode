@@ -1961,7 +1961,6 @@ export const MultiProjectSidebar: Story = {
             t={t}
             onSearchRef={() => {}}
             onShortcuts={() => {}}
-            onHelp={() => {}}
             onHistory={() => {}}
           />
         </div>

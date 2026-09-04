@@ -314,6 +314,43 @@ test("variant picker focuses the selected effort as it opens", async ({ page }) 
   await expect(page.locator(".thinking-selector-item.selected")).toBeFocused()
 })
 
+for (const picker of ["model", "variant"]) {
+  test(`${picker} picker keeps focus during automatic prompt restoration`, async ({ page }) => {
+    await load(page, "prompt-input--with-thinking-420")
+
+    const trigger = page.getByRole("button", {
+      name: picker === "model" ? /^Select model:/ : "Medium",
+      exact: picker === "variant",
+    })
+    const prompt = page.locator("textarea.prompt-input")
+    await prompt.evaluate((el) => el.setAttribute("aria-disabled", "false"))
+    const popup = page.locator(".popup-selector[data-expanded]")
+    await trigger.click()
+    const choice =
+      picker === "model"
+        ? popup.locator(".model-selector-search-wrapper button")
+        : popup.locator(".thinking-selector-item.selected")
+    if (picker === "model") await popup.getByRole("combobox").press("Tab")
+    await expect(choice).toBeFocused()
+    await prompt.hover()
+    await expect(popup).toBeVisible()
+
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    await page.waitForTimeout(100)
+    await expect(popup).toBeVisible()
+    await expect(choice).toBeFocused()
+    await choice.press("Escape")
+    await expect(popup).toBeHidden()
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await expect(popup).toBeVisible()
+    await prompt.click()
+    await expect(popup).toBeHidden()
+    await expect(prompt).toBeFocused()
+  })
+}
+
 test("slash mode picker Escape returns focus to the prompt", async ({ page }) => {
   await load(page, "prompt-input--default-420")
 
