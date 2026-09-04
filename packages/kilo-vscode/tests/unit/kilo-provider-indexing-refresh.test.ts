@@ -181,6 +181,7 @@ describe("KiloProvider indexing refresh", () => {
       return rest
     }
     const payload = {
+      directory: "/repo",
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
       projectConfig: snapshot.targets!.project.raw,

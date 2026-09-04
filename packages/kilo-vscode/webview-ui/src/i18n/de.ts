@@ -151,6 +151,19 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Die {{provider}}-Modelle sind nicht mehr verfügbar.",
   "model.tag.free": "Kostenlos",
   "model.tag.dataCollected": "Daten können für das Training verwendet werden",
+  "model.routing.label": "Anbieter-Routing",
+  "model.routing.auto": "Automatisch",
+  "model.routing.loading": "Anbieter werden geladen…",
+  "model.routing.empty": "Für dieses Modell ist keine Anbieterliste verfügbar",
+  "model.routing.preview.quantization": "Quantisierung",
+  "model.routing.preview.maxOutput": "Max. Ausgabe",
+  "model.routing.preview.cacheRead": "Cache-Lesen",
+  "model.routing.preview.cacheWrite": "Cache-Schreiben",
+  "model.routing.preview.uptime": "Verfügbarkeit (30 Min.)",
+  "model.routing.preview.autoDescription": "Das Gateway wählt beim Senden jeder Anfrage dynamisch einen Anbieter aus.",
+  "model.routing.unavailable": "Derzeit nicht verfügbar",
+  "model.routing.projectOverride":
+    "Das Anbieter-Routing für dieses Modell ist in der kilo.json des Projekts gesetzt und überschreibt diese Auswahl.",
   "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
@@ -466,6 +479,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Modelle mit Prompt-Training ausblenden",
   "settings.models.hidePromptTraining.description":
     "Blendet Kilo-Gateway-Modelle aus, deren Anbieter Ihre Prompts möglicherweise zum Training verwenden.",
+  "settings.models.providerRouting.title": "Anbieter-Routing",
+  "settings.models.providerRouting.description":
+    "Das Standardmodell bei der Weiterleitung über Kilo Gateway an einen bestimmten Upstream-Inferenzanbieter binden. Mit „Automatisch“ trifft das Gateway die Auswahl.",
   "settings.providers.modeModels": "Modell pro Modus",
   "settings.providers.modeModels.description":
     "Überschreiben Sie das Standardmodell für bestimmte Modi. Wenn nicht festgelegt, wird das globale Standardmodell verwendet.",

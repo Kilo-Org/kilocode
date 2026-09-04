@@ -27,6 +27,7 @@ import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButto
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
+import { RoutingSelector } from "../shared/RoutingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { isMentionEntry } from "../../hooks/file-mention-utils"
@@ -1680,6 +1681,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ModeSwitcher sessionID={sid} />
           <ModelSelector sessionID={sid} />
           <ThinkingSelector sessionID={sid} />
+          <RoutingSelector sessionID={sid} />
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>

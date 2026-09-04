@@ -38,6 +38,8 @@ export interface SaveError {
 }
 
 interface ConfigContextValue {
+  /** Workspace directory the effective and project configs belong to; unknown until the first load. */
+  directory: Accessor<string | undefined>
   config: Accessor<Config>
   globalConfig: Accessor<Config>
   globalDraft: Accessor<Partial<Config>>
@@ -94,6 +96,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     backgroundSubagents: false,
   })
   const [loading, setLoading] = createSignal(true)
+  const [directory, setDirectory] = createSignal<string>()
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
   const [projectDraft, setProjectDraft] = createSignal<Partial<Config>>({})
@@ -120,6 +123,9 @@ export const ConfigProvider: ParentComponent = (props) => {
   const updateCollections = (next: ConfigCollections | undefined) => {
     if (next !== undefined) setCollections(next)
   }
+  const updateDirectory = (next: string | undefined) => {
+    if (next !== undefined) setDirectory(next)
+  }
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
@@ -127,6 +133,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     const patch = loadedSettings(message)
     if (patch) return mergeSettings(patch)
     if (message.type === "configLoaded") {
+      updateDirectory(message.directory)
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
       if (saving()) return
@@ -156,6 +163,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       return
     }
     if (message.type === "configUpdated") {
+      updateDirectory(message.directory)
       if (saving()) {
         // This configUpdated is the confirmation of our saveConfig() write.
         // Clear the draft now that the server has confirmed the write.
@@ -401,6 +409,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   }
 
   const value: ConfigContextValue = {
+    directory,
     config,
     globalConfig,
     globalDraft,

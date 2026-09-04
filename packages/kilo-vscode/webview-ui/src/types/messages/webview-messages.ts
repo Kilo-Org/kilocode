@@ -1142,6 +1142,33 @@ export interface RequestVariantsMessage {
   type: "requestVariants"
 }
 
+// Request upstream endpoints (inference providers) serving a model (webview → extension)
+export interface RequestModelEndpointsMessage {
+  type: "requestModelEndpoints"
+  providerID: string
+  modelID: string
+  requestID: number
+  /** Workspace directory whose configuration resolves the catalog; the settings scope when absent. */
+  directory?: string
+}
+
+// Request the project-level config of a workspace (webview → extension)
+export interface RequestWorkspaceConfigMessage {
+  type: "requestWorkspaceConfig"
+  requestID: number
+  /** The settings scope when absent. */
+  directory?: string
+}
+
+// Persist per-model provider routing preference into the global config (webview → extension).
+// `provider` is the endpoint routing slug (e.g. "gmicloud/fp8"); null clears the preference.
+export interface PersistModelRoutingMessage {
+  type: "persistModelRouting"
+  providerID: string
+  modelID: string
+  provider: string | null
+}
+
 // Enhance prompt request (webview → extension)
 export interface EnhancePromptRequest {
   type: "enhancePrompt"
@@ -1683,6 +1710,9 @@ export type WebviewMessage =
   | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | RequestModelEndpointsMessage
+  | RequestWorkspaceConfigMessage
+  | PersistModelRoutingMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage

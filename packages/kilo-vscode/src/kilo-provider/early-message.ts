@@ -1,9 +1,10 @@
 import { routeSuggestionWebviewMessage } from "./handlers/suggestion"
 import * as ModelState from "./model-state"
+import { routeModelRoutingMessage } from "./model-routing"
 import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SuggestionContext } from "./handlers/suggestion"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
 import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
@@ -20,6 +21,9 @@ type Ctx = {
   resume: (sessionID: string, messageID: string, requestID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
+  /** The settings scope: the directory for routing requests that name none. */
+  directory: () => string
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
@@ -52,6 +56,30 @@ async function routeBackgroundMessage(
     if (typeof message.jobID === "string" && typeof message.sessionID === "string") {
       await ctx.promoteBackgroundJob(message.jobID, message.sessionID)
     }
+    return true
+  }
+  return undefined
+}
+
+async function routeSettingsMessage(message: { type: string }, ctx: Ctx): Promise<boolean | undefined> {
+  if (message.type === "requestChatSettings") {
+    ctx.post(buildChatSettingsMessage())
+    return true
+  }
+  if (message.type === "requestThroughputSetting") {
+    ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
+    return true
+  }
+  if (message.type === "requestSpeechToTextModels") {
+    await ctx.speechToTextModels()
+    return true
+  }
+  if (message.type === "requestBrowserSettings") {
+    ctx.browserSettings()
     return true
   }
   return undefined
@@ -102,6 +130,15 @@ export async function routeEarlyMessage(
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
+  if (
+    await routeModelRoutingMessage(message, {
+      client: ctx.client,
+      post: ctx.post,
+      updateConfig: ctx.updateConfig,
+      directory: ctx.directory,
+    })
+  )
+    return true
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)
@@ -119,26 +156,8 @@ export async function routeEarlyMessage(
     ctx.openSessions(ids)
     return true
   }
-  if (message.type === "requestChatSettings") {
-    ctx.post(buildChatSettingsMessage())
-    return true
-  }
-  if (message.type === "requestThroughputSetting") {
-    ctx.post(buildThroughputSettingMessage())
-    return true
-  }
-  if (message.type === "requestAutoApprovalReasonSetting") {
-    ctx.post(buildAutoApprovalReasonSettingMessage())
-    return true
-  }
-  if (message.type === "requestSpeechToTextModels") {
-    await ctx.speechToTextModels()
-    return true
-  }
-  if (message.type === "requestBrowserSettings") {
-    ctx.browserSettings()
-    return true
-  }
+  const settings = await routeSettingsMessage(message, ctx)
+  if (settings !== undefined) return settings
   const background = await routeBackgroundMessage(message, ctx)
   return (
     background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))

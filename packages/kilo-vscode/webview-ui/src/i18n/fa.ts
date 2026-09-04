@@ -146,6 +146,19 @@ export const dict = {
 
   "model.tag.free": "رایگان",
   "model.tag.dataCollected": "ممکن است داده‌ها برای آموزش استفاده شوند",
+  "model.routing.label": "مسیریابی ارائه‌دهنده",
+  "model.routing.auto": "خودکار",
+  "model.routing.loading": "در حال بارگذاری ارائه‌دهندگان…",
+  "model.routing.empty": "فهرست ارائه‌دهندگان برای این مدل در دسترس نیست",
+  "model.routing.preview.quantization": "کوانتیزاسیون",
+  "model.routing.preview.maxOutput": "حداکثر خروجی",
+  "model.routing.preview.cacheRead": "خواندن از کش",
+  "model.routing.preview.cacheWrite": "نوشتن در کش",
+  "model.routing.preview.uptime": "دسترس‌پذیری (۳۰ دقیقه)",
+  "model.routing.preview.autoDescription": "درگاه هنگام ارسال هر درخواست، ارائه‌دهنده را به‌صورت پویا انتخاب می‌کند.",
+  "model.routing.unavailable": "در حال حاضر در دسترس نیست",
+  "model.routing.projectOverride":
+    "مسیریابی ارائه‌دهنده برای این مدل در فایل kilo.json پروژه تنظیم شده است و بر این انتخاب اولویت دارد.",
   "model.group.auto": "مدل‌های خودکار",
   "model.group.recommended": "پیشنهادی",
   "model.group.favorites": "موردعلاقه‌ها",
@@ -1151,6 +1164,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "پنهان کردن مدل‌های آموزش پرامپت",
   "settings.models.hidePromptTraining.description":
     "مدل‌های Kilo Gateway را که ارائه‌دهندگانشان ممکن است از پرامپت‌های شما برای آموزش استفاده کنند پنهان کنید.",
+  "settings.models.providerRouting.title": "مسیریابی ارائه‌دهنده",
+  "settings.models.providerRouting.description":
+    "هنگام مسیریابی از طریق Kilo Gateway، مدل پیش‌فرض را روی یک ارائه‌دهنده استنتاج مشخص تثبیت کنید. حالت خودکار انتخاب را به درگاه می‌سپارد.",
   "settings.providers.modeModels": "مدل به ازای حالت",
   "settings.providers.modeModels.description":
     "مدل پیش‌فرض را برای حالت‌های خاص بازنویسی کنید. در صورت عدم تنظیم، از مدل پیش‌فرض سراسری استفاده می‌شود.",

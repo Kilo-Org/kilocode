@@ -146,6 +146,19 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Los modelos de {{provider}} ya no están disponibles.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Los datos pueden utilizarse para entrenamiento",
+  "model.routing.label": "Enrutamiento de proveedores",
+  "model.routing.auto": "Automático",
+  "model.routing.loading": "Cargando proveedores…",
+  "model.routing.empty": "No hay una lista de proveedores disponible para este modelo",
+  "model.routing.preview.quantization": "Cuantización",
+  "model.routing.preview.maxOutput": "Salida máxima",
+  "model.routing.preview.cacheRead": "Lectura de caché",
+  "model.routing.preview.cacheWrite": "Escritura de caché",
+  "model.routing.preview.uptime": "Disponibilidad (30 min)",
+  "model.routing.preview.autoDescription": "El gateway selecciona dinámicamente un proveedor al enviar cada solicitud.",
+  "model.routing.unavailable": "No disponible actualmente",
+  "model.routing.projectOverride":
+    "El enrutamiento de proveedor de este modelo está definido en el kilo.json del proyecto y anula esta selección.",
   "model.group.auto": "Modelos automáticos",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
@@ -460,6 +473,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Ocultar modelos que entrenan con prompts",
   "settings.models.hidePromptTraining.description":
     "Oculta los modelos de Kilo Gateway cuyos proveedores pueden usar tus prompts para entrenamiento.",
+  "settings.models.providerRouting.title": "Enrutamiento de proveedores",
+  "settings.models.providerRouting.description":
+    "Fija el modelo predeterminado a un proveedor de inferencia específico al enrutarlo mediante Kilo Gateway. Con «Automático», el gateway elige el proveedor.",
   "settings.providers.modeModels": "Modelo por modo",
   "settings.providers.modeModels.description":
     "Anula el modelo predeterminado para modos específicos. Si no se establece, se usa el modelo predeterminado global.",

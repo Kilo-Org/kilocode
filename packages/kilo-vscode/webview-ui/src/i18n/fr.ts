@@ -146,6 +146,20 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Les modèles {{provider}} ne sont plus disponibles.",
   "model.tag.free": "Gratuit",
   "model.tag.dataCollected": "Les données peuvent être utilisées pour l’entraînement",
+  "model.routing.label": "Routage des fournisseurs",
+  "model.routing.auto": "Automatique",
+  "model.routing.loading": "Chargement des fournisseurs…",
+  "model.routing.empty": "Aucune liste de fournisseurs n’est disponible pour ce modèle",
+  "model.routing.preview.quantization": "Quantification",
+  "model.routing.preview.maxOutput": "Sortie maximale",
+  "model.routing.preview.cacheRead": "Lecture du cache",
+  "model.routing.preview.cacheWrite": "Écriture du cache",
+  "model.routing.preview.uptime": "Disponibilité (30 min)",
+  "model.routing.preview.autoDescription":
+    "La passerelle sélectionne dynamiquement un fournisseur lors de l’envoi de chaque requête.",
+  "model.routing.unavailable": "Actuellement indisponible",
+  "model.routing.projectOverride":
+    "Le routage de fournisseur de ce modèle est défini dans le kilo.json du projet et remplace cette sélection.",
   "model.group.auto": "Modèles automatiques",
   "model.group.recommended": "Recommandé",
   "model.group.favorites": "Favoris",
@@ -461,6 +475,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Masquer les modèles entraînés sur les prompts",
   "settings.models.hidePromptTraining.description":
     "Masquez les modèles Kilo Gateway dont les fournisseurs peuvent utiliser vos prompts à des fins d'entraînement.",
+  "settings.models.providerRouting.title": "Routage des fournisseurs",
+  "settings.models.providerRouting.description":
+    "Associez le modèle par défaut à un fournisseur d’inférence en amont spécifique lors du routage via Kilo Gateway. Le mode Automatique laisse la passerelle choisir.",
   "settings.providers.modeModels": "Modèle par mode",
   "settings.providers.modeModels.description":
     "Remplacez le modèle par défaut pour des modes spécifiques. Si non défini, le modèle par défaut global est utilisé.",

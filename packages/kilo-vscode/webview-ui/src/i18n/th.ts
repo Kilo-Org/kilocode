@@ -144,6 +144,19 @@ export const dict = {
 
   "model.tag.free": "ฟรี",
   "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
+  "model.routing.label": "การกำหนดเส้นทางผู้ให้บริการ",
+  "model.routing.auto": "อัตโนมัติ",
+  "model.routing.loading": "กำลังโหลดผู้ให้บริการ…",
+  "model.routing.empty": "ไม่มีรายการผู้ให้บริการสำหรับโมเดลนี้",
+  "model.routing.preview.quantization": "การควอนไทซ์",
+  "model.routing.preview.maxOutput": "เอาต์พุตสูงสุด",
+  "model.routing.preview.cacheRead": "การอ่านแคช",
+  "model.routing.preview.cacheWrite": "การเขียนแคช",
+  "model.routing.preview.uptime": "ความพร้อมใช้งาน (30 นาที)",
+  "model.routing.preview.autoDescription": "เกตเวย์จะเลือกผู้ให้บริการแบบไดนามิกเมื่อส่งคำขอแต่ละครั้ง",
+  "model.routing.unavailable": "ไม่พร้อมใช้งานในขณะนี้",
+  "model.routing.projectOverride":
+    "การกำหนดเส้นทางผู้ให้บริการของโมเดลนี้ตั้งค่าไว้ใน kilo.json ของโปรเจกต์ และจะแทนที่การเลือกนี้",
   "model.group.auto": "โมเดลอัตโนมัติ",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
@@ -452,6 +465,9 @@ export const dict = {
     "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
   "settings.models.hidePromptTraining.title": "ซ่อนโมเดลที่ใช้พรอมต์ในการฝึก",
   "settings.models.hidePromptTraining.description": "ซ่อนโมเดล Kilo Gateway ที่ผู้ให้บริการอาจใช้พรอมต์ของคุณในการฝึก",
+  "settings.models.providerRouting.title": "การกำหนดเส้นทางผู้ให้บริการ",
+  "settings.models.providerRouting.description":
+    "กำหนดโมเดลเริ่มต้นให้ใช้ผู้ให้บริการอนุมานรายใดรายหนึ่งเมื่อส่งคำขอผ่าน Kilo Gateway หากเลือกอัตโนมัติ Kilo Gateway จะเป็นผู้เลือก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
   "settings.providers.modeModels.description":
     "แทนที่โมเดลเริ่มต้นสำหรับโหมดที่กำหนด หากไม่ได้ตั้งค่า จะใช้โมเดลเริ่มต้นทั่วไป",
