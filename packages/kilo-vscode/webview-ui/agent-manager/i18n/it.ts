@@ -291,7 +291,6 @@ export const dict = {
     "Un worktree è una cartella e un branch separati per un'attività. I tuoi agenti possono lavorare fianco a fianco senza modificare gli stessi file.",
   "agentManager.intro.graph.agent": "Agente Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "In caso di conflitti",
   "agentManager.intro.stage1.title": "Il tuo repository",
   "agentManager.intro.stage1.text": "I file locali restano invariati",
   "agentManager.intro.stage2.title": "Esempio: due attività in parallelo",
@@ -302,8 +301,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Riporta le modifiche quando sei pronto",
   "agentManager.intro.stage4.text":
     "Chiedi all'agente di ogni worktree di aprire una pull request. Oppure usa Apply nel pannello diff per copiare le modifiche in Local.",
-  "agentManager.intro.conflictText":
-    "Chiedi all'agente nel worktree di unire il proprio branch di base originale e risolvere i conflitti, poi controlla il risultato. Evita git stash: gli stash sono condivisi tra i worktree.",
+  "agentManager.intro.updateTitle": "Risolvi i conflitti con Kilo",
+  "agentManager.intro.updateText":
+    "Prima di applicare le modifiche a Local o fare il merge di una pull request, esegui /update-from-base nella sessione di quel worktree. Kilo unisce le ultime modifiche del branch di base e risolve prima i conflitti all'interno di quel worktree.",
   "agentManager.intro.prDetection":
     "I badge PR si aggiornano automaticamente per ogni branch del worktree (è richiesto l'accesso a GitHub CLI).",
   "agentManager.intro.checksRunning": "Controlli in corso",

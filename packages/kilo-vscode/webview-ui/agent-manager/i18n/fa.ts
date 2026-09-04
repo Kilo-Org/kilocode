@@ -284,9 +284,9 @@ export const dict = {
     "worktree برای هر وظیفه یک پوشه و شاخه جداست. عامل‌ها بدون ویرایش فایل‌های یکسان کنار هم کار می‌کنند.",
   "agentManager.intro.graph.agent": "عامل Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "اگر تغییرات تعارض داشته باشند",
-  "agentManager.intro.conflictText":
-    "از عامل در worktree بخواهید شاخهٔ پایهٔ اصلی خود را merge کند و تعارض‌ها را حل کند، سپس نتیجه را بررسی کنید. از git stash پرهیز کنید: stashها بین worktreeها مشترک هستند.",
+  "agentManager.intro.updateTitle": "رفع تعارض‌ها با Kilo",
+  "agentManager.intro.updateText":
+    "پیش از اعمال تغییرات در Local یا ادغام pull request، /update-from-base را در جلسه همان worktree اجرا کنید. Kilo آخرین تغییرات شاخه پایه را ادغام می‌کند و ابتدا تعارض‌ها را در همان worktree برطرف می‌کند.",
   "agentManager.intro.stage1.title": "مخزن شما",
   "agentManager.intro.stage1.text": "فایل‌های محلی بدون تغییر می‌مانند",
   "agentManager.intro.stage2.title": "مثال: دو وظیفه به‌صورت موازی",

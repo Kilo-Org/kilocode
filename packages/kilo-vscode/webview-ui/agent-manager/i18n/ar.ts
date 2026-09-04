@@ -278,9 +278,9 @@ export const dict = {
     "worktree هو مجلد وفرع منفصلان لمهمة. يمكن لوكلائك العمل جنبًا إلى جنب دون تعديل الملفات نفسها.",
   "agentManager.intro.graph.agent": "وكيل Kilo",
   "agentManager.intro.graph.pr": "طلب سحب",
-  "agentManager.intro.graph.conflict": "إذا تعارضت التغييرات",
-  "agentManager.intro.conflictText":
-    "اطلب من الوكيل في worktree دمج فرعه الأساسي الأصلي وحل التعارضات، ثم راجع النتيجة. تجنب git stash: فعمليات stash مشتركة بين worktrees.",
+  "agentManager.intro.updateTitle": "حلّ التعارضات باستخدام Kilo",
+  "agentManager.intro.updateText":
+    "قبل تطبيق التغييرات على Local أو دمج طلب سحب، شغّل /update-from-base في جلسة الـ worktree المعني. يدمج Kilo أحدث تغييرات الفرع الأساسي ويحلّ التعارضات داخل الـ worktree نفسه أولًا.",
   "agentManager.intro.stage1.title": "مستودعك",
   "agentManager.intro.stage1.text": "تبقى الملفات المحلية دون تغيير",
   "agentManager.intro.stage2.title": "مثال: مهمتان بالتوازي",

@@ -281,9 +281,9 @@ export const dict = {
     "Worktree to osobny folder i gałąź dla zadania. Agenci mogą pracować obok siebie bez edytowania tych samych plików.",
   "agentManager.intro.graph.agent": "agent Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Jeśli zmiany powodują konflikt",
-  "agentManager.intro.conflictText":
-    "Poproś agenta w worktree o scalenie jego oryginalnej gałęzi bazowej i rozwiązanie konfliktów, a następnie przejrzyj wynik. Unikaj git stash: stash jest współdzielony między worktree.",
+  "agentManager.intro.updateTitle": "Rozwiąż konflikty z Kilo",
+  "agentManager.intro.updateText":
+    "Zanim zastosujesz zmiany w Local lub scalisz pull request, uruchom /update-from-base w sesji tego worktree. Kilo scala najnowsze zmiany z gałęzi bazowej i najpierw rozwiązuje konflikty w tym worktree.",
   "agentManager.intro.stage1.title": "Twoje repozytorium",
   "agentManager.intro.stage1.text": "Lokalne pliki pozostają niezmienione",
   "agentManager.intro.stage2.title": "Przykład: dwa zadania równolegle",

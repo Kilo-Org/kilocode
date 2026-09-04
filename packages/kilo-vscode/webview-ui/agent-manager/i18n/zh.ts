@@ -273,9 +273,9 @@ export const dict = {
   "agentManager.intro.subtitle": "worktree 是用于任务的独立文件夹和分支。代理可以并行工作，不会编辑相同文件。",
   "agentManager.intro.graph.agent": "Kilo 代理",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "如果更改发生冲突",
-  "agentManager.intro.conflictText":
-    "请让 worktree 中的代理合并其原始基础分支并解决冲突，然后检查结果。请避免使用 git stash，因为 stash 会在 worktree 之间共享。",
+  "agentManager.intro.updateTitle": "使用 Kilo 解决冲突",
+  "agentManager.intro.updateText":
+    "将更改应用到 Local 或合并 pull request 前，请在该 worktree 的会话中运行 /update-from-base。Kilo 会先在该 worktree 中合并基础分支的最新更改并解决冲突。",
   "agentManager.intro.stage1.title": "你的仓库",
   "agentManager.intro.stage1.text": "本地文件保持不变",
   "agentManager.intro.stage2.title": "示例：两个任务并行",

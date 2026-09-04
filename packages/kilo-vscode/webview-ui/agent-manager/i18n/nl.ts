@@ -287,9 +287,9 @@ export const dict = {
     "Een worktree is een aparte map en branch voor een taak. Je agents kunnen naast elkaar werken zonder dezelfde bestanden te bewerken.",
   "agentManager.intro.graph.agent": "Kilo-agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Als wijzigingen conflicteren",
-  "agentManager.intro.conflictText":
-    "Vraag de agent in de worktree om zijn oorspronkelijke basisbranch te mergen en conflicten op te lossen, en controleer daarna het resultaat. Vermijd git stash: stashes worden gedeeld tussen worktrees.",
+  "agentManager.intro.updateTitle": "Los conflicten op met Kilo",
+  "agentManager.intro.updateText":
+    "Voer /update-from-base uit in de sessie van die worktree voordat je wijzigingen toepast op Local of een pull request samenvoegt. Kilo voegt de nieuwste wijzigingen van de basisbranch samen en lost conflicten eerst in die worktree op.",
   "agentManager.intro.stage1.title": "Je repository",
   "agentManager.intro.stage1.text": "Lokale bestanden blijven ongewijzigd",
   "agentManager.intro.stage2.title": "Voorbeeld: twee taken parallel",

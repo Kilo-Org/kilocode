@@ -276,9 +276,9 @@ export const dict = {
     "worktree คือโฟลเดอร์และ branch แยกสำหรับงานหนึ่งงาน เอเจนต์ทำงานเคียงข้างกันได้โดยไม่แก้ไฟล์เดียวกัน",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "หากการเปลี่ยนแปลงขัดแย้งกัน",
-  "agentManager.intro.conflictText":
-    "ขอให้ agent ใน worktree merge base branch เดิมของตนและแก้ไขความขัดแย้ง จากนั้นตรวจสอบผลลัพธ์ หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
+  "agentManager.intro.updateTitle": "แก้ไขข้อขัดแย้งด้วย Kilo",
+  "agentManager.intro.updateText":
+    "ก่อนนำการเปลี่ยนแปลงไปใช้กับ Local หรือผสาน pull request ให้เรียกใช้ /update-from-base ในเซสชันของ worktree นั้น Kilo จะผสานการเปลี่ยนแปลงล่าสุดจากสาขาฐานและแก้ไขข้อขัดแย้งใน worktree นั้นก่อน",
   "agentManager.intro.stage1.title": "repository ของคุณ",
   "agentManager.intro.stage1.text": "ไฟล์ในเครื่องจะไม่เปลี่ยนแปลง",
   "agentManager.intro.stage2.title": "ตัวอย่าง: สองงานทำพร้อมกัน",
