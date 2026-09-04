@@ -43,3 +43,14 @@ export interface PRReviewer {
   avatar?: string
   state: ReviewerState
 }
+
+export interface PRConversationComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  createdAt?: number
+  url?: string
+  state?: ReviewerState
+  isBot?: boolean
+}

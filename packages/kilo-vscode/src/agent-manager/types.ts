@@ -92,6 +92,17 @@ export interface PRReviewer {
   state: ReviewerState
 }
 
+export interface PRConversationComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  createdAt?: number
+  url?: string
+  state?: ReviewerState
+  isBot?: boolean
+}
+
 export interface PRStatus {
   number: number
   title: string
@@ -114,6 +125,7 @@ export interface PRStatus {
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
