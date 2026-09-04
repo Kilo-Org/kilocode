@@ -2330,7 +2330,6 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
-            onHelp={intro.open}
             onHistory={openHistory}
             shortcutMap={projectShortcutMap}
             activityFor={activity.project}
@@ -2362,7 +2361,6 @@ const AgentManagerContent: Component = () => {
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
             onHistory={() => openHistory()}
-            onHelp={intro.open}
             projectId={activeProjectId()}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
