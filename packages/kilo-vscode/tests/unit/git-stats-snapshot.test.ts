@@ -3,7 +3,7 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 import { GitOps, type ExecBufferResult } from "../../src/agent-manager/GitOps"
-import { GitStatsSnapshot, refOID } from "../../src/agent-manager/git-stats-snapshot"
+import { GitStatsSnapshot, lines, refOID } from "../../src/agent-manager/git-stats-snapshot"
 import { diffSummary } from "../../src/agent-manager/local-diff"
 
 function run(dir: string, args: string[]): string {
@@ -138,6 +138,31 @@ describe("GitStatsSnapshot", () => {
     })
   })
 
+  it("does not cache metadata when a file changes during its read", async () => {
+    await repo(async (dir, base) => {
+      const snapshots = new GitStatsSnapshot(new GitOps({ log: () => undefined }))
+      const file = path.join(dir, "changing.txt")
+      await fs.writeFile(file, "one\ntwo\n")
+      const read = fs.readFile
+      const probe = spyOn(fs, "readFile").mockImplementationOnce(async (...args) => {
+        const value = await read(...args)
+        await fs.writeFile(file, "replacement\n")
+        return value
+      })
+      try {
+        expect((await snapshots.diff(dir, base, ["changing.txt"])).additions).toBe(2)
+        expect((await snapshots.diff(dir, base, ["changing.txt"])).additions).toBe(1)
+        expect(probe).toHaveBeenCalledTimes(2)
+        expect((await snapshots.diff(dir, base, ["changing.txt"])).additions).toBe(1)
+        expect(probe).toHaveBeenCalledTimes(2)
+        await fs.unlink(file)
+        expect(await lines(file)).toBe(0)
+      } finally {
+        probe.mockRestore()
+      }
+    })
+  })
+
   it("skips extra metadata reads for empty and oversized files", async () => {
     await repo(async (dir, base) => {
       const snapshots = new GitStatsSnapshot(new GitOps({ log: () => undefined }))
@@ -188,6 +213,53 @@ describe("GitStatsSnapshot", () => {
       }
     })
   })
+
+  it("resists scans over cache capacity and admits files from a new root", async () => {
+    const paths: string[] = []
+    const files = Array.from({ length: 11_000 }, (_, index) => `${index}.txt`)
+    const read = spyOn(fs, "readFile")
+    const scan = async (dir: string, base: string) => {
+      const snapshots = new GitStatsSnapshot(new GitOps({ log: () => undefined }))
+      paths.push(...files.map((file) => path.join(dir, file)))
+      for (let index = 0; index < files.length; index += 64) {
+        await Promise.all(
+          files.slice(index, index + 64).map((file) => fs.writeFile(path.join(dir, file), "one\ntwo\n")),
+        )
+      }
+      const counts: number[] = []
+      for (let pass = 0; pass < 3; pass++) {
+        read.mockClear()
+        expect(await snapshots.diff(dir, base, files)).toEqual({
+          files: files.length,
+          additions: files.length * 2,
+          deletions: 0,
+        })
+        counts.push(read.mock.calls.length)
+      }
+      return counts
+    }
+    try {
+      await repo(async (dir, base) => {
+        const counts = await scan(dir, base)
+        expect(counts.at(0)).toBe(files.length)
+        for (const count of counts.slice(1)) {
+          expect(count).toBeGreaterThanOrEqual(files.length - 10_000)
+          expect(count).toBeLessThan(files.length / 2)
+        }
+      })
+      await repo(async (dir, base) => {
+        const counts = await scan(dir, base)
+        expect(counts.at(0)).toBe(files.length)
+        expect(counts.at(1)!).toBeLessThan(counts.at(0)!)
+        expect(counts.at(2)!).toBeLessThan(counts.at(1)!)
+      })
+    } finally {
+      read.mockRestore()
+      for (let index = 0; index < paths.length; index += 64) {
+        await Promise.all(paths.slice(index, index + 64).map((file) => lines(file)))
+      }
+    }
+  }, 60_000)
 
   it("reads ref OIDs and upstreams", async () => {
     await repo(async (dir) => {
