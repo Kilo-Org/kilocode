@@ -1862,7 +1862,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         if (state === "connected") {
           const target = this.indexingScope
-          void this.fetchAndSendIndexingStatus(target.directory, target.projectId)
+          this.fetchAndSendIndexingStatus(target.directory, target.projectId)
           this.flushPendingKiloModel()
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
