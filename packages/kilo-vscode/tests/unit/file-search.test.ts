@@ -101,7 +101,7 @@ describe("handleFileSearch", () => {
 
     await handleFileSearch({
       client: api.value as never,
-      message: { query: "", requestId: "request-multi" },
+      message: { query: "ts", requestId: "request-multi" },
       dir: () => "/repo",
       roots: () => [
         { path: "/repo", name: "repo" },
@@ -225,7 +225,7 @@ describe("handleFileSearch resilience and ranking basis", () => {
 
     await handleFileSearch({
       client: api.value as never,
-      message: { query: "", requestId: "request-broken-root" },
+      message: { query: "b", requestId: "request-broken-root" },
       dir: () => "/repo",
       roots: () => roots,
       // A .kilocodeignore that cannot be read propagates out of the ignore
@@ -262,6 +262,87 @@ describe("handleFileSearch resilience and ranking basis", () => {
 
     expect(posted).toHaveLength(1)
     expect(posted[0]!.paths).toEqual(["src/a.ts"])
+  })
+
+  it("does not search added folders for a bare @", async () => {
+    // Each added folder costs a file index the backend holds for an hour.
+    // Opening the menu is not a reason to build them.
+    const api = multiClient({
+      "/repo": { files: ["src/a.ts"], folders: [] },
+      "/other": { files: ["lib/b.ts"], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-bare" },
+      dir: () => "/repo",
+      roots: () => roots,
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
+    expect(posted[0]!.paths).toEqual(["src/a.ts"])
+    // The badge still reflects the workspace, so rows do not gain one the
+    // moment a character is typed.
+    expect(posted[0]!.items).toEqual([{ path: "src/a.ts", type: "file", root: "repo" }])
+  })
+
+  it("searches added folders as soon as there is something to search for", async () => {
+    const api = multiClient({
+      "/repo": { files: ["src/a.ts"], folders: [] },
+      "/other": { files: ["lib/b.ts"], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "b", requestId: "request-typed" },
+      dir: () => "/repo",
+      roots: () => roots,
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo", "/other", "/other"])
+  })
+
+  it("treats a whitespace-only query as a bare @", async () => {
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "   ", requestId: "request-spaces" },
+      dir: () => "/repo",
+      roots: () => roots,
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo"])
+  })
+
+  it("bounds how many added folders one query can search", async () => {
+    const many = [
+      { path: "/repo", name: "repo" },
+      ...Array.from({ length: 8 }, (_, i) => ({ path: `/extra-${i}`, name: `extra-${i}` })),
+    ]
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "x", requestId: "request-cap" },
+      dir: () => "/repo",
+      roots: () => many,
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    const searched = [...new Set(api.calls.map((call) => call.directory))]
+    expect(searched).toEqual(["/repo", "/extra-0", "/extra-1", "/extra-2", "/extra-3"])
   })
 
   it("does not let the filesystem prefix of an added folder count as a match", async () => {

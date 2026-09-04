@@ -12,6 +12,14 @@ import { mergeFileSearchItems, type FileSearchItem } from "./file-search-items"
 const MULTI_FILE_LIMIT = 100
 const MULTI_FOLDER_LIMIT = 50
 
+/**
+ * How many folders beyond the session's own project a single query may search.
+ *
+ * Each one costs its own file index and watcher in the backend, kept for an
+ * hour, so an unusually large workspace must not grow that cost without bound.
+ */
+const MAX_EXTRA_ROOTS = 4
+
 /** A folder open in the editor workspace, as a candidate mention source. */
 export type SearchRoot = { path: string; name: string }
 
@@ -162,8 +170,15 @@ export async function handleFileSearch(input: Input): Promise<void> {
       return { secondary: [] as SearchRoot[] }
     }
   })()
-  const extras = split.secondary
+  // A bare `@` searches the session's own project only. Every other workspace
+  // folder costs a file index the backend then holds for an hour, and opening
+  // the menu without searching is not a reason to build them — the same reason
+  // past chats are fetched on the first character rather than on every `@`.
+  const extras = query.trim() ? split.secondary.slice(0, MAX_EXTRA_ROOTS) : []
   const multi = extras.length > 0
+  // Badges follow the shape of the workspace, not what this particular query
+  // happened to search, so rows do not sprout a badge on the first keystroke.
+  const labelled = split.secondary.length > 0
 
   const [primary, secondary] = await Promise.all([
     gather(client, dir, query, input.open, false),
@@ -185,7 +200,7 @@ export async function handleFileSearch(input: Input): Promise<void> {
     for (const [full, rel] of group.hits.relative) relative.set(full, rel)
     for (const value of [...group.hits.files, ...group.hits.folders, ...group.hits.open]) {
       if (!priority.has(value)) priority.set(value, index)
-      if (multi && group.root && !labels.has(value)) labels.set(value, group.root.name)
+      if (labelled && group.root && !labels.has(value)) labels.set(value, group.root.name)
     }
   })
 
