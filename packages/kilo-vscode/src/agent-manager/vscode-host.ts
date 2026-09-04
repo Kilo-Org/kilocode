@@ -259,6 +259,15 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
 
+  async approveBrowserNavigation(origin: string): Promise<boolean> {
+    const answer = await vscode.window.showWarningMessage(
+      `Allow the Agent Manager browser to navigate to ${origin}?`,
+      { modal: true },
+      "Allow",
+    )
+    return answer === "Allow"
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
@@ -328,8 +337,12 @@ export class VscodeHost implements Host {
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
 
-  copyToClipboard(text: string): void {
-    void vscode.env.clipboard.writeText(text)
+  async copyToClipboard(text: string): Promise<void> {
+    await vscode.env.clipboard.writeText(text)
+  }
+
+  async readClipboard(): Promise<string> {
+    return vscode.env.clipboard.readText()
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {

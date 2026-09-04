@@ -804,7 +804,8 @@ export const dict = {
   "settings.browser.description":
     "عند التفعيل، يمكن لوكيل الذكاء الاصطناعي التفاعل مع صفحات الويب — التنقل والنقر والكتابة والتقاط لقطات الشاشة. سيتم فتح نافذة Chrome حتى تتمكن من مشاهدة الوكيل أثناء العمل.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description":
+    "تفعيل متصفح Agent Manager الخاص بكل جلسة للتطبيقات المحلية وصفحات HTTPS العامة.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",

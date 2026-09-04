@@ -14,6 +14,7 @@ Object.assign(globalThis, {
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
   Event: window.Event,
   MouseEvent: window.MouseEvent,
   getComputedStyle: window.getComputedStyle.bind(window),
@@ -32,8 +33,12 @@ document.body.append(root)
 const scope = { sessionId: "standalone", projectId: "fixture" }
 const sent: BrowserCommand[] = []
 const references: BrowserReference[] = []
-let receive: ((event: BrowserEvent) => void) | undefined
+const listeners = new Set<(event: BrowserEvent) => void>()
+const receive = (event: BrowserEvent) => {
+  for (const listener of [...listeners]) listener(event)
+}
 let closed = 0
+const actions = { download: 0, settings: 0 }
 const [labels, update] = createSignal<BrowserLabels>({
   title: "Browser",
   url: "Address",
@@ -46,6 +51,13 @@ const [labels, update] = createSignal<BrowserLabels>({
   diagnostics: "Browser diagnostics",
   diagnosticsHint: "Recent events from the automation browser. Security blocks are not console errors.",
   empty: "Open a local page",
+  requirement: "Requires an installed browser",
+  missingTitle: "Browser not found",
+  missingChrome: "Install Google Chrome, then retry.",
+  missingChromium: "Install compatible Playwright Chromium or change Browser Settings.",
+  download: "Download Chrome",
+  retry: "Retry",
+  settings: "Browser Settings",
   noSession: "Choose a session",
   screenshotAlt: "Preview",
   errors: (count) => `${count} errors`,
@@ -59,12 +71,12 @@ const dispose = render(
       transport={{
         send: (command) => sent.push(command),
         subscribe: (handler) => {
-          receive = handler
-          return () => {
-            receive = undefined
-          }
+          listeners.add(handler)
+          return () => listeners.delete(handler)
         },
       }}
+      download={() => actions.download++}
+      settings={() => actions.settings++}
       onReference={(reference) => references.push(reference)}
       onClose={() => closed++}
     />
@@ -72,40 +84,70 @@ const dispose = render(
   root,
 )
 assert.deepEqual(sent[0], { type: "state", scope })
-const state = { scope, browserId: "browser", status: "ready" as const, errors: 0, url: "about:blank" }
+assert.ok(root.querySelector(".am-browser-empty")?.textContent?.includes(labels().requirement))
+const state = {
+  scope,
+  browserId: "browser",
+  navigation: 0,
+  status: "ready" as const,
+  errors: 0,
+  url: "https://example.com/",
+}
+receive({
+  type: "state",
+  value: { ...state, browserId: "", status: "error", missing: "chrome", error: "Internal runtime details" },
+})
+const warning = root.querySelector('[role="alert"][data-component="card"][data-variant="warning"]')
+assert.ok(warning)
+assert.equal(warning.querySelector('[data-slot="card-title"]')?.textContent, labels().missingTitle)
+assert.equal(warning.querySelector('[data-slot="card-description"]')?.textContent, labels().missingChrome)
+assert.equal(warning.textContent?.includes("Internal runtime details"), false)
+const button = (label: string) =>
+  [...root.querySelectorAll("button")].find((node) => node.textContent?.trim() === label)
+button(labels().download)!.click()
+button(labels().settings)!.click()
+assert.deepEqual(actions, { download: 1, settings: 1 })
+button(labels().retry)!.click()
+assert.deepEqual(sent.at(-1), { type: "open", scope, url: state.url })
+receive({ type: "state", value: { ...state, browserId: "", status: "error", missing: "chromium" } })
+assert.equal(warning.querySelector('[data-slot="card-description"]')?.textContent, labels().missingChromium)
+assert.equal(button(labels().download), undefined)
+update((value) => ({ ...value, missingTitle: "Navigateur introuvable" }))
+assert.equal(warning.querySelector('[data-slot="card-title"]')?.textContent, "Navigateur introuvable")
 receive?.({ type: "state", value: { ...state, status: "error", error: "Cannot connect to the local server" } })
+assert.equal(root.querySelector('[data-variant="warning"]'), null)
 const failure = root.querySelector('[role="alert"][data-component="card"][data-variant="error"]')
 assert.ok(failure)
 assert.equal(failure.querySelector(".error-card-message")?.textContent, "Cannot connect to the local server")
 assert.ok(failure.querySelector('[data-component="icon"]'))
-assert.equal(root.querySelector(".am-browser-frame"), null)
+assert.equal(root.querySelector(".am-browser-stream canvas"), null)
 assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
 assert.equal(root.querySelector('[role="alert"]'), null)
 await window.happyDOM.waitUntilComplete()
-const frame = root.querySelector(".am-browser-frame")
+const frame = root.querySelector(".am-browser-stream canvas")
 assert.ok(frame)
 assert.equal(root.querySelector(".am-browser-site"), null)
 receive?.({ type: "state", value: { ...state, logs: ["[info] Updated"] } })
-assert.equal(root.querySelector(".am-browser-frame"), frame)
+assert.equal(root.querySelector(".am-browser-stream canvas"), frame)
 assert.equal(root.querySelector(".am-browser-diagnostics button")?.textContent, "Browser diagnostics")
 assert.equal(root.querySelector(".am-browser-console"), null)
 ;(root.querySelector("button[aria-label=Reload]") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "refresh", scope })
 receive?.({ type: "state", value: { ...state, navigation: 1 } })
 await window.happyDOM.waitUntilComplete()
-assert.equal(frame.isConnected, false)
-const refreshed = root.querySelector(".am-browser-frame")
-assert.ok(refreshed)
-assert.equal(refreshed.getAttribute("src"), state.url)
-assert.equal(refreshed.getAttribute("sandbox"), "allow-scripts allow-forms allow-same-origin")
+assert.equal(frame.isConnected, true)
+const refreshed = root.querySelector(".am-browser-stream canvas")
+assert.equal(refreshed, frame)
+assert.equal(refreshed.getAttribute("src"), null)
+assert.equal(root.querySelector(".am-browser-viewport iframe"), null)
 receive?.({ type: "state", value: { ...state, navigation: 1, errors: 1 } })
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 receive?.({
   type: "state",
   value: { ...state, navigation: 1, title: "", error: "Developer tools are unavailable" },
 })
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 assert.equal(
   root.querySelector('[role="alert"][data-variant="error"] .error-card-message')?.textContent,
   "Developer tools are unavailable",
@@ -162,7 +204,7 @@ assert.equal(entries.length, 3, root.querySelector(".am-browser-diagnostics")?.o
 assert.equal(entries.at(0)?.textContent, `${blocked}×3`)
 assert.equal(entries.at(1)?.textContent, other)
 assert.equal(entries.at(2)?.textContent, "[error] Failed to load")
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 ;(root.querySelector(".am-browser-tools-action button") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "devtools", scope, theme: "light" })
 receive?.({ type: "devtools", value: { scope, browserId: state.browserId, url: "about:blank" } })
@@ -176,5 +218,5 @@ assert.equal(root.querySelector(".am-browser-diagnostics"), null)
 assert.equal(closed, 1)
 assert.deepEqual(sent.at(-1), { type: "close", scope })
 dispose()
-assert.equal(receive, undefined)
+assert.equal(listeners.size, 0)
 await window.happyDOM.close()

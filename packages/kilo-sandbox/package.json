@@ -7,7 +7,8 @@
   "private": true,
   "description": "OS-neutral sandbox profiles and launch preparation for Kilo Code",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./destination": "./src/destination.ts"
   },
   "files": [
     "src"

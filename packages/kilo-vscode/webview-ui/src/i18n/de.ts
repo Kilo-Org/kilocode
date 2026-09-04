@@ -838,7 +838,8 @@ export const dict = {
   "settings.browser.description":
     "Wenn aktiviert, kann der KI-Agent mit Webseiten interagieren — navigieren, klicken, tippen und Screenshots erstellen. Ein Chrome-Fenster wird geöffnet, damit Sie dem Agenten bei der Arbeit zusehen können.",
   "settings.browser.enable.title": "Browser-Automatisierung aktivieren",
-  "settings.browser.enable.description": "Den Playwright-MCP-Server beim CLI-Backend registrieren.",
+  "settings.browser.enable.description":
+    "Den sitzungsgebundenen Browser im Agent Manager für lokale Anwendungen und öffentliche HTTPS-Seiten aktivieren.",
   "settings.browser.systemChrome.title": "System-Chrome verwenden",
   "settings.browser.systemChrome.description":
     "Verwenden Sie Ihren installierten Chrome-Browser anstelle einer separaten Chromium-Instanz.",

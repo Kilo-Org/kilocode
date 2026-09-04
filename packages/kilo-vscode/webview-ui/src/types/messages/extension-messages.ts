@@ -18,6 +18,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { BrowserFrame } from "../../../../src/shared/browser-stream"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -1456,6 +1457,7 @@ export interface AgentManagerBrowserStateMessage {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
 }
 
@@ -1483,6 +1485,12 @@ export interface AgentManagerBrowserInspectionMessage {
   hover?: boolean
 }
 
+interface AgentManagerBrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
+}
+
 export interface AgentManagerBrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -1500,6 +1508,7 @@ export type ExtensionMessage =
   | AgentManagerBrowserStateMessage
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
+  | AgentManagerBrowserFrameMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

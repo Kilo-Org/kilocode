@@ -821,7 +821,8 @@ export const dict = {
   "settings.browser.description":
     "При включении ИИ-агент может взаимодействовать с веб-страницами — переходить по ссылкам, нажимать, вводить текст и делать скриншоты. Откроется окно Chrome, чтобы вы могли наблюдать за работой агента.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description":
+    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
     "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",

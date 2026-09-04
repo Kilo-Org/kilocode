@@ -1,3 +1,5 @@
+import { isIP } from "node:net"
+import { isPublicAddress } from "@kilocode/sandbox/destination"
 import { HttpClient } from "effect/unstable/http"
 import { Effect, Schema } from "effect"
 import { Env } from "@/env"
@@ -8,7 +10,7 @@ import DESCRIPTION from "./browser-open.txt"
 
 const Parameters = Schema.Struct({
   url: Schema.String.annotate({
-    description: "HTTP loopback URL for the local application, for example http://localhost:3000.",
+    description: "Public HTTPS URL or HTTP loopback URL for a local application, for example http://localhost:3000.",
   }),
 })
 
@@ -72,25 +74,26 @@ export const BrowserOpenTool = Tool.define<
             }
           }
 
-          let url: URL
-          try {
-            url = new URL(params.url)
-          } catch {
+          const url = URL.parse(params.url)
+          if (!url) {
             return {
               title: "Browser URL invalid",
-              output: "Use an HTTP loopback URL such as http://localhost:5173.",
+              output: "Use a public HTTPS URL or an HTTP localhost URL.",
               metadata: { status: "error", errors: 0 } satisfies Meta,
             }
           }
-          if (
-            url.protocol !== "http:" ||
-            !["localhost", "127.0.0.1"].includes(url.hostname) ||
-            url.username ||
-            url.password
-          ) {
+          const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "")
+          const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
+          const remote =
+            url.protocol === "https:" &&
+            host !== "localhost" &&
+            !host.endsWith(".localhost") &&
+            (!isIP(host) || isPublicAddress(host))
+          if ((!local && !remote) || url.username || url.password) {
             return {
               title: "Browser URL blocked",
-              output: "Use an HTTP URL on localhost or 127.0.0.1. Use localhost for IPv6 loopback servers.",
+              output:
+                "Use public HTTPS or HTTP localhost without credentials. Private remote destinations are blocked.",
               metadata: { status: "error", errors: 0 } satisfies Meta,
             }
           }
@@ -118,7 +121,7 @@ export const BrowserOpenTool = Tool.define<
                   : `HTTP ${response.status}`
               return {
                 title: "Browser open failed",
-                output: `The browser could not open the local application: ${error}`,
+                output: `The browser could not open the page: ${error}`,
                 metadata: { status: "error", errors: 0 } satisfies Meta,
               }
             }
@@ -153,7 +156,7 @@ export const BrowserOpenTool = Tool.define<
             Effect.catch((error) =>
               Effect.succeed({
                 title: "Browser open failed",
-                output: `The browser could not open the local application: ${error.message.slice(0, 500)}`,
+                output: `The browser could not open the page: ${error.message.slice(0, 500)}`,
                 metadata: { status: "error", errors: 0 } satisfies Meta,
               }),
             ),

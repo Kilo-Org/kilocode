@@ -811,7 +811,8 @@ export const dict = {
   "settings.browser.description":
     "Після увімкнення агент ШІ може взаємодіяти з веб-сторінками — навігація, натискання, введення тексту та знімки екрана. Відкриється вікно Chrome, щоб ви могли стежити за роботою агента.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description":
+    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",

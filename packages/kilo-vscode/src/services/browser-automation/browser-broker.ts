@@ -3,10 +3,26 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
-import { chromium, type BrowserContext, type LaunchOptions, type Page } from "playwright-core"
+import {
+  chromium,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type LaunchOptions,
+  type Page,
+} from "playwright-core"
 import { BrowserDevtools } from "./browser-devtools"
 import { capture as element, locate } from "./browser-element"
 import { options } from "./browser-runtime"
+import { BrowserStream } from "./browser-stream"
+import { BrowserNetwork } from "./browser-network"
+import { BrowserProxy } from "./browser-proxy"
+import { parse } from "./browser-policy"
+import type {
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewport,
+  BrowserViewIdentity,
+} from "../../shared/browser-stream"
 
 export type BrowserStatus = "starting" | "ready" | "loading" | "error" | "closed"
 
@@ -30,6 +46,7 @@ export interface BrowserState {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
 }
 
@@ -64,11 +81,15 @@ export interface BrowserBrokerOptions {
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
+  network?: (
+    page: Page,
+    options: Parameters<typeof BrowserNetwork.attach>[1],
+  ) => Promise<Pick<BrowserNetwork, "authorize" | "close" | "active">>
 }
 
 export interface BrowserContextFactory {
   debugging?: number
-  newContext(options: { serviceWorkers: "block"; viewport: { width: number; height: number } }): Promise<BrowserContext>
+  newContext(options: BrowserContextOptions): Promise<BrowserContext>
   close(): Promise<void>
 }
 
@@ -77,9 +98,34 @@ interface Entry {
   browserId: string
   context: BrowserContext
   page: Page
+  proxy: BrowserProxy
+  network?: Pick<BrowserNetwork, "authorize" | "close" | "active">
+  waiting: Set<string>
+  local: boolean
   origin: string
   state: BrowserState
   response?: number
+  stream?: BrowserStream
+  viewport?: BrowserViewport
+  navigating?: boolean
+}
+
+export class BrowserLaunchError extends Error {
+  constructor(
+    readonly missing: "chrome" | "chromium" | undefined,
+    cause: unknown,
+  ) {
+    const detail = cause instanceof Error ? cause.message : String(cause)
+    super(
+      missing === "chrome"
+        ? "Google Chrome was not found. Install Chrome and try again."
+        : missing === "chromium"
+          ? "A compatible Playwright Chromium browser was not found. Install one or enable Use System Chrome in Kilo Settings > Web Tools."
+          : `The browser could not start. ${detail}`,
+      { cause },
+    )
+    this.name = "BrowserLaunchError"
+  }
 }
 
 class BrowserNavigationError extends Error {
@@ -101,16 +147,20 @@ type RequestBody = {
 
 const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
+const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
 
 export function diagnostic(error: unknown, url?: string): string {
   const text = stripVTControlCharacters(error instanceof Error ? error.message : String(error))
-  if (/ERR_CONNECTION_REFUSED|ECONNREFUSED/i.test(text)) {
+  const launch = error instanceof BrowserLaunchError
+  if (!launch && /ERR_CONNECTION_REFUSED|ECONNREFUSED/i.test(text)) {
     return `Cannot connect to ${url ?? "the local application"}. Make sure the local server is running.`
   }
-  if (/ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i.test(text)) {
-    return "The local application did not respond in time. Check the server and try again."
+  if (!launch && TIMEOUT.test(text)) {
+    return url && URL.parse(url)?.protocol === "https:"
+      ? "The website did not respond in time. Check the URL and network connection, then try again."
+      : "The local application did not respond in time. Check the server and try again."
   }
-  if (/Target page, context or browser has been closed|Browser has been closed/i.test(text)) {
+  if (!launch && /Target page, context or browser has been closed|Browser has been closed/i.test(text)) {
     return "The browser session was closed. Reopen the browser and try again."
   }
   return text
@@ -137,26 +187,6 @@ function reserve(): Promise<number> {
       })
     })
   })
-}
-
-function framing(headers: Record<string, string> | undefined): string | undefined {
-  if (!headers) return undefined
-  const options = headers["x-frame-options"]?.trim().toLowerCase()
-  if (options && (options === "deny" || options === "sameorigin" || options.startsWith("allow-from"))) {
-    return `This application blocks embedded browser previews with X-Frame-Options: ${options.toUpperCase()}.`
-  }
-  const policy = headers["content-security-policy"]
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.toLowerCase().startsWith("frame-ancestors"))
-  if (policy && /(?:^|\s)'(?:none|self)'(?:\s|$)/i.test(policy)) {
-    return `This application blocks embedded browser previews with Content-Security-Policy: ${policy}.`
-  }
-  return undefined
-}
-
-function loopback(url: URL): boolean {
-  return url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
 }
 
 function json(res: ServerResponse, status: number, value: unknown): void {
@@ -187,8 +217,12 @@ export class BrowserBroker {
   private readonly entries = new Map<string, Entry>()
   private readonly pending = new Map<string, Promise<unknown>>()
   private readonly listeners = new Set<(state: BrowserState) => void>()
+  private readonly viewers = new Set<(frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly token = randomBytes(32).toString("hex")
+  private readonly proxies = new Set<BrowserProxy>()
+  private gateway: BrowserProxy | undefined
   private owner: ((route: BrowserRoute) => BrowserRoute | undefined) | undefined
+  private approval: ((route: BrowserRoute, url: URL) => Promise<boolean>) | undefined
   private server: Server | undefined
   private readonly sockets = new Set<Socket>()
   private port: number | undefined
@@ -244,8 +278,12 @@ export class BrowserBroker {
     }
   }
 
-  bind(owner: (route: BrowserRoute) => BrowserRoute | undefined): void {
+  bind(
+    owner: (route: BrowserRoute) => BrowserRoute | undefined,
+    approve?: (route: BrowserRoute, url: URL) => Promise<boolean>,
+  ): void {
     this.owner = owner
+    this.approval = approve
   }
 
   subscribe(listener: (state: BrowserState) => void): () => void {
@@ -257,6 +295,92 @@ export class BrowserBroker {
     for (const entry of this.entries.values()) listener(this.copy(entry.state))
   }
 
+  frames(listener: (frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void): () => void {
+    this.viewers.add(listener)
+    return () => this.viewers.delete(listener)
+  }
+
+  async viewport(
+    sessionId: string,
+    projectId: string | undefined,
+    browserId: string,
+    navigation: number,
+    viewport: BrowserViewport,
+  ): Promise<void> {
+    this.available()
+    const entry = this.view(sessionId, projectId, { browserId, navigation })
+    if (!entry || !Number.isSafeInteger(viewport.revision) || viewport.revision < 1) return
+    if (entry.viewport && viewport.revision < entry.viewport.revision) return
+    if (!entry.stream) {
+      entry.stream = new BrowserStream(
+        entry.page,
+        () => ({ browserId: entry.browserId, navigation: entry.state.navigation }),
+        (frame) => {
+          if (!this.view(sessionId, projectId, frame) || entry.viewport?.active !== true) return
+          for (const viewer of this.viewers) viewer({ ...frame, projectId, sessionId })
+        },
+        this.opts.log,
+      )
+    }
+    entry.viewport = { ...viewport }
+    await entry.stream.configure(viewport)
+  }
+
+  accepts(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity): boolean {
+    const entry = this.view(sessionId, projectId, identity)
+    return !!entry?.stream && entry.viewport?.active === true && entry.viewport.revision === identity.revision
+  }
+
+  acknowledge(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity, sequence: number): void {
+    const entry = this.view(sessionId, projectId, identity)
+    if (entry?.viewport?.revision !== identity.revision) return
+    if (Number.isSafeInteger(sequence) && sequence > 0) entry.stream?.acknowledge(sequence)
+  }
+
+  async interact(
+    sessionId: string,
+    projectId: string | undefined,
+    identity: BrowserViewIdentity,
+    event: BrowserInteraction,
+    read?: () => Promise<string>,
+    write?: (text: string) => void | Promise<void>,
+  ): Promise<string | undefined> {
+    if (!this.accepts(sessionId, projectId, identity)) return
+    const entry = this.view(sessionId, projectId, identity)
+    if (!entry?.stream) return
+    const copied = await entry.stream.interact(
+      event,
+      read,
+      write &&
+        ((text) => {
+          if (this.view(sessionId, projectId, identity)) return write(text)
+        }),
+    )
+    return this.view(sessionId, projectId, identity) ? copied : undefined
+  }
+
+  suspend(): void {
+    for (const entry of this.entries.values()) {
+      if (!entry.viewport || !entry.stream) continue
+      entry.viewport = { ...entry.viewport, active: false }
+      void entry.stream
+        .configure(entry.viewport)
+        .catch((error: unknown) => this.opts.log("Browser stream pause failed", error))
+    }
+  }
+
+  private view(
+    sessionId: string,
+    projectId: string | undefined,
+    identity: Pick<BrowserViewIdentity, "browserId" | "navigation">,
+  ): Entry | undefined {
+    if (this.closed || this.opts.enabled?.() === false || this.opts.trusted?.() === false) return
+    const entry = this.entries.get(this.key(sessionId, projectId))
+    if (!entry || entry.browserId !== identity.browserId || entry.state.navigation !== identity.navigation) return
+    const scope = this.owner ? this.owner(entry.route) : entry.route
+    return scope?.directory === entry.route.directory && scope.projectId === entry.route.projectId ? entry : undefined
+  }
+
   get(sessionId: string, projectId?: string): BrowserState | undefined {
     const entries = [...this.entries.values()].filter(
       (entry) =>
@@ -266,51 +390,73 @@ export class BrowserBroker {
   }
 
   sessions(): string[] {
-    return [...new Set([...this.entries.values()].map((entry) => entry.route.sessionId))]
+    return [...new Set([...this.entries.keys(), ...this.pending.keys()].map((key) => key.slice(key.indexOf("\0") + 1)))]
   }
 
-  open(route: BrowserRoute, target: string): Promise<BrowserState> {
+  open(route: BrowserRoute, target: string, capture = true): Promise<BrowserState> {
     const scope = this.owner ? this.owner(route) : route
     if (!scope)
       return Promise.reject(new Error("Browser session does not belong to the requested project or directory"))
-    return this.serial(this.key(scope.sessionId, scope.projectId), () => this.create(scope, target))
+    return this.serial(this.key(scope.sessionId, scope.projectId), () => this.create(scope, target, capture))
   }
 
-  private async create(scope: BrowserRoute, target: string): Promise<BrowserState> {
+  private async create(scope: BrowserRoute, target: string, capture: boolean): Promise<BrowserState> {
     this.available()
     const url = this.validate(target)
     const existing = this.entries.get(this.key(scope.sessionId, scope.projectId))
     if (existing) {
       if (existing.route.directory !== scope.directory) throw new Error("Browser session directory cannot change")
-      if (scope.projectId && existing.route.projectId && existing.route.projectId !== scope.projectId) {
+      if (existing.route.projectId !== scope.projectId) {
         throw new Error("Browser session project cannot change")
       }
-      existing.route.projectId = scope.projectId ?? existing.route.projectId
-      existing.state.projectId = existing.route.projectId
-      const reload = existing.state.status === "ready" && existing.page.url() === url.href
-      await this.goto(existing, url, reload)
-      return this.copy(existing.state)
+      const replace =
+        existing.network?.active === false ||
+        existing.local !== (url.protocol === "http:") ||
+        (existing.local && existing.origin !== url.origin)
+      if (!replace) {
+        existing.route.projectId = scope.projectId ?? existing.route.projectId
+        existing.state.projectId = existing.route.projectId
+        existing.network?.authorize(url)
+        const reload = existing.state.status === "ready" && existing.page.url() === url.href
+        await this.goto(existing, url, reload, capture)
+        return this.copy(existing.state)
+      }
+      await this.retire(existing)
     }
 
     const browser = await this.ensureBrowser()
     this.available()
-    const context = await browser.newContext({
-      serviceWorkers: "block",
-      viewport: { width: 1280, height: 720 },
+    const proxy = await BrowserProxy.start(url.protocol === "http:" ? url : "public")
+    this.proxies.add(proxy)
+    const context = await (async () => {
+      this.available()
+      return browser.newContext({
+        serviceWorkers: "block",
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 2,
+        proxy: proxy.proxy,
+        ignoreHTTPSErrors: false,
+        acceptDownloads: false,
+      })
+    })().catch(async (error: unknown) => {
+      await proxy.close()
+      this.proxies.delete(proxy)
+      throw error
     })
     const page = await context.newPage().catch(async (error: unknown) => {
+      await proxy.close()
+      this.proxies.delete(proxy)
       await context.close().catch((failure: unknown) => this.opts.log("Browser context close failed", failure))
       throw error
     })
-    if (this.closed) {
-      await context.close().catch((error: unknown) => this.opts.log("Browser context close failed", error))
-      throw new Error("Browser broker is closed")
-    }
     const entry: Entry = {
       route: { ...scope },
       browserId: randomUUID(),
       context,
       page,
+      proxy,
+      waiting: new Set(),
+      local: url.protocol === "http:",
       origin: url.origin,
       state: {
         browserId: "",
@@ -326,13 +472,41 @@ export class BrowserBroker {
     const key = this.key(scope.sessionId, scope.projectId)
     this.entries.set(key, entry)
     this.attach(entry)
-    await this.route(entry).catch(async (error: unknown) => {
-      this.entries.delete(key)
-      await context.close().catch((failure: unknown) => this.opts.log("Browser context close failed", failure))
+    try {
+      this.available()
+      if (this.owner && !this.owner(scope)) throw new Error("Browser session is no longer available")
+      entry.network = await (this.opts.network ?? BrowserNetwork.attach)(page, {
+        url,
+        proxy,
+        approve: async (target) => {
+          const identity = { browserId: entry.browserId, navigation: entry.state.navigation }
+          if (!this.view(scope.sessionId, scope.projectId, identity)) return false
+          entry.waiting.add(target.origin)
+          try {
+            const approved = await this.approval?.(entry.route, target)
+            return (
+              approved === true &&
+              entry.network?.active !== false &&
+              !!this.view(scope.sessionId, scope.projectId, identity)
+            )
+          } finally {
+            entry.waiting.delete(target.origin)
+          }
+        },
+        blocked: (message) => {
+          entry.state.error = message
+          this.emit(entry.state)
+        },
+        log: this.opts.log,
+      })
+      this.available()
+      if (this.owner && !this.owner(scope)) throw new Error("Browser session is no longer available")
+    } catch (error) {
+      await this.retire(entry)
       throw error
-    })
+    }
     this.emit(entry.state)
-    await this.goto(entry, url)
+    await this.goto(entry, url, false, capture)
     return this.copy(entry.state)
   }
 
@@ -398,43 +572,62 @@ export class BrowserBroker {
     })
   }
 
-  refresh(sessionId: string, projectId?: string): Promise<BrowserState> {
+  refresh(sessionId: string, projectId?: string, capture = true): Promise<BrowserState> {
     return this.serial(this.key(sessionId, projectId), async () => {
       this.available()
       const entry = this.require(sessionId, undefined, projectId)
       const url = this.validate(entry.state.url ?? entry.origin)
-      await this.goto(entry, url, true)
+      await this.goto(entry, url, true, capture)
       return this.copy(entry.state)
     })
   }
 
   close(sessionId: string, projectId?: string): Promise<void> {
-    const entries = [...this.entries.values()].filter(
-      (entry) =>
-        entry.route.sessionId === sessionId && (projectId === undefined || entry.route.projectId === projectId),
-    )
+    const keys = new Set([...this.entries.keys(), ...this.pending.keys()])
     return Promise.all(
-      entries.map((entry) =>
-        this.serial(this.key(entry.route.sessionId, entry.route.projectId), async () => {
-          const key = this.key(entry.route.sessionId, entry.route.projectId)
-          if (this.entries.get(key) !== entry) return
-          this.entries.delete(key)
-          this.tools?.revoke(entry.browserId)
-          await entry.context.close().catch((error: unknown) => this.opts.log("Browser context close failed", error))
-          entry.state.status = "closed"
-          entry.state.screenshot = undefined
-          this.emit(entry.state)
-        }),
-      ),
+      [...keys]
+        .filter((key) =>
+          projectId === undefined
+            ? key.slice(key.indexOf("\0") + 1) === sessionId
+            : key === this.key(sessionId, projectId),
+        )
+        .map((key) => this.stop(key)),
     ).then(() => undefined)
+  }
+
+  private stop(key: string): Promise<void> {
+    const entry = this.entries.get(key)
+    void entry?.proxy.close().catch((error: unknown) => this.opts.log("Browser proxy close failed", error))
+    return this.serial(key, async () => {
+      const current = this.entries.get(key)
+      if (current) await this.retire(current)
+    })
+  }
+
+  private async retire(entry: Entry): Promise<void> {
+    const key = this.key(entry.route.sessionId, entry.route.projectId)
+    if (this.entries.get(key) === entry) this.entries.delete(key)
+    this.tools?.revoke(entry.browserId)
+    const stream = entry.stream?.close().catch((error: unknown) => this.opts.log("Browser stream close failed", error))
+    const network = entry.network
+      ?.close()
+      .catch((error: unknown) => this.opts.log("Browser network close failed", error))
+    await entry.proxy.close().catch((error: unknown) => this.opts.log("Browser proxy close failed", error))
+    this.proxies.delete(entry.proxy)
+    await entry.context.close().catch((error: unknown) => this.opts.log("Browser context close failed", error))
+    await Promise.all([stream, network])
+    entry.state.status = "closed"
+    entry.state.screenshot = undefined
+    this.emit(entry.state)
   }
 
   async disposeAsync(): Promise<void> {
     if (this.closed) return
     this.closed = true
-    await Promise.all(
-      [...this.entries.values()].map((entry) => this.close(entry.route.sessionId, entry.route.projectId)),
-    )
+    await Promise.all([...this.proxies].map((proxy) => proxy.close()))
+    await Promise.all([...new Set([...this.entries.keys(), ...this.pending.keys()])].map((key) => this.stop(key)))
+    this.proxies.clear()
+    this.gateway = undefined
     await this.browserStarting?.catch((error: unknown) => this.opts.log("Browser startup failed", error))
     await this.browser?.close().catch((error: unknown) => this.opts.log("Browser close failed", error))
     this.browser = undefined
@@ -451,6 +644,7 @@ export class BrowserBroker {
     this.server = undefined
     this.port = undefined
     this.listeners.clear()
+    this.viewers.clear()
   }
 
   dispose(): void {
@@ -461,9 +655,27 @@ export class BrowserBroker {
     if (this.closed) throw new Error("Browser broker is closed")
     if (this.browser) return this.browser
     if (this.browserStarting) return this.browserStarting
+    const system = this.opts.useSystemChrome?.() !== false
     this.browserStarting = (async () => {
       const port = this.opts.launch ? undefined : await reserve()
-      const config = options(this.opts.useSystemChrome?.() !== false, port)
+      const base = options(system, port)
+      const gateway = await BrowserProxy.start("deny")
+      this.proxies.add(gateway)
+      this.gateway = gateway
+      this.available()
+      const config: LaunchOptions = {
+        ...base,
+        proxy: gateway.proxy,
+        ignoreDefaultArgs: ["--disable-popup-blocking"],
+        args: [
+          ...(base.args ?? []).filter((arg) => arg !== "--no-proxy-server"),
+          "--force-device-scale-factor=2",
+          "--disable-quic",
+          "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
+          "--webrtc-ip-handling-policy=disable_non_proxied_udp",
+          "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+        ],
+      }
       const browser = await (this.opts.launch?.(config) ?? chromium.launch(config))
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
       this.browser = browser
@@ -472,12 +684,19 @@ export class BrowserBroker {
     try {
       return await this.browserStarting
     } catch (error) {
+      const gateway = this.gateway
+      this.gateway = undefined
+      if (gateway) {
+        await gateway.close().catch((failure: unknown) => this.opts.log("Browser proxy close failed", failure))
+        this.proxies.delete(gateway)
+      }
       const detail = error instanceof Error ? error.message : String(error)
-      const action =
-        this.opts.useSystemChrome?.() === false
-          ? "Install a compatible Playwright Chromium browser or enable Use System Chrome in Kilo Settings > Web Tools."
-          : "Install Google Chrome or select an existing Playwright Chromium browser in Kilo Settings > Web Tools."
-      throw new Error(`${action} ${detail}`.slice(0, 1000), { cause: error })
+      const missing = /Chromium distribution ['"]chrome['"] is not found\b|Executable doesn't exist at\b/i.test(detail)
+        ? system
+          ? "chrome"
+          : "chromium"
+        : undefined
+      throw new BrowserLaunchError(missing, error)
     } finally {
       this.browserStarting = undefined
     }
@@ -514,46 +733,28 @@ export class BrowserBroker {
     })
     entry.page.on("framenavigated", (frame) => {
       if (frame !== entry.page.mainFrame()) return
-      void this.update(entry).catch((error: unknown) => this.fail(entry, error))
+      if (!entry.navigating) entry.state.navigation++
+      void this.update(entry)
+        .then(() => this.emit(entry.state))
+        .catch((error: unknown) => this.fail(entry, error))
+    })
+    entry.page.on("domcontentloaded", () => {
+      void this.update(entry)
+        .then(() => this.emit(entry.state))
+        .catch((error: unknown) => this.fail(entry, error))
     })
   }
 
-  private async route(entry: Entry): Promise<void> {
-    await entry.context.route("**/*", async (route, request) => {
-      const target = request.url()
-      if (this.allowed(entry, target, Boolean(request.isNavigationRequest?.()))) {
-        await route.continue()
-        return
-      }
-      const origin = URL.canParse(target) ? new URL(target).origin : "invalid"
-      this.opts.log("Blocked browser request", { sessionId: entry.route.sessionId, origin })
-      entry.state.errors++
-      this.record(entry, `Blocked browser request: ${origin}`)
-      this.emit(entry.state)
-      await route.abort("blockedbyclient")
-    })
-    await entry.context.routeWebSocket("**/*", async (socket) => {
-      const target = socket.url()
-      if (this.allowed(entry, target)) {
-        socket.connectToServer()
-        return
-      }
-      const origin = URL.canParse(target) ? new URL(target).origin : "invalid"
-      this.opts.log("Blocked browser WebSocket", { sessionId: entry.route.sessionId, origin })
-      entry.state.errors++
-      this.record(entry, `Blocked browser request: ${origin}`)
-      this.emit(entry.state)
-      await socket.close({ code: 1008, reason: "Blocked browser origin" })
-    })
-  }
-
-  private async goto(entry: Entry, url: URL, reload = false): Promise<void> {
+  private async goto(entry: Entry, url: URL, reload = false, capture = true): Promise<void> {
+    entry.navigating = true
     entry.origin = url.origin
     entry.response = undefined
     entry.state.navigation++
     entry.state.status = "loading"
     entry.state.url = url.href
     entry.state.title = undefined
+    entry.state.screenshot = undefined
+    entry.state.mime = undefined
     entry.state.error = undefined
     entry.state.frameError = undefined
     entry.state.errors = 0
@@ -564,20 +765,29 @@ export class BrowserBroker {
         ? await entry.page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 })
         : await entry.page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 30_000 })
       entry.response = response?.status() ?? entry.response
-      entry.state.frameError = framing(response?.headers?.())
       if (entry.response !== undefined && entry.response >= 400) {
         await this.update(entry)
-        await this.capture(entry)
+        if (capture) await this.capture(entry)
         throw new BrowserNavigationError(`Local application returned HTTP ${entry.response}`, entry.response)
       }
       await this.update(entry)
-      await this.capture(entry)
+      if (capture) await this.capture(entry)
       entry.state.status = "ready"
       this.emit(entry.state)
     } catch (error) {
+      const waiting = entry.waiting.size > 0 && TIMEOUT.test(error instanceof Error ? error.message : String(error))
+      const failure = waiting
+        ? new BrowserNavigationError(
+            "Browser navigation stopped while waiting for approval in VS Code. Dismiss the approval prompt and retry.",
+          )
+        : error
+      if (waiting)
+        await entry.network?.close().catch((error: unknown) => this.opts.log("Browser network close failed", error))
       entry.state.url = url.href
-      this.fail(entry, error)
-      throw error
+      this.fail(entry, failure)
+      throw failure
+    } finally {
+      entry.navigating = false
     }
   }
 
@@ -599,9 +809,10 @@ export class BrowserBroker {
     ) {
       throw new Error("Browser element coordinates are invalid")
     }
-    const width = Math.max(1, Math.min(1920, Math.round(position.width)))
-    const height = Math.max(1, Math.min(1440, Math.round(position.height)))
     const viewport = entry.page.viewportSize?.()
+    const width = entry.viewport && viewport ? viewport.width : Math.max(1, Math.min(1920, Math.round(position.width)))
+    const height =
+      entry.viewport && viewport ? viewport.height : Math.max(1, Math.min(1440, Math.round(position.height)))
     if (viewport?.width !== width || viewport.height !== height) {
       await entry.page.setViewportSize({ width, height })
     }
@@ -609,8 +820,14 @@ export class BrowserBroker {
   }
 
   private async update(entry: Entry): Promise<void> {
-    entry.state.url = entry.page.url()
-    entry.state.title = await entry.page.title().catch(() => undefined)
+    const navigation = entry.state.navigation
+    const url = entry.page.url()
+    const parsed = URL.parse(url)
+    if (!parsed || !["http:", "https:"].includes(parsed.protocol)) return
+    const title = await entry.page.title().catch(() => undefined)
+    if (entry.state.navigation !== navigation || entry.page.url() !== url) return
+    entry.state.url = url
+    entry.state.title = title
   }
 
   private async capture(entry: Entry): Promise<void> {
@@ -667,32 +884,7 @@ export class BrowserBroker {
   }
 
   validate(target: string): URL {
-    let url: URL
-    try {
-      url = new URL(target)
-    } catch {
-      throw new Error("Browser URL is invalid")
-    }
-    if (!loopback(url) || url.username || url.password) {
-      throw new Error(
-        "Browser URLs must use HTTP localhost or 127.0.0.1 without credentials. Use localhost for IPv6 loopback servers.",
-      )
-    }
-    return url
-  }
-
-  private allowed(entry: Entry, target: string, navigation = false): boolean {
-    let url: URL
-    try {
-      url = new URL(target)
-    } catch {
-      return false
-    }
-    if (["about:", "blob:", "data:"].includes(url.protocol)) return !navigation
-    if (url.protocol === "ws:" || url.protocol === "wss:")
-      return `${url.protocol === "ws:" ? "http:" : "https:"}//${url.host}` === entry.origin
-    if (url.protocol !== "http:" && url.protocol !== "https:") return false
-    return url.origin === entry.origin
+    return parse(target)
   }
 
   private copy(state: BrowserState): BrowserState {

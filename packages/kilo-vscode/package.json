@@ -1315,6 +1315,7 @@
     "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/core": "workspace:*",
     "@opencode-ai/ui": "workspace:*",

@@ -266,14 +266,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Incolla un URL PR sopra o crea un nuovo worktree.",
   "agentManager.import.failed": "Importazione non riuscita",
   "agentManager.browser.title": "Browser",
-  "agentManager.browser.url": "URL dell'applicazione locale",
+  "agentManager.browser.url": "Indirizzo",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Apri",
   "agentManager.browser.inspect": "Seleziona elemento",
   "agentManager.browser.devtoolsTitle": "Strumenti per sviluppatori",
   "agentManager.browser.refresh": "Aggiorna browser",
   "agentManager.browser.close": "Chiudi browser",
-  "agentManager.browser.empty": "Apri un'applicazione locale per visualizzarla qui.",
+  "agentManager.browser.empty":
+    "Apri un'applicazione locale o una pagina HTTPS pubblica per visualizzarne qui l'anteprima.",
+  "agentManager.browser.requirement":
+    "Richiede Google Chrome o un browser Playwright Chromium compatibile. I browser non vengono installati automaticamente.",
+  "agentManager.browser.missingTitle": "Browser non trovato",
+  "agentManager.browser.missingChrome":
+    "Google Chrome non è stato trovato. Installa Chrome per usare «Automazione del browser», poi riprova.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium non è stato trovato. Installa un browser compatibile o abilita «Usa Chrome di sistema» in «Impostazioni del browser».",
+  "agentManager.browser.downloadChrome": "Scarica Chrome",
+  "agentManager.browser.settings": "Impostazioni del browser",
   "agentManager.browser.noSession": "Seleziona prima una sessione di Agent Manager.",
   "agentManager.browser.screenshotAlt": "Pagina corrente del browser",
   "agentManager.browser.errors": "Problemi del browser: {{count}}",

@@ -39,6 +39,13 @@ export interface BrowserController {
   dispose: () => void
 }
 
+function address(value: string): string {
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return value
+  const host = value.replace(/^\/\//, "")
+  const scheme = /^(?:localhost|127\.0\.0\.1)(?=[:/?#]|$)/i.test(host) ? "http" : "https"
+  return `${scheme}://${host}`
+}
+
 export function createBrowserController(props: BrowserControllerOptions): BrowserController {
   const [url, setUrl] = createSignal("")
   const [selecting, setSelecting] = createSignal(false)
@@ -173,7 +180,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   }
 
   const receive = (event: BrowserEvent) => {
-    if (disposed) return
+    if (disposed || event.type === "frame") return
     sync()
     if (!current) return
     if (event.type === "state") return receiveState(event.value)
@@ -231,7 +238,9 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       if (!sync() || !current) return
       const value = url().trim()
       if (!value) return
-      send({ type: "open", scope: current, url: /^https?:\/\//i.test(value) ? value : `http://${value}` })
+      const target = address(value)
+      setUrl(target)
+      send({ type: "open", scope: current, url: target })
     },
     refresh: () => request("refresh"),
     close: () => {
