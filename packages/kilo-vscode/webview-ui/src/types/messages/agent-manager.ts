@@ -62,6 +62,7 @@ import type {
   PRCheck,
   PRComment,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 export type {
   PRState,
@@ -72,10 +73,13 @@ export type {
   PRComment,
   PRCommentReply,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body?: string
   url: string
@@ -96,6 +100,7 @@ export interface PRStatus {
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
@@ -155,6 +160,7 @@ export interface WorktreeFileDiff {
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
+  failed?: boolean
   stamp?: string
   kind?: "image"
   image?: DiffImage

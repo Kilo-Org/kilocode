@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.AgentManagerHost
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -72,8 +73,33 @@ open class WorktreeSessionEditorManager(
             project.service<KiloVfsManager>().updatePresentation(WorktreeSessionEditorKind.ID, worktreeSessionParams(updated))
         }
     },
+    // Whether this tab's directory is the repo's main working tree rather than a linked worktree.
+    // `git worktree list` answers this from any of the repo's worktrees, so no separate "repo root"
+    // is needed -- just the tab's own directory.
+    private val resolveBase: suspend (String) -> Boolean = { dir ->
+        service<KiloWorktreeService>().list(dir).worktrees
+            .firstOrNull { normalizeWorktreePath(it.path) == normalizeWorktreePath(dir) }
+            ?.main == true
+    },
+    private val moveHost: (String?, String, String) -> Unit = { id, dir, surface ->
+        project.service<AgentManagerHost>().move(id, dir, surface)
+    },
+    private val newWorktreeHost: () -> Unit = {
+        project.service<AgentManagerHost>().newWorktree()
+    },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
-    override val showsBranchDock: Boolean get() = false
+    // Both the branch dock and the New Worktree / Move to Worktree flows only make sense from the
+    // base checkout -- a linked worktree's own editor tab keeps today's plain session view. Resolved
+    // once in start(), before the first session opens; see resolveBase().
+    private var resolvedBase = false
+    private var baseResolved = false
+    // The answer lands on the EDT after the lookup coroutine has already finished, so a second start()
+    // in between would launch a second lookup and open the first session twice. This spans the whole
+    // gap; the job's own lifetime does not.
+    private var resolving = false
+    override val showsBranchDock: Boolean get() = base()
+    override val supportsNewWorktree: Boolean get() = base()
+    override val supportsMoveToWorktree: Boolean get() = base()
     override val hostedInEditorTab: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
@@ -94,9 +120,44 @@ open class WorktreeSessionEditorManager(
         bindMigration()
     }
 
+    /** Whether this tab's directory is the repo's main working tree; see [resolveBase]. */
+    @RequiresEdt
+    open fun base(): Boolean = resolvedBase
+
+    @RequiresEdt
+    override fun newWorktree() {
+        if (base()) newWorktreeHost()
+    }
+
+    @RequiresEdt
+    override fun moveToWorktree(sessionId: String?, directory: String) {
+        if (base()) moveHost(sessionId, directory, "worktree_editor")
+    }
+
     @RequiresEdt
     fun start() {
         startedOnce = true
+        if (baseResolved) {
+            startSessions()
+            return
+        }
+        // A start() that arrives mid-lookup needs nothing: the lookup in flight opens the first session
+        // when it lands, and that is what this call would have done itself.
+        if (resolving) return
+        resolving = true
+        cs.launch {
+            val resolved = runCatching { resolveBase(worktree.directory) }.getOrDefault(false)
+            edt({ !Disposer.isDisposed(this@WorktreeSessionEditorManager) }) {
+                resolving = false
+                resolvedBase = resolved
+                baseResolved = true
+                startSessions()
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun startSessions() {
         list.reload {
             val target = session
             if (target != null) {

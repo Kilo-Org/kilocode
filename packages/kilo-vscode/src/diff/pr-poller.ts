@@ -64,9 +64,8 @@ export function createDiffPRPolling(opts: Options) {
         directory,
         onStatus: (id, pr, error, name) => {
           if (id !== "diff" || gen !== generation) return
-          if (error) return
-          if (!pr) {
-            if (retainPRStatus(status, branch, name, pr)) return
+          if (error || !pr) {
+            if (retainPRStatus(status, branch, name, null)) return
             status = undefined
             branch = name
             opts.onStatus()

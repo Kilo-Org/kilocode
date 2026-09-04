@@ -63,6 +63,44 @@ async function alignTarget(page: Page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 }
 
+for (const width of [420, 200]) {
+  test(`renders PR-panel threads inside committed hunks at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    const story = width === 200 ? "agentmanager--pr-panel-comments-200" : "agentmanager--pr-panel-comments"
+    await page.goto(`/iframe.html?id=${story}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+    await disableAnimations(page)
+    const card = page.locator('.am-pr-diff-thread [data-thread-id="PRRT_1"]')
+    await expect(card).toBeVisible()
+    await expect(page.locator('[data-thread-id="PRRT_1"]')).toHaveCount(1)
+    await expect
+      .poll(() =>
+        card.evaluate((el) => {
+          const wrapper = el.closest<HTMLElement>("[slot]")
+          const root = el.closest("diffs-container")?.shadowRoot
+          const lines = [...(root?.querySelectorAll<HTMLElement>("[data-content] [data-line]") ?? [])]
+          const target = lines.find((line) => line.getAttribute("data-line-type") === "change-addition")
+          const next = lines.find((line) => line.textContent?.includes("return result"))
+          const bounds = el.getBoundingClientRect()
+          return (
+            wrapper?.assignedSlot?.name === "annotation-additions-42" &&
+            !!target &&
+            !!next &&
+            bounds.top >= target.getBoundingClientRect().bottom - 1 &&
+            next.getBoundingClientRect().top >= bounds.bottom - 1 &&
+            bounds.width <= innerWidth
+          )
+        }),
+      )
+      .toBe(true)
+    await card.locator(".am-pr-comment-head").click()
+    await expect(page.locator(".am-pr-diff-thread")).toHaveCount(0)
+    const collapsed = page.locator('[data-thread-id="PRRT_1"] .am-pr-comment-head')
+    await expect(collapsed).toHaveAttribute("aria-expanded", "false")
+    await collapsed.click()
+    await expect(card).toBeVisible()
+  })
+}
+
 test("preserves diff scroll position while an agent edit refreshes a file", async ({ page }) => {
   const first = await openStory(page)
   const scroller = page.locator(".am-review-diff")

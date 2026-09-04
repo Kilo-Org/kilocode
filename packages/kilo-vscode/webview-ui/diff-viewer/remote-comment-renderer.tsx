@@ -20,7 +20,7 @@ import { useLanguage } from "../src/context/language"
 import { sendReviewComments } from "./review-annotations"
 import type { AnnotationMeta } from "./review-annotations"
 import type { WorktreeFileDiff } from "../src/types/messages"
-import { mapRemoteComments, remoteLocation, type RemoteCommentAnchor, type RemoteCommentMap } from "./remote-comments"
+import { mapRemoteComments, remoteLocation, type RemoteCommentMap } from "./remote-comments"
 
 export interface RemoteAnnotationMeta {
   type: "remote"
@@ -46,13 +46,12 @@ type Mounted = {
   host: HTMLElement
   setIds: (ids: string[]) => void
   dispose: () => void
-  observer?: MutationObserver
   frame?: number
 }
 
 export interface RemoteCommentController {
   map: () => RemoteCommentMap
-  annotations: (file: string) => DiffLineAnnotation<RemoteAnnotationMeta>[]
+  annotations: (file: string) => () => DiffLineAnnotation<RemoteAnnotationMeta>[]
   outside: () => string[]
   fileCount: (file: string) => number
   location: (file: string, id: string) => "inline" | "outside" | "pending"
@@ -65,7 +64,6 @@ export interface RemoteCommentController {
 interface Options {
   key: () => string | undefined
   comments: () => PRComment[] | undefined
-  loading?: () => ReadonlySet<string> | undefined
   diffs: () => WorktreeFileDiff[]
   active: () => boolean
   activeTerminalId: () => string | undefined
@@ -77,10 +75,6 @@ interface Options {
 interface CardProps {
   item: Entry
   inline: boolean
-}
-
-function remoteIds(anchor: RemoteCommentAnchor): string[] {
-  return anchor.comments.map((comment) => comment.threadId)
 }
 
 function findTarget(container: HTMLElement, id: string, place: "inline" | "outside"): HTMLElement | undefined {
@@ -99,17 +93,21 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
   const entries = new Map<string, Entry>()
   const mounted = new Map<string, Mounted>()
   const annotations = new Map<string, { ids: string; value: DiffLineAnnotation<RemoteAnnotationMeta> }>()
-  const mapped = createMemo(() => {
-    if (!options.active()) return { anchors: new Map<string, RemoteCommentAnchor[]>(), outside: [] as PRComment[] }
+  const mapped = createMemo<RemoteCommentMap>(() => {
+    if (!options.active()) return { anchors: new Map(), pending: new Map(), outside: [] }
     return mapRemoteComments(options.comments() ?? [], options.diffs())
   })
   let disposed = false
+  let observer: MutationObserver | undefined
 
   const releaseMounted = (item: Mounted) => {
     if (item.frame !== undefined) cancelAnimationFrame(item.frame)
-    item.observer?.disconnect()
     item.dispose()
     if (mounted.get(item.key) === item) mounted.delete(item.key)
+    if (mounted.size === 0) {
+      observer?.disconnect()
+      observer = undefined
+    }
   }
 
   const disposeMounted = () => {
@@ -229,34 +227,35 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
       const parent = host.parentNode
       const scope = host.closest(".am-diff-panel, .am-review-layout") ?? parent?.parentNode ?? parent
       if (!(scope instanceof Node)) return
-      item.observer = new MutationObserver(() => {
-        if (!host.isConnected) releaseMounted(item)
+      observer ??= new MutationObserver(() => {
+        for (const item of mounted.values()) {
+          if (item.frame === undefined && !item.host.isConnected) releaseMounted(item)
+        }
       })
-      item.observer.observe(scope, { childList: true, subtree: true })
+      observer.observe(scope, { childList: true, subtree: true })
     })
     return host
   }
 
-  const fileAnnotations = (file: string): DiffLineAnnotation<RemoteAnnotationMeta>[] =>
-    (mapped().anchors.get(file) ?? []).map((anchor: RemoteCommentAnchor) => {
-      const ids = remoteIds(anchor).join("\0")
-      const key = `${anchor.file}:${anchor.side}:${anchor.line}`
-      const current = annotations.get(key)
-      if (current?.ids === ids) return current.value
-      const value: DiffLineAnnotation<RemoteAnnotationMeta> = {
-        side: anchor.side,
-        lineNumber: anchor.line,
-        metadata: {
-          type: "remote",
-          file: anchor.file,
-          side: anchor.side,
-          line: anchor.line,
-          comments: anchor.comments,
-        },
-      }
-      annotations.set(key, { ids, value })
-      return value
-    })
+  const fileAnnotations = (file: string) =>
+    createMemo(
+      () =>
+        (mapped().anchors.get(file) ?? []).map((anchor) => {
+          const ids = anchor.comments.map((comment) => comment.threadId).join("\0")
+          const key = `${anchor.file}:${anchor.side}:${anchor.line}`
+          const current = annotations.get(key)
+          if (current?.ids === ids) return current.value
+          const value: DiffLineAnnotation<RemoteAnnotationMeta> = {
+            side: anchor.side,
+            lineNumber: anchor.line,
+            metadata: { type: "remote", ...anchor },
+          }
+          annotations.set(key, { ids, value })
+          return value
+        }),
+      [],
+      { equals: (a, b) => a.length === b.length && a.every((item, index) => item === b.at(index)) },
+    )
 
   const outside = createMemo(() => mapped().outside.map((comment) => comment.threadId))
 
@@ -271,21 +270,11 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
     annotations: fileAnnotations,
     outside,
     fileCount: (file) => {
-      const anchors = mapped().anchors.get(file) ?? []
-      return anchors.reduce((count: number, anchor: RemoteCommentAnchor) => count + anchor.comments.length, 0)
+      const map = mapped()
+      const anchors = map.anchors.get(file) ?? []
+      return anchors.reduce((count, anchor) => count + anchor.comments.length, map.pending.get(file)?.length ?? 0)
     },
-    location: (file, id) => {
-      const comment = (options.comments() ?? []).find((item) => item.threadId === id)
-      const diff = options.diffs().find((item) => item.file === file)
-      if (
-        diff?.summarized === true &&
-        comment?.line !== undefined &&
-        !comment.outdated &&
-        options.loading?.()?.has(file)
-      )
-        return "pending"
-      return remoteLocation(mapped(), file, id)
-    },
+    location: (file, id) => remoteLocation(mapped(), file, id),
     open: (id) => {
       const comment = (options.comments() ?? []).find((item) => item.threadId === id)
       if (comment) entry(comment).setOpen(true)
@@ -302,6 +291,7 @@ export function createRemoteFocus(
   scroll?: { root: () => HTMLElement | undefined; to: (offset: number) => void },
 ) {
   let observer: MutationObserver | undefined
+  let resize: ResizeObserver | undefined
   let frame: number | undefined
   let token = 0
 
@@ -309,6 +299,8 @@ export function createRemoteFocus(
     token += 1
     observer?.disconnect()
     observer = undefined
+    resize?.disconnect()
+    resize = undefined
     if (frame !== undefined) cancelAnimationFrame(frame)
     frame = undefined
     pending?.()
@@ -330,6 +322,7 @@ export function createRemoteFocus(
   ) => {
     stop()
     const current = token
+    let seen: HTMLElement | undefined
     pending?.(file)
     prepare()
 
@@ -337,17 +330,27 @@ export function createRemoteFocus(
       if (current !== token) return true
       const container = root()
       if (!container) return false
+      observer!.observe(container, { childList: true, subtree: true })
       const place = location()
       if (place === "pending") return false
-      if (place === "inline" && reveal && !reveal()) return false
-      const target = findTarget(container, id, place)
-      if (!target) return false
+      const ready = place !== "inline" || !reveal || reveal()
+      const target = ready ? findTarget(container, id, place) : undefined
+      if (!target) {
+        if (place === "inline") prepare()
+        return false
+      }
       if (place === "inline") {
+        resize?.observe(target)
+        if (target !== seen) {
+          seen = target
+          update()
+          return false
+        }
         const shadow = target.closest("diffs-container")?.shadowRoot
         if (shadow) observer?.observe(shadow, { childList: true, subtree: true })
         const slot = target.closest<HTMLElement>("[data-annotation-slot]")
         const rect = target.getBoundingClientRect()
-        if ((slot && !slot.assignedSlot) || rect.width <= 0 || rect.height <= 0) return false
+        if ((slot && !slot.assignedSlot) || Math.min(rect.width, rect.height) <= 0) return false
       }
       const card = target.closest<HTMLElement>('[data-component="pr-comment"], .am-pr-comment') ?? target
       move(card, place === "inline")
@@ -357,14 +360,18 @@ export function createRemoteFocus(
       return true
     }
 
-    if (settle()) return
-    observer = new MutationObserver(settle)
-    const container = root()
-    if (container) observer.observe(container, { childList: true, subtree: true })
-    frame = requestAnimationFrame(() => {
-      frame = undefined
-      settle()
-    })
+    const update = () => {
+      if (frame !== undefined) return
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          frame = undefined
+          settle()
+        })
+      })
+    }
+    observer = new MutationObserver(update)
+    if (typeof ResizeObserver !== "undefined") resize = new ResizeObserver(update)
+    update()
   }
 
   onCleanup(stop)

@@ -75,7 +75,8 @@ function byType(items: unknown[], type: string) {
 
 describe("WorktreeDiffController.setBase", () => {
   it("rebuilds the active source against the overridden base branch", async () => {
-    const { controller, builds } = make()
+    const { controller, builds, posted } = make()
+    const resets = () => byType(posted, "agentManager.worktreeDiffLoading").filter((msg) => Object.hasOwn(msg, "reset"))
     controller.start("w1#branch")
     await waitFor(() => builds.length === 1)
     expect(builds[0]!.ctx.dir).toBe("/wt")
@@ -90,6 +91,11 @@ describe("WorktreeDiffController.setBase", () => {
     await controller.setBase("w1#branch", undefined)
     expect(builds.length).toBe(3)
     expect(builds[2]!.ctx.baseBranch).toBe("origin/main")
+    expect(resets()).toHaveLength(3)
+    await controller.request("w1#branch")
+    expect(resets()).toHaveLength(3)
+    await controller.requestFile("w2#branch", "a.ts")
+    expect(byType(posted, "agentManager.worktreeDiffFile")).toHaveLength(0)
 
     controller.stop()
   })

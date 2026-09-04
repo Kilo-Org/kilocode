@@ -6,6 +6,7 @@ export type RemoteSide = "additions" | "deletions"
 
 type PatchLine = {
   mark: " " | "+" | "-"
+  hunk: number
   text: string
   old: number
   next: number
@@ -29,29 +30,30 @@ export interface RemoteCommentAnchor {
 
 export interface RemoteCommentMap {
   anchors: Map<string, RemoteCommentAnchor[]>
+  pending: Map<string, PRComment[]>
   outside: PRComment[]
 }
 
-export type RemoteLocation = "inline" | "outside"
+export type RemoteLocation = "inline" | "outside" | "pending"
 
 function parsePatch(value: string): Patch | undefined {
-  const source = value.split("\n")
   const result: PatchLine[] = []
-  for (let index = 0; index < source.length; index += 1) {
-    const match = source[index]?.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
-    if (!match) continue
-
-    let old = Number(match[1])
-    let next = Number(match[3])
-    for (const raw of source.slice(index + 1)) {
-      if (/^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.test(raw)) break
-      if (raw.startsWith("\\")) continue
-      const mark = (raw[0] ?? " ") as PatchLine["mark"]
-      if (mark !== " " && mark !== "+" && mark !== "-") continue
-      result.push({ mark, text: raw.slice(1).replace(/\r$/, ""), old, next })
-      if (mark !== "+") old += 1
-      if (mark !== "-") next += 1
+  let hunk = -1
+  let old = 0
+  let next = 0
+  for (const [index, raw] of value.split("\n").entries()) {
+    const match = raw.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
+    if (match) {
+      hunk = index
+      old = Number(match[1])
+      next = Number(match[3])
+      continue
     }
+    const mark = raw[0]
+    if (hunk < 0 || (mark !== " " && mark !== "+" && mark !== "-")) continue
+    result.push({ mark, hunk, text: raw.slice(1).replace(/\r$/, ""), old, next })
+    if (mark !== "+") old += 1
+    if (mark !== "-") next += 1
   }
   if (result.length === 0) return undefined
   return { lines: result }
@@ -77,16 +79,11 @@ function sideFromPatch(comment: PRComment, patch: Patch): RemoteSide | undefined
   const additions = patch.lines.some((item) => item.next === line && item.mark === "+")
   const deletions = patch.lines.some((item) => item.old === line && item.mark === "-")
   if (additions === deletions) return undefined
-  if (deletions) return "deletions"
-  if (additions) return "additions"
-  const context = patch.lines.some((item) => item.mark === " " && (item.old === line || item.next === line))
-  if (context) return "additions"
-  return undefined
+  return deletions ? "deletions" : "additions"
 }
 
-function matchingLine(patch: Patch | undefined, side: RemoteSide, line: number, text: string): boolean {
-  if (!patch) return false
-  return patch.lines.some((item) => {
+function matchingLine(patch: Patch | undefined, side: RemoteSide, line: number, text: string) {
+  return patch?.lines.find((item) => {
     if (side === "additions" && item.next !== line) return false
     if (side === "deletions" && item.old !== line) return false
     if (side === "additions" && item.mark !== "+" && item.mark !== " ") return false
@@ -100,14 +97,26 @@ function matchesPatch(
   diff: WorktreeFileDiff,
   side: RemoteSide,
   line: number,
-  text: string,
+  source: Source,
   hunk: Patch | undefined,
   visible: Patch | undefined,
 ): boolean {
   if (comment.diffHunk && !hunk) return false
   if (diff.patch && !visible) return false
-  if (visible && !matchingLine(visible, side, line, text)) return false
-  return !hunk || matchingLine(hunk, side, comment.originalLine ?? line, text)
+  const text = lineAt(source, line)
+  if (text === undefined || (visible && !matchingLine(visible, side, line, text))) return false
+  if (!hunk) return true
+  const origin = comment.originalLine ?? line
+  const target = matchingLine(hunk, side, origin, text)
+  if (!target) return false
+  for (const item of hunk.lines) {
+    if (item.hunk !== target.hunk) continue
+    if (side === "additions" && item.mark === "-") continue
+    if (side === "deletions" && item.mark === "+") continue
+    const position = side === "additions" ? item.next : item.old
+    if (lineAt(source, position + line - origin) !== item.text) return false
+  }
+  return true
 }
 
 function safeAnchor(
@@ -116,7 +125,8 @@ function safeAnchor(
   visible: Patch | undefined,
   cache: Map<string, Source>,
 ): RemoteCommentAnchor | undefined {
-  if (!comment.file || comment.outdated || diff.kind === "image" || diff.summarized === true) return undefined
+  if (!comment.file || comment.outdated || diff.kind === "image" || diff.summarized === true || diff.failed)
+    return undefined
   const hunk = comment.diffHunk ? parsePatch(comment.diffHunk) : undefined
   const side = comment.side ?? sideFromPatch(comment, hunk ?? visible ?? { lines: [] })
   if (!side) return undefined
@@ -126,9 +136,7 @@ function safeAnchor(
   const key = `${diff.file}:${side}`
   const source = cache.get(key) ?? { text: side === "deletions" ? diff.before : diff.after, offsets: [0] }
   cache.set(key, source)
-  const text = lineAt(source, line)
-  if (text === undefined) return undefined
-  if (!matchesPatch(comment, diff, side, line, text, hunk, visible)) return undefined
+  if (!matchesPatch(comment, diff, side, line, source, hunk, visible)) return undefined
 
   return { file: diff.file, side, line, comments: [comment] }
 }
@@ -136,6 +144,7 @@ function safeAnchor(
 export function mapRemoteComments(comments: PRComment[], diffs: WorktreeFileDiff[]): RemoteCommentMap {
   const files = new Map(diffs.map((diff) => [diff.file, diff]))
   const anchors = new Map<string, RemoteCommentAnchor[]>()
+  const pending = new Map<string, PRComment[]>()
   const outside: PRComment[] = []
   const seen = new Set<string>()
   const patches = new Map<string, Patch | undefined>()
@@ -149,6 +158,21 @@ export function mapRemoteComments(comments: PRComment[], diffs: WorktreeFileDiff
     if (seen.has(comment.threadId)) continue
     seen.add(comment.threadId)
     const diff = comment.file ? files.get(comment.file) : undefined
+    const line = comment.line ?? comment.startLine
+    if (
+      diff?.summarized === true &&
+      !diff.failed &&
+      diff.kind !== "image" &&
+      !comment.outdated &&
+      line !== undefined &&
+      Number.isInteger(line) &&
+      line > 0
+    ) {
+      const list = pending.get(diff.file) ?? []
+      list.push(comment)
+      pending.set(diff.file, list)
+      continue
+    }
     const anchor = diff ? safeAnchor(comment, diff, patch(diff), cache) : undefined
     if (!anchor) {
       outside.push(comment)
@@ -162,10 +186,11 @@ export function mapRemoteComments(comments: PRComment[], diffs: WorktreeFileDiff
     anchors.set(anchor.file, list)
   }
 
-  return { anchors, outside }
+  return { anchors, pending, outside }
 }
 
 export function remoteLocation(map: RemoteCommentMap, file: string, threadId: string): RemoteLocation {
+  if (map.pending.get(file)?.some((comment) => comment.threadId === threadId)) return "pending"
   const anchors = map.anchors.get(file) ?? []
   return anchors.some((anchor) => anchor.comments.some((comment) => comment.threadId === threadId))
     ? "inline"

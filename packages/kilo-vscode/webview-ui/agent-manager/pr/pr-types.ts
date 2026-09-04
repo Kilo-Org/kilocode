@@ -35,7 +35,16 @@ export interface PRComment {
   outdated: boolean
   createdAt?: number
   diffHunk?: string
-  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  preview?: {
+    patch: string
+    line: number
+    side: "additions" | "deletions"
+    base: string
+    head: string
+    top: boolean
+    bottom: boolean
+  }
+  previewUnavailable?: boolean
   after?: string[]
   replies?: PRCommentReply[]
 }
@@ -46,4 +55,15 @@ export interface PRReviewer {
   login: string
   avatar?: string
   state: ReviewerState
+}
+
+export interface PRConversationComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  createdAt?: number
+  url?: string
+  state?: ReviewerState
+  isBot?: boolean
 }

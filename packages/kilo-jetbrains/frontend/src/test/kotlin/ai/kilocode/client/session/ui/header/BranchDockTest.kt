@@ -21,6 +21,7 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
 import java.awt.Point
@@ -318,6 +319,46 @@ class BranchDockTest : BasePlatformTestCase() {
         assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
     }
 
+    // ---- header=false (worktree editor: branch, PR, and counts shown by the tab's own header) ----
+
+    fun `test header false hides the PR row and its changes summary`() {
+        val dock = dockNoHeader()
+        edt {
+            dock.setBranch(prBranch())
+            dock.setChanges(listOf(DiffFileDto("base.kt", 11, 3)))
+            dock.setLocal(listOf(DiffFileDto("src/A.kt", 2, 1)))
+        }
+
+        val core = edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }
+        assertFalse(edt { core.isVisible })
+    }
+
+    fun `test header false keeps the dock hidden while busy even with a PR`() {
+        // With header=true (test dock keeps PR row while session is busy) the PR keeps the dock
+        // visible through a busy session; header=false has no PR row to fall back on, so busy hides
+        // it exactly like a PR-less branch.
+        val dock = dockNoHeader()
+        edt {
+            dock.setBranch(prBranch())
+            dock.setHasMessages(true)
+            dock.setBusy(true)
+        }
+        assertFalse(edt { dock.isVisible })
+    }
+
+    fun `test header false shows the action row for a branch with a PR`() {
+        val dock = dockWithNewWorktreeNoHeader()
+        edt {
+            dock.setBranch(prBranch())
+            dock.setHasMessages(true)
+        }
+        assertTrue(edt { dock.isVisible })
+        assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
+        assertTrue(update(ChatNewWorktreeAction(), dock).isVisible)
+        val core = edt { UIUtil.findComponentOfType(dock, PrHeaderView::class.java)!! }
+        assertFalse(edt { core.isVisible })
+    }
+
     fun `test PR and standalone paths use compact retained summaries`() {
         val dock = dock()
         edt {
@@ -337,6 +378,11 @@ class BranchDockTest : BasePlatformTestCase() {
     private fun dock(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}) }
 
     private fun dockWithNewWorktree(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}) }
+
+    private fun dockNoHeader(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, header = false) }
+
+    private fun dockWithNewWorktreeNoHeader(): BranchDock =
+        edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}, header = false) }
 
     private fun prBranch() = BranchStatusDto(
         branch = "feature-x",

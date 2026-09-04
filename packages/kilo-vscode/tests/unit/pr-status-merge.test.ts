@@ -63,6 +63,49 @@ describe("mergePRStatus", () => {
     },
   )
 
+  it.each([
+    { baseRefOid: "c".repeat(40), headRefOid: "b".repeat(40) },
+    { baseRefOid: "a".repeat(40), headRefOid: "c".repeat(40) },
+    {},
+  ])("drops stale threads but keeps the conversation across revisions: %j", (next) => {
+    const conversation = [{ id: "c1", author: "alice", body: "LGTM" }]
+    const prev = status({
+      baseRefOid: "a".repeat(40),
+      headRefOid: "b".repeat(40),
+      comments: threads,
+      unresolvedThreads: 1,
+      conversation,
+    })
+    const merged = mergePRStatus(prev, status(next))
+    expect(merged.comments).toBeUndefined()
+    expect(merged.unresolvedThreads).toBeUndefined()
+    expect(merged.conversation).toEqual(conversation)
+  })
+
+  it("keeps cached previews for same-revision lightweight or failed thread fetches", () => {
+    const refs = { baseRefOid: "a".repeat(40), headRefOid: "b".repeat(40) }
+    const comments = {
+      ...threads,
+      comments: [
+        {
+          ...threads.comments.at(0)!,
+          preview: {
+            patch: "@@ -1,1 +1,1 @@\n-before\n+after",
+            line: 1,
+            side: "additions" as const,
+            base: refs.baseRefOid,
+            head: refs.headRefOid,
+            top: false,
+            bottom: false,
+          },
+        },
+      ],
+    }
+    const merged = mergePRStatus(status({ ...refs, comments }), status({ ...refs, unresolvedThreads: 0 }))
+    expect(merged.comments).toEqual(comments)
+    expect(merged.unresolvedThreads).toBe(0)
+  })
+
   it("passes the first status through untouched", () => {
     expect(mergePRStatus(undefined, status()).comments).toBeUndefined()
   })
@@ -71,5 +114,11 @@ describe("mergePRStatus", () => {
     const next = mergePRStatus(status({ unresolvedThreads: 1, comments: threads }), status({ unresolvedThreads: 0 }))
     expect(next.unresolvedThreads).toBe(0)
     expect(next.comments).toEqual(threads)
+  })
+
+  it("keeps the previous conversation when a refresh reports none", () => {
+    const convo = [{ id: "c1", author: "alice", body: "LGTM" }]
+    const next = mergePRStatus(status({ conversation: convo }), status({ title: "renamed" }))
+    expect(next.conversation).toEqual(convo)
   })
 })

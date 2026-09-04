@@ -1,7 +1,24 @@
 import { createHash } from "node:crypto"
 import { serialize } from "../../util/serialize"
-import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
-import type { PRResult, GhComment, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
+import type {
+  CheckStatus,
+  PRCheck,
+  PRComment,
+  PRConversationComment,
+  PRReviewer,
+  PRStatus,
+  ReviewerState,
+} from "../types"
+import type {
+  PRResult,
+  GhAuthor,
+  GhComment,
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
   const data = JSON.parse(json)
@@ -18,6 +35,8 @@ export function parsePRResult(json: string): PRResult | null {
           : null
   const result: PRResult = {
     number: data.number,
+    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
+    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
     title: data.title ?? "",
     body: data.body ?? "",
     url: data.url ?? "",
@@ -139,8 +158,9 @@ function parseReplies(nodes: GhComment[]): PRComment["replies"] {
 
 function parseThread(thread: GhThread): PRComment | undefined {
   const nodes = thread.comments?.nodes ?? []
-  const first = nodes[0]
+  const first = nodes.at(0)
   if (!first) return undefined
+  const current = thread.line === undefined ? first.line : thread.line
   return {
     id: first.id,
     threadId: thread.id ?? first.id,
@@ -153,6 +173,7 @@ function parseThread(thread: GhThread): PRComment | undefined {
     outdated: thread.isOutdated ?? false,
     createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
     diffHunk: first.diffHunk,
+    ...(typeof current === "number" ? {} : { previewUnavailable: true }),
     replies: parseReplies(nodes),
   }
 }
@@ -184,6 +205,55 @@ export function parseReviewers(requests: GhReviewRequest[], reviews: GhReview[])
   return [...map.values()]
 }
 
+function bot(author?: GhAuthor & { __typename?: string }): boolean {
+  if (!author?.login) return false
+  return author.__typename === "Bot" || author.login.endsWith("[bot]") || author.login === "kilo-code-bot"
+}
+
+function commentItem(node: GhConversationComment): PRConversationComment | null {
+  if (!node.id || !node.body?.trim()) return null
+  return {
+    id: node.id,
+    author: node.author?.login ?? "unknown",
+    avatar: node.author?.avatarUrl,
+    body: node.body,
+    createdAt: node.createdAt ? new Date(node.createdAt).getTime() : undefined,
+    url: node.url,
+    isBot: bot(node.author) || undefined,
+  }
+}
+
+function reviewItem(node: GhReviewWithBody): PRConversationComment | null {
+  if (!node.id || !node.body?.trim()) return null
+  return {
+    id: node.id,
+    author: node.author?.login ?? "unknown",
+    avatar: node.author?.avatarUrl,
+    body: node.body,
+    createdAt: node.submittedAt ? new Date(node.submittedAt).getTime() : undefined,
+    url: node.url,
+    state: REVIEWER_STATE[node.state ?? ""],
+    isBot: bot(node.author) || undefined,
+  }
+}
+
+export function parseConversation(
+  comments: GhConversationComment[],
+  reviews: GhReviewWithBody[],
+): PRConversationComment[] {
+  const items: PRConversationComment[] = []
+  for (const node of comments) {
+    const item = commentItem(node)
+    if (item) items.push(item)
+  }
+  for (const node of reviews) {
+    const item = reviewItem(node)
+    if (item) items.push(item)
+  }
+  items.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
+  return items
+}
+
 /**
  * Short, user-facing reason from a failed `gh` invocation. The raw message
  * repeats the whole command line, which is useless inside a comment card.
@@ -204,10 +274,12 @@ export function ghErrorReason(message: string): string {
  */
 export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
   if (!prev || prev.number !== next.number || prev.url !== next.url) return next
+  const current = prev.baseRefOid === next.baseRefOid && prev.headRefOid === next.headRefOid ? prev : undefined
   return {
     ...next,
-    comments: next.comments ?? prev.comments,
-    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? prev.unresolvedThreads,
+    comments: next.comments ?? current?.comments,
+    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? current?.unresolvedThreads,
+    conversation: next.conversation ?? prev.conversation,
   }
 }
 
@@ -215,6 +287,8 @@ export function signature(pr: PRStatus): string {
   return serialize([
     pr.url,
     pr.number,
+    pr.baseRefOid ?? null,
+    pr.headRefOid ?? null,
     pr.title,
     pr.state,
     pr.review,
@@ -227,6 +301,7 @@ export function signature(pr: PRStatus): string {
       pr.unresolvedThreads ?? null,
       commentsSig(pr.comments?.comments),
     ],
+    pr.conversation?.map((c) => [c.id, c.author, c.body, c.state ?? "", c.isBot ? 1 : 0]) ?? [],
   ])
 }
 

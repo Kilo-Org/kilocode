@@ -36,20 +36,15 @@ function comment(overrides: Partial<PRComment> = {}): PRComment {
 }
 
 describe("remote diff comments", () => {
-  it("anchors explicit additions to current patch text", () => {
-    const result = mapRemoteComments([comment({ file: diff.file, line: 2, side: "additions" })], [diff])
-
-    expect(result.anchors.get(diff.file)?.[0]).toMatchObject({ side: "additions", line: 2 })
+  it.each([
+    ["additions", patch],
+    ["deletions", patch],
+    ["additions", undefined],
+  ] as const)("anchors explicit %s with optional patch metadata", (side, source) => {
+    const value = comment({ file: diff.file, line: 2, originalLine: 2, side })
+    const result = mapRemoteComments([value], [{ ...diff, patch: source }])
+    expect(result.anchors.get(diff.file)?.at(0)).toMatchObject({ side, line: 2 })
     expect(result.outside).toHaveLength(0)
-  })
-
-  it("anchors explicit locations without patch metadata when the current line exists", () => {
-    const result = mapRemoteComments(
-      [comment({ file: diff.file, line: 2, side: "additions" })],
-      [{ ...diff, patch: undefined }],
-    )
-
-    expect(result.anchors.get(diff.file)?.[0]).toMatchObject({ side: "additions", line: 2 })
   })
 
   it("anchors a multi-line addition at the end of its current range", () => {
@@ -69,66 +64,20 @@ describe("remote diff comments", () => {
     expect(result.anchors.get(value.file)?.[0]).toMatchObject({ side: "additions", line: 3 })
   })
 
-  it("uses originalLine to validate moved text while placing at the current line", () => {
-    const moved: WorktreeFileDiff = {
-      ...diff,
-      after: "const before = true\nconst inserted = true\nconst added = false\nconst after = true",
-      patch: [
-        "@@ -1,3 +1,4 @@",
-        " const before = true",
-        "+const inserted = true",
-        "+const added = false",
-        " const after = true",
-      ].join("\n"),
-    }
-    const result = mapRemoteComments(
-      [
-        comment({
-          file: moved.file,
-          line: 3,
-          originalLine: 2,
-          side: "additions",
-          diffHunk: "@@ -2 +2 @@\n+const added = false",
-        }),
-      ],
-      [moved],
-    )
-
-    expect(result.anchors.get(moved.file)?.[0]).toMatchObject({ side: "additions", line: 3 })
-    expect(result.outside).toHaveLength(0)
-  })
-
-  it("uses originalLine for explicit deletions and never treats it as an addition", () => {
-    const result = mapRemoteComments(
-      [comment({ file: diff.file, line: 2, originalLine: 2, side: "deletions" })],
-      [diff],
-    )
-
-    expect(result.anchors.get(diff.file)?.[0]).toMatchObject({ side: "deletions", line: 2 })
-  })
-
-  it("uses the current deletion line and validates the original hunk location", () => {
+  it.each(["additions", "deletions"] as const)("places moved %s at the current line using originalLine", (side) => {
     const moved = {
       ...diff,
       before: "const before = true\nconst inserted = true\nconst removed = true\nconst after = true",
-      after: "const before = true\nconst inserted = true\nconst after = true",
+      after: "const before = true\nconst inserted = true\nconst added = false\nconst after = true",
       patch:
-        "@@ -1,4 +1,3 @@\n const before = true\n const inserted = true\n-const removed = true\n const after = true",
+        "@@ -1,4 +1,4 @@\n const before = true\n const inserted = true\n-const removed = true\n+const added = false\n const after = true",
     }
-    const result = mapRemoteComments(
-      [
-        comment({
-          file: diff.file,
-          line: 3,
-          originalLine: 2,
-          side: "deletions",
-          diffHunk: "@@ -2 +2,0 @@\n-const removed = true",
-        }),
-      ],
-      [moved],
-    )
+    const hunk = side === "additions" ? "@@ -2 +2 @@\n+const added = false" : "@@ -2 +2,0 @@\n-const removed = true"
+    const value = comment({ file: diff.file, line: 3, originalLine: 2, side, diffHunk: hunk })
+    const result = mapRemoteComments([value], [moved])
 
-    expect(result.anchors.get(diff.file)?.[0]).toMatchObject({ side: "deletions", line: 3 })
+    expect(result.anchors.get(diff.file)?.at(0)).toMatchObject({ side, line: 3 })
+    expect(result.outside).toHaveLength(0)
   })
 
   it("infers a legacy deletion only when the hunk identifies one side", () => {
@@ -140,47 +89,119 @@ describe("remote diff comments", () => {
     expect(result.anchors.get(diff.file)?.[0]).toMatchObject({ side: "deletions", line: 2 })
   })
 
-  it("puts stale, outdated, line-less, summarized, and missing comments outside", () => {
-    const result = mapRemoteComments(
-      [
-        comment({ threadId: "stale", file: diff.file, line: 2, side: "additions" }),
-        comment({ threadId: "outdated", file: diff.file, line: 2, side: "additions", outdated: true }),
-        comment({ threadId: "line-less", file: diff.file }),
-        comment({ threadId: "missing", file: "gone.ts", line: 1, side: "additions" }),
-      ],
-      [
-        { ...diff, after: "const before = true\nconst changed = true\nconst after = true" },
-        { ...diff, file: "hidden.ts", summarized: true },
-      ],
-    )
+  it.each(["additions", "deletions"] as const)("rejects repeated %s text from a different hunk location", (side) => {
+    const original = ["function alpha() {", "  return 1", "}"]
+    const lines = ["function beta() {", "  return 2", "}", "", ...original]
+    const sign = side === "additions" ? "+" : "-"
+    const header = side === "additions" ? "@@ -0,0 +1,3 @@" : "@@ -1,3 +0,0 @@"
+    const current = side === "additions" ? "@@ -0,0 +1,7 @@" : "@@ -1,7 +0,0 @@"
+    const value = comment({
+      file: diff.file,
+      line: 3,
+      originalLine: 3,
+      side,
+      diffHunk: [header, ...original.map((line) => sign + line)].join("\n"),
+    })
+    const source = {
+      ...diff,
+      before: side === "deletions" ? lines.join("\n") : "",
+      after: side === "additions" ? lines.join("\n") : "",
+      patch: [current, ...lines.map((line) => sign + line)].join("\n"),
+    }
+    const wrong = mapRemoteComments([value], [source])
+    expect(wrong.anchors.size).toBe(0)
+    expect(wrong.outside).toEqual([value])
 
-    expect(result.anchors.size).toBe(0)
-    expect(result.outside.map((item) => item.threadId)).toEqual(["stale", "outdated", "line-less", "missing"])
-    expect(remoteLocation(result, diff.file, "outdated")).toBe("outside")
+    const moved = mapRemoteComments([{ ...value, line: 7 }], [source])
+    expect(moved.anchors.get(diff.file)?.at(0)?.line).toBe(7)
+    expect(moved.outside).toEqual([])
+  })
+
+  it.each([`${patch.replaceAll("\n", "\r\n")}\r\n`, "@@ -2 +2 @@\n+const added = false"])(
+    "matches CRLF source against either hunk newline format",
+    (hunk) => {
+      const result = mapRemoteComments(
+        [comment({ file: diff.file, line: 2, side: "additions", diffHunk: hunk })],
+        [{ ...diff, after: `${diff.after.replaceAll("\n", "\r\n")}\r\n` }],
+      )
+      expect(result.anchors.get(diff.file)?.at(0)?.line).toBe(2)
+      expect(result.outside).toEqual([])
+    },
+  )
+
+  it("validates only the original hunk containing the comment", () => {
+    const hunk =
+      "@@ -1 +1 @@\n-old first\n+first\n@@ -5,3 +5,3 @@\n const before = true\n-const removed = true\n+const added = false\n const after = true"
+    const value = comment({ file: diff.file, line: 6, side: "additions", diffHunk: hunk })
+    const result = mapRemoteComments(
+      [value],
+      [{ ...diff, patch: undefined, after: `changed first\n\n\n\n${diff.after}` }],
+    )
+    expect(result.anchors.get(diff.file)?.at(0)?.line).toBe(6)
+    expect(result.outside).toEqual([])
+  })
+
+  it("shows failed detail loads outside until a successful retry", () => {
+    const value = comment({ file: diff.file, line: 2, side: "additions" })
+    const result = mapRemoteComments([value], [{ ...diff, summarized: true, failed: true }])
+    expect(result.pending.size).toBe(0)
+    expect(result.outside).toEqual([value])
+    expect(remoteLocation(result, diff.file, value.threadId)).toBe("outside")
+
+    const recovered = mapRemoteComments([value], [diff])
+    expect(recovered.outside).toEqual([])
+    expect(remoteLocation(recovered, diff.file, value.threadId)).toBe("inline")
+  })
+
+  it("keeps summarized-file threads pending until detail is available", () => {
+    const comments = [
+      comment({ file: diff.file, line: 2, side: "additions" }),
+      comment({ threadId: "range", file: diff.file, startLine: 2, side: "additions" }),
+    ]
+    const pending = mapRemoteComments(comments, [
+      { ...diff, before: "", after: "", patch: undefined, summarized: true },
+    ])
+
+    expect(pending.anchors.size).toBe(0)
+    expect(pending.outside).toEqual([])
+    expect(pending.pending.get(diff.file)).toEqual(comments)
+    expect(remoteLocation(pending, diff.file, "thread")).toBe("pending")
+    expect(remoteLocation(pending, diff.file, "range")).toBe("pending")
+
+    const loaded = mapRemoteComments(comments, [diff])
+    expect(loaded.pending.size).toBe(0)
+    expect(loaded.outside).toEqual([])
+    expect(remoteLocation(loaded, diff.file, "thread")).toBe("inline")
+
+    const stale = mapRemoteComments(comments, [{ ...diff, after: "changed" }])
+    expect(stale.pending.size).toBe(0)
+    expect(stale.outside).toEqual(comments)
+    expect(remoteLocation(stale, diff.file, "thread")).toBe("outside")
+  })
+
+  it("does not defer outdated, invalid, image, or missing-file threads", () => {
+    const comments = [
+      comment({ threadId: "outdated", file: diff.file, line: 2, outdated: true }),
+      comment({ threadId: "line-less", file: diff.file }),
+      comment({ threadId: "invalid", file: diff.file, line: 0 }),
+      comment({ threadId: "image", file: "image.png", line: 2 }),
+      comment({ threadId: "missing", file: "gone.ts", line: 2 }),
+    ]
+    const result = mapRemoteComments(comments, [
+      { ...diff, summarized: true },
+      { ...diff, file: "image.png", kind: "image", summarized: true },
+    ])
+
+    expect(result.pending.size).toBe(0)
+    expect(result.outside).toEqual(comments)
   })
 
   it("does not anchor text found elsewhere in the original hunk", () => {
-    const result = mapRemoteComments(
-      [
-        comment({
-          file: diff.file,
-          line: 2,
-          side: "additions",
-          diffHunk: "@@ -0,0 +1,2 @@\n+const added = false\n+different",
-        }),
-      ],
-      [diff],
-    )
+    const hunk = "@@ -0,0 +1,2 @@\n+const added = false\n+different"
+    const value = comment({ file: diff.file, line: 2, side: "additions", diffHunk: hunk })
+    const result = mapRemoteComments([value], [diff])
     expect(result.anchors.size).toBe(0)
     expect(result.outside).toHaveLength(1)
-  })
-
-  it("matches CRLF files against normalized GitHub hunks", () => {
-    const result = mapRemoteComments(
-      [comment({ file: diff.file, line: 2, side: "additions", diffHunk: "@@ -2 +2 @@\n+const added = false" })],
-      [{ ...diff, after: `${diff.after.replaceAll("\n", "\r\n")}\r\n` }],
-    )
-    expect(result.anchors.get(diff.file)?.[0]?.line).toBe(2)
   })
 
   it("does not treat a trailing newline as an extra source line", () => {

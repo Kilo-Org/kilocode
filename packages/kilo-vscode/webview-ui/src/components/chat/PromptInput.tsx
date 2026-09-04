@@ -29,6 +29,7 @@ import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
+import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -41,6 +42,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
@@ -65,6 +67,8 @@ import {
   failedPrompt,
   movePromptDraft,
   pendingDraftKey,
+  promotePromptDraft,
+  promptDraftKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../utils/prompt-drafts"
@@ -176,6 +180,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
   if (item.type === "file-picker")
     return (
       <>
@@ -238,6 +252,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+
+  /**
+   * True after the last menu entry of a bare `@`, which lists the entries above
+   * the files. A query ranks entries among the results it finds, so there is no
+   * group boundary left to draw.
+   */
+  const divides = (index: number) => {
+    if (mention.mentionQuery()) return false
+    const items = mention.mentionResults()
+    const item = items.at(index)
+    const next = items.at(index + 1)
+    return item !== undefined && next !== undefined && isMentionEntry(item) && !isMentionEntry(next)
+  }
 
   const boxKey = () => props.boxId ?? "prompt:default"
   const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
@@ -818,9 +845,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const appendReviews = (message: Extract<ExtensionMessage, { type: "appendReviewComments" }>) => {
-    if (message.sessionID && message.sessionID !== sid()) {
-      const key = scopeDraftKey(boxKey(), sessionDraftKey(message.sessionID))
-      reviewDrafts.set(key, mergeReviewComments(reviewDrafts.get(key) ?? [], message.comments))
+    const target = message.sessionID
+      ? promptDraftKey(boxKey(), message.sessionID, {
+          draft: props.pendingSessionID ?? session.draftSessionID(),
+          current: session.currentSessionID(),
+        })
+      : draftKey()
+    if (!target) return
+    if (target !== draftKey()) {
+      reviewDrafts.set(target, mergeReviewComments(reviewDrafts.get(target) ?? [], message.comments))
       return
     }
     const empty =
@@ -839,11 +872,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const source = scopeDraftKey(boxKey(), raw)
     const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
     if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
+    const from = reviewDrafts.get(source)
+    const to = reviewDrafts.get(target)
+    if (from && to) {
+      reviewDrafts.set(target, mergeReviewComments(from, to))
+      reviewDrafts.delete(source)
+    }
     movePromptDraft(
       { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references },
       source,
       target,
     )
+    if (message.draftID) promotePromptDraft(boxKey(), message.draftID, message.session.id)
     if (
       message.draftID &&
       !session.currentSessionID() &&
@@ -862,9 +902,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "appendChatBoxMessage") appendBox(message)
 
-    if (message.type === "appendReviewComments") {
-      appendReviews(message)
-    }
+    if (message.type === "appendReviewComments") appendReviews(message)
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
@@ -1489,7 +1527,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     >
                       <MentionItemContent item={item} />
                     </div>
-                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                    <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
                   </>

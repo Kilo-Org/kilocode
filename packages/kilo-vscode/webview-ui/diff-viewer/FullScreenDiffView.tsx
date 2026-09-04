@@ -142,7 +142,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const remote = createRemoteCommentController({
     key: () => props.sessionKey,
     comments: () => props.remoteComments,
-    loading: () => props.loadingFiles,
     diffs: () => rows(),
     active: () => true,
     activeTerminalId: () => props.activeTerminalId,
@@ -197,10 +196,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     const target = focusFile()
     return rows().flatMap((diff, index) => (keep.has(index) || diff.file === target ? [index] : []))
   })
-  const annotations = (file: string): DiffLineAnnotation<DiffAnnotationMeta>[] => [
-    ...review.annotationsForFile(file),
-    ...remote.annotations(file),
-  ]
   const render = (annotation: DiffLineAnnotation<DiffAnnotationMeta>): HTMLElement | undefined => {
     if (annotation.metadata?.type === "remote") return remote.render(annotation.metadata)
     return review.buildAnnotation(annotation as DiffLineAnnotation<AnnotationMeta>)
@@ -457,19 +452,20 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   onReady={setVirtualizer}
                   render={(diff) => {
                     const viewport = createDiffViewport(scroller)
+                    const annotations = remote.annotations(diff.file)
                     return (
                       <ReviewDiffItem
                         diff={diff}
                         open={open}
                         viewport={viewport}
-                        request={request}
+                        request={props.onRequestDiff ? request : undefined}
                         loading={() => props.loadingFiles?.has(diff.file) ?? false}
                         comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
                         diffStyle={() => props.diffStyle}
                         markdownRender={() => props.markdownRender ?? false}
                         handle={(handle) => register(diff.file, handle)}
                         scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
-                        annotations={() => annotations(diff.file)}
+                        annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
                         renderAnnotation={render}
                         onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                         onOpenFile={props.onOpenFile}

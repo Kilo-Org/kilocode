@@ -1,4 +1,4 @@
-import { batch, createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
+import { batch, createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { thread } from "../../../src/shared/pr-review"
 import type { PRReviewCommentData } from "../../../src/shared/review-comments"
 import type { PRStatus } from "../../src/types/messages"
@@ -20,8 +20,12 @@ export function createPRReview(opts: Options) {
   const [target, setTarget] = createSignal<{
     key: string
     comment: PRComment
-    focus: { id: string; file: string }
+    pending: boolean
   }>()
+  const focused = createMemo(() => {
+    const comment = target()?.comment
+    return comment?.file ? { id: comment.threadId, file: comment.file } : undefined
+  })
   const key = (context?: string) => `${opts.project() ?? "single"}\0${context ?? ""}`
   const comments = (context = opts.context()): PRComment[] => {
     if (!context) return []
@@ -31,10 +35,7 @@ export function createPRReview(opts: Options) {
     if (list.some((comment) => comment.threadId === item.comment.threadId)) return list
     return [...list, { ...item.comment, outdated: true }]
   }
-  const focus = (scope?: string) => {
-    const item = target()
-    return item?.key === key(scope) ? item.focus : undefined
-  }
+  const focus = (scope?: string) => (target()?.key === key(scope) ? focused() : undefined)
   const open = (comment: PRComment) => {
     const context = opts.context()
     if (!context || !comment.file) return false
@@ -43,7 +44,7 @@ export function createPRReview(opts: Options) {
     if (!value.file) return false
     batch(() => {
       opts.select(`${context}#branch`)
-      setTarget({ key: key(`${context}#branch`), comment: value, focus: { id: value.threadId, file: value.file! } })
+      setTarget({ key: key(`${context}#branch`), comment: value, pending: !current })
       opts.show()
     })
     return true
@@ -69,5 +70,13 @@ export function createPRReview(opts: Options) {
       { defer: true },
     ),
   )
+  createEffect(() => {
+    const item = target()
+    if (!item?.pending || item.key !== key(`${opts.context()}#branch`)) return
+    const live = opts
+      .statuses()
+      [opts.context() ?? ""]?.comments?.comments.find((comment) => comment.threadId === item.comment.threadId)
+    if (live?.file) setTarget({ ...item, comment: live, pending: false })
+  })
   return { comments, focus, open }
 }

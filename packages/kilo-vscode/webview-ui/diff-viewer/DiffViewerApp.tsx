@@ -12,7 +12,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "./FullScreenDiffView"
-import { mergeWorktreeDiffs } from "./diff-state"
+import { mergeWorktreeDiffs, resolveDiffFile } from "./diff-state"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { ConfigProvider } from "../src/context/config"
@@ -148,10 +148,8 @@ const DiffViewerContent: Component = () => {
     }
 
     if (msg.type === "diffViewer.diffFile") {
+      setDiffs((prev) => resolveDiffFile(prev, msg.file, msg.diff))
       markLoadingFile(msg.file, false)
-      const fresh = msg.diff
-      if (!fresh) return
-      setDiffs((prev) => prev.map((entry) => (entry.file === fresh.file ? fresh : entry)))
       return
     }
 
@@ -178,8 +176,11 @@ const DiffViewerContent: Component = () => {
       return
     }
     if (msg.type === "setAvailableSources") {
-      setAvailableSources(msg.descriptors)
-      setCurrentSourceId(msg.currentId)
+      batch(() => {
+        setAvailableSources(msg.descriptors)
+        setCurrentSourceId(msg.currentId)
+        setLoadingFiles(new Set<string>())
+      })
       return
     }
 
@@ -222,7 +223,6 @@ const DiffViewerContent: Component = () => {
       setComments([])
       setDiffStyle("unified")
       setReverting(new Set<string>())
-      setLoadingFiles(new Set<string>())
       setNotice(undefined)
     }),
   )

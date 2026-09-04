@@ -1119,6 +1119,7 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   projectId?: string
   sessionId: string
   loading: boolean
+  reset?: boolean
 }
 
 // Agent Manager: Source-level diff notice (extension → webview)

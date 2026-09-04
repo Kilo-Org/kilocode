@@ -85,12 +85,12 @@ export function createDiffRequests(opts: DiffRequestOptions) {
     ),
   )
 
-  const request = (diff: WorktreeFileDiff, visible?: () => boolean) => {
+  const request = (diff: WorktreeFileDiff, visible?: () => boolean, retry = false) => {
     const send = opts.send()
     if (!send || opts.loading()?.has(diff.file)) return
-    if (!isDiffExpandable(diff) || diff.summarized !== true) return
+    if (!isDiffExpandable(diff) || diff.summarized !== true || (diff.failed && !retry)) return
     const value = diffToken(diff)
-    if (requested.get(diff.file) === value || visible?.() === false) return
+    if ((!retry && requested.get(diff.file) === value) || visible?.() === false) return
     requested.set(diff.file, value)
     send(diff.file)
   }
@@ -98,7 +98,7 @@ export function createDiffRequests(opts: DiffRequestOptions) {
   createEffect(
     on(
       () => [opts.open(), opts.diffs(), opts.loading(), opts.send()] as const,
-      ([open, diffs]) => {
+      ([open, diffs, loading], prev) => {
         if (!opts.send()) {
           requested.clear()
           active = false
@@ -110,7 +110,7 @@ export function createDiffRequests(opts: DiffRequestOptions) {
         }
         const files = new Set(open)
         for (const file of requested.keys()) {
-          if (!files.has(file)) requested.delete(file)
+          if (!files.has(file) || (prev?.[2]?.has(file) && !loading?.has(file))) requested.delete(file)
         }
         if (opts.eager === false) return
         for (const file of open) {

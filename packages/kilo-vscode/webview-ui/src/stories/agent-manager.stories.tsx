@@ -12,10 +12,11 @@ import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
 import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
-import { SessionContext } from "../context/session"
+import { SessionContext, useSession } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
@@ -144,6 +145,56 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+function IntroductionPreview(props: { skipped?: boolean }) {
+  const intro = createIntro({
+    base: () => "main",
+    git: () => true,
+    onCreateWorktree: () => {},
+    onSelectSession: () => {},
+    onShowHistory: () => {},
+    reveal: () => {},
+    focus: () => {},
+  })
+  if (props.skipped) intro.dismiss()
+  const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  const session = {
+    ...useSession(),
+    sessions: () => [
+      {
+        id: "intro-search",
+        title: "Add settings search",
+        createdAt: ago(10),
+        updatedAt: ago(5),
+      },
+      {
+        id: "intro-login",
+        title: "Fix login validation",
+        createdAt: ago(30),
+        updatedAt: ago(15),
+      },
+    ],
+  }
+  return <SessionContext.Provider value={session}>{intro.render()}</SessionContext.Provider>
+}
+
+export const Introduction: Story = {
+  name: "Introduction",
+  render: () => (
+    <StoryProviders>
+      <IntroductionPreview />
+    </StoryProviders>
+  ),
+}
+
+export const IntroductionSkipped: Story = {
+  name: "Introduction skipped",
+  render: () => (
+    <StoryProviders>
+      <IntroductionPreview skipped />
+    </StoryProviders>
+  ),
+}
 
 // ---------------------------------------------------------------------------
 // Wide chat layout
@@ -1939,7 +1990,17 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       outdated: false,
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
-      after: ["  return result", "}", ""],
+      side: "additions",
+      preview: {
+        patch:
+          '@@ -40,6 +40,6 @@\n   const options = { timeout: 5000 }\n   const result = await\n-    execWithShellEnv("gh", args, options)\n+    execWithShellEnv("gh", args, { ...options, env: env(options) })\n   return result\n }\n ',
+        line: 42,
+        side: "additions",
+        base: "b".repeat(40),
+        head: "a".repeat(40),
+        top: true,
+        bottom: true,
+      },
       replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
     },
     {

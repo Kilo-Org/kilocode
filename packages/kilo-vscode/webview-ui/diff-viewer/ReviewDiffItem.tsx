@@ -1,5 +1,6 @@
 import { createEffect, type Accessor, type Component, Show } from "solid-js"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
@@ -25,7 +26,7 @@ type Props = {
   diff: WorktreeFileDiff
   open: Accessor<string[]>
   viewport: DiffViewport
-  request: (diff: WorktreeFileDiff, visible?: () => boolean) => void
+  request?: (diff: WorktreeFileDiff, visible?: () => boolean, retry?: boolean) => void
   active?: Accessor<boolean>
   loading: Accessor<boolean>
   comments: Accessor<number>
@@ -56,7 +57,7 @@ export const ReviewDiffItem: Component<Props> = (props) => {
 
   createEffect(() => {
     if (!props.viewport.visible() || !props.open().includes(props.diff.file) || !active()) return
-    props.request(props.diff, props.viewport.intersects)
+    props.request?.(props.diff, props.viewport.intersects)
   })
 
   return (
@@ -186,11 +187,26 @@ export const ReviewDiffItem: Component<Props> = (props) => {
             when={props.diff.summarized !== true}
             fallback={
               <div class="am-diff-summary-state">
-                <Show when={props.loading()} fallback={<span>Diff preview loads on demand.</span>}>
+                <Show
+                  when={props.loading()}
+                  fallback={
+                    <span>{props.diff.failed ? t("common.requestFailed") : "Diff preview loads on demand."}</span>
+                  }
+                >
                   <Show when={props.showLoadingSpinner}>
                     <Spinner />
                   </Show>
                   <span>Loading diff...</span>
+                </Show>
+                <Show when={props.diff.failed && props.request}>
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    disabled={props.loading()}
+                    onClick={() => props.request?.(props.diff, undefined, true)}
+                  >
+                    {t("common.retry")}
+                  </Button>
                 </Show>
               </div>
             }
