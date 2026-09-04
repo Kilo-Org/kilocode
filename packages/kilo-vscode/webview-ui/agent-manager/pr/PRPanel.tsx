@@ -26,6 +26,7 @@ interface PRPanelProps {
   jump?: number
   onJump?: (id: number) => void
   onClose: () => void
+  onRefresh: () => void
   onOpenExternal: () => void
   onOpenFile?: (file: string, line?: number) => void
   onOpenUrl?: (url: string) => void
@@ -192,6 +193,15 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          <Tooltip value={t("common.refresh")} placement="bottom">
+            <IconButton
+              icon="refresh"
+              size="small"
+              variant="ghost"
+              aria-label={t("common.refresh")}
+              onClick={props.onRefresh}
+            />
+          </Tooltip>
           <Tooltip value={t("agentManager.pr.copyLink")} placement="bottom">
             <CopyButton text={props.pr.url} label={t("agentManager.pr.copyLink")} />
           </Tooltip>
