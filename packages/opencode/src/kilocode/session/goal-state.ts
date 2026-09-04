@@ -1,10 +1,13 @@
 export namespace GoalState {
-  const runs = new Map<string, object>()
-  const pending = new Map<string, object>()
+  type Token = { cancel?: () => void }
+  const runs = new Map<string, Token>()
+  const pending = new Map<string, Token>()
 
-  export function prepare(id: string) {
-    const token = {}
+  export function prepare(id: string, cancel?: () => void) {
+    const previous = pending.get(id)
+    const token = { cancel }
     pending.set(id, token)
+    previous?.cancel?.()
     const current = () => pending.get(id) === token
     return {
       current,
@@ -22,15 +25,24 @@ export namespace GoalState {
     return { text: goal.text, active: "active" in goal && goal.active === true }
   }
 
-  export function start(id: string) {
-    const token = {}
+  export function start(id: string, cancel?: () => void) {
+    const previous = runs.get(id)
+    const token = { cancel }
     runs.set(id, token)
+    previous?.cancel?.()
     return () => runs.get(id) === token
   }
 
   export function pause(id: string, preserve = false) {
-    if (!preserve) pending.delete(id)
-    return runs.delete(id)
+    if (!preserve) {
+      const token = pending.get(id)
+      pending.delete(id)
+      token?.cancel?.()
+    }
+    const token = runs.get(id)
+    const active = runs.delete(id)
+    token?.cancel?.()
+    return active
   }
 
   export function active(id: string) {

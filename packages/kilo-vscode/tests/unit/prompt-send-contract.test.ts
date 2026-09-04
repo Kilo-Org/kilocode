@@ -319,16 +319,17 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
-  it("sendCommand seeds the pending agent before resolving the draft-scoped agent", () => {
+  it("sendCommand seeds the pending agent independently of model-using command overrides", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+      /const scope = effectiveDraftID \?\? sid\s*if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)\s*if \(effectiveSelection\)/,
     )
   })
 
-  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+  it("sendMessage and model-using commands post the agent returned by promptAgent", () => {
     expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
-    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const selection = effectiveSelection && {")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("agent: promptAgent(scope)")
     expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
   })
 

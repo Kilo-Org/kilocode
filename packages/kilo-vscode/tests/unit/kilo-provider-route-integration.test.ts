@@ -481,31 +481,45 @@ describe("KiloProvider route integration", () => {
     expect(failed, "expected a sendMessageFailed message for the ambiguous share command").toBeTruthy()
   })
 
-  it.each(["Fix failing tests", "", "pause", "resume", "clear"])(
-    "completes goal %j without checkpoints, retries, or run status changes",
-    async (args) => {
-      const { connection } = mockConnection()
-      const calls: unknown[] = []
-      const client = connection.getClient()
-      client.session.command = async (input) => {
-        calls.push(input)
-        return {
-          data: {
-            parts: [
-              { type: "text", text: "Goal paused" },
-              { type: "reasoning", text: "hidden" },
-            ],
-          },
-        } as Awaited<ReturnType<typeof client.session.command>>
-      }
-      const provider = new KiloProvider({} as never, connection, undefined, {
-        rootDirectory: () => "/goal/worktree",
-      })
-      const internal = provider as unknown as ProviderInternals
-      connect(internal)
-      internal.isWebviewReady = true
-      const sent: unknown[] = []
-      internal.webview = { postMessage: async (message) => sent.push(message) }
+  function goal(error?: string) {
+    const { connection } = mockConnection()
+    const calls: unknown[] = []
+    const sent: unknown[] = []
+    const client = connection.getClient()
+    client.session.command = async (input) => {
+      calls.push(input)
+      return (
+        error
+          ? { error, response: new Response(null, { status: 409 }) }
+          : {
+              data: {
+                parts: [
+                  { type: "text", text: "Goal paused" },
+                  { type: "reasoning", text: "hidden" },
+                ],
+              },
+            }
+      ) as Awaited<ReturnType<typeof client.session.command>>
+    }
+    const internal = new KiloProvider({} as never, connection, undefined, {
+      rootDirectory: () => "/goal/worktree",
+    }) as unknown as ProviderInternals
+    connect(internal)
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+    return { internal, calls, sent }
+  }
+
+  it.each([
+    { args: "Fix failing tests", control: false },
+    { args: "resume", control: false },
+    { args: "", control: true },
+    { args: "pause", control: true },
+    { args: "clear", control: true },
+  ])(
+    "waits for checkpoints before starting or resuming goals but sends controls immediately: %j",
+    async ({ args, control }) => {
+      const { internal, calls, sent } = goal()
       const pending = Promise.withResolvers<void>()
       const retry = new AbortController()
       internal.checkpoints.set("goal-session", pending.promise)
@@ -513,13 +527,34 @@ describe("KiloProvider route integration", () => {
       internal.sessionStatusMap.set("goal-session", "busy")
       const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
       try {
-        await internal.handleSendCommand("goal", args, "goal-message", "goal-session")
+        const send = internal.handleSendCommand(
+          "goal",
+          args,
+          "goal-message",
+          "goal-session",
+          undefined,
+          "test",
+          "selected",
+          "ask",
+          "high",
+        )
+        await Promise.resolve()
+        await Promise.resolve()
+        expect(calls).toHaveLength(control ? 1 : 0)
+        if (!control) {
+          expect(sent).not.toContainEqual({ type: "sessionCommandCompleted", messageID: "goal-message" })
+          pending.resolve()
+        }
+        await send
         expect(calls).toHaveLength(1)
         expect(calls.at(0)).toMatchObject({
           sessionID: "goal-session",
           directory: "/goal/worktree",
           command: "goal",
           arguments: args,
+          model: control ? undefined : "test/selected",
+          agent: control ? undefined : "ask",
+          variant: control ? undefined : "high",
         })
         expect(sent).toContainEqual({ type: "sessionCommandCompleted", messageID: "goal-message" })
         expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionStatus" }))
@@ -533,19 +568,25 @@ describe("KiloProvider route integration", () => {
     },
   )
 
+  it("does not resume a goal when the pending checkpoint fails", async () => {
+    const { internal, calls, sent } = goal()
+    const pending = Promise.withResolvers<void>()
+    internal.checkpoints.set("goal-session", pending.promise)
+    const send = internal.handleSendCommand("goal", "resume", "goal-message", "goal-session")
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(calls).toHaveLength(0)
+    pending.reject(new Error("Checkpoint failed"))
+    await send
+    expect(calls).toHaveLength(0)
+    expect(sent).toContainEqual(
+      expect.objectContaining({ type: "sendMessageFailed", messageID: "goal-message", error: "Checkpoint failed" }),
+    )
+    expect(sent).not.toContainEqual({ type: "sessionCommandCompleted", messageID: "goal-message" })
+  })
+
   it("reports goal command errors without marking an active run idle", async () => {
-    const { connection } = mockConnection()
-    const client = connection.getClient()
-    client.session.command = async () =>
-      ({ error: "Goal is unavailable", response: new Response(null, { status: 409 }) }) as Awaited<
-        ReturnType<typeof client.session.command>
-      >
-    const provider = new KiloProvider({} as never, connection)
-    const internal = provider as unknown as ProviderInternals
-    connect(internal)
-    internal.isWebviewReady = true
-    const sent: unknown[] = []
-    internal.webview = { postMessage: async (message) => sent.push(message) }
+    const { internal, sent } = goal("Goal is unavailable")
     internal.sessionStatusMap.set("goal-session", "busy")
     await internal.handleSendCommand("goal", "resume", undefined, "goal-session")
     expect(sent).toContainEqual(expect.objectContaining({ type: "sendMessageFailed", error: "Goal is unavailable" }))

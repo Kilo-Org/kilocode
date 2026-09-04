@@ -23,6 +23,12 @@ export namespace KiloRun {
     process.exit(1)
   }
 
+  export function validateGoal(text: string) {
+    return ["", "pause", "clear"].includes(text.trim())
+      ? undefined
+      : "Goal start and resume require the TUI. Run kilo, then use /goal <text> or /goal resume."
+  }
+
   export async function goal(
     sdk: KiloClient,
     sessionID: string,
@@ -31,9 +37,8 @@ export namespace KiloRun {
   ) {
     try {
       const action = text.trim()
-      if (!["", "pause", "clear"].includes(action)) {
-        throw new Error("Goal start and resume require the TUI. Run kilo, then use /goal <text> or /goal resume.")
-      }
+      const error = validateGoal(action)
+      if (error) throw new Error(error)
       const result = await sdk.session.command(
         { sessionID, command: "goal", arguments: action },
         { throwOnError: true },

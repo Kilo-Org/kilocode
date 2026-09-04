@@ -7,14 +7,10 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useToast } from "@tui/ui/toast"
 import { errorMessage } from "@tui/util/error"
+import { GoalState } from "@/kilocode/session/goal-state"
 
 export namespace GoalPrompt {
-  export function read(metadata?: Record<string, unknown> | null) {
-    const goal = metadata?.["kilo.goal"]
-    if (!goal || typeof goal !== "object" || !("text" in goal) || typeof goal.text !== "string" || !goal.text.trim())
-      return undefined
-    return { text: goal.text, active: "active" in goal && goal.active === true }
-  }
+  export const read = GoalState.read
 
   export function feedback(
     command: string,

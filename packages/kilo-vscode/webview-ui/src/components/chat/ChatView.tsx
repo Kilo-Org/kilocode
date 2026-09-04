@@ -397,52 +397,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </Show>
             <SessionDock
               blocked={dockBlocked()}
-              hasActions={() => !props.readonly && !goal()?.active && hasActions(hasMessages())}
-              actions={() => renderActions(hasMessages())}
+              hasActions={() => !props.readonly && !goal() && hasActions(hasMessages())}
+              actions={() => !goal() && renderActions(hasMessages())}
+              readonly={props.readonly}
             />
-            <Show when={goal()}>
-              {(goal) => (
-                <DropdownMenu placement="top-start" gutter={4}>
-                  <Tooltip
-                    value={`${language.t(goal().active ? "session.goal.active" : "session.goal.paused")}: ${goal().text}`}
-                    contentStyle={{ "max-width": "min(320px, calc(100vw - 16px))" }}
-                    placement="top"
-                  >
-                    <DropdownMenu.Trigger
-                      as={Button}
-                      variant="ghost"
-                      size="small"
-                      class="session-goal-trigger"
-                      disabled={props.readonly}
-                      aria-label={language.t("session.goal.label")}
-                    >
-                      <Icon name="chevron-down" size="small" />
-                      <span>
-                        {language.t("session.goal.label")}: {goal().text}
-                      </span>
-                    </DropdownMenu.Trigger>
-                  </Tooltip>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content>
-                      <DropdownMenu.Item
-                        disabled={!server.isConnected()}
-                        onSelect={() => session.sendCommand("goal", goal().active ? "pause" : "resume")}
-                      >
-                        <DropdownMenu.ItemLabel>
-                          {language.t(goal().active ? "session.goal.pause" : "session.goal.resume")}
-                        </DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        disabled={!server.isConnected()}
-                        onSelect={() => session.sendCommand("goal", "clear")}
-                      >
-                        <DropdownMenu.ItemLabel>{language.t("session.goal.clear")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu>
-              )}
-            </Show>
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}

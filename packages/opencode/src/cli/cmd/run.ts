@@ -447,6 +447,11 @@ export const RunCommand = effectCmd({
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
+      if (args.command === "goal") {
+        await loadInput()
+        const error = KiloRun.validateGoal(message)
+        if (error) die(error)
+      }
       // kilocode_change end
 
       if (args.fork && !args.continue && !args.session) {

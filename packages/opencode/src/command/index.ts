@@ -129,11 +129,14 @@ const layer = Layer.effect(
       // kilocode_change start - defer partial overrides until all command sources are registered
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
+        if (name === "goal")
+          throw new Error("The /goal command is reserved for session goals. Rename the custom command.")
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
       // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
+        if (name === "goal") throw new Error("The /goal command is reserved for session goals. Rename the MCP prompt.") // kilocode_change
         commands[name] = {
           name,
           source: "mcp",

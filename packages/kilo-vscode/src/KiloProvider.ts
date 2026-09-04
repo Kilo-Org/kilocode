@@ -139,7 +139,7 @@ import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
 import { type ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
-import { completesWithoutStatus } from "./kilo-provider/command-completion"
+import { completesWithoutStatus, goalControl } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
 import {
@@ -4127,7 +4127,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
       if (!resolved) return
-      const stopping = command === "goal" && (args.trim() === "pause" || args.trim() === "clear")
+      const control = goalControl(command, args)
+      const stopping = control && args.trim() !== ""
       if (sandbox && !stopping) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
@@ -4144,7 +4145,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         source: f.source,
       }))
 
-      if (command !== "goal") await this.checkpoints.get(sid)
+      if (!control) await this.checkpoints.get(sid)
       const send = () =>
         this.client!.session.command({
           sessionID: sid,
@@ -4152,9 +4153,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           command,
           arguments: args,
           messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent,
-          variant,
+          model: !control && providerID && modelID ? `${providerID}/${modelID}` : undefined,
+          agent: control ? undefined : agent,
+          variant: control ? undefined : variant,
           parts,
           snapshotInitialization: this.opts.snapshotInitialization,
         })

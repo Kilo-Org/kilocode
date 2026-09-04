@@ -234,6 +234,9 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
+  const interruptible = createMemo(
+    () => status().type !== "idle" || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
+  )
   // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
@@ -423,8 +426,9 @@ export function Prompt(props: PromptProps) {
         name: "session.interrupt",
         category: "Session",
         hidden: true,
-        enabled: status().type !== "idle" || goal()?.active === true, // kilocode_change
+        enabled: interruptible(), // kilocode_change
         run: () => {
+          if (!interruptible()) return // kilocode_change
           if (auto()?.visible) return
           if (!input.focused) return
           // TODO: this should be its own command
@@ -1534,7 +1538,7 @@ export function Prompt(props: PromptProps) {
                   return
                 }
                 // kilocode_change start - route keys through the vim layer when enabled
-                if (!(e.name === "escape" && goal()?.active) && vim.vimOnKey(e)) {
+                if (!(e.name === "escape" && interruptible()) && vim.vimOnKey(e)) {
                   e.preventDefault()
                   e.stopPropagation()
                   return
