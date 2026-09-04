@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.5.12
+
+### Patch Changes
+
+- [#13789](https://github.com/Kilo-Org/kilocode/pull/13789) [`b1ed65e`](https://github.com/Kilo-Org/kilocode/commit/b1ed65ed673fedc51af01e04c93526a836f9f2f9) - Keep model and reasoning selectors open during automatic prompt focus restoration.
+
 ## 7.5.11
 
 ### Minor Changes
