@@ -227,7 +227,6 @@ describe("TUI inline tool wrapping", () => {
     expect(toolDisplay("bash")).toBe("bash")
     // kilocode_change start - Kilo tools keep their dedicated renderers
     expect(toolDisplay("background_process")).toBe("background_process")
-    expect(toolDisplay("interactive_terminal")).toBe("interactive_terminal")
     expect(toolDisplay("semantic_search")).toBe("semantic_search")
     // kilocode_change end
     expect(toolDisplay("plugin_tool")).toBe("generic")

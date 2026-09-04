@@ -36,7 +36,6 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
-import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { KiloSession } from "@/kilocode/session"
 import { forkWriter } from "@/kilocode/session/fork"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
@@ -731,7 +730,6 @@ export const layer: Layer.Layer<
             KiloSession.clearPlatformOverride(sessionID)
             if (hasInstance) {
               yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-              yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID)).pipe(Effect.ignore)
               void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
                 app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
                   () => {},

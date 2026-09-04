@@ -70,10 +70,10 @@ describe("notify_user tool", () => {
   test("is only available while remote is enabled", () => {
     const tool = { id: "notify_user" } as Tool.Def
     status.mockReturnValue({ enabled: false, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(true)
+    expect(KiloToolRegistry.available(tool)).toBe(true)
   })
 
   test("registers with id and description", async () => {

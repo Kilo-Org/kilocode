@@ -674,7 +674,7 @@ describe("RemoteSender", () => {
     sender.dispose()
   })
 
-  test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
+  test("send_message preserves client tool toggles", async () => {
     const { conn } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
@@ -699,7 +699,6 @@ describe("RemoteSender", () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(calls[0]?.tools).toEqual({ bash: true })
-    expect(calls[0]?.ephemeralTools).toEqual({ interactive_terminal: false })
   })
 
   test("interrupt waits for session cancellation before responding", async () => {
@@ -1366,7 +1365,6 @@ describe("RemoteSender", () => {
           providerID: ProviderV2.ID.make("kilo"),
           modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514"),
         },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -1401,7 +1399,6 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("gpt-5-mini") },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -1441,7 +1438,6 @@ describe("RemoteSender", () => {
           providerID: ProviderV2.ID.make("custom:edge"),
           modelID: ModelV2.ID.make("deployment/model-v1"),
         },
-        ephemeralTools: { interactive_terminal: false },
         variant: "precise",
       },
     ])
@@ -1537,7 +1533,6 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("kilo/gpt-5-mini") },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })

@@ -6,7 +6,6 @@ import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
-import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
@@ -79,7 +78,6 @@ export namespace KiloToolRegistry {
       const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
-      const terminal = yield* InteractiveTerminalTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
       // via KiloSessions.defaultLayer (see src/tool/registry.ts). Grabs the service from the surrounding
       // context here and injects it into the tool's init Effect.
@@ -98,7 +96,6 @@ export namespace KiloToolRegistry {
           browser,
           chart,
           image,
-          terminal,
           notify,
           send,
           ...board,
@@ -118,7 +115,6 @@ export namespace KiloToolRegistry {
         browser,
         chart,
         image,
-        terminal,
         notify,
         send,
         ...board,
@@ -140,7 +136,6 @@ export namespace KiloToolRegistry {
       browser?: Tool.Info
       chart: Tool.Info
       image: Tool.Info
-      terminal?: Tool.Info
       notify: Tool.Info
       send: Tool.Info
       boardRead?: Tool.Info
@@ -165,7 +160,6 @@ export namespace KiloToolRegistry {
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
       })
-      const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const board =
         tools.boardRead && tools.boardPost
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
@@ -180,7 +174,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, ...board, terminal, browser, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return { ...base, ...board, browser, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -221,12 +215,10 @@ export namespace KiloToolRegistry {
     })
   }
 
-  /** Hide human-driven tools from agents that cannot interact with the user directly. */
-  export function available(tool: Tool.Def, agent: Agent.Info) {
+  export function available(tool: Tool.Def) {
     if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
     if (tool.id === "send_file") return KiloSessions.remoteStatus().connected
-    if (tool.id !== "interactive_terminal") return true
-    return agent.mode === "primary"
+    return true
   }
 
   /** Kilo-specific tools to append to the builtin list */
@@ -242,7 +234,6 @@ export namespace KiloToolRegistry {
       browser?: Tool.Def
       chart: Tool.Def
       image: Tool.Def
-      terminal?: Tool.Def
       notify: Tool.Def
       send: Tool.Def
       boardRead?: Tool.Def
@@ -271,7 +262,6 @@ export namespace KiloToolRegistry {
       tools.recall,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
-      ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
       ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
         ? [tools.managerModels]
         : []),

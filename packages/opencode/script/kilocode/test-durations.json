@@ -84,8 +84,6 @@
  "kilocode/cli/cmd/mcp.test.ts": 1000,
  "kilocode/cli/cmd/remote.test.ts": 1200,
  "kilocode/cli/cmd/run-message.test.ts": 1100,
- "kilocode/cli/cmd/run-terminal.test.ts": 1100,
- "kilocode/cli/cmd/run/interactive-terminal.test.ts": 1000,
  "kilocode/cli/cmd/serve.test.ts": 3500,
  "kilocode/cli/cmd/tui-worktree.test.ts": 2300,
  "kilocode/cli/cmd/tui/attention.test.ts": 1400,
