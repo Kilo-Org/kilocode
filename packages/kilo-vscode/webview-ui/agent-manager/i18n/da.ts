@@ -278,9 +278,9 @@ export const dict = {
     "Et worktree er en separat mappe og branch til en opgave. Dine agenter kan arbejde side om side uden at redigere de samme filer.",
   "agentManager.intro.graph.agent": "Kilo-agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Hvis ændringer giver konflikter",
-  "agentManager.intro.conflictText":
-    "Brug /update-from-base i worktree-chatten til at bede agenten om at hente og flette den gemte base-branch. Gennemgå eventuelle konfliktløsninger. Undgå git stash: stash deles mellem worktrees.",
+  "agentManager.intro.updateTitle": "Opdater et worktree fra base-branchen",
+  "agentManager.intro.updateText":
+    "Kør /update-from-base i worktreets session for at flette de seneste ændringer fra base-branchen.",
   "agentManager.intro.stage1.title": "Dit repository",
   "agentManager.intro.stage1.text": "Lokale filer forbliver uændrede",
   "agentManager.intro.stage2.title": "Eksempel: to opgaver parallelt",

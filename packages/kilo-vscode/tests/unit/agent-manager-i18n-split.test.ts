@@ -154,7 +154,7 @@ describe("Agent Manager i18n split", () => {
 
   it("references the base update command in every introduction locale", () => {
     for (const [locale, dict] of Object.entries(locales)) {
-      expect(dict["agentManager.intro.conflictText"], `${locale}: base update command`).toContain("/update-from-base")
+      expect(dict["agentManager.intro.updateText"], `${locale}: base update command`).toContain("/update-from-base")
     }
   })
 

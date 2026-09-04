@@ -281,7 +281,6 @@ export const dict = {
     "Ein Worktree ist ein separater Ordner und Branch für eine Aufgabe. Ihre Agenten können nebeneinander arbeiten, ohne dieselben Dateien zu ändern.",
   "agentManager.intro.graph.agent": "Kilo-Agent",
   "agentManager.intro.graph.pr": "Pull Request",
-  "agentManager.intro.graph.conflict": "Bei Konflikten",
   "agentManager.intro.stage1.title": "Ihr Repository",
   "agentManager.intro.stage1.text": "Lokale Dateien bleiben unverändert",
   "agentManager.intro.stage2.title": "Beispiel: zwei Aufgaben parallel",
@@ -292,8 +291,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Änderungen zurückholen, wenn Sie bereit sind",
   "agentManager.intro.stage4.text":
     "Bitten Sie den Agenten in jedem Worktree, einen Pull Request zu öffnen. Oder verwenden Sie Apply im Diff-Panel, um Änderungen nach Local zu kopieren.",
-  "agentManager.intro.conflictText":
-    "Verwenden Sie /update-from-base im Worktree-Chat, um den Agenten zu bitten, den gespeicherten Basis-Branch des Worktrees abzurufen und zu mergen. Prüfen Sie alle Konfliktlösungen. Vermeiden Sie git stash: Stashes werden zwischen Worktrees geteilt.",
+  "agentManager.intro.updateTitle": "Einen Worktree vom Basis-Branch aktualisieren",
+  "agentManager.intro.updateText":
+    "Führen Sie /update-from-base in dessen Sitzung aus, um die neuesten Änderungen des Basis-Branches zu mergen.",
   "agentManager.intro.prDetection":
     "PR-Abzeichen werden für jeden Worktree-Branch automatisch aktualisiert (GitHub CLI-Anmeldung erforderlich).",
   "agentManager.intro.checksRunning": "Prüfungen laufen",

@@ -285,9 +285,9 @@ export const dict = {
     "Worktree, bir görev için ayrı bir klasör ve daldır. Agentlar aynı dosyaları düzenlemeden yan yana çalışabilir.",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Değişiklikler çakışırsa",
-  "agentManager.intro.conflictText":
-    "Worktree sohbetinde /update-from-base kullanarak ajandan kayıtlı temel dalını getirip birleştirmesini isteyin. Çakışma çözümlerini gözden geçirin. git stash kullanmaktan kaçının: stash'ler worktree'ler arasında paylaşılır.",
+  "agentManager.intro.updateTitle": "Worktree'yi temel daldan güncelle",
+  "agentManager.intro.updateText":
+    "Temel daldaki en son değişiklikleri birleştirmek için ilgili oturumda /update-from-base komutunu çalıştırın.",
   "agentManager.intro.stage1.title": "Deponuz",
   "agentManager.intro.stage1.text": "Yerel dosyalar değişmeden kalır",
   "agentManager.intro.stage2.title": "Örnek: iki görev paralel",

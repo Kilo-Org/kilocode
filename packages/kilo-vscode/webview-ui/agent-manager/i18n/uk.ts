@@ -285,9 +285,8 @@ export const dict = {
     "Worktree — це окрема папка та гілка для завдання. Агенти можуть працювати поруч, не редагуючи одні й ті самі файли.",
   "agentManager.intro.graph.agent": "агент Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Якщо зміни конфліктують",
-  "agentManager.intro.conflictText":
-    "Використайте /update-from-base у чаті worktree, щоб попросити агента отримати та злити збережену базову гілку цього worktree. Перевірте результати вирішення конфліктів. Уникайте git stash: записи stash є спільними для всіх worktree.",
+  "agentManager.intro.updateTitle": "Оновити робоче дерево з базової гілки",
+  "agentManager.intro.updateText": "Виконайте /update-from-base у його сесії, щоб злити останні зміни базової гілки.",
   "agentManager.intro.stage1.title": "Ваш репозиторій",
   "agentManager.intro.stage1.text": "Локальні файли залишаються без змін",
   "agentManager.intro.stage2.title": "Приклад: два завдання паралельно",

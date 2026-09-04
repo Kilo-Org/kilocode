@@ -279,7 +279,6 @@ export const dict = {
     "worktree はタスク用の分離されたフォルダとブランチです。エージェントは同じファイルを編集せず、並行して作業できます。",
   "agentManager.intro.graph.agent": "Kilo エージェント",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "変更が競合する場合",
   "agentManager.intro.stage1.title": "あなたのリポジトリ",
   "agentManager.intro.stage1.text": "ローカルファイルは変更されません",
   "agentManager.intro.stage2.title": "例：2 つのタスクを並行実行",
@@ -290,8 +289,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "準備ができたら変更を戻す",
   "agentManager.intro.stage4.text":
     "各 worktree のエージェントに pull request を開くよう依頼します。または差分パネルで Apply を使い、変更を Local にコピーします。",
-  "agentManager.intro.conflictText":
-    "worktree のチャットで /update-from-base を使い、保存されているベースブランチをフェッチしてマージするようエージェントに依頼してください。競合が解決された場合は、その内容を確認してください。stash は worktree 間で共有されるため、git stash の使用は避けてください。",
+  "agentManager.intro.updateTitle": "ベースブランチから worktree を更新",
+  "agentManager.intro.updateText":
+    "そのセッションで /update-from-base を実行して、ベースブランチの最新変更をマージしてください。",
   "agentManager.intro.prDetection":
     "PR バッジは各 worktree ブランチで自動的に更新されます（GitHub CLI へのサインインが必要です）。",
   "agentManager.intro.checksRunning": "チェック実行中",

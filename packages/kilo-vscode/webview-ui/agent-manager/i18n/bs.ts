@@ -276,9 +276,9 @@ export const dict = {
     "Worktree je zaseban folder i grana za zadatak. Agenti mogu raditi usporedno bez uređivanja istih datoteka.",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Ako se promjene sukobe",
-  "agentManager.intro.conflictText":
-    "Koristite /update-from-base u chatu worktree-a da zamolite agenta da preuzme i spoji njegovu sačuvanu osnovnu granu. Pregledajte sva rješenja konflikata. Izbjegavajte git stash: stash-ovi se dijele između worktree-a.",
+  "agentManager.intro.updateTitle": "Ažurirajte worktree iz osnovne grane",
+  "agentManager.intro.updateText":
+    "Pokrenite /update-from-base u njegovoj sesiji da spojite najnovije promjene osnovne grane.",
   "agentManager.intro.stage1.title": "Vaš repozitorij",
   "agentManager.intro.stage1.text": "Lokalne datoteke ostaju nepromijenjene",
   "agentManager.intro.stage2.title": "Primjer: dva zadatka paralelno",

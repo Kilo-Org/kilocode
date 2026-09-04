@@ -271,9 +271,9 @@ export const dict = {
     "worktree คือโฟลเดอร์และ branch แยกสำหรับงานหนึ่งงาน เอเจนต์ทำงานเคียงข้างกันได้โดยไม่แก้ไฟล์เดียวกัน",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "หากการเปลี่ยนแปลงขัดแย้งกัน",
-  "agentManager.intro.conflictText":
-    "ใช้ /update-from-base ในแชทของ worktree เพื่อขอให้ agent fetch และ merge base branch ที่บันทึกไว้สำหรับ worktree นั้น ตรวจสอบผลการแก้ไขความขัดแย้ง หลีกเลี่ยง git stash: stash ใช้ร่วมกันระหว่าง worktree",
+  "agentManager.intro.updateTitle": "อัปเดต worktree จากสาขาฐาน",
+  "agentManager.intro.updateText":
+    "เรียกใช้ /update-from-base ในเซสชันของ worktree เพื่อผสานการเปลี่ยนแปลงล่าสุดของสาขาฐาน.",
   "agentManager.intro.stage1.title": "repository ของคุณ",
   "agentManager.intro.stage1.text": "ไฟล์ในเครื่องจะไม่เปลี่ยนแปลง",
   "agentManager.intro.stage2.title": "ตัวอย่าง: สองงานทำพร้อมกัน",

@@ -278,9 +278,9 @@ export const dict = {
     "Um worktree é uma pasta e branch separadas para uma tarefa. Seus agentes podem trabalhar lado a lado sem editar os mesmos arquivos.",
   "agentManager.intro.graph.agent": "agente Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Se as alterações entrarem em conflito",
-  "agentManager.intro.conflictText":
-    "Use /update-from-base no chat do worktree para pedir ao agente que busque e mescle sua branch base salva. Revise as resoluções de conflitos. Evite git stash: os stashes são compartilhados entre os worktrees.",
+  "agentManager.intro.updateTitle": "Atualizar um worktree a partir da base",
+  "agentManager.intro.updateText":
+    "Execute /update-from-base na sessão do worktree para mesclar as alterações mais recentes da branch base.",
   "agentManager.intro.stage1.title": "Seu repositório",
   "agentManager.intro.stage1.text": "Os arquivos locais permanecem inalterados",
   "agentManager.intro.stage2.title": "Exemplo: duas tarefas em paralelo",

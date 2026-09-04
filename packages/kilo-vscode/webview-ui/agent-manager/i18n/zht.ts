@@ -267,9 +267,8 @@ export const dict = {
   "agentManager.intro.subtitle": "worktree 是工作專用的個別資料夾與分支。代理可並行工作，不會編輯相同檔案。",
   "agentManager.intro.graph.agent": "Kilo 代理",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "如果變更發生衝突",
-  "agentManager.intro.conflictText":
-    "請在 worktree 聊天中使用 /update-from-base，讓代理程式擷取並合併該 worktree 已儲存的基底分支。請檢查所有衝突的解決結果。請避免使用 git stash，因為 stash 會在 worktree 之間共用。",
+  "agentManager.intro.updateTitle": "從基底分支更新 worktree",
+  "agentManager.intro.updateText": "在其工作階段中執行 /update-from-base，以合併基底分支的最新變更。",
   "agentManager.intro.stage1.title": "你的儲存庫",
   "agentManager.intro.stage1.text": "本機檔案保持不變",
   "agentManager.intro.stage2.title": "範例：兩個工作平行進行",
