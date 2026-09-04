@@ -442,7 +442,7 @@ for (const item of targets) {
           url: "https://github.com/Kilo-Org/kilocode",
         },
         // kilocode_change end
-        ...(item.abi ? { libc: [item.abi] } : item.os === "linux" ? { libc: ["glibc"] } : {}),
+        ...(item.abi ? { libc: [item.abi] } : item.os === "linux" ? { libc: ["glibc"] } : {}), // kilocode_change
       },
       null,
       2,

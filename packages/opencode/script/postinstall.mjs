@@ -172,11 +172,31 @@ function copyBinary(source) {
 
 function verifyBinary() {
   const result = childProcess.spawnSync(targetBinary, ["--version"], {
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"], // kilocode_change - capture output to surface errors
     windowsHide: true,
   })
+  // kilocode_change start - log failure reason so the root cause is visible
+  if (result.status !== 0) {
+    const out = (result.stdout || "").toString().trim()
+    const err = (result.stderr || "").toString().trim()
+    if (out) console.error(`[kilo] binary verification stdout: ${out}`)
+    if (err) console.error(`[kilo] binary verification stderr: ${err}`)
+    if (result.error) console.error(`[kilo] binary verification error: ${result.error.message}`)
+  }
+  // kilocode_change end
   return result.status === 0
 }
+
+// kilocode_change start - check if a package name is compatible with the current libc
+function isLibcCompatible(name) {
+  const musl = isMusl()
+  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
+  // prevent installing a musl package on a glibc system and vice versa
+  if (nameIsMusl && !musl) return false
+  if (!nameIsMusl && musl && name.startsWith("@kilocode/cli-linux-")) return false
+  return true
+}
+// kilocode_change end
 
 function main() {
   if (platform === "windows") {
@@ -185,6 +205,12 @@ function main() {
   }
 
   for (const name of packageNames()) {
+    // kilocode_change start - skip packages incompatible with the current libc
+    if (!isLibcCompatible(name)) {
+      console.log(`[kilo] skipping ${name}: incompatible libc`)
+      continue
+    }
+    // kilocode_change end
     try {
       copyBinary(resolveBinary(name))
       if (verifyBinary()) return
