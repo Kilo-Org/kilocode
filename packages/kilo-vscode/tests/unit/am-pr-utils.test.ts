@@ -6,11 +6,18 @@ import {
   formatCheckDuration,
   ghErrorReason,
   parseComments,
+  parseConversation,
   parseReviewers,
   signature,
 } from "../../src/agent-manager/pr/am-pr-utils"
-import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/pr/am-pr-types"
-import type { PRComment, PRStatus } from "../../src/agent-manager/types"
+import type {
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "../../src/agent-manager/pr/am-pr-types"
+import type { PRComment, PRConversationComment, PRStatus } from "../../src/agent-manager/types"
 
 // --- parsePRResult ---
 
@@ -547,5 +554,149 @@ describe("parseReviewers", () => {
   it("skips reviews without a login", () => {
     const reviews: GhReview[] = [{ author: {}, state: "APPROVED" }]
     expect(parseReviewers([], reviews)).toHaveLength(0)
+  })
+})
+
+// --- parseConversation ---
+
+describe("parseConversation", () => {
+  it("parses empty lists to an empty array", () => {
+    expect(parseConversation([], [])).toEqual([])
+  })
+
+  it("extracts comments and reviews with non-empty bodies", () => {
+    const comments: GhConversationComment[] = [
+      {
+        id: "IC_1",
+        author: { login: "alice", avatarUrl: "https://avatar/alice" },
+        body: "First comment",
+        createdAt: "2026-09-01T10:00:00Z",
+        url: "https://github.com/org/repo/pull/1#issuecomment-1",
+      },
+      {
+        id: "IC_empty",
+        author: { login: "bob" },
+        body: "   ",
+      },
+    ]
+    const reviews: GhReviewWithBody[] = [
+      {
+        id: "PRR_1",
+        author: { login: "bob", avatarUrl: "https://avatar/bob" },
+        body: "Consider using rawJSON",
+        state: "APPROVED",
+        submittedAt: "2026-09-01T11:00:00Z",
+        url: "https://github.com/org/repo/pull/1#pullrequestreview-1",
+      },
+      {
+        id: "PRR_empty",
+        author: { login: "charlie" },
+        body: "",
+        state: "APPROVED",
+      },
+    ]
+
+    const result = parseConversation(comments, reviews)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({
+      id: "IC_1",
+      author: "alice",
+      avatar: "https://avatar/alice",
+      body: "First comment",
+      createdAt: new Date("2026-09-01T10:00:00Z").getTime(),
+      url: "https://github.com/org/repo/pull/1#issuecomment-1",
+      isBot: undefined,
+    })
+    expect(result[1]).toEqual({
+      id: "PRR_1",
+      author: "bob",
+      avatar: "https://avatar/bob",
+      body: "Consider using rawJSON",
+      createdAt: new Date("2026-09-01T11:00:00Z").getTime(),
+      url: "https://github.com/org/repo/pull/1#pullrequestreview-1",
+      state: "approved",
+      isBot: undefined,
+    })
+  })
+
+  it("sorts comments and reviews chronologically", () => {
+    const comments: GhConversationComment[] = [
+      {
+        id: "IC_late",
+        author: { login: "alice" },
+        body: "Later comment",
+        createdAt: "2026-09-01T12:00:00Z",
+      },
+    ]
+    const reviews: GhReviewWithBody[] = [
+      {
+        id: "PRR_early",
+        author: { login: "bob" },
+        body: "Earlier review",
+        state: "CHANGES_REQUESTED",
+        submittedAt: "2026-09-01T08:00:00Z",
+      },
+    ]
+
+    const result = parseConversation(comments, reviews)
+    expect(result.map((c) => c.id)).toEqual(["PRR_early", "IC_late"])
+  })
+
+  it("identifies bot accounts", () => {
+    const comments: GhConversationComment[] = [
+      {
+        id: "IC_bot1",
+        author: { login: "kilo-code-bot", __typename: "Bot" },
+        body: "Review summary",
+      },
+      {
+        id: "IC_bot2",
+        author: { login: "dependabot[bot]" },
+        body: "Bump dependency",
+      },
+      {
+        id: "IC_user",
+        author: { login: "alice", __typename: "User" },
+        body: "User comment",
+      },
+    ]
+
+    const result = parseConversation(comments, [])
+    expect(result.find((c) => c.id === "IC_bot1")?.isBot).toBe(true)
+    expect(result.find((c) => c.id === "IC_bot2")?.isBot).toBe(true)
+    expect(result.find((c) => c.id === "IC_user")?.isBot).toBeUndefined()
+  })
+})
+
+// --- signature with conversation ---
+
+describe("signature with conversation", () => {
+  const item = (overrides: Partial<PRConversationComment> = {}): PRConversationComment => ({
+    id: "c1",
+    author: "alice",
+    body: "looks good",
+    ...overrides,
+  })
+
+  it("updates PR status signature when conversation changes", () => {
+    const base: PRStatus = {
+      number: 1,
+      title: "PR",
+      url: "https://example.com/pr/1",
+      state: "open",
+      review: null,
+      checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
+      reviewers: [],
+      additions: 0,
+      deletions: 0,
+      files: 0,
+    }
+
+    const withoutConvo = signature(base)
+    const withConvo = signature({ ...base, conversation: [item()] })
+    const updatedConvo = signature({ ...base, conversation: [item({ body: "updated" })] })
+
+    expect(withConvo).not.toBe(withoutConvo)
+    expect(updatedConvo).not.toBe(withConvo)
   })
 })

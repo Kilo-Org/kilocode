@@ -27,6 +27,7 @@ import { Filesystem } from "@/util/filesystem"
 import type { KiloClient, Session, ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
+import { readPipedStdin } from "./run-stdin" // kilocode_change - bounded piped-stdin read
 // kilocode_change start - Kilo implementations (createKiloClient, run-message,
 // cloud-session, run-auto, headless, KiloRun) are dynamically imported inside the
 // handler so other CLI commands don't pay their module cost at startup.
@@ -439,7 +440,12 @@ export const RunCommand = effectCmd({
       const input = { initial: undefined as string | undefined, loaded: false }
       async function loadInput() {
         if (input.loaded) return
-        const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
+        // kilocode_change start - bound the stdin wait when argv already carries a
+        // message or command; a launcher-held-open pipe never EOFs (see run-stdin.ts)
+        const piped = process.stdin.isTTY
+          ? undefined
+          : await readPipedStdin({ bound: rawMessage.trim().length > 0 || args.command !== undefined })
+        // kilocode_change end
         message = resolveRunInput(message, piped) ?? ""
         input.initial = resolveRunInput(rawMessage, piped)
         input.loaded = true

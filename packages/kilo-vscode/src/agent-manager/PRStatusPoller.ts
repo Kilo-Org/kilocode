@@ -1,7 +1,7 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRReviewer } from "./types"
+import type { PRStatus, PRCheck, PRReviewer, PRConversationComment } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
@@ -12,10 +12,18 @@ import {
   signature,
   formatCheckDuration,
   parseComments,
+  parseConversation,
   parseReviewers,
   summarize,
 } from "./pr/am-pr-utils"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
+import type {
+  PRResult,
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "./pr/am-pr-types"
 import { withContext } from "./pr/pr-comment-context"
 
 interface PRStatusPollerOptions {
@@ -484,7 +492,7 @@ export class PRStatusPoller {
     prNumber: number,
     cwd: string,
     full: boolean,
-  ): Promise<Pick<PRStatus, "comments" | "unresolvedThreads"> | undefined> {
+  ): Promise<Pick<PRStatus, "comments" | "unresolvedThreads" | "conversation"> | undefined> {
     try {
       const repo = await this.getRepoInfo(cwd)
       const fields = full
@@ -504,21 +512,44 @@ export class PRStatusPoller {
              }
            }`
         : ""
-      const query = `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $number) {
-            reviewThreads(first: 100, after: $cursor) {
-              totalCount
-              pageInfo { hasNextPage endCursor }
-              nodes { isResolved ${fields} }
-            }
-          }
-        }
-      }`
+      const extra = full
+        ? `comments(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               createdAt
+               url
+             }
+           }
+           reviews(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               state
+               submittedAt
+               url
+             }
+           }`
+        : ""
       const nodes: GhThread[] = []
       const cursors = new Set<string>()
       let cursor: string | undefined
+      let conversation: PRConversationComment[] | undefined
       while (true) {
+        const query = `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $number) {
+              reviewThreads(first: 100, after: $cursor) {
+                totalCount
+                pageInfo { hasNextPage endCursor }
+                nodes { isResolved ${fields} }
+              }
+              ${cursor ? "" : extra}
+            }
+          }
+        }`
         const { stdout } = await this.gh(
           [
             "api",
@@ -537,6 +568,9 @@ export class PRStatusPoller {
         )
         const page = threads(stdout)
         nodes.push(...page.nodes)
+        if (full && !conversation) {
+          conversation = parseConversationPayload(stdout)
+        }
         if (!page.pageInfo.hasNextPage) {
           if (nodes.length !== page.totalCount) throw new Error("Incomplete PR review threads")
           const unresolved = nodes.filter((node) => !node.isResolved).length
@@ -545,6 +579,7 @@ export class PRStatusPoller {
           return {
             unresolvedThreads: unresolved,
             comments: { total: page.totalCount, unresolved, comments },
+            conversation,
           }
         }
         const next = page.pageInfo.endCursor
@@ -604,4 +639,13 @@ async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Pr
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, thunks.length) }, () => run()))
   return results
+}
+
+function parseConversationPayload(stdout: string): PRConversationComment[] | undefined {
+  const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+  if (!pr) return undefined
+  return parseConversation(
+    (pr.comments?.nodes ?? []) as GhConversationComment[],
+    (pr.reviews?.nodes ?? []) as GhReviewWithBody[],
+  )
 }

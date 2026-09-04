@@ -223,6 +223,11 @@ export const dict = {
   "agentManager.pr.comment.openOnGitHub": "Abrir en GitHub",
   "agentManager.pr.comment.resolveFailed": "No se pudo resolver. {{error}}",
   "agentManager.pr.comment.unresolveFailed": "No se pudo deshacer la resolución. {{error}}",
+  "agentManager.pr.conversation.title": "Comentarios del PR",
+  "agentManager.pr.conversation.dismiss": "Descartar",
+  "agentManager.pr.conversation.restore": "Restaurar",
+  "agentManager.pr.conversation.sendAll": "Enviar {{count}} al agente",
+  "agentManager.pr.conversation.sendAllToTerminal": "Enviar {{count}} al terminal",
   "agentManager.review.collapsedOnly": "{{count}} contraídos",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} contraídos, {{large}} grandes",
   "agentManager.review.largeFileCollapsed": "Archivo grande (contraído)",
@@ -280,7 +285,6 @@ export const dict = {
     "Un worktree es una carpeta y una rama separadas para una tarea. Tus agentes pueden trabajar juntos sin modificar los mismos archivos.",
   "agentManager.intro.graph.agent": "Agente de Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "Si hay conflictos",
   "agentManager.intro.stage1.title": "Tu repositorio",
   "agentManager.intro.stage1.text": "Los archivos locales no cambian",
   "agentManager.intro.stage2.title": "Ejemplo: dos tareas en paralelo",
@@ -291,8 +295,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Devuelve los cambios cuando estés listo",
   "agentManager.intro.stage4.text":
     "Pide al agente de cada worktree que abra un pull request. O usa Apply en el panel de diff para copiar los cambios a Local.",
-  "agentManager.intro.conflictText":
-    "Pide al agente del worktree que fusione su rama base original y resuelva los conflictos, y luego revisa el resultado. Evita git stash: los stashes se comparten entre worktrees.",
+  "agentManager.intro.updateTitle": "Resuelve los conflictos con Kilo",
+  "agentManager.intro.updateText":
+    "Antes de aplicar cambios a Local o fusionar una pull request, ejecuta /update-from-base en la sesión de ese worktree. Kilo fusiona los últimos cambios de la rama base y resuelve primero los conflictos dentro de ese worktree.",
   "agentManager.intro.prDetection":
     "Las insignias de PR se actualizan automáticamente para cada rama de worktree (se requiere iniciar sesión en GitHub CLI).",
   "agentManager.intro.checksRunning": "Comprobaciones en curso",

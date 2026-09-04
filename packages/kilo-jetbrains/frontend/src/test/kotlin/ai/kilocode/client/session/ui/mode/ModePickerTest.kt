@@ -106,4 +106,69 @@ class ModePickerTest : BasePlatformTestCase() {
         assertFalse(renderer.badgeVisible())
     }
 
+    fun `test cycle advances to the next mode in sorted order`() {
+        val picker = ModePicker()
+        var selected: ModePicker.Item? = null
+        picker.onSelect = { selected = it }
+        picker.setItems(
+            listOf(ModePicker.Item("plan", "Plan"), ModePicker.Item("ask", "Ask"), ModePicker.Item("code", "Code")),
+            "ask",
+        )
+
+        picker.cycle()
+
+        assertEquals("code", picker.selectedForTest()?.id)
+        assertEquals("code", selected?.id)
+        assertEquals("Code ▴", picker.text)
+    }
+
+    fun `test cycle wraps to the first mode after the last`() {
+        val picker = ModePicker()
+        picker.setItems(
+            listOf(ModePicker.Item("plan", "Plan"), ModePicker.Item("ask", "Ask"), ModePicker.Item("code", "Code")),
+            "plan",
+        )
+
+        picker.cycle()
+
+        // Sorted order is Ask, Code, Plan; "plan" is last, so cycling wraps back to "ask".
+        assertEquals("ask", picker.selectedForTest()?.id)
+    }
+
+    fun `test cycle skips deprecated modes`() {
+        val picker = ModePicker()
+        picker.setItems(
+            listOf(
+                ModePicker.Item("ask", "Ask"),
+                ModePicker.Item("old", "Old", deprecated = true),
+                ModePicker.Item("plan", "Plan"),
+            ),
+            "ask",
+        )
+
+        picker.cycle()
+
+        assertEquals("plan", picker.selectedForTest()?.id)
+    }
+
+    fun `test canCycle is false with a single usable mode`() {
+        val picker = ModePicker()
+        picker.setItems(listOf(ModePicker.Item("ask", "Ask")), "ask")
+
+        assertFalse(picker.canCycle())
+    }
+
+    fun `test canCycle is false with no items`() {
+        val picker = ModePicker()
+
+        assertFalse(picker.canCycle())
+    }
+
+    fun `test canCycle is true with two usable modes`() {
+        val picker = ModePicker()
+        picker.setItems(listOf(ModePicker.Item("ask", "Ask"), ModePicker.Item("code", "Code")), "ask")
+
+        assertTrue(picker.canCycle())
+    }
+
 }

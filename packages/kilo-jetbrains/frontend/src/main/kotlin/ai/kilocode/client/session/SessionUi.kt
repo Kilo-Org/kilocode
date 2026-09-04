@@ -348,7 +348,10 @@ class SessionUi(
         // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
         // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
         // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
-        if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
+        if (this::prompt.isInitialized) {
+            sink[PromptDataKeys.SEND] = prompt
+            sink[PromptDataKeys.SELECTORS] = prompt
+        }
     }
 
     @RequiresEdt

@@ -84,6 +84,13 @@ export function PRPanelHost(props: Props) {
         jump={props.jump}
         onJump={props.onJump}
         onClose={props.onClose}
+        onRefresh={() =>
+          vscode.postMessage({
+            type: "agentManager.refreshPR",
+            projectId: props.projectId,
+            worktreeId: props.worktreeId,
+          })
+        }
         onOpenExternal={() => openUrl(vscode.postMessage, props.worktreeId, props.pr.url)}
         onOpenFile={(file, line) => openFile(vscode.postMessage, props.sessionId, file, line)}
         onOpenUrl={(url) => openUrl(vscode.postMessage, props.worktreeId, url)}
