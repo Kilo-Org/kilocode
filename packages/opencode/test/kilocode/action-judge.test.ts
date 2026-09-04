@@ -30,7 +30,7 @@ import {
 
 const CLEAN_FLAGS = { hasRedirect: false, hasSubstitution: false, hasError: false }
 const cmd = (executable: string, ...args: string[]): ShellCommand => ({ executable, args: [executable, ...args] })
-const input: JudgeInput = { userIntent: "add type hints", cwd: "/work", command: "npm test", commands: [cmd("npm", "test")] }
+const input: JudgeInput = { surface: "shell", userIntent: "add type hints", cwd: "/work", command: "npm test", commands: [cmd("npm", "test")] }
 const openSignal = () => new AbortController().signal
 const abortedSignal = () => {
   const c = new AbortController()
@@ -178,7 +178,7 @@ describe("ActionJudge.runJudge — verdict, fail-closed, abort, real cancellatio
     }
     const multi: JudgeInput = { ...input, command: "pwd && rm -rf x", commands: [cmd("pwd"), cmd("rm", "-rf", "x")] }
     await Effect.runPromise(runJudge(capture, multi, { signal: openSignal(), timeoutMs: 1000 }))
-    expect(seen?.commands.map((c) => c.executable)).toEqual(["pwd", "rm"])
+    expect(seen && "commands" in seen ? seen.commands.map((c) => c.executable) : []).toEqual(["pwd", "rm"])
   })
 })
 
@@ -284,10 +284,45 @@ describe("ActionJudge — misc", () => {
     expect(basename("/usr/bin/ls")).toBe("ls")
     expect(basename("rm")).toBe("rm")
   })
-  test("payload carries the raw command as a structured data field", () => {
+  test("shell payload: surface shell + raw command as structured data (regression)", () => {
     const parsed = JSON.parse(buildPayload(input))
+    expect(parsed.surface).toBe("shell")
     expect(parsed.command).toBe("npm test")
     expect(parsed.userIntent).toBe("add type hints")
     expect(Array.isArray(parsed.commands)).toBe(true)
+    expect("targets" in parsed).toBe(false)
+  })
+  test("write payload: surface write + targets, no command, no content field", () => {
+    const parsed = JSON.parse(
+      buildPayload({
+        surface: "write",
+        userIntent: "add a docstring",
+        cwd: "/work",
+        tool: "edit",
+        targets: [{ path: "/work/src/a.ts", op: "replace" }],
+      }),
+    )
+    expect(parsed.surface).toBe("write")
+    expect(parsed.tool).toBe("edit")
+    expect(parsed.targets).toEqual([{ path: "/work/src/a.ts", op: "replace" }])
+    expect("command" in parsed).toBe(false)
+    expect("content" in parsed).toBe(false)
+  })
+  test("mcp payload: surface mcp + server/tool/argKeys, no values, no command", () => {
+    const parsed = JSON.parse(
+      buildPayload({
+        surface: "mcp",
+        userIntent: "open an issue",
+        server: "github",
+        tool: "create_issue",
+        argKeys: ["title", "token"],
+      }),
+    )
+    expect(parsed.surface).toBe("mcp")
+    expect(parsed.server).toBe("github")
+    expect(parsed.tool).toBe("create_issue")
+    expect(parsed.argKeys).toEqual(["title", "token"])
+    expect("command" in parsed).toBe(false)
+    expect("targets" in parsed).toBe(false)
   })
 })

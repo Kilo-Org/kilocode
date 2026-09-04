@@ -10,6 +10,10 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
+import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - Code Mode child MCP gate
+import * as McpCodeMode from "@/kilocode/gate/mcp-codemode" // kilocode_change - Code Mode child-MCP gate wiring (testable adapter)
+import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change
+import { Provider } from "@/provider/provider" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -146,7 +150,10 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID },
     { args: input.args },
   )
-  const result: CallToolResult = yield* input.bridge
+  // kilocode_change - MCP gate (KILO_MCP_GATE=1): classify server+tool+argKeys vs intent BEFORE the
+  // external child MCP call. guardedExecute invokes runChild exactly once on allow; block throws.
+  const runChild = () =>
+    input.bridge
     .run(
       SandboxPolicy.executeMcp(
         input.ctx.sessionID,
@@ -188,6 +195,27 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
         },
       }),
     )
+  const result: CallToolResult = yield* (McpGate.enabled
+    ? Effect.gen(function* () {
+        const providerOpt = yield* Effect.serviceOption(Provider.Service)
+        return yield* McpCodeMode.guardChildMcpCall({
+          tool: input.entry.tool,
+          args: input.args,
+          ctx: {
+            messages: input.ctx.messages as unknown as ActionJudge.MessageView[],
+            userMessageID: input.ctx.userMessageID,
+            parentSessionID: input.ctx.parentSessionID,
+            abort: input.ctx.abort,
+            sessionID: input.ctx.sessionID,
+            callID: input.callID,
+          },
+          makeJudge: (model) => (mi) =>
+            ActionJudge.classify(providerOpt, model, mi, input.ctx.abort, input.ctx.sessionID, input.callID),
+          execute: runChild,
+        })
+      })
+    : runChild())
+  // kilocode_change end
   yield* input.plugin.trigger(
     "tool.execute.after",
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID, args: input.args },

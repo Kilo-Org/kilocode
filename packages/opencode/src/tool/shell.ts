@@ -491,7 +491,7 @@ export const ShellPermission = Effect.gen(function* () {
             const verdict = yield* ActionJudge.classify(
               providerOpt,
               model,
-              { userIntent: intent!, cwd: input.cwd, command: input.command, commands: cmdList },
+              { surface: "shell", userIntent: intent!, cwd: input.cwd, command: input.command, commands: cmdList },
               ctx.abort,
               ctx.sessionID,
               ctx.callID ?? "",

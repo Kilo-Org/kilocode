@@ -40,6 +40,9 @@ export type Context<M extends Metadata = Metadata> = {
   // kilocode_change - id of the user message that initiated THIS turn (the assistant message's parentID).
   // Used by ActionJudge to read the trusted user intent from the exact turn, not by array position.
   userMessageID?: MessageID
+  // kilocode_change - parent SESSION id when this is a sub-agent/child session (intent is agent-authored,
+  // not human-verified); the gates fail closed for child sessions. Set from input.session.parentID.
+  parentSessionID?: SessionID
   agent: string
   abort: AbortSignal
   callID?: string

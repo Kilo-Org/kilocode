@@ -32,6 +32,11 @@ import { McpApps } from "@/kilocode/mcp/apps"
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - write-gate classifier
+import * as WriteGate from "@/kilocode/gate/write-gate" // kilocode_change - edit/write/apply_patch surface
+import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - generic MCP surface
+import { InstanceState } from "@/effect/instance-state" // kilocode_change - workspace cwd for write targets
+import { existsSync } from "node:fs" // kilocode_change - create-vs-overwrite op normalization for write-gate
 
 const MCP_RESOURCE_TOOLS = {
   list: "list_mcp_resources",
@@ -106,6 +111,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       abort: options.abortSignal!,
       messageID: input.processor.message.id,
       userMessageID: input.processor.message.parentID, // kilocode_change - exact turn-initiating user message for ActionJudge
+      parentSessionID: input.session.parentID, // kilocode_change - child-session detection for the gates
       callID: options.toolCallId,
       extra,
       agent: input.agent.name,
@@ -190,7 +196,33 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
               { args },
             )
-            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            // kilocode_change start - write-gate (KILO_WRITE_GATE=1): reasoning-blind classifier on
+            // edit/write/apply_patch TARGETS before the built-in's own permission ask + fs write. shell is
+            // gated in shell.ts; reads are not gated. Block = throw -> tool error (deny-and-continue).
+            const doExecute = () => SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            const result = yield* (WriteGate.enabled && WriteGate.WRITE_TOOLS.has(item.id)
+              ? Effect.gen(function* () {
+                  const dir = (yield* InstanceState.context).directory
+                  const { intent, model } = ActionJudge.selectIntent(
+                    ctx.messages as unknown as ActionJudge.MessageView[],
+                    ctx.userMessageID,
+                  )
+                  const providerOpt = yield* Effect.serviceOption(Provider.Service)
+                  return yield* WriteGate.guardedExecute(
+                    {
+                      tool: item.id,
+                      isChildSession: input.session.parentID != null,
+                      args,
+                      cwd: dir,
+                      exists: (p) => existsSync(p),
+                      intent,
+                      judge: (wi) => ActionJudge.classify(providerOpt, model, wi, ctx.abort, ctx.sessionID, ctx.callID ?? ""),
+                    },
+                    doExecute,
+                  )
+                })
+              : doExecute())
+            // kilocode_change end
             const output = {
               ...result,
               attachments: result.attachments?.map((attachment) => ({
@@ -483,24 +515,49 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
             { args },
           )
-          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
-            ctx.sessionID,
-            entry, // kilocode_change - retain the native entry's local/remote network authority marker
-            Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              return yield* Effect.promise(() => execute(args, opts))
-            }),
-          ).pipe(
-            // kilocode_change end
-            Effect.withSpan("Tool.execute", {
-              attributes: {
-                "tool.name": key,
-                "tool.call_id": opts.toolCallId,
-                "session.id": ctx.sessionID,
-                "message.id": input.processor.message.id,
-              },
-            }),
-          )
+          // kilocode_change start - MCP gate (KILO_MCP_GATE=1): reasoning-blind classifier on the MCP call
+          // (server + tool + arg keys, NO values). guardedExecute runs the classifier BEFORE the external
+          // MCP execute and invokes it exactly once on allow; a block throws (deny-and-continue), so the
+          // external MCP call never happens. Active only in the generic wrapper (experimentalCodeMode OFF).
+          const runMcp = () =>
+            SandboxPolicy.executeMcp(
+              ctx.sessionID,
+              entry,
+              Effect.gen(function* () {
+                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                return yield* Effect.promise(() => execute(args, opts))
+              }),
+            ).pipe(
+              Effect.withSpan("Tool.execute", {
+                attributes: {
+                  "tool.name": key,
+                  "tool.call_id": opts.toolCallId,
+                  "session.id": ctx.sessionID,
+                  "message.id": input.processor.message.id,
+                },
+              }),
+            )
+          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* (McpGate.enabled
+            ? Effect.gen(function* () {
+                const { intent, model } = ActionJudge.selectIntent(
+                  ctx.messages as unknown as ActionJudge.MessageView[],
+                  ctx.userMessageID,
+                )
+                const providerOpt = yield* Effect.serviceOption(Provider.Service)
+                return yield* McpGate.guardedExecute(
+                  {
+                    server: entry.clientName,
+                    tool: entry.def.name,
+                    args,
+                    isChildSession: input.session.parentID != null,
+                    intent,
+                    judge: (mi) => ActionJudge.classify(providerOpt, model, mi, ctx.abort, ctx.sessionID, ctx.callID ?? ""),
+                  },
+                  runMcp,
+                )
+              })
+            : runMcp())
+          // kilocode_change end
           yield* plugin.trigger(
             "tool.execute.after",
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
