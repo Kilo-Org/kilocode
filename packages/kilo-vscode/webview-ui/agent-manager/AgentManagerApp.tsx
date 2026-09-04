@@ -78,6 +78,7 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { useBaseUpdate } from "./update-from-base"
 import { createModeRouter } from "./mode-router"
+import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
 import { TabBar } from "./TabBar"
@@ -1314,17 +1315,8 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("keydown", deleteKeyHandler)
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
 
-    // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
-    // Capture phase so the terminal's key handlers can't swallow them; blur resets state
-    // when the keyup is lost (e.g. Cmd+Tab away).
-    const modifier = isMac ? "Meta" : "Control"
-    const modTrack = (e: KeyboardEvent) => {
-      if (e.key === modifier) setHeld(e.type === "keydown")
-    }
-    const modReset = () => setHeld(false)
-    window.addEventListener("keydown", modTrack, true)
-    window.addEventListener("keyup", modTrack, true)
-    window.addEventListener("blur", modReset)
+    // Pointer movement repairs a lost keyup before hover actions are revealed.
+    const stopModifier = modifier.watch(window, isMac, setHeld)
 
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
@@ -1602,9 +1594,7 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", shortcut, true)
       window.removeEventListener("keydown", deleteKeyHandler)
-      window.removeEventListener("keydown", modTrack, true)
-      window.removeEventListener("keyup", modTrack, true)
-      window.removeEventListener("blur", modReset)
+      stopModifier()
       window.removeEventListener("focus", onWindowFocus)
       window.removeEventListener("newTaskRequest", newTaskHandler, true)
       drafts.cleanup()
