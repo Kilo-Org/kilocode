@@ -8,7 +8,6 @@ import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
 import { format } from "@/kilocode/tool/tool" // kilocode_change
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 interface Metadata {
   [key: string]: any
@@ -146,13 +145,7 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
               ...(truncated.truncated && { outputPath: truncated.outputPath }),
             },
           }
-          // kilocode_change start
-        }).pipe(
-          (work) => Activity.call(ctx, work),
-          Effect.orDie,
-          Effect.withSpan("Tool.execute", { attributes: attrs }),
-        )
-        // kilocode_change end
+        }).pipe(Effect.orDie, Effect.withSpan("Tool.execute", { attributes: attrs }))
       }
       return toolInfo
     })

@@ -11,11 +11,9 @@ const QuestionID = Schema.String.check(Schema.isStartsWith("que")).pipe(Schema.b
 export const Info = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("idle"),
-    working: optional(Schema.Boolean), // kilocode_change
   }),
   Schema.Struct({
     type: Schema.Literal("retry"),
-    working: optional(Schema.Boolean), // kilocode_change
     attempt: NonNegativeInt,
     message: Schema.String,
     action: optional(
@@ -32,12 +30,10 @@ export const Info = Schema.Union([
   }),
   Schema.Struct({
     type: Schema.Literal("busy"),
-    working: optional(Schema.Boolean), // kilocode_change
   }),
   // kilocode_change start - represent a session paused for an offline Kilo question
   Schema.Struct({
     type: Schema.Literal("offline"),
-    working: optional(Schema.Boolean),
     requestID: QuestionID,
     message: Schema.String,
   }),
@@ -53,16 +49,6 @@ export const Status = Event.define({
   },
 })
 
-// kilocode_change start
-export const Working = Event.define({
-  type: "session.working",
-  schema: {
-    sessionID: SessionID,
-    status: Info,
-  },
-})
-// kilocode_change end
-
 // deprecated
 export const Idle = Event.define({
   type: "session.idle",
@@ -71,4 +57,4 @@ export const Idle = Event.define({
   },
 })
 
-export const Definitions = Event.inventory(Status, Idle, Working) // kilocode_change
+export const Definitions = Event.inventory(Status, Idle)

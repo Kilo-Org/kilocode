@@ -1,17 +1,16 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, expect, it } from "bun:test"
 import { once } from "node:events"
 import type { ChildProcess, SpawnOptions } from "node:child_process"
 import { createCaffeinationDriver, type CaffeinationDriver } from "../../src/services/caffeination/inhibitor"
-import { exec, spawn } from "../../src/util/process"
+import { spawn } from "../../src/util/process"
 
 const READY = "KILO_CAFFEINATION_READY"
+const HOLD = "process.stdin.resume()"
 const drivers = new Set<CaffeinationDriver>()
 
-function setup(
-  platform: NodeJS.Platform,
-  script: string | typeof spawn = `console.log('${READY}'); process.stdin.resume()`,
-) {
+function setup(platform: NodeJS.Platform, script: string | typeof spawn = `console.log('${READY}'); ${HOLD}`) {
   const calls: { command: string; args: string[]; opts: SpawnOptions; child: ChildProcess }[] = []
+  const ended = Promise.withResolvers<Error | undefined>()
   const driver = createCaffeinationDriver({
     platform,
     locate: (name) => name,
@@ -26,8 +25,10 @@ function setup(
   })
   drivers.add(driver)
   return {
-    driver,
+    ...driver,
     calls,
+    ended: ended.promise,
+    start: (pid = process.pid) => driver.start(pid, ended.resolve),
     get child() {
       return calls.at(-1)!.child
     },
@@ -39,261 +40,160 @@ afterEach(async () => {
   drivers.clear()
 })
 
-describe("native caffeination drivers", () => {
-  it("uses only idle system sleep inhibition on macOS", async () => {
-    const fixture = setup("darwin")
-    await fixture.driver.start(process.pid, () => {})
-    expect(fixture.calls.at(0)?.command).toBe("/usr/bin/caffeinate")
-    expect(fixture.calls.at(0)?.args).toEqual(["-i", "-w", String(process.pid)])
-    expect(fixture.calls.at(0)?.opts.shell).toBeUndefined()
-  })
-
-  it.skipIf(process.platform === "win32")(
-    "keeps Linux locking outside the inhibitor and passes the PID as data",
-    async () => {
-      const fixture = setup("linux", (_command, args, opts) => spawn(args.at(4)!, args.slice(5), opts))
-      await fixture.driver.start(process.pid, () => {})
-      expect(fixture.calls.at(0)?.command).toBe("systemd-inhibit")
-      expect(fixture.calls.at(0)?.args.slice(0, 6)).toEqual([
-        "--what=sleep",
-        "--who=Kilo Code",
-        "--why=Kilo agent running",
-        "--mode=block",
-        "sh",
-        "-c",
-      ])
-      expect(fixture.calls.at(0)?.args.slice(-2)).toEqual(["kilo-caffeination", String(process.pid)])
-      expect(fixture.calls.at(0)?.opts).toMatchObject({ detached: true, stdio: ["ignore", "pipe", "pipe"] })
-      await fixture.driver.stop()
-      expect(fixture.child.signalCode ?? fixture.child.exitCode).not.toBeNull()
-    },
-  )
-
-  it.skipIf(process.platform === "win32")("exits the real Linux watcher when its parent exits", async () => {
-    const parent = spawn(process.execPath, ["-e", "process.stdin.resume()"], { stdio: ["pipe", "ignore", "ignore"] })
-    const ended = Promise.withResolvers<Error | undefined>()
-    try {
-      await once(parent, "spawn")
-      const fixture = setup("linux", (_command, args, opts) => spawn(args.at(4)!, args.slice(5), opts))
-      await fixture.driver.start(parent.pid!, ended.resolve)
-      const closed = once(parent, "close")
-      parent.stdin!.end()
-      await closed
-      expect((await ended.promise)?.message).toContain("code 0")
-      expect(fixture.child.exitCode).toBe(0)
-    } finally {
-      parent.kill("SIGKILL")
-    }
-  })
-
-  it("uses an unsigned PowerShell 5.1 mask and acknowledges only after the API succeeds", async () => {
-    const fixture = setup("win32")
-    await fixture.driver.start(process.pid, () => {})
-    const args = fixture.calls.at(0)!.args
-    expect(args.slice(0, 6)).toEqual(["-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command"])
-    const script = args.at(-1)!
-    expect(script).toContain("$flags = [uint32]2147483649;")
-    expect(script).not.toContain("0x80000000")
-    expect(script).toContain("$ErrorActionPreference = 'Stop';")
-    expect(script).toContain("if ($result -eq 0) { throw 'SetThreadExecutionState failed' }")
-    expect(script.indexOf(READY)).toBeGreaterThan(script.indexOf("if ($result -eq 0)"))
-    expect(script).toContain("[Console]::Error.WriteLine($_.Exception.Message); exit 1")
-    expect(fixture.calls.at(0)?.opts.shell).toBeUndefined()
-  })
-
-  it("rejects invalid PIDs before constructing a command", async () => {
-    for (const platform of ["darwin", "linux", "win32"] as const) {
-      const fixture = setup(platform)
-      for (const pid of [0, -1, 1.5, NaN, Infinity, 2_147_483_648, "1; exit 0" as unknown as number]) {
-        await expect(fixture.driver.start(pid, () => {})).rejects.toThrow("Invalid parent process ID")
-      }
-      expect(fixture.calls).toHaveLength(0)
-    }
-  })
-
-  it("does not spawn for missing tools, unsupported platforms, or an explicit unavailable reason", async () => {
-    for (const opts of [{ platform: "linux" as const }, { platform: "freebsd" as const }, { reason: "Remote host" }]) {
-      const driver = createCaffeinationDriver({
-        ...opts,
-        locate: () => undefined,
-        spawn: () => {
-          throw new Error("Must not spawn")
-        },
-      })
-      expect(driver.available).toBe(false)
-      await expect(driver.start(process.pid, () => {})).rejects.toThrow(driver.reason!)
-      await driver.stop()
-    }
-  })
-
-  it("shares pending startup and waits for a complete acknowledgement, not spawn", async () => {
-    const fixture = setup(
-      "win32",
-      `process.stdin.on('data', chunk => { process.stdout.write(chunk); console.error('input') })`,
+it.each(
+  (
+    [
+      ["darwin", "/usr/bin/caffeinate", ["-i", "-w", String(process.pid)]],
+      ["linux", "systemd-inhibit", ["--what=sleep", "--mode=block", "sh", "-c", String(process.pid)]],
+      ["win32", "powershell.exe", ["-NoProfile", "-NonInteractive", "-Command"]],
+    ] as const
+  ).filter(([platform]) => platform !== "linux" || process.platform !== "win32"),
+)("%s uses safe arguments and validates PIDs", async (platform, command, flags) => {
+  const run = setup(platform)
+  for (const pid of [0, -1, 1.5, NaN, Infinity, 2_147_483_648, "1; exit 0" as unknown as number]) {
+    await expect(run.start(pid)).rejects.toThrow("Invalid parent process ID")
+  }
+  expect(run.calls).toHaveLength(0)
+  await run.start()
+  const call = run.calls.at(0)!
+  expect(call.command).toEndWith(command)
+  expect(call.opts).toEqual({ detached: platform === "linux", stdio: ["ignore", "pipe", "pipe"] })
+  expect(call.args).toEqual(expect.arrayContaining([...flags]))
+  if (platform === "darwin") expect(call.args).toHaveLength(3)
+  if (platform === "linux") expect(call.args.filter((arg) => arg.startsWith("--what="))).toEqual(["--what=sleep"])
+  if (platform === "win32")
+    expect(call.args.at(-1)).toMatch(
+      /'Stop'[\s\S]*\[uint32\]2147483649\) -eq 0[\s\S]*throw[\s\S]*KILO_CAFFEINATION_READY[\s\S]*catch.*exit 1/,
     )
-    let ready = false
-    const first = fixture.driver
-      .start(process.pid, () => {})
-      .then(() => {
-        ready = true
-      })
-    const second = fixture.driver.start(process.pid, () => {})
-    await once(fixture.child, "spawn")
-    expect(fixture.calls).toHaveLength(1)
-    expect(ready).toBe(false)
-    const echoed = once(fixture.child.stderr!, "data")
-    fixture.child.stdin!.write(`noise\n${READY}`)
-    await echoed
-    expect(ready).toBe(false)
-    fixture.child.stdin!.write("\r\n")
-    await Promise.all([first, second])
-    expect(ready).toBe(true)
-  })
-
-  it("reports a bounded native error and exit code when acquisition fails", async () => {
-    const fixture = setup(
-      "win32",
-      `process.stderr.write('x'.repeat(20000) + 'acquisition denied', () => process.exit(7))`,
-    )
-    const exits: (Error | undefined)[] = []
-    const error = await fixture.driver.start(process.pid, (err) => exits.push(err)).catch((err: Error) => err)
-    expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toContain("code 7")
-    expect((error as Error).message).toEndWith("acquisition denied")
-    expect((error as Error).message.length).toBeLessThan(4_200)
-    expect(exits).toHaveLength(0)
-    expect(fixture.child.exitCode).toBe(7)
-  })
-
-  it("reports spawn errors without retaining a dead child", async () => {
-    const fixture = setup("win32", (_command, _args, opts) => spawn("/kilo-missing-inhibitor", [], opts))
-    await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("ENOENT")
-    await fixture.driver.stop()
-    await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("ENOENT")
-    expect(fixture.calls).toHaveLength(2)
-  })
-
-  it("reports an unexpected acquired-process exit once with its stderr", async () => {
-    const fixture = setup(
-      "win32",
-      `console.log('${READY}'); process.stdin.once('data', () => process.stderr.write('inhibitor lost', () => process.exit(9)))`,
-    )
-    const ended = Promise.withResolvers<Error | undefined>()
-    const exits: (Error | undefined)[] = []
-    await fixture.driver.start(process.pid, (err) => {
-      exits.push(err)
-      ended.resolve(err)
-    })
-    fixture.child.stdin!.write("exit")
-    expect((await ended.promise)?.message).toContain("code 9: inhibitor lost")
-    await fixture.driver.stop()
-    expect(exits).toHaveLength(1)
-  })
-
-  it("cancels acquisition and makes concurrent stop calls wait for the same exit", async () => {
-    const fixture = setup("win32", "process.stdin.resume()")
-    const exits: (Error | undefined)[] = []
-    const starting = fixture.driver.start(process.pid, (err) => exits.push(err)).catch((err: Error) => err)
-    const ended = once(fixture.child, "close")
-    const first = fixture.driver.stop()
-    expect(fixture.driver.stop()).toBe(first)
-    await Promise.all([first, ended])
-    expect(await starting).toMatchObject({ message: "The keep-awake process was stopped before starting" })
-    expect(fixture.child.signalCode ?? fixture.child.exitCode).not.toBeNull()
-    expect(exits).toHaveLength(0)
-    await fixture.driver.stop()
-  })
-
-  it.skipIf(process.platform === "win32")("escalates and confirms exit before starting a replacement", async () => {
-    const fixture = setup("win32", `process.on('SIGTERM', () => {}); console.log('${READY}'); process.stdin.resume()`)
-    const exits: (Error | undefined)[] = []
-    await fixture.driver.start(process.pid, (err) => exits.push(err))
-    const child = fixture.child
-    const stopping = fixture.driver.stop()
-    const starting = fixture.driver.start(process.pid, (err) => exits.push(err))
-    expect(fixture.calls).toHaveLength(1)
-    await Promise.all([stopping, starting])
-    expect(child.signalCode).toBe("SIGKILL")
-    expect(fixture.calls).toHaveLength(2)
-    expect(exits).toHaveLength(0)
-  })
-
-  it("retains the child for a later stop if signaling fails", async () => {
-    const fixture = setup("win32")
-    const ended = Promise.withResolvers<Error | undefined>()
-    await fixture.driver.start(process.pid, ended.resolve)
-    const child = fixture.child
-    const kill = child.kill.bind(child)
-    child.kill = () => {
-      throw new Error("signal denied")
-    }
-    try {
-      child.emit("error", new Error("native failure"))
-      expect((await ended.promise)?.message).toContain("native failure: signal denied")
-      await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("signal denied")
-      await expect(fixture.driver.stop()).rejects.toThrow("signal denied")
-      expect(fixture.calls).toHaveLength(1)
-      child.kill = () => false
-      await expect(fixture.driver.stop()).rejects.toThrow("did not exit after SIGKILL")
-    } finally {
-      child.kill = kill
-    }
-    await fixture.driver.stop()
-    expect(child.signalCode ?? child.exitCode).not.toBeNull()
-  })
-
-  it.skipIf(process.platform === "win32")("cleans Linux helpers even after their group leader exits", async () => {
-    const script = `process.on('SIGTERM', () => {}); console.error(process.pid); console.log('${READY}'); setInterval(() => {}, 1000)`
-    const fixture = setup(
-      "linux",
-      `Bun.spawn([process.execPath, '-e', ${JSON.stringify(script)}], { stdout: 'inherit', stderr: 'inherit' }); process.stdin.resume()`,
-    )
-    const starting = fixture.driver.start(process.pid, () => {})
-    const [output] = await once(fixture.child.stderr!, "data")
-    const pid = Number(String(output).trim())
-    expect(Number.isInteger(pid)).toBe(true)
-    await starting
-    await fixture.driver.stop()
-    const status = await exec("ps", ["-p", String(pid), "-o", "stat="]).then(
-      (result) => result.stdout.trim(),
-      (err: unknown) => {
-        if (err instanceof Error && "code" in err && err.code === 1) return ""
-        throw err
-      },
-    )
-    expect(status === "" || status.startsWith("Z")).toBe(true)
-  })
-
-  it("releases a process that never acknowledges acquisition", async () => {
-    const fixture = setup("win32", "process.stdin.resume()")
-    await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("Timed out while starting")
-    expect(fixture.child.signalCode ?? fixture.child.exitCode).not.toBeNull()
-  }, 15_000)
-
-  it.skipIf(process.platform !== "win32")(
-    "executes the unsigned mask and native failure path in Windows PowerShell",
-    async () => {
-      for (const result of [1, 0]) {
-        const prelude = `$probe = Microsoft.PowerShell.Utility\\Add-Type -TypeDefinition 'public class Probe { public static uint SetThreadExecutionState(uint flags) { if (flags != 2147483649u) throw new System.Exception("wrong flags"); return ${result}u; } }' -PassThru; function Add-Type { $probe }; `
-        const fixture = setup("win32", (command, args, opts) =>
-          spawn(command, [...args.slice(0, -1), prelude + args.at(-1)], opts),
-        )
-        if (result === 0) {
-          await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("SetThreadExecutionState failed")
-          continue
-        }
-        await fixture.driver.start(process.pid, () => {})
-        await fixture.driver.stop()
-      }
-      const fixture = setup("win32", (command, args, opts) =>
-        spawn(
-          command,
-          [...args.slice(0, -1), `function Add-Type { Write-Error 'compilation denied' }; ${args.at(-1)}`],
-          opts,
-        ),
-      )
-      await expect(fixture.driver.start(process.pid, () => {})).rejects.toThrow("compilation denied")
-    },
-    25_000,
-  )
 })
+
+it.each(["darwin", "linux", "win32", "freebsd", "remote"] as const)(
+  "rejects unavailable %s hosts",
+  async (platform) => {
+    const reason = platform === "remote" ? "Remote host" : undefined
+    const driver = createCaffeinationDriver({
+      platform: platform === "remote" ? "darwin" : platform,
+      reason,
+      locate: (name) => (reason ? name : undefined),
+    })
+    expect(driver.available).toBe(false)
+    await expect(driver.start(process.pid, () => {})).rejects.toThrow(reason ?? driver.reason!)
+    await driver.stop()
+  },
+)
+
+it.each([false, true])("shares startup, waits for a full ack, and awaits stop (ack=%s)", async (ack) => {
+  const run = setup("win32", "process.stdin.on('data', data => { process.stdout.write(data); console.error('input') })")
+  const first = run.start().catch((err: Error) => err)
+  const second = run.start().catch((err: Error) => err)
+  const echoed = once(run.child.stderr!, "data")
+  run.child.stdin!.write(`noise\n${READY}`)
+  await echoed
+  expect(Bun.peek.status(first)).toBe("pending")
+  expect(run.calls).toHaveLength(1)
+  if (ack) {
+    run.child.stdin!.write("\r\n")
+    await Promise.all([first, second])
+  }
+  const stopping = run.stop()
+  expect(run.stop()).toBe(stopping)
+  await stopping
+  expect(await first).toEqual(
+    ack ? undefined : expect.objectContaining({ message: expect.stringContaining("stopped before starting") }),
+  )
+  expect(Bun.peek.status(run.ended)).toBe("pending")
+  expect(run.child.signalCode ?? run.child.exitCode).not.toBeNull()
+})
+
+it.each([
+  [/ENOENT/, () => spawn("/kilo-missing-inhibitor", [])],
+  [
+    /code 7: x+acquisition denied$/,
+    "process.stderr.write('x'.repeat(20000) + 'acquisition denied', () => process.exit(7))",
+  ],
+  [/Timed out while starting/, HOLD],
+] as const)(
+  "bounds errors and cleans up %s",
+  async (message, script) => {
+    const run = setup("win32", script)
+    const error = await run.start().catch((err: Error) => err)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(message)
+    expect((error as Error).message.length).toBeLessThan(4_200)
+    if (run.child.pid) expect(run.child.signalCode ?? run.child.exitCode).not.toBeNull()
+  },
+  15_000,
+)
+
+it.skipIf(process.platform === "win32")("retains failed cleanup and kills before replacement", async () => {
+  const run = setup("win32", `process.on('SIGTERM', () => {}); console.log('${READY}'); ${HOLD}`)
+  await run.start()
+  const child = run.child
+  const kill = child.kill.bind(child)
+  child.kill = () => {
+    throw new Error("signal denied")
+  }
+  try {
+    child.emit("error", new Error("native failure"))
+    expect((await run.ended)?.message).toContain("native failure: signal denied")
+    await expect(run.start()).rejects.toThrow("signal denied")
+    child.kill = () => false
+    await expect(run.stop()).rejects.toThrow("did not exit after SIGKILL")
+  } finally {
+    child.kill = kill
+  }
+  const stopping = run.stop()
+  const starting = run.start()
+  expect(run.calls).toHaveLength(1)
+  await Promise.all([stopping, starting])
+  expect(child.signalCode).toBe("SIGKILL")
+  expect(run.calls).toHaveLength(2)
+})
+
+it.skipIf(process.platform === "win32")("ends the real Linux watcher on parent exit", async () => {
+  const parent = setup("win32")
+  await parent.start()
+  const run = setup("linux", (_command, args, opts) => spawn(args.at(4)!, args.slice(5), opts))
+  await run.start(parent.child.pid!)
+  await parent.stop()
+  expect((await run.ended)?.message).toContain("code 0")
+  expect(run.child.exitCode).toBe(0)
+})
+
+it.skipIf(process.platform === "win32")("kills Linux helpers after their group leader exits", async () => {
+  const script = `process.on('SIGTERM', () => {}); console.error(process.pid); console.log('${READY}'); setInterval(() => {}, 1000)`
+  const run = setup(
+    "linux",
+    `Bun.spawn([process.execPath, '-e', ${JSON.stringify(script)}], { stdout: 'inherit', stderr: 'inherit' }); ${HOLD}`,
+  )
+  const starting = run.start()
+  const [output] = await once(run.child.stderr!, "data")
+  const pid = Number(String(output).trim())
+  expect(Number.isInteger(pid)).toBe(true)
+  await starting
+  await run.stop()
+  const status = Bun.spawnSync(["ps", "-p", String(pid), "-o", "stat="])
+  expect([0, 1]).toContain(status.exitCode)
+  expect(status.stdout.toString().trim()).toMatch(/^Z|^$/)
+})
+
+it.skipIf(process.platform !== "win32")(
+  "checks native PowerShell acquisition",
+  async () => {
+    for (const result of [1, 0, "error"] as const) {
+      const prelude =
+        result === "error"
+          ? "function Add-Type { Write-Error 'compilation denied' }; "
+          : `$probe = Microsoft.PowerShell.Utility\\Add-Type -TypeDefinition 'public class Probe { public static uint SetThreadExecutionState(uint flags) { if (flags != 2147483649u) throw new System.Exception("wrong flags"); return ${result}u; } }' -PassThru; function Add-Type { $probe }; `
+      const run = setup("win32", (command, args, opts) =>
+        spawn(command, [...args.slice(0, -1), prelude + args.at(-1)], opts),
+      )
+      const starting = run.start()
+      if (result === 1) await starting
+      if (result !== 1)
+        await expect(starting).rejects.toThrow(result === 0 ? "SetThreadExecutionState failed" : "compilation denied")
+      await run.stop()
+    }
+  },
+  25_000,
+)

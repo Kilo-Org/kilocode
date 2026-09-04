@@ -15,7 +15,6 @@ import { SessionID } from "@/session/schema" // kilocode_change - used by AllowE
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { KiloHeadless } from "@/kilocode/permission/headless"
-import { Activity } from "@/kilocode/session/activity"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
@@ -275,7 +274,7 @@ const layer = Layer.effect(
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
-        Activity.wait(Deferred.await(deferred), info),
+        Deferred.await(deferred),
         Effect.sync(() => {
           pending.delete(id)
         }),

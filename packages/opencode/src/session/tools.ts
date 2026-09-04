@@ -1,6 +1,5 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -568,20 +567,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             })),
             content: result.content,
           }
-          // kilocode_change start
-          return yield* finish(key, output, opts)
-        }).pipe((work) =>
-          Activity.call(
-            {
-              sessionID: input.session.id,
-              messageID: input.processor.message.id,
-              callID: opts.toolCallId,
-              abort: opts.abortSignal,
-            },
-            work,
-          ),
-        ),
-        // kilocode_change end
+          return yield* finish(key, output, opts) // kilocode_change
+        }),
       )
     tools[key] = item
   }

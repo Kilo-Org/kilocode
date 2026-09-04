@@ -84,7 +84,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     })
 
     const status = Effect.fn("SessionHttpApi.status")(function* () {
-      return Object.fromEntries(yield* SessionStatus.snapshot(statusSvc)) // kilocode_change
+      return Object.fromEntries(yield* statusSvc.list())
     })
 
     const requireSession = Effect.fn("SessionHttpApi.requireSession")(function* (sessionID: SessionID) {

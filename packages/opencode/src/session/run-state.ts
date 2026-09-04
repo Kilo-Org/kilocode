@@ -9,7 +9,6 @@ import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 export interface Interface {
   readonly assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError>
@@ -103,15 +102,10 @@ export const layer = Layer.effect(
       work: Effect.Effect<SessionV1.WithParts>,
       valid?: () => boolean, // kilocode_change
     ) {
-      yield* status.get(sessionID)
       return yield* drain.track(
         sessionID,
         Effect.gen(function* () {
-          return yield* Activity.follow(
-            // kilocode_change
-            sessionID, // kilocode_change
-            (yield* runner(sessionID, onInterrupt)).ensureRunning(Activity.run(sessionID, work), valid), // kilocode_change
-          ) // kilocode_change
+          return yield* (yield* runner(sessionID, onInterrupt)).ensureRunning(work, valid)
         }),
       ) // kilocode_change
     })
@@ -122,16 +116,12 @@ export const layer = Layer.effect(
       work: Effect.Effect<SessionV1.WithParts>,
       ready?: Latch.Latch,
     ) {
-      yield* status.get(sessionID)
       return yield* drain.track(
         sessionID,
         Effect.gen(function* () {
           return yield* (yield* runner(sessionID, onInterrupt))
-            .startShell(Activity.run(sessionID, work), ready) // kilocode_change
-            .pipe(
-              (work) => Activity.follow(sessionID, work), // kilocode_change
-              Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))),
-            )
+            .startShell(work, ready)
+            .pipe(Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))))
         }),
       )
     })

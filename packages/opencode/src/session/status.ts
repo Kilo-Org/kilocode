@@ -5,7 +5,6 @@ import { SessionID } from "./schema"
 import { Effect, Layer, Context } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionStatusEvent } from "@opencode-ai/schema/session-status-event"
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 export const Info = SessionStatusEvent.Info
 export type Info = SessionStatusEvent.Info
@@ -19,10 +18,6 @@ export interface Interface {
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionStatus") {}
-
-// kilocode_change start
-export const snapshot = (service: Pick<Interface, "list">) => service.list().pipe(Effect.flatMap(Activity.list))
-// kilocode_change end
 
 // kilocode_change start - process-global status store keyed by project id. InstanceState
 // keys its map by directory, so the session prompt loop (session worktree
@@ -58,13 +53,7 @@ export const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
 
     const state = yield* InstanceState.make(
-      // kilocode_change start
-      Effect.fn("SessionStatus.state")(function* () {
-        const data = new Map<SessionID, Info>()
-        yield* Activity.bind(data, (sessionID, status) => events.publish(Event.Working, { sessionID, status }))
-        return data
-      }),
-      // kilocode_change end
+      Effect.fn("SessionStatus.state")(() => Effect.succeed(new Map<SessionID, Info>())),
     )
 
     const get = Effect.fn("SessionStatus.get")(function* (sessionID: SessionID) {
@@ -82,11 +71,10 @@ export const layer = Layer.effect(
       const ctx = yield* InstanceState.context
       const projectID = String(ctx.project.id)
       // kilocode_change end
-      yield* events.publish(Event.Status, { sessionID, status: yield* Activity.overlay(sessionID, status) }) // kilocode_change
+      yield* events.publish(Event.Status, { sessionID, status })
       if (status.type === "idle") {
         yield* events.publish(Event.Idle, { sessionID })
         data.delete(sessionID)
-        yield* Activity.idle(sessionID) // kilocode_change
         // kilocode_change start
         const store = stores.get(projectID)
         store?.delete(sessionID)

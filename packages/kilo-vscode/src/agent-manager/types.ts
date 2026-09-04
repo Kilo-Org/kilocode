@@ -500,14 +500,6 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
-interface CaffeinationMessage {
-  type: "agentManager.caffeination"
-  enabled: boolean
-  active: boolean
-  available: boolean
-  error?: string
-}
-
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeActivityMessage
@@ -545,7 +537,6 @@ export type AgentManagerOutMessage =
   | BrowserInspectionMessage
   | BrowserDevtoolsMessage
   | RunStatusMessage
-  | CaffeinationMessage
   | TerminalCreatedMessage
   | TerminalRestartedMessage
   | TerminalClosedMessage
@@ -780,15 +771,6 @@ interface SetSessionsCollapsedIn {
 interface SetSidebarCollapsedIn {
   type: "agentManager.setSidebarCollapsed"
   collapsed: boolean
-}
-
-interface RequestCaffeinationIn {
-  type: "agentManager.requestCaffeination"
-}
-
-interface SetCaffeinationIn {
-  type: "agentManager.setCaffeination"
-  enabled: boolean
 }
 
 interface SetReviewDiffStyleIn {
@@ -1212,8 +1194,6 @@ export type AgentManagerInMessage =
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn
-  | RequestCaffeinationIn
-  | SetCaffeinationIn
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn

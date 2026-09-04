@@ -175,7 +175,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     if (context.globalState.get<boolean>("caffeination.confirmed") === true) return true
     const detail = [
-      "Keep Awake prevents system sleep while Kilo agents work. It does not keep the display on or disable screen locking. It turns off when this VS Code window reloads.",
+      "Keep Awake prevents system sleep while Kilo sessions are in progress, including some waits for approval. It does not keep the display on or disable screen locking. It turns off when this VS Code window reloads.",
       "Agents may continue to access files, network services, and available credentials while the computer is locked. Enable only if your organization's device policy permits it.",
       ...(process.platform === "linux"
         ? ["On Linux, this can also block manual suspend. Turn Keep Awake off before suspending."]

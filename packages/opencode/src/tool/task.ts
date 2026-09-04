@@ -14,7 +14,6 @@ import { Provider } from "@/provider/provider" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge" // kilocode_change
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-process" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
@@ -279,7 +278,7 @@ export const TaskTool = Tool.define(
             },
             parts,
           })
-          yield* Activity.wait(drain.wait(nextSession.id))
+          yield* drain.wait(nextSession.id)
           const latest = (yield* sessions.messages({ sessionID: nextSession.id, limit: 1 })).at(-1)
           const result = latest?.info.role === "assistant" && latest.info.id > initial.info.id ? latest : initial
           // kilocode_change end
@@ -344,7 +343,6 @@ export const TaskTool = Tool.define(
             const release = yield* drain.hold(ctx.sessionID)
             yield* Scope.addFinalizer(owner, Effect.sync(release))
             yield* background.wait({ id: jobID }).pipe(
-              (work) => Activity.follow(nextSession.id, work, "delivery"),
               Effect.flatMap((result) => {
                 if (result.info?.status === "completed") return inject("completed", result.info.output ?? "")
                 if (result.info?.status === "error") return inject("error", result.info.error ?? "")
@@ -364,7 +362,6 @@ export const TaskTool = Tool.define(
                     }),
               ),
               Effect.ensuring(Scope.close(owner, Exit.void)),
-              (work) => Activity.run(ctx.sessionID, work, "observer"),
               Effect.forkIn(scope, { startImmediately: true }),
             )
           }),
@@ -471,16 +468,10 @@ export const TaskTool = Tool.define(
         // kilocode_change end
         () =>
           Effect.gen(function* () {
-            // kilocode_change start
-            const result = yield* Activity.follow(
-              nextSession.id,
-              Effect.raceFirst(
-                background.wait({ id: nextSession.id }).pipe(Effect.map((waited) => waited.info)),
-                background.waitForPromotion(nextSession.id),
-              ),
-              "delivery",
+            const result = yield* Effect.raceFirst(
+              background.wait({ id: nextSession.id }).pipe(Effect.map((waited) => waited.info)),
+              background.waitForPromotion(nextSession.id),
             )
-            // kilocode_change end
             // kilocode_change start
             if (result?.metadata?.background === true) {
               yield* notify(info.id)

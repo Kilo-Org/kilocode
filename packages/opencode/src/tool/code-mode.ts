@@ -1,7 +1,6 @@
 import * as Tool from "./tool"
 import { CallToolResultSchema, type CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { Cause, Effect, Schema } from "effect"
-import { Context } from "effect" // kilocode_change
 import { CodeMode, Tool as SandboxTool, toolError } from "@opencode-ai/codemode"
 import { MCP } from "@/mcp"
 import { McpCatalog } from "@/mcp/catalog"
@@ -11,7 +10,6 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
-import { Activity } from "@/kilocode/session/activity" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -148,7 +146,6 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID },
     { args: input.args },
   )
-  const current = yield* Activity.Current // kilocode_change
   const result: CallToolResult = yield* input.bridge
     .run(
       SandboxPolicy.executeMcp(
@@ -179,7 +176,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
             return raw
           })
         }),
-      ).pipe(Effect.provideService(Activity.Current, current)), // kilocode_change
+      ),
     )
     .pipe(
       Effect.withSpan("Tool.execute", {
@@ -206,9 +203,7 @@ export const CodeModeTool = Tool.define(
     const agents = yield* Agent.Service
     const sessions = yield* Session.Service
     const plugin = yield* Plugin.Service
-    // kilocode_change start
-    const base = (yield* Effect.context()).pipe(Context.omit(Activity.Current, Activity.Pending, Activity.Generation))
-    // kilocode_change end
+    const bridge = yield* EffectBridge.make() // kilocode_change
 
     const init: Tool.DefWithoutID<typeof Parameters, Metadata> = {
       description: DESCRIPTION,
@@ -221,9 +216,6 @@ export const CodeModeTool = Tool.define(
             output: "Execution cancelled.",
           } satisfies Tool.ExecuteResult<Metadata>
         }
-        // kilocode_change start
-        const bridge = yield* EffectBridge.make().pipe(Effect.provide(Context.merge(base, yield* Effect.context())))
-        // kilocode_change end
         const agent = yield* agents.get(ctx.agent)
         const session = yield* sessions.get(ctx.sessionID).pipe(Effect.orDie)
         const ruleset = Permission.merge(agent.permission, session.permission ?? [])
@@ -256,12 +248,10 @@ export const CodeModeTool = Tool.define(
               const error = Cause.squash(cause)
               return Effect.fail(toolError(error instanceof Error ? error.message : String(error), error))
             }),
-            Activity.inner, // kilocode_change
           )
 
         const runtime = CodeMode.make({
           tools: toolTree(catalog, callTool),
-          onWait: yield* Activity.observe, // kilocode_change
           onToolCallStart: ({ index, name, input }) =>
             Effect.suspend(() => {
               const shown = (() => {
@@ -274,13 +264,13 @@ export const CodeModeTool = Tool.define(
               })()
               calls[index] = { tool: name, status: "running", ...(shown ? { input: shown } : {}) }
               return publish()
-            }).pipe(Activity.inner), // kilocode_change
+            }),
           onToolCallEnd: ({ index, outcome }) =>
             Effect.suspend(() => {
               const current = calls[index]
               if (current) calls[index] = { ...current, status: outcome === "success" ? "completed" : "error" }
               return publish()
-            }).pipe(Activity.inner), // kilocode_change
+            }),
         })
 
         const abort = Effect.callback<void>((resume) => {

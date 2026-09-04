@@ -613,13 +613,11 @@ class Interpreter<R> {
   // program completion drains these (like a runtime waiting on in-flight work at exit) and
   // surfaces a never-awaited failure as an unhandled-rejection diagnostic.
   private readonly pendingSettlements = new Set<SandboxPromise>()
-  private readonly settled = new WeakSet<SandboxPromise>() // kilocode_change
 
   constructor(
     invokeTool: (path: ReadonlyArray<string>, args: Array<unknown>) => Effect.Effect<unknown, unknown, R>,
     toolKeys: (path: ReadonlyArray<string>) => ReadonlyArray<string>,
     logs: Array<string> = [],
-    private readonly onWait?: ExecuteOptions["onWait"], // kilocode_change
   ) {
     const globalScope = new Map<string, Binding>()
     this.scopes = [globalScope]
@@ -736,7 +734,6 @@ class Interpreter<R> {
       }),
       (fiber) => {
         const promise = new SandboxPromise(fiber)
-        if (self.onWait) fiber.addObserver(() => self.settled.add(promise)) // kilocode_change
         self.pendingSettlements.add(promise)
         return promise
       },
@@ -746,29 +743,10 @@ class Interpreter<R> {
   // The promise's settlement as an Exit, marking it observed for unhandled-rejection tracking.
   // Fiber settlement is idempotent, so observing the same promise repeatedly (await twice,
   // Promise.all([p, p])) never re-runs the underlying call.
-  // kilocode_change start
-  private observePromise(promise: SandboxPromise, observe = true): Effect.Effect<Exit.Exit<unknown, unknown>> {
+  private observePromise(promise: SandboxPromise): Effect.Effect<Exit.Exit<unknown, unknown>> {
     this.pendingSettlements.delete(promise)
-    const work =
-      promise.fiber !== undefined ? Fiber.await(promise.fiber) : Effect.exit(promise.immediate ?? Effect.void)
-    if (!this.onWait || !observe) return work
-    return Effect.suspend(() => (promise.fiber && !this.settled.has(promise) ? this.wait(work) : work))
+    return promise.fiber !== undefined ? Fiber.await(promise.fiber) : Effect.exit(promise.immediate ?? Effect.void)
   }
-  // kilocode_change end
-
-  // kilocode_change start
-  private wait<A, E>(work: Effect.Effect<A, E>) {
-    const notify = (waiting: boolean) =>
-      Effect.sync(() => this.onWait?.(waiting)).pipe(
-        Effect.catchCause((cause) => Effect.logWarning("CodeMode wait observer failed", cause)),
-      )
-    return Effect.acquireUseRelease(
-      notify(true),
-      () => work,
-      () => notify(false),
-    )
-  }
-  // kilocode_change end
 
   // `await promise`: succeed with the fulfilled value or re-raise the failure so try/catch
   // observes it exactly like a synchronous throw at the await site.
@@ -2213,22 +2191,13 @@ class Interpreter<R> {
         }
         const observations = items.map((item, index) =>
           item instanceof SandboxPromise
-            ? Effect.map(this.observePromise(item, false), (exit) => ({ index, exit })) // kilocode_change
+            ? Effect.map(this.observePromise(item), (exit) => ({ index, exit }))
             : Effect.succeed({ index, exit: Exit.succeed(item as unknown) }),
         )
         return Effect.gen(function* () {
           // First settlement (fulfilled OR rejected) wins; the observations never fail, so
           // racing them yields exactly that. Losing in-flight calls are then interrupted.
-          // kilocode_change start
-          const race = Effect.raceAll(observations)
-          const winner = yield* !self.onWait
-            ? race
-            : Effect.suspend(() =>
-                items.some((item) => !(item instanceof SandboxPromise) || !item.fiber || self.settled.has(item))
-                  ? race
-                  : self.wait(race),
-              )
-          // kilocode_change end
+          const winner = yield* Effect.raceAll(observations)
           for (const [index, item] of items.entries()) {
             if (index === winner.index || !(item instanceof SandboxPromise) || item.fiber === undefined) continue
             item.interrupted = true
@@ -3396,9 +3365,7 @@ export const executeWithLimits = <const Tools extends Record<string, unknown>>(
 
   const operation = Effect.gen(function* () {
     const program = parseProgram(options.code)
-    // kilocode_change start
-    const interpreter = new Interpreter<Services<Tools>>(tools.invoke, tools.keys, logs, options.onWait)
-    // kilocode_change end
+    const interpreter = new Interpreter<Services<Tools>>(tools.invoke, tools.keys, logs)
     const value = yield* interpreter.run(program)
     const result = copyOut(copyIn(value, "Execution result"), true) as DataValue
     return {
