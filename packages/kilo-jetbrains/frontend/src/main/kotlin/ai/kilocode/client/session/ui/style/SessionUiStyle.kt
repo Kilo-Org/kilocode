@@ -173,7 +173,7 @@ object SessionUiStyle {
         internal const val HOVER_FILL_ALPHA = 0.10f
 
         /** Shift applied to the backdrop for the dialog-card surface — enough to read as its own panel. */
-        internal const val DIALOG_DELTA = 24
+        internal const val DIALOG_DELTA = 12
 
         /** Dialog border position between the backdrop and the card surface: the midpoint of the two. */
         internal const val OUTLINE_BLEND = 0.5f
