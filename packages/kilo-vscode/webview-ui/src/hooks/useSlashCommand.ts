@@ -392,7 +392,7 @@ export function useSlashCommand(
       setIndex((i) => Math.max(i - 1, 0))
       return true
     }
-    if (e.key === "Enter" || e.key === "Tab") {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
       const cmd = filtered[index()]
       if (!cmd) return false
       e.preventDefault()
