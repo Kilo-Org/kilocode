@@ -137,6 +137,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       (ctx) => this.catalog.listAvailable(ctx),
       (msg) => void panel.webview.postMessage(msg),
     )
+    this.controller.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err))
     if (this.ctx) this.controller.setContext(this.ctx)
 
     this.fontConfigDisposable?.dispose()
@@ -144,6 +145,9 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     this.panelDisposables.push(
       panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg as Record<string, unknown>)),
+      panel.onDidChangeViewState(() =>
+        this.controller?.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err)),
+      ),
       panel.onDidDispose(() => this.onPanelDisposed()),
     )
   }

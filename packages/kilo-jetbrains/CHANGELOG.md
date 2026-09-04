@@ -4,6 +4,12 @@
 
 ### Minor Changes
 
+- [#13764](https://github.com/Kilo-Org/kilocode/pull/13764) [`17c915b`](https://github.com/Kilo-Org/kilocode/commit/17c915b2a0687dc1dfe977c45bfedf2dc92b5db0) - Cycle Kilo mode, model, and reasoning effort from the chat with Ctrl+1, Ctrl+2, and Ctrl+3, and reset the model override with Ctrl+0. The same Ctrl shortcuts apply on macOS, they show up in the prompt bar's tooltips, and they can be rebound from Settings > Keymap.
+
+## 7.6.0
+
+### Minor Changes
+
 - [#13756](https://github.com/Kilo-Org/kilocode/pull/13756) [`f20ab7f`](https://github.com/Kilo-Org/kilocode/commit/f20ab7f885955c43ba97eaed1d335c920660dfeb) - Move a session into a new worktree directly from the base checkout's worktree editor tab: a "Move to Worktree" entry now leads its session list's row menu, and sessions there get the same New Worktree / Move to Worktree toolbar above the prompt that the tool window shows. The tab's header now also reports the base checkout's uncommitted changes, the ones a move would carry.
 
 ## 7.6.0
