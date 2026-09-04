@@ -2319,11 +2319,13 @@ export const layer = Layer.effect(
         available.sort() // kilocode_change - alphabetical for stable, easy-to-scan output
         const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
+        // kilocode_change start
         yield* events.publish(
           Session.Event.Error,
           { sessionID: input.sessionID, error: error.toObject() },
-          { metadata: { phase: "admission" } }, // kilocode_change
+          { metadata: { phase: "admission" } },
         )
+        // kilocode_change end
         throw error
       }
       // kilocode_change start
