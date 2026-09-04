@@ -287,9 +287,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Bring changes back when you are ready",
   "agentManager.intro.stage4.text":
     "Ask the agent in each worktree to open a pull request. Or use Apply in the diff panel to copy changes to Local.",
-  "agentManager.intro.updateTitle": "Resolve conflicts with the worktree agent",
+  "agentManager.intro.updateTitle": "Resolve conflicts with Kilo",
   "agentManager.intro.updateText":
-    "Before applying changes to Local or merging a pull request, run /update-from-base in that worktree's session. The agent merges the latest base changes and resolves conflicts there first.",
+    "Before applying changes to Local or merging a pull request, run /update-from-base in that worktree's session. Kilo merges the latest base changes and resolves conflicts there first.",
   "agentManager.intro.prDetection":
     "PR badges update automatically for each worktree branch (GitHub CLI sign-in required).",
   "agentManager.intro.checksRunning": "Checks running",

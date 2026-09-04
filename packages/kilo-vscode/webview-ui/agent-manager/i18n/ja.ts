@@ -289,9 +289,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "準備ができたら変更を戻す",
   "agentManager.intro.stage4.text":
     "各 worktree のエージェントに pull request を開くよう依頼します。または差分パネルで Apply を使い、変更を Local にコピーします。",
-  "agentManager.intro.updateTitle": "worktree のエージェントで競合を解決",
+  "agentManager.intro.updateTitle": "Kilo で競合を解決",
   "agentManager.intro.updateText":
-    "Local に変更を適用するか、pull request をマージする前に、その worktree のセッションで /update-from-base を実行してください。エージェントがベースブランチの最新変更をマージし、まずその worktree 内で競合を解決します。",
+    "Local に変更を適用するか、pull request をマージする前に、その worktree のセッションで /update-from-base を実行してください。Kilo がベースブランチの最新変更をマージし、まずその worktree 内で競合を解決します。",
   "agentManager.intro.prDetection":
     "PR バッジは各 worktree ブランチで自動的に更新されます（GitHub CLI へのサインインが必要です）。",
   "agentManager.intro.checksRunning": "チェック実行中",
