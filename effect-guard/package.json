@@ -1,0 +1,21 @@
+{
+  "name": "effect-guard",
+  "version": "0.1.0",
+  "description": "Deterministic effect-based guard for AI coding agents",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "tsx --test test/guard.test.ts test/packages.test.ts test/robustness.test.ts",
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx demo/demo.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
