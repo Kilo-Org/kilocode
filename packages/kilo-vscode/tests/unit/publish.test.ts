@@ -34,5 +34,5 @@ test.each(["vsce publish", "npx ovsx publish"])("%s retries the same package and
       ?.asKind(SyntaxKind.NumericLiteral)
       ?.getLiteralValue()
   expect(value("attempts")).toBe(3)
-  expect(value("delay")).toBe(10_000)
+  expect(value("delay")).toBe(30_000)
 })
