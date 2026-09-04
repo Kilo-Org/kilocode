@@ -43,15 +43,22 @@ const flag = prerelease ? ["--pre-release"] : []
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
   console.log(`\n🚀 Publishing ${target} to VS Code Marketplace${prerelease ? " (pre-release)" : ""}...`)
-  await $`vsce publish ${flag} --packagePath ${vsixPath}`
+  await retry(() => $`vsce publish ${flag} --skip-duplicate --packagePath ${vsixPath}`, {
+    attempts: 3,
+    delay: 10_000,
+    label: `vsce publish ${target}`,
+  })
   console.log(`  ✅ Published ${target} to VS Code Marketplace`)
 
   console.log(`\n📤 Publishing ${target} to Open VSX${prerelease ? " (pre-release)" : ""}...`)
-  await retry(() => $`npx ovsx publish ${flag} --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`, {
-    attempts: 3,
-    delay: 10_000,
-    label: `ovsx publish ${target}`,
-  })
+  await retry(
+    () => $`npx ovsx publish ${flag} --skip-duplicate --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`,
+    {
+      attempts: 3,
+      delay: 10_000,
+      label: `ovsx publish ${target}`,
+    },
+  )
   console.log(`  ✅ Published ${target} to Open VSX`)
 }
 
