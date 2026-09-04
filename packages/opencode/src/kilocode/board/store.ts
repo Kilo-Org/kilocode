@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { SessionID } from "@/session/schema"
 
 type DB = Database.Interface["db"]
@@ -136,7 +137,12 @@ export namespace BoardStore {
           Effect.gen(function* () {
             const line = yield* walk(tx, input.sessionID)
             if (line.root !== input.sessionID) return yield* fail("Only the owning session can reset this board")
-            if (line.current.directory !== input.directory) return yield* fail("Session is not in the routed directory")
+            if (
+              !line.current.directory ||
+              !input.directory ||
+              FSUtil.resolve(line.current.directory) !== FSUtil.resolve(input.directory)
+            )
+              return yield* fail("Session is not in the routed directory")
             const board = yield* get(tx, line.root)
             if (input.revision !== (board ? board.next_seq - 1 : 0))
               return yield* new Conflict({ message: "The board changed. Refresh it before clearing messages." })
@@ -462,7 +468,12 @@ export namespace BoardStore {
     return Effect.gen(function* () {
       const limit = yield* checkLimit(input.limit)
       const line = yield* walk(tx, input.sessionID)
-      if (line.current.directory !== input.directory) return yield* fail("Session is not in the routed directory")
+      if (
+        !line.current.directory ||
+        !input.directory ||
+        FSUtil.resolve(line.current.directory) !== FSUtil.resolve(input.directory)
+      )
+        return yield* fail("Session is not in the routed directory")
       const root = SessionID.make(line.root)
       const board = yield* get(tx, root)
       const before = yield* cursor(tx, root, input.before)

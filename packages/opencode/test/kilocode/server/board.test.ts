@@ -55,8 +55,9 @@ describe("shared board HTTP routes", () => {
         const root = yield* sessions.create({ title: "Unused board" })
         const child = yield* sessions.create({ parentID: root.id, title: "Unused child" })
         const response = yield* requestInDirectory(`/kilocode/session/${child.id}/board?limit=1`, instance.directory)
-        expect(response.status).toBe(200)
-        expect(yield* response.json).toEqual({
+        const body = yield* response.json
+        expect(response.status, JSON.stringify(body)).toBe(200)
+        expect(body).toEqual({
           ownerSessionID: root.id,
           revision: 0,
           messages: [],
@@ -110,8 +111,9 @@ describe("shared board HTTP routes", () => {
         yield* status.set(child.id, { type: "busy" })
         const path = `/kilocode/session/${root.id}/board`
         const response = yield* requestInDirectory(path, other)
-        expect(response.status).toBe(200)
-        const original = decode(yield* response.json)
+        const body = yield* response.json
+        expect(response.status, JSON.stringify(body)).toBe(200)
+        const original = decode(body)
         expect(original.messages).toEqual([first])
         const next = yield* BoardStore.post({
           sessionID: child.id,
