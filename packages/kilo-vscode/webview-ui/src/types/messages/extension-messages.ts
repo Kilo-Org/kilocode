@@ -179,6 +179,7 @@ export interface SessionStatusMessage {
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
+  eventID: string
   reason: SessionCloseReason
   parentID?: string
 }
@@ -1491,6 +1492,8 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
+  | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
   | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage

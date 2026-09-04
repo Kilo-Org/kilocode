@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
+
+  "agentManager.updateBase.title": "ベースから更新",
+  "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
+
   "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "コメント",
   "agentManager.pr.copyLink": "PRリンクをコピー",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 件未解決",
+  "agentManager.pr.comment.unresolvedThread": "未解決のレビュースレッド {{count}} 件",
+  "agentManager.pr.comment.unresolvedThreads": "未解決のレビュースレッド {{count}} 件",
   "agentManager.pr.comment.resolvedGroup": "解決済み ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} 件の未解決コメントをエージェントに送信",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} 件の未解決コメントをターミナルに送信",
@@ -268,4 +274,30 @@ export const dict = {
   "agentManager.pr.error.gh_missing.title": "GitHub CLIがインストールされていません",
   "agentManager.pr.error.gh_missing.description":
     "PRステータスを有効にするには、GitHub CLIをインストールしてください。",
+  "agentManager.intro.title": "並行タスク。分離された worktree。",
+  "agentManager.intro.subtitle":
+    "worktree はタスク用の分離されたフォルダとブランチです。エージェントは同じファイルを編集せず、並行して作業できます。",
+  "agentManager.intro.graph.agent": "Kilo エージェント",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "変更が競合する場合",
+  "agentManager.intro.stage1.title": "あなたのリポジトリ",
+  "agentManager.intro.stage1.text": "ローカルファイルは変更されません",
+  "agentManager.intro.stage2.title": "例：2 つのタスクを並行実行",
+  "agentManager.intro.stage2.text":
+    "2 つの worktree はこのリポジトリに属します。別のリポジトリには別のプロジェクトを選択してください。",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "専用のフォルダとブランチ",
+  "agentManager.intro.stage4.title": "準備ができたら変更を戻す",
+  "agentManager.intro.stage4.text":
+    "各 worktree のエージェントに pull request を開くよう依頼します。または差分パネルで Apply を使い、変更を Local にコピーします。",
+  "agentManager.intro.conflictText":
+    "worktree のエージェントに元のベースブランチをマージして競合を解決するよう依頼し、その後結果を確認してください。git stash は worktree 間で共有されるため、使用は避けてください。",
+  "agentManager.intro.prDetection":
+    "PR バッジは各 worktree ブランチで自動的に更新されます（GitHub CLI へのサインインが必要です）。",
+  "agentManager.intro.checksRunning": "チェック実行中",
+  "agentManager.intro.approved": "承認済み",
+  "agentManager.intro.create": "worktree を作成",
+  "agentManager.intro.guide": "ガイドを読む",
+  "agentManager.intro.dismiss": "イントロダクションをスキップ",
+  "agentManager.intro.reopen": "Agent Manager の仕組み",
 }

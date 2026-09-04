@@ -84,24 +84,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui/src/components/basic-tool.css", "packages/kilo-ui/src/components/message-part.css"],
-      "fingerprint": "2bcd290f6a1dfcff",
-      "maxMatches": 1,
-      "maxTokens": 138,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": ["packages/kilo-ui/src/components/list.css", "packages/kilo-ui/src/components/model-selector.css"],
-      "fingerprint": "8c547d9472640a65",
-      "maxMatches": 1,
-      "maxTokens": 109,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/kilo-ui/src/components/message-part.tsx", "packages/kilo-ui/src/components/message-part.tsx"],
       "fingerprint": "e4dd50a081850b7d",
       "maxMatches": 1,
@@ -148,18 +130,6 @@
       "fingerprint": "acf42b6bbd0b3d17",
       "maxMatches": 1,
       "maxTokens": 112,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
-        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
-      ],
-      "fingerprint": "9020d3c20123ef72",
-      "maxMatches": 1,
-      "maxTokens": 104,
       "kind": "legacy",
       "owner": "kilo-vscode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."

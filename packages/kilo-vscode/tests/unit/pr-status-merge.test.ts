@@ -17,6 +17,7 @@ function status(overrides: Partial<PRStatus> = {}): PRStatus {
     state: "open",
     review: null,
     checks: { status: "success", total: 1, passed: 1, failed: 0, pending: 0, checks: [] },
+    reviewers: [],
     additions: 1,
     deletions: 0,
     files: 1,
@@ -41,10 +42,11 @@ const threads = {
 
 describe("mergePRStatus", () => {
   it("keeps the previous threads when a refresh reports none", () => {
-    const next = mergePRStatus(status({ comments: threads }), status({ title: "renamed" }))
+    const next = mergePRStatus(status({ comments: threads, unresolvedThreads: 2 }), status({ title: "renamed" }))
 
     expect(next.title).toBe("renamed")
     expect(next.comments).toEqual(threads)
+    expect(next.unresolvedThreads).toBe(2)
   })
 
   it("prefers the threads reported by the refresh", () => {
@@ -52,11 +54,22 @@ describe("mergePRStatus", () => {
     expect(mergePRStatus(status({ comments: threads }), status({ comments: fresh })).comments).toEqual(fresh)
   })
 
-  it("drops threads that belong to another pull request", () => {
-    expect(mergePRStatus(status({ comments: threads }), status({ number: 43 })).comments).toBeUndefined()
-  })
+  it.each([{ number: 43 }, { url: "https://github.com/org/other/pull/42" }])(
+    "drops another PR's state: %j",
+    (change) => {
+      const next = mergePRStatus(status({ comments: threads, unresolvedThreads: 2 }), status(change))
+      expect(next.comments).toBeUndefined()
+      expect(next.unresolvedThreads).toBeUndefined()
+    },
+  )
 
   it("passes the first status through untouched", () => {
     expect(mergePRStatus(undefined, status()).comments).toBeUndefined()
+  })
+
+  it("accepts a fresh zero count without dropping cached comments", () => {
+    const next = mergePRStatus(status({ unresolvedThreads: 1, comments: threads }), status({ unresolvedThreads: 0 }))
+    expect(next.unresolvedThreads).toBe(0)
+    expect(next.comments).toEqual(threads)
   })
 })

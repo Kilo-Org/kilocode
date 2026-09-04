@@ -30153,6 +30153,10 @@
           "multiple": {
             "type": "boolean"
           },
+          "default": {
+            "type": "string",
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown."
+          },
           "questionKey": {
             "type": "string"
           },

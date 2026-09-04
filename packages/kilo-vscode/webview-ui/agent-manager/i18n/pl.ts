@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Usuń z Agent Manager",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
+
+  "agentManager.updateBase.title": "Aktualizuj z bazy",
+  "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
+
   "agentManager.worktree.settings": "Ustawienia Worktree",
   "agentManager.worktree.new": "Nowy Worktree",
   "agentManager.worktree.setupScript": "Skrypt konfiguracji Worktree",
@@ -203,6 +207,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Komentarze",
   "agentManager.pr.copyLink": "Kopiuj link do PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} nierozwiązanych",
+  "agentManager.pr.comment.unresolvedThread": "Nierozwiązany wątek przeglądu: {{count}}",
+  "agentManager.pr.comment.unresolvedThreads": "Nierozwiązane wątki przeglądu: {{count}}",
   "agentManager.pr.comment.resolvedGroup": "Rozwiązane ({{count}})",
   "agentManager.pr.comment.sendAll": "Wyślij {{count}} nierozwiązanych do agenta",
   "agentManager.pr.comment.sendAllToTerminal": "Wyślij {{count}} nierozwiązanych do terminala",
@@ -265,4 +271,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Uruchom 'gh auth login' w terminalu, aby przywrócić status PR.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI nie jest zainstalowane",
   "agentManager.pr.error.gh_missing.description": "Zainstaluj GitHub CLI, aby włączyć status PR.",
+  "agentManager.intro.title": "Równoległe zadania. Oddzielne worktree.",
+  "agentManager.intro.subtitle":
+    "Worktree to osobny folder i gałąź dla zadania. Agenci mogą pracować obok siebie bez edytowania tych samych plików.",
+  "agentManager.intro.graph.agent": "agent Kilo",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Jeśli zmiany powodują konflikt",
+  "agentManager.intro.conflictText":
+    "Poproś agenta w worktree o scalenie jego oryginalnej gałęzi bazowej i rozwiązanie konfliktów, a następnie przejrzyj wynik. Unikaj git stash: stash jest współdzielony między worktree.",
+  "agentManager.intro.stage1.title": "Twoje repozytorium",
+  "agentManager.intro.stage1.text": "Lokalne pliki pozostają niezmienione",
+  "agentManager.intro.stage2.title": "Przykład: dwa zadania równolegle",
+  "agentManager.intro.stage2.text":
+    "Oba worktree należą do tego repozytorium. Dla innego repozytorium wybierz inny projekt.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Własny folder + gałąź",
+  "agentManager.intro.stage4.title": "Przywróć zmiany, gdy będziesz gotowy",
+  "agentManager.intro.stage4.text": "Poproś agenta o otwarcie pull request albo użyj Apply w panelu diff.",
+  "agentManager.intro.prDetection":
+    "Odznaki PR aktualizują się automatycznie dla każdej gałęzi worktree (wymagane zalogowanie do GitHub CLI).",
+  "agentManager.intro.checksRunning": "Sprawdzanie w toku",
+  "agentManager.intro.approved": "Zatwierdzono",
+  "agentManager.intro.create": "Utwórz worktree",
+  "agentManager.intro.guide": "Przeczytaj przewodnik",
+  "agentManager.intro.dismiss": "Pomiń wprowadzenie",
+  "agentManager.intro.reopen": "Jak działa Agent Manager",
 }

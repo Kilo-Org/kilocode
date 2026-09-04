@@ -469,6 +469,21 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test move reports the caller's surface on the telemetry event`() {
+        // Reuses "test move without a session..."'s no-session DONE event (no `session` field) so
+        // this leaves nothing in the app-level PendingWorktreeSession service for another test in
+        // this file to trip over.
+        val done = WorktreeDto("/wt/moved-surface", "moved-surface", "moved-surface", "/wt/moved-surface")
+        rpc.moveScript = listOf(MoveProgressDto(MoveStage.DONE, worktree = done))
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = controller(telemetry = { name, props -> events += name to props })
+
+        ApplicationManager.getApplication().invokeAndWait { controller.move("ses_source", "/repo", "worktree_editor") }
+        flush()
+
+        assertTrue(events.any { it.first == "Continue in Worktree" && it.second["surface"] == "worktree_editor" })
+    }
+
     fun `test move without a session transfers changes and skips forking`() {
         val done = WorktreeDto("/wt/moved", "moved", "moved", "/wt/moved")
         rpc.moveScript = listOf(

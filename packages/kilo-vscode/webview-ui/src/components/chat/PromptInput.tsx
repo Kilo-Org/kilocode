@@ -133,6 +133,7 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   boxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -331,8 +332,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
       if (props.worktree !== true) hidden.add("review worktree")
+      if (!props.onUpdateBase || props.worktree !== true) hidden.add("update-from-base")
       return hidden
     },
+    undefined,
+    undefined,
+    [
+      {
+        name: "update-from-base",
+        description: "Ask the worktree agent to fetch and merge its saved base branch",
+        hints: [],
+        action: () => props.onUpdateBase?.(),
+        enabled: () => props.worktree === true && server.isConnected() && !locked() && !props.blocked?.(),
+      },
+    ],
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {

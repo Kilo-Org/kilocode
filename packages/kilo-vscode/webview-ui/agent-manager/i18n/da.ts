@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke fundet",
   "agentManager.notGitRepo": "Ikke et git-repository",
+
+  "agentManager.updateBase.title": "Opdater fra base",
+  "agentManager.updateBase.selectWorktree": "Vælg først et administreret worktree.",
+
   "agentManager.worktree.settings": "Worktree-indstillinger",
   "agentManager.worktree.new": "Nyt Worktree",
   "agentManager.worktree.setupScript": "Worktree-opsætningsscript",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "Kommentarer",
   "agentManager.pr.copyLink": "Kopiér PR-link",
   "agentManager.pr.comment.unresolvedCount": "{{count}} uløste",
+  "agentManager.pr.comment.unresolvedThread": "{{count}} uløst review-tråd",
+  "agentManager.pr.comment.unresolvedThreads": "{{count}} uløste review-tråde",
   "agentManager.pr.comment.resolvedGroup": "Løste ({{count}})",
   "agentManager.pr.comment.sendAll": "Send {{count}} uløste til agenten",
   "agentManager.pr.comment.sendAllToTerminal": "Send {{count}} uløste til terminalen",
@@ -267,4 +273,29 @@ export const dict = {
   "agentManager.pr.error.gh_auth.description": "Kør 'gh auth login' i din terminal for at gendanne PR-status.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI er ikke installeret",
   "agentManager.pr.error.gh_missing.description": "Installer GitHub CLI for at aktivere PR-status.",
+  "agentManager.intro.title": "Parallelle opgaver. Separate worktrees.",
+  "agentManager.intro.subtitle":
+    "Et worktree er en separat mappe og branch til en opgave. Dine agenter kan arbejde side om side uden at redigere de samme filer.",
+  "agentManager.intro.graph.agent": "Kilo-agent",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.graph.conflict": "Hvis ændringer giver konflikter",
+  "agentManager.intro.conflictText":
+    "Bed agenten i worktree om at flette sin oprindelige base-branch og løse konflikter, og gennemgå derefter resultatet. Undgå git stash: stash deles mellem worktrees.",
+  "agentManager.intro.stage1.title": "Dit repository",
+  "agentManager.intro.stage1.text": "Lokale filer forbliver uændrede",
+  "agentManager.intro.stage2.title": "Eksempel: to opgaver parallelt",
+  "agentManager.intro.stage2.text":
+    "Begge worktrees tilhører dette repository. Vælg et andet projekt til et andet repository.",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "Egen mappe og branch",
+  "agentManager.intro.stage4.title": "Bring ændringer tilbage, når du er klar",
+  "agentManager.intro.stage4.text": "Bed agenten åbne en pull request, eller brug Apply i diff-panelet.",
+  "agentManager.intro.prDetection":
+    "PR-badges opdateres automatisk for hver worktree-branch (login til GitHub CLI kræves).",
+  "agentManager.intro.checksRunning": "Kontroller kører",
+  "agentManager.intro.approved": "Godkendt",
+  "agentManager.intro.create": "Opret et worktree",
+  "agentManager.intro.guide": "Læs guiden",
+  "agentManager.intro.dismiss": "Spring introduktion over",
+  "agentManager.intro.reopen": "Sådan fungerer Agent Manager",
 }
