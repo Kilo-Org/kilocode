@@ -178,6 +178,6 @@
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch"
   },
-  "version": "7.5.9",
+  "version": "7.5.14",
   "peerDependencies": {}
 }

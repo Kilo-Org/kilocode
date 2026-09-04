@@ -904,21 +904,6 @@ html[data-theme="kilo-vscode"]
   }
 }
 
-/* Toolbar Run button group — split layout comes from .am-split-button.
-   The label button tightens its right edge so the chevron sits as close
-   to the label as it does to the icon in the other split buttons. */
-.am-run-group [data-component="button"][data-size="small"] {
-  padding-right: 2px;
-}
-
-/* Unconfigured — muted until hover */
-.am-run-unconfigured {
-  opacity: 0.5;
-}
-.am-run-unconfigured:hover {
-  opacity: 0.85;
-}
-
 /* Green accent when running — uses VS Code's standard green token */
 .am-run-active,
 .am-run-active [data-component="icon"] {
@@ -1643,13 +1628,22 @@ body.am-wt-dragging-active * {
   border-left: 1px solid var(--border-weak-base);
 }
 
-/* One control height for the row: text buttons (Run, Apply, Open) match
-   the 20px icon buttons so hover fills align across every combination
-   of visible actions. */
-.am-tab-actions [data-component="button"][data-size="small"] {
-  height: 20px;
-  min-height: 20px;
+.am-tab-apply {
+  display: flex;
+  position: relative;
 }
+
+.am-tab-apply [aria-busy="true"] [data-component="icon"] {
+  visibility: hidden;
+}
+
+.am-tab-apply .am-apply-spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
+}
+
 .am-sidebar-search-popover[data-component="popover-content"] {
   max-height: min(480px, calc(100vh - 64px));
 }

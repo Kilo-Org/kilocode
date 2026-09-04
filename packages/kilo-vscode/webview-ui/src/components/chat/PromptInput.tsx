@@ -10,7 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { isTextControl } from "../../utils/focus"
+import { hasPopup, isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -514,7 +514,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
     const ownsFocus = () => {
       const active = document.activeElement
-      return active !== textareaRef && isTextControl(active)
+      return hasPopup() || (active !== textareaRef && isTextControl(active))
     }
     const focus = () => {
       if (defer() || ownsFocus()) return

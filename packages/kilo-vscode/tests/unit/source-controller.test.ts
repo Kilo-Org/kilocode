@@ -183,6 +183,107 @@ describe("SourceController.activate", () => {
   })
 })
 
+describe("SourceController.setVisible", () => {
+  it("defers hidden activation and refreshes when shown without rebuilding", async () => {
+    let fetches = 0
+    let disposed = 0
+    const source: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        fetches++
+        return { diffs: [] }
+      },
+      dispose() {
+        disposed++
+      },
+    }
+    const { controller } = make({ workspace: source })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      await controller.setVisible(false)
+      await controller.activate("workspace")
+      await controller.refresh()
+      expect(fetches).toBe(0)
+      expect(controller.isPolling).toBe(false)
+      expect(controller.currentId).toBe("workspace")
+
+      await controller.setVisible(true)
+      await controller.setVisible(true)
+      expect(fetches).toBe(1)
+      expect(controller.isPolling).toBe(true)
+
+      await controller.setVisible(false)
+      await controller.refresh()
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe(1)
+      await controller.setVisible(true)
+      expect(fetches).toBe(2)
+      expect(disposed).toBe(0)
+    } finally {
+      controller.stop()
+    }
+  })
+
+  it("does not restart polling when an in-flight fetch finishes hidden", async () => {
+    const gate = Promise.withResolvers<void>()
+    let fetches = 0
+    const { controller } = make({
+      workspace: {
+        descriptor: WORKSPACE_DESC,
+        async fetch() {
+          fetches++
+          await gate.promise
+          return { diffs: [] }
+        },
+      },
+    })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      const activation = controller.activate("workspace")
+      await controller.setVisible(false)
+      gate.resolve()
+      await activation
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe(1)
+      await controller.setVisible(true)
+      expect(fetches).toBe(2)
+      expect(controller.isPolling).toBe(true)
+    } finally {
+      gate.resolve()
+      controller.stop()
+    }
+  })
+
+  it.each([{ poll: false }, { fetch: false }])("preserves activation options %j when shown", async (options) => {
+    let fetches = 0
+    const { controller } = make({
+      workspace: {
+        descriptor: WORKSPACE_DESC,
+        async fetch() {
+          fetches++
+          return { diffs: [] }
+        },
+      },
+    })
+    controller.setContext({ workspaceRoot: "/repo" })
+    try {
+      await controller.setVisible(false)
+      await controller.activate("workspace", options)
+      await controller.setVisible(true)
+      expect(fetches).toBe("fetch" in options ? 0 : 1)
+      expect(controller.isPolling).toBe(false)
+      await controller.setVisible(false)
+      controller.stop()
+      await controller.setVisible(true)
+      expect(controller.currentId).toBeUndefined()
+      expect(controller.isPolling).toBe(false)
+      expect(fetches).toBe("fetch" in options ? 0 : 1)
+    } finally {
+      controller.stop()
+    }
+  })
+})
+
 describe("SourceController.stop", () => {
   it("disposes the active source", async () => {
     let disposed = 0

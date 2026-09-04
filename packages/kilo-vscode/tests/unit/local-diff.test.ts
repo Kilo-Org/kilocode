@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
@@ -11,6 +11,7 @@ import {
   MAX_DETAIL_BYTES,
 } from "../../src/agent-manager/local-diff"
 import { GitOps, type ExecBufferResult, type ExecResult } from "../../src/agent-manager/GitOps"
+import { GitStatsSnapshot } from "../../src/agent-manager/git-stats-snapshot"
 import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
 import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
 
@@ -371,6 +372,184 @@ describe("diffSummary", () => {
       const src = result.find((e) => e.file === "src.ts")
       expect(dist?.generatedLike).toBe(true)
       expect(src?.generatedLike).toBe(false)
+    })
+  })
+})
+
+describe("createLocalDiff summary cache", () => {
+  it("reuses counts and binary probes across summaries and badges", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "text.txt"), "one\ntwo\n")
+      await fs.writeFile(path.join(dir, "binary.bin"), Buffer.from([0, 1, 2, 3]))
+      const ops = git()
+      const local = createLocalDiff(ops)
+      const snapshots = new GitStatsSnapshot(ops)
+      const read = spyOn(fs, "readFile")
+      const probe = spyOn(fs, "open")
+      try {
+        const first = await local.summary(dir, base)
+        expect(first.map((entry) => [entry.file, entry.additions, entry.summarized])).toEqual([
+          ["binary.bin", 0, false],
+          ["text.txt", 2, true],
+        ])
+        expect(read).toHaveBeenCalledTimes(1)
+        expect(probe).toHaveBeenCalledTimes(2)
+        read.mockClear()
+        probe.mockClear()
+
+        expect(await local.summary(dir, base)).toEqual(first)
+        expect(await createLocalDiff(ops).summary(dir, base)).toEqual(first)
+        expect(await snapshots.diff(dir, base, ["binary.bin", "text.txt"])).toEqual({
+          files: 2,
+          additions: 2,
+          deletions: 0,
+        })
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).not.toHaveBeenCalled()
+
+        await fs.writeFile(path.join(dir, "text.txt"), "three\nfour\nfive\n")
+        expect((await snapshots.diff(dir, base, ["binary.bin", "text.txt"])).additions).toBe(3)
+        read.mockClear()
+        probe.mockClear()
+        expect((await local.summary(dir, base)).find((entry) => entry.file === "text.txt")?.additions).toBe(3)
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).not.toHaveBeenCalled()
+      } finally {
+        read.mockRestore()
+        probe.mockRestore()
+      }
+    })
+  })
+
+  it("retries binary classification after a failed sample instead of caching it", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "binary.bin"), Buffer.alloc(1_000_001))
+      const local = createLocalDiff(git())
+      const probe = spyOn(fs, "open").mockRejectedValueOnce(new Error("temporary sample failure"))
+      try {
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(probe).toHaveBeenCalledTimes(1)
+        const recovered = await local.summary(dir, base)
+        expect(recovered.at(0)).toMatchObject({ additions: 0, summarized: false })
+        expect(probe).toHaveBeenCalledTimes(2)
+        expect(await local.summary(dir, base)).toEqual(recovered)
+        expect(probe).toHaveBeenCalledTimes(2)
+      } finally {
+        probe.mockRestore()
+      }
+    })
+  })
+
+  it("skips full reads when a file grows past the cutoff during its binary probe", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "growing.txt")
+      await fs.writeFile(file, "small\n")
+      const local = createLocalDiff(git())
+      const open = fs.open
+      const probe = spyOn(fs, "open").mockImplementationOnce(async (...args) => {
+        const handle = await open(...args)
+        const close = handle.close.bind(handle)
+        handle.close = async () => {
+          await close()
+          await fs.writeFile(file, Buffer.alloc(1_000_001, 0x61))
+        }
+        return handle
+      })
+      const read = spyOn(fs, "readFile")
+      try {
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(read).not.toHaveBeenCalled()
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(read).not.toHaveBeenCalled()
+      } finally {
+        probe.mockRestore()
+        read.mockRestore()
+      }
+    })
+  })
+
+  it("refreshes changed, deleted, and replaced files without rereading stable siblings", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "changing.txt")
+      const time = new Date(1_000_000_000_000)
+      await fs.writeFile(file, "one\ntwo\n")
+      await fs.utimes(file, time, time)
+      await fs.writeFile(path.join(dir, "stable.txt"), "stable\n")
+      const local = createLocalDiff(git())
+      const first = await local.summary(dir, base)
+      const read = spyOn(fs, "readFile")
+      const probe = spyOn(fs, "open")
+      try {
+        await fs.writeFile(file, Buffer.from([0, 1, 2, 3, 4, 5, 6, 7]))
+        await fs.utimes(file, time, time)
+        const changed = await local.summary(dir, base)
+        expect(changed.find((entry) => entry.file === "changing.txt")).toMatchObject({
+          additions: 0,
+          summarized: false,
+        })
+        expect(changed.at(0)?.stamp).not.toBe(first.at(0)?.stamp)
+        expect(changed.at(1)).toEqual(first.at(1))
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).toHaveBeenCalledTimes(1)
+        probe.mockClear()
+
+        await fs.unlink(file)
+        expect(await local.summary(dir, base)).toEqual([first.at(1)!])
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).not.toHaveBeenCalled()
+
+        await fs.writeFile(file, "new\ntext")
+        await fs.utimes(file, time, time)
+        const replaced = await local.summary(dir, base)
+        expect(replaced.at(0)).toMatchObject({ file: "changing.txt", additions: 2, summarized: true })
+        expect(replaced.at(0)?.stamp).not.toBe(changed.at(0)?.stamp)
+        expect(replaced.at(1)).toEqual(first.at(1))
+        expect(read).toHaveBeenCalledTimes(1)
+        expect(read.mock.calls.at(0)?.at(0)).toBe(file)
+        expect(probe).toHaveBeenCalledTimes(1)
+        read.mockClear()
+        probe.mockClear()
+        expect(await local.summary(dir, base)).toEqual(replaced)
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).not.toHaveBeenCalled()
+      } finally {
+        read.mockRestore()
+        probe.mockRestore()
+      }
+    })
+  })
+
+  it("preserves empty, oversized, binary, and symlink summaries", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "empty.txt"), "")
+      await fs.writeFile(path.join(dir, "large.txt"), Buffer.alloc(1_000_001, 0x61))
+      await fs.writeFile(path.join(dir, "large.bin"), Buffer.alloc(1_000_001))
+      await fs.writeFile(path.join(dir, "text.bin"), "one\r\ntwo")
+      await fs.symlink("large.bin", path.join(dir, "link.txt"))
+      await fs.symlink("missing", path.join(dir, "broken.txt"))
+      const local = createLocalDiff(git())
+      const first = await local.summary(dir, base)
+      expect(first.map((entry) => [entry.file, entry.additions, entry.summarized])).toEqual([
+        ["broken.txt", 1, true],
+        ["empty.txt", 0, true],
+        ["large.bin", 0, false],
+        ["large.txt", 0, true],
+        ["link.txt", 1, true],
+        ["text.bin", 2, true],
+      ])
+      const read = spyOn(fs, "readFile")
+      const probe = spyOn(fs, "open")
+      const link = spyOn(fs, "readlink")
+      try {
+        expect(await local.summary(dir, base)).toEqual(first)
+        expect(read).not.toHaveBeenCalled()
+        expect(probe).not.toHaveBeenCalled()
+        expect(link).not.toHaveBeenCalled()
+      } finally {
+        read.mockRestore()
+        probe.mockRestore()
+        link.mockRestore()
+      }
     })
   })
 })
