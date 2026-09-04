@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
+import { indexingConsentStore } from "../../src/indexing-consent"
 import { fetchSnapshot } from "../../src/kilo-provider/config-snapshot"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -24,7 +25,8 @@ type Internals = {
   fetchAndSendSkills: () => Promise<void>
   fetchAndSendCommands: () => Promise<void>
   fetchAndSendNotifications: () => Promise<void>
-  fetchAndSendIndexingStatus: () => Promise<void>
+  fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => Promise<void>
+  initializeConnection: () => Promise<void>
   connectionGeneration: number
   configBindings: {
     create: (input: unknown) => { id: string }
@@ -105,6 +107,45 @@ function createConnection() {
       getClient: () => client,
     },
   }
+}
+
+const initial = {
+  state: "In Progress",
+  message: "Indexing is initializing.",
+  processedFiles: 0,
+  totalFiles: 0,
+  percent: 0,
+}
+
+const complete = {
+  state: "Complete",
+  message: "Index up-to-date.",
+  processedFiles: 100,
+  totalFiles: 100,
+  percent: 100,
+}
+
+function indexing(dir = "/repo", root = dir) {
+  const context = { globalState: { get: () => undefined, update: async () => {} } }
+  indexingConsentStore(context as never).project = async () => ({ id: "prj-test", root, label: "Project" })
+  const client = {
+    kilo: { profile: async () => ({ data: null }) },
+    config: { warnings: async () => ({ data: [] }) },
+  }
+  const service = {
+    getClient: () => client,
+    getServerConfig: () => ({ baseUrl: "http://127.0.0.1:9999", password: "secret" }),
+    getServerInfo: () => null,
+    getConnectionError: () => null,
+    resolveEventSessionId: () => undefined,
+  }
+  const provider = new KiloProvider({} as never, service as never, context as never)
+  const internal = provider as unknown as Internals
+  const messages: Array<Record<string, unknown>> = []
+  provider.postMessage = (message) => void messages.push(message as Record<string, unknown>)
+  provider.setSessionDirectory("ses_indexing", dir)
+  internal.currentSession = { id: "ses_indexing" }
+  return { internal, client, service, messages }
 }
 
 describe("KiloProvider indexing refresh", () => {
@@ -307,58 +348,119 @@ describe("KiloProvider indexing refresh", () => {
     })
   })
 
-  it("fetchAndSendIndexingStatus writes project consent through the dedicated endpoint", async () => {
-    const worktree = "/repo/.kilo/.kilocode/worktrees/feature"
-    const calls: { input: RequestInfo | URL; init?: RequestInit }[] = []
-    const original = globalThis.fetch
+  it.each(["/repo/.kilo/.kilocode/worktrees/feature", "/home/user/桌面/project", "/repo/100%/%2F/project"])(
+    "fetchAndSendIndexingStatus writes consent with an encoded directory header: %s",
+    async (dir) => {
+      const calls: { input: RequestInfo | URL; init?: RequestInit }[] = []
+      const original = globalThis.fetch
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ input, init })
+        return Response.json(initial)
+      }) as typeof fetch
 
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ input, init })
-      return new Response(
-        JSON.stringify({
-          state: "Disabled",
-          message: "Indexing is disabled in worktree sessions.",
-          processedFiles: 0,
-          totalFiles: 0,
-          percent: 0,
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      )
+      try {
+        await indexing(dir).internal.fetchAndSendIndexingStatus()
+
+        expect(calls).toHaveLength(1)
+        const call = calls.at(0)
+        const headers = new Headers(call?.init?.headers)
+        const auth = Buffer.from("kilo:secret").toString("base64")
+        expect(headers.get("Authorization")).toBe(`Basic ${auth}`)
+        expect(headers.get("x-kilo-directory")).toBe(encodeURIComponent(dir))
+        expect(decodeURIComponent(headers.get("x-kilo-directory") ?? "")).toBe(dir)
+        expect(call?.init?.method).toBe("PUT")
+        expect(String(call?.input)).toBe("http://127.0.0.1:9999/indexing/consent")
+        expect(JSON.parse(String(call?.init?.body))).toEqual({ enabled: false })
+      } finally {
+        globalThis.fetch = original
+      }
+    },
+  )
+
+  it("keeps newer indexing.status when an older HTTP status response arrives", async () => {
+    const fixture = indexing()
+    const called = Promise.withResolvers<void>()
+    const response = Promise.withResolvers<Response>()
+    const original = globalThis.fetch
+    globalThis.fetch = (() => {
+      called.resolve()
+      return response.promise
     }) as typeof fetch
 
+    const request = fixture.internal.fetchAndSendIndexingStatus()
     try {
-      const provider = new KiloProvider(
-        {} as never,
-        {
-          getClient: () => ({}) as never,
-          getServerConfig: () => ({ baseUrl: "http://127.0.0.1:9999", password: "secret" }),
-        } as never,
-        {
-          globalState: {
-            get: () => undefined,
-            update: async () => {},
-          },
-        } as never,
-      )
-      const internal = provider as unknown as Internals
-      provider.setSessionDirectory("ses_worktree", worktree)
-      internal.currentSession = { id: "ses_worktree" }
+      await called.promise
+      fixture.internal.handleEvent({ type: "indexing.status", properties: { status: complete } }, "/repo")
+      response.resolve(Response.json(initial))
+      await request
 
-      await internal.fetchAndSendIndexingStatus()
+      expect(fixture.messages).toEqual([expect.objectContaining({ type: "indexingStatusLoaded", status: complete })])
+    } finally {
+      response.resolve(Response.json(initial))
+      await request
+      globalThis.fetch = original
+    }
+  })
 
-      expect(calls.length).toBe(1)
-      const headers = new Headers(calls[0]?.init?.headers)
-      const auth = Buffer.from("kilo:secret").toString("base64")
-      expect(headers.get("Authorization")).toBe(`Basic ${auth}`)
-      expect(headers.get("x-kilo-directory")).toBe(worktree)
-      expect(calls[0]?.init?.method).toBe("PUT")
-      expect(String(calls[0]?.input)).toBe("http://127.0.0.1:9999/indexing/consent")
-      expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ enabled: false })
+  it("accepts the resolved project root and rejects unrelated indexing.status events from a repo subfolder", async () => {
+    const fixture = indexing("/repo/subfolder", "/repo")
+    const original = globalThis.fetch
+    globalThis.fetch = (async () => Response.json(initial)) as typeof fetch
+
+    try {
+      await fixture.internal.fetchAndSendIndexingStatus(undefined, "prj-test")
+      const event = { type: "indexing.status", properties: { status: complete } }
+      fixture.internal.handleEvent(event, "/other-repo")
+      expect(fixture.messages).toHaveLength(1)
+
+      fixture.internal.handleEvent(event, "/repo")
+      expect(fixture.messages).toEqual([
+        expect.objectContaining({ type: "indexingStatusLoaded", status: initial, projectId: "prj-test" }),
+        expect.objectContaining({ type: "indexingStatusLoaded", status: complete, projectId: "prj-test" }),
+      ])
     } finally {
       globalThis.fetch = original
+    }
+  })
+
+  it("refreshes indexing on SSE reconnect without waiting for profile", async () => {
+    const fixture = indexing()
+    const callback = Promise.withResolvers<(state: Internals["connectionState"]) => Promise<void>>()
+    const subscribe = () => () => {}
+    Object.assign(fixture.service, {
+      connect: async () => {},
+      getClient: () => null,
+      getConnectionState: () => "disconnected",
+      onEventFiltered: subscribe,
+      onStateChange: (listener: (state: Internals["connectionState"]) => Promise<void>) => {
+        callback.resolve(listener)
+        return () => {}
+      },
+      onNotificationDismissed: subscribe,
+      onLanguageChanged: subscribe,
+      onProfileChanged: subscribe,
+      onFavoritesChanged: subscribe,
+      onModelSelectorExpandedChanged: subscribe,
+      onClearPendingPrompts: subscribe,
+      registerDirectoryProvider: subscribe,
+    })
+    await fixture.internal.initializeConnection()
+    expect(fixture.internal.connectionState).toBe("disconnected")
+
+    const profile = Promise.withResolvers<{ data: null }>()
+    const calls: string[] = []
+    fixture.service.getClient = () => fixture.client
+    fixture.client.kilo.profile = () => profile.promise
+    fixture.internal.fetchAndSendIndexingStatus = async () => {
+      calls.push("indexing")
+    }
+
+    const syncing = (await callback.promise)("connected")
+    try {
+      expect(calls).toEqual(["indexing"])
+    } finally {
+      profile.resolve({ data: null })
+      await syncing
     }
   })
 
