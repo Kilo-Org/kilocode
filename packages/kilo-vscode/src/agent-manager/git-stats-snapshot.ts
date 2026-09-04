@@ -2,7 +2,7 @@ import { createHash } from "crypto"
 import type { BigIntStats } from "fs"
 import * as fs from "fs/promises"
 import { LRUCache } from "lru-cache"
-import { binaryFile } from "../diff/shared/binary"
+import { probe } from "../diff/shared/binary"
 import { resolveInside } from "../diff/shared/path"
 import { serialize } from "../util/serialize"
 import type { GitOps } from "./GitOps"
@@ -175,9 +175,12 @@ export async function measure(file: string, classify = true): Promise<Measuremen
     if (hit?.stamp === key) return hit
 
     const value = await (async () => {
-      const binary = stat.isFile() && (await binaryFile(file))
+      const binary = stat.isFile() ? await probe(file) : false
+      if (binary === undefined) return undefined
       if (binary || stat.size > MAX_BYTES) return { binary, count: 0 }
-      const content = stat.isSymbolicLink() ? await fs.readlink(file) : await fs.readFile(file, "utf8")
+      const current = await fs.lstat(file, { bigint: true })
+      if (stamp(current) !== key) return undefined
+      const content = current.isSymbolicLink() ? await fs.readlink(file) : await fs.readFile(file, "utf8")
       const count = !content ? 0 : content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
       return { binary, count }
     })().catch(() => undefined)

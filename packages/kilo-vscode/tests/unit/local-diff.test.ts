@@ -421,6 +421,53 @@ describe("createLocalDiff summary cache", () => {
     })
   })
 
+  it("retries binary classification after a failed sample instead of caching it", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "binary.bin"), Buffer.alloc(1_000_001))
+      const local = createLocalDiff(git())
+      const probe = spyOn(fs, "open").mockRejectedValueOnce(new Error("temporary sample failure"))
+      try {
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(probe).toHaveBeenCalledTimes(1)
+        const recovered = await local.summary(dir, base)
+        expect(recovered.at(0)).toMatchObject({ additions: 0, summarized: false })
+        expect(probe).toHaveBeenCalledTimes(2)
+        expect(await local.summary(dir, base)).toEqual(recovered)
+        expect(probe).toHaveBeenCalledTimes(2)
+      } finally {
+        probe.mockRestore()
+      }
+    })
+  })
+
+  it("skips full reads when a file grows past the cutoff during its binary probe", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "growing.txt")
+      await fs.writeFile(file, "small\n")
+      const local = createLocalDiff(git())
+      const open = fs.open
+      const probe = spyOn(fs, "open").mockImplementationOnce(async (...args) => {
+        const handle = await open(...args)
+        const close = handle.close.bind(handle)
+        handle.close = async () => {
+          await close()
+          await fs.writeFile(file, Buffer.alloc(1_000_001, 0x61))
+        }
+        return handle
+      })
+      const read = spyOn(fs, "readFile")
+      try {
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(read).not.toHaveBeenCalled()
+        expect((await local.summary(dir, base)).at(0)).toMatchObject({ additions: 0, summarized: true })
+        expect(read).not.toHaveBeenCalled()
+      } finally {
+        probe.mockRestore()
+        read.mockRestore()
+      }
+    })
+  })
+
   it("refreshes changed, deleted, and replaced files without rereading stable siblings", async () => {
     await withRepo(async (dir, base) => {
       const file = path.join(dir, "changing.txt")
