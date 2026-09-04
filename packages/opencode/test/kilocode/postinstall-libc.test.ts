@@ -4,8 +4,8 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const mockPackageDir = path.resolve(__dirname, "../../../../test-13282/package")
-const postinstall = path.resolve(mockPackageDir, "postinstall.mjs")
+const postinstall = path.resolve(__dirname, "../../script/postinstall.mjs")
+const packageJsonPath = path.resolve(__dirname, "../../package.json")
 
 function runPostinstall(env: Record<string, string>): {
   exitCode: number
@@ -16,8 +16,13 @@ function runPostinstall(env: Record<string, string>): {
     process.execPath,
     ["--experimental-vm-modules", postinstall],
     {
-      cwd: mockPackageDir,
-      env: { ...process.env, ...env },
+      cwd: __dirname,
+      env: { 
+        ...process.env, 
+        ...env,
+        KILO_TEST_PACKAGE_JSON: packageJsonPath,
+        KILO_TEST_NPM: "skip" // mock npm so it doesn't do a real network install
+      },
       encoding: "utf8",
       timeout: 10000,
     },

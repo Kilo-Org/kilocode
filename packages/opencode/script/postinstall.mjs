@@ -9,7 +9,10 @@ import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
+// kilocode_change start - allow test suite to point to root package.json
+const packageJsonPath = process.env.KILO_TEST_PACKAGE_JSON ?? path.join(__dirname, "package.json")
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"))
+// kilocode_change end
 
 // kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
@@ -224,11 +227,16 @@ function main() {
       try {
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
-        const result = childProcess.spawnSync(
-          "npm",
-          ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
-          { stdio: "inherit", windowsHide: true },
-        )
+        let result;
+        if (process.env.KILO_TEST_NPM === "skip") {
+          result = { status: 1 } // kilocode_change - mock failed install for tests
+        } else {
+          result = childProcess.spawnSync(
+            "npm",
+            ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
+            { stdio: "inherit", windowsHide: true },
+          )
+        }
         if (result.status !== 0) continue
         copyBinary(path.join(temp, "node_modules", name, "bin", sourceBinary))
         if (verifyBinary()) return
