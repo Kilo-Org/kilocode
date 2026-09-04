@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Дошка",
+  "task.swarm.refresh": "Оновити",
+  "task.swarm.reset": "Скинути дошку",
+  "task.swarm.resetTitle": "Скинути цю дошку?",
+  "task.swarm.resetDescription":
+    "Очистити видимі повідомлення? Розмови й поточні завдання залишаться без змін. Агенти можуть публікувати нові повідомлення.",
+  "task.swarm.loading": "Завантаження дошки...",
+  "task.swarm.failed": "Не вдалося завантажити або скинути дошку. Спробуйте оновити її.",
 
   "command.provider.connect": "Підключити провайдера",
 

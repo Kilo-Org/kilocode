@@ -39,6 +39,27 @@ type Body = {
 }
 
 describe("Kilo PublicApi OpenAPI contract", () => {
+  test("exposes board paging and reset with a minimal snapshot", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const path = KilocodePaths.sessionBoard.replace(":sessionID", "{sessionID}")
+    const reset = KilocodePaths.resetSessionBoard.replace(":sessionID", "{sessionID}")
+    const query = spec.paths[path]?.get?.parameters as Parameter[] | undefined
+    expect(spec.paths[path]?.get?.operationId).toBe("kilocode.sessionBoard")
+    expect(spec.paths[reset]?.post?.operationId).toBe("kilocode.resetSessionBoard")
+    expect(query?.find((field) => field.name === "limit")?.schema).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 50,
+    })
+    expect(Object.keys(spec.components?.schemas?.SessionBoard.properties ?? {}).sort()).toEqual([
+      "cursor",
+      "hasMore",
+      "messages",
+      "ownerSessionID",
+      "revision",
+    ])
+  })
+
   test("uses Kilo branding", () => {
     const spec = OpenApi.fromApi(PublicApi)
     expect(spec.info.title).toBe("kilo")

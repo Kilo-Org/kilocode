@@ -2538,6 +2538,7 @@ const AgentManagerContent: Component = () => {
                 </Show>
                 <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
                   <ChatView
+                    projectId={currentProjectId()}
                     worktrees={references}
                     emptyState={intro.render}
                     introduction={intro.visible()}

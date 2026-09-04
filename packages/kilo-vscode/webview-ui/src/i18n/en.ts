@@ -55,6 +55,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Board",
+  "task.swarm.refresh": "Refresh",
+  "task.swarm.reset": "Reset board",
+  "task.swarm.resetTitle": "Reset this board?",
+  "task.swarm.resetDescription":
+    "Clear visible messages? Conversations and running tasks stay unchanged. Agents can post new messages.",
+  "task.swarm.loading": "Loading board...",
+  "task.swarm.failed": "Could not load or reset the board. Try refreshing it.",
 
   "command.provider.connect": "Connect provider",
 
