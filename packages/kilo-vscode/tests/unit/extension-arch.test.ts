@@ -198,6 +198,28 @@ describe("Extension — package.json command sync", () => {
       ]),
     )
   })
+
+  it("routes task-close commands to the focused Kilo surface", () => {
+    const commands = pkg.contributes?.commands ?? []
+    expect(commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.closeTask", title: "Close Task", category: "Kilo Code" }),
+        expect.objectContaining({
+          command: "kilo-code.new.closeAllTasks",
+          title: "Close All Tasks",
+          category: "Kilo Code",
+        }),
+      ]),
+    )
+
+    const source = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const closeTask = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeTask"'))
+    const closeAll = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeAllTasks"'))
+    expect(closeTask).toContain('agentManagerProvider.postMessage({ type: "action", action: "closeTask" })')
+    expect(closeTask).toContain('target.postMessage({ type: "action", action: "closeTask" })')
+    expect(closeAll).toContain('agentManagerProvider.postMessage({ type: "action", action: "closeAllTasks" })')
+    expect(closeAll).toContain('target.postMessage({ type: "action", action: "closeAllTasks" })')
+  })
 })
 
 // ---------------------------------------------------------------------------

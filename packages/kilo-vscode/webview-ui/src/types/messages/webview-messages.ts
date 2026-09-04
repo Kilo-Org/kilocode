@@ -739,6 +739,12 @@ export interface CloseSessionRequest {
   sessionId: string
 }
 
+// Stop and remove multiple Local or worktree sessions from Agent Manager.
+export interface CloseSessionsRequest {
+  type: "agentManager.closeSessions"
+  sessionIds: string[]
+}
+
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
@@ -1647,6 +1653,7 @@ export type WebviewMessage =
   | ForkSessionRequest
   | SidebarForkSessionRequest
   | CloseSessionRequest
+  | CloseSessionsRequest
   | PersistSessionRequest
   | ForgetSessionRequest
   | RenameWorktreeRequest

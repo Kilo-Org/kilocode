@@ -417,6 +417,22 @@ export async function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.closeTask", () => {
+      if (agentManagerProvider.isActive()) {
+        agentManagerProvider.postMessage({ type: "action", action: "closeTask" })
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      target.postMessage({ type: "action", action: "closeTask" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.closeAllTasks", () => {
+      if (agentManagerProvider.isActive()) {
+        agentManagerProvider.postMessage({ type: "action", action: "closeAllTasks" })
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      target.postMessage({ type: "action", action: "closeAllTasks" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
@@ -648,6 +664,13 @@ export async function activate(context: vscode.ExtensionContext) {
       connectionService.dispose()
     },
   })
+
+  // Extension-test hosts drive the contributed commands through the real command
+  // registry, so expose the live surfaces they assert against. Normal activation
+  // returns nothing and keeps the public extension API closed.
+  if (context.extensionMode === vscode.ExtensionMode.Test) {
+    return { sidebar: provider, agentManager: agentManagerProvider, activeTab: activeTabProvider }
+  }
 }
 
 export async function deactivate() {

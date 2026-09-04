@@ -237,16 +237,32 @@ const AppContent: Component = () => {
       : undefined,
   )
 
+  const newTask = () => {
+    if (currentView() === "newTask") {
+      window.dispatchEvent(new CustomEvent("newTaskRequest"))
+      return
+    }
+    tabs?.add()
+    if (!tabs) session.clearCurrentSession()
+    setCurrentView("newTask")
+  }
+
   const handleViewAction = (action: string) => {
     switch (action) {
-      case "plusButtonClicked": {
-        const chat = currentView() === "newTask"
-        if (chat) window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        if (!chat && tabs) tabs.add()
-        if (!chat && !tabs) session.clearCurrentSession()
-        setCurrentView("newTask")
+      case "plusButtonClicked":
+        newTask()
+        break
+      case "closeTask": {
+        if (currentView() !== "newTask") break
+        const id = tabs?.active()
+        if (!tabs || !id) break
+        tabs.close(id)
         break
       }
+      case "closeAllTasks":
+        tabs?.closeAll()
+        setCurrentView("newTask")
+        break
       case "historyButtonClicked":
         setCurrentView("history")
         break

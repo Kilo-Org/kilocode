@@ -341,7 +341,9 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await host.sessions.abort([sessionId])")
+    const close = getMethodBody("onCloseSessions")
+    expect(close).toContain("await host.sessions.abort(")
+    expect(close.indexOf("await host.sessions.abort(")).toBeLessThan(close.indexOf("stopSessionProcesses("))
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -555,6 +557,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.addSessionToWorktree",
       "agentManager.forkSession",
       "agentManager.closeSession",
+      "agentManager.closeSessions",
       "agentManager.persistSession",
       "agentManager.forgetSession",
       "agentManager.configureSetupScript",

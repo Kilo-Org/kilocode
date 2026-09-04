@@ -112,6 +112,16 @@
         "icon": "$(add)"
       },
       {
+        "command": "kilo-code.new.closeTask",
+        "title": "Close Task",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.closeAllTasks",
+        "title": "Close All Tasks",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManagerOpen",
         "title": "Agent Manager",
         "category": "Kilo Code",
@@ -1249,8 +1259,8 @@
     "build:check:production": "bun run --parallel check-types check-types:webview lint bundle:production",
     "bundle": "bun esbuild.js",
     "bundle:production": "bun esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
+    "compile-tests": "tsc -p tsconfig.test.json",
+    "watch-tests": "tsc -p tsconfig.test.json --watch",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsgo --noEmit",
     "check-types:webview": "tsgo --noEmit --project webview-ui/tsconfig.json",
