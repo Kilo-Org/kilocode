@@ -105,18 +105,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": [
-        "packages/kilo-vscode/src/agent-manager/types.ts",
-        "packages/kilo-vscode/webview-ui/agent-manager/pr/pr-types.ts"
-      ],
-      "fingerprint": "01014e9610c0c91c",
-      "maxMatches": 1,
-      "maxTokens": 159,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": ["packages/kilo-vscode/src/diff/sources/staged.ts", "packages/kilo-vscode/src/diff/sources/unstaged.ts"],
       "fingerprint": "2aad5496387de63a",
       "maxMatches": 1,

@@ -1,5 +1,5 @@
 import { formatReviewCommentMarkdown, type PRReviewCommentData } from "../../../src/shared/review-comments"
-import type { PRComment } from "./pr-types"
+import type { PRComment, PRConversationComment } from "./pr-types"
 
 /** Caps so one talkative PR cannot blow up a prompt. */
 const BODY = 4_000
@@ -173,6 +173,20 @@ export function prPayload(comment: PRComment): PRReviewCommentData {
     outdated: comment.outdated || undefined,
     replies: replies.length > 0 ? replies : undefined,
   }
+}
+
+export function prConversationPayload(comment: PRConversationComment): PRReviewCommentData {
+  return {
+    id: comment.id,
+    origin: "pr",
+    author: comment.author,
+    body: clip(comment.body, BODY),
+    reviewState: comment.state,
+  }
+}
+
+export function prConversationMarkdown(comment: PRConversationComment): string {
+  return formatReviewCommentMarkdown(prConversationPayload(comment))
 }
 
 /** Only https urls reach the payload, the markdown, or `openExternal`. */

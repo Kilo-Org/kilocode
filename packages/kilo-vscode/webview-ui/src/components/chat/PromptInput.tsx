@@ -29,6 +29,7 @@ import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
+import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -41,6 +42,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
@@ -176,6 +178,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
   if (item.type === "file-picker")
     return (
       <>
@@ -238,6 +250,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+
+  /**
+   * True after the last menu entry of a bare `@`, which lists the entries above
+   * the files. A query ranks entries among the results it finds, so there is no
+   * group boundary left to draw.
+   */
+  const divides = (index: number) => {
+    if (mention.mentionQuery()) return false
+    const items = mention.mentionResults()
+    const item = items.at(index)
+    const next = items.at(index + 1)
+    return item !== undefined && next !== undefined && isMentionEntry(item) && !isMentionEntry(next)
+  }
 
   const boxKey = () => props.boxId ?? "prompt:default"
   const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
@@ -1484,7 +1509,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     >
                       <MentionItemContent item={item} />
                     </div>
-                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                    <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
                   </>

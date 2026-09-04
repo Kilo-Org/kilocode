@@ -72,4 +72,10 @@ describe("mergePRStatus", () => {
     expect(next.unresolvedThreads).toBe(0)
     expect(next.comments).toEqual(threads)
   })
+
+  it("keeps the previous conversation when a refresh reports none", () => {
+    const convo = [{ id: "c1", author: "alice", body: "LGTM" }]
+    const next = mergePRStatus(status({ conversation: convo }), status({ title: "renamed" }))
+    expect(next.conversation).toEqual(convo)
+  })
 })

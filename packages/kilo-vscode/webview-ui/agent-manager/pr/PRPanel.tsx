@@ -11,6 +11,7 @@ import { PRReviewers } from "./PRReviewers"
 import { PRDescription } from "./PRDescription"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
+import { PRConversation } from "./PRConversation"
 import { commentScroll, patchCommentState, setCommentScroll } from "./pr-comment-state"
 import { PRSummary } from "./PRSummary"
 import { CopyButton } from "./CopyButton"
@@ -25,6 +26,7 @@ interface PRPanelProps {
   jump?: number
   onJump?: (id: number) => void
   onClose: () => void
+  onRefresh: () => void
   onOpenExternal: () => void
   onOpenFile?: (file: string, line?: number) => void
   onOpenUrl?: (url: string) => void
@@ -152,6 +154,30 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
     return undefined
   })
 
+  const conversation = createMemo<
+    | { project?: string; worktree: string; number: number; url: string; value: NonNullable<PRStatus["conversation"]> }
+    | undefined
+  >((prev) => {
+    const next = props.pr.conversation
+    if (next)
+      return {
+        project: props.projectId,
+        worktree: props.worktreeId,
+        number: props.pr.number,
+        url: props.pr.url,
+        value: next,
+      }
+    if (
+      prev &&
+      prev.project === props.projectId &&
+      prev.worktree === props.worktreeId &&
+      prev.number === props.pr.number &&
+      prev.url === props.pr.url
+    )
+      return prev
+    return undefined
+  })
+
   createEffect(() => {
     if (!jumping() || !comments()) return
     patchCommentState(props.worktreeId, () => ({ open: true }))
@@ -167,6 +193,15 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          <Tooltip value={t("common.refresh")} placement="bottom">
+            <IconButton
+              icon="refresh"
+              size="small"
+              variant="ghost"
+              aria-label={t("common.refresh")}
+              onClick={props.onRefresh}
+            />
+          </Tooltip>
           <Tooltip value={t("agentManager.pr.copyLink")} placement="bottom">
             <CopyButton text={props.pr.url} label={t("agentManager.pr.copyLink")} />
           </Tooltip>
@@ -207,6 +242,19 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
                   onOpenUrl={props.onOpenUrl}
                 />
               </div>
+            )}
+          </Show>
+          <Show when={conversation()}>
+            {(item) => (
+              <Show when={item().value.length > 0}>
+                <PRConversation
+                  comments={item().value}
+                  projectId={props.projectId}
+                  worktreeId={props.worktreeId}
+                  activeTerminalId={props.activeTerminalId}
+                  onOpenUrl={props.onOpenUrl}
+                />
+              </Show>
             )}
           </Show>
         </div>
