@@ -3825,6 +3825,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.sendIndexingSettings(project.id)
     const config = this.connectionService.getServerConfig()
     if (!config) return
+    if (this.indexingProjectId !== project.id) {
+      await this.syncIndexingConsent(project.root, enabled, config)
+      return
+    }
     const target = {
       source: this.getWorkspaceDirectory(this.currentSession?.id),
       directory: project.root,
@@ -3834,7 +3838,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const request = ++this.indexingStatusRequest
     const status = await this.syncIndexingConsent(project.root, enabled, config)
     if (
-      request !== this.indexingStatusRequest ||
+      (enabled && request !== this.indexingStatusRequest) ||
       target !== this.indexingScope ||
       this.indexingProjectId !== project.id
     )

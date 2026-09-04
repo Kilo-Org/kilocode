@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
-import { indexingConsentStore } from "../../src/indexing-consent"
+import { indexingConsentStore, type IndexingProject } from "../../src/indexing-consent"
 import { fetchSnapshot } from "../../src/kilo-provider/config-snapshot"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -26,6 +26,8 @@ type Internals = {
   fetchAndSendCommands: () => Promise<void>
   fetchAndSendNotifications: () => Promise<void>
   fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => Promise<void>
+  sendIndexingSettings: (projectId?: string) => Promise<IndexingProject | undefined>
+  setIndexingConsent: (projectId: string, enabled: boolean) => Promise<void>
   initializeConnection: () => Promise<void>
   connectionGeneration: number
   configBindings: {
@@ -127,7 +129,8 @@ const complete = {
 
 function indexing(dir = "/repo", root = dir) {
   const context = { globalState: { get: () => undefined, update: async () => {} } }
-  indexingConsentStore(context as never).project = async () => ({ id: "prj-test", root, label: "Project" })
+  const store = indexingConsentStore(context as never)
+  store.project = async () => ({ id: "prj-test", root, label: "Project" })
   const client = {
     kilo: { profile: async () => ({ data: null }) },
     config: { warnings: async () => ({ data: [] }) },
@@ -145,7 +148,7 @@ function indexing(dir = "/repo", root = dir) {
   provider.postMessage = (message) => void messages.push(message as Record<string, unknown>)
   provider.setSessionDirectory("ses_indexing", dir)
   internal.currentSession = { id: "ses_indexing" }
-  return { internal, client, service, messages }
+  return { internal, client, service, messages, store }
 }
 
 describe("KiloProvider indexing refresh", () => {
@@ -398,6 +401,92 @@ describe("KiloProvider indexing refresh", () => {
     } finally {
       response.resolve(Response.json(initial))
       await request
+      globalThis.fetch = original
+    }
+  })
+
+  it("keeps the Disabled consent response when progress arrives during the request", async () => {
+    const fixture = indexing()
+    const project = await fixture.store.project("/repo")
+    fixture.store.list = async () => [project]
+    const disabled = { ...initial, state: "Disabled", message: "Indexing consent is required." }
+    const called = Promise.withResolvers<RequestInit | undefined>()
+    const response = Promise.withResolvers<Response>()
+    const original = globalThis.fetch
+    globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+      called.resolve(init)
+      return response.promise
+    }) as typeof fetch
+
+    const request = fixture.internal.setIndexingConsent(project.id, false)
+    try {
+      const init = await called.promise
+      expect(JSON.parse(String(init?.body))).toEqual({ enabled: false })
+      fixture.internal.handleEvent({ type: "indexing.status", properties: { status: initial } }, project.root)
+      response.resolve(Response.json(disabled))
+      await request
+
+      expect(fixture.messages.filter((message) => message.type === "indexingStatusLoaded")).toEqual([
+        expect.objectContaining({ status: initial, projectId: project.id }),
+        expect.objectContaining({ status: disabled, projectId: project.id }),
+      ])
+    } finally {
+      response.resolve(Response.json(disabled))
+      await request
+      globalThis.fetch = original
+    }
+  })
+
+  it("applies a delayed consent save without replacing or invalidating the selected project status", async () => {
+    const fixture = indexing()
+    const project = await fixture.store.project("/repo")
+    const prior = { id: "prj-other", root: "/other-repo", label: "Other" }
+    const projects = [prior, project]
+    const waiting = Promise.withResolvers<void>()
+    const listing = Promise.withResolvers<IndexingProject[]>()
+    let lists = 0
+    fixture.store.list = async () => {
+      if (++lists !== 2) return projects
+      waiting.resolve()
+      return listing.promise
+    }
+    const called = Promise.withResolvers<void>()
+    const response = Promise.withResolvers<Response>()
+    const calls: Array<{ directory: string; enabled: boolean }> = []
+    const original = globalThis.fetch
+    globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+      const directory = decodeURIComponent(new Headers(init?.headers).get("x-kilo-directory") ?? "")
+      calls.push({ directory, enabled: JSON.parse(String(init?.body)).enabled })
+      if (directory === prior.root) return Promise.resolve(Response.json(initial))
+      called.resolve()
+      return response.promise
+    }) as typeof fetch
+
+    const saving = fixture.internal.setIndexingConsent(prior.id, true)
+    let request: Promise<void> | undefined
+    try {
+      await waiting.promise
+      await fixture.internal.sendIndexingSettings(project.id)
+      request = fixture.internal.fetchAndSendIndexingStatus(project.root, project.id)
+      await called.promise
+      listing.resolve(projects)
+      await saving
+      expect(calls).toEqual([
+        { directory: project.root, enabled: false },
+        { directory: prior.root, enabled: true },
+      ])
+      response.resolve(Response.json(initial))
+      await request
+      fixture.internal.handleEvent({ type: "indexing.status", properties: { status: complete } }, project.root)
+
+      expect(fixture.messages.filter((message) => message.type === "indexingStatusLoaded")).toEqual([
+        expect.objectContaining({ status: initial, projectId: project.id }),
+        expect.objectContaining({ status: complete, projectId: project.id }),
+      ])
+    } finally {
+      listing.resolve(projects)
+      response.resolve(Response.json(initial))
+      await Promise.all([saving, request])
       globalThis.fetch = original
     }
   })
