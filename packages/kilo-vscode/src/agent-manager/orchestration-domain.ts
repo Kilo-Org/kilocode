@@ -355,7 +355,7 @@ function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`
 }
 
-async function blocked(input: Target, dir: string, name: string): Promise<string | undefined> {
+async function blocked(input: Target, dir: string, name: string, questions?: "dismiss"): Promise<string | undefined> {
   const [perms, qs] = await Promise.all([
     input.client.permission.list({ directory: dir }),
     input.client.question.list({ directory: dir }),
@@ -363,7 +363,7 @@ async function blocked(input: Target, dir: string, name: string): Promise<string
   if (perms.error || qs.error)
     throw new OrchestrationError("host_error", "The managed session blockers could not be read")
   const mine = (qs.data ?? []).filter((value) => value.sessionID === input.sessionID)
-  const first = mine[0]
+  const first = questions === "dismiss" ? undefined : mine.at(0)
   if (first) {
     const detail = mine
       .map((value) => {
@@ -395,10 +395,11 @@ export async function prompt(input: {
   messageID: string
   signal?: AbortSignal
   managed?: ManagedSession
+  questions?: "dismiss"
 }): Promise<void> {
   if (input.signal?.aborted) return
   const target = await locate(input)
-  const blocker = await blocked(input, target.dir, target.name)
+  const blocker = await blocked(input, target.dir, target.name, input.questions)
   if (blocker) throw new OrchestrationError("unavailable_session", blocker)
   if (input.signal?.aborted) return
   await input.client.session.promptAsync(

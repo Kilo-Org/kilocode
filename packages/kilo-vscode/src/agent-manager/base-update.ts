@@ -90,6 +90,7 @@ export async function handleBaseUpdate(msg: BaseUpdateRequest, ctx: ProjectConte
       sessionID: id,
       text: baseUpdatePrompt(worktree),
       messageID: randomUUID(),
+      questions: "dismiss",
     })
   } catch (err) {
     host.log("Update from base failed:", err)
