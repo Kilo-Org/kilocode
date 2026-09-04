@@ -8,9 +8,12 @@ import { serialize } from "../util/serialize"
 import type { GitOps } from "./GitOps"
 import { Semaphore } from "./semaphore"
 
+type Measurement = { stamp: string; count: number; binary: boolean }
+
 const MAX_BYTES = 1_000_000n
 const reads = new Semaphore(16)
-const cache = new LRUCache<string, { stamp: string; count: number }>({ max: 10_000 })
+const cache = new LRUCache<string, Measurement>({ max: 10_000 })
+let misses = 0
 
 export interface DiffStats {
   files: number
@@ -158,30 +161,42 @@ function numstat(raw: Buffer): DiffStats {
   return result
 }
 
-export async function lines(file: string): Promise<number> {
+export async function measure(file: string, classify = true): Promise<Measurement | undefined> {
   return reads.run(async () => {
     const stat = await fs.lstat(file, { bigint: true }).catch(() => undefined)
     if (!stat) {
       cache.delete(file)
-      return 0
+      return undefined
     }
-    if (stat.size === 0n || stat.size > MAX_BYTES) return 0
+    if (!classify && (stat.size === 0n || stat.size > MAX_BYTES)) return { stamp: "", count: 0, binary: false }
     const key = stamp(stat)
+    if (stat.size === 0n) return { stamp: key, count: 0, binary: false }
     const hit = cache.get(file)
-    if (hit?.stamp === key) return hit.count
+    if (hit?.stamp === key) return hit
 
-    const count = await (async () => {
-      if (await binaryFile(file)) return 0
+    const value = await (async () => {
+      const binary = stat.isFile() && (await binaryFile(file))
+      if (binary || stat.size > MAX_BYTES) return { binary, count: 0 }
       const content = stat.isSymbolicLink() ? await fs.readlink(file) : await fs.readFile(file, "utf8")
-      if (!content) return 0
-      return content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
+      const count = !content ? 0 : content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
+      return { binary, count }
     })().catch(() => undefined)
-    if (count === undefined) return 0
+    if (!value) return { stamp: key, count: 0, binary: false }
 
+    const result = { stamp: key, ...value }
     const current = await fs.lstat(file, { bigint: true }).catch(() => undefined)
-    if (current && stamp(current) === key) cache.set(file, { stamp: key, count })
-    return count
+    if (!current || stamp(current) !== key) return result
+    if (!cache.has(file) && cache.size === cache.max) {
+      misses = (misses + 1) % 16
+      if (misses !== 0) return result
+    }
+    cache.set(file, result)
+    return result
   })
+}
+
+export async function lines(file: string): Promise<number> {
+  return (await measure(file, false))?.count ?? 0
 }
 
 export function refOID(refs: RefSnapshot | undefined, ref: string): string | undefined {
