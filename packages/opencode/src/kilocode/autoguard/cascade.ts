@@ -14,23 +14,30 @@
 
 import { level0 } from "./level0"
 import { createLevel1Client, DEFAULT_LEVEL1_CONFIG, type Level1Client, type Level1Config } from "./level1"
-import type { CascadeResult, Level1Result, PolicyInput } from "./types"
+import { createLevel2Client, type Level2Client, type Level2Config } from "./level2"
+import type { CascadeResult, Level1Result, Level2Result, PolicyInput } from "./types"
 
 export interface CascadeConfig {
   /** Set false to measure the Level 0 rules on their own. */
   useLevel1: boolean
   level1: Level1Config
   /**
-   * Level 2 is not implemented. Until it is, a Level 1 `REVIEW` becomes `ask`,
-   * which is the honest mapping: the cascade genuinely does not know.
+   * When false, a Level 1 `REVIEW` becomes `ask` -- the honest mapping when
+   * nothing deeper is available: the cascade genuinely does not know.
    */
-  useLevel2: false
+  useLevel2: boolean
+  level2: Level2Config
 }
 
 export const DEFAULT_CASCADE_CONFIG: CascadeConfig = {
   useLevel1: true,
   level1: DEFAULT_LEVEL1_CONFIG,
   useLevel2: false,
+  // Level 2 defaults to the same endpoint but with `extraBody` cleared, so the
+  // reasoning switch Level 1 turns off stays ON here. This layer exists to
+  // think, and it is only reached for the minority Level 1 could not settle,
+  // so the latency is paid rarely.
+  level2: { ...DEFAULT_LEVEL1_CONFIG, extraBody: {} },
 }
 
 /** Alternatives are derived from the rule that fired, not written by a model. */
@@ -63,6 +70,7 @@ export async function evaluate(
   input: PolicyInput,
   config: CascadeConfig = DEFAULT_CASCADE_CONFIG,
   client?: Level1Client,
+  deepClient?: Level2Client,
 ): Promise<CascadeResult> {
   const started = Date.now()
   const l0 = level0(input)
@@ -76,6 +84,7 @@ export async function evaluate(
       safe_alternatives: alternativesFor(l0.rule),
       level0: l0,
       level1: null,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
@@ -89,6 +98,7 @@ export async function evaluate(
       safe_alternatives: [],
       level0: l0,
       level1: null,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
@@ -103,6 +113,7 @@ export async function evaluate(
       safe_alternatives: [],
       level0: l0,
       level1: null,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
@@ -118,6 +129,7 @@ export async function evaluate(
       safe_alternatives: [],
       level0: l0,
       level1: l1,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
@@ -131,6 +143,7 @@ export async function evaluate(
       safe_alternatives: alternativesFor(null),
       level0: l0,
       level1: l1,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
@@ -144,19 +157,53 @@ export async function evaluate(
       safe_alternatives: [],
       level0: l0,
       level1: l1,
+      level2: null,
       latency_ms: Date.now() - started,
     }
   }
 
   // REVIEW with no Level 2 behind it. Undetermined, so a human decides.
+  if (!config.useLevel2) {
+    return {
+      decision: "ask",
+      decided_by: "fail_closed",
+      rule: "L1:review",
+      reason: "Level 1 was not confident; Level 2 is not enabled",
+      safe_alternatives: [],
+      level0: l0,
+      level1: l1,
+      level2: null,
+      latency_ms: Date.now() - started,
+    }
+  }
+
+  const l2: Level2Result = await (deepClient ?? createLevel2Client(config.level2)).review(input)
+
+  if (l2.failure) {
+    return {
+      decision: "ask",
+      decided_by: "fail_closed",
+      rule: `L2-FAIL:${l2.failure}`,
+      reason: `Level 2 ${l2.failure}; failing closed to ask`,
+      safe_alternatives: [],
+      level0: l0,
+      level1: l1,
+      level2: l2,
+      latency_ms: Date.now() - started,
+    }
+  }
+
+  const decision: CascadeResult["decision"] = l2.verdict === "ALLOW" ? "allow" : l2.verdict === "DENY" ? "deny" : "ask"
   return {
-    decision: "ask",
-    decided_by: "fail_closed",
-    rule: "L1:review",
-    reason: "Level 1 was not confident; Level 2 is not enabled",
-    safe_alternatives: [],
+    decision,
+    decided_by: "level2",
+    rule: `L2:${l2.verdict.toLowerCase()}:${l2.failed_check}`,
+    reason: `Level 2 ${l2.verdict.toLowerCase()} (${l2.reason_code}, failed check: ${l2.failed_check}, risk: ${l2.risk})`,
+    // Level 2 writes its own alternatives; fall back to the rule table if it did not.
+    safe_alternatives: decision === "deny" ? (l2.safe_alternatives.length ? l2.safe_alternatives : alternativesFor(null)) : [],
     level0: l0,
     level1: l1,
+    level2: l2,
     latency_ms: Date.now() - started,
   }
 }

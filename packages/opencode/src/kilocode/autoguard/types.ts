@@ -100,6 +100,17 @@ export type Level0Verdict = "ALLOW" | "DENY" | "CONTINUE"
 /** Level 1's verdict. `REVIEW` routes to Level 2; it never prompts a human. */
 export type Level1Verdict = "ALLOW" | "REVIEW" | "DENY"
 
+/**
+ * Level 2's verdict.
+ *
+ * `ASK` is a deliberate departure from classification-design.md §7, which gives
+ * this layer only ALLOW and DENY. Half of what actually reaches Level 2 is
+ * plausible but under-authorized -- the grant simply never covers this target --
+ * and the right answer there is a human, not a guess. A binary would turn every
+ * such case into an unsafe allow or a false block.
+ */
+export type Level2Verdict = "ALLOW" | "DENY" | "ASK"
+
 export interface Level0Result {
   verdict: Level0Verdict
   /** Stable id of the rule that fired, for audit and per-rule metrics. */
@@ -115,6 +126,19 @@ export interface Level1Result {
   latency_ms: number
 }
 
+export interface Level2Result {
+  verdict: Level2Verdict
+  /** Which of the three checks failed, or `none`. */
+  failed_check: string
+  reason_code: string
+  risk: string
+  /** Feeds structured deny-and-continue directly. */
+  safe_alternatives: string[]
+  failure: "timeout" | "transport" | "malformed" | null
+  raw_response: string | null
+  latency_ms: number
+}
+
 export interface CascadeResult {
   decision: Decision
   /** Which level ended the evaluation. */
@@ -125,5 +149,6 @@ export interface CascadeResult {
   safe_alternatives: string[]
   level0: Level0Result
   level1: Level1Result | null
+  level2: Level2Result | null
   latency_ms: number
 }
