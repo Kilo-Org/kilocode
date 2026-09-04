@@ -6,6 +6,7 @@
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
 import ProfileView from "../components/profile/ProfileView"
+import { ProviderUsageCards } from "../components/profile/ProviderUsageCards"
 import type { ProfileData, ProviderUsageData, DeviceAuthState } from "../types/messages"
 
 const meta: Meta = {
@@ -169,4 +170,26 @@ export const StaleAndUnavailable: Story = {
 export const EmptyUsage: Story = {
   name: "ProfileView — no usage sources",
   render: () => render(personalProfile, { generatedAt: usage.generatedAt, items: [] }, 480),
+}
+
+export const GatewayCard: Story = {
+  name: "Kilo Gateway — no pass",
+  render: () => (
+    <StoryProviders>
+      <ProviderUsageCards
+        data={{ generatedAt: usage.generatedAt, items: [] }}
+        loading={false}
+        kiloPass={null}
+        showKiloPass
+        onRefresh={noop}
+        onOpen={noop}
+        onGetKiloPass={noop}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const GatewayCard200: Story = {
+  ...GatewayCard,
+  name: "Kilo Gateway — no pass, 200px",
 }
