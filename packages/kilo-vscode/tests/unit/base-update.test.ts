@@ -111,11 +111,8 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
   expect(text).toContain("Never merge a stale tracking ref")
   for (const safeguard of [
     "FETCH_HEAD^{commit}",
-    "git stash, --autostash",
+    "Do not use the shared stash stack or --autostash",
     "merge.autoStash",
-    "Do not discard",
-    "stage, or commit pre-existing edits",
-    "uncommitted changes in this worktree block",
     "intended resolution is unclear, stop and ask",
     "merge or rebase is already in progress",
     "HEAD is detached",
@@ -125,6 +122,26 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
     "Do not push",
   ])
     expect(text).toContain(safeguard)
+})
+
+it("asks the agent to preserve local work without asking the user to choose a method", () => {
+  const text = baseUpdatePrompt(wt)
+  for (const safeguard of [
+    "Preserve all staged, unstaged, and untracked changes",
+    "verified recovery copy unique to this worktree and this update before changing them",
+    "Never restore or remove another worktree's recovery data",
+    "Git's internal temporary merge state is allowed if it does not change the shared stash stack",
+    "If preservation cannot be verified, stop and ask before clearing any edits",
+    "You may temporarily clear backed-up edits to merge the base",
+    "restore local changes and their staging state",
+    "leave unfinished work uncommitted",
+    "Keep pre-existing edits out of the merge commit",
+    "Keep the recovery copy until restoration is verified",
+    "Do not ask me to choose a preservation method",
+  ])
+    expect(text).toContain(safeguard)
+  expect(text).not.toContain("stop and ask how to preserve them")
+  expect(text).not.toContain("Do not discard, overwrite, stage, or commit pre-existing edits")
 })
 
 it("sends one prompt to the owning worktree, queues on its busy session, and leaves drafts alone", async () => {
