@@ -478,6 +478,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private followupListeners: Array<(session: Session, directory: string) => void> = []
   private statsPoller: GitStatsPoller | null = null
   private statsGitOps: GitOps | null = null
+  private statsVisible = true
   private cachedStats: unknown = null
   private cachedGitRepo = false
   private cachedGitDirectory: string | undefined
@@ -778,16 +779,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
       this.setSidebarVisible(webviewView.visible)
-      if (this.statsPoller) {
-        this.statsPoller.setEnabled(webviewView.visible)
-        this.statsPoller.setVisible(webviewView.visible)
-      }
       this.focusSession(webviewView.visible ? this.contextSessionID : undefined)
     })
     this.initializeConnection()
   }
 
   private setSidebarVisible(visible: boolean): void {
+    this.setStatsVisible(visible)
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
     if (!visible && this.opts.focusContext) {
@@ -811,12 +809,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.setupWebviewMessageHandler(panel.webview)
     this.viewStateDisposable?.dispose()
     this.viewStateDisposable = this.visibleTaskStreams.bindPanel(panel, () => {
+      this.setStatsVisible(panel.visible)
       this.setStreamVisibility(panel.active && panel.visible)
       if (this.opts.disableViewedRegistration) return
       const id = this.contextSessionID
       this.streams.focus(panel.visible ? id : undefined)
       this.connectionService.registerVisible(this.instanceId, panel.visible && id ? [id] : [])
     })
+    this.setStatsVisible(panel.visible)
     this.setStreamVisibility(panel.active && panel.visible)
     this.initializeConnection()
   }
@@ -5485,6 +5485,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // ── Worktree stats polling (sidebar diff badge) ──────────────────
+  private setStatsVisible(visible: boolean): void {
+    this.statsVisible = visible
+    this.statsPoller?.setEnabled(visible)
+    this.statsPoller?.setVisible(visible)
+  }
+
   private startStatsPolling(): void {
     if (this.opts.disableStatsPolling) return
     this.statsPoller?.stop()
@@ -5509,8 +5515,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       log: () => {},
       hiddenIntervalMs: 60000,
     })
-    this.statsPoller.setEnabled(true)
-    this.statsPoller.setVisible(true)
+    this.setStatsVisible(this.statsVisible)
   }
 
   /**
@@ -5526,7 +5531,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)
     this.connectionService.unregisterAttached(this.instanceId)
-    this.statsPoller?.stop()
+    this.setStatsVisible(false)
     this.statsGitOps?.dispose()
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
