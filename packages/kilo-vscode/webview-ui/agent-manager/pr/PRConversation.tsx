@@ -11,7 +11,7 @@ import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { CopyButton } from "./CopyButton"
 import { SectionHeading } from "./SectionHeading"
 import { commentState, patchCommentState } from "./pr-comment-state"
-import { prConversationMarkdown, prConversationPayload, preview, SEND_LIMIT } from "./pr-comment-payload"
+import { githubUrl, prConversationMarkdown, prConversationPayload, preview, SEND_LIMIT } from "./pr-comment-payload"
 import type { PRConversationComment, ReviewerState } from "./pr-types"
 
 const REVIEWER_ICON: Record<ReviewerState, string> = {
@@ -219,7 +219,11 @@ export function PRConversation(props: Props) {
                   onToggleOpen={() => toggleOpen(comment)}
                   onSend={() => send([comment.id])}
                   onDismiss={() => toggleDismiss(comment)}
-                  onOpenUrl={comment.url && props.onOpenUrl ? () => props.onOpenUrl?.(comment.url!) : undefined}
+                  onOpenUrl={
+                    githubUrl(comment.url) && props.onOpenUrl
+                      ? () => props.onOpenUrl?.(githubUrl(comment.url)!)
+                      : undefined
+                  }
                 />
               )}
             </For>
