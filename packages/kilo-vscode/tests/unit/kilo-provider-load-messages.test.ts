@@ -608,6 +608,7 @@ describe("KiloProvider session status reconciliation", () => {
     await Bun.sleep(0)
 
     expect(internal.sessionStatusMap.get("child")).toBe("idle")
+    expect(["busy", "retry", "waiting"].includes(internal.sessionStatusMap.get("child") ?? "idle")).toBe(false)
     expect(internal.owners.has("child")).toBe(false)
     expect(sent).toContainEqual({ type: "sessionStatus", sessionID: "child", status: "idle" })
   })
