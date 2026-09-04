@@ -53,6 +53,8 @@ import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.RunProcessState
+import ai.kilocode.rpc.dto.RunStateDto
 import ai.kilocode.rpc.dto.SetupScriptTargetDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDirtyListDto
@@ -96,6 +98,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeWorktreeRpcApi
     private lateinit var service: KiloWorktreeService
+    private lateinit var run: FakeRunRpcApi
 
     override fun setUp() {
         super.setUp()
@@ -104,9 +107,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         rpc = FakeWorktreeRpcApi()
         service = KiloWorktreeService(coroutines.scope, rpc)
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
-        // remove() releases any worktree run processes through this service before deleting.
+        // remove() releases any worktree run processes through this service before deleting; the
+        // live-run indicator tests below push states through the same fake to drive the row icon.
+        run = FakeRunRpcApi()
         ApplicationManager.getApplication()
-            .replaceService(KiloRunService::class.java, KiloRunService(coroutines.scope, FakeRunRpcApi()), testRootDisposable)
+            .replaceService(KiloRunService::class.java, KiloRunService(coroutines.scope, run), testRootDisposable)
         // Worktree stats/PR loading resolves the backend project root first.
         fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         ApplicationManager.getApplication()
@@ -693,6 +698,116 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         assertSame(WorktreeIcons.locked, row(panel, 0).icon)
+    }
+
+    fun `test a running process replaces the resting icon with the platform live-run indicator`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        assertSame(WorktreeIcons.branch, row(panel, 0).icon)
+
+        run.states.value = listOf(RunStateDto("id1", "dev [wt]", item.path))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+    }
+
+    fun `test a stopping process still shows the live-run indicator`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        run.states.value = listOf(RunStateDto("id1", "dev [wt]", item.path, state = RunProcessState.STOPPING))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+    }
+
+    fun `test the live-run indicator follows the worktree the process runs in`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        // Shown while the process belongs to this row...
+        run.states.value = listOf(RunStateDto("id1", "dev [wt]", item.path))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+
+        // ...and cleared once the only live process belongs to a different worktree. Asserting the
+        // transition rather than a bare non-match keeps this from passing when the states never arrive.
+        run.states.value = listOf(RunStateDto("id1", "dev [other]", "${project.basePath!!}/.kilo/worktrees/other"))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.branch }
+    }
+
+    fun `test the live-run indicator clears when the last process exits`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        run.states.value = listOf(RunStateDto("id1", "dev [wt]", item.path))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+
+        run.states.value = emptyList()
+        waitUntil { row(panel, 0).icon === WorktreeIcons.branch }
+    }
+
+    fun `test a running process badges the session activity glyph and settles back to the run indicator`() {
+        val item = worktree("feature-x")
+        val activity = MutableStateFlow(mapOf("ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.QUESTION)))
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope, activity = activity)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        assertSame(SessionActivityKind.QUESTION.icon(), row(panel, 0).icon)
+
+        // A process starts while the agent is still waiting on an answer: the question glyph stays and
+        // picks up the run badge, rather than being replaced by the run indicator.
+        run.states.value = listOf(RunStateDto("id1", "dev [wt]", item.path))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.live(SessionActivityKind.QUESTION.icon()) }
+
+        // The question is answered, the process is still up: back to the standard running glyph.
+        activity.value = emptyMap()
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+    }
+
+    fun `test a running process in the main checkout replaces the monitor icon`() {
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        assertSame(WorktreeIcons.local, row(panel, 0).icon)
+
+        run.states.value = listOf(RunStateDto("id1", "dev", project.basePath!!))
+        waitUntil { row(panel, 0).icon === WorktreeIcons.runIndicator }
+    }
+
+    fun `test a pending worktree row never shows the live-run indicator even if its synthetic path matches a running process`() {
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        edt { controller.create("feature/y", null) }
+        flush()
+
+        val pendingPath = edt { controller.model.getElementAt(0).path }
+        run.states.value = listOf(RunStateDto("id1", "dev", pendingPath))
+        flush()
+
+        assertEquals(KiloBundle.message("worktree.progress.creating"), row(panel, 0).progress)
+        assertSame(WorktreeIcons.spinner, row(panel, 0).icon)
+
+        gate.complete(Unit)
+        flush()
     }
 
     /**

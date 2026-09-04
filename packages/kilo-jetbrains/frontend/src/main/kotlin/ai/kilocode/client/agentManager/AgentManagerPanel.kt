@@ -11,6 +11,7 @@ import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeRunBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
@@ -156,6 +157,7 @@ class AgentManagerPanel(
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
+    private var running: Set<String> = emptySet()
     private var hovered: String? = null
 
     init {
@@ -507,6 +509,7 @@ class AgentManagerPanel(
                 // The main checkout can sit on a PR branch just like a worktree can.
                 pr = prs[normalizeWorktreePath(item.path)],
                 current = true,
+                running = running.contains(normalizeWorktreePath(item.path)),
             )
         }
         list.update(
@@ -522,6 +525,7 @@ class AgentManagerPanel(
                     stats[key],
                     pull,
                     dirty[key],
+                    running = running.contains(key),
                 )
             },
             ActiveListSelection.Preserve,
@@ -651,6 +655,7 @@ class AgentManagerPanel(
             // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
             onDirty = { value -> dirty = value; sync() },
         )
+        WorktreeRunBinding(target, this) { value -> running = value; sync() }
     }
 
     override fun dispose() {
@@ -719,13 +724,14 @@ class AgentManagerPanel(
         val pr: WorktreePrDto?,
         val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
+        val running: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
         override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current)
+        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current, running)
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
@@ -827,7 +833,8 @@ class AgentManagerPanel(
                 stats == row.stats &&
                 pr == row.pr &&
                 dirty == row.dirty &&
-                current == row.current
+                current == row.current &&
+                running == row.running
         }
 
         override fun hashCode(): Int {
@@ -838,6 +845,7 @@ class AgentManagerPanel(
             result = 31 * result + (pr?.hashCode() ?: 0)
             result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
+            result = 31 * result + running.hashCode()
             return result
         }
     }
