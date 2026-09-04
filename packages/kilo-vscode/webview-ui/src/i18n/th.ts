@@ -834,6 +834,12 @@ export const dict = {
   "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
   "settings.notifications.enable.description":
     "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.workbench.title": "เปิดใช้การแจ้งเตือนของ VS Code",
+  "settings.notifications.workbench.description":
+    "แสดงการแจ้งเตือนของ VS Code เมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.os.title": "เปิดใช้การแจ้งเตือนของระบบปฏิบัติการ",
+  "settings.notifications.os.description":
+    "แสดงการแจ้งเตือนในศูนย์การแจ้งเตือนของ Windows เมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูลขณะที่ VS Code ไม่ได้ใช้งานอยู่ macOS และ Linux ต้องมีการพัฒนาแบบเนทีฟแยกต่างหาก",
   "settings.notifications.testSound": "ทดสอบ",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
   "settings.notifications.sound.system": "ระบบ",

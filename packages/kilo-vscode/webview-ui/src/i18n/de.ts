@@ -866,6 +866,12 @@ export const dict = {
   "settings.notifications.enable.title": "Tonbenachrichtigungen aktivieren",
   "settings.notifications.enable.description":
     "Töne wiedergeben, wenn Sitzungen abgeschlossen werden, ein Fehler auftritt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.workbench.title": "VS Code-Benachrichtigungen aktivieren",
+  "settings.notifications.workbench.description":
+    "VS Code-Benachrichtigungen anzeigen, wenn Kilo eine Aufgabe abschließt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.os.title": "Betriebssystem-Benachrichtigungen aktivieren",
+  "settings.notifications.os.description":
+    "Hinweise im Windows-Info-Center anzeigen, wenn Kilo eine Aufgabe abschließt oder Ihre Eingabe erforderlich ist, während VS Code nicht aktiv ist. macOS und Linux erfordern separate native Implementierungen.",
   "settings.notifications.testSound": "Testen",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",

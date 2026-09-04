@@ -826,6 +826,11 @@ export const dict = {
   "settings.notifications.sounds": "أصوات",
   "settings.notifications.enable.title": "تمكين الإشعارات الصوتية",
   "settings.notifications.enable.description": "تشغيل أصوات عند اكتمال الجلسات أو حدوث خطأ أو الحاجة إلى ردّك",
+  "settings.notifications.workbench.title": "تفعيل إشعارات VS Code",
+  "settings.notifications.workbench.description": "عرض إشعارات VS Code عند اكتمال مهمة Kilo أو الحاجة إلى ردّك",
+  "settings.notifications.os.title": "تفعيل إشعارات نظام التشغيل",
+  "settings.notifications.os.description":
+    "عرض تنبيهات مركز إشعارات Windows عند اكتمال مهمة Kilo أو الحاجة إلى ردّك بينما يكون VS Code غير نشط. يتطلب macOS وLinux تنفيذًا أصليًا منفصلاً.",
   "settings.notifications.testSound": "اختبار",
   "settings.notifications.sound.default": "افتراضي",
   "settings.notifications.sound.system": "النظام",
