@@ -1795,7 +1795,7 @@ const AgentManagerContent: Component = () => {
   const selectAfterDelete = (id: string) => {
     if (selection() !== id) return
     const ids = new Set(managedSessions().map((item) => item.worktreeId))
-    const order = buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, true)
+    const order = buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, id)
       .filter((item) => item.type === "wt")
       .map((item) => item.id)
     const next = nextSelectionAfterDelete(
@@ -1804,10 +1804,6 @@ const AgentManagerContent: Component = () => {
       (id) => ids.has(id) && !busyWorktrees().has(id) && !staleWorktreeIds().has(id),
     )
     if (next === LOCAL) return selectLocal()
-    const section = sections().find((item) => item.id === worktrees().find((wt) => wt.id === next)?.sectionId)
-    if (section?.collapsed) {
-      vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })
-    }
     selectWorktree(next)
   }
 
