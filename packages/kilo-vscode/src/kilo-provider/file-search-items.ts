@@ -3,6 +3,12 @@ export type FileSearchItem = {
   type: "file" | "folder" | "opened-file"
   /** Owning workspace folder name, set only when the workspace has more than one folder. */
   root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The webview
+   * ranks the whole `@` menu again, and scoring an absolute path there would let
+   * the filesystem prefix match on every entry under that folder.
+   */
+  relative?: string
 }
 
 const normalize = (p: string) => p.replaceAll("\\", "/")
@@ -30,12 +36,15 @@ export function mergeFileSearchItems(input: {
   open?: Set<string>
   /** Path to owning workspace-folder name. Empty in a single-folder workspace, where a badge would say nothing. */
   labels?: Map<string, string>
+  /** Absolute path to its form relative to the owning workspace folder. */
+  relative?: Map<string, string>
 }): FileSearchItem[] {
   const query = normalize(input.query).trim().toLowerCase()
   const open = new Set([...(input.open ?? [])].map(normalize))
   const label = (p: string) => {
-    const value = input.labels?.get(p)
-    return value ? { root: value } : {}
+    const root = input.labels?.get(p)
+    const rel = input.relative?.get(p)
+    return { ...(root ? { root } : {}), ...(rel ? { relative: rel } : {}) }
   }
   const files = input.files.map((p) => {
     const path = normalize(p)

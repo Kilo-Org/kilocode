@@ -18,16 +18,25 @@ import type {
   WorktreeGitStats,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
+import { useBaseUpdate } from "./update-from-base"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
-import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import {
+  buildSidebarOrder,
+  buildTopLevelItems,
+  sortWorktrees,
+  isGroupEnd,
+  isGroupStart,
+  isGrouped,
+} from "./section-helpers"
+import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
@@ -55,6 +64,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -62,6 +72,7 @@ interface Props {
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
     createEffect(() => {
@@ -86,7 +97,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     if (pending() === worktreeId) {
       clearTimeout(pendingTimer)
       setPending(undefined)
+      store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
       post({ type: "agentManager.deleteWorktree", worktreeId })
+      selectAfterDelete(worktreeId)
       return
     }
     clearTimeout(pendingTimer)
@@ -108,6 +121,21 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
   const localState = () => props.activityFor(null)
+
+  const selectAfterDelete = (id: string) => {
+    if (!active() || props.selection !== id) return
+    const ids = new Set(store.managedSessions().map((item) => item.worktreeId))
+    const order = buildSidebarOrder(top(), sorted(), sections(), members, id)
+      .filter((item) => item.type === "wt")
+      .map((item) => item.id)
+    const next = nextSelectionAfterDelete(
+      id,
+      order,
+      (id) => ids.has(id) && !props.busy(id) && !store.staleWorktreeIds().has(id),
+    )
+    if (next === LOCAL) return props.onSelectLocal(props.project.id)
+    props.onSelectWorktree(props.project.id, next)
+  }
 
   const row = (id: string) =>
     projectWorktreeRow({
@@ -278,9 +306,22 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onRenameInput={setName}
           onCommitRename={() => commitRename(worktree.id)}
           onCancelRename={cancelRename}
-          onRemoveStale={() => post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })}
+          onRemoveStale={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
+            selectAfterDelete(worktree.id)
+          }}
+          onUpdateBase={() =>
+            updateBase(
+              worktree.id,
+              props.project.id,
+              state()?.sessions.find(
+                (item) => item.worktreeId === worktree.id && item.id === props.currentSessionID?.(),
+              )?.id,
+            )
+          }
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
+          onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
           onOpenPR={() => {
             const url = props.prs?.[worktree.id]?.url
             post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })
@@ -298,18 +339,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         data-sidebar-id={`${props.project.id}:local`}
         onClick={() => props.onSelectLocal(props.project.id)}
       >
-        <span class="am-local-status" data-activity={localState()} aria-label={props.t(label(localState()))}>
-          <ActivityIcon
-            state={localState()}
-            idle={
-              <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-                <path d="M10 13.5V16.5" stroke="currentColor" />
-              </svg>
-            }
-          />
-        </span>
+        <LocalActivity state={localState()} label={props.t(label(localState()))} />
         <div class="am-local-text">
           <span class="am-local-label">{props.t("agentManager.local")}</span>
           <Show when={props.local === undefined}>

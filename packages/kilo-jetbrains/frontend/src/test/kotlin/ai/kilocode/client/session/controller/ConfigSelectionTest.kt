@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
@@ -21,7 +22,6 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         edt { m.selectModel("kilo", "gpt-5") }
         flush()
 
-        assertTrue(rpc.configs.isEmpty())
         assertEquals("code", appRpc.selections.single().agent)
         assertEquals("kilo", appRpc.selections.single().providerID)
         assertEquals("gpt-5", appRpc.selections.single().modelID)
@@ -34,7 +34,11 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         )
     }
 
-    fun `test selectAgent updates SessionModel and calls updateConfig`() {
+    /**
+     * A mode switch must stay client-side. Writing it to the CLI's global config made the CLI dispose
+     * every instance it held, cancelling every running turn in every worktree.
+     */
+    fun `test selectAgent stays local and never patches CLI config`() {
         val m = controller()
         collect(m)
         flush()
@@ -42,8 +46,7 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         edt { m.selectAgent("plan") }
         flush()
 
-        assertEquals(1, rpc.configs.size)
-        assertEquals("plan", rpc.configs[0].second.agent)
+        assertEquals("plan", KiloPluginSettings.getAgent())
         assertSession(
             """
             [plan] [app: DISCONNECTED] [workspace: PENDING]
@@ -51,6 +54,32 @@ class ConfigSelectionTest : SessionControllerTestBase() {
             m,
             show = false,
         )
+    }
+
+    fun `test remembered mode seeds a new session ahead of the CLI default`() {
+        edt { KiloPluginSettings.setAgent("plan") }
+        projectRpc.state.value = workspaceReady(
+            agents = listOf(
+                AgentDto(name = "code", displayName = "Code", mode = "code"),
+                AgentDto(name = "plan", displayName = "Plan", mode = "code"),
+            ),
+            default = "code",
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("plan", m.model.agent)
+    }
+
+    fun `test CLI default wins when the remembered mode no longer exists`() {
+        edt { KiloPluginSettings.setAgent("removed-mode") }
+        projectRpc.state.value = workspaceReady(default = "code")
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("code", m.model.agent)
     }
 
     fun `test selectModel fires WorkspaceReady event`() {

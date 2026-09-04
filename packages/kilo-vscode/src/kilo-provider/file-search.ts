@@ -211,6 +211,7 @@ export async function handleFileSearch(input: Input): Promise<void> {
     folders: groups.flatMap((group) => group.hits.folders),
     open: opened,
     labels,
+    relative,
   })
   // Cap folders only after ranking. Slicing the input would hand the whole
   // allowance to the first root, dropping every added folder before its

@@ -22,6 +22,7 @@ export interface PRReviewCommentData {
   line?: number
   diffHunk?: string
   outdated?: boolean
+  reviewState?: string
   replies?: PRReviewReply[]
 }
 
@@ -53,7 +54,7 @@ function escapeInline(value: string): string {
 }
 
 /** Wrap a snippet in a fence long enough to survive backticks inside it. */
-function fenced(value: string): string[] {
+export function fenced(value: string): string[] {
   const matches = value.match(/`+/g) ?? []
   const longest = matches.reduce((max, item) => Math.max(max, item.length), 0)
   const fence = "`".repeat(Math.max(3, longest + 1))
@@ -68,9 +69,10 @@ function quote(value: string): string {
 }
 
 function formatPR(comment: PRReviewCommentData): string {
+  const kind = comment.reviewState ? `PR review (${comment.reviewState.replace("_", " ")})` : "PR comment"
   const at = comment.file
-    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, PR comment`
-    : "PR comment"
+    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, ${kind}`
+    : kind
   const lines = [`${at} by @${comment.author}${comment.outdated ? " (outdated)" : ""}:`]
   if (comment.diffHunk) lines.push(...fenced(comment.diffHunk))
   lines.push(comment.body)
@@ -94,12 +96,12 @@ export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): st
   return lines.join("\n").trimEnd()
 }
 
-function record(value: unknown): Record<string, unknown> | undefined {
+export function record(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
 }
 
-function text(value: unknown, limit: number): string | undefined {
+export function text(value: unknown, limit: number): string | undefined {
   if (typeof value !== "string" || value.length > limit) return undefined
   return value
 }
@@ -139,7 +141,7 @@ function optional(value: unknown, limit: number, valid?: (item: string) => boole
   return item
 }
 
-function optionalLine(value: unknown): number | false | undefined {
+export function optionalLine(value: unknown): number | false | undefined {
   if (value === undefined) return undefined
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) return false
   return value
@@ -156,6 +158,8 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
   const line = optionalLine(item.line)
   if (file === false || hunk === false || line === false) return undefined
   if (item.outdated !== undefined && typeof item.outdated !== "boolean") return undefined
+  const reviewState = optional(item.reviewState, 64)
+  if (reviewState === false) return undefined
 
   const replies = item.replies === undefined ? undefined : parseReplies(item.replies)
   if (item.replies !== undefined && !replies) return undefined
@@ -169,6 +173,7 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
     line,
     diffHunk: hunk,
     outdated: item.outdated,
+    reviewState: reviewState || undefined,
     replies,
   }
 }
@@ -233,10 +238,6 @@ export function parseReview(value: unknown, content: string): ReviewMessageData 
 
 export function reviewMetadata(review: ReviewMessageData): Record<string, unknown> {
   return { kilo: { review } }
-}
-
-export function reviewBody(review: ReviewMessageData, content: string): string | undefined {
-  return view(review, content)?.body
 }
 
 export function partReview(metadata: unknown, content: string): ReviewMessageView | undefined {

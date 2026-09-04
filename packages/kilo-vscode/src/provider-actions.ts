@@ -61,8 +61,8 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
       : Promise.resolve({})
   const kiloRequest = client.kilo
     .authStatus({ directory: dir }, { throwOnError: true })
-    .then((r) => (r.data?.authenticated ? (r.data.type ?? null) : null))
-    .catch(() => null)
+    .then((r) => r.data)
+    .catch(() => undefined)
 
   const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
@@ -89,8 +89,30 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     return next as (typeof response.all)[number]
   })
   delete authStates[KILO_PROVIDER_ID]
-  if (kiloAuth) authStates[KILO_PROVIDER_ID] = kiloAuth
-  return { response: { ...response, all }, authMethods, authStates, storedKeys }
+  if (kiloAuth?.authenticated && kiloAuth.type) authStates[KILO_PROVIDER_ID] = kiloAuth.type
+  const organizationId = kiloAuth ? (kiloAuth.organizationId ?? null) : undefined
+  const defaults = { ...response.default }
+  if (organizationId) {
+    const models = all.find((item) => item.id === KILO_PROVIDER_ID)?.models ?? {}
+    const recommended = response.default[KILO_PROVIDER_ID]
+    const model = recommended && Object.hasOwn(models, recommended) ? recommended : Object.keys(models).at(0)
+    if (model) defaults[KILO_PROVIDER_ID] = model
+    if (!model) delete defaults[KILO_PROVIDER_ID]
+  }
+  if (!kiloAuth) delete defaults[KILO_PROVIDER_ID]
+  return {
+    response: {
+      ...response,
+      all: kiloAuth ? all : all.filter((item) => item.id !== KILO_PROVIDER_ID),
+      connected: kiloAuth ? response.connected : response.connected.filter((id) => id !== KILO_PROVIDER_ID),
+      default: defaults,
+    },
+    authMethods,
+    authStates,
+    storedKeys,
+    organizationId,
+    ready: !!kiloAuth,
+  }
 }
 
 /**

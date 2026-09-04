@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import kotlinx.coroutines.Job
 
@@ -18,7 +19,7 @@ import kotlinx.coroutines.Job
  * as a popup. The group composition is declared in
  * `kilo.jetbrains.frontend.xml`.
  */
-class KiloSettingsAction : AnAction() {
+class KiloSettingsAction : AnAction(), DumbAware {
 
     companion object {
         const val GROUP_ID = "Kilo.SettingsGroup"

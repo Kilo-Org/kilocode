@@ -850,6 +850,9 @@ export const dict = {
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "یک برد را بین یک جلسهٔ اصلی و عامل‌های فرعی مسئول وظایف آن، از جمله عامل‌های فرعی تودرتو، به اشتراک بگذارید. از آن برای تلاش‌های موازی جهت یافتن راه‌حل یا کارهای مکمل استفاده کنید، نه برای هر وظیفه.",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
   "settings.experimental.imageGenerationModel.description": "مدل تولید تصویر",
   "settings.experimental.imageGenerationModel.placeholder": "پیش‌فرض (مسیریاب خودکار)",
@@ -879,6 +882,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
+  "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
+  "settings.experimental.taskModelSelection.description":
+    "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -1164,59 +1170,17 @@ export const dict = {
   "question.summary": "{{n}} از {{total}} سؤال",
   "common.review": "بررسی",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "انتقال از نسخه قدیمی",
-  "settings.aboutKiloCode.legacyMigration.title": "انتقال از نسخه قدیمی",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "تنظیمات را از نصب قبلی Kilo Code منتقل کنید، از جمله کلیدهای API ارائه‌دهنده و مدل پیش‌فرض.",
   "settings.aboutKiloCode.rooImport.description": "تاریخچه مکالمات را از یک نصب Roo Code وارد کنید.",
   "settings.aboutKiloCode.rooImport.button": "وارد کردن جلسات از Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "تازه‌های Kilo Code",
-  "migration.whatsNew.subtitle": "افزونه را بر پایه‌ای سریع‌تر و کارآمدتر بازسازی کرده‌ایم.",
-  "migration.whatsNew.features.performance.title": "عملکرد سریع‌تر عامل",
-  "migration.whatsNew.features.performance.detail":
-    "فراخوانی ابزارهای موازی و زیرعامل‌ها به عامل شما امکان می‌دهند کارهای بیشتری را همزمان انجام دهد — تا زمان کمتری صرف نظارت کنید و زمان بیشتری برای ارسال داشته باشید.",
-  "migration.whatsNew.features.interface.title": "رابط کاربری ساده‌تر",
-  "migration.whatsNew.features.interface.detail": "حواس‌پرتی کمتر، خواندن آسان‌تر و سریع‌تر.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
-  "migration.whatsNew.features.agentManager.detail":
-    "یک رابط یکپارچه برای اجرای چندین عامل به‌صورت موازی، هر کدام در worktree مخصوص خود — پیشرفت را رصد کنید، بین زمینه‌ها جابه‌جا شوید و تغییرات را در یک مکان بررسی کنید.",
-  "migration.whatsNew.features.foundation.title": "پایه مشترک",
-  "migration.whatsNew.features.foundation.detail":
-    "یک هسته کوچک و کارآمد در تمام محصولات Kilo. تجربه‌ای آشنا، هر طور که انتخاب کنید کار کنید.",
-  "migration.whatsNew.blogLink": "خواندن اعلامیه کامل",
-  "migration.whatsNew.docsLink": "چه چیزی جدید است و سؤالات متداول",
-  "migration.whatsNew.continue": "ادامه",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "تنظیمات خود را منتقل کنید",
-  "migration.migrate.subtitle": "تنظیماتی از نصب قبلی شما یافتیم. این‌ها چیزهایی هستند که می‌توانیم منتقل کنیم.",
+  "migration.roo.button": "وارد کردن جلسات",
+  "migration.roo.empty": "هیچ جلسه‌ای از Roo Code یافت نشد.",
   "migration.migrate.selectLabel": "انتخاب موارد برای انتقال",
   "migration.migrate.chatHistory": "جلسات و تاریخچه چت",
-  "migration.migrate.button": "انتقال تنظیمات",
-  "migration.migrate.skip": "رد کردن",
-  "migration.migrate.keysDetected": "{{count}} کلید شناسایی شد",
-  "migration.migrate.serversConfigured": "{{count}} سرور پیکربندی شده",
-  "migration.migrate.modesFound": "{{count}} حالت یافت شد",
   "migration.migrate.sessionsDetected": "{{count}} نشست شناسایی شد",
-  "migration.migrate.nothingToMigrate": "هیچ موردی برای انتقال در تنظیمات قدیمی یافت نشد.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "کلیدهای API ارائه‌دهنده",
-  "migration.select.mcpServers": "سرورهای MCP",
-  "migration.select.customModes": "حالت‌ها / عوامل سفارشی",
-  "migration.select.defaultModel": "مدل پیش‌فرض",
-  "migration.select.autoApproval": "تأیید خودکار",
-  "migration.select.language": "زبان رابط کاربری",
-  "migration.select.autocomplete": "تنظیمات تکمیل خودکار",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} از {{total}} مورد با موفقیت منتقل شد.",
-  "migration.complete.cleanup": "حذف داده‌های تنظیمات قدیمی",
-  "migration.complete.cleanupDescription":
-    "این گزینه تنظیمات قدیمی را از حافظه VS Code حذف می‌کند. پس از این کار، امکان اجرای مجدد این انتقال وجود نخواهد داشت.",
   "migration.complete.done": "انجام شد",
   "migration.error.continue": "ادامه",
   "migration.sessionSummary.title": "خلاصه:",
@@ -1248,7 +1212,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "تاریخ نامشخص",
   "migration.sessionFormat.unknown": "نامشخص",
   "migration.sessionFormat.unknownError": "خطای نامشخص",
-  // legacy-migration end
 
   "error.details.show": "جزئیات",
 
@@ -1258,6 +1221,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
   "task.backgroundAgents.more": "+{{count}} بیشتر",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
+  "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
@@ -1270,6 +1234,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "لغو شد",
   "task.backgroundAgents.status.error": "خطا",
   "task.backgroundAgents.untitled": "عامل پس‌زمینه",
+  "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

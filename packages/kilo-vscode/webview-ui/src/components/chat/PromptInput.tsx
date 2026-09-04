@@ -29,6 +29,7 @@ import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
+import { isMentionEntry } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -39,8 +40,9 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
-import { convertToMentionPath } from "../../utils/path-mentions"
+import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
@@ -58,10 +60,11 @@ import {
   type SandboxState,
 } from "./prompt-input-utils"
 import { sandboxMessages } from "./prompt-sandbox-messages"
-import type { ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
+  failedPrompt,
   movePromptDraft,
   pendingDraftKey,
   scopeDraftKey,
@@ -69,6 +72,7 @@ import {
 } from "../../utils/prompt-drafts"
 import {
   beginPendingSend,
+  browserDrafts as references,
   clearPendingDraftDiscarded,
   clearSessionDraftDiscarded,
   drafts,
@@ -82,7 +86,14 @@ import {
   scrollDrafts,
 } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
-import { partReview, reviewBody } from "../../../../src/shared/review-comments"
+import { BrowserReferences } from "./BrowserReferences"
+import {
+  browserFeedbackData,
+  formatBrowserFeedback,
+  mergeBrowserReferences,
+  partFeedback,
+  type BrowserReference,
+} from "../../../../src/shared/browser-feedback"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
@@ -124,6 +135,7 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   boxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -166,6 +178,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
   if (item.type === "file-picker")
     return (
       <>
@@ -184,9 +206,7 @@ function MentionItemContent(props: { item: MentionResult }) {
         {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
       </span>
       {/* Without the folder name, two roots holding the same relative path render identically. */}
-      <Show when={item.type !== "session" ? item.root : undefined}>
-        {(root) => <span class="file-mention-root">{root()}</span>}
-      </Show>
+      <Show when={item.root}>{(root) => <span class="file-mention-root">{root()}</span>}</Show>
       <span class="file-mention-dir">{dirName(item.value)}</span>
     </>
   )
@@ -219,17 +239,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
-    const val = ref.value
-    const cursor = ref.selectionStart ?? val.length
-    const before = val.substring(0, cursor)
-    const after = val.substring(cursor)
-    const inserted = resolved.map((p) => `@${p}`).join(" ")
-    const result = before + inserted + " " + after
-    ref.value = result
-    setText(result)
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
+    setText(result.text)
     mention.addPaths(resolved, cwd)
-    const pos = cursor + inserted.length + 1
-    ref.setSelectionRange(pos, pos)
+    ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()
   })
@@ -238,6 +252,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+
+  /**
+   * True after the last menu entry of a bare `@`, which lists the entries above
+   * the files. A query ranks entries among the results it finds, so there is no
+   * group boundary left to draw.
+   */
+  const divides = (index: number) => {
+    if (mention.mentionQuery()) return false
+    const items = mention.mentionResults()
+    const item = items.at(index)
+    const next = items.at(index + 1)
+    return item !== undefined && next !== undefined && isMentionEntry(item) && !isMentionEntry(next)
+  }
 
   const boxKey = () => props.boxId ?? "prompt:default"
   const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
@@ -253,16 +280,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     comments: ReviewCommentEntry[],
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
-  ) => savePromptDraft(key, next, comments, imgs, scroll)
+    browser: BrowserReference[] = browsers(),
+  ) => savePromptDraft(key, next, comments, imgs, scroll, browser)
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
     images: imageAttach.images(),
+    browsers: browsers(),
     scroll: textareaRef?.scrollTop ?? scrollDrafts.get(draftKey()) ?? 0,
   })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
+  const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -329,8 +359,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
       if (props.worktree !== true) hidden.add("review worktree")
+      if (!props.onUpdateBase || props.worktree !== true) hidden.add("update-from-base")
       return hidden
     },
+    undefined,
+    undefined,
+    [
+      {
+        name: "update-from-base",
+        description: "Ask the worktree agent to fetch and merge its saved base branch",
+        hints: [],
+        action: () => props.onUpdateBase?.(),
+        enabled: () => props.worktree === true && server.isConnected() && !locked() && !props.blocked?.(),
+      },
+    ],
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -388,6 +430,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const clearReviewComments = () => replaceReviewComments([])
 
+  const replace = (next: BrowserReference[]) => {
+    setBrowsers(next)
+    if (next.length === 0) {
+      references.delete(draftKey())
+      return
+    }
+    references.set(draftKey(), next)
+  }
+
+  const remove = (id: string) => replace(browsers().filter((item) => item.id !== id))
+  const clear = () => replace([])
+
   const removeReviewComment = (id: string) => {
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
   }
@@ -400,8 +454,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const val = untrack(text)
         const comments = untrack(reviewComments)
         const imgs = untrack(imageAttach.images)
-        if (val || comments.length > 0 || imgs.length > 0 || drafts.has(prev)) {
-          saveDraft(prev, val, comments, imgs)
+        const browser = untrack(browsers)
+        if (val || comments.length > 0 || imgs.length > 0 || browser.length > 0 || drafts.has(prev)) {
+          saveDraft(prev, val, comments, imgs, undefined, browser)
         }
       }
       const draft = drafts.get(key) ?? ""
@@ -415,6 +470,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         mention.seedSessions(refs.sessions, draft)
       }
       setReviewComments(pending)
+      setBrowsers(references.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
@@ -446,7 +502,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const parts = session.getParts(m.id)
         return parts
           .filter((part): part is TextPart => part.type === "text")
-          .map((part) => partReview(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
+          .map((part) => partFeedback(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
           .join("")
       })
       history.seed(texts)
@@ -491,11 +547,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = text().trim()
     const comments = reviewComments()
     const imgs = imageAttach.images()
+    const browser = browsers()
     const scroll = textareaRef?.scrollTop ?? 0
     const id = tabs?.add()
     if (!id) session.clearCurrentSession()
     const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
-    saveDraft(key, draft, comments, imgs, scroll)
+    saveDraft(key, draft, comments, imgs, scroll, browser)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -517,7 +574,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = captured.get(id)
     captured.delete(id)
     if (!draft) return
-    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images, draft.scroll)
+    saveDraft(
+      scopeDraftKey(box, sessionDraftKey(sid)),
+      draft.text,
+      draft.comments,
+      draft.images,
+      draft.scroll,
+      draft.browsers,
+    )
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
   onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
@@ -558,7 +622,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const isDisabled = () => !server.isConnected() || locked()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
-  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const hasInput = () =>
+    text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0 || browsers().length > 0
   const sendReady = () => !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const canContinue = () => speech.state() === "idle" && !hasInput() && session.canResume()
   const canSend = () =>
@@ -657,8 +722,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const restoreFailed = (failed: SendMessageFailedMessage) => {
-    const draft = failed.review ? reviewBody(failed.review, failed.text) : failed.text
-    if (draft === undefined) return
+    const restored = failedPrompt(failed)
+    if (!restored) return
+    const draft = restored.text
     if (
       (failed.draftID && isPendingDraftDiscarded(failed.draftID)) ||
       (failed.sessionID && isSessionDraftDiscarded(failed.sessionID))
@@ -676,7 +742,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           ? scopeDraftKey(boxKey(), "new")
           : undefined
     if (!target) return
-    const comments = failed.review?.comments ?? []
+    const comments = restored.comments
+    const browser = restored.browsers
     const images = (failed.files ?? [])
       .filter((file) => file.mime.startsWith("image/") && file.url.startsWith("data:"))
       .map((file) => ({
@@ -686,12 +753,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         dataUrl: file.url,
       }))
     if (target !== draftKey()) {
-      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0)
+      saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser)
       return
     }
     // Do not overwrite a new draft the user started while the send was in flight.
-    if (text().trim() || reviewComments().length > 0 || imageAttach.images().length > 0) return
+    if (text().trim() || reviewComments().length > 0 || imageAttach.images().length > 0 || browsers().length > 0) return
     replaceReviewComments(comments)
+    replace(browser)
     if (draft) {
       setText(draft)
       mention.seedFromText(draft)
@@ -730,59 +798,94 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }),
   })
 
+  const restoreBox = (message: Extract<ExtensionMessage, { type: "setChatBoxMessage" }>) => {
+    setText(message.text)
+    if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
+    else mention.seedFromText(message.text)
+    if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
+    if (textareaRef) {
+      textareaRef.value = message.text
+      adjustHeight()
+    }
+    if (message.review || message.browser) {
+      replaceReviewComments(message.review ?? [])
+      replace(message.browser ?? [])
+    }
+    if (message.images) {
+      const imgs = message.images.map((img) => ({
+        id: crypto.randomUUID(),
+        filename: img.filename ?? "image",
+        mime: img.mime,
+        dataUrl: img.dataUrl,
+      }))
+      imageAttach.replace(imgs)
+      imageDrafts.set(draftKey(), imgs)
+    }
+  }
+
+  const appendBox = (message: Extract<ExtensionMessage, { type: "appendChatBoxMessage" }>) => {
+    const reference = message.browser
+    if (reference) {
+      if (reference.sessionId !== sid()) return
+      replace(mergeBrowserReferences(browsers(), reference))
+      textareaRef?.focus()
+      return
+    }
+    const current = text()
+    const separator = current && !current.endsWith("\n") ? "\n\n" : ""
+    const next = current + separator + message.text
+    setText(next)
+    if (textareaRef) {
+      textareaRef.value = next
+      adjustHeight()
+      textareaRef.focus()
+      textareaRef.scrollTop = textareaRef.scrollHeight
+      syncHighlightScroll()
+    }
+  }
+
+  const appendReviews = (message: Extract<ExtensionMessage, { type: "appendReviewComments" }>) => {
+    const empty =
+      !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0 && browsers().length === 0
+    replaceReviewComments(mergeReviewComments(reviewComments(), message.comments))
+    if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
+      void handleSend()
+      return
+    }
+    textareaRef?.focus()
+  }
+
+  const created = (message: Extract<ExtensionMessage, { type: "sessionCreated" }>) => {
+    const raw = createdDraftKey(message.draftID, sandboxRequest(undefined) !== undefined)
+    if (!raw) return
+    const source = scopeDraftKey(boxKey(), raw)
+    const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
+    if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
+    movePromptDraft(
+      { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references },
+      source,
+      target,
+    )
+    if (
+      message.draftID &&
+      !session.currentSessionID() &&
+      (props.pendingSessionID ?? session.draftSessionID()) === message.draftID
+    ) {
+      session.setDraftSessionID(message.session.id)
+    }
+  }
+
   const unsubscribe = vscode.onMessage((message) => {
     if (handleSandboxMessage(message)) return
 
     if (message.type === "setChatBoxMessage") {
-      setText(message.text)
-      // Prefer the exact attachment paths when available (e.g. reverting to a
-      // message with @mentions) — seedFromText re-derives candidate mentions
-      // from raw text via regex, which truncates at the first space in a
-      // filename and cannot be relied on to reconstruct spaced paths correctly.
-      if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
-      else mention.seedFromText(message.text)
-      if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
-      if (textareaRef) {
-        textareaRef.value = message.text
-        adjustHeight()
-      }
-      // When present, images are authoritative: replace current attachments
-      // (an empty array clears them, e.g. on redo). Absent leaves them alone.
-      if (message.images) {
-        const imgs = message.images.map((img) => ({
-          id: crypto.randomUUID(),
-          filename: img.filename ?? "image",
-          mime: img.mime,
-          dataUrl: img.dataUrl,
-        }))
-        imageAttach.replace(imgs)
-        imageDrafts.set(draftKey(), imgs)
-      }
+      restoreBox(message)
     }
 
-    if (message.type === "appendChatBoxMessage") {
-      const current = text()
-      const separator = current && !current.endsWith("\n") ? "\n\n" : ""
-      const next = current + separator + message.text
-      setText(next)
-      if (textareaRef) {
-        textareaRef.value = next
-        adjustHeight()
-        textareaRef.focus()
-        textareaRef.scrollTop = textareaRef.scrollHeight
-        syncHighlightScroll()
-      }
-    }
+    if (message.type === "appendChatBoxMessage") appendBox(message)
 
     if (message.type === "appendReviewComments") {
-      const empty = !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0
-      const merged = mergeReviewComments(reviewComments(), message.comments)
-      replaceReviewComments(merged)
-      if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
-        void handleSend()
-      } else {
-        textareaRef?.focus()
-      }
+      appendReviews(message)
     }
 
     if (message.type === "triggerTask") {
@@ -795,26 +898,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       restoreFailed(message as SendMessageFailedMessage)
     }
 
-    if (message.type === "sessionCreated") {
-      const raw = createdDraftKey(message.draftID, sandboxRequest(undefined) !== undefined)
-      if (raw) {
-        const source = scopeDraftKey(boxKey(), raw)
-        const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
-        if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
-        movePromptDraft(
-          { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts },
-          source,
-          target,
-        )
-      }
-      if (
-        message.draftID &&
-        !session.currentSessionID() &&
-        (props.pendingSessionID ?? session.draftSessionID()) === message.draftID
-      ) {
-        session.setDraftSessionID(message.session.id)
-      }
-    }
+    if (message.type === "sessionCreated") created(message)
 
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
@@ -1082,6 +1166,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const context = ctx()
     const value = text()
     const comments = reviewComments()
+    const browser = browsers()
     const images = imageAttach.images()
     speech.stop({
       done: () => void handleSend(),
@@ -1091,6 +1176,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         ctx() === context &&
         text() === value &&
         reviewComments() === comments &&
+        browsers() === browser &&
         imageAttach.images() === images,
     })
   }
@@ -1195,6 +1281,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       history.append(draft)
       setMemoryText(memory)
       clearReviewComments()
+      clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1221,6 +1308,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (matched.enabled && !matched.enabled()) return
       setText("")
       clearReviewComments()
+      clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1237,11 +1325,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    const browserData = browserFeedbackData(browsers())
+    const browserText = browserData ? formatBrowserFeedback(browserData.references) : ""
+    const message = [review, browserText, draft].filter(Boolean).join("\n\n")
     if (canSendContinue()) {
       session.resume()
       return
     }
-    const message = draft && review ? `${review}\n\n${draft}` : draft || review
     const data = review ? { version: 1 as const, comments: pending } : undefined
     if ((!message && imgs.length === 0) || !sendReady() || speech.active()) return
 
@@ -1289,9 +1379,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     // Server-side slash command (cmdMatch/matched already computed above)
-    if (matched && !data) {
+    if (matched && !data && !browserData) {
       const args = draft.slice(cmdMatch![0].length).trim()
-      session.sendCommand(
+      const accepted = session.sendCommand(
         matched.name,
         args,
         sel?.providerID,
@@ -1306,12 +1396,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           variant: matched.variant,
         },
       )
+      if (!accepted) return
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context, data, origin ?? null)
+      const accepted = session.sendMessage(
+        message,
+        sel?.providerID,
+        sel?.modelID,
+        attachments,
+        pendingId,
+        context,
+        data,
+        origin ?? null,
+        browserData,
+      )
+      if (!accepted) return
     }
 
     drafts.delete(key)
     reviewDrafts.delete(key)
+    references.delete(key)
     imageDrafts.delete(key)
     mentionDrafts.delete(key)
     scrollDrafts.delete(key)
@@ -1321,6 +1424,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     history.reset()
     setText("")
     clearReviewComments()
+    setBrowsers([])
     imageAttach.clear()
     mention.closeMention()
     slash.close()
@@ -1349,6 +1453,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           onRemove={removeReviewComment}
           onClear={clearReviewComments}
         />
+      </Show>
+      <Show when={browsers().length > 0}>
+        <div data-component="browser-references">
+          <BrowserReferences references={browsers()} onRemove={remove} onClear={clear} />
+        </div>
       </Show>
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
@@ -1402,7 +1511,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     >
                       <MentionItemContent item={item} />
                     </div>
-                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                    <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
                   </>

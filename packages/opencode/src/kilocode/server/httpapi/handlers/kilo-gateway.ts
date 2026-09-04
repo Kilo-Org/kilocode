@@ -34,6 +34,8 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
+import { Config } from "@/config/config"
+import { organization as catalogOrganization } from "@/kilocode/provider/catalog"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Storage } from "@/storage/storage"
 import { Instance } from "@/kilocode/instance"
@@ -56,6 +58,7 @@ function logError(route: string, err: unknown) {
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
+    const config = yield* Config.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
     const events = yield* EventV2Bridge.Service
@@ -71,7 +74,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: () =>
           Promise.all([
             fetchProfile(info.access),
-            fetchBalance(info.access, currentOrgId ?? undefined),
+            fetchBalance(info.access, currentOrgId ?? undefined, log),
             fetchKiloPassState(info.access),
           ]),
         catch: () => new HttpApiError.BadRequest({}),
@@ -81,9 +84,14 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const cfg = yield* config.get()
+      const organizationId = catalogOrganization(cfg.provider?.kilo?.options, info)
       const type = getToken(info) && (info?.type === "api" || info?.type === "oauth") ? info.type : undefined
-      if (!type) return { authenticated: false }
-      return { authenticated: true, type }
+      return {
+        authenticated: !!type,
+        ...(type ? { type } : {}),
+        ...(organizationId == null ? {} : { organizationId }),
+      }
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {

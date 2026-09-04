@@ -866,6 +866,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Del et board mellem en hovedsession og dens underagenter til opgaveløsning, herunder indlejrede underagenter. Brug det til parallelle løsningsforsøg eller arbejdsopgaver, der supplerer hinanden, ikke til alle opgaver.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
@@ -893,6 +896,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
+  "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
+  "settings.experimental.taskModelSelection.description":
+    "Tillad eksplicit valg af model, udbyder og ræsonnementsindsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1166,59 +1172,16 @@ export const dict = {
   "question.summary": "{{n}} af {{total}} spørgsmål",
   "common.review": "Gennemgå",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrer fra legacy-version",
-  "settings.aboutKiloCode.legacyMigration.title": "Legacy-migrering",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer indstillinger fra en tidligere installation af Kilo Code, herunder udbyder API-nøgler og standardmodel.",
   "settings.aboutKiloCode.rooImport.description": "Importer samtalehistorik fra en installation af Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importer sessioner fra Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Nyheder i Kilo Code",
-  "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
-  "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
-  "migration.whatsNew.features.performance.detail":
-    "Parallelle værktøjskald og underagenter lader din agent tackle mere på én gang — så du bruger mindre tid på at vente og mere tid på at levere.",
-  "migration.whatsNew.features.interface.title": "Strømlinet brugerflade",
-  "migration.whatsNew.features.interface.detail": "Færre distraktioner, nemmere og hurtigere at læse.",
-  "migration.whatsNew.features.agentManager.title": "Agentstyring",
-  "migration.whatsNew.features.agentManager.detail":
-    "En samlet brugerflade til at køre flere agenter parallelt, hver på sit eget worktree — overvåg fremskridt, skift kontekst og gennemgå ændringer ét sted.",
-  "migration.whatsNew.features.foundation.title": "Fælles fundament",
-  "migration.whatsNew.features.foundation.detail":
-    "Én lille, effektiv kerne på tværs af alle Kilo-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
-  "migration.whatsNew.blogLink": "Læs den fulde meddelelse",
-  "migration.whatsNew.docsLink": "Nyheder og ofte stillede spørgsmål",
-  "migration.whatsNew.continue": "Fortsæt",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migrer dine indstillinger",
-  "migration.migrate.subtitle":
-    "Vi har fundet indstillinger fra din tidligere installation. Her er, hvad vi kan overføre.",
+  "migration.roo.button": "Importér sessioner",
+  "migration.roo.empty": "Ingen Roo Code-sessioner fundet.",
   "migration.migrate.selectLabel": "Vælg hvad der skal migreres",
   "migration.migrate.chatHistory": "Chatsessioner og historik",
-  "migration.migrate.button": "Migrer indstillinger",
-  "migration.migrate.skip": "Spring over",
-  "migration.migrate.keysDetected": "{{count}} nøgler fundet",
-  "migration.migrate.serversConfigured": "{{count}} server(e) konfigureret",
-  "migration.migrate.modesFound": "{{count}} tilstand(e) fundet",
-  "migration.migrate.nothingToMigrate": "Der blev ikke fundet noget at migrere i legacy-indstillingerne.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Udbyder API-nøgler",
-  "migration.select.mcpServers": "MCP-servere",
-  "migration.select.customModes": "Brugerdefinerede tilstande / Agenter",
-  "migration.select.defaultModel": "Standardmodel",
-  "migration.select.autoApproval": "Automatisk godkendelse",
-  "migration.select.language": "UI-sprog",
-  "migration.select.autocomplete": "Indstillinger for autofuldførelse",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} af {{total}} elementer blev migreret med succes.",
-  "migration.complete.cleanup": "Fjern legacy-indstillingsdata",
-  "migration.complete.cleanupDescription":
-    "Dette fjerner de gamle indstillinger fra VS Code-lageret. Du vil ikke kunne køre denne migrering igen.",
   "migration.complete.done": "Færdig",
   "migration.migrate.sessionsDetected": "{{count}} sessioner fundet",
   "migration.error.continue": "Fortsæt",
@@ -1252,7 +1215,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Ukendt dato",
   "migration.sessionFormat.unknown": "Ukendt",
   "migration.sessionFormat.unknownError": "Ukendt fejl",
-  // legacy-migration end
 
   "error.details.show": "Detaljer",
 
@@ -1262,6 +1224,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
   "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
+  "task.backgroundAgents.openAll": "Åbn alle baggrundsagenter",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
@@ -1274,6 +1237,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Annulleret",
   "task.backgroundAgents.status.error": "Fejl",
   "task.backgroundAgents.untitled": "Baggrundsagent",
+  "task.backgroundAgents.stopAll": "Stop alle ({{count}})",
   "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
   "settings.saveBar.discard": "Kassér",
   "settings.saveBar.save": "Gem",

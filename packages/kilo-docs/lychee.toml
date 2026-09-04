@@ -20,6 +20,9 @@ accept = [
 exclude = [
   '\.png$',
   'https://synthetic.new/user-settings/api',
+  # Synthetic's site intermittently returns 503 to automated link checks.
+  '^https?://synthetic\.new/?$',
+  '^https?://synthetic\.new/pricing/?$',
   'https://platform.slack-edge.com/img/add_to_slack.png',
   'https://console.groq.com/pages/models',
   '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',

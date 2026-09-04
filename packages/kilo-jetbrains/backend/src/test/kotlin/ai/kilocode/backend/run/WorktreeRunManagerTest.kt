@@ -270,7 +270,8 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
         assertTrue(mgr.release(wt))
         await("released process stopped") { handler.isProcessTerminated }
-        assertTrue(mgr.states.value.isEmpty())
+        // Dropping the tracked state is a separate hop after termination, so it needs its own wait.
+        await("dropped tracked process") { mgr.states.value.isEmpty() }
         // The clone and handler are forgotten, so a later stop finds nothing and release is a no-op.
         assertFalse(mgr.stop(settings.uniqueID, wt))
         assertFalse(mgr.release(wt))
@@ -296,7 +297,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
 
         await("in-flight start stopped") { handler.isProcessTerminated }
-        assertTrue(mgr.states.value.isEmpty())
+        await("dropped tracked process") { mgr.states.value.isEmpty() }
         assertFalse(mgr.stop(settings.uniqueID, wt))
     }
 

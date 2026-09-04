@@ -1,6 +1,22 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.KiloDiffEditorService
+import ai.kilocode.client.diff.openKiloDiff
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.telemetry.KiloTelemetryService
+import ai.kilocode.client.vfs.KiloVirtualFile
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.util.Disposer
+import com.intellij.ui.components.JBLabel
+import java.awt.Component
+import java.awt.Container
+import java.awt.event.MouseEvent
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
@@ -22,6 +38,7 @@ import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
@@ -31,10 +48,12 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -51,6 +70,17 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
+
+    /** The worktree RPC installed by [dock], so branch/PR lookups can be asserted. */
+    private lateinit var worktree: FakeWorktreeRpcApi
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetGithub()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test root contains content overlay and blocker layers`() {
         val root = find<SessionRootPanel>(ui)
@@ -236,7 +266,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         }
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
-        workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
         // A brand-new sidebar session has no id until its first prompt, but the local changes alone
         // are worth moving: the worktree gets the changes and starts its own session.
         ui = newUi(manager = owner)
@@ -249,6 +279,69 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         dock.triggerMove()
 
         assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
+    }
+
+    fun `test editor tab host leaves the dock without a header row`() {
+        // The worktree editor tab reports the branch, its PR, and its counts in its own header, so its
+        // dock is the action row alone -- mirrors WorktreeSessionEditorManager's base tab.
+        installEditorTabWorktree()
+        workspaceRpc.localDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+        assertFalse(find<PrHeaderView>(dock).isVisible)
+    }
+
+    fun `test editor tab dock keeps the prompt's readable width`() {
+        installEditorTabWorktree()
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = editorTabOwner())
+        settle()
+        layout()
+        // The base helper only walks the prompt's own path down the bottom column; the dock sits in its
+        // own alignment wrapper beside it.
+        layoutAll(ui)
+
+        val dock = find<BranchDock>(ui)
+        val prompt = find<PromptPanel>(ui)
+        assertTrue(dock.isVisible)
+        assertEquals(prompt.width, dock.width)
+        assertTrue("dock must not run the full editor width", dock.width < ui.width)
+        assertEquals(
+            SwingUtilities.convertPoint(prompt, 0, 0, ui).x,
+            SwingUtilities.convertPoint(dock, 0, 0, ui).x,
+        )
+    }
+
+    private fun editorTabOwner() = object : SessionManager {
+        override fun newSession() {}
+        override fun showHistory(back: (() -> Unit)?) {}
+        override fun openSession(ref: SessionRef) {}
+        override val hostedInEditorTab: Boolean get() = true
+        override val supportsMoveToWorktree: Boolean get() = true
+        override fun moveToWorktree(sessionId: String?, directory: String) {}
+    }
+
+    private fun layoutAll(root: Component) {
+        root.doLayout()
+        if (root is Container) root.components.forEach(::layoutAll)
+    }
+
+    private fun installEditorTabWorktree() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(
+                branch = "main",
+                availability = GhAvailability.OK,
+                pr = WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7", "Title"),
+            )
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
     }
 
     fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {
@@ -267,13 +360,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     fun `test dock branch changes refresh on finish and revert`() {
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
-        val badge = find<ai.kilocode.client.session.ui.header.BranchChangesBadge>(ui)
+        val badge = find<ChangesPanel>(ui)
 
         controller().model.setState(SessionState.Busy("running"))
         controller().model.setState(SessionState.Idle)
         settle()
 
-        assertEquals(2 to 1, badge.stats())
+        assertEquals(2 to 1, stats(badge))
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/B.kt", 4, 3))
@@ -281,7 +374,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Idle)
         settle()
 
-        assertEquals(4 to 3, badge.stats())
+        assertEquals(4 to 3, stats(badge))
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/C.kt", 1, 0))
@@ -289,7 +382,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.TurnEnded(Outcome.INCOMPLETE, "unknown"))
         settle()
 
-        assertEquals(1 to 0, badge.stats())
+        assertEquals(1 to 0, stats(badge))
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/D.kt", 5, 2))
@@ -297,14 +390,220 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Error("failed"))
         settle()
 
-        assertEquals(5 to 2, badge.stats())
+        assertEquals(5 to 2, stats(badge))
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/E.kt", 1, 0))
         controller().model.setRevert(SessionRevertDto("msg1", "part1", diff = "patch"))
         settle()
 
-        assertEquals(1 to 0, badge.stats())
+        assertEquals(1 to 0, stats(badge))
+    }
+
+    fun `test dock fetches stats only and does not display local changes`() {
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panels = components(dock).filterIsInstance<ChangesPanel>()
+
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertTrue(dock.newWorktreeEnabled())
+        assertEquals(1, dock.changeCount())
+        assertTrue(panels.none { it.isVisible })
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+        assertEquals(listOf(false), workspaceRpc.localDiffPatchCalls)
+
+        workspaceRpc.branchDiffs.addAll(listOf(DiffFileDto("src/Base.kt", 2, 1), DiffFileDto("src/Rename.kt", 0, 0)))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertTrue(panels.all { it.isVisible })
+        assertTrue(panels.all { stats(it) == (2 to 1) })
+        assertEquals(1, dock.changeCount())
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+        assertEquals(listOf(false, false), workspaceRpc.localDiffPatchCalls)
+    }
+
+    fun `test dock resolves the pull request while the github integration is on`() {
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals(listOf("/test" to true), worktree.branchCalls)
+        assertTrue(dock.isVisible)
+        // Read by the PR badge and by the pull-request context-menu actions.
+        assertEquals(7, ui.pr?.number)
+    }
+
+    fun `test dock resolves the branch without gh while the github integration is off`() {
+        KiloPluginSettings.setGithub(false)
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals("the backend must be told not to spawn gh", listOf("/test" to false), worktree.branchCalls)
+        // Git-backed dock content and worktree actions are unaffected by the GitHub setting.
+        assertTrue(dock.isVisible)
+        assertTrue(dock.newWorktreeEnabled())
+        assertEquals(1, dock.changeCount())
+        // Nothing PR-shaped survives.
+        assertNull(ui.pr)
+    }
+
+    fun `test committed-only summary does not enable empty-session worktree actions`() {
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        val dock = dock()
+
+        assertTrue(dock.isVisible)
+        assertTrue(find<ChangesPanel>(dock).isVisible)
+        assertEquals(2 to 1, stats(find<ChangesPanel>(dock)))
+        assertEquals(0, dock.changeCount())
+        assertFalse(dock.moveEnabled())
+        assertFalse(dock.newWorktreeEnabled())
+    }
+
+    fun `test local actions update independently while committed summary is loading`() {
+        val gate = CompletableDeferred<Unit>()
+        workspaceRpc.beforeBranchDiff = { gate.await() }
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+
+        assertFalse(panel.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+        assertTrue(workspaceRpc.branchDiffCalls.isNotEmpty())
+        assertEquals(listOf("/test"), workspaceRpc.localDiffCalls)
+
+        gate.complete(Unit)
+        settle()
+
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(1, dock.changeCount())
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test committed summary updates independently while local actions are loading`() {
+        val gate = CompletableDeferred<Unit>()
+        workspaceRpc.beforeLocalDiff = { gate.await() }
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+
+        assertTrue(panel.isVisible)
+        assertEquals(2 to 1, stats(panel))
+        assertFalse(dock.moveEnabled())
+        assertEquals(0, dock.changeCount())
+
+        gate.complete(Unit)
+        settle()
+
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(1, dock.changeCount())
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test refresh failures clear only their comparison state`() {
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+        val dock = dock()
+        val panel = find<ChangesPanel>(dock)
+        workspaceRpc.beforeBranchDiff = { error("branch unavailable") }
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertFalse(panel.isVisible)
+        assertTrue(dock.moveEnabled())
+        assertEquals(1, dock.changeCount())
+
+        workspaceRpc.beforeBranchDiff = null
+        workspaceRpc.beforeLocalDiff = { error("local unavailable") }
+        controller().model.setRevert(SessionRevertDto("msg1"))
+        settle()
+
+        assertTrue(panel.isVisible)
+        assertEquals(2 to 1, stats(panel))
+        assertEquals(0, dock.changeCount())
+        assertFalse(dock.moveEnabled())
+        assertFalse(dock.newWorktreeEnabled())
+    }
+
+    fun `test unavailable worktree actions avoid local comparison requests`() {
+        settle()
+        assertTrue(workspaceRpc.localDiffCalls.isEmpty())
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        controller().model.setRevert(SessionRevertDto("msg1"))
+        settle()
+
+        assertTrue(workspaceRpc.localDiffCalls.isEmpty())
+        assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
+    }
+
+    fun `test disposed session cancels independent comparison requests`() {
+        val gate = CompletableDeferred<Unit>()
+        val base = CompletableDeferred<Unit>()
+        val local = CompletableDeferred<Unit>()
+        workspaceRpc.beforeBranchDiff = {
+            try {
+                gate.await()
+            } finally {
+                base.complete(Unit)
+            }
+        }
+        workspaceRpc.beforeLocalDiff = {
+            try {
+                gate.await()
+            } finally {
+                local.complete(Unit)
+            }
+        }
+        val dock = dock()
+        assertTrue(workspaceRpc.branchDiffCalls.isNotEmpty())
+        assertTrue(workspaceRpc.localDiffCalls.isNotEmpty())
+        Disposer.dispose(ui)
+        settle()
+        assertTrue(base.isCompleted)
+        assertTrue(local.isCompleted)
+        gate.complete(Unit)
+        settle()
+        assertEquals(0, dock.changeCount())
+        assertFalse(find<ChangesPanel>(dock).isVisible)
+    }
+
+    fun `test session summary uses common normalized base editor identity`() {
+        workspaceRpc.branchName = "feature/topic"
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/Committed.kt", 2, 1))
+        val dock = dock()
+        ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, workspaces, testRootDisposable)
+        ApplicationManager.getApplication().replaceService(KiloAppService::class.java, app, testRootDisposable)
+        ApplicationManager.getApplication()
+            .replaceService(KiloTelemetryService::class.java, KiloTelemetryService(scope, appRpc), testRootDisposable)
+        project.replaceService(KiloSessionService::class.java, sessions, testRootDisposable)
+        project.replaceService(KiloDiffEditorService::class.java, KiloDiffEditorService(project, scope), testRootDisposable)
+        val manager = FileEditorManager.getInstance(project)
+        try {
+            val panel = components(dock).filterIsInstance<ChangesPanel>().last()
+            val event = MouseEvent(panel, MouseEvent.MOUSE_CLICKED, 0, 0, 1, 1, 1, false, MouseEvent.BUTTON1)
+            panel.mouseListeners.forEach { it.mouseClicked(event) }
+            settle()
+            val file = manager.openFiles.filterIsInstance<KiloVirtualFile>().single()
+            assertEquals("branch", file.path.params["source"])
+            assertEquals("/test", file.path.params["directory"])
+            assertEquals("feature/topic", file.path.params["branch"])
+            assertEquals(KiloDiffComparison.BASE.title("feature/topic"), file.name)
+            assertFalse(file.path.params.containsKey("sessionId"))
+            assertFalse(file.path.params.containsKey("token"))
+
+            openKiloDiff(project, "/test/./", KiloDiffComparison.BASE, "feature/topic")
+            assertSame(file, manager.openFiles.filterIsInstance<KiloVirtualFile>().single())
+        } finally {
+            manager.openFiles.forEach { manager.closeFile(it) }
+        }
     }
 
     fun `test prompt file drag leave does not immediately hide drop overlay`() {
@@ -990,6 +1289,44 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(top, overlay.y)
         assertEquals(root.overlay.width - overlay.width - right, overlay.x)
     }
+
+    // Reassigns [ui] without disposing the previous instance first, matching every other `ui =
+    // newUi(...)` swap in this file: SessionController.dispose() cancels the shared `scope`, which
+    // would kill every later coroutine (including the replacement UI's own branch/local refresh)
+    // launched on that same scope for the rest of the test.
+    private fun dock(pr: WorktreePrDto? = null): BranchDock {
+        val fake = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "feature/topic", availability = GhAvailability.OK, pr = pr)
+        }
+        worktree = fake
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, fake), testRootDisposable)
+        // The UI built in setUp launched its own branch lookup before this fake existed, and it
+        // resolves the service inside the coroutine — so it lands on the fake whenever the shared
+        // dispatcher gets to it after the swap. Drain it here and drop what it recorded so the
+        // assertions below only see the lookup made by the UI under test.
+        settle()
+        fake.branchCalls.clear()
+        ui = newUi(manager = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override val supportsNewWorktree: Boolean get() = true
+        })
+        settle()
+        return find(ui)
+    }
+
+    private fun stats(panel: ChangesPanel): Pair<Int, Int> {
+        val labels = components(panel).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text.orEmpty() }
+        val added = labels.firstOrNull { it.startsWith("+") }?.drop(1)?.toIntOrNull() ?: 0
+        val removed = labels.firstOrNull { it.startsWith("-") }?.drop(1)?.toIntOrNull() ?: 0
+        return added to removed
+    }
+
+    private fun components(root: Component): List<Component> =
+        listOf(root) + (root as? Container)?.components?.flatMap(::components).orEmpty()
 
     private fun dropCard(drop: SessionDropOverlay) = drop.components
         .single()

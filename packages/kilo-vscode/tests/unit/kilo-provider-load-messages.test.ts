@@ -2,9 +2,11 @@ import { describe, it, expect, spyOn } from "bun:test"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
+import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
+const { ProjectRouteService } = await import("../../src/agent-manager/project/route")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
 
@@ -79,7 +81,7 @@ function createClient(options?: {
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
-  const aborted: { sessionID: string; directory?: string }[] = []
+  const aborted: { sessionID: string; directory?: string; scope?: "session" | "tree" }[] = []
   const deleted: { sessionID: string; directory?: string }[] = []
   const deletedMessages: Array<{
     sessionID: string
@@ -126,7 +128,7 @@ function createClient(options?: {
         prompted.push(params)
         return { data: undefined }
       },
-      abort: async (params: { sessionID: string; directory?: string }) => {
+      abort: async (params: { sessionID: string; directory?: string; scope?: "session" | "tree" }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
         await options?.abortDeferred?.promise
@@ -211,9 +213,9 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
+    onSessionAcknowledged: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
-    onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
@@ -239,7 +241,9 @@ type ProviderInternals = {
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   sessionStatusMap: Map<string, string>
+  owners: Map<string, { dir: string; project: string }>
   trackedSessionIds: Set<string>
+  syncedChildSessions: Set<string>
   removedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
@@ -252,7 +256,8 @@ type ProviderInternals = {
   seedSessionStatusMap: (reconcile?: boolean) => Promise<void>
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
-  handleAbort: (sid?: string) => Promise<void>
+  setupWebviewMessageHandler: (webview: unknown) => void
+  handleAbort: (sid?: string, scope?: "session" | "tree") => Promise<void>
   resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
@@ -264,13 +269,18 @@ type ProviderInternals = {
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
+  handleSyncSession: (sid: string, parent?: string) => Promise<void>
+  releaseChildSession: (sid: string) => void
   handleDeleteSession: (sid: string) => Promise<void>
   handleDeleteMessage: (sid: string, mid: string, rid?: string) => Promise<void>
 }
 
-function makeProvider(client: ReturnType<typeof createClient> | null) {
+function makeProvider(
+  client: ReturnType<typeof createClient> | null,
+  opts?: ConstructorParameters<typeof KiloProvider>[3],
+) {
   const connection = createConnection(client)
-  const provider = new KiloProvider({} as never, connection as never)
+  const provider = new KiloProvider({} as never, connection as never, undefined, opts)
   const internal = provider as unknown as ProviderInternals
   internal.connectionState = client ? "connected" : "disconnected"
   const sent: unknown[] = []
@@ -291,6 +301,32 @@ function mockMaxCost(internal: ProviderInternals, value: number) {
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it.each([undefined, "session", "tree"] as const)(
+    "forwards %s abort scope without extra child or process stops",
+    async (scope) => {
+      const client = createClient()
+      const { provider, internal } = makeProvider(client)
+      const listener = Promise.withResolvers<(message: AbortRequest) => Promise<void>>()
+      internal.setupWebviewMessageHandler({
+        onDidReceiveMessage: (handler: (message: AbortRequest) => Promise<void>) => {
+          listener.resolve(handler)
+          return { dispose: () => {} }
+        },
+      })
+      const receive = await listener.promise
+      status(internal, "busy")
+      status(internal, "busy", "/repo", "child")
+
+      await receive({ type: "abort", sessionID: "s1", scope })
+
+      expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo", scope }])
+      expect(client.stopped).toEqual([])
+      expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+      expect(internal.sessionStatusMap.get("child")).toBe("busy")
+      provider.dispose()
+    },
+  )
+
   it("aborts a session whose busy status was seeded without an SSE event", async () => {
     const client = createClient()
     const { internal, sent } = makeProvider(client)
@@ -549,6 +585,44 @@ describe("KiloProvider session status reconciliation", () => {
     await internal.seedSessionStatusMap()
 
     expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("reconciles a released child from its owning directory snapshot", async () => {
+    const client = createClient({ sessionData: { ...mkSession(), id: "child" } })
+    const routes = new ProjectRouteService()
+    const { internal, sent } = makeProvider(client, {
+      rootDirectory: () => "/repo",
+      projectQualifier: () => ({ projectId: "project" }),
+      routeService: routes,
+    })
+    internal.sessionDirectories.set("parent", "/repo/worktree")
+    await internal.handleSyncSession("child", "parent")
+    internal.sessionStatusMap.set("child", "busy")
+    internal.releaseChildSession("child")
+
+    internal.refreshSessionDetails("parent", "/repo")
+    await Bun.sleep(0)
+    expect(internal.sessionStatusMap.get("child")).toBe("busy")
+
+    internal.refreshSessionDetails("parent", "/repo/worktree")
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("child")).toBe("idle")
+    expect(["busy", "retry", "waiting"].includes(internal.sessionStatusMap.get("child") ?? "idle")).toBe(false)
+    expect(internal.owners.has("child")).toBe(false)
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: "child", status: "idle" })
+  })
+
+  it("does not retain child ownership outside multi-project providers", async () => {
+    const client = createClient({ sessionData: { ...mkSession(), id: "child" } })
+    const { internal } = makeProvider(client)
+    internal.sessionDirectories.set("parent", "/repo/worktree")
+    await internal.handleSyncSession("child", "parent")
+    internal.sessionStatusMap.set("child", "busy")
+
+    internal.releaseChildSession("child")
+
+    expect(internal.owners.has("child")).toBe(false)
   })
 })
 

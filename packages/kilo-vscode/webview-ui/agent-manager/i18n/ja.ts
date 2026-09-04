@@ -17,6 +17,10 @@ export const dict = {
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
+
+  "agentManager.updateBase.title": "ベースから更新",
+  "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
+
   "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
@@ -204,6 +208,8 @@ export const dict = {
   "agentManager.pr.comment.title": "コメント",
   "agentManager.pr.copyLink": "PRリンクをコピー",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 件未解決",
+  "agentManager.pr.comment.unresolvedThread": "未解決のレビュースレッド {{count}} 件",
+  "agentManager.pr.comment.unresolvedThreads": "未解決のレビュースレッド {{count}} 件",
   "agentManager.pr.comment.resolvedGroup": "解決済み ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} 件の未解決コメントをエージェントに送信",
   "agentManager.pr.comment.sendAllToTerminal": "{{count}} 件の未解決コメントをターミナルに送信",
@@ -216,6 +222,11 @@ export const dict = {
   "agentManager.pr.comment.openOnGitHub": "GitHubで開く",
   "agentManager.pr.comment.resolveFailed": "解決できませんでした。{{error}}",
   "agentManager.pr.comment.unresolveFailed": "解決を取り消せませんでした。{{error}}",
+  "agentManager.pr.conversation.title": "PRコメント",
+  "agentManager.pr.conversation.dismiss": "閉じる",
+  "agentManager.pr.conversation.restore": "復元",
+  "agentManager.pr.conversation.sendAll": "{{count}} 件をエージェントに送信",
+  "agentManager.pr.conversation.sendAllToTerminal": "{{count}} 件をターミナルに送信",
   "agentManager.review.collapsedOnly": "{{count}} 件折りたたみ",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 件折りたたみ、{{large}} 件がサイズ大",
   "agentManager.review.largeFileCollapsed": "大きなファイル（折りたたみ）",
@@ -246,6 +257,21 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ブランチが見つかりません。",
   "agentManager.import.noBranchesHint": "上にPR URLを貼り付けるか、新しいWorktreeを作成してください。",
   "agentManager.import.failed": "インポートに失敗しました",
+  "agentManager.browser.title": "ブラウザー",
+  "agentManager.browser.url": "ローカルアプリケーション URL",
+  "agentManager.browser.urlPlaceholder": "http://localhost:3000",
+  "agentManager.browser.open": "開く",
+  "agentManager.browser.refresh": "ブラウザーを更新",
+  "agentManager.browser.close": "ブラウザーを閉じる",
+  "agentManager.browser.inspect": "要素を選択",
+  "agentManager.browser.devtoolsTitle": "開発者ツール",
+  "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
+  "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
+  "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
+  "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
+  "agentManager.browser.diagnostics": "ブラウザー診断",
+  "agentManager.browser.diagnosticsHint":
+    "自動操作用ブラウザーの最近のイベントです。セキュリティによるブロックはコンソールエラーではありません。",
 
   "agentManager.pr.error.gh_auth.title": "GitHub認証が必要です",
   "agentManager.pr.error.gh_auth.description":
@@ -253,4 +279,30 @@ export const dict = {
   "agentManager.pr.error.gh_missing.title": "GitHub CLIがインストールされていません",
   "agentManager.pr.error.gh_missing.description":
     "PRステータスを有効にするには、GitHub CLIをインストールしてください。",
+  "agentManager.intro.title": "並行タスク。分離された worktree。",
+  "agentManager.intro.subtitle":
+    "worktree はタスク用の分離されたフォルダとブランチです。エージェントは同じファイルを編集せず、並行して作業できます。",
+  "agentManager.intro.graph.agent": "Kilo エージェント",
+  "agentManager.intro.graph.pr": "Pull request",
+  "agentManager.intro.stage1.title": "あなたのリポジトリ",
+  "agentManager.intro.stage1.text": "ローカルファイルは変更されません",
+  "agentManager.intro.stage2.title": "例：2 つのタスクを並行実行",
+  "agentManager.intro.stage2.text":
+    "2 つの worktree はこのリポジトリに属します。別のリポジトリには別のプロジェクトを選択してください。",
+  "agentManager.intro.stage3.title": "Worktree",
+  "agentManager.intro.stage3.text": "専用のフォルダとブランチ",
+  "agentManager.intro.stage4.title": "準備ができたら変更を戻す",
+  "agentManager.intro.stage4.text":
+    "各 worktree のエージェントに pull request を開くよう依頼します。または差分パネルで Apply を使い、変更を Local にコピーします。",
+  "agentManager.intro.updateTitle": "Kilo で競合を解決",
+  "agentManager.intro.updateText":
+    "Local に変更を適用するか、pull request をマージする前に、その worktree のセッションで /update-from-base を実行してください。Kilo がベースブランチの最新変更をマージし、まずその worktree 内で競合を解決します。",
+  "agentManager.intro.prDetection":
+    "PR バッジは各 worktree ブランチで自動的に更新されます（GitHub CLI へのサインインが必要です）。",
+  "agentManager.intro.checksRunning": "チェック実行中",
+  "agentManager.intro.approved": "承認済み",
+  "agentManager.intro.create": "worktree を作成",
+  "agentManager.intro.guide": "ガイドを読む",
+  "agentManager.intro.dismiss": "イントロダクションをスキップ",
+  "agentManager.intro.reopen": "Agent Manager の仕組み",
 }

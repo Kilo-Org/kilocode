@@ -117,11 +117,13 @@ describe("handleFileSearch", () => {
     expect(posted[0]!.paths).toEqual(["src/a.ts", abs("/other", "lib/b.ts")])
     // Every entry is labelled once the workspace has more than one folder,
     // including the session's own project.
+    // Outside entries also carry their path within the owning folder, which is
+    // what the webview ranks them on.
     expect(posted[0]!.items).toEqual([
       { path: "src/a.ts", type: "file", root: "repo" },
-      { path: abs("/other", "lib/b.ts"), type: "file", root: "other" },
+      { path: abs("/other", "lib/b.ts"), type: "file", root: "other", relative: "lib/b.ts" },
       { path: "src", type: "folder", root: "repo" },
-      { path: abs("/other", "lib"), type: "folder", root: "other" },
+      { path: abs("/other", "lib"), type: "folder", root: "other", relative: "lib" },
     ])
   })
 

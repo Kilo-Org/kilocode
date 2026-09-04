@@ -32,6 +32,7 @@ import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
+  BrowserReference,
   Part,
   QuestionRequest,
   ReviewComment,
@@ -42,6 +43,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
@@ -266,6 +268,28 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
   return <VscodeUserMessage message={message} parts={parts} />
 }
 
+function browserMessage(references: BrowserReference[]) {
+  const data = { version: 1 as const, references }
+  const message: Message = {
+    id: "browser-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "browser-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${formatBrowserFeedback(references)}\n\nPlease fix the selected browser elements.`,
+      metadata: feedbackMetadata(undefined, data),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -318,6 +342,39 @@ export const UserMessageManyReviewComments: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const UserMessageBrowserFeedback: Story = {
+  name: "User message — browser feedback",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {browserMessage([
+          {
+            id: "browser-1",
+            sessionId: SESSION_ID,
+            selector: "main > button.save",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "button.save"],
+            text: "Save settings",
+            html: '<button class="save">Save settings</button>',
+            styles: { color: "rgb(30, 30, 30)", backgroundColor: "white" },
+            source: { file: "src/settings.tsx", line: 42, column: 7 },
+          },
+          {
+            id: "browser-2",
+            sessionId: SESSION_ID,
+            selector: "form input[name=email]",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "form", "input[name=email]"],
+            text: "Email address",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /**

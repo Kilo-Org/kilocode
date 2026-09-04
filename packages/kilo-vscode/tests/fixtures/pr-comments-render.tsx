@@ -1,7 +1,10 @@
 import assert from "node:assert/strict"
 import { Window } from "happy-dom"
+import type { PRStatus, WebviewMessage } from "../../webview-ui/src/types/messages"
 
+const refreshed: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
   replaceSync() {}
   replace() {
@@ -32,6 +35,13 @@ Object.assign(globalThis, {
   MessageEvent: window.MessageEvent,
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  acquireVsCodeApi: () => ({
+    postMessage: (message: WebviewMessage) => {
+      if (message.type === "agentManager.refreshPR") refreshed.push(message)
+    },
+    getState: () => undefined,
+    setState: () => undefined,
+  }),
 })
 
 const { render } = await import("solid-js/web")
@@ -39,7 +49,10 @@ const { MarkedProvider } = await import("@kilocode/kilo-ui/context/marked")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
 const { PRComments } = await import("../../webview-ui/agent-manager/pr/PRComments")
-const { createSignal } = await import("solid-js")
+const { Show, createRoot, createSignal } = await import("solid-js")
+const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
+const { createPRNavigation, PRPanelHost } = await import("../../webview-ui/agent-manager/pr/PRPanelHost")
+const { commentState, patchCommentState } = await import("../../webview-ui/agent-manager/pr/pr-comment-state")
 
 const root = document.createElement("div")
 const colors = document.createElement("style")
@@ -233,3 +246,206 @@ assert.equal(revived.get("PRRT_done")?.querySelector(".am-pr-comment-head")?.get
 assert.match(second.textContent ?? "", /second paragraph only shows when expanded/)
 assert.match(second.textContent ?? "", /Sent/)
 disposeSecond()
+
+const base: PRStatus = {
+  number: 42,
+  title: "Review navigation",
+  url: "https://github.com/example/repo/pull/42",
+  state: "open",
+  review: null,
+  checks: { status: "success", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
+  additions: 1,
+  deletions: 0,
+  files: 1,
+}
+const [badge, setBadge] = createSignal(base)
+const [project, setProject] = createSignal<string | undefined>("project-a")
+const [selection, setSelection] = createSignal<string | null>("local")
+const [visible, setVisible] = createSignal(false)
+const clicked: string[] = []
+const target = { projectId: "project-b", worktreeId: "wt-navigation" }
+const navigation = createRoot((dispose) => ({
+  ...createPRNavigation({
+    project,
+    active: project,
+    selection,
+    select: () => clicked.push("select"),
+    visible,
+    open: () => setVisible(true),
+    refresh: () => clicked.push("refresh"),
+  }),
+  dispose,
+}))
+const noop = () => undefined
+let jumps = 0
+window.HTMLElement.prototype.scrollIntoView = () => {
+  jumps++
+}
+patchCommentState(target.worktreeId, () => ({ open: false }))
+const release = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <MarkedProvider>
+          <WorktreeItem
+            worktree={{
+              id: target.worktreeId,
+              branch: "feature",
+              path: "/repo/feature",
+              parentBranch: "main",
+              createdAt: "2026-09-03",
+            }}
+            label="Feature"
+            active={false}
+            pendingDelete={false}
+            busy={false}
+            activity="idle"
+            stale={false}
+            sessions={1}
+            grouped={false}
+            groupStart={false}
+            groupEnd={false}
+            groupSize={0}
+            renaming={false}
+            renameValue=""
+            closeKeybind=""
+            openKeybind=""
+            pr={badge()}
+            onOpenComments={() => navigation.open(target)}
+            onOpenPR={() => clicked.push("external")}
+            onClick={() => clicked.push("row")}
+            onDelete={noop}
+            onStartRename={noop}
+            onRenameInput={noop}
+            onCommitRename={noop}
+            onCancelRename={noop}
+            onRemoveStale={noop}
+            onCopyPath={noop}
+            onOpen={noop}
+          />
+          <Show when={visible()}>
+            <PRPanelHost
+              pr={badge()}
+              projectId={project()}
+              worktreeId={target.worktreeId}
+              jump={navigation.jump()}
+              onJump={navigation.complete}
+              onClose={() => setVisible(false)}
+            />
+          </Show>
+        </MarkedProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  second,
+)
+const indicator = () => second.querySelector<HTMLButtonElement>(".am-pr-badge-comments")
+assert.equal(indicator(), null)
+setBadge({ ...base, unresolvedThreads: 1 })
+assert.equal(indicator()?.getAttribute("aria-label"), "1 unresolved review thread")
+indicator()!.click()
+setProject(target.projectId)
+assert.equal(visible(), false)
+setSelection(target.worktreeId)
+await window.happyDOM.waitUntilComplete()
+assert.equal(visible(), true)
+assert.deepEqual(clicked, ["select", "refresh"])
+assert.equal(jumps, 0)
+setBadge({
+  ...base,
+  unresolvedThreads: 1,
+  comments: {
+    total: 1,
+    unresolved: 1,
+    comments: [{ id: "feedback", author: "reviewer", body: "Fix this", resolved: false }],
+  },
+  conversation: [
+    {
+      id: "convo1",
+      author: "lead-reviewer",
+      body: "Consider simplifying the signature serializer",
+      state: "approved",
+      createdAt: Date.now() - 60_000,
+    },
+    {
+      id: "convo2",
+      author: "kilo-code-bot",
+      body: "Bot review summary",
+      isBot: true,
+      createdAt: Date.now() - 120_000,
+    },
+  ],
+})
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).open, true)
+assert.equal(jumps, 1)
+
+// Conversation comments render at the bottom of the PR panel
+assert.match(second.textContent ?? "", /PR Comments/)
+assert.match(second.textContent ?? "", /lead-reviewer/)
+assert.match(second.textContent ?? "", /Consider simplifying the signature serializer/)
+assert.match(second.textContent ?? "", /Approved/)
+assert.match(second.textContent ?? "", /kilo-code-bot/)
+assert.match(second.textContent ?? "", /bot/)
+
+// Send conversation comment to agent
+const convoCard = second.querySelector('[data-thread-id="convo1"]')
+assert.ok(convoCard)
+const sendBtn = Array.from(convoCard!.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+  b.textContent?.includes("Send to agent"),
+)
+assert.ok(sendBtn)
+sendBtn!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).sent["convo1"], true)
+const lastSent = sent.at(-1) as { comments?: Array<{ id: string; author: string; body: string; reviewState?: string }> }
+assert.equal(lastSent?.comments?.[0]?.id, "convo1")
+assert.equal(lastSent?.comments?.[0]?.author, "lead-reviewer")
+assert.equal(lastSent?.comments?.[0]?.reviewState, "approved")
+assert.match(lastSent?.comments?.[0]?.body ?? "", /simplifying the signature serializer/)
+
+// Dismissing a conversation comment marks it dismissed
+const convo2Card = second.querySelector('[data-thread-id="convo2"]')
+assert.ok(convo2Card)
+// convo2 is a bot, so collapsed by default; click header to open
+convo2Card!.querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
+await window.happyDOM.waitUntilComplete()
+const dismissBtn = Array.from(convo2Card!.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+  b.textContent?.includes("Dismiss"),
+)
+assert.ok(dismissBtn)
+dismissBtn!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).dismissed["convo2"], true)
+
+indicator()!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(jumps, 2)
+const panel = second.querySelector(".am-pr-panel")
+const refresh = second.querySelector<HTMLButtonElement>('.am-pr-panel-actions [aria-label="Refresh"]')
+assert.ok(refresh, "refresh button is rendered in the PR header")
+refresh.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(refreshed, [{ type: "agentManager.refreshPR", ...target }])
+assert.equal(visible(), true)
+assert.equal(second.querySelector(".am-pr-panel"), panel)
+setBadge((prev) => ({ ...prev, title: "Updated" }))
+await window.happyDOM.waitUntilComplete()
+assert.equal(second.querySelector(".am-pr-panel-title")?.textContent, "Updated")
+assert.equal(jumps, 2)
+second.querySelector<HTMLElement>(".am-pr-badge-number")!.click()
+assert.equal(clicked.at(-1), "external")
+assert.ok(!clicked.includes("row"))
+setBadge((prev) => ({ ...prev, unresolvedThreads: 0 }))
+assert.equal(indicator(), null)
+setProject(undefined)
+refresh.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(refreshed, [
+  { type: "agentManager.refreshPR", ...target },
+  { type: "agentManager.refreshPR", projectId: undefined, worktreeId: target.worktreeId },
+])
+assert.equal(visible(), true)
+release()
+navigation.dispose()
