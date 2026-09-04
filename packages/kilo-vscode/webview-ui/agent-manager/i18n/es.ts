@@ -290,9 +290,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Devuelve los cambios cuando estés listo",
   "agentManager.intro.stage4.text":
     "Pide al agente de cada worktree que abra un pull request. O usa Apply en el panel de diff para copiar los cambios a Local.",
-  "agentManager.intro.updateTitle": "Actualizar un worktree desde la rama base",
+  "agentManager.intro.updateTitle": "Resuelve los conflictos con el agente del worktree",
   "agentManager.intro.updateText":
-    "Ejecuta /update-from-base en su sesión para fusionar los cambios más recientes de la rama base.",
+    "Antes de aplicar cambios a Local o fusionar una pull request, ejecuta /update-from-base en la sesión de ese worktree. El agente fusiona los últimos cambios de la rama base y resuelve primero los conflictos dentro de ese worktree.",
   "agentManager.intro.prDetection":
     "Las insignias de PR se actualizan automáticamente para cada rama de worktree (se requiere iniciar sesión en GitHub CLI).",
   "agentManager.intro.checksRunning": "Comprobaciones en curso",

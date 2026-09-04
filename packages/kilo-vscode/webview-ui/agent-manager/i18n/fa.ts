@@ -279,8 +279,9 @@ export const dict = {
     "worktree برای هر وظیفه یک پوشه و شاخه جداست. عامل‌ها بدون ویرایش فایل‌های یکسان کنار هم کار می‌کنند.",
   "agentManager.intro.graph.agent": "عامل Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.updateTitle": "به‌روزرسانی worktree از شاخه پایه",
-  "agentManager.intro.updateText": "برای ادغام آخرین تغییرات شاخه پایه، /update-from-base را در جلسه آن اجرا کنید.",
+  "agentManager.intro.updateTitle": "رفع تعارض‌ها با عامل worktree",
+  "agentManager.intro.updateText":
+    "پیش از اعمال تغییرات در Local یا ادغام pull request، /update-from-base را در جلسه همان worktree اجرا کنید. عامل آخرین تغییرات شاخه پایه را ادغام می‌کند و ابتدا تعارض‌ها را در همان worktree برطرف می‌کند.",
   "agentManager.intro.stage1.title": "مخزن شما",
   "agentManager.intro.stage1.text": "فایل‌های محلی بدون تغییر می‌مانند",
   "agentManager.intro.stage2.title": "مثال: دو وظیفه به‌صورت موازی",

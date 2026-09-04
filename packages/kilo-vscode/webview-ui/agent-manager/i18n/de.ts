@@ -291,9 +291,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Änderungen zurückholen, wenn Sie bereit sind",
   "agentManager.intro.stage4.text":
     "Bitten Sie den Agenten in jedem Worktree, einen Pull Request zu öffnen. Oder verwenden Sie Apply im Diff-Panel, um Änderungen nach Local zu kopieren.",
-  "agentManager.intro.updateTitle": "Einen Worktree vom Basis-Branch aktualisieren",
+  "agentManager.intro.updateTitle": "Konflikte mit dem Worktree-Agenten lösen",
   "agentManager.intro.updateText":
-    "Führen Sie /update-from-base in dessen Sitzung aus, um die neuesten Änderungen des Basis-Branches zu mergen.",
+    "Bevor Sie Änderungen auf Local anwenden oder einen Pull Request mergen, führen Sie /update-from-base in der Sitzung dieses Worktrees aus. Der Agent mergt die neuesten Änderungen des Basis-Branches und löst Konflikte zuerst in diesem Worktree.",
   "agentManager.intro.prDetection":
     "PR-Abzeichen werden für jeden Worktree-Branch automatisch aktualisiert (GitHub CLI-Anmeldung erforderlich).",
   "agentManager.intro.checksRunning": "Prüfungen laufen",

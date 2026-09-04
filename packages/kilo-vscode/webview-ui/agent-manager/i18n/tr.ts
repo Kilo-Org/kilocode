@@ -285,9 +285,9 @@ export const dict = {
     "Worktree, bir görev için ayrı bir klasör ve daldır. Agentlar aynı dosyaları düzenlemeden yan yana çalışabilir.",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.updateTitle": "Worktree'yi temel daldan güncelle",
+  "agentManager.intro.updateTitle": "Çakışmaları worktree agentiyle çözün",
   "agentManager.intro.updateText":
-    "Temel daldaki en son değişiklikleri birleştirmek için ilgili oturumda /update-from-base komutunu çalıştırın.",
+    "Değişiklikleri Local'e uygulamadan veya bir pull request'i birleştirmeden önce ilgili worktree oturumunda /update-from-base komutunu çalıştırın. Agent en son temel dal değişikliklerini birleştirir ve çakışmaları önce aynı worktree içinde çözer.",
   "agentManager.intro.stage1.title": "Deponuz",
   "agentManager.intro.stage1.text": "Yerel dosyalar değişmeden kalır",
   "agentManager.intro.stage2.title": "Örnek: iki görev paralel",

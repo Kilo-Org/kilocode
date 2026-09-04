@@ -296,9 +296,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Riporta le modifiche quando sei pronto",
   "agentManager.intro.stage4.text":
     "Chiedi all'agente di ogni worktree di aprire una pull request. Oppure usa Apply nel pannello diff per copiare le modifiche in Local.",
-  "agentManager.intro.updateTitle": "Aggiornare un worktree dal branch di base",
+  "agentManager.intro.updateTitle": "Risolvi i conflitti con l'agente del worktree",
   "agentManager.intro.updateText":
-    "Esegui /update-from-base nella sua sessione per unire le ultime modifiche del branch di base.",
+    "Prima di applicare le modifiche a Local o fare il merge di una pull request, esegui /update-from-base nella sessione di quel worktree. L'agente unisce le ultime modifiche del branch di base e risolve prima i conflitti all'interno di quel worktree.",
   "agentManager.intro.prDetection":
     "I badge PR si aggiornano automaticamente per ogni branch del worktree (è richiesto l'accesso a GitHub CLI).",
   "agentManager.intro.checksRunning": "Controlli in corso",

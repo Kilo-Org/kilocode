@@ -274,9 +274,9 @@ export const dict = {
     "worktree는 작업을 위한 별도 폴더와 브랜치입니다. 에이전트가 같은 파일을 편집하지 않고 나란히 작업할 수 있습니다.",
   "agentManager.intro.graph.agent": "Kilo 에이전트",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.updateTitle": "베이스 브랜치에서 worktree 업데이트",
+  "agentManager.intro.updateTitle": "worktree 에이전트로 충돌 해결",
   "agentManager.intro.updateText":
-    "해당 세션에서 /update-from-base 명령을 실행하여 베이스 브랜치의 최신 변경 사항을 병합하세요.",
+    "Local에 변경 사항을 적용하거나 pull request를 병합하기 전에 해당 worktree의 세션에서 /update-from-base 명령을 실행하세요. 에이전트가 베이스 브랜치의 최신 변경 사항을 병합하고 먼저 해당 worktree 안에서 충돌을 해결합니다.",
   "agentManager.intro.stage1.title": "내 저장소",
   "agentManager.intro.stage1.text": "로컬 파일은 변경되지 않습니다",
   "agentManager.intro.stage2.title": "예: 두 작업을 병렬로",
