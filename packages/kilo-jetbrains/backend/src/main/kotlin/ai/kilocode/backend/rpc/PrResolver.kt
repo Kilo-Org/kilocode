@@ -134,11 +134,17 @@ internal class PrResolver(
      * Only live pull requests pay for it. The query is a process spawn per row per poll, and unresolved
      * feedback on something already merged or closed is not work anyone is waiting on.
      *
-     * A refusal must not cost the PR the row already shows, so only a spent budget is reported — that one
-     * means "ask again later", and reporting it holds every badge this poll would otherwise blank. Anything
-     * else latches the query off for the process, exactly as [RichRefusal.FIELD] does for review and CI
-     * fields, so a `gh` or token that cannot answer threads costs one call in total rather than one per
-     * checkout on every poll.
+     * A spent budget answers nothing about this pull request, and the DTO's default count reads as "every
+     * conversation settled" — so it is reported the way a refused `gh pr view` is, with no PR at all. That
+     * is what lets the frontend's `held` keep the previous answer, count included, instead of blanking a
+     * conversation badge for the best part of an hour over a lookup that never ran.
+     *
+     * Only a rejected field name latches the query off, exactly as [RichRefusal.FIELD] does for review and
+     * CI fields: it is the one failure true of every repository this process sees, so a `gh` that cannot
+     * answer threads costs one call in total rather than one per checkout on every poll. A per-repository
+     * access refusal or a transient failure costs this poll's count and nothing else — one resolver serves
+     * every checkout, so latching on those would strip the badge from every other worktree until the IDE
+     * restarts.
      */
     private fun comments(dir: Path, found: PrLookup): PrLookup {
         val pr = found.pr ?: return found
@@ -146,9 +152,13 @@ internal class PrResolver(
         if (!threads || found.node.isEmpty()) return found
         val out = gh(dir, listOf("api", "graphql", "-f", "query=$THREADS_QUERY", "-f", "id=${found.node}"))
         if (out.ok) return found.copy(pr = pr.copy(comments = parseThreads(out.stdout)))
-        if (rateLimited(out.stderr.lowercase())) return found.copy(availability = GhAvailability.RATE_LIMITED)
-        threads = false
-        LOG.info("gh cannot answer review threads, dropping the comment count: ${out.stderr.trim()}")
+        if (rateLimited(out.stderr.lowercase())) return PrLookup(availability = GhAvailability.RATE_LIMITED)
+        if (richRefusal(out.stderr) == RichRefusal.FIELD) {
+            threads = false
+            LOG.info("gh cannot answer review threads, dropping the comment count: ${out.stderr.trim()}")
+            return found
+        }
+        LOG.info("review thread lookup failed, will ask again next poll: ${out.stderr.trim()}")
         return found
     }
 

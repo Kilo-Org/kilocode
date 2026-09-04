@@ -14,6 +14,9 @@ class PrResolverTest {
     private val path = "/repo/.kilo/worktrees/feature-x"
     private val calls = mutableListOf<List<String>>()
 
+    /** The checkout the command in flight runs in, so a test can answer differently per repository. */
+    private var dir = ""
+
     @Test
     fun `resolves through branch config without falling back`() {
         val resolver = resolver(view = { pr(7, "OPEN") })
@@ -290,34 +293,73 @@ class PrResolverTest {
     }
 
     @Test
-    fun `reports a spent budget from the review conversation lookup while keeping the pull request`() {
-        // The count is unknown, but the PR is not: the availability holds every badge this poll would
-        // otherwise blank, and dropping the PR here would report a change that never happened.
+    fun `reports a spent budget from the review conversation lookup without a pull request`() {
+        // The count is unknown and the DTO's default reads as "every conversation settled", so answering
+        // with the PR would publish a resolution nobody made and hold it for the rate-limit window. Told
+        // the way a refused `gh pr view` is instead, which is what lets the frontend keep its last answer.
         val resolver = resolver(view = { pr(7, "OPEN") }, api = { CmdOut(1, "", "API rate limit exceeded") })
 
         val lookup = resolver.resolve(path, "feature/x", base = "main")
 
         assertEquals(GhAvailability.RATE_LIMITED, lookup.availability)
-        assertEquals(7, assertNotNull(lookup.pr, "a spent budget must not cost the row its PR").number)
-        assertEquals(0, lookup.pr?.comments?.unresolved)
+        assertNull(lookup.pr, "a PR carrying a zeroed count would blank a conversation badge already shown")
     }
 
     @Test
-    fun `keeps the pull request and latches when review conversations are refused`() {
+    fun `keeps the pull request and latches when gh rejects the review conversation field`() {
+        // The one failure that is true of every repository this process sees, so it may latch.
         val resolver = resolver(
             view = { pr(7, "OPEN") },
-            api = { CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository.pullRequest)") },
+            api = { CmdOut(1, "", "GraphQL: Field 'reviewThreads' doesn't exist on type 'PullRequest'") },
         )
 
         val first = resolver.resolve(path, "feature/x", base = "main")
         calls.clear()
         val second = resolver.resolve(path, "feature/x", base = "main")
 
-        assertEquals(7, assertNotNull(first.pr, "a refused count must not cost the row its PR").number)
+        assertEquals(7, assertNotNull(first.pr, "a rejected field must not cost the row its PR").number)
         assertEquals(GhAvailability.OK, first.availability, "a refusal is not a reason to hold every badge")
         assertEquals(7, assertNotNull(second.pr).number)
-        // Latched, so a token that cannot read threads costs one call in total rather than one per poll.
+        // Latched, so a gh that cannot read threads costs one call in total rather than one per poll.
         assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
+    fun `keeps asking about review conversations after one repository refused the token`() {
+        // One resolver serves every checkout and an access refusal is per repository and token, so the
+        // restricted worktree must not cost the others their conversation count until the IDE restarts.
+        val restricted = "$path-restricted"
+        val resolver = resolver(
+            view = { pr(7, "OPEN") },
+            api = {
+                if (dir == restricted) CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository)")
+                else threads(unresolved = 2)
+            },
+        )
+
+        val refused = resolver.resolve(restricted, "feature/x", base = "main")
+        val other = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(refused.pr, "a refused count must not cost the row its PR").number)
+        assertEquals(GhAvailability.OK, refused.availability, "one restricted repository holds no badges")
+        assertEquals(0, refused.pr?.comments?.unresolved)
+        assertEquals(2, other.pr?.comments?.unresolved, "the second checkout still gets its count")
+    }
+
+    @Test
+    fun `keeps asking about review conversations after a transient failure`() {
+        // A gateway error or a dropped connection says nothing about whether gh can answer threads at
+        // all, so it costs this poll's count and not the badge for every worktree until a restart.
+        val answers = mutableListOf(CmdOut(1, "", "HTTP 502: Bad Gateway"), threads(unresolved = 4))
+        val resolver = resolver(view = { pr(7, "OPEN") }, api = { answers.removeFirst() })
+
+        val blip = resolver.resolve(path, "feature/x", base = "main")
+        val after = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(GhAvailability.OK, blip.availability)
+        assertEquals(0, blip.pr?.comments?.unresolved)
+        assertEquals(4, after.pr?.comments?.unresolved, "the query must still run on the next poll")
+        assertTrue(answers.isEmpty(), "both answers should have been asked for")
     }
 
     @Test
@@ -348,7 +390,8 @@ class PrResolverTest {
         list: (List<String>) -> CmdOut = { ok("[]") },
         api: (List<String>) -> CmdOut = { threads() },
     ): PrResolver = PrResolver(
-        gh = { _, args ->
+        gh = { at, args ->
+            dir = at.toString()
             calls.add(args)
             when {
                 args.firstOrNull() == "api" -> api(args)
@@ -356,7 +399,8 @@ class PrResolverTest {
                 else -> view(args)
             }
         },
-        git = { _, args ->
+        git = { at, args ->
+            dir = at.toString()
             calls.add(args)
             assertEquals(listOf("rev-parse", "HEAD"), args)
             ok("$SHA\n")

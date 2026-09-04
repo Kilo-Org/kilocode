@@ -2,6 +2,7 @@ package ai.kilocode.client.ui
 
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -32,6 +33,17 @@ class PrBadgesTest {
         // answer, which is still accurate because git needs no GitHub budget.
         assertEquals(GhAvailability.RATE_LIMITED, result.availability)
         assertEquals("feature/x", result.branch)
+    }
+
+    @Test
+    fun `a refused refresh keeps the unresolved conversation count already shown`() {
+        // The count rides the pull request, so a refresh that answers without one must not leave the
+        // header reading "every conversation settled" — the resolver never got to ask.
+        val counted = pr.copy(comments = GhCommentsDto(total = 5, unresolved = 3))
+        val previous = BranchStatusDto(branch = "feature/x", availability = GhAvailability.OK, pr = counted)
+        val next = BranchStatusDto(branch = "feature/x", availability = GhAvailability.RATE_LIMITED)
+
+        assertEquals(3, held(next, previous).pr?.comments?.unresolved)
     }
 
     @Test
