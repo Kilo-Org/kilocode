@@ -121,7 +121,9 @@ function Introduction(props: IntroProps) {
           <p>{t("agentManager.intro.stage4.text")}</p>
         </div>
         <div class="am-intro-detail">
-          <h3>{t("agentManager.intro.graph.conflict")}</h3>
+          <h3>
+            {t("agentManager.updateBase.title")} <code class="am-intro-command">/update-from-base</code>
+          </h3>
           <p>{t("agentManager.intro.conflictText")}</p>
         </div>
       </div>
@@ -142,9 +144,13 @@ function Introduction(props: IntroProps) {
           placement="top-start"
           class="am-intro-tip"
           triggerAs={Button}
-          triggerProps={{ variant: "ghost", size: "small", icon: "help", class: "am-intro-help" }}
-          trigger={t("agentManager.intro.graph.conflict")}
-          title={t("agentManager.intro.graph.conflict")}
+          triggerProps={{ variant: "ghost", size: "small", icon: "branch", class: "am-intro-help" }}
+          trigger={
+            <span>
+              {t("agentManager.updateBase.title")} <code class="am-intro-command">/update-from-base</code>
+            </span>
+          }
+          title={t("agentManager.updateBase.title")}
         >
           <div class="am-intro-tip-body">
             <p>{t("agentManager.intro.conflictText")}</p>
