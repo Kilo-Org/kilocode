@@ -12,7 +12,7 @@ function setup(
     details?: (sessionID: string, directory?: string) => Promise<Omit<AttentionNotice, "message"> | undefined>
     notifications?: boolean
     windowsNotifications?: boolean
-    focused?: boolean
+    focused?: boolean | (() => boolean)
     visible?: boolean | ((sessionID: string) => boolean)
     windows?: (notice: AttentionNotice) => void
     show?: (sessionID: string, directory?: string) => void
@@ -69,7 +69,7 @@ function setup(
   const service = new AttentionService(connection, {
     approve: opts.approve,
     details: opts.details,
-    focused: () => opts.focused ?? true,
+    focused: () => (typeof opts.focused === "function" ? opts.focused() : (opts.focused ?? true)),
     visible: (sessionID) => (typeof opts.visible === "function" ? opts.visible(sessionID) : (opts.visible ?? false)),
     windows: opts.windows,
     show: opts.show,
@@ -202,6 +202,59 @@ describe("AttentionService", () => {
       { message: "Kilo needs your input.", workspace: "kilo-vscode", session: "Add notifications" },
     ])
     expect(test.messages).toEqual([])
+    test.service.dispose()
+    test.restore()
+  })
+
+  it("falls back to a VS Code notification when the OS channel is unavailable", () => {
+    const test = setup({ notifications: true, windowsNotifications: true, focused: false, capture: false })
+    test.event(event({ type: "question.asked", properties: { id: "q1", sessionID: "s1" } }))
+
+    expect(test.messages).toEqual([{ message: "Kilo needs your input.", style: "info" }])
+    test.service.dispose()
+    test.restore()
+  })
+
+  it("skips the alert when the session becomes visible while details resolve", async () => {
+    let visible = false
+    const test = setup({
+      notifications: true,
+      capture: false,
+      visible: () => visible,
+      details: async () => {
+        visible = true
+        return { workspace: "kilo-vscode", session: "Add notifications" }
+      },
+    })
+    test.event(event({ type: "question.asked", properties: { id: "q1", sessionID: "s1" } }))
+    await Bun.sleep(0)
+
+    expect(test.messages).toEqual([])
+    test.service.dispose()
+    test.restore()
+  })
+
+  it("uses the VS Code channel when the window regains focus while details resolve", async () => {
+    const alerts: AttentionNotice[] = []
+    let focused = false
+    const test = setup({
+      notifications: true,
+      windowsNotifications: true,
+      capture: false,
+      focused: () => focused,
+      windows: (notice) => alerts.push(notice),
+      details: async () => {
+        focused = true
+        return { workspace: "kilo-vscode", session: "Add notifications" }
+      },
+    })
+    test.event(event({ type: "question.asked", properties: { id: "q1", sessionID: "s1" } }))
+    await Bun.sleep(0)
+
+    expect(alerts).toEqual([])
+    expect(test.messages).toEqual([
+      { message: "Kilo needs your input. Workspace: kilo-vscode | Session: Add notifications", style: "info" },
+    ])
     test.service.dispose()
     test.restore()
   })

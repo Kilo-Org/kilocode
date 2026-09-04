@@ -230,7 +230,7 @@ export async function activate(context: vscode.ExtensionContext) {
       (provider.isSidebarVisible() && provider.getCurrentSessionId() === sessionID) ||
       activeTabProvider()?.getCurrentSessionId() === sessionID ||
       (agentManagerProvider.isActive() && agentManagerProvider.getActiveSessionId() === sessionID),
-    windows: showWindowsNotification,
+    windows: process.platform === "win32" ? showWindowsNotification : undefined,
     show: async (sessionID, directory) => {
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.openSession(sessionID, directory)
