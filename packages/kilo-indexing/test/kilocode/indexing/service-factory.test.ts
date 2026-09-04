@@ -8,6 +8,11 @@ import {
 import type { AvailableEmbedders, IEmbedder } from "../../../src/indexing/interfaces/embedder"
 
 mock.module("openai", openAIMockFactory)
+mock.module("@zilliz/milvus2-sdk-node", () => ({
+  HttpClient: class {
+    constructor(public readonly config: Record<string, unknown>) {}
+  },
+}))
 import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
 import { CacheManager } from "../../../src/indexing/cache-manager"
@@ -56,6 +61,29 @@ describe("CodeIndexServiceFactory", () => {
     })
 
     expect(factory.createEmbedder().embedderInfo).toEqual({ name: "openai-compatible" })
+  })
+
+  test("passes configured dimension to Gemini embedding requests", async () => {
+    const factory = createFactory({
+      embedderProvider: "gemini",
+      openAiKey: undefined,
+      geminiApiKey: "gemini-test",
+      modelId: "gemini-embedding-001",
+      modelDimension: 768,
+    })
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: [0.1, 0.2] }],
+      usage: { prompt_tokens: 2, total_tokens: 2 },
+    })
+
+    await factory.createEmbedder().createEmbeddings(["test text"])
+
+    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+      input: ["test text"],
+      model: "gemini-embedding-001",
+      encoding_format: "base64",
+      dimensions: 768,
+    })
   })
 
   test("lets SDK-backed embedders own validation timeouts", async () => {
@@ -123,6 +151,28 @@ describe("CodeIndexServiceFactory", () => {
     const store = factory.createVectorStore() as unknown as { dbPath: string }
 
     expect(store.dbPath).toContain(dir)
+  })
+
+  test("creates a Milvus vector store with configured connection settings", () => {
+    const factory = createFactory({
+      vectorStoreProvider: "milvus",
+      milvusAddress: "https://cluster.example.com",
+      milvusToken: "token",
+      milvusDatabase: "code",
+    })
+
+    const store = factory.createVectorStore() as unknown as {
+      address: string
+      token?: string
+      database?: string
+      vectorSize: number
+    }
+
+    expect(store).toBeDefined()
+    expect(store.address).toBe("https://cluster.example.com")
+    expect(store.token).toBe("token")
+    expect(store.database).toBe("code")
+    expect(store.vectorSize).toBe(1536)
   })
 
   test("passes configured dimension to Ollama embed requests", async () => {

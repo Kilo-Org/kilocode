@@ -434,6 +434,15 @@ export const dict = {
   "settings.indexing.dimension.description":
     "Lad være tom for automatisk at registrere embedding-dimensionen fra modellen.",
   "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.milvusAddress.title": "Milvus-adresse",
+  "settings.indexing.milvusAddress.description": "Adresse til Milvus Standalone eller Zilliz Cloud.",
+  "settings.indexing.milvusAddress.placeholder": "localhost:19530",
+  "settings.indexing.milvusToken.title": "Milvus-token",
+  "settings.indexing.milvusToken.description": "Valgfrit token til godkendt Milvus eller Zilliz Cloud.",
+  "settings.indexing.milvusToken.placeholder": "Valgfrit token",
+  "settings.indexing.milvusDatabase.title": "Milvus-database",
+  "settings.indexing.milvusDatabase.description": "Valgfrit navn på Milvus-databasen.",
+  "settings.indexing.milvusDatabase.placeholder": "Lad stå tomt for standardværdien",
   "settings.indexing.status.title": "Status",
   "settings.indexing.tuning.description": "Avanceret søge- og batchparameter.",
 

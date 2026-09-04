@@ -85,6 +85,23 @@ describe("GeminiEmbedder", () => {
       expect(result.embeddings).toEqual([[0.5, 0.6]])
     })
 
+    test("should request the configured output dimension", async () => {
+      embedder = new GeminiEmbedder("test-api-key", "gemini-embedding-001", 768)
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: [0.1, 0.2] }],
+        usage: { prompt_tokens: 2, total_tokens: 2 },
+      })
+
+      await embedder.createEmbeddings(["test text"])
+
+      expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+        input: ["test text"],
+        model: "gemini-embedding-001",
+        encoding_format: "base64",
+        dimensions: 768,
+      })
+    })
+
     test("should handle errors from embedding API", async () => {
       embedder = new GeminiEmbedder("test-api-key")
       const error = new Error("Embedding failed")

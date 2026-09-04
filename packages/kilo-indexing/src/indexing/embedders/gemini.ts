@@ -23,8 +23,9 @@ export class GeminiEmbedder implements IEmbedder {
    * Creates a new Gemini embedder
    * @param apiKey The Gemini API key for authentication
    * @param modelId The model ID to use (defaults to gemini-embedding-001)
+   * @param dimensions Optional output dimension for models that support dimensionality reduction
    */
-  constructor(apiKey: string, modelId?: string) {
+  constructor(apiKey: string, modelId?: string, dimensions?: number) {
     if (!apiKey) {
       throw new Error("API key is required for Gemini embedder")
     }
@@ -38,6 +39,7 @@ export class GeminiEmbedder implements IEmbedder {
       apiKey,
       this.modelId,
       GEMINI_MAX_ITEM_TOKENS,
+      { dimensions },
     )
   }
 
