@@ -334,8 +334,25 @@ const mounts = createRoot((dispose) => {
 })
 await window.happyDOM.waitUntilComplete()
 assert.equal(observers.size, 1)
+const check = checks.get([...observers].at(0)!)!
 const first = mounts.at(0)!
 const last = mounts.at(1)!
+for (const revealed of [false, true]) {
+  let prepared = 0
+  const dispose = createRoot((cleanup) => {
+    createRemoteFocus(() => root).request(
+      "inline-1",
+      "inline.ts",
+      () => prepared++,
+      () => "inline",
+      () => revealed,
+    )
+    return cleanup
+  })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(prepared, revealed ? 1 : 2)
+  dispose()
+}
 const Resize = globalThis.ResizeObserver
 let resized: () => void = () => undefined
 globalThis.ResizeObserver = class extends Resize {
@@ -365,14 +382,16 @@ globalThis.ResizeObserver = Resize
 const header = last.host.querySelector<HTMLButtonElement>(".am-pr-comment-head")!
 header.click()
 first.wrapper.remove()
+check()
 await window.happyDOM.waitUntilComplete()
 const replacement = remote.render(first.meta)
 assert.notEqual(replacement, first.host)
-checks.get([...observers].at(0)!)!()
+check()
 assert.equal(remote.render(first.meta), replacement)
 assert.equal(remote.render(last.meta), last.host)
 assert.equal(header.getAttribute("aria-expanded"), "false")
 last.wrapper.remove()
+check()
 await window.happyDOM.waitUntilComplete()
 assert.notEqual(remote.render(last.meta), last.host)
 remote.cleanup()
@@ -664,6 +683,9 @@ setBadge((prev) => ({
 await window.happyDOM.waitUntilComplete()
 assert.ok(inline())
 assert.match(inline().textContent ?? "", /Updated committed thread/)
+assert.doesNotMatch(inline().textContent ?? "", /Request failed/)
+patchCommentState(target.worktreeId, (prev) => ({ errors: { ...prev.errors, feedback: "Request failed" } }))
+await window.happyDOM.waitUntilComplete()
 assert.match(inline().textContent ?? "", /Request failed/)
 setProject(undefined)
 refresh.click()

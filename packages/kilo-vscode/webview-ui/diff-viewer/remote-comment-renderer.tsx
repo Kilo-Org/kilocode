@@ -336,7 +336,7 @@ export function createRemoteFocus(
       const ready = place !== "inline" || !reveal || reveal()
       const target = ready ? findTarget(container, id, place) : undefined
       if (!target) {
-        if (place === "inline") prepare()
+        if (!ready) prepare()
         return false
       }
       if (place === "inline") {

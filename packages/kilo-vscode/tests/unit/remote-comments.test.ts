@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+import { parseComments } from "../../src/agent-manager/pr/am-pr-utils"
 import { mapRemoteComments, remoteLocation } from "../../webview-ui/diff-viewer/remote-comments"
 import type { PRComment } from "../../webview-ui/agent-manager/pr/pr-types"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
@@ -179,8 +180,19 @@ describe("remote diff comments", () => {
     expect(remoteLocation(stale, diff.file, "thread")).toBe("outside")
   })
 
-  it("does not defer outdated, invalid, image, or missing-file threads", () => {
+  it.each([false, true])("keeps unplaced threads outside with summarized=%s", (summarized) => {
     const comments = [
+      ...parseComments([
+        {
+          id: "original-only",
+          path: diff.file,
+          diffSide: "RIGHT",
+          line: null,
+          originalLine: 2,
+          isOutdated: false,
+          comments: { nodes: [{ id: "original-comment" }] },
+        },
+      ]),
       comment({ threadId: "outdated", file: diff.file, line: 2, outdated: true }),
       comment({ threadId: "line-less", file: diff.file }),
       comment({ threadId: "invalid", file: diff.file, line: 0 }),
@@ -188,10 +200,11 @@ describe("remote diff comments", () => {
       comment({ threadId: "missing", file: "gone.ts", line: 2 }),
     ]
     const result = mapRemoteComments(comments, [
-      { ...diff, summarized: true },
-      { ...diff, file: "image.png", kind: "image", summarized: true },
+      { ...diff, summarized },
+      { ...diff, file: "image.png", kind: "image", summarized },
     ])
 
+    expect(result.anchors.size).toBe(0)
     expect(result.pending.size).toBe(0)
     expect(result.outside).toEqual(comments)
   })

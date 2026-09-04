@@ -138,12 +138,7 @@ export function PRComments(props: Props) {
           pending={state().pending[id] !== undefined}
           sent={state().sent[id] === true}
           open={expandedFor(comment())}
-          error={
-            state().errors[id] ??
-            (!comment().outdated && comment().line && comment().previewUnavailable
-              ? t("common.requestFailed")
-              : undefined)
-          }
+          error={state().errors[id]}
           onToggleOpen={() => {
             const next = !expandedFor(comment())
             patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))
