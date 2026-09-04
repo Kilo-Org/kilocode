@@ -96,7 +96,7 @@ interface Params {
 
 const stripEmptySlots = (params: Params) => {
   for (const [slot, value] of Object.entries(params)) {
-    if (value && typeof value === "object" && !Array.isArray(value) && !Object.keys(value).length) {
+    if (value && typeof value === "object" && !Object.keys(value).length) {
       delete params[slot as Slot]
     }
   }
@@ -104,10 +104,10 @@ const stripEmptySlots = (params: Params) => {
 
 export const buildClientParams = (args: ReadonlyArray<unknown>, fields: FieldsConfig) => {
   const params: Params = {
-    body: Object.create(null),
-    headers: Object.create(null),
-    path: Object.create(null),
-    query: Object.create(null),
+    body: {},
+    headers: {},
+    path: {},
+    query: {},
   }
 
   const map = buildKeyMap(fields)

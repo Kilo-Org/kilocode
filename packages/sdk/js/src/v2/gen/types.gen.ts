@@ -2359,7 +2359,31 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
-  [key: string]: unknown
+  [key: string]:
+    | unknown
+    | string
+    | number
+    | {
+        [key: string]: boolean
+      }
+    | boolean
+    | "subagent"
+    | "primary"
+    | "all"
+    | {
+        [key: string]: unknown
+      }
+    | string
+    | "primary"
+    | "secondary"
+    | "accent"
+    | "success"
+    | "warning"
+    | "error"
+    | "info"
+    | number
+    | PermissionConfig
+    | undefined
 }
 
 export type ProviderConfig = {
@@ -2384,7 +2408,7 @@ export type ProviderConfig = {
      */
     headerTimeout?: number | false
     chunkTimeout?: number
-    [key: string]: unknown
+    [key: string]: unknown | string | boolean | number | false | number | false | number | undefined
   }
   models?: {
     [key: string]: {
@@ -2447,7 +2471,7 @@ export type ProviderConfig = {
       variants?: {
         [key: string]: {
           disabled?: boolean
-          [key: string]: unknown
+          [key: string]: unknown | boolean | undefined
         }
       }
     }
@@ -17005,6 +17029,336 @@ export type KilocodeRemoveAgentResponses = {
 }
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KilocodeMarketplaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace"
+}
+
+export type KilocodeMarketplaceListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceListError = KilocodeMarketplaceListErrors[keyof KilocodeMarketplaceListErrors]
+
+export type KilocodeMarketplaceListResponses = {
+  /**
+   * Marketplace catalog and installed metadata
+   */
+  200: {
+    items: Array<
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "mcp"
+          url: string
+          content:
+            | string
+            | Array<{
+                name: string
+                content: string
+                parameters?: Array<{
+                  name: string
+                  key: string
+                  placeholder?: string
+                  optional?: boolean
+                }>
+                prerequisites?: Array<string>
+              }>
+          parameters?: Array<{
+            name: string
+            key: string
+            placeholder?: string
+            optional?: boolean
+          }>
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "agent"
+          content: {
+            mode: "primary" | "subagent" | "all"
+            description: string
+            prompt: string
+            options?: {
+              [key: string]: unknown
+            }
+            permission?: {
+              [key: string]: unknown
+            }
+            requirements?: {
+              skills?: Array<string>
+              mcps?: Array<string>
+              vscode_extensions?: Array<{
+                name: string
+                id: string
+              }>
+            }
+          }
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "skill"
+          githubUrl: string
+          content: string
+          displayName: string
+          displayCategory: string
+        }
+    >
+    installed: {
+      project: {
+        [key: string]: {
+          type: string
+        }
+      }
+      global: {
+        [key: string]: {
+          type: string
+        }
+      }
+    }
+    errors?: Array<string>
+  }
+}
+
+export type KilocodeMarketplaceListResponse = KilocodeMarketplaceListResponses[keyof KilocodeMarketplaceListResponses]
+
+export type KilocodeMarketplaceInstallData = {
+  body?: {
+    item:
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "mcp"
+          url: string
+          content:
+            | string
+            | Array<{
+                name: string
+                content: string
+                parameters?: Array<{
+                  name: string
+                  key: string
+                  placeholder?: string
+                  optional?: boolean
+                }>
+                prerequisites?: Array<string>
+              }>
+          parameters?: Array<{
+            name: string
+            key: string
+            placeholder?: string
+            optional?: boolean
+          }>
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "agent"
+          content: {
+            mode: "primary" | "subagent" | "all"
+            description: string
+            prompt: string
+            options?: {
+              [key: string]: unknown
+            }
+            permission?: {
+              [key: string]: unknown
+            }
+            requirements?: {
+              skills?: Array<string>
+              mcps?: Array<string>
+              vscode_extensions?: Array<{
+                name: string
+                id: string
+              }>
+            }
+          }
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          category: string
+          author?: string
+          authorUrl?: string
+          prerequisites?: Array<string>
+          suggest_for?: {
+            filename?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
+          }
+          type: "skill"
+          githubUrl: string
+          content: string
+          displayName: string
+          displayCategory: string
+        }
+    target?: "project" | "global"
+    parameters?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/install"
+}
+
+export type KilocodeMarketplaceInstallErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeMarketplaceInstallError = KilocodeMarketplaceInstallErrors[keyof KilocodeMarketplaceInstallErrors]
+
+export type KilocodeMarketplaceInstallResponses = {
+  /**
+   * Marketplace install result
+   */
+  200: {
+    success: boolean
+    slug: string
+    error?: string
+    filePath?: string
+    line?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type KilocodeMarketplaceInstallResponse =
+  KilocodeMarketplaceInstallResponses[keyof KilocodeMarketplaceInstallResponses]
+
+export type KilocodeMarketplaceRemoveData = {
+  body?: {
+    item: {
+      id: string
+      type: "mcp" | "agent" | "skill"
+    }
+    scope: "project" | "global"
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/remove"
+}
+
+export type KilocodeMarketplaceRemoveErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeMarketplaceRemoveError = KilocodeMarketplaceRemoveErrors[keyof KilocodeMarketplaceRemoveErrors]
+
+export type KilocodeMarketplaceRemoveResponses = {
+  /**
+   * Marketplace removal result
+   */
+  200: {
+    success: boolean
+    slug: string
+    error?: string
+  }
+}
+
+export type KilocodeMarketplaceRemoveResponse =
+  KilocodeMarketplaceRemoveResponses[keyof KilocodeMarketplaceRemoveResponses]
 
 export type KilocodeRemoveSnapshotData = {
   body?: {

@@ -617,6 +617,11 @@ export namespace KilocodeConfig {
 
     const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
     for (const [name, src] of Object.entries(srcMcp)) {
+      if (src === null) {
+        delete out[name]
+        continue
+      }
+
       const base = baseMcp[name]
       if (!isRecord(src) || !isRecord(base)) {
         out[name] = src
