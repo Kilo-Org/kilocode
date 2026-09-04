@@ -345,6 +345,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly instanceId = crypto.randomUUID()
 
   private webview: vscode.Webview | null = null
+  private sidebarVisible = false
   private currentSession: Session | null = null
   /** Remembers the last selected session so /new can stay in the same worktree after clearSession. */
   private contextSessionID: string | undefined
@@ -788,11 +789,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private setSidebarVisible(visible: boolean): void {
+    this.sidebarVisible = visible
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
     if (!visible && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
+  }
+
+  public isSidebarVisible(): boolean {
+    return this.sidebarVisible
   }
 
   /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */
@@ -997,6 +1003,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public openCloudSession(sessionId: string): void {
     this.postMessage({ type: "openCloudSession", sessionId })
+  }
+
+  public rememberSession(sessionID: string, directory?: string): void {
+    if (directory) this.sessionDirectories.set(sessionID, directory)
+  }
+
+  public async openSession(sessionID: string, directory?: string): Promise<void> {
+    this.rememberSession(sessionID, directory)
+    await this.waitForReady()
+    this.postMessage({ type: "openSession", sessionID })
   }
 
   public selectKiloModel(modelID?: string, agent?: string): void {
@@ -3180,7 +3196,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "notificationSettingsLoaded",
       settings: {
         attentionEnabled: attention.get<boolean>("enabled", false),
+        attentionNotifications: attention.get<boolean>("notifications", false),
+        attentionWindowsNotifications: attention.get<boolean>("windowsNotifications", false),
         attentionSound: attention.get<string>("sound", "default"),
+        windowsNotificationsAvailable: process.platform === "win32",
       },
     })
   }
@@ -5018,7 +5037,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
   public waitForReady(): Promise<void> {
-    return this.isWebviewReady && this.webview ? Promise.resolve() : new Promise((r) => this.readyResolvers.push(r))
+    if (this.isWebviewReady && this.webview) return Promise.resolve()
+    const deferred = Promise.withResolvers<void>()
+    this.readyResolvers.push(deferred.resolve)
+    return deferred.promise
   }
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {

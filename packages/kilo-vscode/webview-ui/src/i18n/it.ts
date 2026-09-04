@@ -720,6 +720,12 @@ export const dict = {
   "settings.notifications.enable.title": "Abilita le notifiche sonore",
   "settings.notifications.enable.description":
     "Riproduci suoni quando le sessioni si concludono, si verifica un errore o è richiesto il tuo intervento",
+  "settings.notifications.workbench.title": "Abilita le notifiche di VS Code",
+  "settings.notifications.workbench.description":
+    "Mostra notifiche di VS Code quando Kilo completa un'attività o richiede il tuo intervento",
+  "settings.notifications.os.title": "Abilita le notifiche del sistema operativo",
+  "settings.notifications.os.description":
+    "Mostra avvisi nel centro notifiche di Windows quando Kilo completa un'attività o richiede il tuo intervento mentre VS Code non è attivo. macOS e Linux richiedono implementazioni native separate.",
   "settings.notifications.testSound": "Prova",
   "settings.notifications.sound.default": "Predefinito",
   "settings.notifications.sound.system": "Sistema",

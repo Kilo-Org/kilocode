@@ -849,6 +849,12 @@ export const dict = {
   "settings.notifications.enable.title": "Omogući zvučne obavijesti",
   "settings.notifications.enable.description":
     "Reproduciraj zvukove kada se sesije završe, naiđu na grešku ili trebaju vaš unos",
+  "settings.notifications.workbench.title": "Omogući VS Code obavijesti",
+  "settings.notifications.workbench.description":
+    "Prikaži VS Code obavijesti kada Kilo završi zadatak ili treba vaš unos",
+  "settings.notifications.os.title": "Omogući obavijesti operativnog sistema",
+  "settings.notifications.os.description":
+    "Prikaži obavijesti u Windows centru za obavijesti kada Kilo završi zadatak ili treba vaš unos dok VS Code nije aktivan. macOS i Linux zahtijevaju zasebne izvorne implementacije.",
   "settings.notifications.testSound": "Testiraj",
   "settings.notifications.sound.default": "Zadano",
   "settings.notifications.sound.system": "Sistem",

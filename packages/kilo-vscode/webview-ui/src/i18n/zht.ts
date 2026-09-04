@@ -774,6 +774,11 @@ export const dict = {
   "settings.notifications.sounds": "聲音",
   "settings.notifications.enable.title": "啟用聲音通知",
   "settings.notifications.enable.description": "在工作階段完成、遇到錯誤或需要你輸入時播放聲音",
+  "settings.notifications.workbench.title": "啟用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成工作或需要你輸入時顯示 VS Code 通知",
+  "settings.notifications.os.title": "啟用作業系統通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未處於使用中狀態時，若 Kilo 完成工作或需要你輸入，則在 Windows 通知中心顯示提醒。macOS 和 Linux 需要個別的原生實作。",
   "settings.notifications.testSound": "測試",
   "settings.notifications.sound.default": "預設",
   "settings.notifications.sound.system": "系統",

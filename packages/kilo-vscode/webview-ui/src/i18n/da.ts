@@ -848,6 +848,12 @@ export const dict = {
   "settings.notifications.enable.title": "Aktivér lydnotifikationer",
   "settings.notifications.enable.description":
     "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.workbench.title": "Aktivér VS Code-notifikationer",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-notifikationer, når Kilo fuldfører en opgave eller har brug for input fra dig",
+  "settings.notifications.os.title": "Aktivér OS-notifikationer",
+  "settings.notifications.os.description":
+    "Vis beskeder i Windows-meddelelsescenteret, når Kilo fuldfører en opgave eller har brug for input fra dig, mens VS Code ikke er aktiv. macOS og Linux kræver separate native implementeringer.",
   "settings.notifications.testSound": "Test",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",

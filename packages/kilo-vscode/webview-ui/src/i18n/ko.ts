@@ -839,6 +839,12 @@ export const dict = {
   "settings.notifications.enable.title": "소리 알림 활성화",
   "settings.notifications.enable.description":
     "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.workbench.title": "VS Code 알림 활성화",
+  "settings.notifications.workbench.description":
+    "Kilo가 작업을 완료하거나 사용자 입력이 필요할 때 VS Code 알림을 표시합니다",
+  "settings.notifications.os.title": "OS 알림 활성화",
+  "settings.notifications.os.description":
+    "VS Code가 활성화되어 있지 않을 때 Kilo가 작업을 완료하거나 사용자 입력이 필요하면 Windows 알림 센터에 알림을 표시합니다. macOS와 Linux는 별도의 네이티브 구현이 필요합니다.",
   "settings.notifications.testSound": "테스트",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.system": "시스템",

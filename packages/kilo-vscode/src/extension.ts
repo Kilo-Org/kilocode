@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -17,6 +18,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
+import { showWindowsNotification } from "./services/attention/windows"
 import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -214,6 +216,25 @@ export async function activate(context: vscode.ExtensionContext) {
   )
   const attention = new AttentionService(connectionService, {
     approve: (event, directory) => autoApprove.approve(event, directory),
+    details: async (sessionID, directory) => {
+      provider.rememberSession(sessionID, directory)
+      const session = await provider.getSessionInfo(sessionID)
+      const dir = directory ?? session?.directory
+      const workspace = dir
+        ? (vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dir))?.name ?? basename(dir))
+        : (vscode.workspace.name ?? "Workspace")
+      return { workspace, session: session?.title ?? session?.slug ?? sessionID }
+    },
+    focused: () => vscode.window.state.focused,
+    visible: (sessionID) =>
+      (provider.isSidebarVisible() && provider.getCurrentSessionId() === sessionID) ||
+      activeTabProvider()?.getCurrentSessionId() === sessionID ||
+      (agentManagerProvider.isActive() && agentManagerProvider.getActiveSessionId() === sessionID),
+    windows: process.platform === "win32" ? showWindowsNotification : undefined,
+    show: async (sessionID, directory) => {
+      await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await provider.openSession(sessionID, directory)
+    },
   })
 
   // Prewarm only after all global event consumers are ready.

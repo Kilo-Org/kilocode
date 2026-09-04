@@ -1698,6 +1698,10 @@ export class AgentManagerProvider implements Disposable {
     return this.panel?.active === true
   }
 
+  public getActiveSessionId(): string | undefined {
+    return this.activeSessionId
+  }
+
   private async waitForPanel(panel: PanelContext, promise: Promise<void>): Promise<boolean> {
     const done = promise.then(() => true)
     let sub: Disposable | undefined
@@ -1727,7 +1731,7 @@ export class AgentManagerProvider implements Disposable {
     return this.waitForPanelReady(panel)
   }
 
-  public async showMemory(): Promise<void> {
+  private async memory(action: "showMemory" | "toggleMemory", failure: string): Promise<void> {
     const panel = this.panel
     const sid = this.activeSessionId
     if (!panel || !sid) {
@@ -1737,26 +1741,18 @@ export class AgentManagerProvider implements Disposable {
     if (!(await this.waitForPanelReady(panel))) return
     if (this.activeSessionId !== sid) return
     try {
-      await panel.sessions.showMemory(sid)
+      await panel.sessions[action](sid)
     } catch (error) {
-      this.host.showError(getErrorMessage(error) || "Failed to show memory")
+      this.host.showError(getErrorMessage(error) || failure)
     }
   }
 
-  public async toggleMemory(): Promise<void> {
-    const panel = this.panel
-    const sid = this.activeSessionId
-    if (!panel || !sid) {
-      this.host.showError("No active Agent Manager session")
-      return
-    }
-    if (!(await this.waitForPanelReady(panel))) return
-    if (this.activeSessionId !== sid) return
-    try {
-      await panel.sessions.toggleMemory(sid)
-    } catch (error) {
-      this.host.showError(getErrorMessage(error) || "Failed to toggle memory")
-    }
+  public showMemory(): Promise<void> {
+    return this.memory("showMemory", "Failed to show memory")
+  }
+
+  public toggleMemory(): Promise<void> {
+    return this.memory("toggleMemory", "Failed to toggle memory")
   }
 
   /** Expose worktree session→directory mappings for the auto-approve toggle. */

@@ -809,6 +809,12 @@ export const dict = {
   "settings.notifications.enable.title": "Aktiver lydvarsler",
   "settings.notifications.enable.description":
     "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.workbench.title": "Aktiver VS Code-varsler",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-varsler når Kilo fullfører en oppgave eller trenger innspill fra deg",
+  "settings.notifications.os.title": "Aktiver OS-varsler",
+  "settings.notifications.os.description":
+    "Vis varsler i Windows-varslingssenteret når Kilo fullfører en oppgave eller trenger innspill fra deg mens VS Code ikke er aktiv. macOS og Linux krever egne native implementasjoner.",
   "settings.notifications.testSound": "Test",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",

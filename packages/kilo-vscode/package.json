@@ -1135,6 +1135,16 @@
           "default": false,
           "description": "Play sounds when sessions complete, error, or need input"
         },
+        "kilo-code.new.attention.notifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show VS Code notifications when Kilo completes a task or needs input. Notifications are suppressed while a Kilo panel is active."
+        },
+        "kilo-code.new.attention.windowsNotifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show Windows notification center alerts when Kilo completes a task or needs input while VS Code is not active. macOS and Linux require separate native implementations."
+        },
         "kilo-code.new.attention.sound": {
           "type": "string",
           "default": "default",
