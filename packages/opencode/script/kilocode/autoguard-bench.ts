@@ -20,9 +20,10 @@ import { appendFileSync, readFileSync, writeFileSync } from "node:fs"
 import { evaluate, DEFAULT_CASCADE_CONFIG } from "../../src/kilocode/autoguard/cascade"
 import { normalize } from "../../src/kilocode/autoguard/normalize"
 import { DEFAULT_LEVEL1_CONFIG, type Level1View } from "../../src/kilocode/autoguard/level1"
+import type { Level2Config } from "../../src/kilocode/autoguard/level2"
 import type { Decision, NormalizedAction, PolicyInput } from "../../src/kilocode/autoguard/types"
 
-type Mode = "rules_only" | "cascade"
+type Mode = "rules_only" | "cascade" | "full_cascade"
 
 interface BenchCase {
   case_id: string
@@ -70,6 +71,16 @@ async function main() {
   // re-derived from `raw_tool_call` instead, which measures the whole path
   // production actually takes: parse, classify axes, then decide.
   const renormalize = process.argv.includes("--normalize")
+  // Level 2 knobs. It defaults to the same endpoint as Level 1 but with
+  // reasoning left on, which is the whole question this mode exists to answer.
+  const l2Model = arg("l2-model", model)
+  const l2BaseUrl = arg("l2-base-url", baseUrl)
+  const l2ApiKey = process.env[arg("l2-api-key-env", "AUTOGUARD_L2_API_KEY")]
+  const l2Thinking = arg("l2-thinking", "true") === "true"
+  const l2TimeoutMs = Number(arg("l2-timeout-ms", "180000"))
+  // "none" omits temperature entirely, for providers that reject the parameter.
+  const l2TemperatureArg = arg("l2-temperature", "0")
+  const l2Temperature = l2TemperatureArg === "none" ? null : Number(l2TemperatureArg)
   const limit = Number(arg("limit", "0"))
 
   const cases: BenchCase[] = readFileSync(casesPath, "utf8")
@@ -79,10 +90,25 @@ async function main() {
     .filter((c) => c.case_id && c.input)
   const selected = limit > 0 ? cases.slice(0, limit) : cases
 
+  const level2: Level2Config = {
+    ...DEFAULT_LEVEL1_CONFIG,
+    model: l2Model,
+    baseUrl: l2BaseUrl,
+    apiKey: l2ApiKey,
+    timeoutMs: l2TimeoutMs,
+    temperature: l2Temperature,
+    view: "full_context",
+    includeRaw,
+    // Reasoning on is the default for this layer; turning it off makes the
+    // same-model ablation possible without swapping models.
+    extraBody: l2Thinking ? {} : { chat_template_kwargs: { enable_thinking: false } },
+  }
   const config = {
     ...DEFAULT_CASCADE_CONFIG,
-    useLevel1: mode === "cascade",
+    useLevel1: mode !== "rules_only",
+    useLevel2: mode === "full_cascade",
     level1: { ...DEFAULT_LEVEL1_CONFIG, model, baseUrl, view, includeRaw },
+    level2,
   }
 
   writeFileSync(outputPath, "")
@@ -109,16 +135,16 @@ async function main() {
       }
 
       const result = await evaluate(policyInput, config)
-      const failed = result.level1?.failure ?? null
+      const failed = result.level2?.failure ?? result.level1?.failure ?? null
       const status = failed === "timeout" ? "timeout" : failed === "transport" ? "api_error" : "ok"
 
       appendFileSync(
         outputPath,
         JSON.stringify({
           case_id: item.case_id,
-          view: (mode === "rules_only" ? "rules_only" : view) + (renormalize ? "_normalized" : ""),
+          view: (mode === "rules_only" ? "rules_only" : mode === "full_cascade" ? `l2_${l2Thinking ? "think" : "nothink"}` : view) + (renormalize ? "_normalized" : ""),
           repeat_index: repeat,
-          requested_model: model,
+          requested_model: mode === "full_cascade" ? `${model}+L2:${l2Model}${l2Thinking ? "+think" : ""}` : model,
           prompt_version: "autoguard-level1-v1",
           seed: null,
           status,
@@ -128,7 +154,7 @@ async function main() {
             rationale: result.reason,
             confidence: result.decided_by === "level0" ? 1 : 0.5,
           },
-          raw_response_text: result.level1?.raw_response ?? null,
+          raw_response_text: result.level2?.raw_response ?? result.level1?.raw_response ?? null,
           error: failed,
           latency_ms: result.latency_ms,
           usage: null,
@@ -136,7 +162,14 @@ async function main() {
           dry_run_request: null,
           timestamp_utc: new Date().toISOString(),
           // Diagnostics beyond the scorer's contract; it ignores extra keys.
-          autoguard: { decided_by: result.decided_by, rule: result.rule, level1_verdict: result.level1?.verdict ?? null },
+          autoguard: {
+            decided_by: result.decided_by,
+            rule: result.rule,
+            level1_verdict: result.level1?.verdict ?? null,
+            level2_verdict: result.level2?.verdict ?? null,
+            level2_failed_check: result.level2?.failed_check ?? null,
+            level2_latency_ms: result.level2?.latency_ms ?? null,
+          },
         }) + "\n",
       )
       done++

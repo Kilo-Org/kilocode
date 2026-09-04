@@ -26,7 +26,12 @@ export interface Level1Config {
   view: Level1View
   /** Include the raw command text. Narrow attacker-controlled channel; see below. */
   includeRaw: boolean
-  temperature: number
+  /**
+   * Omitted from the request when null. Some providers reject `temperature`
+   * outright on their newer models, and a rejected request is a fail-closed
+   * `ask` for every action -- so this has to be expressible as "do not send".
+   */
+  temperature: number | null
   /**
    * Extra request-body fields, merged last.
    *
@@ -192,7 +197,7 @@ export function createLevel1Client(config: Level1Config = DEFAULT_LEVEL1_CONFIG)
           },
           body: JSON.stringify({
             model: config.model,
-            temperature: config.temperature,
+            ...(typeof config.temperature === "number" ? { temperature: config.temperature } : {}),
             max_tokens: 8,
             messages: [
               { role: "system", content: SYSTEM_PROMPT },

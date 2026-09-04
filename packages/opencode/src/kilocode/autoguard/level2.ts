@@ -199,7 +199,7 @@ export function createLevel2Client(config: Level2Config): Level2Client {
           },
           body: JSON.stringify({
             model: config.model,
-            temperature: config.temperature,
+            ...(typeof config.temperature === "number" ? { temperature: config.temperature } : {}),
             // Room for a structured object, and for reasoning when it is enabled.
             max_tokens: 1024,
             messages: [
