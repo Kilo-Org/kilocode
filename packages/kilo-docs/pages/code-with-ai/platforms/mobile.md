@@ -101,6 +101,31 @@ The app shows what each session cost and which models did the work:
 
 Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
 
+## Active Agents widget and Live Activity
+
+Add the **Active Agents** widget to your Home Screen to track your agents without opening the app. It shows how many agents need input, are reconnecting, and are running, plus how long the current work has been going. When there is nothing to report, it shows a status message instead, such as "No work in progress". Tapping the widget opens the Active Agents view in the app.
+
+The counts update in the background, so they stay current while the app is in the background or closed. Signing out unregisters the device and stops the updates.
+
+{% tabs %}
+{% tab label="iOS" %}
+
+- **Widget** — available on the Home Screen and Lock Screen, with an **Open agents** button when counts are showing.
+- **Live Activity** — shown in the Dynamic Island and on the Lock Screen. It leads with the most urgent count (needs input, then reconnecting, then running) across compact, expanded, and minimal layouts.
+
+If your device can't show Live Activities, the Agents tab offers a one-time prompt to open Settings and enable them.
+
+{% /tab %}
+{% tab label="Android" %}
+
+- **Widget** — resizable, with light and dark layouts. The smallest size shows only the top count; larger sizes show every non-zero count.
+- **Notification** — an ongoing **Active agents** notification shows the same counts. On devices that support promoted ongoing notifications, the system promotes it to a Live Update; other devices show an ordinary ongoing notification.
+
+If notifications are turned off while work is pending, the app offers a one-time prompt to open the device settings and enable them.
+
+{% /tab %}
+{% /tabs %}
+
 ## Android App
 
 The Android app is available now on Google Play.

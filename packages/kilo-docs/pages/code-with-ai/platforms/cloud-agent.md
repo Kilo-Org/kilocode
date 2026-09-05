@@ -75,6 +75,10 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
+## Reviewing Changes
+
+The chat header's **Changes** button shows how many files the agent has changed in the session workspace, with total additions and deletions. Click it to open the **Changes** panel, which lists every changed file with its status (added, modified, or deleted) and per-file line counts. Switch between a flat list grouped by directory and a tree layout, refresh the list on demand, and see which base branch the changes are compared against and when the summary was last saved.
+
 ## Agent Environment Profiles
 
 Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:

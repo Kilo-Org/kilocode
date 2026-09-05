@@ -29,3 +29,7 @@ Now, **subagent support is built into agents that have full tool access** (Code,
 4. When done, the subagent returns a summary to the parent agent, which continues its work.
 
 Agents can launch multiple subagent sessions concurrently for parallel work.
+
+{% callout type="info" %}
+With the experimental **Kilo Swarm** setting enabled, a main session and its task subagents can also exchange messages on a shared board during execution. It is off by default. See [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) for details.
+{% /callout %}

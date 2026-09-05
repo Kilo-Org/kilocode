@@ -23,6 +23,27 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. The JetBrains
 - **Branch comparison** — when the workspace differs from the base branch, the session header shows a changes badge. Click it (**Compare with base branch**) to open a diff editor with a file tree and per-file navigation.
 - **Stale diff refresh** — diff views detect when files change on disk and offer a **Refresh** action to reload them instead of showing outdated content.
 
+## Working with worktrees
+
+The **Agents** tab of the Kilo Code tool window runs sessions in isolated git worktrees, and each worktree's sessions open in a dedicated editor tab. The tab for your main checkout — the repository's base working tree, not a linked worktree — can also start worktree flows directly, without switching back to the tool window:
+
+- **Move to Worktree** — the session list's row menu leads with **Move to Worktree**, which moves the conversation and your uncommitted changes into a new worktree for isolated follow-up work. The action hides while the session is running.
+- **New Worktree / Move to Worktree toolbar** — sessions in the main checkout's tab show the same toolbar above the prompt that the **Agents** panel shows.
+- **Uncommitted changes** — the tab header reports the main checkout's uncommitted change counts, which are exactly what a move carries. Linked worktree tabs keep the plain session view.
+
+## Keyboard shortcuts
+
+The chat's mode, model, and reasoning effort pickers can be cycled from the keyboard. Each shortcut is a registered action, so it appears in **Settings → Keymap** and can be rebound.
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+1` | Cycle to the next mode |
+| `Ctrl+2` | Cycle to the next favorite model (or recommended model when no favorites are set) |
+| `Ctrl+3` | Cycle to the next reasoning effort for the current model |
+| `Ctrl+0` | Reset the model override to the default |
+
+The same `Ctrl` shortcuts apply on macOS (not `Cmd`). The shortcuts work from anywhere in a Kilo session — tool window, editor tab, or worktree session editor — and are also shown in the prompt bar's picker tooltips.
+
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.
