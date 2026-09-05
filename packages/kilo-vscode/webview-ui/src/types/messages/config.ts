@@ -51,8 +51,9 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
+  shared_agent_board?: boolean
   image_generation_model?: string
-  agent_requirements?: boolean
+  task_model_selection?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   speech_to_text_base_url?: string
@@ -60,8 +61,6 @@ export interface ExperimentalConfig {
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  swe_pruner?: boolean
-  swe_pruner_model?: string
 }
 
 export interface SandboxConfig {
@@ -129,9 +128,7 @@ export type KiloEmbeddingModelCatalog = {
 export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {
-  enabled: boolean
   useSystemChrome: boolean
-  headless: boolean
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
@@ -178,4 +175,5 @@ export interface Config {
 export interface FeatureFlags {
   indexing: boolean
   sandboxControls: boolean
+  backgroundSubagents: boolean
 }

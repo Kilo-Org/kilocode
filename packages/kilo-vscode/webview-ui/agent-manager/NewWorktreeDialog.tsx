@@ -23,7 +23,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -42,7 +42,7 @@ import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImage
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
-import { convertToMentionPath } from "../src/utils/path-mentions"
+import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -51,6 +51,7 @@ import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
+import { createDialogModels } from "./new-worktree-models"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -88,16 +89,6 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
   if (!value) return base
   if (list.length === 0) return value
   return list.some((item) => item.name === value) ? value : base
-}
-
-function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
-  if (!value) return undefined
-  if (Object.keys(providers).length === 0) return value
-  return valid(value) ? value : undefined
-}
-
-function fallback<T>(value: T | undefined, get: () => T): T {
-  return value === undefined ? get() : value
 }
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -168,14 +159,17 @@ export const NewWorktreeDialog: Component<{
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const initialModel = fallback(
-    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
-    () => session.modelForAgent(initialAgent),
-  )
-  const [model, setModel] = createSignal<Model | null>(initialModel)
+  const [agent, setAgent] = createSignal(initialAgent)
+  const selection = createDialogModels({
+    saved: saved.model,
+    fallback: () => session.modelForAgent(agent()),
+    ready: provider.ready,
+    valid: provider.isModelValid,
+    variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+  })
+  const model = selection.model
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -184,9 +178,7 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(
-    fallback(saved.variant, () => session.variantForAgent(initialAgent, initialModel)),
-  )
+  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -209,15 +201,8 @@ export const NewWorktreeDialog: Component<{
 
   const selectAgent = (name: string) => {
     setAgent(name)
-    const sel = session.modelForAgent(name)
-    setModel(sel)
-    setVariant(session.variantForAgent(name, sel))
-  }
-
-  const resetModel = () => {
-    const sel = session.configModelForAgent(agent())
-    setModel(sel)
-    setVariant(session.variantForAgent(agent(), sel))
+    selection.select(undefined)
+    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -244,20 +229,11 @@ export const NewWorktreeDialog: Component<{
     return Object.keys(found.variants)
   })
 
-  // Current effective variant — an absent or invalid selection uses the model default.
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
-    const stored = variant()
+    const stored = variant() ?? session.variantForAgent(agent(), model())
     return stored && list.includes(stored) ? stored : undefined
-  })
-
-  // True when the user has changed the model from the session/config default
-  const overridden = createMemo(() => {
-    const sel = model()
-    const cfg = session.configModelForAgent(agent())
-    if (!sel || !cfg) return false
-    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
 
   // Reset variant when model changes and stored variant is not in new list
@@ -316,18 +292,12 @@ export const NewWorktreeDialog: Component<{
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
-    const val = ref.value
-    const cursor = ref.selectionStart ?? val.length
-    const before = val.substring(0, cursor)
-    const after = val.substring(cursor)
-    const inserted = resolved.map((p) => `@${p}`).join(" ")
-    const result = before + inserted + " " + after
-    ref.value = result
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
     cancel()
-    setPrompt(result)
-    persistPrompt(result)
-    const pos = cursor + inserted.length + 1
-    ref.setSelectionRange(pos, pos)
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()
   })
@@ -352,7 +322,7 @@ export const NewWorktreeDialog: Component<{
       ...state,
       advancedDialogSelections: {
         agent: agent(),
-        model: model(),
+        model: selection.choice(),
         variant: variant(),
         sandbox: sandbox(),
       },
@@ -440,8 +410,7 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
-    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
-    return true
+    return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
@@ -474,8 +443,8 @@ export const NewWorktreeDialog: Component<{
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
-      variant: isCompare ? undefined : effectiveVariant(),
-      baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
+      variant: isCompare ? undefined : (effectiveVariant() ?? (variants().length > 0 ? DEFAULT_VARIANT : undefined)),
+      baseBranch: effectiveBaseBranch(),
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
@@ -527,7 +496,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next)
+      setVariant(next ?? DEFAULT_VARIANT)
       return
     }
     undo(e)
@@ -745,7 +714,6 @@ export const NewWorktreeDialog: Component<{
                     setProjectOpen(false)
                   }}
                   labels={{
-                    untrusted: t("agentManager.dialog.project.untrusted"),
                     missing: t("agentManager.dialog.project.missing"),
                   }}
                 />
@@ -874,8 +842,8 @@ export const NewWorktreeDialog: Component<{
                         const current = effectiveVariant()
                         const next = { providerID: pid, modelID: mid }
                         const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        setModel(next)
-                        setVariant(preserveVariant(current, list))
+                        selection.select(next)
+                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
@@ -888,7 +856,7 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
-                      onClear={() => setVariant(undefined)}
+                      onClear={() => setVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}
@@ -896,20 +864,6 @@ export const NewWorktreeDialog: Component<{
                       deferDismiss
                       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
                     />
-                    <Show when={overridden()}>
-                      <Tooltip value={t("prompt.action.resetModel")} placement="top">
-                        <Button
-                          variant="ghost"
-                          size="small"
-                          onClick={resetModel}
-                          aria-label={t("prompt.action.resetModel")}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
-                          </svg>
-                        </Button>
-                      </Tooltip>
-                    </Show>
                   </Show>
                 </div>
                 <div class="prompt-input-hint-actions">

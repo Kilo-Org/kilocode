@@ -19,6 +19,8 @@ sealed class KiloWorkspaceState {
         val commands: List<CommandInfo>,
         val skills: List<SkillInfo>,
     ) : KiloWorkspaceState()
+    data class Unsupported(val reason: String) : KiloWorkspaceState()
+    data class Missing(val path: String) : KiloWorkspaceState()
     data class Error(val message: String, val errors: List<LoadError> = emptyList()) : KiloWorkspaceState()
 }
 

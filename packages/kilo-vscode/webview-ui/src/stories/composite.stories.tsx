@@ -11,7 +11,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
-import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
+import { For } from "solid-js"
+import { TranscriptRowView } from "../components/chat/TranscriptRow"
+import { messageTurns } from "../context/session-queue"
+import { transcriptRows } from "../context/transcript-rows"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -1328,6 +1331,82 @@ export const ToolErrors200: Story = {
   },
 }
 
+function board(): ToolPart[] {
+  const fromLabel =
+    "Inspect parser edge cases (legacy compatibility) and preserve legitimate parenthesized task descriptions"
+  const toLabel =
+    "Check serializer compatibility with nested collections, Unicode identifiers, and long unbroken values"
+  const rows = [
+    {
+      id: "board_direct",
+      from: "main",
+      to: "ses_serializer",
+      fromLabel: "main",
+      toLabel,
+      type: "INFO",
+      body: "The parser accepts empty input. Check whether the serializer preserves it.",
+    },
+    {
+      id: "board_broadcast",
+      from: "ses_parser",
+      to: "ALL",
+      fromLabel,
+      type: "RESULT",
+      body: "Parser checks are complete. The compatibility notes are available to all agents.",
+    },
+  ]
+  const parts: ToolPart[] = rows.map((row, index) => ({
+    id: `part_board_${index}`,
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: `call_board_${index}`,
+    tool: "board_post",
+    state: {
+      status: "completed",
+      input: { to: row.to, type: row.type, body: row.body },
+      output: JSON.stringify(row),
+      title: "Post agent message",
+      metadata: { from: row.from, to: row.to, fromLabel: row.fromLabel, toLabel: row.toLabel },
+      time: { start: now - 2000, end: now - 1000 },
+    },
+  }))
+  parts.push({
+    id: "part_board_read",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call_board_read",
+    tool: "board_read",
+    state: {
+      status: "completed",
+      input: {},
+      output: JSON.stringify({ messages: rows, hasMore: false }),
+      title: "Read agent messages",
+      metadata: {},
+      time: { start: now - 1000, end: now },
+    },
+  })
+  return parts
+}
+
+export const AgentMessages: Story = {
+  name: "Agent messages",
+  render: () => {
+    const parts = board()
+    return (
+      <StoryProviders data={dataWith(parts)} sessionID={SESSION_ID}>
+        <For each={parts}>{(part) => <Part part={part} message={baseAssistantMessage} defaultOpen />}</For>
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentMessages200: Story = {
+  ...AgentMessages,
+  name: "Agent messages with long titles (200px)",
+}
+
 export const McpToolCards: Story = {
   name: "MCP Tool Cards — collapsed",
   render: () => {
@@ -1380,20 +1459,28 @@ export const DiffSummaryCollapsed: Story = {
           {
             id: USER_MSG_ID,
             sessionID: SESSION_ID,
-            role: "user",
+            role: "user" as const,
+            createdAt: new Date(now - 10000).toISOString(),
             time: { created: now - 10000 },
             summary: { diffs: mockDiffs },
           },
-          { ...baseAssistantMessage, parentID: USER_MSG_ID },
+          { ...baseAssistantMessage, parentID: USER_MSG_ID, createdAt: new Date(now - 9000).toISOString() },
         ],
       },
       part: {
         [USER_MSG_ID]: [
-          { id: "part-user-text", sessionID: SESSION_ID, messageID: USER_MSG_ID, type: "text", text: "Fix the bug" },
+          {
+            id: "part-user-text",
+            sessionID: SESSION_ID,
+            messageID: USER_MSG_ID,
+            type: "text" as const,
+            text: "Fix the bug",
+          },
         ],
         [ASST_MSG_ID]: [textPart],
       },
     }
+    const parts = new Map(Object.entries(data.part))
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => data.message[SESSION_ID],
@@ -1419,13 +1506,9 @@ export const DiffSummaryCollapsed: Story = {
         <ServerContext.Provider value={server as any}>
           <SessionContext.Provider value={session as any}>
             <div style={{ width: "380px", padding: "12px" }}>
-              <VscodeSessionTurn
-                turn={{
-                  id: USER_MSG_ID,
-                  user: data.message[SESSION_ID][0] as any,
-                  assistant: [data.message[SESSION_ID][1] as any],
-                }}
-              />
+              <For each={transcriptRows(messageTurns(data.message[SESSION_ID]), (id) => parts.get(id) ?? [])}>
+                {(row) => <TranscriptRowView row={row} />}
+              </For>
             </div>
           </SessionContext.Provider>
         </ServerContext.Provider>

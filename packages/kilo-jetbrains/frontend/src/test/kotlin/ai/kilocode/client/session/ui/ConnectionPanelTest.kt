@@ -137,16 +137,41 @@ class ConnectionPanelTest : SessionControllerTestBase() {
         assertTrue(panel.detailsVisible())
     }
 
-    fun `test expanded details height is capped at ten lines`() {
+    fun `test expanded details preferred height fits full text`() {
         edt {
-            panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", lines(30)))
+            panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", lines(10)))
             panel.size = Dimension(480, 1000)
         }
 
         edt { panel.clickSummary() }
+        val ten = panel.preferredSize.height
+
+        edt {
+            panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", lines(30)))
+            panel.clickSummary()
+        }
 
         assertTrue(panel.detailsVisible())
-        assertTrue(panel.preferredSize.height <= panel.maxExpandedHeight())
+        assertTrue(panel.preferredSize.height > ten)
+    }
+
+    fun `test expanded details grow for a wrapped single line`() {
+        val sentence = (1..40).joinToString(" ") { "word$it" }
+        edt {
+            panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", sentence))
+            panel.size = Dimension(240, 1000)
+            panel.clickSummary()
+        }
+
+        val fontHeight = fontHeight()
+        assertTrue(panel.detailsVisible())
+        // A single logical line that wraps must contribute more than one visual row of height.
+        assertTrue(panel.preferredSize.height > fontHeight * 2)
+    }
+
+    private fun fontHeight(): Int {
+        val details = panel.components.filterIsInstance<JBScrollPane>().single().viewport.view
+        return details.getFontMetrics(details.font).height
     }
 
     fun `test raw app and workspace events do not render panel`() {

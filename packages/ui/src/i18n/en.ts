@@ -100,6 +100,15 @@ export const dict: Record<string, string> = {
   "ui.messagePart.diagnostic.error": "Error",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Read agent messages",
+  "ui.messagePart.board.all": "All agents",
+  "ui.messagePart.board.primary": "Primary agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} to {{to}}",
+  "ui.messagePart.board.empty": "No agent messages",
+  "ui.messagePart.board.stored": "Stored only. Delivery and reading are not confirmed.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -166,7 +175,6 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Read",
   "ui.tool.loaded": "Loaded",
-  "ui.tool.swePruned": "SWE-Pruner · kept {{kept}} of {{total}} lines", // kilocode_change
   "ui.tool.list": "List",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -228,6 +236,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Created",
   "ui.patch.action.moved": "Moved",
   "ui.patch.action.patched": "Patched",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} answered",
   "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change

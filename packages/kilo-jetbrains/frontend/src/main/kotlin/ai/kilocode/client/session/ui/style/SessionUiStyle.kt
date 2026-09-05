@@ -114,6 +114,13 @@ object SessionUiStyle {
         }
 
         /**
+         * Left inset for expanded card content that should read as nested under the header — the diff
+         * body's filename row and the auto-approve rule rows both use it. Reuse this wherever expanded
+         * content needs indenting so the amount stays consistent across cards.
+         */
+        fun contentIndent() = UiStyle.Gap.pad()
+
+        /**
          * Standard transparent inset separating an expanded card header from its content, and
          * separating stacked content surfaces inside a [ai.kilocode.client.session.ui.SessionContentPanel].
          * Matches the gap between views in the transcript ([SessionLayout.GAP]), so a card's internal
@@ -146,6 +153,14 @@ object SessionUiStyle {
             const val MAX_WIDTH = 350
             const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
             const val MAX_HEIGHT = 450
+
+            /**
+             * Band kept above and below a body that scrolls sideways, so its scrollbar clears the
+             * content instead of landing on the last line of it. Doubles the balloon's own 6px vertical
+             * inset, because a body with a scrollbar is one whose first and last line would otherwise
+             * sit against the balloon edge with a bar over them.
+             */
+            const val SCROLL_PADDING = 12
         }
 
         internal const val BORDER_DELTA = 80
@@ -272,6 +287,12 @@ object SessionUiStyle {
             const val WIDTH_PADDING = 16
 
             fun topPadding(): Int = VIEWPORT_TOP_PADDING + UiStyle.Gap.lg()
+        }
+
+        object Diagram {
+            const val MAX_HEIGHT = 480
+            const val PADDING = 16
+            const val EMPTY_HEIGHT = 96
         }
 
         /** Permission session-view command preview limits. */

@@ -131,6 +131,7 @@ export interface Host {
 
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
+  browserAutomation(): boolean
 
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
@@ -167,7 +168,7 @@ export interface Host {
   createOutput(name: string): OutputHandle
 
   /** Read extension keybinding metadata. */
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }>
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void
@@ -177,6 +178,9 @@ export interface Host {
 
   /** Open a URL in the user's default browser. */
   openExternal(url: string): void
+
+  /** Open Kilo Settings, optionally focused on a tab and project. */
+  openSettings(tab?: string, projectId?: string): void
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void

@@ -1,6 +1,9 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
+import type { UiI18nParams } from "@kilocode/kilo-ui/context"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { extractLines, type ReviewComment } from "./review-comments"
+import type { ReviewCommentEntry } from "../src/types/messages"
+import { post } from "../src/utils/webview-message"
 
 export interface AnnotationLabels {
   commentOnLine: (line: number) => string
@@ -13,6 +16,21 @@ export interface AnnotationLabels {
   sendToChat: string
   edit: string
   delete: string
+}
+
+export function labels(t: (key: string, params?: UiI18nParams) => string): AnnotationLabels {
+  return {
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  }
 }
 
 // A draft is the active unsaved inline comment composer opened from the gutter.
@@ -82,7 +100,7 @@ interface AnnotationHandlers {
   deleteComment: (id: string) => void
   cancelDraft: () => void
   labels: AnnotationLabels
-  activeTerminalId?: string
+  activeTerminalId: () => string | undefined
   speech?: {
     active: () => boolean
     render: (meta: AnnotationMeta, textarea: HTMLTextAreaElement) => HTMLElement | undefined
@@ -137,17 +155,13 @@ function makeActionButton(title: string, icon: SVGSVGElement, action: () => void
   return button
 }
 
-export function sendReviewComments(comments: ReviewComment[], activeTerminalId?: string): void {
-  window.dispatchEvent(
-    new MessageEvent("message", {
-      data: {
-        type: activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-        comments,
-        autoSend: true,
-        targetTerminalId: activeTerminalId,
-      },
-    }),
-  )
+export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): void {
+  post({
+    type: activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
+    comments,
+    autoSend: true,
+    targetTerminalId: activeTerminalId,
+  })
 }
 
 export function buildFileAnnotations(
@@ -323,6 +337,7 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
+        event.stopPropagation()
         submit()
       }
     })
@@ -400,6 +415,7 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
+        event.stopPropagation()
         save()
       }
     })
@@ -427,7 +443,7 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      sendReviewComments([comment], handlers.activeTerminalId)
+      sendReviewComments([comment], handlers.activeTerminalId())
       handlers.deleteComment(comment.id)
     }),
   )

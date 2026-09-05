@@ -411,7 +411,13 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
-  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" | "superseded" }
+  | {
+      type: "sessionTurnClosed"
+      sessionID: string
+      eventID: string
+      reason: "completed" | "error" | "interrupted" | "superseded"
+      parentID?: string
+    }
   | {
       type: "permissionRequest"
       permission: {
@@ -555,7 +561,9 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
       return {
         type: "sessionTurnClosed",
         sessionID: event.properties.sessionID,
+        eventID: event.id,
         reason: event.properties.reason,
+        ...(event.properties.parentID ? { parentID: event.properties.parentID } : {}),
       }
     case "permission.asked":
       return {

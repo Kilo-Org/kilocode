@@ -1,12 +1,30 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
+import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, PRReviewer, AggregateCheckStatus } from "./types"
+import type { PRStatus, PRCheck, PRReviewer, PRConversationComment } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
-import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./pr/am-pr-utils"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
+import {
+  parsePRResult,
+  checkStatus,
+  signature,
+  formatCheckDuration,
+  parseComments,
+  parseConversation,
+  parseReviewers,
+  summarize,
+} from "./pr/am-pr-utils"
+import type {
+  PRResult,
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "./pr/am-pr-types"
+import { withContext } from "./pr/pr-comment-context"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -36,8 +54,9 @@ export class PRStatusPoller {
   private failures = 0 // consecutive failure count for backoff
   private ghAvailable: boolean | undefined
   private ghProbeTime = 0
+  private rich = true
   private activeWorktreeId: string | undefined
-  private cachedRepo: { owner: string; name: string; cwd: string } | undefined
+  private cachedRepo: { owner: string; name: string; root: string } | undefined
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
@@ -116,6 +135,7 @@ export class PRStatusPoller {
     this.failures = 0
     this.ghAvailable = undefined
     this.ghProbeTime = 0
+    this.rich = true
     this.cachedRepo = undefined
     this.prCache.clear()
     this.lastFullSync = 0
@@ -125,7 +145,7 @@ export class PRStatusPoller {
   refresh(worktreeId: string): void {
     if (!this.active) return
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
-    if (wt) this.prCache.delete(wt.branch)
+    if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
     void this.fetchOne(worktreeId)
   }
 
@@ -241,17 +261,16 @@ export class PRStatusPoller {
       const pr = await this.cachedFetchPR(wt.branch, wt.path)
       if (!pr || this.stale(generation)) {
         if (this.stale(generation)) return
-        const hash = `${worktreeId}:none`
+        const hash = `${worktreeId}:${wt.branch}:none`
         if (this.lastHash.get(worktreeId) === hash) return
         this.lastHash.set(worktreeId, hash)
         this.options.onStatus(worktreeId, null)
         return
       }
 
-      const [checks, reviewers, comments] = await Promise.all([
-        this.fetchChecks(pr.number, wt.path),
-        this.fetchReviewers(pr.number, wt.path),
-        this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
+      const [checks, reviewers, threads] = await Promise.all([
+        ...this.extras(pr, wt.path),
+        this.fetchThreads(pr.number, wt.path, this.activeWorktreeId === worktreeId),
       ])
       if (this.stale(generation)) return
 
@@ -264,29 +283,31 @@ export class PRStatusPoller {
         review: pr.review,
         checks,
         reviewers,
-        ...(comments && {
-          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments },
-        }),
+        ...threads,
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
       }
 
-      const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
-      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
+      const hash = signature(status)
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
       this.options.onStatus(worktreeId, status)
     } catch (err) {
-      this.handleError(worktreeId, wt.branch, err)
+      if (this.stale(generation)) return
+      this.handleError(worktreeId, wt.branch, wt.path, err)
       throw err // propagate so fetchAll can track failures for backoff
     }
   }
 
-  private handleError(worktreeId: string, branch: string, err: unknown): void {
+  private extras(pr: PRResult, cwd: string) {
+    return [pr.checks ?? this.fetchChecks(pr.number, cwd), pr.reviewers ?? this.fetchReviewers(pr.number, cwd)] as const
+  }
+
+  private handleError(worktreeId: string, branch: string, cwd: string, err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err)
-    const kind = classifyPRError(msg)
+    const kind = existsSync(cwd) ? classifyPRError(msg) : "unknown"
     this.options.log(`PR fetch failed for ${branch}:`, msg)
     const key = kind === "gh_missing" ? "gh_missing" : kind === "gh_auth" ? "gh_auth" : "fetch_failed"
     if (kind === "gh_missing") this.ghAvailable = false
@@ -298,21 +319,29 @@ export class PRStatusPoller {
 
   private target(worktreeId: string): Worktree | undefined {
     if (!this.options.getWorkspaceRoot()) return
-    return this.options.getWorktrees().find((worktree) => worktree.id === worktreeId)
+    const worktree = this.options.getWorktrees().find((item) => item.id === worktreeId)
+    if (!worktree || !existsSync(worktree.path)) return
+    return worktree
   }
 
-  private static readonly PR_JSON_FIELDS =
+  private static readonly BASE_JSON_FIELDS =
     "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
+  private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews`
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
    *  Keyed by branch name so multiple worktrees on the same branch share
    *  the cache, and a branch switch in a worktree naturally misses. */
   private async cachedFetchPR(branch: string, cwd: string): Promise<PRResult | null> {
-    const cached = this.prCache.get(branch)
+    const key = this.key(branch, cwd)
+    const cached = this.prCache.get(key)
     if (cached && Date.now() < cached.expires) return cached.result
     const result = await this.fetchPRForBranch(branch, cwd)
-    this.prCache.set(branch, { result, expires: Date.now() + PR_LOOKUP_TTL })
+    this.prCache.set(key, { result, expires: Date.now() + PR_LOOKUP_TTL })
     return result
+  }
+
+  private key(branch: string, cwd: string): string {
+    return `${this.options.getWorkspaceRoot() ?? cwd}\0${branch === "HEAD" ? cwd : branch}`
   }
 
   private async fetchPRForBranch(branch: string, cwd: string): Promise<PRResult | null> {
@@ -328,15 +357,25 @@ export class PRStatusPoller {
     try {
       const args = ["pr", "view"]
       if (branch) args.push(branch)
-      args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
-
-      const { stdout } = await this.gh(args, { cwd, timeout: 15_000 })
-      return parsePRResult(stdout)
+      return parsePRResult(await this.query(args, cwd))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes("no pull requests found") || msg.includes("Could not resolve")) return null
       throw err
     }
+  }
+
+  private async query(args: string[], cwd: string): Promise<string> {
+    if (this.rich) {
+      try {
+        return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!/unknown.*field|does(?:n't| not) exist|not accessible|insufficient|forbidden/i.test(msg)) throw err
+        this.rich = false
+      }
+    }
+    return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
   }
 
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */
@@ -346,20 +385,9 @@ export class PRStatusPoller {
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await this.gh(
-        [
-          "pr",
-          "list",
-          "--state",
-          "all",
-          "--search",
-          `${head} is:pr`,
-          "--limit",
-          "5",
-          "--json",
-          PRStatusPoller.PR_JSON_FIELDS,
-        ],
-        { cwd, timeout: 15_000 },
+      const stdout = await this.query(
+        ["pr", "list", "--state", "all", "--search", `${head} is:pr`, "--limit", "5"],
+        cwd,
       )
       const items = JSON.parse(stdout) as unknown[]
       if (!Array.isArray(items) || items.length === 0) return null
@@ -375,17 +403,7 @@ export class PRStatusPoller {
     }
   }
 
-  private async fetchChecks(
-    prNumber: number,
-    cwd: string,
-  ): Promise<{
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }> {
+  private async fetchChecks(prNumber: number, cwd: string): Promise<PRStatus["checks"]> {
     try {
       const { stdout } = await this.gh(
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
@@ -406,30 +424,21 @@ export class PRStatusPoller {
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
 
-      const total = checks.filter((c) => c.status !== "skipped").length
-      const passed = checks.filter((c) => c.status === "success").length
-      const failed = checks.filter((c) => c.status === "failure").length
-      const pending = checks.filter((c) => c.status === "pending").length
-
-      const status: AggregateCheckStatus =
-        total === 0 ? "none" : failed > 0 ? "failure" : pending > 0 ? "pending" : "success"
-
-      return { status, total, passed, failed, pending, checks }
+      return summarize(checks)
     } catch {
       return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] }
     }
   }
 
   private async getRepoInfo(cwd: string): Promise<{ owner: string; name: string }> {
-    if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
-      return this.cachedRepo
-    }
+    const root = this.options.getWorkspaceRoot() ?? cwd
+    if (this.cachedRepo?.root === root) return this.cachedRepo
     const { stdout } = await this.gh(["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
     const data = JSON.parse(stdout)
-    const info = { owner: data.owner.login as string, name: data.name as string, cwd }
+    const info = { owner: data.owner.login as string, name: data.name as string, root }
     this.cachedRepo = info
     return info
   }
@@ -475,63 +484,142 @@ export class PRStatusPoller {
     }
   }
 
-  private async fetchComments(
+  /**
+   * Undefined on failure, never an empty thread list: the panel keeps the
+   * comments it already shows instead of collapsing the section mid-review.
+   */
+  private async fetchThreads(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; comments: PRComment[] }> {
+    full: boolean,
+  ): Promise<Pick<PRStatus, "comments" | "unresolvedThreads" | "conversation"> | undefined> {
     try {
       const repo = await this.getRepoInfo(cwd)
-      const query = `query($owner: String!, $repo: String!, $number: Int!) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $number) {
-            reviewThreads(first: 100) {
-              totalCount
-              nodes {
-                id
-                isResolved
-                comments(first: 1) {
-                  nodes {
-                    id
-                    author { login avatarUrl }
-                    body
-                    path
-                    line
-                    url
-                    createdAt
-                    diffHunk
-                  }
-                }
+      const fields = full
+        ? `id
+           isOutdated
+           comments(first: 10) {
+             nodes {
+               id
+               author { login avatarUrl }
+               body
+               path
+               line
+               originalLine
+               url
+               createdAt
+               diffHunk
+             }
+           }`
+        : ""
+      const extra = full
+        ? `comments(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               createdAt
+               url
+             }
+           }
+           reviews(last: 50) {
+             nodes {
+               id
+               author { login avatarUrl __typename }
+               body
+               state
+               submittedAt
+               url
+             }
+           }`
+        : ""
+      const nodes: GhThread[] = []
+      const cursors = new Set<string>()
+      let cursor: string | undefined
+      let conversation: PRConversationComment[] | undefined
+      while (true) {
+        const query = `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $number) {
+              reviewThreads(first: 100, after: $cursor) {
+                totalCount
+                pageInfo { hasNextPage endCursor }
+                nodes { isResolved ${fields} }
               }
+              ${cursor ? "" : extra}
             }
           }
+        }`
+        const { stdout } = await this.gh(
+          [
+            "api",
+            "graphql",
+            "-f",
+            `query=${query}`,
+            "-F",
+            `owner=${repo.owner}`,
+            "-F",
+            `repo=${repo.name}`,
+            "-F",
+            `number=${prNumber}`,
+            ...(cursor ? ["-f", `cursor=${cursor}`] : []),
+          ],
+          { cwd, timeout: 15_000 },
+        )
+        const page = threads(stdout)
+        nodes.push(...page.nodes)
+        if (full && !conversation) {
+          conversation = parseConversationPayload(stdout)
         }
-      }`
-
-      const { stdout } = await this.gh(
-        [
-          "api",
-          "graphql",
-          "-f",
-          `query=${query}`,
-          "-F",
-          `owner=${repo.owner}`,
-          "-F",
-          `repo=${repo.name}`,
-          "-F",
-          `number=${prNumber}`,
-        ],
-        { cwd, timeout: 15_000 },
-      )
-      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const threads = pr?.reviewThreads
-      const comments = parseComments((threads?.nodes ?? []) as GhThread[])
-      const totalCount = threads?.totalCount ?? comments.length
-      return { total: totalCount, unresolved: comments.filter((c) => !c.resolved).length, comments }
+        if (!page.pageInfo.hasNextPage) {
+          if (nodes.length !== page.totalCount) throw new Error("Incomplete PR review threads")
+          const unresolved = nodes.filter((node) => !node.isResolved).length
+          if (!full) return { unresolvedThreads: unresolved }
+          const comments = await withContext(cwd, parseComments(nodes))
+          return {
+            unresolvedThreads: unresolved,
+            comments: { total: page.totalCount, unresolved, comments },
+            conversation,
+          }
+        }
+        const next = page.pageInfo.endCursor
+        if (typeof next !== "string" || !next || cursors.has(next)) throw new Error("Invalid PR review thread cursor")
+        cursors.add(next)
+        cursor = next
+      }
     } catch (err) {
-      this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, comments: [] }
+      this.options.log("Failed to fetch PR review threads:", err)
+      return undefined
     }
   }
+}
+
+function threads(json: string) {
+  const result = JSON.parse(json) as {
+    errors?: unknown[]
+    data?: {
+      repository?: {
+        pullRequest?: {
+          reviewThreads?: {
+            totalCount: number
+            pageInfo: { hasNextPage: boolean; endCursor?: string | null }
+            nodes: GhThread[]
+          }
+        }
+      }
+    }
+  }
+  const page = result.data?.repository?.pullRequest?.reviewThreads
+  if (result.errors?.length || !page || !Array.isArray(page.nodes) || !Number.isInteger(page.totalCount)) {
+    throw new Error("Invalid PR review threads response")
+  }
+  if (
+    typeof page.pageInfo?.hasNextPage !== "boolean" ||
+    page.nodes.some((node) => typeof node?.isResolved !== "boolean")
+  ) {
+    throw new Error("Incomplete PR review threads response")
+  }
+  return page
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */
@@ -551,4 +639,13 @@ async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Pr
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, thunks.length) }, () => run()))
   return results
+}
+
+function parseConversationPayload(stdout: string): PRConversationComment[] | undefined {
+  const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+  if (!pr) return undefined
+  return parseConversation(
+    (pr.comments?.nodes ?? []) as GhConversationComment[],
+    (pr.reviews?.nodes ?? []) as GhReviewWithBody[],
+  )
 }

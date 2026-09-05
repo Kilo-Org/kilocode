@@ -11,7 +11,6 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -24,6 +23,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
@@ -112,6 +112,12 @@ class KiloSessionRpcApiImpl internal constructor(
         return sessions.rename(id, dir, title)
     }
 
+    override suspend fun share(id: String, directory: String): SessionDto =
+        ready { sessions.share(id, sessions.getDirectory(id, directory)) }
+
+    override suspend fun unshare(id: String, directory: String): SessionDto =
+        ready { sessions.unshare(id, sessions.getDirectory(id, directory)) }
+
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         ready { sessions.cloudSessions(directory, cursor, limit, gitUrl) }
 
@@ -123,6 +129,9 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun activity(): Flow<Map<String, SessionActivityDto>> =
         activity.activity
+
+    override suspend fun changes(): Flow<SessionChangeDto> =
+        sessions.changes
 
     override suspend fun setDirectory(id: String, directory: String) =
         sessions.setDirectory(id, directory)
@@ -275,9 +284,6 @@ class KiloSessionRpcApiImpl internal constructor(
                 }
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true failed message=${cause.message}", cause)
             }
-
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =
-        ready { chat.updateConfig(directory, config) }
 
     // ------ permission / question resolution ------
 

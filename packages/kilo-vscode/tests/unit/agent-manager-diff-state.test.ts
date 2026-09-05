@@ -6,6 +6,7 @@ import {
   expandableOpenFiles,
   initialOpenFiles,
   isDiffExpandable,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -148,6 +149,20 @@ describe("agent manager diff state", () => {
     expect(toggleOpenFiles(diffs, files)).toEqual([])
   })
 
+  it("opens newly arriving files while preserving a manual collapse", () => {
+    const current = [diff({ file: "src/app.ts" }), diff({ file: "src/new.ts" })]
+    expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
+      open: ["src/app.ts", "src/new.ts"],
+      known: ["src/app.ts", "src/new.ts"],
+    })
+  })
+
+  it("does not initialize a manual empty snapshot until the first state exists", () => {
+    const current = [diff({ file: "src/app.ts" })]
+    expect(reconcileOpenFiles(current, undefined, [])).toEqual({ open: undefined, known: ["src/app.ts"] })
+    expect(reconcileOpenFiles(current, [], ["src/app.ts"])).toEqual({ open: [], known: ["src/app.ts"] })
+  })
+
   it("opens images while preventing other non-text diffs from entering open state", () => {
     const audio = diff({ file: "audio/alert.wav", summarized: false, additions: 0 })
     const image = diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 })
@@ -179,5 +194,12 @@ describe("diff line virtualization", () => {
         diff({ file: "src/big.ts", patch: "large", additions: EXTREME_DIFF_CHANGED_LINES + 1, deletions: 0 }),
       ),
     ).toBe(true)
+  })
+
+  it("virtualizes small patches when either source file exceeds the eager byte limit", () => {
+    const patch = "@@ -1 +1 @@\n-old\n+new\n"
+    expect(shouldVirtualizeDiff(diff({ patch, before: "x".repeat(256 * 1024 + 1), after: "new\n" }))).toBe(true)
+    expect(shouldVirtualizeDiff(diff({ patch, before: "old\n", after: "x".repeat(256 * 1024 + 1) }))).toBe(true)
+    expect(shouldVirtualizeDiff(diff({ patch, before: "x".repeat(256 * 1024), after: "new\n" }))).toBe(false)
   })
 })

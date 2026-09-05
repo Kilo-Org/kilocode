@@ -13,6 +13,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
@@ -29,6 +30,8 @@ import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
@@ -36,6 +39,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.pumpEdt
 import java.awt.event.HierarchyEvent
 import kotlinx.coroutines.CoroutineScope
@@ -103,12 +107,19 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     protected lateinit var scope: CoroutineScope
     protected lateinit var parent: Disposable
 
+    /** Balloons a controller raised, instead of real IDE notifications. */
+    protected val notifications = mutableListOf<Pair<String, String>>()
+
     override fun setUp() {
         super.setUp()
         rpc = FakeSessionRpcApi()
         appRpc = FakeAppRpcApi()
         projectRpc = FakeWorkspaceRpcApi()
         timers = TestUiTimers()
+        notifications.clear()
+        // Application-level and shared across tests in a fixture, and it now seeds a new session's
+        // mode, so a leftover pick from another test would decide this one's starting agent.
+        KiloPluginSettings.unsetAgent()
 
         coroutines = TestCoroutines()
         scope = coroutines.scope
@@ -124,6 +135,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         try {
             Disposer.dispose(parent)
             coroutines.close()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -181,6 +193,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
+            notify = { title, body -> notifications.add(title to body) },
             timers = timers,
             log = log ?: KiloLog.create(SessionController::class.java),
         )
@@ -275,6 +288,19 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         runBlocking { rpc.events.emit(event) }
         if (flush) flush()
     }
+
+    /** Emit a session lifecycle change into the fake RPC flow. */
+    protected fun change(id: String, directory: String, kind: SessionChangeKindDto) {
+        runBlocking { rpc.changes.emit(SessionChangeDto(id, directory, kind)) }
+    }
+
+    /**
+     * Drain background work and the EDT until [cond] holds, returning whether it did. Use for state
+     * that arrives from a flow rather than from a call the test just made, where [flush] alone
+     * cannot know how many hops are still pending.
+     */
+    protected fun waitFor(deadlineMs: Long = TEST_WAIT_MS, cond: () -> Boolean): Boolean =
+        coroutines.pumpUntil(deadlineMs, { edt { controllers.forEach { it.flushEvents() } }; pumpEdt() }, cond)
 
     /** Create a controller, attach both listeners, send initial prompt, and flush. */
     protected fun prompted(): Triple<SessionController, MutableList<SessionControllerEvent>, MutableList<SessionModelEvent>> {

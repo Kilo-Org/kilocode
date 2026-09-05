@@ -5,6 +5,8 @@ description: "Browser-based dashboard for managing your OpenClaw instance"
 
 # OpenClaw Control UI
 
+{% partial file="kiloclaw-eol.md" /%}
+
 The Control UI is a browser-based dashboard (built with Vite + Lit) served by the OpenClaw Gateway on the same port as the gateway itself (default: `http://localhost:18789/`). It connects via WebSocket and gives you real-time control over your agent, channels, sessions, and system configuration. For KiloClaw users, see [Accessing the Control UI](/docs/kiloclaw/dashboard#accessing-the-control-ui) to get started.
 
 ## Features

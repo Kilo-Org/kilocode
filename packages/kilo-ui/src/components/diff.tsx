@@ -12,6 +12,9 @@ import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untr
 import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
+import { attachLineSelectionListeners, readSelectedLineRange } from "../pierre/selection"
+import { applyDiffCommentedLines, diffRowIndex } from "../pierre/diff-dom"
+import { fixDiffSelection } from "../pierre/selection-range"
 
 type SelectionSide = "additions" | "deletions"
 
@@ -73,14 +76,21 @@ function enqueue(job: Job) {
   schedule()
 }
 
-// When a large batch of diffs becomes near-visible at once, render one diff per
-// animation frame. This keeps the UI responsive while preserving expanded state.
+const FRAME_BUDGET_MS = 12
+
+// When a batch of diffs becomes near-visible at once, render within a per-frame
+// time budget so visible diffs populate smoothly in the same frame while preserving
+// 60fps responsiveness for large lists.
 function schedule() {
   if (frame !== undefined) return
   frame = requestAnimationFrame(() => {
     frame = undefined
-    const job = queue.shift()
-    if (job && !job.cancelled) job.run()
+    const deadline = performance.now() + FRAME_BUDGET_MS
+    while (queue.length > 0) {
+      const job = queue.shift()
+      if (job && !job.cancelled) job.run()
+      if (performance.now() >= deadline) break
+    }
     if (queue.length > 0) schedule()
   })
 }
@@ -189,12 +199,13 @@ export function Diff<T>(props: DiffProps<T>) {
     "selectedLines",
     "commentedLines",
     "onRendered",
+    "visible",
     "virtualized",
     "sizeKey",
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
-  const [visible, setVisible] = createSignal(false)
+  const [visible, setVisible] = createSignal(local.visible === true)
 
   const before = createMemo(() => {
     if (local.fileDiff) return local.fileDiff.deletionLines.join("")
@@ -270,6 +281,10 @@ export function Diff<T>(props: DiffProps<T>) {
 
   createEffect(() => {
     if (visible()) return
+    if (local.visible) {
+      setVisible(true)
+      return
+    }
     const cleanup = observe(container, () => setVisible(true))
     onCleanup(cleanup)
   })
@@ -323,61 +338,10 @@ export function Diff<T>(props: DiffProps<T>) {
       root.adoptedStyleSheets = [...root.adoptedStyleSheets, separatorPatchSheet]
   }
 
-  const lineIndex = (split: boolean, element: HTMLElement) => {
-    const raw = element.dataset.lineIndex
-    if (!raw) return
-    const values = raw
-      .split(",")
-      .map((value) => parseInt(value, 10))
-      .filter((value) => !Number.isNaN(value))
-    if (values.length === 0) return
-    if (!split) return values[0]
-    if (values.length === 2) return values[1]
-    return values[0]
-  }
-
-  const rowIndex = (root: ShadowRoot, split: boolean, line: number, side: SelectionSide | undefined) => {
-    const nodes = Array.from(root.querySelectorAll(`[data-line="${line}"], [data-alt-line="${line}"]`)).filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    )
-    if (nodes.length === 0) return
-
-    const targetSide = side ?? "additions"
-
-    for (const node of nodes) {
-      if (findSide(node) === targetSide) return lineIndex(split, node)
-      if (parseInt(node.dataset.altLine ?? "", 10) === line) return lineIndex(split, node)
-    }
-  }
-
   const fixSelection = (range: SelectedLineRange | null) => {
-    if (!range) return range
     const root = getRoot()
     if (!root) return
-
-    const diffs = root.querySelector("[data-diff]")
-    if (!(diffs instanceof HTMLElement)) return
-
-    const split = diffs.dataset.diffType === "split"
-
-    const start = rowIndex(root, split, range.start, range.side)
-    const end = rowIndex(root, split, range.end, range.endSide ?? range.side)
-    if (start === undefined || end === undefined) {
-      if (root.querySelector("[data-line], [data-alt-line]") == null) return
-      return null
-    }
-    if (start <= end) return range
-
-    const side = range.endSide ?? range.side
-    const swapped: SelectedLineRange = {
-      start: range.end,
-      end: range.start,
-    }
-
-    if (side) swapped.side = side
-    if (range.endSide && range.side) swapped.endSide = range.side
-
-    return swapped
+    return fixDiffSelection(root, range, diffRowIndex)
   }
 
   const notifyRendered = () => {
@@ -464,60 +428,6 @@ export function Diff<T>(props: DiffProps<T>) {
     observer.observe(container, { childList: true, subtree: true })
   }
 
-  const applyCommentedLines = (ranges: SelectedLineRange[]) => {
-    const root = getRoot()
-    if (!root) return
-
-    const existing = Array.from(root.querySelectorAll("[data-comment-selected]"))
-    for (const node of existing) {
-      if (!(node instanceof HTMLElement)) continue
-      node.removeAttribute("data-comment-selected")
-    }
-
-    const diffs = root.querySelector("[data-diff]")
-    if (!(diffs instanceof HTMLElement)) return
-
-    const split = diffs.dataset.diffType === "split"
-
-    const rows = Array.from(diffs.querySelectorAll("[data-line-index]")).filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    )
-    if (rows.length === 0) return
-
-    const annotations = Array.from(diffs.querySelectorAll("[data-line-annotation]")).filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    )
-
-    for (const range of ranges) {
-      const start = rowIndex(root, split, range.start, range.side)
-      if (start === undefined) continue
-
-      const end = (() => {
-        const same = range.end === range.start && (range.endSide == null || range.endSide === range.side)
-        if (same) return start
-        return rowIndex(root, split, range.end, range.endSide ?? range.side)
-      })()
-      if (end === undefined) continue
-
-      const first = Math.min(start, end)
-      const last = Math.max(start, end)
-
-      for (const row of rows) {
-        const idx = lineIndex(split, row)
-        if (idx === undefined) continue
-        if (idx < first || idx > last) continue
-        row.setAttribute("data-comment-selected", "")
-      }
-
-      for (const annotation of annotations) {
-        const idx = parseInt(annotation.dataset.lineAnnotation?.split(",")[1] ?? "", 10)
-        if (Number.isNaN(idx)) continue
-        if (idx < first || idx > last) continue
-        annotation.setAttribute("data-comment-selected", "")
-      }
-    }
-  }
-
   const setSelectedLines = (range: SelectedLineRange | null) => {
     const active = current()
     if (!active) {
@@ -538,42 +448,8 @@ export function Diff<T>(props: DiffProps<T>) {
   const updateSelection = () => {
     const root = getRoot()
     if (!root) return
-
-    const selection =
-      (root as unknown as { getSelection?: () => Selection | null }).getSelection?.() ?? window.getSelection()
-    if (!selection || selection.isCollapsed) return
-
-    const domRange =
-      (
-        selection as unknown as {
-          getComposedRanges?: (options?: { shadowRoots?: ShadowRoot[] }) => Range[]
-        }
-      ).getComposedRanges?.({ shadowRoots: [root] })?.[0] ??
-      (selection.rangeCount > 0 ? selection.getRangeAt(0) : undefined)
-
-    const startNode = domRange?.startContainer ?? selection.anchorNode
-    const endNode = domRange?.endContainer ?? selection.focusNode
-    if (!startNode || !endNode) return
-
-    if (!root.contains(startNode) || !root.contains(endNode)) return
-
-    const start = findLineNumber(startNode)
-    const end = findLineNumber(endNode)
-    if (start === undefined || end === undefined) return
-
-    const startSide = findSide(startNode)
-    const endSide = findSide(endNode)
-    const side = startSide ?? endSide
-
-    const selected: SelectedLineRange = {
-      start,
-      end,
-    }
-
-    if (side) selected.side = side
-    if (endSide && side && endSide !== side) selected.endSide = endSide
-
-    setSelectedLines(selected)
+    const selected = readSelectedLineRange(root, findLineNumber, findSide)
+    if (selected) setSelectedLines(selected)
   }
 
   const scheduleSelectionUpdate = () => {
@@ -829,7 +705,8 @@ export function Diff<T>(props: DiffProps<T>) {
   createEffect(() => {
     rendered()
     const ranges = local.commentedLines ?? []
-    requestAnimationFrame(() => applyCommentedLines(ranges))
+    const root = getRoot()
+    if (root) requestAnimationFrame(() => applyDiffCommentedLines(root, ranges))
   })
 
   createEffect(() => {
@@ -838,19 +715,14 @@ export function Diff<T>(props: DiffProps<T>) {
   })
 
   createEffect(() => {
-    if (props.enableLineSelection !== true) return
-
-    container.addEventListener("mousedown", handleMouseDown)
-    container.addEventListener("mousemove", handleMouseMove)
-    window.addEventListener("mouseup", handleMouseUp)
-    document.addEventListener("selectionchange", handleSelectionChange)
-
-    onCleanup(() => {
-      container.removeEventListener("mousedown", handleMouseDown)
-      container.removeEventListener("mousemove", handleMouseMove)
-      window.removeEventListener("mouseup", handleMouseUp)
-      document.removeEventListener("selectionchange", handleSelectionChange)
-    })
+    onCleanup(
+      attachLineSelectionListeners(container, props.enableLineSelection === true, {
+        mousedown: handleMouseDown,
+        mousemove: handleMouseMove,
+        mouseup: handleMouseUp,
+        selectionchange: handleSelectionChange,
+      }),
+    )
   })
 
   onCleanup(() => {

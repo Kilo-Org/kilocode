@@ -233,9 +233,18 @@ For the full release process (resolve version, pin verification, prepare, change
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/`.
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget — internal mode is already on for every dev run (see below).
 - **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Corrupt IDE extraction**: if `runIdeBackend` or `runIdeSplitMode` fails before startup with `coroutinesJavaAgentFile` / `Collection contains no element matching the predicate`, the extracted IDE under `.intellijPlatform/ides/` is likely incomplete. Health check: `ls .intellijPlatform/ides/*/lib/*.jar | wc -l` should be in the hundreds. Repair by removing `.intellijPlatform/ides`, `.intellijPlatform/localPlatformArtifacts`, `.intellijPlatform/layoutIndex`, and `.intellijPlatform/coroutines-javaagent.jar`, then rerun the Gradle task.
 - **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
+- **Surveys are off in dev runs**: every `runIde*` task sets `platform.feedback=false`, `csat.survey.enabled=false`, and `editor.ux.survey.enabled=false` so IntelliJ feedback surveys ("Share Your Experience" / "Take Survey") never interrupt a sandbox run. These are IntelliJ registry keys overridden as JVM system properties; keep them unconditional.
+- **Internal mode is on in dev runs**: every `runIde*` task sets `idea.is.internal=true` (`ApplicationManagerEx.IS_INTERNAL_PROPERTY`), which enables the Split Mode latency widget and the Internal Actions menu. The embedded JetBrains Client inherits this property from the backend; the survey keys above are not on that inherit list, so a split-mode client may still need them set in its own Registry.
+
+### Stopping a Sandbox Run
+
+Quit the sandbox IDE from inside it (File → Exit) instead of pressing Stop on the Gradle run tab. Stop on an external-system configuration only calls `CancellationTokenSource.cancel()` through the Gradle tooling API — the IDE never learns the forked JVM's pid, sends it no signal, and `ExternalSystemProcessHandler` does not implement `KillableProcess`, so there is no force-kill escalation either. Quitting the sandbox IDE lets it run its real shutdown sequence and the `JavaExec` task then completes on its own. Cancelling the build instead is what leaves the orphaned Java processes noted above.
+
+Do not start a second `runIde*` task for a checkout while a sandbox IDE launched from that same checkout is still running. All `runIde*` tasks share one sandbox container per checkout (`.intellijPlatform/sandbox/kilo.jetbrains/<ide>/plugins_runIde*`), and `prepareSandbox` rewrites the running IDE's own plugin jars. The IDE then attempts a hot reload that cannot succeed and reports `Failed to unload modified plugins: Kilo Code`.
 
 ### CLI/SDK Change Awareness
 

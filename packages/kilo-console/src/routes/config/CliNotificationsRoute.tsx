@@ -1,7 +1,7 @@
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
-import { ConfigPage, ConfigTag as Tag } from "./ConfigPage"
+import { ConfigPage, ConfigToggle as Toggle } from "./ConfigPage"
 import { type TitleIcon, useTuiNotificationSettings } from "./state/ui"
 
 const icons = [
@@ -9,31 +9,6 @@ const icons = [
   { value: "unicode", label: "Unicode" },
   { value: "emojis", label: "Emojis" },
 ] satisfies SelectOption<TitleIcon>[]
-
-function Toggle(props: {
-  label: string
-  description: string
-  checked: boolean
-  disabled?: boolean
-  onChange: () => void
-}) {
-  return (
-    <button
-      class="ui-toggle"
-      classList={{ selected: props.checked }}
-      type="button"
-      aria-pressed={props.checked}
-      disabled={props.disabled}
-      onClick={props.onChange}
-    >
-      <span>
-        <strong>{props.label}</strong>
-        <small>{props.description}</small>
-      </span>
-      <Tag tone={props.checked ? "success" : "neutral"}>{props.checked ? "On" : "Off"}</Tag>
-    </button>
-  )
-}
 
 export function CliNotificationsRoute() {
   const state = useTuiNotificationSettings()

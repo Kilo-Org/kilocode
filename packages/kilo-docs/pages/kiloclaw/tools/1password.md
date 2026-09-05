@@ -5,6 +5,8 @@ description: "Connect your KiloClaw agent to 1Password to securely manage creden
 
 # 1Password Integration Guide
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Connect your KiloClaw agent to 1Password to securely manage credentials. This allows your agent to fetch API keys or passwords without ever seeing them in plain text.
 
 ## Step 1: Create a Dedicated Vault

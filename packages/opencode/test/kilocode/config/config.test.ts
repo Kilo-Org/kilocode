@@ -1,7 +1,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Layer, Option, Schema } from "effect"
+import { Effect, Fiber, Layer, Logger, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -43,12 +43,14 @@ const noopNpm = Layer.mock(Npm.Service)({
 const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
-const layer = AppNodeBuilder.build(Config.node, [
-  [Auth.node, emptyAuth],
-  [Account.node, emptyAccount],
-  [Npm.node, noopNpm],
-  [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, unexpectedHttp)],
-]).pipe(Layer.provideMerge(infra))
+const make = (npm: Layer.Layer<Npm.Service>) =>
+  AppNodeBuilder.build(Config.node, [
+    [Auth.node, emptyAuth],
+    [Account.node, emptyAccount],
+    [Npm.node, npm],
+    [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, unexpectedHttp)],
+  ]).pipe(Layer.provideMerge(infra))
+const layer = make(noopNpm)
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>
@@ -945,6 +947,181 @@ describe("unset propagation across layered config files", () => {
   })
 })
 
+describe("project plugin dependencies", () => {
+  async function sandbox(fn: (dir: string) => Promise<void>) {
+    await using home = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = home.path
+    await disposeAllInstances()
+
+    try {
+      await fn(tmp.path)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await disposeAllInstances()
+    }
+  }
+
+  test("does not install dependencies for an ordinary project config directory", async () => {
+    await sandbox(async (dir) => {
+      await writeConfig(path.join(dir, ".kilo"), { username: "kilo" })
+      const calls: Array<{ dir: string; name?: string }> = []
+      const npm = Layer.mock(Npm.Service)({
+        install: (dir, input) =>
+          Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(undefined),
+      })
+
+      await provideTestInstance({
+        directory: dir,
+        fn: () =>
+          Effect.runPromise(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
+              Effect.scoped,
+              Effect.provide(make(npm)),
+            ),
+          ),
+      })
+
+      expect(calls).toEqual([])
+    })
+  })
+
+  test("installs dependencies for an auto-discovered file plugin and waits for completion", async () => {
+    await sandbox(async (dir) => {
+      const config = path.join(dir, ".kilo")
+      await Filesystem.write(path.join(config, "plugin", "local.ts"), "export default {}")
+      const gate = Promise.withResolvers<void>()
+      const calls: Array<{ dir: string; name?: string }> = []
+      const npm = Layer.mock(Npm.Service)({
+        install: (dir, input) =>
+          Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(
+            Effect.andThen(Effect.promise(() => gate.promise)),
+          ),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(undefined),
+      })
+
+      const pending = await provideTestInstance({
+        directory: dir,
+        fn: () =>
+          Effect.runPromise(
+            Config.Service.use((svc) =>
+              Effect.gen(function* () {
+                yield* svc.get()
+                const fiber = yield* svc.waitForDependencies().pipe(Effect.forkChild)
+                const status = yield* Fiber.join(fiber).pipe(Effect.timeoutOption("10 millis"))
+                gate.resolve()
+                yield* Fiber.join(fiber)
+                return Option.isNone(status)
+              }),
+            ).pipe(Effect.scoped, Effect.provide(make(npm))),
+          ),
+      })
+
+      expect(pending).toBe(true)
+      expect(calls).toEqual([{ dir: config, name: "@kilocode/plugin" }])
+    })
+  })
+
+  test("installs dependencies for a file plugin declared in directory config", async () => {
+    await sandbox(async (dir) => {
+      const config = path.join(dir, ".kilo")
+      await writeConfig(config, { plugin: ["./local.ts"] })
+      await Filesystem.write(path.join(config, "local.ts"), "export default {}")
+      const calls: Array<{ dir: string; name?: string }> = []
+      const npm = Layer.mock(Npm.Service)({
+        install: (dir, input) =>
+          Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(Effect.asVoid),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(undefined),
+      })
+
+      await provideTestInstance({
+        directory: dir,
+        fn: () =>
+          Effect.runPromise(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
+              Effect.scoped,
+              Effect.provide(make(npm)),
+            ),
+          ),
+      })
+
+      expect(calls).toEqual([{ dir: config, name: "@kilocode/plugin" }])
+    })
+  })
+
+  test("does not install dependencies for built-in or package plugins", async () => {
+    await sandbox(async (dir) => {
+      await writeConfig(path.join(dir, ".kilo"), {
+        plugin: ["@kilocode/kilo-indexing", "opencode-gitlab-auth"],
+      })
+      const calls: string[] = []
+      const npm = Layer.mock(Npm.Service)({
+        install: (dir) => Effect.sync(() => calls.push(dir)).pipe(Effect.asVoid),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(undefined),
+      })
+
+      await provideTestInstance({
+        directory: dir,
+        fn: () =>
+          Effect.runPromise(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
+              Effect.scoped,
+              Effect.provide(make(npm)),
+            ),
+          ),
+      })
+
+      expect(calls).toEqual([])
+    })
+  })
+
+  test("keeps a failed file plugin dependency install non-fatal and logs a warning", async () => {
+    await sandbox(async (dir) => {
+      const config = path.join(dir, ".kilo")
+      await writeConfig(config, { username: "loaded" })
+      await Filesystem.write(path.join(config, "plugins", "local.js"), "export default {}")
+      const logs: string[] = []
+      const logger = Logger.make(({ message }) => logs.push(String(message)))
+      const npm = Layer.mock(Npm.Service)({
+        install: (dir) =>
+          Effect.fail(
+            new Npm.InstallFailedError({
+              dir,
+              add: ["@kilocode/plugin"],
+              cause: new Error("test install failure"),
+            }),
+          ),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(undefined),
+      })
+      const testLayer = make(npm).pipe(Layer.provideMerge(Logger.layer([logger], { mergeWithExisting: false })))
+
+      const loaded = await provideTestInstance({
+        directory: dir,
+        fn: () =>
+          Effect.runPromise(
+            Config.Service.use((svc) =>
+              Effect.gen(function* () {
+                const result = yield* svc.get()
+                yield* svc.waitForDependencies()
+                return result.username
+              }),
+            ).pipe(Effect.scoped, Effect.provide(testLayer)),
+          ),
+      })
+
+      expect(loaded).toBe("loaded")
+      expect(logs.some((message) => message.includes("background dependency install failed"))).toBe(true)
+    })
+  })
+})
+
 describe("agent config", () => {
   test("accepts delete sentinels for agent model and variant overrides", () => {
     const patch = decode({ agent: { explore: { model: null, variant: null } } })
@@ -1358,6 +1535,141 @@ describe("bash permission migration", () => {
       const parsed = ConfigParse.schema(Config.Info, ConfigParse.jsonc(text, file), file)
       expect(parsed.permission?.read).toBe("allow")
       expect(parsed.permission?.bash).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not restore a migrated bash permission after the user deletes it", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, { permission: { read: "allow" } }, "kilo.jsonc")
+      },
+    })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      await KilocodeConfig.migrateBashPermission()
+      expect(JSON.parse(await Filesystem.readText(file)).permission.bash).toBe("allow")
+
+      await writeConfig(tmp.path, { permission: { read: "allow" } }, "kilo.jsonc")
+      await KilocodeConfig.migrateBashPermission()
+
+      expect(JSON.parse(await Filesystem.readText(file)).permission).toEqual({ read: "allow" })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not later migrate a fresh install after its config gains settings", async () => {
+    await using tmp = await tmpdir()
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await KilocodeConfig.migrateBashPermission()
+      await writeConfig(tmp.path, { model: "test/model" }, "kilo.jsonc")
+      await KilocodeConfig.migrateBashPermission()
+
+      expect(JSON.parse(await Filesystem.readText(path.join(tmp.path, "kilo.jsonc")))).toEqual({
+        model: "test/model",
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not mark migration done for malformed config and retries after fix", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(file, "{ not valid json")
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(false)
+      expect(await Filesystem.readText(file)).toBe("{ not valid json")
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      expect(JSON.parse(await Filesystem.readText(file)).permission.bash).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not mark migration done for unreadable config and retries after fix", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await $`rm ${file}`.quiet().nothrow()
+      await $`mkdir -p ${file}`.quiet()
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(false)
+      await $`rm -rf ${file}`.quiet()
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      expect(JSON.parse(await Filesystem.readText(file)).permission.bash).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("migrates config with trailing commas", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(
+        file,
+        `{
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": {
+    "read": "allow",
+  },
+}`,
+      )
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      const text = await Filesystem.readText(file)
+      const parsed = ConfigParse.jsonc(text, file) as Record<string, any>
+      expect(parsed.permission.bash).toBe("allow")
+      expect(text).toContain(`"read": "allow"`)
     } finally {
       ;(Global.Path as { config: string }).config = prev
       await clear()

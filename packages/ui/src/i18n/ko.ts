@@ -171,6 +171,7 @@ export const dict = {
   "ui.patch.action.created": "생성됨",
   "ui.patch.action.moved": "이동됨",
   "ui.patch.action.patched": "패치됨",
+  "ui.patch.action.plan": "계획", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
   "ui.question.answer.none": "(답변 없음)",
@@ -230,11 +231,17 @@ export const dict = {
   "ui.message.deleteQueued": "대기 중인 메시지 삭제",
   "ui.messagePart.mcp.input": "입력",
   "ui.messagePart.mcp.output": "출력",
+  "ui.messagePart.board.read": "에이전트 메시지 읽기",
+  "ui.messagePart.board.all": "모든 에이전트",
+  "ui.messagePart.board.primary": "주 에이전트",
+  "ui.messagePart.board.agent": "에이전트",
+  "ui.messagePart.board.route": "{{from}}에서 {{to}}(으)로",
+  "ui.messagePart.board.empty": "에이전트 메시지 없음",
+  "ui.messagePart.board.stored": "저장만 되었습니다. 전달 및 읽기 여부는 확인되지 않았습니다.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "변경됨",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지",
   // kilocode_change end
 }

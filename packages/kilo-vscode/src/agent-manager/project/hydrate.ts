@@ -28,7 +28,7 @@ interface Hooks {
 /** Ensure every expanded background project has current state in the webview. */
 export function hydrateExpanded(projects: readonly ProjectSnapshot[], hooks: Hooks): void {
   for (const project of projects) {
-    if (project.active || !project.expanded || !project.trusted || project.missing) continue
+    if (project.active || !project.expanded || project.missing) continue
     const ctx = hooks.expand(project.id)
     if (!ctx) continue
     if (ctx.lifecycle === "ready") hooks.push(ctx)

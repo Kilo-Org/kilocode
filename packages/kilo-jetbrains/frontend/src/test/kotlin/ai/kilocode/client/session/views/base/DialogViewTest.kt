@@ -60,6 +60,29 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test setHeader with blank title hides header text`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("", "Stopped")
+            val areas = findAll<JBTextArea>(panel)
+
+            assertTrue("Blank header text area should be hidden", areas.filter { it.text.isBlank() }.all { !it.isVisible })
+            assertNotNull("Description should remain visible", areas.firstOrNull { it.text == "Stopped" && it.isVisible })
+        }
+    }
+
+    fun `test setOutlined toggles outline color`() {
+        edt {
+            val panel = InspectDialogView()
+
+            assertNotNull(panel.line())
+            panel.setOutlined(false)
+            assertNull(panel.line())
+            panel.setOutlined(true)
+            assertNotNull(panel.line())
+        }
+    }
+
     fun `test setDescription with blank hides description`() {
         edt {
             val panel = DialogView()
@@ -529,5 +552,9 @@ class DialogViewTest : BasePlatformTestCase() {
             if (child is Container) result.addAll(findAllCls(child, cls))
         }
         return result
+    }
+
+    private class InspectDialogView : DialogView() {
+        fun line() = outlineColor()
     }
 }
