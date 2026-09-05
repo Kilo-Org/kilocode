@@ -19,9 +19,14 @@ private const val CELL_GAP = 8
  * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
  * badge into hit-testing; [action] requires an id to have any effect.
  *
- * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph.
- * The glyph form is how a row shows a status that already has a settled visual language — a CI or review
+ * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph. The
+ * glyph form is how a row shows a status that already has a settled visual language — a CI or review
  * verdict — where a worded pill would only repeat what the icon already says.
+ *
+ * A glyph may still be labelled: an [icon] with a non-blank [text] renders the two side by side, in the
+ * muted row color rather than a pill's own. That is the form for a status whose icon says what is being
+ * counted and whose text says how many — where the icon alone would report that something is outstanding
+ * without saying how much of it.
  */
 internal data class ActiveListBadge(
     val text: String,
@@ -42,6 +47,8 @@ internal data class ActiveListMetrics(
     val additions: Int = 0,
     val deletions: Int = 0,
     val base: String = "",
+    /** The committed counts no longer merge into [base]. Marks the summary rather than changing it. */
+    val conflict: Boolean = false,
     val onChanges: (() -> Unit)? = null,
     val localFiles: Int = 0,
     val localAdditions: Int = 0,
