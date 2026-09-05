@@ -374,26 +374,48 @@ export async function addSessionToLifecycleWorktree(
   return null
 }
 
-/** Stop a session and remove it from Agent Manager. */
-export async function closeLifecycleSession(
+/**
+ * Stop sessions and remove them from Agent Manager.
+ *
+ * Closing one tab and closing every tab share this path, so a bulk close issues
+ * a single abort batch instead of a sequence of independent single closes.
+ */
+export async function closeLifecycleSessions(
   ctx: ProjectContext,
   host: LifecycleHost,
-  sessionId: string,
+  ids: readonly string[],
 ): Promise<null> {
   const state = ctx.peekState()
-  const dir = state?.directoryFor(sessionId) ?? host.sessions.directories()?.get(sessionId) ?? ctx.root ?? process.cwd()
-  await host.sessions.abort([sessionId])
-  host.sessions.forget(sessionId)
-  try {
-    await stopSessionProcesses(host.client(), sessionId, dir)
-  } catch (err) {
-    host.log("onCloseSession: client not available:", err)
-  }
+  const dirs = host.sessions.directories()
+  const entries = [...new Set(ids)].map((id) => ({
+    id,
+    dir: state?.directoryFor(id) ?? dirs?.get(id) ?? ctx.root ?? process.cwd(),
+  }))
+  if (entries.length === 0) return null
 
-  state?.removeSession(sessionId)
-  host.sessions.clearDirectory(sessionId)
+  await host.sessions.abort(entries.map((entry) => entry.id))
+  // Drop the sessions from state before stopping their processes. Process
+  // shutdown can be slow or unavailable, and while a closed session is still
+  // listed here any concurrent state push would restore the tabs the user just
+  // closed, because a webview with no remaining real tabs looks like a reload.
+  for (const entry of entries) {
+    host.sessions.forget(entry.id)
+    state?.removeSession(entry.id)
+    host.sessions.clearDirectory(entry.id)
+  }
   if (state) host.push()
-  host.log(`Closed session ${sessionId}`)
+  // Per-session shutdown is independent, so one slow or unavailable session
+  // must not hold up the rest of a bulk close.
+  await Promise.all(
+    entries.map(async (entry) => {
+      try {
+        await stopSessionProcesses(host.client(), entry.id, entry.dir)
+      } catch (err) {
+        host.log("closeSessions: client not available:", err)
+      }
+    }),
+  )
+  host.log(`Closed sessions ${entries.map((entry) => entry.id).join(", ")}`)
   return null
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   addPendingTab,
   addSessionTab,
+  closeAllTabs,
   closeOtherTabs,
   closeTab,
   nextTabAfterClose,
@@ -141,6 +142,10 @@ describe("local session tabs", () => {
 
   it("keeps an empty chat available after closing the final tab", () => {
     expect(closeTab(state(["s1"], "s1"), "s1", makePending())).toEqual({ ids: [pending()], active: pending() })
+  })
+
+  it("replaces all closed tabs with a fresh empty chat", () => {
+    expect(closeAllTabs(makePending())).toEqual({ ids: [pending()], active: pending() })
   })
 
   it("drops missing persisted sessions while preserving pending work", () => {

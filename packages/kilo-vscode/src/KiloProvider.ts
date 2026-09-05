@@ -352,6 +352,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private connectionGeneration = 0
   private loginAttempt = 0
   private isWebviewReady = false
+  // Mirrors the focus context key this provider publishes. Commands cannot read
+  // context keys back, and an editor panel can stay `active` while the user
+  // works in the sidebar, so routing needs this to find the real target.
+  private focused = false
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   private cachedProvidersMessage: unknown = null
@@ -789,9 +793,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.setStatsVisible(visible)
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
+    if (!visible) this.focused = false
     if (!visible && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
+  }
+
+  /** Whether this provider's webview currently holds focus. */
+  public isFocused(): boolean {
+    return this.focused
   }
 
   /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */
@@ -1041,6 +1051,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeAcknowledged = this.connectionService.onSessionAcknowledged((sessionID, eventID) => {
       this.postMessage({ type: "sessionAcknowledged", sessionID, eventID })
     })
+    this.focused = false
     this.setFocusTarget("other")
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
@@ -1627,6 +1638,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
+    if (message.type === "webviewFocusChanged") this.focused = message.focused === true
     if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
@@ -5557,6 +5569,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.focused = false
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
