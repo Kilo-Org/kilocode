@@ -55,6 +55,68 @@ const fixture = Effect.gen(function* () {
 })
 
 it.instance(
+  "scripted clarification uses native Question and cannot execute the blocked effect",
+  () =>
+    Effect.gen(function* () {
+      const { root, controller, audit } = yield* fixture
+      controller.options.scripted = [{ question_pattern: ".*", answer: "Keep secrets/ unchanged. Fix src/a.py." }]
+      yield* Effect.promise(() => controller.message(sid, { id: "u", text: "Avoid changing private assets." }))
+      const target = path.join(root, "src/a.py")
+      const result = yield* execute(
+        ctx,
+        { id: "write" },
+        { filePath: target },
+        Effect.sync(() => writeFileSync(target, "bad")),
+      ).pipe(Effect.exit)
+      expect(Exit.isFailure(result)).toBe(true)
+      expect(readFileSync(target, "utf8")).toBe("dirty = 1\n")
+      expect(authorize(controller.contract(sid), "code.modify", target)).toBe(true)
+      expect(controller.options.scripted).toHaveLength(0)
+      expect(readFileSync(audit, "utf8")).toContain('"actor":"scripted"')
+    }),
+  { git: true },
+)
+
+it.instance(
+  "native agent questions are audited and predefined text is returned through Question",
+  () =>
+    Effect.gen(function* () {
+      const { root, controller, audit } = yield* fixture
+      controller.options.scripted = [{ question_pattern: "source file", answer: "Fix src/a.py." }]
+      const service = yield* Question.Service
+      const questions = [{ header: "Target", question: "Which source file should I fix?", options: [] }]
+      const result = yield* execute(
+        ctx,
+        { id: "question" },
+        { questions },
+        service.ask({
+          sessionID: sid,
+          tool: { messageID: ctx.messageID, callID: ctx.callID! },
+          questions,
+          blocking: true,
+        }),
+      )
+      expect(result).toEqual([["Fix src/a.py."]])
+      expect(authorize(controller.contract(sid), "code.modify", path.join(root, "src/a.py"))).toBe(true)
+      const events = readFileSync(audit, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line))
+      const question = events.find((event) => event.event === "waiting_user" && event.source === "native_question")
+      expect(question.request_id).toBeTruthy()
+      expect(
+        events.some(
+          (event) =>
+            event.event === "approval_replied" &&
+            event.request_id === question.request_id &&
+            event.actor === "scripted",
+        ),
+      ).toBe(true)
+    }),
+  { git: true },
+)
+
+it.instance(
   "a forbidden suffix and a forbidden patch hunk prevent the first effect",
   () =>
     Effect.gen(function* () {
@@ -174,6 +236,53 @@ it.instance(
       )
       expect(registered(test.directory)!.contract(sid).grants).toHaveLength(0)
       if (hooks.dispose) yield* Effect.promise(() => hooks.dispose!())
+    }),
+  { git: true },
+)
+
+it.instance(
+  "a cancelled native question clears waiting evidence without granting authority",
+  () =>
+    Effect.gen(function* () {
+      const { controller, audit } = yield* fixture
+      const service = yield* Question.Service
+      const questions = [{ header: "Target", question: "Which file?", options: [] }]
+      const fiber = yield* execute(
+        ctx,
+        { id: "question" },
+        { questions },
+        service.ask({
+          sessionID: sid,
+          tool: { messageID: ctx.messageID, callID: ctx.callID! },
+          questions,
+          blocking: true,
+        }),
+      ).pipe(Effect.forkScoped)
+      const pending = yield* pollWithTimeout(
+        Effect.sync(() =>
+          readFileSync(audit, "utf8")
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line))
+            .find((event) => event.event === "waiting_user"),
+        ),
+        "native question not audited",
+      )
+      yield* service.reject(pending.request_id)
+      expect(Exit.isFailure(yield* Fiber.await(fiber))).toBe(true)
+      expect(controller.contract(sid).grants).toHaveLength(0)
+      const events = readFileSync(audit, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line))
+      expect(
+        events.some(
+          (event) =>
+            event.event === "approval_replied" &&
+            event.request_id === pending.request_id &&
+            event.outcome === "cancelled",
+        ),
+      ).toBe(true)
     }),
   { git: true },
 )

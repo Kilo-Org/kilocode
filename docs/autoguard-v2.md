@@ -86,6 +86,15 @@ pending state without automatically replaying an effect. Three equivalent
 DENYs stop for user input; acknowledging the question does not remove the
 underlying prohibition. Autonomous benchmark runs never answer these questions.
 
+Agent-initiated `question` calls use the same native service and audit stream.
+Scripted benchmark answers may either select a proposed grant with
+`operation`, `target`, `approved`, or answer one concrete question with
+`question_pattern`, `answer`. Text rules are consumed once. Their exact text
+passes through contract validation; a regex match never creates authority.
+Clarifying a pending action returns control to the agent to propose a fresh
+call. Unanswered questions remain `waiting_user`; cancellation is recorded and
+does not count as a successful scripted continuation.
+
 ## Audit and limits
 
 Events distinguish proposal, policy decision, I/O or process start, execution

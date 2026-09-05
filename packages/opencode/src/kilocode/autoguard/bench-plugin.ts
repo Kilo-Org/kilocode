@@ -12,7 +12,24 @@ function createAutoGuardBenchPlugin() {
   const scripted =
     process.env.AUTOGUARD_INTERACTION === "scripted" && file
       ? z
-          .array(z.object({ operation: z.string(), target: z.string(), approved: z.boolean() }).strict())
+          .array(
+            z.union([
+              z.object({ operation: z.string(), target: z.string(), approved: z.boolean() }).strict(),
+              z
+                .object({
+                  question_pattern: z.string().refine((value) => {
+                    try {
+                      new RegExp(value, "iu")
+                      return true
+                    } catch {
+                      return false
+                    }
+                  }),
+                  answer: z.string().min(1),
+                })
+                .strict(),
+            ]),
+          )
           .parse(JSON.parse(readFileSync(file, "utf8")))
       : undefined
   return createAutoGuardPlugin({

@@ -1,4 +1,4 @@
-import { selection, respond } from "./scripted"
+import { selection, respond, clarification, observeQuestion } from "./scripted"
 import { Effect, Exit, Cause } from "effect"
 import { backendSupport, current, run, withRunner, mutate, type Profile } from "@kilocode/sandbox"
 import { InstanceState } from "@/effect/instance-state"
@@ -117,7 +117,9 @@ export function execute<A, E, R>(
       const questions = yield* Effect.serviceOption(Question.Service)
       if (questions._tag === "None") return yield* Effect.die(new Error(`AutoGuard waiting_user: ${request.question}`))
       const scripted =
-        controller.options.scripted && selection(request, controller.options.scripted, prepared.contract.workspace)
+        controller.options.scripted &&
+        (selection(request, controller.options.scripted, prepared.contract.workspace) ??
+          (!request.candidates.length ? clarification(request.question, controller.options.scripted) : undefined))
       const asking = questions.value
         .ask({
           sessionID: ctx.sessionID,
@@ -151,12 +153,12 @@ export function execute<A, E, R>(
       const approved =
         request.candidates.length > 0 && answer.length === 1 && answer[0].length === 1 && answer[0][0] === "Разрешить"
       controller.answer(prepared, approved, scripted === undefined ? "user" : "scripted")
-      if (
+      const clarified =
         !approved &&
         answer.length === 1 &&
         answer[0].length === 1 &&
         !["Отменить", "Отказать", "Разрешить"].includes(answer[0][0])
-      ) {
+      if (clarified) {
         yield* Effect.promise(() =>
           controller.message(
             ctx.sessionID,
@@ -167,7 +169,11 @@ export function execute<A, E, R>(
       }
       if (!approved)
         return yield* Effect.die(
-          new AutoGuardDenied({ ...prepared.result, decision: "deny", reason: "The user declined this operation" }),
+          new AutoGuardDenied({
+            ...prepared.result,
+            decision: "deny",
+            reason: clarified ? "Task clarified; retry using the updated contract" : "The user declined this operation",
+          }),
         )
       prepared = yield* Effect.promise(() => controller.prepare(ctx.sessionID, call))
       if (prepared.result.decision !== "allow")
@@ -244,11 +250,56 @@ export function execute<A, E, R>(
         }),
       effect,
     ).pipe(Effect.provideService(Observation, observer))
-    return yield* (
-      ["task", "todowrite", "todoread", "question"].includes(tool.id) ? observed : run(profile, observed)
-    ).pipe(
+    let execution = ["task", "todowrite", "todoread", "question"].includes(tool.id) ? observed : run(profile, observed)
+    let nativePending: string | undefined
+    let nativeAnswered = false
+    if (tool.id === "question") {
+      const questions = yield* Effect.serviceOption(Question.Service)
+      if (questions._tag === "Some") {
+        execution = Effect.all(
+          [
+            execution,
+            observeQuestion(
+              questions.value,
+              ctx.sessionID,
+              call.callID,
+              controller.options.scripted ?? [],
+              (id) => {
+                nativePending = id
+                controller.event("waiting_user", ctx.sessionID, call.callID, {
+                  request_id: id,
+                  source: "native_question",
+                })
+              },
+              async (id, answer) => {
+                await controller.message(
+                  ctx.sessionID,
+                  { id: `answer:${id}`, text: answer },
+                  prepared.contract.uncertainties?.map((m) => m.id),
+                )
+                controller.event("approval_replied", ctx.sessionID, call.callID, {
+                  request_id: id,
+                  actor: "scripted",
+                  source: "native_question",
+                })
+                nativeAnswered = true
+              },
+            ),
+          ],
+          { concurrency: 2 },
+        ).pipe(Effect.map(([result]) => result))
+      }
+    }
+    return yield* execution.pipe(
       Effect.onExit((exit) =>
         Effect.sync(() => {
+          if (nativePending && !nativeAnswered)
+            controller.event("approval_replied", ctx.sessionID, call.callID, {
+              request_id: nativePending,
+              actor: Exit.isSuccess(exit) ? "user" : "runtime",
+              outcome: Exit.isSuccess(exit) ? "answered" : "cancelled",
+              source: "native_question",
+            })
           const output =
             Exit.isSuccess(exit) && exit.value && typeof exit.value === "object"
               ? (exit.value as { metadata?: { exit?: unknown } })
