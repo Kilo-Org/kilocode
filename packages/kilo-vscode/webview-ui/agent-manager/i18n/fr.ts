@@ -225,6 +225,11 @@ export const dict = {
   "agentManager.pr.comment.openOnGitHub": "Ouvrir sur GitHub",
   "agentManager.pr.comment.resolveFailed": "Impossible de résoudre. {{error}}",
   "agentManager.pr.comment.unresolveFailed": "Impossible d’annuler la résolution. {{error}}",
+  "agentManager.pr.conversation.title": "Commentaires de la PR",
+  "agentManager.pr.conversation.dismiss": "Ignorer",
+  "agentManager.pr.conversation.restore": "Restaurer",
+  "agentManager.pr.conversation.sendAll": "Envoyer {{count}} à l’agent",
+  "agentManager.pr.conversation.sendAllToTerminal": "Envoyer {{count}} au terminal",
   "agentManager.review.collapsedOnly": "{{count}} repliés",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
   "agentManager.review.largeFileCollapsed": "Fichier volumineux (replié)",
@@ -281,7 +286,6 @@ export const dict = {
     "Un worktree est un dossier et une branche séparés pour une tâche. Vos agents peuvent travailler côte à côte sans modifier les mêmes fichiers.",
   "agentManager.intro.graph.agent": "Agent Kilo",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "En cas de conflit",
   "agentManager.intro.stage1.title": "Votre dépôt",
   "agentManager.intro.stage1.text": "Les fichiers locaux restent inchangés",
   "agentManager.intro.stage2.title": "Exemple : deux tâches en parallèle",
@@ -292,8 +296,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Rapportez les modifications quand vous êtes prêt",
   "agentManager.intro.stage4.text":
     "Demandez à l'agent de chaque worktree d'ouvrir une pull request. Ou utilisez Apply dans le panneau de diff pour copier les modifications vers Local.",
-  "agentManager.intro.conflictText":
-    "Demandez à l'agent du worktree de fusionner sa branche de base d'origine et de résoudre les conflits, puis examinez le résultat. Évitez git stash : les stashes sont partagés entre les worktrees.",
+  "agentManager.intro.updateTitle": "Résolvez les conflits avec Kilo",
+  "agentManager.intro.updateText":
+    "Avant d'appliquer des modifications à Local ou de fusionner une pull request, exécutez /update-from-base dans la session de ce worktree. Kilo fusionne les dernières modifications de la branche de base et résout d'abord les conflits dans ce worktree.",
   "agentManager.intro.prDetection":
     "Les badges PR se mettent à jour automatiquement pour chaque branche de worktree (connexion à GitHub CLI requise).",
   "agentManager.intro.checksRunning": "Vérifications en cours",

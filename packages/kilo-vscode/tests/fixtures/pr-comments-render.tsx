@@ -1,7 +1,8 @@
 import assert from "node:assert/strict"
 import { Window } from "happy-dom"
-import type { PRStatus } from "../../webview-ui/src/types/messages"
+import type { PRStatus, WebviewMessage } from "../../webview-ui/src/types/messages"
 
+const refreshed: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -34,6 +35,13 @@ Object.assign(globalThis, {
   MessageEvent: window.MessageEvent,
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  acquireVsCodeApi: () => ({
+    postMessage: (message: WebviewMessage) => {
+      if (message.type === "agentManager.refreshPR") refreshed.push(message)
+    },
+    getState: () => undefined,
+    setState: () => undefined,
+  }),
 })
 
 const { render } = await import("solid-js/web")
@@ -252,7 +260,7 @@ const base: PRStatus = {
   files: 1,
 }
 const [badge, setBadge] = createSignal(base)
-const [project, setProject] = createSignal("project-a")
+const [project, setProject] = createSignal<string | undefined>("project-a")
 const [selection, setSelection] = createSignal<string | null>("local")
 const [visible, setVisible] = createSignal(false)
 const clicked: string[] = []
@@ -352,20 +360,92 @@ setBadge({
     unresolved: 1,
     comments: [{ id: "feedback", author: "reviewer", body: "Fix this", resolved: false }],
   },
+  conversation: [
+    {
+      id: "convo1",
+      author: "lead-reviewer",
+      body: "Consider simplifying the signature serializer",
+      state: "approved",
+      createdAt: Date.now() - 60_000,
+    },
+    {
+      id: "convo2",
+      author: "kilo-code-bot",
+      body: "Bot review summary",
+      isBot: true,
+      createdAt: Date.now() - 120_000,
+    },
+  ],
 })
 await window.happyDOM.waitUntilComplete()
 assert.equal(commentState(target.worktreeId).open, true)
 assert.equal(jumps, 1)
+
+// Conversation comments render at the bottom of the PR panel
+assert.match(second.textContent ?? "", /PR Comments/)
+assert.match(second.textContent ?? "", /lead-reviewer/)
+assert.match(second.textContent ?? "", /Consider simplifying the signature serializer/)
+assert.match(second.textContent ?? "", /Approved/)
+assert.match(second.textContent ?? "", /kilo-code-bot/)
+assert.match(second.textContent ?? "", /bot/)
+
+// Send conversation comment to agent
+const convoCard = second.querySelector('[data-thread-id="convo1"]')
+assert.ok(convoCard)
+const sendBtn = Array.from(convoCard!.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+  b.textContent?.includes("Send to agent"),
+)
+assert.ok(sendBtn)
+sendBtn!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).sent["convo1"], true)
+const lastSent = sent.at(-1) as { comments?: Array<{ id: string; author: string; body: string; reviewState?: string }> }
+assert.equal(lastSent?.comments?.[0]?.id, "convo1")
+assert.equal(lastSent?.comments?.[0]?.author, "lead-reviewer")
+assert.equal(lastSent?.comments?.[0]?.reviewState, "approved")
+assert.match(lastSent?.comments?.[0]?.body ?? "", /simplifying the signature serializer/)
+
+// Dismissing a conversation comment marks it dismissed
+const convo2Card = second.querySelector('[data-thread-id="convo2"]')
+assert.ok(convo2Card)
+// convo2 is a bot, so collapsed by default; click header to open
+convo2Card!.querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
+await window.happyDOM.waitUntilComplete()
+const dismissBtn = Array.from(convo2Card!.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+  b.textContent?.includes("Dismiss"),
+)
+assert.ok(dismissBtn)
+dismissBtn!.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(commentState(target.worktreeId).dismissed["convo2"], true)
+
 indicator()!.click()
 await window.happyDOM.waitUntilComplete()
 assert.equal(jumps, 2)
+const panel = second.querySelector(".am-pr-panel")
+const refresh = second.querySelector<HTMLButtonElement>('.am-pr-panel-actions [aria-label="Refresh"]')
+assert.ok(refresh, "refresh button is rendered in the PR header")
+refresh.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(refreshed, [{ type: "agentManager.refreshPR", ...target }])
+assert.equal(visible(), true)
+assert.equal(second.querySelector(".am-pr-panel"), panel)
 setBadge((prev) => ({ ...prev, title: "Updated" }))
 await window.happyDOM.waitUntilComplete()
+assert.equal(second.querySelector(".am-pr-panel-title")?.textContent, "Updated")
 assert.equal(jumps, 2)
 second.querySelector<HTMLElement>(".am-pr-badge-number")!.click()
 assert.equal(clicked.at(-1), "external")
 assert.ok(!clicked.includes("row"))
 setBadge((prev) => ({ ...prev, unresolvedThreads: 0 }))
 assert.equal(indicator(), null)
+setProject(undefined)
+refresh.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(refreshed, [
+  { type: "agentManager.refreshPR", ...target },
+  { type: "agentManager.refreshPR", projectId: undefined, worktreeId: target.worktreeId },
+])
+assert.equal(visible(), true)
 release()
 navigation.dispose()

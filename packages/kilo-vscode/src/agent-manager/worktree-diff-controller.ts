@@ -248,6 +248,10 @@ export class WorktreeDiffController {
     void this.activate(id, true, true)
   }
 
+  public async setVisible(visible: boolean): Promise<void> {
+    await this.controller.setVisible(visible)
+  }
+
   public stop(): void {
     this.generation++
     this.controller.stop()
