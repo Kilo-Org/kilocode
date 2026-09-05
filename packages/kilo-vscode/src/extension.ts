@@ -28,6 +28,7 @@ import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
 import { createGitExecutable } from "./util/git-executable"
 import { isCursorHost } from "./utils"
+import { sameDirectory } from "./kilo-provider-utils"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -134,6 +135,21 @@ export async function activate(context: vscode.ExtensionContext) {
     focusContext: "kilo-code.new.sidebarFocused",
   })
   provider.setRemoteService(remoteService)
+
+  const deliver = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string): void => {
+    const target = sessionID
+      ? [...tabPanels.values()].find((item) => {
+          if (item.getCurrentSessionId() !== sessionID || !item.canReceiveReviewComments()) return false
+          if (!directory) return true
+          return [item.getSessionDirectories().get(sessionID), item.getSessionGitDirectory(sessionID)]
+            .filter((value): value is string => value !== undefined)
+            .some((value) => sameDirectory(value, directory))
+        })
+      : undefined
+    const destination = target ?? provider
+    void destination.appendReviewComments(comments, autoSend, sessionID)
+  }
+  provider.setReviewCommentsHandler(deliver)
 
   // Register the webview view provider for the sidebar.
   // retainContextWhenHidden keeps the webview alive when switching to other sidebar panels.
@@ -252,25 +268,32 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  const attach = (panel: vscode.WebviewPanel) => {
+    const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+      tabTitle: panelTitleHandler(panel),
+      topBarSurface: "tab",
+    })
+    tabProvider.setRemoteService(remoteService)
+    tabProvider.setAutoApproveController(autoApprove)
+    tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
+      agentManagerProvider.continueFromSidebar(sessionId, progress),
+    )
+    tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
+      agentManagerProvider.createFromSidebar(baseBranch, branchName),
+    )
+    tabProvider.setDiffVirtualProvider(diffVirtualProvider)
+    tabProvider.setDiffViewerProvider(diffViewerProvider)
+    tabProvider.setReviewCommentsHandler(deliver)
+    tabProvider.resolveWebviewPanel(panel)
+    tabPanels.set(panel, tabProvider)
+    return tabProvider
+  }
+
   // Register serializer so "Open in Tab" restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
-          tabTitle: panelTitleHandler(panel),
-          topBarSurface: "tab",
-        })
-        tabProvider.setRemoteService(remoteService)
-        tabProvider.setAutoApproveController(autoApprove)
-        tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
-          agentManagerProvider.continueFromSidebar(sessionId, progress),
-        )
-        tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
-          agentManagerProvider.createFromSidebar(baseBranch, branchName),
-        )
-        tabProvider.setDiffVirtualProvider(diffVirtualProvider)
-        tabProvider.resolveWebviewPanel(panel)
-        tabPanels.set(panel, tabProvider)
+        const tabProvider = attach(panel)
         panel.onDidDispose(
           () => {
             console.log("[Kilo New] Tab panel restored from restart disposed")
@@ -486,19 +509,11 @@ export async function activate(context: vscode.ExtensionContext) {
       remoteService.toggle().catch((err) => console.error("[Kilo New] toggleRemote command failed:", err))
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(
-        context,
-        connectionService,
-        agentManagerProvider,
-        tabPanels,
-        diffVirtualProvider,
-        remoteService,
-        autoApprove,
-      )
+      return openKiloInNewTab(context, tabPanels, attach)
     }),
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
-      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string; directory?: string }) => {
+      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => {
         diffViewerProvider.openFromCommand(arg)
       },
     ),
@@ -658,12 +673,8 @@ export async function deactivate() {
 
 function openKiloInNewTab(
   context: vscode.ExtensionContext,
-  connectionService: KiloConnectionService,
-  agentManagerProvider: AgentManagerProvider,
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
-  diffVirtualProvider: DiffVirtualProvider,
-  remoteService: RemoteStatusService,
-  autoApprove: ReturnType<typeof registerToggleAutoApprove>,
+  attach: (panel: vscode.WebviewPanel) => KiloProvider,
 ) {
   const panel = vscode.window.createWebviewPanel(
     "kilo-code.new.TabPanel",
@@ -681,21 +692,7 @@ function openKiloInNewTab(
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
-    tabTitle: panelTitleHandler(panel),
-    topBarSurface: "tab",
-  })
-  tabProvider.setRemoteService(remoteService)
-  tabProvider.setAutoApproveController(autoApprove)
-  tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
-    agentManagerProvider.continueFromSidebar(sessionId, progress),
-  )
-  tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
-    agentManagerProvider.createFromSidebar(baseBranch, branchName),
-  )
-  tabProvider.setDiffVirtualProvider(diffVirtualProvider)
-  tabProvider.resolveWebviewPanel(panel)
-  tabPanels.set(panel, tabProvider)
+  const tabProvider = attach(panel)
 
   panel.onDidDispose(
     () => {

@@ -77,6 +77,8 @@ export type {
 
 export interface PRStatus {
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body?: string
   url: string
@@ -352,6 +354,7 @@ interface WorktreeDiffLoadingMessage {
   projectId?: string
   sessionId: string
   loading: boolean
+  reset?: boolean
 }
 
 /** Source-level notice for a diff context (e.g. snapshots disabled). */

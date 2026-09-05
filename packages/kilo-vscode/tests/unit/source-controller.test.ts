@@ -441,8 +441,8 @@ describe("SourceController.requestFile", () => {
     posted.length = 0
     await controller.requestFile("foo.ts")
 
-    const files = byType(posted, "diffViewer.diffFile")
-    expect(files[0]!.diff).toEqual(detail)
+    await controller.requestFile("missing.ts")
+    expect(byType(posted, "diffViewer.diffFile").map((msg) => msg.diff)).toEqual([detail, null])
 
     controller.stop()
   })
@@ -465,7 +465,7 @@ describe("SourceController.requestFile", () => {
         return { diffs: [] }
       },
     }
-    const { controller } = make({ workspace, "session:s1": session })
+    const { controller, posted } = make({ workspace, "session:s1": session })
 
     controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
     await controller.activate("workspace")
@@ -474,41 +474,38 @@ describe("SourceController.requestFile", () => {
     await request
 
     expect(details).toBe(0)
+    expect(byType(posted, "diffViewer.diffFile")).toEqual([])
     controller.stop()
   })
 
-  it("posts null when a pending fetchFile result is invalidated by stop", async () => {
-    let release: () => void = () => {}
+  it.each(["stop", "switch", "reactivate"])("drops pending detail after %s", async (mode) => {
+    const entered = Promise.withResolvers<void>()
+    const wait = Promise.withResolvers<void>()
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
       async fetch() {
         return { diffs: [] }
       },
       async fetchFile() {
-        await new Promise<void>((resolve) => (release = resolve))
-        return {
-          file: "foo.ts",
-          before: "a",
-          after: "b",
-          additions: 1,
-          deletions: 1,
-        }
+        entered.resolve()
+        await wait.promise
+        return { file: "foo.ts", before: "a", after: "b", additions: 1, deletions: 1 }
       },
     }
-    const { controller, posted } = make({ workspace })
+    const { controller, posted } = make({ workspace, "session:s1": { ...workspace, descriptor: SESSION_DESC } })
 
     controller.setContext({ workspaceRoot: "/repo" })
     await controller.activate("workspace")
-    posted.length = 0
     const request = controller.requestFile("foo.ts")
-    controller.stop()
-    release()
+    await entered.promise
+    if (mode === "stop") controller.stop()
+    if (mode === "switch") await controller.activate("session:s1")
+    if (mode === "reactivate") await controller.reactivate()
+    wait.resolve()
     await request
-
-    const files = byType(posted, "diffViewer.diffFile")
-    expect(files).toHaveLength(1)
-    expect(files[0]!.file).toBe("foo.ts")
-    expect(files[0]!.diff).toBeNull()
+    controller.stop()
+    await controller.requestFile("foo.ts")
+    expect(byType(posted, "diffViewer.diffFile")).toEqual([])
   })
 })
 

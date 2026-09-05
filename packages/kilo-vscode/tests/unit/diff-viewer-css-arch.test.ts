@@ -23,7 +23,12 @@ import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const FULL_SCREEN_DIFF_VIEW = path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx")
-const REQUIRED = ["../agent-manager/agent-manager.css", "../agent-manager/agent-manager-review.css"] as const
+const REQUIRED = [
+  "../agent-manager/agent-manager.css",
+  "../agent-manager/agent-manager-review.css",
+  "../agent-manager/pr/pr-panel.css",
+  "./remote-comments.css",
+] as const
 
 describe("FullScreenDiffView — CSS imports", () => {
   it("imports every stylesheet required to render correctly", () => {

@@ -3,6 +3,7 @@ import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEnt
 import { escapeGlob, isAbsolutePath } from "../path-utils"
 import { validateFiles } from "./file-links"
 import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
+import { isPRReviewComment, parseReview, type PRReviewCommentData } from "../shared/review-comments"
 
 type EditorOpenMessage = {
   type?: string
@@ -28,6 +29,16 @@ function openDiffVirtual(provider: DiffVirtualProvider | undefined, diff: unknow
   const file = diff as DiffVirtualFile
   file.initialDiffStyle = initialDiffStyle === "split" ? "split" : "unified"
   provider.open(file)
+}
+
+function openReview(
+  message: EditorOpenMessage & { comment?: unknown },
+  open?: (comment: PRReviewCommentData, sessionID?: string) => void,
+): void {
+  if (typeof message.content !== "string") return
+  if (message.sessionID !== undefined && typeof message.sessionID !== "string") return
+  const comment = parseReview({ version: 1, comments: [message.comment] }, message.content)?.comments[0]
+  if (comment && isPRReviewComment(comment)) open?.(comment, message.sessionID)
 }
 
 function previewImage(dir: vscode.Uri | undefined, dataUrl: string, filename: string): void {
@@ -76,15 +87,21 @@ export function handleEditorAction(
     filename?: string
     id?: string
     paths?: string[]
+    comment?: unknown
   },
   opts: {
     dir: (sessionID?: string) => string
     diff?: DiffVirtualProvider
     openMarkdown?: (file: string, sessionID?: string) => boolean
+    openPRComment?: (comment: PRReviewCommentData, sessionID?: string) => void
     storage?: vscode.Uri
     post?: (msg: unknown) => void
   },
 ): boolean {
+  if (message.type === "openPRComment") {
+    openReview(message, opts.openPRComment)
+    return true
+  }
   if (message.type === "openFile") {
     // Resolve the directory from the session the file reference was rendered
     // for (when the webview provides it), not whatever session happens to be

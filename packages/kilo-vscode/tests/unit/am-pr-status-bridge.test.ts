@@ -22,11 +22,14 @@ const pr: PRStatus = {
   files: 0,
 }
 
-function page(nodes: unknown[], total = nodes.length, cursor?: string) {
+const refs = { baseRefOid: "a".repeat(40), headRefOid: "b".repeat(40) }
+
+function page(nodes: unknown[], total = nodes.length, cursor?: string, revision = refs) {
   return {
     data: {
       repository: {
         pullRequest: {
+          ...revision,
           reviewThreads: {
             nodes,
             totalCount: total,
@@ -63,6 +66,71 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
 }
 
 describe("PRStatusPoller batched GitHub queries", () => {
+  it("forwards the actual branch for null PR results", async () => {
+    const values: Array<{ pr: PRStatus | null; branch?: string }> = []
+    const branches: string[] = []
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [{ id: "wt1", path: "/repo", branch: "HEAD" }] as never,
+      getWorkspaceRoot: () => "/repo",
+      onStatus: (_id, status, _error, branch) => values.push({ pr: status, branch }),
+      getBranch: async () => "feature/real",
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      target: (id: string) => { id: string; path: string; branch: string }
+      cachedFetchPR: (branch: string) => Promise<null>
+      fetchOne: (id: string) => Promise<void>
+    }
+    internal.target = () => ({ id: "wt1", path: "/repo", branch: "HEAD" })
+    internal.cachedFetchPR = async (branch) => {
+      branches.push(branch)
+      return null
+    }
+
+    await internal.fetchOne("wt1")
+
+    expect(values).toEqual([{ pr: null, branch: "feature/real" }])
+    expect(branches).toEqual(["feature/real"])
+    poller.stop()
+  })
+
+  it("reports resolved and unverified error branches without suppressing branch changes", async () => {
+    const values: Array<{ error?: string; branch?: string }> = []
+    const tree = { id: "wt1", path: process.cwd(), branch: "HEAD", parentBranch: "", createdAt: "" }
+    let branch: string | Error | undefined
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [tree],
+      getWorkspaceRoot: () => tree.path,
+      getBranch: async () => {
+        if (branch instanceof Error) throw branch
+        return branch
+      },
+      onStatus: (_id, _pr, error, branch) => values.push({ error, branch }),
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      fetchOne: (id: string) => Promise<void>
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    internal.gh = async () => {
+      throw new Error("offline")
+    }
+
+    for (const name of ["feature/a", "feature/a", "feature/b", undefined, "feature/c", new Error("offline")]) {
+      branch = name
+      await expect(internal.fetchOne("wt1")).rejects.toThrow("offline")
+    }
+
+    expect(values).toEqual([
+      { error: "fetch_failed", branch: "feature/a" },
+      { error: "fetch_failed", branch: "feature/b" },
+      { error: "fetch_failed", branch: undefined },
+      { error: "fetch_failed", branch: "feature/c" },
+      { error: "fetch_failed", branch: undefined },
+    ])
+    poller.stop()
+  })
+
   it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
     let root = "/alpha"
     const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }
@@ -182,30 +250,122 @@ describe("PRStatusPoller unresolved threads", () => {
         102,
         after ? undefined : "next",
       )
+      if (active && !after)
+        Object.assign(data.data.repository.pullRequest, {
+          comments: { nodes: [{ id: "conversation", body: "General comment" }] },
+          reviews: { nodes: [{ id: "review", body: "Review summary", state: "CHANGES_REQUESTED" }] },
+        })
       return { stdout: JSON.stringify(data), stderr: "" }
     }
     if (active) bridge.poller.setActiveWorktreeId("wt1")
     await internal.fetchOne("wt1")
     const status = bridge.snapshot().get("wt1")
+    expect(status).toMatchObject(refs)
     expect(status?.unresolvedThreads).toBe(2)
     expect(calls).toHaveLength(2)
     expect(calls.at(1)).toContain("cursor=next")
     for (const args of calls) {
       const query = args.find((arg) => arg.startsWith("query=")) ?? ""
+      expect(query).toContain("baseRefOid")
+      expect(query).toContain("headRefOid")
       expect(query.includes("comments(first: 10)")).toBe(active)
       expect(query.includes("body")).toBe(active)
+      expect(query.includes("comments(last: 50)")).toBe(active && !args.includes("cursor=next"))
+      expect(query.includes("reviews(last: 50)")).toBe(active && !args.includes("cursor=next"))
     }
     if (active) {
       expect(status?.comments).toMatchObject({ total: 102, unresolved: 2 })
       expect(status?.comments?.comments).toHaveLength(101)
       expect(status?.comments?.comments.at(-1)).toMatchObject({ body: "Reviewed", replies: [{ body: "Agreed" }] })
+      expect(status?.conversation).toMatchObject([
+        { id: "conversation", body: "General comment" },
+        { id: "review", body: "Review summary", state: "changes_requested" },
+      ])
     }
-    if (!active) expect(status?.comments).toBeUndefined()
+    if (!active) {
+      expect(status?.comments).toBeUndefined()
+      expect(status?.conversation).toBeUndefined()
+    }
     sent.length = 0
     for (const node of nodes) node.isResolved = true
     await internal.fetchOne("wt1")
     expect(sent).toEqual([expect.objectContaining({ pr: expect.objectContaining({ unresolvedThreads: 0 }) })])
   })
+
+  it.each(["baseRefOid", "headRefOid"] as const)(
+    "rejects mixed %s pages without carrying cached comments",
+    async (field) => {
+      const { bridge, onStatus, worktrees } = harness()
+      worktrees.at(0)!.path = process.cwd()
+      onStatus("wt1", {
+        ...pr,
+        ...refs,
+        comments: {
+          total: 1,
+          unresolved: 1,
+          comments: [
+            {
+              id: "old",
+              threadId: "old",
+              author: "reviewer",
+              body: "Cached body",
+              resolved: false,
+              outdated: false,
+            },
+          ],
+        },
+      })
+      const revision = { ...refs, [field]: "c".repeat(40) }
+      const internal = bridge.poller as unknown as {
+        fetchOne: (id: string) => Promise<void>
+        gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+        shell: () => Promise<never>
+      }
+      let reads = 0
+      internal.shell = async () => {
+        reads++
+        throw new Error("Preview must wait for all thread pages")
+      }
+      internal.gh = async (args) => {
+        if (args[0] === "repo") return { stdout: JSON.stringify({ owner: { login: "x" }, name: "y" }), stderr: "" }
+        if (args[0] === "pr")
+          return {
+            stdout: JSON.stringify({ ...pr, ...refs, statusCheckRollup: [], reviewRequests: [], reviews: [] }),
+            stderr: "",
+          }
+        const after = args.includes("cursor=next")
+        return {
+          stdout: JSON.stringify(
+            page(
+              [
+                {
+                  id: after ? "second" : "first",
+                  isResolved: false,
+                  isOutdated: false,
+                  path: "file.ts",
+                  diffSide: "RIGHT",
+                  line: 1,
+                  comments: { nodes: [{ id: after ? "second-comment" : "first-comment", body: "Current body" }] },
+                },
+              ],
+              2,
+              after ? undefined : "next",
+              after ? revision : refs,
+            ),
+          ),
+          stderr: "",
+        }
+      }
+      bridge.poller.setActiveWorktreeId("wt1")
+      await internal.fetchOne("wt1")
+      const status = bridge.snapshot().get("wt1")
+      expect(status).toMatchObject(revision)
+      expect(status?.comments).toBeUndefined()
+      expect(status?.unresolvedThreads).toBeUndefined()
+      expect(reads).toBe(0)
+      bridge.poller.stop()
+    },
+  )
 
   it("leaves the count unknown when a later page fails", async () => {
     const { bridge, sent, worktrees } = harness()

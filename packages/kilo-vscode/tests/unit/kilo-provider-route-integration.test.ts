@@ -3,6 +3,8 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 import { ProjectRouteService } from "../../src/agent-manager/project/route"
+import type { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
+import type { PRReviewCommentData } from "../../src/shared/review-comments"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -77,6 +79,8 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       onModelSelectorExpandedChanged: () => () => undefined,
       onClearPendingPrompts: () => () => undefined,
       registerDirectoryProvider: () => () => undefined,
+      unregisterVisible: () => undefined,
+      unregisterAttached: () => undefined,
       getServerInfo: () => ({ port: 12345 }),
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
       getConnectionState: () => "connected" as const,
@@ -109,6 +113,7 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   startStatsPolling: () => void
   contextSessionID: string | undefined
+  openChanges: (sessionID?: string, turnID?: string, comment?: PRReviewCommentData) => Promise<void>
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
   refreshSessionDetails: (sessionID: string, dir: string) => void
@@ -141,6 +146,92 @@ function connect(internal: ProviderInternals): void {
 }
 
 describe("KiloProvider route integration", () => {
+  const comment: PRReviewCommentData = {
+    id: "thread-one",
+    origin: "pr",
+    author: "reviewer",
+    body: "Keep the selection while loading.",
+    file: "src/selection.ts",
+    line: 4,
+  }
+
+  it("opens PR comments beside a chat tab and sends them back to the originating session", async () => {
+    const { connection } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      rootDirectory: () => "/active/root",
+      topBarSurface: "tab",
+    })
+    provider.setSessionDirectory("origin", "/repo/origin")
+    const opened: NonNullable<Parameters<DiffViewerProvider["openFromCommand"]>[0]>[] = []
+    provider.setDiffViewerProvider({ openFromCommand: (args) => opened.push(args) } as DiffViewerProvider)
+    const internal = provider as unknown as ProviderInternals
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+    internal.isWebviewReady = true
+    provider.setReviewCommentsHandler(() => {
+      throw new Error("A live origin must not use the fallback")
+    })
+
+    await internal.openChanges("origin", undefined, comment)
+    expect(opened).toHaveLength(1)
+    expect(opened[0]).toMatchObject({ sessionId: "origin", directory: "/repo/origin", beside: true, comment })
+    internal.contextSessionID = "another-session"
+    opened[0]!.onComments?.([comment], true)
+    expect(posted).toContainEqual({
+      type: "appendReviewComments",
+      comments: [comment],
+      autoSend: true,
+      sessionID: "origin",
+    })
+  })
+
+  it.each([
+    ["origin", "origin", true],
+    ["sidebar-pending:draft", undefined, false],
+    ["pending:draft", undefined, false],
+  ] as const)(
+    "keeps PR comment delivery alive after the originating provider is disposed (%s)",
+    async (id, target, send) => {
+      const { connection } = mockConnection()
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => "/active/root",
+      })
+      provider.setSessionDirectory(id, "/repo/origin")
+      const opened: NonNullable<Parameters<DiffViewerProvider["openFromCommand"]>[0]>[] = []
+      const received: unknown[] = []
+      provider.setDiffViewerProvider({ openFromCommand: (args) => opened.push(args) } as DiffViewerProvider)
+      const stable = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) =>
+        received.push({ comments, autoSend, sessionID, directory })
+      provider.setReviewCommentsHandler(stable)
+
+      const internal = provider as unknown as ProviderInternals
+      await internal.openChanges(id, undefined, comment)
+      provider.dispose()
+      expect(provider.canReceiveReviewComments()).toBe(false)
+      opened[0]!.onComments?.([comment], true)
+
+      expect(received).toEqual([{ comments: [comment], autoSend: send, sessionID: target, directory: "/repo/origin" }])
+    },
+  )
+
+  it("does not open a PR comment in an unrelated project for an ambiguous session", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerProject("b", "/repo/b", 1)
+    routes.registerSession({ projectId: "a", sessionId: "same" }, "/repo/a", 1)
+    routes.registerSession({ projectId: "b", sessionId: "same" }, "/repo/b", 1)
+    const { connection } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const opened: unknown[] = []
+    provider.setDiffViewerProvider({ openFromCommand: (args) => opened.push(args) } as DiffViewerProvider)
+    const internal = provider as unknown as ProviderInternals
+    await internal.openChanges("same", undefined, comment)
+    expect(opened).toEqual([])
+  })
+
   it("finds a nested Git root when the workspace parent is not a repo", async () => {
     await withNestedRepo(async (root) => {
       const source = path.join(root, "src")

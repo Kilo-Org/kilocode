@@ -10,7 +10,7 @@ import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
 import { resolveComment, unresolveComment } from "./pr/PRActions"
-import { ghErrorReason, mergePRStatus } from "./pr/am-pr-utils"
+import { ghErrorReason, mergePRStatus, retainPRStatus } from "./pr/am-pr-utils"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -219,7 +219,7 @@ function accept(bridge: PRStatusBridge, host: PRBridgeHost, id: string, pr: PRSt
   // PR cannot leave a branch, so on the same branch the known PR is kept:
   // forwarding pr:null would unmount the panel and throw away the comment the
   // user is reading.
-  if (!pr && prev && branch !== undefined && bridge["branches"].get(id) === branch) {
+  if (prev && retainPRStatus(prev, bridge["branches"].get(id), branch, pr)) {
     host.log(`PR status: keeping PR #${prev.number} for ${id}, empty result on ${branch}`)
     return
   }

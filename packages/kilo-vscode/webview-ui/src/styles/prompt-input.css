@@ -131,8 +131,8 @@
 }
 
 .prompt-review-row-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 5px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
   display: flex;
@@ -211,6 +211,18 @@
   gap: 6px;
   padding: 0 6px 6px 30px;
   min-width: 0;
+}
+
+.prompt-review-comments [data-component="avatar"] {
+  border-radius: 50%;
+}
+
+.prompt-review-row-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--border-weak-base, var(--vscode-panel-border));
 }
 
 .prompt-review-row-path {

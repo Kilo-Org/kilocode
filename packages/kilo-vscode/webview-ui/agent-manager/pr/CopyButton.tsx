@@ -16,7 +16,7 @@ export function CopyButton(props: { text: string; label?: string; class?: string
       icon={copied() ? "check" : "copy"}
       size="small"
       variant="ghost"
-      label={props.label ?? "Copy"}
+      aria-label={props.label ?? "Copy"}
       class={props.class}
       onClick={copy}
     />

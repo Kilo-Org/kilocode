@@ -235,6 +235,22 @@
   min-width: 0;
 }
 
+.am-pr-comment-inline .am-pr-comment-head {
+  flex-wrap: wrap;
+}
+
+.am-pr-comment-inline .am-pr-comment-author {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-wrap: anywhere;
+}
+
+.am-pr-comment-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .am-pr-comment-head:hover {
   background: var(--vscode-list-hoverBackground);
 }
@@ -338,6 +354,14 @@
   padding-left: 0;
 }
 
+.am-pr-comment [data-component="avatar"] {
+  border-radius: 50%;
+}
+
+.am-pr-comment-reply-head {
+  gap: 6px;
+}
+
 .am-pr-comment-error {
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-testing-iconFailed, #f87171);
@@ -387,6 +411,24 @@
   border-radius: 4px;
   overflow: hidden;
   margin: 6px 8px 0;
+}
+
+.am-pr-diff-thread {
+  margin: 0;
+}
+
+.am-pr-diff-file {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  color: var(--text-weak);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-11);
+  overflow-wrap: anywhere;
+}
+
+.am-pr-thread-annotation {
+  padding: 8px;
+  background: var(--vscode-editor-background);
 }
 
 .am-pr-diff-context-marker {

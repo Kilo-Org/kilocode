@@ -67,6 +67,8 @@ import {
   failedPrompt,
   movePromptDraft,
   pendingDraftKey,
+  promotePromptDraft,
+  promptDraftKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../utils/prompt-drafts"
@@ -843,6 +845,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const appendReviews = (message: Extract<ExtensionMessage, { type: "appendReviewComments" }>) => {
+    const target = message.sessionID
+      ? promptDraftKey(boxKey(), message.sessionID, {
+          draft: props.pendingSessionID ?? session.draftSessionID(),
+          current: session.currentSessionID(),
+        })
+      : draftKey()
+    if (!target) return
+    if (target !== draftKey()) {
+      reviewDrafts.set(target, mergeReviewComments(reviewDrafts.get(target) ?? [], message.comments))
+      return
+    }
     const empty =
       !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0 && browsers().length === 0
     replaceReviewComments(mergeReviewComments(reviewComments(), message.comments))
@@ -859,11 +872,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const source = scopeDraftKey(boxKey(), raw)
     const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
     if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
+    const from = reviewDrafts.get(source)
+    const to = reviewDrafts.get(target)
+    if (from && to) {
+      reviewDrafts.set(target, mergeReviewComments(from, to))
+      reviewDrafts.delete(source)
+    }
     movePromptDraft(
       { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references },
       source,
       target,
     )
+    if (message.draftID) promotePromptDraft(boxKey(), message.draftID, message.session.id)
     if (
       message.draftID &&
       !session.currentSessionID() &&
@@ -882,9 +902,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "appendChatBoxMessage") appendBox(message)
 
-    if (message.type === "appendReviewComments") {
-      appendReviews(message)
-    }
+    if (message.type === "appendReviewComments") appendReviews(message)
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
@@ -1449,7 +1467,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           comments={reviewComments()}
           sessionID={sid()}
           onRemove={removeReviewComment}
-          onClear={clearReviewComments}
+          onClear={(ids) => replaceReviewComments(reviewComments().filter((item) => !ids.includes(item.id)))}
         />
       </Show>
       <Show when={browsers().length > 0}>
