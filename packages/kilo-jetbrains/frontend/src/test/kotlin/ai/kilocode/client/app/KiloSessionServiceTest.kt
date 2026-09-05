@@ -207,6 +207,24 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         assertEquals(SessionActivityKindDto.PERMISSION, result["ses_1"]?.kind)
     }
 
+    fun `test a session entering attention does not hold back the rest of the snapshot`() = runBlocking(Dispatchers.Default) {
+        service = KiloSessionService(project, scope, rpc, grace = 5_000)
+
+        // One snapshot, three sessions: only the one newly waiting on the user may be held.
+        rpc.activity.value = mapOf(
+            "ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.PERMISSION),
+            "ses_2" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+            "ses_3" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING),
+        )
+
+        // A 5s grace would time this out if the whole map were delayed with the permission.
+        val settled = withTimeout(1_000) { service.activity.first { it.size == 2 } }
+
+        assertEquals(SessionActivityKindDto.ERROR, settled["ses_2"]?.kind)
+        assertEquals(SessionActivityKindDto.RUNNING, settled["ses_3"]?.kind)
+        assertNull(settled["ses_1"])
+    }
+
     fun `test clearing activity is not delayed`() = runBlocking(Dispatchers.Default) {
         service = KiloSessionService(project, scope, rpc, grace = 5_000)
         rpc.activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING))

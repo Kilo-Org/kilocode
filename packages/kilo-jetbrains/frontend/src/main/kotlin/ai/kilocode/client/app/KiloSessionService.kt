@@ -86,39 +86,58 @@ class KiloSessionService internal constructor(
         combine(stream { statuses() }, removed) { map, gone -> map - gone }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
-    // Last snapshot published downstream, and when the attention it is still holding back was first
-    // seen. Touched only from the single upstream collector below, so no synchronisation.
+    // Last snapshot published downstream, and per session the moment the attention still being held
+    // back was first seen. Touched only from the single upstream collector below, so no
+    // synchronisation.
     private var shown = emptyMap<String, SessionActivityDto>()
-    private var since = 0L
+    private val since = mutableMapOf<String, Long>()
 
     /**
      * Live session activity map from backend global events, minus sessions deleted this run.
      *
      * A permission the client answers itself (auto-approve) still goes through a real
      * `permission.asked`/`permission.replied` pair, so every auto-approved edit would otherwise swap
-     * every badge to the attention glyph and straight back. A kind that newly becomes an attention
-     * state is held for [ATTENTION_GRACE_MS]; a newer snapshot cancels the wait, so a machine-answered
-     * permission is never published. Clearing, RUNNING and ERROR transitions are never delayed, and
-     * [since] survives the cancellation so continuous churn cannot starve a real prompt.
+     * every badge to the attention glyph and straight back. A session that newly enters an attention
+     * state therefore keeps its previously published kind for [ATTENTION_GRACE_MS]; a machine-answered
+     * permission resolves inside that window and is never published.
+     *
+     * The hold is per session, not per snapshot: every other session in the same snapshot — and every
+     * clearing, RUNNING or ERROR transition — is published immediately. [since] is keyed per session
+     * and survives further snapshots, so churn cannot starve a real prompt.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val activity: StateFlow<Map<String, SessionActivityDto>> =
         combine(stream { activity() }, removed) { map, gone -> map - gone }
             .transformLatest { next ->
-                if (rising(shown, next)) {
-                    if (since == 0L) since = System.currentTimeMillis()
-                    val wait = grace - (System.currentTimeMillis() - since)
-                    if (wait > 0) delay(wait)
+                // Publish what is ready now, then wait out the earliest held session and re-settle
+                // the same snapshot. A newer snapshot cancels the wait, which is why [since] is kept.
+                while (true) {
+                    emit(settle(next))
+                    val first = since.values.minOrNull() ?: return@transformLatest
+                    delay((first + grace - System.currentTimeMillis()).coerceAtLeast(1))
                 }
-                shown = next
-                since = 0L
-                emit(next)
             }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
-    /** Whether [next] turns some session into an attention state that [prev] did not already show. */
-    private fun rising(prev: Map<String, SessionActivityDto>, next: Map<String, SessionActivityDto>): Boolean =
-        next.any { (id, dto) -> waiting(dto.kind) && !waiting(prev[id]?.kind) }
+    /**
+     * The snapshot to publish for [next]: every entry as it arrived, except sessions that just
+     * entered an attention state and have not held it for [grace] yet, which keep the kind they were
+     * last published with (or stay absent when they had none). Records the held sessions in [since]
+     * and updates [shown].
+     */
+    private fun settle(next: Map<String, SessionActivityDto>): Map<String, SessionActivityDto> {
+        val now = System.currentTimeMillis()
+        val rising = next.filterValues { waiting(it.kind) }.keys.filterTo(mutableSetOf()) { !waiting(shown[it]?.kind) }
+        // The first sighting starts the clock; a later snapshot still holding the attention keeps the
+        // original deadline instead of extending it.
+        val held = rising.filterTo(mutableSetOf()) { now - since.getOrPut(it) { now } < grace }
+        since.keys.retainAll(held)
+        val settled = if (held.isEmpty()) next else buildMap {
+            next.forEach { (id, dto) -> if (id in held) shown[id]?.let { put(id, it) } else put(id, dto) }
+        }
+        shown = settled
+        return settled
+    }
 
     private fun waiting(kind: SessionActivityKindDto?): Boolean =
         kind == SessionActivityKindDto.PERMISSION ||
