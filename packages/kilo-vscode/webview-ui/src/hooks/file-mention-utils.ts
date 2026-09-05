@@ -81,9 +81,9 @@ type MentionEntry = (typeof entries)[number]["result"]
 
 export type MentionResult =
   | MentionEntry
-  | { type: "file"; value: string }
-  | { type: "opened-file"; value: string }
-  | { type: "folder"; value: string }
+  | { type: "file"; value: string; root?: string; relative?: string }
+  | { type: "opened-file"; value: string; root?: string; relative?: string }
+  | { type: "folder"; value: string; root?: string; relative?: string }
   | { type: "session"; value: string; session: SessionSearchItem }
 
 /**
@@ -140,6 +140,13 @@ function labels(item: MentionResult): string[] {
   const entry = entries.find((candidate) => candidate.result.type === item.type)
   if (entry) return [...("label" in item ? [item.label] : []), item.value, ...entry.aliases]
   if (item.type === "session") return [item.session.title, item.session.worktreeName ?? ""].filter(Boolean)
+  // Files in another workspace folder carry an absolute path so they can be
+  // mentioned without being auto-attached. Score them on their path within that
+  // folder: including the filesystem prefix would let a query match a username
+  // or a parent directory on every file under it.
+  if (item.type === "file" || item.type === "folder" || item.type === "opened-file") {
+    return [item.relative ?? item.value]
+  }
   return [item.value]
 }
 
@@ -205,9 +212,10 @@ export function buildMentionResults(
   const references = entries.filter((entry) => entry.gate === null || gates[entry.gate]).map((entry) => entry.result)
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
-    if (item.type === "folder") return { type: "folder", value: item.path }
-    if (item.type === "opened-file") return { type: "opened-file", value: item.path }
-    return { type: "file", value: item.path }
+    const owner = { ...(item.root ? { root: item.root } : {}), ...(item.relative ? { relative: item.relative } : {}) }
+    if (item.type === "folder") return { type: "folder", value: item.path, ...owner }
+    if (item.type === "opened-file") return { type: "opened-file", value: item.path, ...owner }
+    return { type: "file", value: item.path, ...owner }
   })
   return rankMentionResults(query, [...references, ...sessions, ...results])
 }
