@@ -1,6 +1,6 @@
 import { Plugin } from "@opencode-ai/plugin/tui"
 import { createClient } from "@kilocode/client"
-import { createEffect, createMemo, createSignal, on, onCleanup, Show, Switch, Match } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { MemoryRpc, type MemoryRpcStatus } from "../memory-rpc"
 import { memoryUiRequestOptions, subscribeMemoryUiRefresh } from "./memory"
 
@@ -12,6 +12,21 @@ export type MemorySidebarOptions = {
 }
 
 type MemoryRpcClient = ReturnType<MemorySidebarClient["rpc"]>
+
+/**
+ * Compact status row, matching the current-main sidebar row contract. v1 tones
+ * Enabled by per-session activity (durable message markers or a 5s save pulse);
+ * v2 has no per-session evidence seam, so Enabled honestly stays muted.
+ */
+export function memoryRow(input: { enabled?: boolean; loading?: boolean }) {
+  if (input.enabled === undefined) {
+    return input.loading
+      ? ({ label: "Loading", tone: "muted" } as const)
+      : ({ label: "Unavailable", tone: "error" } as const)
+  }
+  if (!input.enabled) return { label: "Disabled", tone: "muted" } as const
+  return { label: "Enabled", tone: "muted" } as const
+}
 
 /** Render the current project-memory state in the native session sidebar. */
 export function MemorySidebar(props: {
@@ -101,50 +116,20 @@ export function MemorySidebar(props: {
     stopExecutionEvents()
   })
 
+  const row = createMemo(() =>
+    memoryRow({ enabled: unavailable() ? undefined : status()?.state.enabled, loading: loading() }),
+  )
+
+  // Sidebar slot roots must be stable; a conditional root never mounts.
   return (
     <box>
       <text fg={theme.text.default}>
         <b>Memory</b>
       </text>
-      <Switch>
-        <Match when={loading()}>
-          <text fg={theme.text.subdued}>Loading</text>
-        </Match>
-        <Match when={unavailable()}>
-          <text fg={theme.text.feedback.warning.default}>Unavailable</text>
-        </Match>
-        <Match when={status()?.state.enabled === false}>
-          <text fg={theme.text.subdued}>Disabled</text>
-        </Match>
-        <Match when={status()?.state.enabled === true}>
-          <Show when={status()}>
-            {(value) => (
-              <>
-                <text fg={theme.text.feedback.success.default}>Enabled</text>
-                <text fg={theme.text.subdued}>Auto: {value().state.autoConsolidate ? "On" : "Off"}</text>
-                <text fg={theme.text.subdued}>Data: {value().index.tokens.toLocaleString()} estimated tokens</text>
-                <Show when={value().activity?.lastInjectedAt != null}>
-                  <text fg={theme.text.subdued}>Injected: {value().activity?.lastInjectedTokens} estimated tokens</text>
-                </Show>
-                <Show when={value().activity?.lastSessionSavedAt != null}>
-                  <text fg={theme.text.subdued}>
-                    Last save:{" "}
-                    {new Date(value().activity!.lastSessionSavedAt!).toLocaleString(undefined, {
-                      month: "numeric",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </text>
-                </Show>
-                <Show when={value().index.truncated}>
-                  <text fg={theme.text.subdued}>Data truncated</text>
-                </Show>
-              </>
-            )}
-          </Show>
-        </Match>
-      </Switch>
+      <box flexDirection="row" gap={1}>
+        <text fg={row().tone === "error" ? theme.text.feedback.error.default : theme.text.subdued}>•</text>
+        <text fg={theme.text.default}>{row().label}</text>
+      </box>
     </box>
   )
 }

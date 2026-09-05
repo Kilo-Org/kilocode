@@ -65,13 +65,10 @@ export function createPlanPolicy(options: PlanPolicyOptions = {}) {
             { action: "websearch", resource: "*", effect: "allow" },
             { action: "semantic_search", resource: "*", effect: "allow" },
             {
+              // Permission resources for in-Location mutations are Location-relative
+              // (LocationMutation.Target.resource), never absolute.
               action: "edit",
-              resource: path.join(ctx.location.directory, ".kilo", "plans", "*.md"),
-              effect: "allow",
-            },
-            {
-              action: "external_directory",
-              resource: path.join(ctx.location.directory, ".kilo", "plans", "*"),
+              resource: ".kilo/plans/*.md",
               effect: "allow",
             },
             { action: "shell", resource: "*", effect: "deny" },
@@ -197,12 +194,13 @@ function validatePlanPath(file: string, directory: string) {
       const plans = path.join(kilo, "plans")
       const candidate = path.resolve(directory, file)
       if (!contains(plans, candidate)) throw new Error("Plan file must be under this project's .kilo/plans directory")
-      const [project, kiloStat, plansStat, stat] = await Promise.all([
+      const [project, kiloStat, plansStat] = await Promise.all([
         realpath(directory),
-        lstat(kilo),
-        lstat(plans),
-        lstat(candidate),
+        optionalStat(kilo),
+        optionalStat(plans),
       ])
+      if (!kiloStat || !plansStat)
+        throw new Error("Plan directory does not exist yet; save the plan under .kilo/plans before calling plan_exit")
       if (
         !kiloStat.isDirectory() ||
         kiloStat.isSymbolicLink() ||
@@ -210,6 +208,8 @@ function validatePlanPath(file: string, directory: string) {
         plansStat.isSymbolicLink()
       )
         throw new Error("Plan directory must be a real directory within this project")
+      const stat = await optionalStat(candidate)
+      if (!stat) throw new Error(`Plan file does not exist yet; save the plan to ${file} before calling plan_exit`)
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0)
         throw new Error("Plan file must be a non-empty regular file")
       const root = await realpath(plans)
@@ -219,6 +219,13 @@ function validatePlanPath(file: string, directory: string) {
       return resolved
     },
     catch: (error) => new Tool.Error({ message: error instanceof Error ? error.message : "Invalid Plan file" }),
+  })
+}
+
+function optionalStat(target: string) {
+  return lstat(target).catch((error) => {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+    return undefined
   })
 }
 

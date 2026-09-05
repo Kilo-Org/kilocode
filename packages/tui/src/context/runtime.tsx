@@ -8,6 +8,8 @@ export type TuiModelGroup = Readonly<{
   category?: string
   order?: number
   footer?: string
+  // kilocode_change - host presentation policy can hide a model from every dialog section
+  hidden?: boolean
 }>
 export type TuiModelPicker = Readonly<{
   preferredProviderID?: string

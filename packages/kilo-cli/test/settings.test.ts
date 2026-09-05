@@ -362,6 +362,78 @@ test("refuses symlinked or out-of-boundary project targets", async () => {
   expect(outside.reason).toContain("outside its project boundary")
 })
 
+test("the Kilo-only training-model key reads raw, edits, resets, and never echoes a wrong-type value", async () => {
+  await using host = await isolated()
+  const invalid = "sk-wrong-type-value"
+  await host.writeProfile(`{ "hide_prompt_training_models": "${invalid}", "shell": "/bin/dash" }\n`)
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+
+  const invalidState = fieldOf(await store.read(), "hide_prompt_training_models")
+  // The arbitrary stored value is explained with fixed text, never carried.
+  expect(invalidState.invalid).toBe("The stored hide_prompt_training_models value is not a boolean and is ignored")
+  expect(invalidState.values).toEqual({})
+  expect(invalidState.source).toBe("unset")
+  // Native fields beside it still resolve canonically through the host pipeline.
+  expect(fieldOf(await store.read(), "shell").values).toEqual({ profile: "/bin/dash" })
+  expect(JSON.stringify(await store.read())).not.toContain(invalid)
+
+  await store.set({ scope: "profile", key: "hide_prompt_training_models", value: true })
+  expect(await Bun.file(host.layout.config).json()).toEqual({ hide_prompt_training_models: true, shell: "/bin/dash" })
+  const valid = fieldOf(await store.read(), "hide_prompt_training_models")
+  expect(valid.values).toEqual({ profile: true })
+  expect(valid.source).toBe("profile")
+  expect(valid.invalid).toBeUndefined()
+
+  await expect(store.set({ scope: "profile", key: "hide_prompt_training_models", value: "yes" })).rejects.toThrow(
+    "The supplied value is not valid for hide_prompt_training_models",
+  )
+  expect(await Bun.file(host.layout.config).text()).toContain("true")
+
+  await store.reset({ scope: "profile", key: "hide_prompt_training_models" })
+  const cleared = fieldOf(await store.read(), "hide_prompt_training_models")
+  expect(cleared.source).toBe("unset")
+  expect(cleared.invalid).toBeUndefined()
+  expect(await Bun.file(host.layout.config).json()).toEqual({ shell: "/bin/dash" })
+})
+
+test("project Kilo-only values fold ancestor documents and reset falls back across scopes", async () => {
+  await using host = await isolated()
+  const nested = path.join(host.directory, "nested")
+  await mkdir(path.join(nested, ".kilo"), { recursive: true })
+  // The nested document is the write target; the ancestor only contributes keys.
+  await Bun.write(path.join(nested, ".kilo", "kilo.jsonc"), '{ "shell": "/bin/target" }\n')
+  await Bun.write(path.join(host.directory, "kilo.jsonc"), '{ "hide_prompt_training_models": true }\n')
+  await host.writeProfile('{ "hide_prompt_training_models": false }\n')
+  const store = createSettingsStore({
+    layout: host.layout,
+    project: { enabled: true, directory: nested, boundary: host.directory },
+  })
+  const target = path.join(nested, ".kilo", "kilo.jsonc")
+
+  // Both scopes contribute; the project ancestor outranks the profile.
+  const before = fieldOf(await store.read(), "hide_prompt_training_models")
+  expect(before.values).toEqual({ profile: false, project: true })
+  expect(before.source).toBe("project")
+
+  // Resetting the untouched target changes nothing and keeps the ancestor value.
+  expect(await store.reset({ scope: "project", key: "hide_prompt_training_models" })).toMatchObject({
+    changed: false,
+    path: target,
+  })
+  expect(fieldOf(await store.read(), "hide_prompt_training_models").source).toBe("project")
+
+  // An explicit target value outranks the ancestor, and resetting it folds the
+  // ancestor's contribution back in honestly.
+  await store.set({ scope: "project", key: "hide_prompt_training_models", value: false })
+  expect(await Bun.file(target).json()).toEqual({ shell: "/bin/target", hide_prompt_training_models: false })
+  expect(fieldOf(await store.read(), "hide_prompt_training_models").values).toEqual({ profile: false, project: false })
+  await store.reset({ scope: "project", key: "hide_prompt_training_models" })
+  const after = fieldOf(await store.read(), "hide_prompt_training_models")
+  expect(after.values).toEqual({ profile: false, project: true })
+  expect(after.source).toBe("project")
+  expect(await Bun.file(path.join(host.directory, "kilo.jsonc")).text()).toContain("true")
+})
+
 function profileValues(snapshot: SettingsSnapshot) {
   return Object.fromEntries(snapshot.fields.map((field) => [field.key, field.values.profile]))
 }

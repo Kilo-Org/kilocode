@@ -1,8 +1,10 @@
 import type { Context } from "@opencode-ai/plugin/effect/plugin"
 import { define } from "@opencode-ai/plugin/effect/plugin"
+import type { Config } from "@opencode-ai/schema/config"
 import { KiloGateway } from "@opencode-ai/schema/kilocode/gateway"
 import { KiloModels } from "@opencode-ai/schema/kilocode/models"
-import { Effect, Exit, Schema, Scope, Semaphore, Stream } from "effect"
+import type { Location } from "@opencode-ai/schema/location"
+import { Effect, Exit, Option, Schema, Scope, Semaphore, Stream } from "effect"
 import {
   defaultOrganizationID,
   deviceAuth,
@@ -21,6 +23,7 @@ export interface GatewayContext {
   readonly catalog: Pick<Context["catalog"], "transform" | "reload">
   readonly event: Context["event"]
   readonly rpc: Pick<Context["rpc"], "register">
+  readonly session: Pick<Context["session"], "hook">
   readonly storage: Pick<Context["storage"], "get" | "set" | "remove">
 }
 
@@ -31,6 +34,7 @@ const Metadata = Schema.Struct({
   organizationID: Schema.optional(Selection),
 })
 const organizationHeader = "X-KILOCODE-ORGANIZATIONID"
+const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 
 type Loaded = {
   readonly server: string
@@ -42,6 +46,13 @@ type Loaded = {
 type AccountFailure =
   | { readonly type: "kilocode.gateway"; readonly message: string }
   | { readonly type: "kilocode.gateway_unavailable"; readonly message: string }
+
+/**
+ * Config-document model fields the Gateway must never overwrite with API catalog values.
+ * Ownership granularity mirrors the host config fold: `name`, whole `cost`, whole
+ * `capabilities`, and each `limit` subfield independently (the fold shallow-merges limit).
+ */
+type ExplicitField = "name" | "cost" | "capabilities" | "limit.context" | "limit.input" | "limit.output"
 
 export interface GatewayAccount {
   readonly token: string
@@ -106,6 +117,25 @@ export const registerGateway = Effect.fn(function* (
   const loaded: { current?: Loaded; invalid: boolean } = { invalid: false }
   const loading = Semaphore.makeUnsafe(1)
   const selection = runtime?.selection ?? Semaphore.makeUnsafe(1)
+  // Explicit config model fields win over API catalog enrichment, matching the v1 config fold.
+  // The Config service is location-scoped and unreachable from the plugin Context, so the host
+  // injects an entries reader; the map refreshes on config.updated before the catalog rebuild.
+  const configured: { current: ReadonlyMap<string, ReadonlySet<ExplicitField>> } = { current: new Map() }
+  const readEntries = options.configEntries
+  const reloadConfigured =
+    readEntries === undefined
+      ? Effect.void
+      : Effect.suspend(() => readEntries(configuredLocation(ctx.location))).pipe(
+          Effect.map(explicitFields),
+          Effect.tap((fields) =>
+            Effect.sync(() => {
+              configured.current = fields
+            }),
+          ),
+          // A failed read keeps the last known map rather than dropping explicit-field protection.
+          Effect.catch(() => Effect.void),
+          Effect.asVoid,
+        )
   const refresh = () =>
     loading.withPermit(
       Effect.gen(function* () {
@@ -175,6 +205,37 @@ export const registerGateway = Effect.fn(function* (
     )
   }
 
+  yield* ctx.session.hook(
+    "http.request",
+    (event) =>
+      Effect.gen(function* () {
+        const current = loaded.current
+        if (loaded.invalid || !current) return
+        if (isGatewayRequest(event.request, current.server, "/messages")) {
+          // The SDK's x-api-key carries the active Kilo key; it must win over any configured or
+          // foreign Authorization header, matching v1's unconditional Bearer override. Without a
+          // key, an existing Bearer (native OAuth authToken) is preserved untouched.
+          const apiKey = event.request.headers.get("x-api-key")
+          if (apiKey) event.request.headers.set("authorization", `Bearer ${apiKey}`)
+          yield* stripAccountFields(event)
+          return
+        }
+        if (isGatewayRequest(event.request, current.server, "/chat/completions")) {
+          yield* stripAccountFields(event)
+          return
+        }
+        if (!isGatewayRequest(event.request, current.server, "/responses")) return
+        const text = yield* Effect.promise(() => event.request.clone().text())
+        const body = sanitizeResponseBody(text)
+        if (body === undefined) return
+        event.request.headers.delete("content-length")
+        // The pinned Responses endpoint only accepts POST; Request preserves its existing method and headers.
+        // oxlint-disable-next-line unicorn/no-invalid-fetch-options
+        event.request = new Request(event.request, { body })
+      }),
+    { providerID: "kilo" },
+  )
+
   yield* ctx.integration.transform((editor) => {
     editor.update("kilo", (integration) => {
       integration.name = "Kilo Gateway"
@@ -216,13 +277,18 @@ export const registerGateway = Effect.fn(function* (
     if (loaded.invalid || models === undefined) return
     for (const source of models) {
       editor.model.update("kilo", source.id, (model) => {
-        model.name = source.name
+        const explicit = configured.current.get(source.id)
+        if (explicit?.has("name") !== true) model.name = source.name
+        model.package ??= packageFor(source.aiSDKProvider)
         model.settings = { ...model.settings, baseURL }
         model.headers = headers(model.headers)
         if (!disabled.has(source.id)) model.enabled = true
-        if (source.limit) model.limit = source.limit
-        if (source.cost) model.cost = [source.cost]
-        if (source.capabilities) model.capabilities = source.capabilities
+        if (source.limit) {
+          if (explicit?.has("limit.context") !== true) model.limit.context = source.limit.context
+          if (explicit?.has("limit.output") !== true) model.limit.output = source.limit.output
+        }
+        if (source.cost && explicit?.has("cost") !== true) model.cost = [source.cost]
+        if (source.capabilities && explicit?.has("capabilities") !== true) model.capabilities = source.capabilities
         if (source.variants) {
           const variants = new Map(source.variants.map((item) => [item.id, item]))
           model.variants.forEach((item) => variants.set(item.id, item))
@@ -358,12 +424,136 @@ export const registerGateway = Effect.fn(function* (
     Stream.runForEach(refresh),
     Effect.forkScoped({ startImmediately: true }),
   )
+  // ConfigProvider independently reloads the catalog on config.updated; this subscription keeps
+  // the explicit-field map fresh and reloads again so the rebuild can never apply stale fields.
+  yield* ctx.event.subscribe().pipe(
+    Stream.filter((event) => event.type === "config.updated"),
+    Stream.runForEach(() => reloadConfigured.pipe(Effect.andThen(ctx.catalog.reload()))),
+    Effect.forkScoped({ startImmediately: true }),
+  )
+  yield* reloadConfigured
   if (runtime) {
     const release = runtime.register(refresh)
     yield* Effect.addFinalizer(() => Effect.sync(release))
   }
   yield* refresh()
 })
+
+function configuredLocation(location: GatewayContext["location"]): Location.Ref {
+  return {
+    directory: location.directory,
+    ...(location.workspaceID === undefined ? {} : { workspaceID: location.workspaceID }),
+  }
+}
+
+// Fold config documents (lowest to highest priority) into the set of model fields any document
+// explicitly configures. A field set in any document participates in the host's config fold, so
+// the Gateway must preserve it rather than overwrite it with the current account's API values.
+function explicitFields(entries: readonly Config.Entry[]): ReadonlyMap<string, ReadonlySet<ExplicitField>> {
+  const map = new Map<string, Set<ExplicitField>>()
+  for (const entry of entries) {
+    if (entry.type !== "document") continue
+    const kilo = entry.info.providers?.["kilo"]
+    if (!kilo?.models) continue
+    for (const [id, model] of Object.entries(kilo.models)) {
+      const fields = map.get(id) ?? new Set<ExplicitField>()
+      if (model.name !== undefined) fields.add("name")
+      if (model.limit?.context !== undefined) fields.add("limit.context")
+      if (model.limit?.input !== undefined) fields.add("limit.input")
+      if (model.limit?.output !== undefined) fields.add("limit.output")
+      if (model.cost !== undefined) fields.add("cost")
+      if (model.capabilities !== undefined) fields.add("capabilities")
+      if (fields.size > 0) map.set(id, fields)
+    }
+  }
+  return map
+}
+
+function packageFor(provider: CatalogModel["aiSDKProvider"]) {
+  if (provider === "anthropic") return "aisdk:@ai-sdk/anthropic"
+  if (provider === "openai") return "aisdk:@ai-sdk/openai"
+  if (provider === "openai-compatible") return "aisdk:@ai-sdk/openai-compatible"
+  return "aisdk:@openrouter/ai-sdk-provider"
+}
+
+function isGatewayRequest(request: Request, server: string, endpoint: "/messages" | "/responses" | "/chat/completions") {
+  if (request.method !== "POST") return false
+  const expected = new URL(server)
+  expected.pathname = `${expected.pathname.replace(/\/+$/, "")}/api/gateway${endpoint}`
+  const actual = new URL(request.url)
+  return actual.origin === expected.origin && actual.pathname === expected.pathname
+}
+
+// Core's model-resolver merges credential metadata into model settings and (for key credentials)
+// the model body overlay before any provider adapter serializes the request; the Kilo account
+// payload (profile fields plus server/organizationID written by device auth) must never leave the
+// host in a Gateway request body. Strip this closed reserved set at the top level only, after
+// serialization: nested provider routing (`provider`, `models`), BYOK (`api_keys` header payloads),
+// reasoning payloads, and arbitrary user content stay untouched. Keep in sync with the same closed
+// set in packages/ai/src/kilocode/openrouter-routed.ts — the package boundary prevents sharing it.
+// Collision: a deliberately configured top-level `user` or `name` request-body field would also be
+// removed. Neither is a supported Kilo Gateway dialect field (the OpenRouter wrapper no longer
+// forwards source `user`, and account identification is the credential itself), so the reserved
+// set wins over the undocumented configured-field case.
+const accountBodyKeys = new Set([
+  "access",
+  "apiKey",
+  "authToken",
+  "email",
+  "hasPersonalAccount",
+  "key",
+  "name",
+  "organizationID",
+  "organizationName",
+  "organizations",
+  "refresh",
+  "selectedOrganizationId",
+  "server",
+  "token",
+  "user",
+])
+
+const stripAccountFields = (event: { request: Request }) =>
+  Effect.gen(function* () {
+    const text = yield* Effect.promise(() => event.request.clone().text())
+    const data = Option.getOrUndefined(decodeJson(text))
+    if (!record(data)) return
+    const body = Object.fromEntries(Object.entries(data).filter(([key]) => !accountBodyKeys.has(key)))
+    if (Object.keys(body).length === Object.keys(data).length) return
+    event.request.headers.delete("content-length")
+    // oxlint-disable-next-line unicorn/no-invalid-fetch-options
+    event.request = new Request(event.request, { body: JSON.stringify(body) })
+  })
+
+// Source contract: origin/main ecccd1f, kilo-gateway/src/responses.ts.
+// Stateless Responses calls cannot refer back to previous response items. Reserved account
+// fields are stripped on every request — a stored conversation is not a credential-hygiene
+// exemption — while item-reference rewriting stays limited to stateless calls.
+function sanitizeResponseBody(text: string): string | undefined {
+  const data = Option.getOrUndefined(decodeJson(text))
+  if (!record(data)) return undefined
+  const stripped = Object.fromEntries(Object.entries(data).filter(([key]) => !accountBodyKeys.has(key)))
+  const accountChanged = Object.keys(stripped).length !== Object.keys(data).length
+  if (data.store === true || !Array.isArray(data.input)) {
+    return accountChanged ? JSON.stringify(stripped) : undefined
+  }
+  const source = data.input
+  const input = source.flatMap((item) => {
+    if (!record(item)) return [item]
+    if (item.type === "item_reference") return []
+    if (!("id" in item)) return [item]
+    const next = { ...item }
+    delete next.id
+    return [next]
+  })
+  const referencesChanged = input.length !== source.length || input.some((item, index) => item !== source[index])
+  if (!accountChanged && !referencesChanged) return undefined
+  return JSON.stringify({ ...stripped, input })
+}
+
+function record(input: unknown): input is Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+}
 
 function account(ctx: GatewayContext, options: GatewayOptions, oauthMethodID: string) {
   return Effect.gen(function* () {

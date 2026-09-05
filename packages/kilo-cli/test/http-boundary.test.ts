@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test"
 import { createConnection } from "node:net"
-import path from "node:path"
 import { OpenCode } from "@opencode-ai/client"
-import { fixture, ready, start } from "./fixture"
+import { compiledBinary, fixture, readyProcess, start } from "./fixture"
 
 for (const mode of ["source", "compiled"] as const) {
   test(`${mode}: rejects an unauthenticated partial upload without waiting for its body`, async () => {
@@ -80,18 +79,12 @@ for (const mode of ["source", "compiled"] as const) {
 }
 
 async function live(mode: "source" | "compiled") {
-  const binary =
-    mode === "compiled"
-      ? path.join(
-          process.env.KILO_CLI_TEST_ARTIFACT_DIR ?? path.resolve(import.meta.dir, "../dist"),
-          process.platform === "win32" ? "kilo2.exe" : "kilo2",
-        )
-      : undefined
+  const binary = mode === "compiled" ? compiledBinary() : undefined
   const input = await fixture(binary)
   const child = start(input, ["serve"])
   const errors = new Response(child.stderr).text()
   try {
-    const listening = await ready(child.stdout, /URL: (http:\/\/127\.0\.0\.1:\d+)/)
+    const listening = await readyProcess(child, /URL: (http:\/\/127\.0\.0\.1:\d+)/, errors)
     const password = (await Bun.file(input.layout.password).text()).trim()
     const authorization = `Basic ${btoa(`opencode:${password}`)}`
     return {

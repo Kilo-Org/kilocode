@@ -70,6 +70,13 @@ export function DialogModel(props: { providerID?: string }) {
       return items.flatMap((item) => {
         const model = models().find((model) => model.providerID === item.providerID && model.id === item.modelID)
         if (!model) return []
+        // kilocode_change - a host-hidden model leaves favorites and recents too
+        if (
+          groups().some(
+            (group) => group.hidden === true && group.providerID === model.providerID && group.modelID === model.id,
+          )
+        )
+          return []
         const provider = providers().get(model.providerID)
         return [
           {
@@ -107,6 +114,13 @@ export function DialogModel(props: { providerID?: string }) {
       models()
         .filter((model) => model.status !== "deprecated")
         .filter((model) => (props.providerID ? model.providerID === props.providerID : true))
+        // kilocode_change - host presentation policy removes flagged Kilo models entirely
+        .filter(
+          (model) =>
+            !groups().some(
+              (group) => group.hidden === true && group.providerID === model.providerID && group.modelID === model.id,
+            ),
+        )
         .map((model) => {
           const provider = providers().get(model.providerID)
           const key = modelPreferenceKey({ providerID: model.providerID, modelID: model.id })

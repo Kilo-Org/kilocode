@@ -1,25 +1,22 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 import { fixture } from "./fixture"
 
-test("Kilo TUI /kilo-settings edits scoped configuration the host loads, without touching a session", async () => {
+test("the execution host dispatches catalog-selected Gateway protocols and replays settled history", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
       path.resolve(import.meta.dir, "../dist/interactive/bun"),
       "--no-env-file",
-      "--preload",
-      fileURLToPath(import.meta.resolve("@opentui/solid/preload")),
-      path.join(import.meta.dir, "settings-ui-fixture.tsx"),
+      path.join(import.meta.dir, "gateway-protocol-fixture.ts"),
     ],
     {
       cwd: input.cwd,
       env: input.env,
-      stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      timeout: 60000,
+      stdin: "ignore",
+      timeout: 45000,
       killSignal: "SIGKILL",
     },
   )
@@ -30,9 +27,9 @@ test("Kilo TUI /kilo-settings edits scoped configuration the host loads, without
       new Response(child.stderr).text(),
     ])
     expect(code, `${stdout}\n${stderr}`).toBe(0)
-    expect(stdout, stderr).toContain("TUI_SETTINGS_FIXTURE_OK")
+    expect(stdout).toContain("GATEWAY_PROTOCOL_OK")
   } finally {
     child.kill()
     await child.exited
   }
-}, 90000)
+}, 60000)

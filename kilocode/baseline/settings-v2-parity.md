@@ -53,8 +53,9 @@ Sources: `packages/kilo-cli/src/host.ts:22`, `src/paths.ts`,
 
 ## Managed fields
 
-Only native `Config.Info` fields with a verified consumer at this baseline are
-offered. Each row names that consumer.
+Native `Config.Info` fields with a verified consumer at this baseline are
+offered, plus one Kilo-only key whose value the host decode drops. Each row
+names that consumer.
 
 | Field | Type written | Consumer |
 |---|---|---|
@@ -69,6 +70,7 @@ offered. Each row names that consumer.
 | `compaction.keep.tokens` | non-negative integer, including zero | same plugin; `session/compaction.ts` selects the retained recent-history tail |
 | `tool_output.max_lines` | positive integer | `packages/core/src/config/plugin/tool-output.ts:16`, `packages/core/src/shell.ts:233` |
 | `tool_output.max_bytes` | positive integer | same |
+| `hide_prompt_training_models` (Kilo-only) | boolean | the Kilo model picker presentation in `packages/kilo-cli/src/model-picker.ts` reads it through this store; mirrors v1 `filterPromptTrainingModels` (`packages/opencode/src/kilocode/provider/model-filter.ts`) |
 
 ### Deliberately not managed
 
@@ -80,14 +82,31 @@ offered. Each row names that consumer.
 
 ### v1 settings with no v2 field
 
-`indexing.*`, `privacy_mode`, `hide_prompt_training_models`,
-`auto_collapse_reasoning`, `terminal_command_display`, and the
-`enabled_providers`/`disabled_providers` lists have no v2 equivalent field.
-`ConfigMigrateV1` carries a subset under different names (`autoupdate` to
-`update`, `snapshot` to `snapshots`, `small_model` to `agents.title.model`,
-provider lists to `experimental.policies`). The adapter never re-derives any of
-this: `SETTINGS_UNSUPPORTED_NOTE` points users at the v1 import report, which
-runs the upstream engine over their own file.
+`indexing.*`, `privacy_mode`, `auto_collapse_reasoning`,
+`terminal_command_display`, and the `enabled_providers`/`disabled_providers`
+lists have no v2 equivalent field. `hide_prompt_training_models` is the one
+Kilo-only exception now surfaced above: the retained upstream v1 schema does not
+declare it, so the adapter reads it raw (below) and the v1 importer carries it
+verbatim. `ConfigMigrateV1` carries a subset under different names
+(`autoupdate` to `update`, `snapshot` to `snapshots`, `small_model` to
+`agents.title.model`, provider lists to `experimental.policies`). The adapter
+never re-derives any of this: `SETTINGS_UNSUPPORTED_NOTE` points users at the
+v1 import report, which runs the upstream engine over their own file.
+
+### Kilo-only keys read raw
+
+The native decode drops keys that `Config.Info` does not declare, so
+`hide_prompt_training_models` is read from separately parsed raw documents
+instead of the re-encoded ones. The same fold rules apply: every loaded project
+document path contributes, lowest to highest priority, so an ancestor document
+that is not the write target can still supply the key; a reset on the target
+folds that ancestor contribution back in. A stored value that does not decode is
+reported through a fixed `invalid` explanation on the field state — never as the
+raw value, which could echo arbitrary file content. The v1 provider-level
+`dataCollection: "deny"` that v1 also derives from this key
+(`packages/opencode/src/kilocode/provider/provider.ts`, `patchKiloProviderPrivacy`
+and the `kilo` custom loader) has no v2 equivalent yet: this surface is a
+presentation filter, not a data-collection guarantee.
 
 ## Write and read semantics
 
@@ -95,6 +114,11 @@ runs the upstream engine over their own file.
   substitute, jsonc parse, normalize, decode pipeline the host applies
   (`packages/core/src/config.ts:96`), re-encoded to JSON. A literal
   `"anthropic/claude"` therefore reads back as `{ providerID, model }`.
+- Kilo-only keys are the documented exception: they are read from raw parsed
+  documents (no substitution, no Info decode) and are reported as stored. A
+  stored value that does not decode yields a fixed `invalid` explanation instead
+  of the arbitrary value; a wrong-typed write is refused with a content-free
+  message.
 - An invalid field is dropped by `ConfigNormalize` exactly as the host drops it,
   so a bad value is reported as unset rather than as configuration.
 - A malformed document is reported with a reason and is never rewritten from a
@@ -152,6 +176,28 @@ Run from `packages/kilo-cli` with the packaged Bun 1.4 runtime
 
 | Command | Covers |
 |---|---|
-| `bun typecheck` | the three settings modules and both test files |
-| `bun test test/settings.test.ts` | scope reporting, opt-in refusal, comment and mode preservation, project folding across ancestor documents, reset fallback, schema refusals, queue recovery, preflight and boundary refusals, no secret echo |
-| `bun test --preload @opentui/solid/preload test/settings-ui.test.tsx` | real host plus real TUI: the host loads values written through the adapter, `/kilo-settings` drives prompt, choice, and reset edits over the public RPC, an unwritable scope explains itself, and no session is admitted |
+| `bun typecheck` | the settings modules, the picker, and their test files |
+| `bun test test/settings.test.ts` | scope reporting, opt-in refusal, comment and mode preservation, project folding across ancestor documents (including the Kilo-only key), reset fallback, schema refusals, queue recovery, preflight and boundary refusals, no secret echo |
+| `bun test test/model-picker.test.ts` | group/category derivation, `mayTrainOnYourPrompts === true` hiding only for real metadata (unknown and other providers stay visible), effective project-over-profile preference read live per open, abort and error propagation |
+| `bun test test/import-v1-config.test.ts` | v1 config mapping reports, and the Kilo-only boolean import: carried for true/false, read back raw by the settings store, wrong type refused content-free |
+| `bun test --preload @opentui/solid/preload test/settings-ui.test.tsx` | real host plus real TUI: the host loads values written through the adapter, `/kilo-settings` drives prompt, choice, and reset edits over the public RPC (including the Kilo-only toggle), an unwritable scope explains itself, and no session is admitted |
+| `bun test --preload @opentui/solid/preload test/model-picker-ui.test.tsx` | real host, gateway, and TUI: Auto/Recommended grouping, favorite persistence, and the hide preference read live — enabling it removes the flagged model from every dialog section while the favorite persists, and resetting shows it again |
+
+The model picker's hide behavior is presentation policy only: it filters
+listings served by the picker, and never guarantees which models the Gateway
+serves or what the provider does with prompts.
+
+### Settings UI fixture readiness follow-up (2026-09-05)
+
+The earlier intermittent UI failure selected the first unfiltered option:
+merely finding the target's text in a frame did not prove focus, processed
+filter input, or selected-row state. The fixture now waits for the native
+editor type, its input text and the selected option's rendered bold span
+before sending Enter. Toast assertions also allow line wrapping. No production
+dialog behavior was changed.
+
+The delegate recorded three consecutive isolated settings UI passes. Root
+independently reran settings UI plus both memory-sidebar targets with bundled
+Bun 1.4: **5 pass / 0 fail**. This closes the focused fixture investigation,
+not the pending coordinated full-suite validation or the remaining v1
+`dataCollection: "deny"` provider-policy gap.

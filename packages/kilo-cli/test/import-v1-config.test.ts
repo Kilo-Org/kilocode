@@ -7,6 +7,7 @@ import { Effect } from "effect"
 import { launch } from "../src/interactive-server"
 import { createPrivacyStore } from "../src/privacy-settings"
 import type { Layout } from "../src/paths"
+import { createSettingsStore, type SettingsSnapshot } from "../src/settings"
 import type { CredentialWriter, ImportCredential } from "../src/credential-import"
 import {
   applyV1Import,
@@ -689,6 +690,45 @@ test("refuses an invalid privacy value without reflecting its contents", async (
   await expect(planV1Import({ config })).rejects.toThrow(`${config} does not match the v1 configuration schema`)
   expect(await Bun.file(input.layout.config).exists()).toBe(false)
 })
+
+test.each([true, false])(
+  "imports the Kilo hide-prompt-training bit the model picker consumes (%s)",
+  async (hide) => {
+    await using input = await sandbox()
+    const config = await input.write("kilo.json", { hide_prompt_training_models: hide })
+    const before = await Bun.file(config).text()
+    const plan = await planV1Import({ config })
+    expect(plan.configKeys).toEqual([{ key: "hide_prompt_training_models", supported: true }])
+    expect(await applyV1Import({ layout: input.layout, plan })).toMatchObject({ status: "applied" })
+    expect(await Bun.file(input.layout.config).json()).toEqual({ hide_prompt_training_models: hide })
+    // The isolated settings store reads the imported key raw for the picker.
+    const store = createSettingsStore({ layout: input.layout, project: disabled(input.root) })
+    expect(fieldOf(await store.read(), "hide_prompt_training_models").values).toEqual({ profile: hide })
+    expect(await Bun.file(config).text()).toBe(before)
+  },
+)
+
+test("refuses an invalid hide-prompt-training value without reflecting its contents", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", { hide_prompt_training_models: "sk-private-value" })
+  const failure = await planV1Import({ config }).then(
+    () => undefined,
+    (error: Error) => error,
+  )
+  expect(failure?.message).toBe(`${config} does not match the v1 configuration schema`)
+  expect(String(failure)).not.toContain("sk-private-value")
+  expect(await Bun.file(input.layout.config).exists()).toBe(false)
+})
+
+function disabled(root: string) {
+  return { enabled: false, directory: root, boundary: root }
+}
+
+function fieldOf(snapshot: SettingsSnapshot, key: SettingsSnapshot["fields"][number]["key"]) {
+  const found = snapshot.fields.find((item) => item.key === key)
+  if (!found) throw new Error(`Missing settings field: ${key}`)
+  return found
+}
 
 test("refuses unmapped config keys by default and imports the mapped subset only with allowUnmapped", async () => {
   await using input = await sandbox()

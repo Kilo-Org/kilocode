@@ -181,6 +181,7 @@ function fieldDescription(field: SettingsFieldState, snapshot: SettingsSnapshot)
     `profile: ${format(field.values.profile)}`,
     ...(project?.writable ? [`project: ${format(field.values.project)}`] : []),
     `applies: ${field.source}`,
+    ...(field.invalid ? [field.invalid] : []),
   ].join(" · ")
 }
 

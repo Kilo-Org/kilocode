@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -43,6 +44,31 @@ export async function fixture(binary?: string) {
 
 export type Fixture = Awaited<ReturnType<typeof fixture>>
 
+export function testArtifactDir() {
+  const directory = process.env.KILO_CLI_TEST_ARTIFACT_DIR
+  if (!directory) {
+    throw new Error(
+      "compiled-mode tests require a current build artifact: run `bun run script/test.ts` from packages/kilo-cli (with the packaged dist/interactive/bun runtime) or set KILO_CLI_TEST_ARTIFACT_DIR; silently falling back to ../dist executed a stale dist/kilo2 built by an unsupported Bun",
+    )
+  }
+  if (!existsSync(directory)) {
+    throw new Error(
+      `KILO_CLI_TEST_ARTIFACT_DIR points at a missing directory: ${directory}; run \`bun run script/test.ts\` from packages/kilo-cli to build a current artifact`,
+    )
+  }
+  return directory
+}
+
+export function compiledBinary(directory = testArtifactDir()) {
+  const binary = path.join(directory, process.platform === "win32" ? "kilo2.exe" : "kilo2")
+  if (!existsSync(binary)) {
+    throw new Error(
+      `compiled artifact binary is missing: ${binary}; run \`bun run script/test.ts\` from packages/kilo-cli to build a current artifact`,
+    )
+  }
+  return binary
+}
+
 type Input = { cwd: string; env: NodeJS.ProcessEnv; binary?: string }
 
 export function start(input: Input, args: string[], binary = input.binary) {
@@ -64,6 +90,15 @@ export async function run(input: Input, args: string[], binary = input.binary) {
     new Response(child.stderr).text(),
   ])
   return { code, stdout, stderr }
+}
+
+export async function readyProcess(child: ReturnType<typeof start>, pattern: RegExp, errors: Promise<string>) {
+  try {
+    return await ready(child.stdout, pattern)
+  } catch (error) {
+    const stderr = await errors
+    throw new Error(stderr ? `${(error as Error).message}\nchild stderr:\n${stderr}` : (error as Error).message)
+  }
 }
 
 export async function ready(stream: ReadableStream<Uint8Array>, pattern: RegExp) {

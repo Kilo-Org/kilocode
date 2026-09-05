@@ -1,6 +1,7 @@
 import { NodeHttpServer } from "@effect/platform-node"
 import { createClient } from "@kilocode/client"
 import { Service } from "@opencode-ai/client/effect/service"
+import { InputRenderable, TextareaRenderable, TextAttributes } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { Effect, Fiber } from "effect"
 import assert from "node:assert/strict"
@@ -74,21 +75,42 @@ const task = Effect.runPromise(
         ])
         await setup.waitForFrame((frame) => frame.includes("Kilo internal preview"), { maxPasses: 600 })
 
+        const isOptionSelected = (title: string) => {
+          const spans = setup.captureSpans().lines.flatMap((line) => line.spans)
+          return spans.some(
+            (span) => span.text.trimStart().startsWith(title) && (span.attributes & TextAttributes.BOLD) !== 0,
+          )
+        }
         const command = async () => {
+          await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable, {
+            maxPasses: 600,
+          })
           await setup.mockInput.typeText("/kilo-settings")
+          await setup.waitFor(
+            () => Boolean(setup.renderer.currentFocusedEditor?.plainText.includes("/kilo-settings")),
+            { maxPasses: 600 },
+          )
           setup.mockInput.pressEnter()
           await setup.waitForFrame(
             (frame) => frame.includes("Select a configuration scope") && frame.includes("Project"),
             { maxPasses: 600 },
           )
+          await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof InputRenderable, { maxPasses: 600 })
         }
         const select = async (option: string, expected: (frame: string) => boolean) => {
+          await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof InputRenderable, { maxPasses: 600 })
           await setup.mockInput.typeText(option)
-          await setup.waitForFrame((frame) => frame.includes(option), { maxPasses: 600 })
+          await setup.waitFor(() => setup.renderer.currentFocusedEditor?.plainText === option, { maxPasses: 600 })
+          await setup.waitFor(() => isOptionSelected(option), { maxPasses: 600 })
           setup.mockInput.pressEnter()
           await setup.waitForFrame(expected, { maxPasses: 600 })
         }
-        const prompt = (title: string) => select(title, (frame) => !frame.includes("Select a setting"))
+        const prompt = async (title: string) => {
+          await select(title, (frame) => !frame.includes("Select a setting") && frame.includes(title))
+          await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable, {
+            maxPasses: 600,
+          })
+        }
         const scope = async () => {
           await command()
           await select("Profile", (frame) => frame.includes("Select a setting"))
@@ -107,6 +129,7 @@ const task = Effect.runPromise(
         await scope()
         await prompt("Tool output byte limit")
         await setup.mockInput.typeText("4096")
+        await setup.waitFor(() => setup.renderer.currentFocusedEditor?.plainText === "4096", { maxPasses: 600 })
         setup.mockInput.pressEnter()
         await settled("Tool output byte limit updated in the profile scope.")
 
@@ -124,8 +147,17 @@ const task = Effect.runPromise(
         await scope()
         await prompt("Compaction token buffer")
         await setup.mockInput.typeText("0")
+        await setup.waitFor(() => setup.renderer.currentFocusedEditor?.plainText === "0", { maxPasses: 600 })
         setup.mockInput.pressEnter()
         await settled("Compaction token buffer updated in the profile scope.")
+
+        // 5. The Kilo-only training-model toggle edits the raw profile key.
+        await scope()
+        await select("Hide prompt-training models", (frame) => frame.includes("Current in profile"))
+        await select(
+          "Enabled",
+          (frame) => !frame.includes("Current in profile") && frame.includes("Hide prompt-training models updated"),
+        )
 
         const snapshot = await rpc.read({}, { location })
         assert.deepEqual(field(snapshot, "tool_output.max_bytes").values, { profile: 4096 })
@@ -133,6 +165,7 @@ const task = Effect.runPromise(
         assert.deepEqual(field(snapshot, "snapshots").values, {})
         assert.equal(field(snapshot, "snapshots").source, "unset")
         assert.deepEqual(field(snapshot, "compaction.buffer").values, { profile: 0 })
+        assert.deepEqual(field(snapshot, "hide_prompt_training_models").values, { profile: true })
 
         // The document keeps every unrelated key the UI never touched.
         const stored = (await Bun.file(input.config).json()) as Record<string, unknown>
@@ -140,6 +173,7 @@ const task = Effect.runPromise(
         assert.deepEqual(stored["tool_output"], { max_lines: 123, max_bytes: 4096 })
         assert.equal(Object.hasOwn(stored, "snapshots"), false)
         assert.deepEqual(stored["compaction"], { auto: false, keep: { tokens: 512 }, buffer: 0 })
+        assert.equal(stored["hide_prompt_training_models"], true)
 
         // Project writes stay refused without the host opt-in.
         await assert.rejects(rpc.set({ scope: "project", key: "snapshots", value: true }, { location }))
@@ -149,7 +183,11 @@ const task = Effect.runPromise(
         for (const session of after.data)
           assert.deepEqual(await client.session.inbox.list({ sessionID: session.id }), [])
 
+        await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable, { maxPasses: 600 })
         await setup.mockInput.typeText("/exit")
+        await setup.waitFor(() => Boolean(setup.renderer.currentFocusedEditor?.plainText.includes("/exit")), {
+          maxPasses: 600,
+        })
         setup.mockInput.pressEnter()
         await closed.promise
       })

@@ -547,6 +547,7 @@
         "@kilocode/gateway": "workspace:*",
         "@kilocode/indexing": "workspace:*",
         "@kilocode/kilo-memory": "workspace:*",
+        "@opencode-ai/ai": "workspace:*",
         "@opencode-ai/client": "workspace:*",
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/plugin": "workspace:*",

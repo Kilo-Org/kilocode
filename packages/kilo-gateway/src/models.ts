@@ -40,9 +40,10 @@ const Response = Schema.Struct({
       autoRouting: Schema.optionalKey(Schema.Unknown),
       opencode: Schema.optionalKey(
         Schema.Struct({
-          // This is the one v1 opencode extension v2's public catalog can represent directly.
+          // Source overlays map directly to v2 catalog variants.
           variants: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Json))),
-          // V1 tolerates malformed values for these fields. V2 has no equivalent model-owned surface.
+          // V1 tolerates malformed optional policy tags. Prompt assets still need a v2 adaptation;
+          // the closed provider tag is decoded per record below, never added to request settings.
           prompt: Schema.optionalKey(Schema.Unknown),
           ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
         }),
@@ -53,12 +54,18 @@ const Response = Schema.Struct({
 
 type SourceModel = (typeof Response.Type)["data"][number]
 
+const AISDKProvider = Schema.Literals(["anthropic", "openai", "openai-compatible", "openrouter"])
+export type GatewayAISDKProvider = typeof AISDKProvider.Type
+const decodeAISDKProvider = Schema.decodeUnknownOption(AISDKProvider)
+
 const AutoRouting = Schema.Struct({ models: Schema.Array(Schema.String) })
 const decodeAutoRouting = Schema.decodeUnknownOption(AutoRouting)
 
 export type CatalogModel = {
   readonly id: string
   readonly name: string
+  /** Selects the Gateway API dialect for this model. Missing or invalid values use OpenRouter chat. */
+  readonly aiSDKProvider?: GatewayAISDKProvider
   readonly recommendedIndex?: number
   readonly autoRouting?: { readonly models: readonly string[] }
   readonly hasUserByokAvailable?: boolean
@@ -121,6 +128,10 @@ function catalogModel(model: SourceModel): CatalogModel {
   return {
     id: model.id,
     name: model.name,
+    ...Option.match(decodeAISDKProvider(model.opencode?.ai_sdk_provider), {
+      onNone: () => ({}),
+      onSome: (aiSDKProvider) => ({ aiSDKProvider }),
+    }),
     ...(model.preferredIndex === undefined ? {} : { recommendedIndex: model.preferredIndex }),
     ...(model.autoRouting === undefined
       ? {}
@@ -155,21 +166,21 @@ function catalogModel(model: SourceModel): CatalogModel {
   }
 }
 
-function positiveInteger(value: number | null | undefined) {
-  if (value === undefined || value === null || !Number.isInteger(value) || value <= 0) return
+function positiveInteger(value: number | null | undefined): number | undefined {
+  if (value === undefined || value === null || !Number.isInteger(value) || value <= 0) return undefined
   return value
 }
 
-function perMillion(value: string | null | undefined) {
-  if (value === undefined || value === null || value.trim() === "") return
+function perMillion(value: string | null | undefined): number | undefined {
+  if (value === undefined || value === null || value.trim() === "") return undefined
   const parsed = Number(value)
   const result = parsed * 1_000_000
-  if (!Number.isFinite(parsed) || !Number.isFinite(result) || parsed < 0) return
+  if (!Number.isFinite(parsed) || !Number.isFinite(result) || parsed < 0) return undefined
   return result
 }
 
-function modalities(value: readonly string[] | null | undefined) {
-  if (value === undefined || value === null) return
+function modalities(value: readonly string[] | null | undefined): string[] | undefined {
+  if (value === undefined || value === null) return undefined
   const result = value.filter((item) => ["text", "audio", "image", "video", "pdf"].includes(item))
   return result.includes("text") ? result : ["text", ...result]
 }

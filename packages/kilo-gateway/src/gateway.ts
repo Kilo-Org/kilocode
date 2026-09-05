@@ -1,6 +1,8 @@
 import type { IntegrationOAuthMethodRegistration } from "@opencode-ai/plugin/effect/integration"
+import type { Config } from "@opencode-ai/schema/config"
 import { Credential } from "@opencode-ai/schema/credential"
 import { IntegrationMethodID } from "@opencode-ai/schema/integration-id"
+import type { Location } from "@opencode-ai/schema/location"
 import { Clock, Effect, Schema } from "effect"
 
 export interface GatewayOptions {
@@ -8,6 +10,13 @@ export interface GatewayOptions {
   readonly pollIntervalMs?: number
   readonly sessions?: string
   readonly shareApp?: string
+  /**
+   * Host-injected reader for the location-scoped Config service entries (lowest to highest
+   * priority). The plugin Context cannot reach Config directly, so the embedding host bridges
+   * it; the Gateway uses it to keep explicit configured model fields winning over API catalog
+   * enrichment. Absent means no configuration is treated as explicit.
+   */
+  readonly configEntries?: (location: Location.Ref) => Effect.Effect<readonly Config.Entry[], unknown>
 }
 
 const NonEmpty = Schema.String.check(Schema.isMinLength(1))

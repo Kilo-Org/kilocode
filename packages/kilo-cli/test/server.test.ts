@@ -4,22 +4,16 @@ import { chmod, mkdir, symlink } from "node:fs/promises"
 import path from "node:path"
 import { OpenCode } from "@opencode-ai/client"
 import { proveContract } from "./client-proof"
-import { fixture, ready, run, start } from "./fixture"
+import { compiledBinary, fixture, readyProcess, run, start } from "./fixture"
 
 for (const mode of ["source", "compiled"] as const) {
   test(`${mode}: generated client creates, admits and observes without executing`, async () => {
-    const binary =
-      mode === "compiled"
-        ? path.join(
-            process.env.KILO_CLI_TEST_ARTIFACT_DIR ?? path.resolve(import.meta.dir, "../dist"),
-            process.platform === "win32" ? "kilo2.exe" : "kilo2",
-          )
-        : undefined
+    const binary = mode === "compiled" ? compiledBinary() : undefined
     await using input = await fixture(binary)
     const child = start(input, ["serve", "--port", "0"])
     const errors = new Response(child.stderr).text()
     try {
-      const listening = await ready(child.stdout, /URL: (http:\/\/127\.0\.0\.1:\d+)/)
+      const listening = await readyProcess(child, /URL: (http:\/\/127\.0\.0\.1:\d+)/, errors)
       const password = (await Bun.file(input.layout.password).text()).trim()
       expect(password).toMatch(/^[a-f0-9]{64}$/)
       expect(statSync(input.layout.password).mode & 0o077).toBe(0)

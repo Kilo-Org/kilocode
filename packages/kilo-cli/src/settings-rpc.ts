@@ -13,7 +13,9 @@ import { Schema } from "effect"
 export const SETTINGS_SCOPES = ["profile", "project"] as const
 
 /**
- * Only native v2 `Config.Info` fields with a verified consumer at this baseline.
+ * Native v2 `Config.Info` fields with a verified consumer at this baseline, plus
+ * `hide_prompt_training_models`: a Kilo-only key the host config decode drops,
+ * read raw by this store and consumed by the Kilo model picker presentation.
  * Collections (agents, permissions, mcp, providers, commands, formatter, lsp,
  * references, instructions, skills, plugins, experimental) are intentionally
  * absent: they accumulate or merge across documents, and some carry secrets.
@@ -30,6 +32,7 @@ export const SETTINGS_FIELD_KEYS = [
   "compaction.keep.tokens",
   "tool_output.max_lines",
   "tool_output.max_bytes",
+  "hide_prompt_training_models",
 ] as const
 
 /**
@@ -87,6 +90,11 @@ export const SettingsFieldState = Schema.Struct({
   }),
   /** Which loaded scope currently supplies the value. */
   source: Origin,
+  /**
+   * Fixed explanation when a scope stores a value that does not decode. The
+   * arbitrary stored value is never carried; this text is a constant.
+   */
+  invalid: Schema.optional(Schema.String),
 })
 export type SettingsFieldState = typeof SettingsFieldState.Type
 

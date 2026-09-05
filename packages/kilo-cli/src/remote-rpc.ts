@@ -9,7 +9,7 @@ export const RemoteStatus = Schema.Struct({
 })
 
 export const REMOTE_LIMITATION =
-  "Preview control adapter only: legacy transcript forwarding, attachments and cloud-session cloning are not available. Enabling advertises sessions in this location and permits supported remote commands under their native permissions."
+  "Preview control adapter only: legacy transcript forwarding, URL-backed attachments and cloud-session cloning are not available. Inline data attachments are supported. Enabling advertises sessions in this location and permits supported remote commands under their native permissions."
 
 const method = {
   input: Schema.toStandardSchemaV1(Schema.Struct({})),

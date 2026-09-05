@@ -2,6 +2,9 @@ import { cp, mkdir } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { binaryPath } from "@opencode-ai/pty"
+import { requireRuntime } from "../src/runtime"
+
+requireRuntime()
 
 const outdir = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(import.meta.dir, "../dist")
 const native = path.join(outdir, "node_modules/@opencode-ai")

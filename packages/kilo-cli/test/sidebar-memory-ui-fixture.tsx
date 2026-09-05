@@ -7,7 +7,6 @@ import assert from "node:assert/strict"
 import { launch } from "../src/interactive-server"
 import { layout } from "../src/paths"
 import { MemoryRpc } from "../src/memory-rpc"
-import { MemoryStore } from "../src/memory-plugin"
 import { runTui } from "../src/tui"
 
 const setup = await createTestRenderer({ width: 160, height: 40, useThread: false, kittyKeyboard: true })
@@ -40,9 +39,12 @@ const task = Effect.runPromise(
             throw new Error("TUI closed before terminal handoff")
           }),
         ])
-        await setup.waitForFrame((frame) => frame.includes("Memory sidebar fixture") && frame.includes("Disabled"), {
-          maxPasses: 600,
-        })
+        await setup.waitForFrame(
+          (frame) => frame.includes("Memory sidebar fixture") && frame.includes("• Disabled"),
+          {
+            maxPasses: 600,
+          },
+        )
 
         const initial = setup.captureCharFrame()
         assert(!initial.includes("project.md"))
@@ -51,30 +53,38 @@ const task = Effect.runPromise(
         assert(!initial.includes("index.kmem"))
 
         await command("/memory enable", "Memory enabled.")
-        await setup.waitForFrame(
-          (frame) => frame.includes("Memory") && frame.includes("Enabled") && frame.includes("Auto: Off"),
-          { maxPasses: 600 },
-        )
+        await setup.waitForFrame((frame) => frame.includes("• Enabled") && !frame.includes("• Disabled"), {
+          maxPasses: 600,
+        })
 
-        // Actual engine injection statistics arrive independently of a terminal
-        // execution event, so the sidebar must refresh from persisted state.
-        await rpc.remember({ text: "sidebar activity fixture" }, { location })
-        const status = await rpc.status({}, { location })
-        await MemoryStore.context(status.root)
-        const injected = await rpc.status({}, { location })
-        assert(injected.activity?.lastInjectedAt)
-        await setup.waitForFrame(
-          (frame) => frame.includes(`Injected: ${injected.activity!.lastInjectedTokens} estimated tokens`),
-          { maxPasses: 600 },
-        )
+        // The sidebar is the compact current-main status row only; details stay
+        // in the memory dialog and RPC.
+        const enabled = setup.captureCharFrame()
+        assert(!enabled.includes("Auto:"))
+        assert(!enabled.includes("Data:"))
+        assert(!enabled.includes("Injected:"))
+        assert(!enabled.includes("Last save"))
+        assert(!enabled.includes("Data truncated"))
+
+        // The bullet is a muted status marker, the label default text.
+        const spans = setup.captureSpans().lines.flatMap((line) => line.spans)
+        const bullet = spans.find((span) => span.text.trim() === "•")
+        const label = spans.find((span) => span.text.trim() === "Enabled")
+        assert(bullet, "bullet span rendered")
+        assert(label, "label span rendered")
+        assert.notEqual(bullet.fg.toInts().toString(), label.fg.toInts().toString())
+
+        // Narrow widths let the native auto-sidebar policy hide the sidebar; the
+        // memory row must disappear and return without a model request.
+        setup.resize(100, 40)
+        await setup.waitForFrame((frame) => !frame.includes("• Enabled"), { maxPasses: 600 })
         setup.resize(140, 45)
-        await setup.waitForFrame((frame) => frame.includes("Injected:") && frame.includes("Memory"), { maxPasses: 600 })
+        await setup.waitForFrame((frame) => frame.includes("• Enabled"), { maxPasses: 600 })
 
         await command("/memory disable", "Memory disabled.")
-        await setup.waitForFrame(
-          (frame) => frame.includes("Memory") && frame.includes("Disabled") && !frame.includes("Auto: On"),
-          { maxPasses: 600 },
-        )
+        await setup.waitForFrame((frame) => frame.includes("• Disabled") && !frame.includes("• Enabled"), {
+          maxPasses: 600,
+        })
       })
       const sessions = yield* Effect.promise(() => client.session.list({ directory: location.directory }))
       assert.equal(sessions.data.length, 1)

@@ -48,3 +48,53 @@ configured `plan` agent is left wholly untouched, including a `question` deny;
 that custom agent cannot use Kilo's `plan_exit`. The public editor has no
 provenance for individual built-in versus configured permission rules, so the
 owned native Plan policy does not try to retain arbitrary preexisting denies.
+
+## Save permission regression fix (2026-09-05)
+
+The Plan agent could never actually save a plan file. Core tool authorization
+evaluates in-Location mutations against a Location-relative resource
+(`LocationMutation.Target.resource`, e.g. `.kilo/plans/approved.md`), while the
+Plan policy's `edit` allowance used an absolute `<location>/.kilo/plans/*.md`
+glob. `Wildcard.match` never matched the two forms, so every real `write`/`edit`
+call fell through to the trailing `*`/`*` deny. Earlier tests precreated the
+plan file, called `plan_exit` directly, and evaluated `Permission.evaluate`
+with absolute paths, masking the mismatch. The allowance now uses the
+Location-relative `.kilo/plans/*.md` form. A dead `external_directory`
+allowance for the location's own plans directory was removed: `LocationMutation`
+marks those paths internal lexically, so an external request for them is
+unreachable, and no blanket external allow exists. Inherited configured denies
+stay appended last, so global user denies (e.g. `edit *.md`) still win over the
+Plan allowance, verified through a real denied `write` and unchanged file
+contents. Saved-permission grants still cannot bypass configured denies.
+
+`plan_exit` diagnostics for missing targets now distinguish ENOENT ("save the
+plan ... before calling plan_exit") from other filesystem errors, which surface
+with their real message instead of being reported as nonexistent.
+
+## Prompt save-consent workflow (2026-09-05)
+
+The owned native plan prompt now instructs the model to use the native question
+tool to ask the user to choose between "Finalize and save the plan" and
+"Continue refining" before creating or updating a plan file, matching V1's Plan
+File reminder behavior at `ecccd1f`. This save consent is prompt-directed only:
+there is no host-enforced deterministic write-consent gate, and the host cannot
+force a modal before `write`. Host enforcement remains at `plan_exit`, which
+requires the saved non-empty real Markdown file; a cancelled save form leaves
+no file, no completion form, and no implementation (covered by a test), while a
+user-declined save ("Continue refining" answer) is prompt-directed behavior not
+host-tested. The prompt also resolves the former contradiction where the final
+"Do not implement source or documentation changes" line read as prohibiting the
+plan file itself: plan files under `.kilo/plans` are now stated as the one
+permitted exception, and the old "tell the user to switch agents" line is
+scoped so normal completion always flows through `plan_exit` rather than a
+manual switch suggestion.
+
+Test evidence exercises the real flow against a loopback fixture model: with no
+`.kilo/plans` directory, the model's native question opens the save form, a
+real `write` tool call creates the plan file (persisted contents asserted),
+`plan_exit` opens the completion form, and "Continue here" implements in
+session. The captured model request is asserted to advertise the `write` and
+`edit` tools and to carry the updated system prompt including the
+save-consent instruction and the plan-file exception. Writes outside the plan
+directory are denied through real tool authorization and leave the tree
+untouched.

@@ -91,7 +91,8 @@ const task = Effect.runPromise(
           (frame) =>
             frame.includes("Enable remote control?") &&
             frame.includes("Preview control adapter only: legacy transcript") &&
-            frame.includes("attachments and cloud-session cloning"),
+            frame.replace(/\s+/g, " ").includes("URL-backed attachments and cloud-session cloning are not available.") &&
+            frame.replace(/\s+/g, " ").includes("Inline data attachments are supported."),
           { maxPasses: 600 },
         )
         setup.mockInput.pressEscape()
@@ -108,7 +109,8 @@ const task = Effect.runPromise(
           (frame) =>
             frame.includes("Remote preview limitations") &&
             frame.includes("Preview control adapter only: legacy transcript") &&
-            frame.includes("attachments and cloud-session cloning"),
+            frame.replace(/\s+/g, " ").includes("URL-backed attachments and cloud-session cloning are not available.") &&
+            frame.replace(/\s+/g, " ").includes("Inline data attachments are supported."),
           { maxPasses: 600 },
         )
         setup.mockInput.pressEscape()

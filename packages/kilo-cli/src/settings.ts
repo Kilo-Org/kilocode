@@ -85,6 +85,12 @@ interface FieldDefinition {
   readonly description: string
   readonly kind: SettingsFieldState["kind"]
   readonly minimum?: number
+  /**
+   * Kilo-only key: the native `Info` decode drops it, so values are read from
+   * the raw documents instead of the re-encoded ones. Writes still go through
+   * the native verify pipeline, which tolerates unknown keys.
+   */
+  readonly kiloOnly?: boolean
   /** Decoder for the native schema the written value must satisfy. */
   readonly decode: (value: unknown) => Option.Option<unknown>
   readonly options?: SettingsFieldState["options"]
@@ -94,6 +100,12 @@ interface FieldDefinition {
 interface ScopeProjection {
   readonly state: SettingsScopeState
   readonly documents: readonly Record<string, unknown>[]
+  /**
+   * Same documents as `documents`, but parsed raw: Kilo-only keys that the
+   * native `Info` decode would drop stay visible here. Empty unless the scope's
+   * documents were actually loaded.
+   */
+  readonly raw: readonly Record<string, unknown>[]
 }
 
 // Every field below is a native v2 Config.Info field with a verified consumer.
@@ -194,6 +206,16 @@ const definitions: readonly FieldDefinition[] = [
     kind: "integer",
     decode: Schema.decodeUnknownOption(PositiveInt),
   },
+  {
+    key: "hide_prompt_training_models",
+    path: ["hide_prompt_training_models"],
+    title: "Hide prompt-training models",
+    description:
+      "Hide Kilo Gateway models whose metadata says they may train on your prompts. A presentation filter for listings, not a data-collection guarantee",
+    kind: "boolean",
+    kiloOnly: true,
+    decode: Schema.decodeUnknownOption(Schema.Boolean),
+  },
 ]
 
 // Mirrors the host config parser: jsonc with trailing commas, lenient decoding.
@@ -281,9 +303,15 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
     const file = options.layout.config
     const failure = guard()
     if (failure)
-      return { state: { scope: "profile", path: file, exists: false, writable: false, reason: failure }, documents: [] }
+      return {
+        state: { scope: "profile", path: file, exists: false, writable: false, reason: failure },
+        documents: [],
+        raw: [],
+      }
     if (!(await isFile(file)))
-      return { state: { scope: "profile", path: file, exists: false, writable: true }, documents: [] }
+      return { state: { scope: "profile", path: file, exists: false, writable: true }, documents: [], raw: [] }
+    const raw = await rawDocument(file)
+    const rawDocuments = raw ? [raw] : []
     const document = await load(file).catch(() => undefined)
     if (!document)
       return {
@@ -295,8 +323,9 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
           reason: "The profile document is not valid configuration and the host ignores it",
         },
         documents: [],
+        raw: rawDocuments,
       }
-    return { state: { scope: "profile", path: file, exists: true, writable: true }, documents: [document] }
+    return { state: { scope: "profile", path: file, exists: true, writable: true }, documents: [document], raw: rawDocuments }
   }
 
   /**
@@ -318,6 +347,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
           reason: "The project directory is outside its project boundary",
         },
         documents: [],
+        raw: [],
       }
     if (!options.project.enabled)
       return {
@@ -329,6 +359,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
           reason: "Project configuration is disabled; start the host with --project-config to manage this scope",
         },
         documents: [],
+        raw: [],
       }
     const entries = await Effect.runPromise(
       ProjectConfig.readProjectEntries(directory, boundary).pipe(Effect.provide(filesystem)),
@@ -343,6 +374,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
           reason: "Project configuration could not be read",
         },
         documents: [],
+        raw: [],
       }
     const loaded = entries.flatMap((entry) =>
       entry.type === "document" && entry.path !== undefined ? [{ path: entry.path, info: entry.info }] : [],
@@ -351,11 +383,16 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
       const encoded = encodeInfo(entry.info)
       return Option.isSome(encoded) && isObject(encoded.value) ? [encoded.value] : []
     })
+    // Every loaded path, not only the write target: an ancestor document can
+    // still contribute a Kilo-only key, which the native decode drops.
+    const raw = (await Promise.all(loaded.map((entry) => rawDocument(entry.path)))).flatMap((parsed) =>
+      parsed ? [parsed] : [],
+    )
     const target = loaded.at(-1)?.path ?? fallback
     const eligible = await eligibleTarget(target, boundary)
     if (eligible)
-      return { state: { scope: "project", path: target, exists: true, writable: false, reason: eligible }, documents }
-    return { state: { scope: "project", path: target, exists: await isFile(target), writable: true }, documents }
+      return { state: { scope: "project", path: target, exists: true, writable: false, reason: eligible }, documents, raw }
+    return { state: { scope: "project", path: target, exists: await isFile(target), writable: true }, documents, raw }
   }
 
   function guard() {
@@ -391,11 +428,22 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
 }
 
 function state(field: FieldDefinition, scopes: readonly ScopeProjection[]): SettingsFieldState {
+  let invalid = false
   const values = Object.fromEntries(
     scopes.flatMap((scope) => {
-      // Higher-priority documents win inside a scope, matching Config.latest.
-      const value = scope.documents.reduce<unknown>((result, document) => at(document, field.path) ?? result, undefined)
-      return value === undefined ? [] : [[scope.state.scope, value] as const]
+      // Kilo-only keys survive only in the raw documents; native fields report
+      // the canonical values the host resolves. Higher-priority documents win
+      // inside a scope, matching Config.latest.
+      const documents = field.kiloOnly ? scope.raw : scope.documents
+      const value = documents.reduce<unknown>((result, document) => at(document, field.path) ?? result, undefined)
+      if (value === undefined) return []
+      // A Kilo-only key is read raw, so a stored value can have any JSON type:
+      // the snapshot explains the invalid state instead of carrying the value.
+      if (field.kiloOnly && Option.isNone(field.decode(value))) {
+        invalid = true
+        return []
+      }
+      return [[scope.state.scope, value] as const]
     }),
   )
   return {
@@ -405,6 +453,7 @@ function state(field: FieldDefinition, scopes: readonly ScopeProjection[]): Sett
     kind: field.kind,
     ...(field.minimum === undefined ? {} : { minimum: field.minimum }),
     ...(field.options ? { options: field.options } : {}),
+    ...(invalid ? { invalid: `The stored ${field.key} value is not a boolean and is ignored` } : {}),
     values,
     source: values.project !== undefined ? "project" : values.profile !== undefined ? "profile" : "unset",
   }
@@ -438,6 +487,19 @@ async function load(filepath: string) {
   if (Option.isNone(info)) return undefined
   const encoded = encodeInfo(info.value)
   return Option.isSome(encoded) && isObject(encoded.value) ? encoded.value : undefined
+}
+
+/**
+ * Raw JSONC parse without the host substitution or Info decode, for Kilo-only
+ * keys. A document that does not parse contributes nothing rather than failing
+ * the read.
+ */
+async function rawDocument(filepath: string) {
+  try {
+    return json(await text(filepath), filepath)
+  } catch {
+    return undefined
+  }
 }
 
 async function text(filepath: string) {

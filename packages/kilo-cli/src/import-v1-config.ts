@@ -73,7 +73,10 @@ export type ConfigKeyDecision =
   | { readonly key: string; readonly supported: true }
   | { readonly key: string; readonly supported: false; readonly reason: string; readonly paths?: ReadonlyArray<string> }
 
-type MigratedConfig = ReturnType<typeof ConfigMigrateV1.migrate> & { readonly privacy_mode?: boolean }
+type MigratedConfig = ReturnType<typeof ConfigMigrateV1.migrate> & {
+  readonly privacy_mode?: boolean
+  readonly hide_prompt_training_models?: boolean
+}
 
 export interface ImportPlan {
   readonly sources: { readonly auth?: ImportSourceFacts; readonly config?: ImportSourceFacts }
@@ -221,6 +224,11 @@ const oauthDummyKey = "kilo-oauth-dummy-key"
 // unset"; the retained upstream v1 schema only accepts strings, so nulls are
 // dropped before decoding instead of failing the whole file.
 const nullableConfigKeys = ["model", "small_model", "default_agent"] as const
+
+// Kilo-only v1 booleans carried verbatim into the isolated profile config. The
+// retained upstream v1 schema does not declare them, and the migration engine
+// drops them, so they are validated and patched at the raw level instead.
+const kiloOnlyBooleans = ["privacy_mode", "hide_prompt_training_models"] as const
 
 // Matches the upstream v2 config parser options (jsonc parse with trailing commas).
 const IMPORT_SOURCE_MAX_BYTES = 10 * 1024 * 1024
@@ -777,10 +785,11 @@ function planConfig(
   parsed: Record<string, unknown>,
 ): { keys: ConfigKeyDecision[]; patch: MigratedConfig } {
   const normalized = normalizeNulls(parsed)
-  // Kilo v1 and the isolated v2 PrivacyStore consume the same boolean key.
-  // It is intentionally not added to the upstream schema or migration engine.
-  if (parsed.privacy_mode !== undefined && typeof parsed.privacy_mode !== "boolean")
-    throw new Error(`${filepath} does not match the v1 configuration schema`)
+  // Kilo v1 booleans consumed by isolated v2 stores use the same keys. They are
+  // intentionally not added to the upstream schema or migration engine.
+  for (const key of kiloOnlyBooleans)
+    if (parsed[key] !== undefined && typeof parsed[key] !== "boolean")
+      throw new Error(`${filepath} does not match the v1 configuration schema`)
   let info: ConfigV1.Info
   let patch: MigratedConfig
   try {
@@ -793,7 +802,7 @@ function planConfig(
   const recognized = Object.keys(ConfigV1.Info.fields)
   const baseline = JSON.stringify(patch)
   const keys = Object.keys(parsed).map((key): ConfigKeyDecision => {
-    if (key === "privacy_mode") return { key, supported: true }
+    if ((kiloOnlyBooleans as readonly string[]).includes(key)) return { key, supported: true }
     if (nulledKeys(parsed).includes(key)) return { key, supported: true }
     const leaves = leafPaths(parsed[key], [key])
     if (leaves.length === 0) {
@@ -814,7 +823,13 @@ function planConfig(
   })
   return {
     keys,
-    patch: { ...patch, ...(typeof parsed.privacy_mode === "boolean" ? { privacy_mode: parsed.privacy_mode } : {}) },
+    patch: {
+      ...patch,
+      ...(typeof parsed.privacy_mode === "boolean" ? { privacy_mode: parsed.privacy_mode } : {}),
+      ...(typeof parsed.hide_prompt_training_models === "boolean"
+        ? { hide_prompt_training_models: parsed.hide_prompt_training_models }
+        : {}),
+    },
   }
 }
 

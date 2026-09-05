@@ -2,6 +2,10 @@ import { expect, test } from "bun:test"
 import type { CatalogEditor, CatalogProviderRecord } from "@opencode-ai/plugin/effect/catalog"
 import type { IntegrationEditor, IntegrationMethodRegistration } from "@opencode-ai/plugin/effect/integration"
 import type { RpcCallContext, RpcHandlers } from "@opencode-ai/plugin/effect/rpc"
+import type { SessionHooks } from "@opencode-ai/plugin/effect/session"
+import { Agent } from "@opencode-ai/schema/agent"
+import { Document, Event as ConfigEvent, Info, type Config } from "@opencode-ai/schema/config"
+import { ConfigProvider } from "@opencode-ai/schema/config/provider"
 import { Credential } from "@opencode-ai/schema/credential"
 import { Event } from "@opencode-ai/schema/event"
 import { IntegrationID, IntegrationMethodID } from "@opencode-ai/schema/integration-id"
@@ -9,10 +13,12 @@ import { KiloGateway } from "@opencode-ai/schema/kilocode/gateway"
 import { KiloModels } from "@opencode-ai/schema/kilocode/models"
 import { Location } from "@opencode-ai/schema/location"
 import { Model } from "@opencode-ai/schema/model"
+import { Money } from "@opencode-ai/schema/money"
 import { Project } from "@opencode-ai/schema/project"
 import { Provider } from "@opencode-ai/schema/provider"
 import { AbsolutePath } from "@opencode-ai/schema/schema"
-import { Deferred, Effect, PubSub, Schema, Stream } from "effect"
+import { Session } from "@opencode-ai/schema/session"
+import { Deferred, Effect, PubSub, Schema, Stream, Types } from "effect"
 import {
   createGatewayPlugin,
   deviceAuth,
@@ -22,9 +28,18 @@ import {
 } from "../src/index.js"
 import { fixture } from "./fixture.js"
 
-const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>; connectionID?: Credential.ID } = {}) {
+const harness = Effect.fn(function* (
+  input: {
+    storage?: Map<string, Schema.Json>
+    connectionID?: Credential.ID
+    configuredModelPackage?: string
+    /** Pre-folded values simulating the host config fold, which runs before the Gateway transform. */
+    fixtureModel?: Partial<Model.Info>
+  } = {},
+) {
   const changes = yield* PubSub.unbounded<Stream.Success<ReturnType<GatewayContext["event"]["subscribe"]>>>()
   const catalogTransforms: ((editor: CatalogEditor) => void)[] = []
+  const sessionHooks: ((event: SessionHooks["http.request"]) => Effect.Effect<void>)[] = []
   const methods = new Map<string, IntegrationMethodRegistration>([
     ["key", { integrationID: "kilo", method: { type: "key" } }],
   ])
@@ -45,13 +60,18 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
     models: new Map([
       [
         "fixture",
-        {
-          ...Model.Info.default(Provider.ID.make("kilo"), Model.ID.make("fixture")),
-          headers: { "X-KILOCODE-ORGANIZATIONID": "stale-model" },
-          variants: [
-            { id: Model.VariantID.make("variant"), headers: { "x-kilocode-organizationid": "stale-variant" } },
-          ],
-        },
+        ((): Types.DeepMutable<Model.Info> => {
+          const model: Types.DeepMutable<Model.Info> = {
+            ...Model.Info.default(Provider.ID.make("kilo"), Model.ID.make("fixture")),
+            ...(input.configuredModelPackage === undefined ? {} : { package: input.configuredModelPackage }),
+            headers: { "X-KILOCODE-ORGANIZATIONID": "stale-model" },
+            variants: [
+              { id: Model.VariantID.make("variant"), headers: { "x-kilocode-organizationid": "stale-variant" } },
+            ],
+          }
+          Object.assign(model, input.fixtureModel)
+          return model
+        })(),
       ],
     ]),
   }
@@ -63,6 +83,9 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
   const state = {
     credential: undefined as Credential.Value | undefined,
     resolutionFails: false,
+    // Reload rebuilds from this seed, mirroring the host's static + config-fold base state;
+    // tests replace it to simulate a changed configuration before a config.updated event.
+    seed,
     record: structuredClone(seed),
     updated: yield* Deferred.make<void>(),
     activeCalls: 0,
@@ -155,7 +178,7 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
             state.reloadFailures--
             yield* Effect.die(new Error("fixture catalog failure"))
           }
-          state.record = structuredClone(seed)
+          state.record = structuredClone(state.seed)
           catalogTransforms.forEach((callback) => callback(editor))
         }).pipe(
           Effect.andThen(() => Deferred.succeed(state.updated, undefined)),
@@ -163,6 +186,17 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
         ),
     },
     event: { subscribe: () => Stream.fromPubSub(changes) },
+    session: {
+      hook: (name, callback) =>
+        Effect.sync(() => {
+          if (name === "http.request") {
+            // The hook signature is dependent on its name; this narrowed branch is its concrete host entrypoint.
+            // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+            sessionHooks.push(callback as unknown as (event: SessionHooks["http.request"]) => Effect.Effect<void>)
+          }
+          return { dispose: Effect.void }
+        }),
+    },
     rpc: {
       register: (definition, handlers) =>
         Effect.sync(() => {
@@ -197,11 +231,20 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
     )
     yield* Deferred.await(state.updated)
   })
+  const notifyConfig = Effect.fn(function* () {
+    state.updated = yield* Deferred.make<void>()
+    yield* PubSub.publish(
+      changes,
+      ConfigEvent.Updated.make({ id: Event.ID.create(), created: Date.now(), type: "config.updated", data: {} }),
+    )
+    yield* Deferred.await(state.updated)
+  })
   return {
     ctx,
     state,
     methods,
     notify,
+    notifyConfig,
     storage,
     connectionID: connection.id,
     rpc: () => {
@@ -212,8 +255,27 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
       if (!rpc.models) throw new Error("Model metadata RPC was not registered")
       return rpc.models
     },
+    httpRequest: (request: Request) => {
+      const event: SessionHooks["http.request"] = {
+        sessionID: Session.ID.create(),
+        agent: Agent.ID.make("build"),
+        model: Model.Ref.make({ id: Model.ID.make("fixture"), providerID: Provider.ID.make("kilo") }),
+        request,
+      }
+      return Effect.forEach(sessionHooks, (hook) => hook(event), { discard: true }).pipe(
+        Effect.andThen(() => Effect.sync(() => event.request)),
+      )
+    },
   }
 })
+
+function cost(input: number, output: number): Model.Cost {
+  return {
+    input: Money.USDPerMillionTokens.make(input),
+    output: Money.USDPerMillionTokens.make(output),
+    cache: { read: Money.USDPerMillionTokens.zero, write: Money.USDPerMillionTokens.zero },
+  }
+}
 
 function call<M extends (typeof KiloGateway.Definition.methods)[keyof typeof KiloGateway.Definition.methods]>() {
   // The production host brands the same type/message object after validating it against the definition.
@@ -492,6 +554,500 @@ test("catalog projects Kilo disclosures and variants without replacing configure
       expect(yield* host.models().list({}, call())).toEqual([
         { id: "fixture", hasUserByokAvailable: true, mayTrainOnYourPrompts: false },
       ])
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("catalog dispatches each Gateway model through its declared native protocol", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "anthropic",
+        name: "Anthropic",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "anthropic" },
+      },
+      {
+        id: "openai",
+        name: "OpenAI",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "openai" },
+      },
+      {
+        id: "compatible",
+        name: "Compatible",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "openai-compatible" },
+      },
+      {
+        id: "openrouter",
+        name: "OpenRouter",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "openrouter" },
+      },
+      {
+        id: "fallback",
+        name: "Fallback",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "unsupported" },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      expect(host.state.record.models.get("anthropic")?.package).toBe("aisdk:@ai-sdk/anthropic")
+      expect(host.state.record.models.get("openai")?.package).toBe("aisdk:@ai-sdk/openai")
+      expect(host.state.record.models.get("compatible")?.package).toBe("aisdk:@ai-sdk/openai-compatible")
+      expect(host.state.record.models.get("openrouter")?.package).toBe("aisdk:@openrouter/ai-sdk-provider")
+      expect(host.state.record.models.get("fallback")?.package).toBe("aisdk:@openrouter/ai-sdk-provider")
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("Gateway native Messages promotes Kilo key auth and Responses strips stateless item references", async () => {
+  using backend = fixture()
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      const messages = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/messages`, { method: "POST", headers: { "x-api-key": "private-key" } }),
+      )
+      expect(messages.headers.get("authorization")).toBe("Bearer private-key")
+      expect(messages.headers.get("x-api-key")).toBe("private-key")
+
+      // A configured or foreign Authorization header must not suppress the active Kilo key:
+      // the key-derived Bearer wins, matching v1's unconditional override.
+      const configured = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/messages`, {
+          method: "POST",
+          headers: { authorization: "Bearer bogus-configured", "x-api-key": "private-key" },
+        }),
+      )
+      expect(configured.headers.get("authorization")).toBe("Bearer private-key")
+
+      // A real OAuth Bearer (native authToken flow) carries no x-api-key and is preserved.
+      const oauth = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/messages`, {
+          method: "POST",
+          headers: { authorization: "Bearer oauth-token" },
+        }),
+      )
+      expect(oauth.headers.get("authorization")).toBe("Bearer oauth-token")
+
+      const chat = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/chat/completions`, { headers: { "x-api-key": "private-key" } }),
+      )
+      expect(chat.headers.get("authorization")).toBeNull()
+
+      const getMessages = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/messages`, { headers: { "x-api-key": "private-key" } }),
+      )
+      expect(getMessages.headers.get("authorization")).toBeNull()
+
+      const responses = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "content-length": "999" },
+          body: JSON.stringify({
+            store: false,
+            input: [
+              { type: "item_reference", id: "ref_1" },
+              { type: "reasoning", id: "rs_1", encrypted_content: "opaque-state" },
+              { type: "message", id: "msg_1", content: "continue" },
+              "plain input",
+            ],
+          }),
+        }),
+      )
+      expect(responses.headers.get("content-length")).toBeNull()
+      expect(yield* Effect.promise(() => responses.json())).toEqual({
+        store: false,
+        input: [
+          { type: "reasoning", encrypted_content: "opaque-state" },
+          { type: "message", content: "continue" },
+          "plain input",
+        ],
+      })
+
+      const stored = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ store: true, input: [{ type: "item_reference", id: "ref_1" }] }),
+        }),
+      )
+      expect(yield* Effect.promise(() => stored.json())).toEqual({
+        store: true,
+        input: [{ type: "item_reference", id: "ref_1" }],
+      })
+
+      // A stored conversation is not a credential-hygiene exemption: reserved account fields are
+      // stripped even when item references must survive for server-side conversation state.
+      const storedAccount = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            store: true,
+            server: backend.url,
+            email: "account@example.test",
+            input: [{ type: "item_reference", id: "ref_1" }],
+          }),
+        }),
+      )
+      expect(yield* Effect.promise(() => storedAccount.json())).toEqual({
+        store: true,
+        input: [{ type: "item_reference", id: "ref_1" }],
+      })
+
+      // Stateless calls strip reserved account fields alongside item references, preserving
+      // encrypted reasoning.
+      const statelessAccount = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            store: false,
+            organizationID: "selected",
+            token: "token-value",
+            input: [
+              { type: "item_reference", id: "ref_1" },
+              { type: "reasoning", id: "rs_1", encrypted_content: "opaque-state" },
+            ],
+          }),
+        }),
+      )
+      expect(yield* Effect.promise(() => statelessAccount.json())).toEqual({
+        store: false,
+        input: [{ type: "reasoning", encrypted_content: "opaque-state" }],
+      })
+
+      const unreferenced = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "content-length": "999" },
+          body: JSON.stringify({ store: false, input: [{ type: "message", content: "first request" }] }),
+        }),
+      )
+      expect(unreferenced.headers.get("content-length")).toBe("999")
+      expect(yield* Effect.promise(() => unreferenced.json())).toEqual({
+        store: false,
+        input: [{ type: "message", content: "first request" }],
+      })
+
+      const nonJSON = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/responses`, { method: "POST", body: "not json" }),
+      )
+      expect(yield* Effect.promise(() => nonJSON.text())).toBe("not json")
+
+      const foreign = yield* host.httpRequest(
+        new Request("https://foreign.example/api/gateway/responses", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ store: false, input: [{ type: "item_reference", id: "ref_1" }] }),
+        }),
+      )
+      expect(yield* Effect.promise(() => foreign.json())).toEqual({
+        store: false,
+        input: [{ type: "item_reference", id: "ref_1" }],
+      })
+
+      // Account/credential fields merged into model settings by Core's resolver must never leave
+      // the host in a Gateway request body. Top-level reserved keys are stripped; nested
+      // provider routing, BYOK payloads, reasoning, and user content stay untouched.
+      const account = {
+        server: backend.url,
+        organizationID: "selected",
+        organizationName: "Selected Org",
+        email: "account@example.test",
+        name: "Account Holder",
+        organizations: [{ id: "selected" }],
+        selectedOrganizationId: "selected",
+        hasPersonalAccount: true,
+        user: { email: "account@example.test" },
+        token: "token-value",
+        access: "access-value",
+        refresh: "refresh-value",
+      }
+      for (const endpoint of ["/messages", "/chat/completions"] as const) {
+        const stripped = yield* host.httpRequest(
+          new Request(`${backend.url}/api/gateway${endpoint}`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-api-key": "private-key" },
+            body: JSON.stringify({
+              ...account,
+              model: "fixture",
+              provider: { order: ["together"] },
+              models: ["fixture"],
+              reasoning: { effort: "high" },
+              messages: [{ role: "user", content: "name and email stay in content" }],
+              metadata: { user_id: "nested-preserved" },
+              api_keys: { together: "byok-stays" },
+            }),
+          }),
+        )
+        // Bearer promotion is Messages-only; the chat dialect carries no x-api-key promotion.
+        expect(stripped.headers.get("authorization")).toBe(endpoint === "/messages" ? "Bearer private-key" : null)
+        const strippedBody = (yield* Effect.promise(() => stripped.json())) as Record<string, unknown>
+        for (const key of Object.keys(account)) {
+          expect(strippedBody).not.toHaveProperty(key)
+        }
+        expect(strippedBody).toMatchObject({
+          model: "fixture",
+          provider: { order: ["together"] },
+          models: ["fixture"],
+          reasoning: { effort: "high" },
+          metadata: { user_id: "nested-preserved" },
+          api_keys: { together: "byok-stays" },
+        })
+        expect(strippedBody.messages).toEqual([{ role: "user", content: "name and email stay in content" }])
+      }
+
+      // Bodies without reserved keys are left byte-identical, and foreign origins are never read.
+      const cleanBody = JSON.stringify({ model: "fixture", messages: [] })
+      const clean = yield* host.httpRequest(
+        new Request(`${backend.url}/api/gateway/chat/completions`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: cleanBody,
+        }),
+      )
+      expect(yield* Effect.promise(() => clean.text())).toBe(cleanBody)
+      const foreignChat = yield* host.httpRequest(
+        new Request("https://foreign.example/api/gateway/chat/completions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: "untouched", token: "untouched" }),
+        }),
+      )
+      expect(yield* Effect.promise(() => foreignChat.json())).toEqual({ server: "untouched", token: "untouched" })
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("API catalog enriches defaults but preserves explicitly configured model fields across refresh", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "fixture",
+        name: "API Fixture",
+        context_length: 64000,
+        max_completion_tokens: 8000,
+        pricing: { prompt: "0.000001", completion: "0.000002" },
+        architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
+        supported_parameters: ["tools"],
+      },
+      {
+        id: "api-only",
+        name: "API Only",
+        context_length: 32000,
+        max_completion_tokens: 4000,
+        pricing: { prompt: "0.000003", completion: "0.000004" },
+        supported_parameters: ["tools"],
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      // The host config fold runs before the Gateway transform, so the seeded model already
+      // carries the configured name and merged limit; configEntries supplies the same documents
+      // for explicit-field provenance.
+      const host = yield* harness({
+        fixtureModel: { name: "Configured Fixture", limit: { context: 1024, output: 32000 } },
+      })
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      const entries = {
+        current: [
+          new Document({
+            type: "document",
+            info: new Info({
+              providers: {
+                kilo: new ConfigProvider.Info({
+                  models: {
+                    fixture: { name: "Configured Fixture", limit: { context: 1024 } },
+                  },
+                }),
+              },
+            }),
+          }),
+        ] as Config.Entry[],
+      }
+      yield* registerGateway(host.ctx, {
+        server: backend.url,
+        configEntries: () => Effect.succeed(entries.current),
+      })
+
+      // Explicit configured name and limit.context survive; unconfigured fields take API values.
+      const fixtureModel = host.state.record.models.get("fixture")!
+      expect(fixtureModel.name).toBe("Configured Fixture")
+      expect(fixtureModel.limit.context).toBe(1024)
+      expect(fixtureModel.limit.output).toBe(8000)
+      expect(fixtureModel.cost).toEqual([cost(1, 2)])
+      expect(fixtureModel.capabilities).toEqual({ tools: true, input: ["text", "image"], output: ["text"] })
+
+      // API-only models are fully enriched.
+      const apiOnly = host.state.record.models.get("api-only")!
+      expect(apiOnly.name).toBe("API Only")
+      expect(apiOnly.limit).toEqual({ context: 32000, output: 4000 })
+      expect(apiOnly.cost).toEqual([cost(3, 4)])
+      expect(apiOnly.capabilities).toEqual({ tools: true, input: ["text"], output: ["text"] })
+
+      // Account refresh replaces non-explicit values without retaining stale account data;
+      // explicit configured fields still win.
+      backend.state.models = {
+        data: [
+          {
+            id: "fixture",
+            name: "API Fixture Renamed",
+            context_length: 128000,
+            max_completion_tokens: 16000,
+            pricing: { prompt: "0.000005", completion: "0.000006" },
+            supported_parameters: ["tools"],
+          },
+        ],
+      }
+      yield* host.notify()
+      const refreshed = host.state.record.models.get("fixture")!
+      expect(refreshed.name).toBe("Configured Fixture")
+      expect(refreshed.limit.context).toBe(1024)
+      expect(refreshed.limit.output).toBe(16000)
+      expect(refreshed.cost).toEqual([cost(5, 6)])
+      expect(refreshed.capabilities).toEqual({ tools: true, input: ["text"], output: ["text"] })
+      expect(host.state.record.models.has("api-only")).toBe(false)
+
+      // A config update re-reads entries: newly explicit cost now wins over the API value.
+      entries.current = [
+        new Document({
+          type: "document",
+          info: new Info({
+            providers: {
+              kilo: new ConfigProvider.Info({
+                models: {
+                  fixture: {
+                    name: "Configured Fixture",
+                    limit: { context: 1024 },
+                    cost: { input: Money.USDPerMillionTokens.make(7), output: Money.USDPerMillionTokens.make(8) },
+                  },
+                },
+              }),
+            },
+          }),
+        }),
+      ]
+      // The host fold would place the configured cost onto the rebuilt model before the
+      // Gateway transform runs; update the base seed the same way.
+      host.state.seed = {
+        ...host.state.seed,
+        models: new Map([
+          [
+            "fixture",
+            {
+              ...host.state.seed.models.get("fixture")!,
+              cost: [cost(7, 8)],
+            },
+          ],
+        ]),
+      }
+      yield* host.notifyConfig()
+      const updated = host.state.record.models.get("fixture")!
+      expect(updated.cost).toEqual([cost(7, 8)])
+      expect(updated.name).toBe("Configured Fixture")
+      expect(updated.limit.output).toBe(16000)
+    }).pipe(Effect.scoped, Effect.timeout("5 seconds")),
+  )
+})
+
+test("explicit model package configuration wins over Gateway protocol metadata", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "fixture",
+        name: "Fixture",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "anthropic" },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness({ configuredModelPackage: "aisdk:@ai-sdk/openai-compatible" })
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+      expect(host.state.record.models.get("fixture")?.package).toBe("aisdk:@ai-sdk/openai-compatible")
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("team catalog refresh replaces stale protocol metadata with the OpenRouter fallback", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "fixture",
+        name: "Fixture",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { ai_sdk_provider: "anthropic" },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+      expect(host.state.record.models.get("fixture")?.package).toBe("aisdk:@ai-sdk/anthropic")
+
+      backend.state.models = {
+        data: [
+          {
+            id: "fixture",
+            name: "Fixture",
+            context_length: 128000,
+            supported_parameters: ["tools"],
+            opencode: { ai_sdk_provider: "unsupported" },
+          },
+        ],
+      }
+      yield* host.notify()
+
+      expect(host.state.record.models.get("fixture")?.package).toBe("aisdk:@openrouter/ai-sdk-provider")
     }).pipe(Effect.scoped),
   )
 })

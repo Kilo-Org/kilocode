@@ -8,8 +8,10 @@ verification ledger for that slice.
 ## File ownership and provenance
 
 All files are Kilo-owned and new; none edit shared upstream code. Sources are
-ported from `origin/main:packages/opencode/src/kilocode/cloud/` (v1, 14 files).
-"Byte-port" means the file body is the v1 source with only import-path rewriting.
+ported from `origin/main:packages/opencode/src/kilocode/cloud/` (v1, 14 files) at
+pinned SHA `ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7` (the local `origin/main`
+ref at port time). "Byte-port" means the file body is the v1 source with only
+import-path rewriting.
 
 | v2 path | v1 source | Port kind |
 |---|---|---|

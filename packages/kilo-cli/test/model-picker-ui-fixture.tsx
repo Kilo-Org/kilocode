@@ -7,6 +7,7 @@ import { Effect, Fiber } from "effect"
 import assert from "node:assert/strict"
 import { launch } from "../src/interactive-server"
 import { layout } from "../src/paths"
+import { SettingsRpc } from "../src/settings-rpc"
 import { runTui } from "../src/tui"
 
 let calls = 0
@@ -197,6 +198,30 @@ try {
             maxPasses: 600,
           })
           await setup.mockInput.pressEscape()
+
+          // The picker reads the hide preference live at every open: enabling it
+          // removes the flagged model everywhere, while the favorite persists for
+          // the next read that shows the model again.
+          const settings = client.rpc(SettingsRpc.Definition)
+          await settings.set({ scope: "profile", key: "hide_prompt_training_models", value: true }, { location })
+          await setup.mockInput.typeText("/models")
+          setup.mockInput.pressEnter()
+          const hidden = await setup.waitForFrame(
+            (frame) => frame.includes("Fixture Recommended") && !frame.includes("Fixture Auto"),
+            { maxPasses: 600 },
+          )
+          assert(!hidden.includes("May train"))
+          assert(!hidden.includes("BYOK"))
+          assert(!hidden.includes("Favorites"))
+          await setup.mockInput.pressEscape()
+          await settings.reset({ scope: "profile", key: "hide_prompt_training_models" }, { location })
+          await setup.mockInput.typeText("/models")
+          setup.mockInput.pressEnter()
+          await setup.waitForFrame(
+            (frame) => frame.includes("Favorites") && frame.includes("Fixture Auto") && frame.includes("May train"),
+            { maxPasses: 600 },
+          )
+          await setup.mockInput.pressEscape()
           await client.kilocode.organization.set({ organizationID: "team" })
           await Promise.race([
             (async () => {
@@ -235,8 +260,10 @@ try {
           assert(!team.includes("BYOK"))
           assert(!team.includes("May train"))
           await setup.mockInput.pressEscape()
-          assert.equal(calls, 7)
+          assert.equal(calls, 9)
           assert.deepEqual(modelPaths, [
+            "/api/openrouter/models",
+            "/api/openrouter/models",
             "/api/openrouter/models",
             "/api/openrouter/models",
             "/api/openrouter/models",

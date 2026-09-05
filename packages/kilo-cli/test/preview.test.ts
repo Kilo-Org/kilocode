@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite"
 import { existsSync } from "node:fs"
 import { cp, link, mkdir, rm, symlink } from "node:fs/promises"
 import path from "node:path"
-import { entry, fixture, run, type Fixture } from "./fixture"
+import { compiledBinary, entry, fixture, run, testArtifactDir, type Fixture } from "./fixture"
 
 async function stable(input: Fixture) {
   const directory = path.join(input.env.XDG_DATA_HOME, "kilo")
@@ -220,10 +220,8 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 test("packaged help and fresh boot work outside the repository without loading dotenv", async () => {
   await using input = await fixture()
   const artifact = path.join(input.directory, "artifact")
-  await cp(process.env.KILO_CLI_TEST_ARTIFACT_DIR ?? path.resolve(import.meta.dir, "../dist"), artifact, {
-    recursive: true,
-  })
-  const binary = path.join(artifact, process.platform === "win32" ? "kilo2.exe" : "kilo2")
+  await cp(testArtifactDir(), artifact, { recursive: true })
+  const binary = compiledBinary(artifact)
   await Bun.write(path.join(input.cwd, ".env"), `XDG_DATA_HOME=${path.join(input.directory, "poisoned")}\n`)
   const help = await run(input, ["--help"], binary)
   expect(help.code, help.stderr).toBe(0)

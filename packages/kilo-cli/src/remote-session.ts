@@ -1,4 +1,4 @@
-import type { OpenCodeClient } from "@opencode-ai/client"
+import type { ModelInfo, OpenCodeClient, ProviderInfo } from "@opencode-ai/client"
 import type { Context, Plugin } from "@opencode-ai/plugin/effect/plugin"
 import { define } from "@opencode-ai/plugin/effect/plugin"
 import { Effect, PubSub, Scope, Stream } from "effect"
@@ -10,12 +10,22 @@ import {
   RemoteDirectoryListSchema,
   RemoteDropQueuedMessageSchema,
   RemoteInboundSchema,
+  RemoteModelListSchema,
+  RemoteMultipartMessageSchema,
   RemoteRenameSchema,
   RemoteSendCommandSchema,
-  RemoteTextMessageSchema,
   type RemoteInbound,
+  type RemoteMessagePart,
   type RemoteOutbound,
 } from "./remote-protocol"
+
+/**
+ * The host normally supplies a full public client; the model and provider
+ * namespaces stay optional so pre-catalog hosts can still run the session
+ * relay. list_models degrades to an explicit error without them.
+ */
+export type RemoteSessionClient = Pick<OpenCodeClient, "command" | "session"> &
+  Partial<Pick<OpenCodeClient, "model" | "provider">>
 
 export type RemoteSessionConnection = {
   /** Explicit relay origin. Production must use HTTPS; tests may opt into loopback HTTP. */
@@ -23,7 +33,7 @@ export type RemoteSessionConnection = {
   /** Resolved by the host's validated Kilo account callback; never read from env or storage here. */
   readonly bearerToken: string
   /** The authenticated local public client supplied by the host at plugin activation. */
-  readonly client: () => Pick<OpenCodeClient, "command" | "session">
+  readonly client: () => RemoteSessionClient
   readonly allowHttpLoopback?: boolean
 }
 
@@ -57,7 +67,7 @@ export function createRemoteSessionPlugin(connection: RemoteSessionConnection): 
 export function installRemoteSessionAdapter(
   ctx: RemoteSessionContext,
   connection: Omit<RemoteSessionConnection, "client">,
-  client: Pick<OpenCodeClient, "command" | "session">,
+  client: RemoteSessionClient,
 ): Effect.Effect<RemoteSessionHandle, never, Scope.Scope> {
   validateConnection(connection)
   return Effect.gen(function* () {
@@ -200,31 +210,34 @@ function connect(
 }
 
 function heartbeat(ctx: RemoteSessionContext, client: Pick<OpenCodeClient, "session">, socket: RelaySocket) {
-  return Effect.promise(async () => {
-    const [listed, active] = await Promise.all([
-      client.session.list({ directory: ctx.location.directory, workspace: ctx.location.workspaceID }),
-      client.session.active(),
-    ])
-    send(socket, {
-      type: "heartbeat",
-      sessions: listed.data.flatMap((session) => {
-        if (!sameLocation(session.location, ctx.location) || !session.title) return []
-        return [
-          {
-            id: session.id,
-            title: session.title,
-            status: active[session.id] ? "busy" : "idle",
-            ...(session.parentID === undefined ? {} : { parentSessionId: session.parentID }),
-          },
-        ]
-      }),
-    })
+  return Effect.tryPromise({
+    try: async () => {
+      const [listed, active] = await Promise.all([
+        client.session.list({ directory: ctx.location.directory, workspace: ctx.location.workspaceID }),
+        client.session.active(),
+      ])
+      send(socket, {
+        type: "heartbeat",
+        sessions: listed.data.flatMap((session) => {
+          if (!sameLocation(session.location, ctx.location) || !session.title) return []
+          return [
+            {
+              id: session.id,
+              title: session.title,
+              status: active[session.id] ? "busy" : "idle",
+              ...(session.parentID === undefined ? {} : { parentSessionId: session.parentID }),
+            },
+          ]
+        }),
+      })
+    },
+    catch: () => undefined,
   }).pipe(Effect.catch(() => Effect.void))
 }
 
 function inbound(
   ctx: RemoteSessionContext,
-  client: Pick<OpenCodeClient, "command" | "session">,
+  client: RemoteSessionClient,
   socket: RelaySocket,
   admitted: Map<string, string>,
   input: RemoteInbound,
@@ -237,6 +250,7 @@ function inbound(
   if (input.command === "send_command") return sendCommand(ctx, client, socket, input)
   if (input.command === "list_directories") return listDirectories(ctx, socket, input)
   if (input.command === "list_commands") return listCommands(ctx, client, socket, input)
+  if (input.command === "list_models") return listModels(ctx, client, socket, input)
   if (input.command === "create_session") return createSession(ctx, client, socket, input)
   if (input.command === "interrupt") return interrupt(ctx, client, socket, input)
   if (input.command === "drop_queued_message") return dropQueuedMessage(ctx, client, socket, admitted, input)
@@ -251,10 +265,12 @@ function rename(ctx: RemoteSessionContext, client: Pick<OpenCodeClient, "session
   return localSession(ctx, client, parsed.data.sessionId).pipe(
     Effect.flatMap((session) =>
       session
-        ? Effect.promise(() => client.session.rename({ sessionID: session.id, title: parsed.data.title }))
+        ? Effect.tryPromise({
+            try: () => client.session.rename({ sessionID: session.id, title: parsed.data.title }),
+            catch: () => undefined,
+          }).pipe(Effect.catch(() => Effect.void))
         : Effect.void,
     ),
-    Effect.catch(() => Effect.void),
   )
 }
 
@@ -265,18 +281,35 @@ function sendMessage(
   admitted: Map<string, string>,
   input: Extract<RemoteInbound, { type: "command" }>,
 ) {
-  const parsed = RemoteTextMessageSchema.safeParse(input.data)
+  const parsed = RemoteMultipartMessageSchema.safeParse(input.data)
   if (!parsed.success) return respond(socket, input.id, "unsupported send_message payload")
+  const texts = parsed.data.parts.filter((part): part is Extract<RemoteMessagePart, { type: "text" }> => part.type === "text")
+  if (texts.length !== 1) return respond(socket, input.id, "unsupported send_message payload")
+  const files: { uri: string; name?: string }[] = []
+  for (const part of parsed.data.parts) {
+    if (part.type !== "file") continue
+    // Remote callers may only submit inline bytes. The v1 relay materialized
+    // https:// attachments by fetching them, which this adapter must never do;
+    // file: URLs would make the host read caller-named local paths. Both are
+    // rejected here instead of being forwarded to the public prompt API.
+    if (!part.url.startsWith("data:")) {
+      return respond(socket, input.id, "send_message file parts must be inline data URLs")
+    }
+    files.push({ uri: part.url, ...(part.filename === undefined ? {} : { name: part.filename }) })
+  }
   return localSession(ctx, client, parsed.data.sessionID).pipe(
     Effect.flatMap((session) => {
       if (!session) return respond(socket, input.id, "session unavailable")
-      return Effect.promise(() =>
-        client.session.prompt({
-          sessionID: session.id,
-          text: parsed.data.parts[0].text,
-          ...(parsed.data.messageID === undefined ? {} : { id: parsed.data.messageID }),
-        }),
-      ).pipe(
+      return Effect.tryPromise({
+        try: () =>
+          client.session.prompt({
+            sessionID: session.id,
+            text: texts[0].text,
+            ...(files.length === 0 ? {} : { files }),
+            ...(parsed.data.messageID === undefined ? {} : { id: parsed.data.messageID }),
+          }),
+        catch: () => "failed" as const,
+      }).pipe(
         Effect.tap(() =>
           Effect.sync(() => {
             if (parsed.data.messageID) admitted.set(parsed.data.messageID, session.id)
@@ -304,18 +337,23 @@ function sendCommand(
   return localSession(ctx, client, input.sessionId).pipe(
     Effect.flatMap((session) => {
       if (!session) return respond(socket, input.id, "session unavailable")
-      return Effect.promise(() => client.command.list({ location: session.location })).pipe(
+      return Effect.tryPromise({
+        try: () => client.command.list({ location: session.location }),
+        catch: () => "failed" as const,
+      }).pipe(
         Effect.flatMap((commands) => {
           if (!commands.data.some((command) => command.name === parsed.data.command)) {
             return respond(socket, input.id, "unknown slash command")
           }
-          return Effect.promise(() =>
-            client.session.command({
-              sessionID: session.id,
-              command: parsed.data.command,
-              text: parsed.data.arguments,
-            }),
-          ).pipe(
+          return Effect.tryPromise({
+            try: () =>
+              client.session.command({
+                sessionID: session.id,
+                command: parsed.data.command,
+                text: parsed.data.arguments,
+              }),
+            catch: () => "failed" as const,
+          }).pipe(
             Effect.andThen(respond(socket, input.id)),
             Effect.catch(() => respond(socket, input.id, "failed to admit command")),
           )
@@ -338,7 +376,10 @@ function listCommands(
   return localSession(ctx, client, input.sessionId).pipe(
     Effect.flatMap((session) => {
       if (!session) return respond(socket, input.id, "session unavailable")
-      return Effect.promise(() => client.command.list({ location: session.location })).pipe(
+      return Effect.tryPromise({
+        try: () => client.command.list({ location: session.location }),
+        catch: () => "failed" as const,
+      }).pipe(
         Effect.tap((result) =>
           respond(socket, input.id, {
             protocolVersion: 1,
@@ -353,6 +394,245 @@ function listCommands(
       )
     }),
   )
+}
+
+function listModels(
+  ctx: RemoteSessionContext,
+  client: RemoteSessionClient,
+  socket: RelaySocket,
+  input: Extract<RemoteInbound, { type: "command" }>,
+) {
+  if (!RemoteModelListSchema.safeParse(input.data).success) {
+    return respond(socket, input.id, "invalid list_models command")
+  }
+  const catalog = client.model
+  const inventory = client.provider
+  if (!catalog || !inventory) {
+    return respond(socket, input.id, "model catalog is unavailable")
+  }
+  return (
+    input.sessionId === undefined
+      ? Effect.succeed(undefined)
+      : localSession(ctx, client, input.sessionId).pipe(
+          Effect.flatMap((session) =>
+            session ? Effect.succeed(session.model) : Effect.fail("session unavailable"),
+          ),
+        )
+  ).pipe(
+    Effect.flatMap((current) =>
+      Effect.tryPromise({
+        try: async () => {
+          const location = {
+            directory: ctx.location.directory,
+            ...(ctx.location.workspaceID === undefined ? {} : { workspace: ctx.location.workspaceID }),
+          }
+          const [models, providers, fallback] = await Promise.all([
+            catalog.list({ location }),
+            inventory.list({ location }),
+            catalog.default({ location }),
+          ])
+          return modelCatalogResult({
+            models: models.data,
+            providers: providers.data,
+            defaultModel: fallback.data,
+            currentModel: current,
+          })
+        },
+        catch: () => "failed to list models" as const,
+      }),
+    ),
+    Effect.flatMap((result) => respond(socket, input.id, result)),
+    Effect.catch((error) => respond(socket, input.id, typeof error === "string" ? error : "failed to list models")),
+  )
+}
+
+// V1 relay catalog bounds, from origin/main ecccd1f remote-model-catalog.ts.
+const MAX_MODELS = 2_048
+const MAX_NAME_LENGTH = 256
+const MAX_VARIANT_KEY_LENGTH = 64
+const MAX_VARIANTS = 32
+// v1 Provider.sort ordering: priority-substring rank descending, "latest"
+// models first, then model id descending.
+const MODEL_SORT_PRIORITY = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
+
+type WireModel = {
+  id: string
+  providerID: string
+  api: { id: string; url: string; npm: string }
+  name: string
+  capabilities: {
+    toolcall: boolean
+    input: Record<(typeof MODALITIES)[number], boolean>
+    output: Record<(typeof MODALITIES)[number], boolean>
+  }
+  cost: { input: 0; output: 0; cache: { read: 0; write: 0 } }
+  limit: { context: number; input?: number; output: number }
+  status: ModelInfo["status"]
+  options: Record<string, never>
+  headers: Record<string, never>
+  release_date: string
+  variants: Record<string, Record<string, never>>
+}
+
+type WireProvider = {
+  id: string
+  name: string
+  source: "custom"
+  env: string[]
+  options: Record<string, never>
+  models: Record<string, WireModel>
+}
+
+const MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
+
+/**
+ * Translate the public v2 model inventory into the v1 list_models response.
+ * Only the fields the v1 catalog sanitizer emitted travel on the wire: v2
+ * provider/model settings, headers, body, and package metadata are dropped,
+ * and v1's neutral constants (zeroed cost, empty options/headers/env) are
+ * emitted exactly as v1's sanitizer wrote them.
+ */
+function modelCatalogResult(input: {
+  models: ReadonlyArray<ModelInfo>
+  providers: ReadonlyArray<ProviderInfo>
+  defaultModel: ModelInfo | null | undefined
+  currentModel: { id: string; providerID: string; variant?: string } | undefined
+}) {
+  const grouped = new Map<string, WireModel[]>()
+  for (const source of input.models) {
+    const model = wireModel(source)
+    if (!model) continue
+    const bucket = grouped.get(source.providerID)
+    if (bucket) bucket.push(model)
+    else grouped.set(source.providerID, [model])
+  }
+  const named = new Map(input.providers.map((provider) => [provider.id, provider]))
+  const all: WireProvider[] = []
+  let modelCount = 0
+  let truncated = false
+  for (const [providerID, models] of grouped) {
+    const remaining = MAX_MODELS - modelCount
+    if (remaining <= 0) {
+      truncated = true
+      break
+    }
+    const sorted = sortModels(models)
+    const kept = sorted.length > remaining ? sorted.slice(0, remaining) : sorted
+    truncated ||= sorted.length > remaining
+    modelCount += kept.length
+    all.push({
+      id: providerID,
+      name: (named.get(providerID)?.name ?? providerID).slice(0, MAX_NAME_LENGTH),
+      source: "custom",
+      env: [],
+      options: {},
+      models: Object.fromEntries(kept.map((model) => [model.id, model])),
+    })
+  }
+  const defaults: Record<string, string> = {}
+  for (const provider of all) {
+    const preferred = Object.values(provider.models)[0]
+    if (preferred) defaults[provider.id] = preferred.id
+  }
+  const current = input.currentModel
+  const currentModel =
+    current && current.providerID.length > 0 && current.id.length > 0 && presentIn(all, current.providerID, current.id)
+      ? {
+          model: { providerID: current.providerID, modelID: current.id },
+          ...(current.variant === undefined || current.variant === "default"
+            ? {}
+            : { variant: current.variant }),
+        }
+      : undefined
+  const fallback = input.defaultModel
+  const defaultModel =
+    fallback && presentIn(all, fallback.providerID, fallback.id)
+      ? { providerID: fallback.providerID, modelID: fallback.id }
+      : undefined
+  return {
+    all,
+    default: defaults,
+    connected: all.map((provider) => provider.id),
+    failed: [] as string[],
+    protocolVersion: 1,
+    truncated,
+    ...(currentModel ? { currentModel } : {}),
+    ...(defaultModel ? { defaultModel } : {}),
+  }
+}
+
+/**
+ * v1 wire model. v1 sanitizer fields with no v2 public source
+ * (capabilities temperature/reasoning/attachment/interleaved, recommendedIndex,
+ * isFree, mayTrainOnYourPrompts, hasUserByokAvailable) are omitted rather than
+ * asserted; the v2 modality arrays and tool support are the only proven
+ * capability facts. The wire identity is the v2 catalog id: session selection
+ * resolves catalog ids, while `modelID` is only the provider route target
+ * (alias catalogs route chat -> vendor/chat and must keep advertising `chat`).
+ */
+function wireModel(source: ModelInfo): WireModel | undefined {
+  if (!Number.isFinite(source.limit.context) || source.limit.context < 0) return undefined
+  if (!Number.isFinite(source.limit.output) || source.limit.output < 0) return undefined
+  if (source.limit.input !== undefined && (!Number.isFinite(source.limit.input) || source.limit.input < 0)) {
+    return undefined
+  }
+  if (!source.id) return undefined
+  return {
+    id: source.id,
+    providerID: source.providerID,
+    api: { id: source.id, url: "", npm: "" },
+    name: source.name.slice(0, MAX_NAME_LENGTH),
+    capabilities: {
+      toolcall: source.capabilities.tools,
+      input: modalities(source.capabilities.input),
+      output: modalities(source.capabilities.output),
+    },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+    limit: {
+      context: source.limit.context,
+      ...(source.limit.input === undefined ? {} : { input: source.limit.input }),
+      output: source.limit.output,
+    },
+    status: source.status,
+    options: {},
+    headers: {},
+    release_date: "",
+    variants: Object.fromEntries(
+      source.variants
+        .filter((variant) => variant.id.length > 0 && variant.id.length <= MAX_VARIANT_KEY_LENGTH)
+        .slice(0, MAX_VARIANTS)
+        .map((variant) => [variant.id, {}]),
+    ),
+  }
+}
+
+function modalities(values: ReadonlyArray<string>) {
+  return {
+    text: values.includes("text"),
+    audio: values.includes("audio"),
+    image: values.includes("image"),
+    video: values.includes("video"),
+    pdf: values.includes("pdf"),
+  } satisfies Record<(typeof MODALITIES)[number], boolean>
+}
+
+function sortModels(models: WireModel[]) {
+  return models.toSorted((left, right) => {
+    const priority =
+      MODEL_SORT_PRIORITY.findIndex((filter) => right.id.includes(filter)) -
+      MODEL_SORT_PRIORITY.findIndex((filter) => left.id.includes(filter))
+    if (priority !== 0) return priority
+    const latest = (right.id.includes("latest") ? 0 : 1) - (left.id.includes("latest") ? 0 : 1)
+    if (latest !== 0) return latest
+    if (right.id < left.id) return -1
+    if (right.id > left.id) return 1
+    return 0
+  })
+}
+
+function presentIn(providers: WireProvider[], providerID: string, modelID: string) {
+  const provider = providers.find((candidate) => candidate.id === providerID)
+  return provider !== undefined && Object.hasOwn(provider.models, modelID)
 }
 
 function createSession(
@@ -408,7 +688,10 @@ function interrupt(
   return localSession(ctx, client, input.sessionId).pipe(
     Effect.flatMap((session) => {
       if (!session) return respond(socket, input.id, "session unavailable")
-      return Effect.promise(() => client.session.interrupt({ sessionID: session.id })).pipe(
+      return Effect.tryPromise({
+        try: () => client.session.interrupt({ sessionID: session.id }),
+        catch: () => "failed" as const,
+      }).pipe(
         Effect.tap(() => respond(socket, input.id)),
         Effect.catch(() => respond(socket, input.id, "interrupt failed")),
       )
@@ -417,9 +700,8 @@ function interrupt(
 }
 
 function localSession(ctx: RemoteSessionContext, client: Pick<OpenCodeClient, "session">, id: string) {
-  return Effect.promise(() => client.session.get({ sessionID: id })).pipe(
-    Effect.map((session) => (sameLocation(session.location, ctx.location) ? session : undefined)),
-    Effect.catch(() => Effect.succeed(undefined)),
+  return Effect.promise(() => client.session.get({ sessionID: id }).catch(() => undefined)).pipe(
+    Effect.map((session) => (session && sameLocation(session.location, ctx.location) ? session : undefined)),
   )
 }
 
@@ -532,9 +814,10 @@ function dropQueuedMessage(
     Effect.flatMap((session) => {
       if (!session) return respond(socket, input.id, "session unavailable")
       if (admitted.get(parsed.data.messageID) !== session.id) return respond(socket, input.id, "message not queued")
-      return Effect.promise(() =>
-        client.session.inbox.cancel({ sessionID: session.id, inboxID: parsed.data.messageID }),
-      ).pipe(
+      return Effect.tryPromise({
+        try: () => client.session.inbox.cancel({ sessionID: session.id, inboxID: parsed.data.messageID }),
+        catch: () => "failed" as const,
+      }).pipe(
         Effect.tap(() => Effect.sync(() => admitted.delete(parsed.data.messageID))),
         Effect.andThen(respond(socket, input.id)),
         Effect.catch(() => respond(socket, input.id, "message not queued")),

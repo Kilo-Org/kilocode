@@ -2,8 +2,10 @@ import { NodeFileSystem, NodeHttpServer } from "@effect/platform-node"
 import { createGatewayPlugin, type GatewayOptions } from "@kilocode/gateway"
 import type { Plugin } from "@opencode-ai/plugin/effect/plugin"
 import { SdkPlugins } from "@opencode-ai/core/plugin/sdk"
+import { Config } from "@opencode-ai/core/config"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
+import { LocationServiceMap } from "@opencode-ai/core/location-service-map"
 import { Session } from "@opencode-ai/core/session"
 import { Instance } from "@opencode-ai/core/instance/service"
 import { PermissionSaved } from "@opencode-ai/core/permission/saved"
@@ -159,6 +161,7 @@ export function launch(
     )
     if (options.gateway) {
       const transfer = Context.get(context, SessionTransfer.Service)
+      const locations = Context.get(context, LocationServiceMap.Service)
       const { registerCloud } = yield* Effect.promise(() => import("./cloud-plugin"))
       const { registerRemote } = yield* Effect.promise(() => import("./remote-plugin"))
       const { OpenCode } = yield* Effect.promise(() => import("@opencode-ai/client"))
@@ -166,27 +169,38 @@ export function launch(
         () => import("./cloud/origin"),
       )
       yield* plugins.register(
-        createGatewayPlugin(options.gateway, { import: transfer.import }, (ctx, account) =>
-          Effect.gen(function* () {
-            yield* registerCloud(
-              options.cloud ?? {
-                agentOrigin: DEFAULT_CLOUD_AGENT_ORIGIN,
-                webAppOrigin: DEFAULT_WEB_APP_ORIGIN,
-              },
-              { allowHttpLoopback: options.cloud?.allowHttpLoopback },
-            )(ctx, account)
-            yield* registerRemote({
-              // Source: ecccd1f kilo-sessions/kilo-sessions.ts remoteEnable.
-              // Registration is inert; only an explicit authenticated RPC enables it.
-              relayURL: options.remote?.relayURL ?? "https://ingest.kilosessions.ai",
-              allowHttpLoopback: options.remote?.allowHttpLoopback,
-              client: () =>
-                OpenCode.make({
-                  baseUrl: urls()[0],
-                  headers: { authorization: `Basic ${btoa(`opencode:${password}`)}` },
-                }),
-            })(ctx, account)
-          }),
+        createGatewayPlugin(
+          {
+            ...options.gateway,
+            // Bridge the location-scoped Config service to the Gateway so explicit configured
+            // model fields win over API catalog enrichment (the plugin Context cannot reach it).
+            configEntries: (location) =>
+              Effect.flatMap(Config.Service, (config) => config.entries()).pipe(
+                Effect.provide(locations.get(location)),
+              ),
+          },
+          { import: transfer.import },
+          (ctx, account) =>
+            Effect.gen(function* () {
+              yield* registerCloud(
+                options.cloud ?? {
+                  agentOrigin: DEFAULT_CLOUD_AGENT_ORIGIN,
+                  webAppOrigin: DEFAULT_WEB_APP_ORIGIN,
+                },
+                { allowHttpLoopback: options.cloud?.allowHttpLoopback },
+              )(ctx, account)
+              yield* registerRemote({
+                // Source: ecccd1f kilo-sessions/kilo-sessions.ts remoteEnable.
+                // Registration is inert; only an explicit authenticated RPC enables it.
+                relayURL: options.remote?.relayURL ?? "https://ingest.kilosessions.ai",
+                allowHttpLoopback: options.remote?.allowHttpLoopback,
+                client: () =>
+                  OpenCode.make({
+                    baseUrl: urls()[0],
+                    headers: { authorization: `Basic ${btoa(`opencode:${password}`)}` },
+                  }),
+              })(ctx, account)
+            }),
         ),
         { phase: "post" },
       )

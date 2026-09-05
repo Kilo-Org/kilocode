@@ -10,6 +10,10 @@
 
 > Work In Progress
 
+The separate [scenario test plan](kilo-opencode-v2-test-plan.md) tracks detailed
+CLI/TUI and runtime checks. Manual test results are recorded separately from
+this implementation inventory; writing a checklist earns no completion credit.
+
 ## Summary
 
 Migrate Kilo onto the OpenCode v2 architecture as a **target-shaped port**, not
@@ -206,9 +210,87 @@ do not imply the work has been committed, merged, deployed, or released.
 The completion denominator is frozen at **43 active capability rows** (44
 including the obsolete Console row). Count only `done` and verified
 `upstream-equivalent`; partial implementations receive no completion credit.
-The current requested target of 70% requires **31 covered rows** (72.1%),
-without splitting rows or discarding unresolved product capabilities to reach
-it. The earlier 60% target required 26 rows and remains historical below.
+The previous requested target of 70% required **31 covered rows** (72.1%).
+Johnny's latest direction (2026-09-05) is to maximize verified completion outside
+VS Code and JetBrains, while auditing existing ports and reducing upstream
+patches in parallel. Keep the 43-row denominator: exclusions are not completed
+work, and partial rows do not gain credit. The earlier 60% target required 26
+rows and remains historical below.
+
+### Current execution scope
+
+- Continue CLI/TUI, host, Gateway, runtime and explicit import work through
+  existing v2 extension seams. VS Code and JetBrains implementation is deferred.
+  Classify the remaining cross-client Phase 5 capabilities individually before
+  claiming they are excluded or covered by a CLI feature.
+- Use the BB Delegates plugin for bounded implementation, parity verification
+  and cleanup audits, primarily through cheaper Kilo models. Preserve exact file
+  ownership and coordinate full-suite validation after writers settle.
+- Recheck accepted ports against the recorded current-main source, including
+  Johnny's reported memory right-sidebar display discrepancy. A completed engine
+  or modal does not prove sidebar presentation parity; reopen a row if its
+  acceptance scope is contradicted by verified evidence.
+- Prefer reusable upstream behavior and Kilo-owned extensions. Audit the actual
+  shared-file patch inventory against the approved allowance before landing;
+  this direction does not approve new upstream patches or blanket refactors.
+- Keep deployment, unsupported-platform and product-decision gates explicit.
+  Maximum completion means verified acceptance, not bypassing those gates.
+
+Plan save regression (2026-09-05): the native write tool authorizes
+Location-relative resources, while the Kilo policy incorrectly allowed an
+absolute plan path. The policy now allows `.kilo/plans/*.md` without granting
+external-directory access. Its prompt restores the native save question before
+writing and the separate `plan_exit` implementation choice afterward. A real
+host regression begins without a plan directory and exercises question → write
+→ completion; cancellation, outside-plan denial and configured denials remain
+covered. Parent verification: 14 tests / 60 assertions and package typecheck
+pass using bundled Bun 1.4. Save consent is model instruction, not a new
+deterministic write-approval service. The broader CLI/TUI row remains open.
+
+Follow-up validation (2026-09-05): the settings fixture now waits for native
+focus, processed filter text and the selected row before Enter, rather than
+matching any visible option text. The delegate recorded three consecutive
+settings UI passes; parent independently ran settings UI and memory-sidebar
+targets (**5 pass / 0 fail**). Remote catalog/inline-attachment tests also pass
+independently (**5 tests / 60 assertions**), as do remote RPC and the updated
+wrapped limitation disclosure (**2 tests / 21 assertions**). Remote deployed
+transcript compatibility remains open. The former AISDK-compatible adapter
+bypassed supplied HTTP middleware and carried account metadata for prompts
+and titles. A Kilo-owned native compatible route now replaces that alias;
+parent's focused rerun passes **9 tests / 98 assertions**, including a positive
+all-wire credential regression. Opus follow-up review confirms the native
+delta closes the leak without a protocol/auth/reasoning regression. The stable
+snapshot passed the full CLI fresh-artifact wrapper: **443 pass / 0 fail,
+2,741 assertions across 77 files** (359.21s, bundled Bun 1.4). Log:
+`/Users/johnnyamancio/.bb/thread-storage/thr_qr9z7p3cqc/native-route-full-cli.log`.
+Post-snapshot cleanup shares the two native routes' parser/isolation helpers
+inside `packages/ai/src/kilocode/routed.ts`, preserves dialect option handling
+and explicit `extraBody`, and strengthens the real server-value sentinel.
+Parent independently reran **10 AI tests / 82 assertions** and **9 CLI tests /
+98 assertions**, all passing, plus AI typechecks. The full 443-test result
+above predates this cleanup; it is not relabeled as a post-cleanup full run.
+Independent review retracted the title-specific explanation:
+title generation uses normal request preparation and native-route titles are
+covered. Compiled Auto package loading is a separate open gate: isolated Bun
+1.4 probes confirm runtime `import.meta.resolve`/dynamic loading fails for the
+new route in a compiled executable. The current compiled headless artifact
+does not include that plugin, while the interactive preview is source-mode;
+this is not evidence that today's source preview cannot load Auto. No compiled
+Auto end-to-end flow has passed. A build-time rewrite of Core's builtins would
+still be an upstream override and has not been approved.
+These focused results neither close
+those rows nor replace a coordinated full-suite run.
+
+Independent remote review subsequently found an uncovered catalog-alias bug:
+wire selections must use catalog `id`, not provider-route `modelID`. The
+identity fix now uses `source.id` for wire identities and the configured
+default. Final parent rerun: **7 remote tests / 90 assertions pass**. The
+regression derives the selection from the advertised catalog, creates the
+session through the relay, checks the persisted/current identity and admits
+the prompt through relay `send_message`. Admission does not prove model
+execution. A separate remote aggregate
+attachment-budget concern remains under review; no new arbitrary payload
+limits are implied by the existing Core per-file limit.
 
 | Capability | Owner | Phase | Status |
 |---|---|---|---|
@@ -216,7 +298,7 @@ it. The earlier 60% target required 26 rows and remains historical below.
 | Isolated `kilo2` identity + config/data dirs | 2 host | 0 | done |
 | Gateway device auth / profile | 3 plugin (`integration.transform`) | 0–1 | done |
 | Organization / team (`/teams`) | 3 plugin (+ TUI); Protocol only if shape must change | 0–1 | done |
-| Gateway catalog, BYOK, org routing (`kilo-gateway`) | 3 plugin (`catalog.transform`) + approved host-policy seam; Kilo model presentation/auto parity reopened below | 1, 4 | in-progress |
+| Gateway catalog, BYOK, org routing (`kilo-gateway`) | 3 plugin (`catalog.transform`) + approved host-policy seam; catalog protocol transport is covered, but Kilo model presentation/auto and prompt-policy parity remain open below | 1, 4 | in-progress |
 | `kilo serve` / daemon / attach | 2 host | 1 | done |
 | Generated JS SDK | upstream `@opencode-ai/client`; Kilo = plugin/RPC typings only if published | 1 | upstream-equivalent |
 | Session share / unshare / fork-from-share | 3 plugin + Kilo backend; Protocol only if fork-from-share needs it | 1 | in-progress |
@@ -468,13 +550,16 @@ This is source evidence, not a fresh deployed Gateway response capture.
   ready-empty search and confirmed close/reopen are now tested (two fresh RPCs,
   no cache); the real renderer additionally proves a personal-to-team switch
   replaces inventory and waits for fresh scoped metadata before selection.
-- [ ] **Kilo auto models:** preserve real `kilo-auto/*` catalog IDs and
-  `autoRouting` metadata through discovery, grouping, selection and execution.
+- [ ] **Kilo auto models (remaining acceptance):** real `kilo-auto/*` catalog
+  IDs and `autoRouting` now pass through discovery, grouping, selection and the
+  source-selected native transport. OpenRouter Auto uses a Kilo-owned route that
+  captures a response-selected model; explicit compatible Auto keeps the
+  existing compatible extractor. This does not close the row: verify eligible
+  catalogs and unavailable selections across real scopes, and show a routed
+  model only when response metadata actually supplies it.
   V1's model adapter carries `autoRouting`; its constants reference
   `kilo-auto/free`, and its tests cover `kilo-auto/efficient`. These are source
-  examples, not a guaranteed current availability list. Verify eligible team
-  and personal catalogs, selected-org refresh, unavailable selections, and
-  routed-model display only where response metadata actually supplies it.
+  examples, not a guaranteed current availability list.
 - [ ] **Kilo built-in agents:** compare v1
   `packages/opencode/src/kilocode/agent/index.ts` with native v2 agents and
   register only missing policy/prompt deltas through supported extensions.
@@ -560,15 +645,40 @@ completed credential and Memory gates, is **26/43 (60.5%)**.
   field contract before claiming live-data parity; use local fixtures for this
   implementation batch, with no live account calls implicitly authorized.
 
-#### Local implementation checkpoint — 2026-09-05
+#### Prior integrated implementation checkpoint — 2026-09-05
 
-Latest integrated validation after checkpoint `047ffd045f`: **420 CLI tests,
+Integrated validation after checkpoint `047ffd045f`: **420 CLI tests,
 0 failures, 2615 assertions across 73 files** (354.22s), including the compiled
 preview/ACP build and real local host/TUI fixtures. Gateway: **43 pass / 325
 assertions**. Reused Memory engine: **171 pass / 648 assertions**. CLI, Gateway,
 Memory, TUI and Schema package typechecks pass. These are local fixture checks,
 not deployment or release validation; no live account or paid inference was
 used and nothing was pushed.
+
+#### Gateway protocol follow-up — 2026-09-05
+
+The current Gateway batch has **47 passing direct Gateway tests / 355
+assertions**, clean Gateway typecheck, clean AI typecheck, and a passing
+launched-host protocol fixture. The fixture makes two requests through each
+catalog-selected protocol, checks the Kilo Bearer/team headers and stateless
+Responses reasoning replay, then verifies a same-ID team-to-personal protocol
+change. It uses loopback only; it is not a deployed Gateway canary.
+
+The batch does not close the Gateway inventory row or alter the frozen
+**26/43 (60.5%)** count: prompt-selector policy remains open and the remaining
+Auto catalog acceptance remains listed above. A first full CLI run ended
+**421 pass / 1 fail** on a settings TUI frame wait; the correct-runtime isolated
+settings test passed. The follow-up run recording **416 pass / 6 fail** on
+compiled/packaged startup tests is **not valid full acceptance evidence**: it
+bypassed `script/test.ts` (no `KILO_CLI_TEST_ARTIFACT_DIR`), so compiled-mode
+tests silently fell back to a stale `dist/kilo2` built by unsupported
+Bun 1.3.14 — not a same-command confirmation. The six compiled/packaged
+startup failures are attributed to that stale artifact's `requireRuntime`
+guard (evidence: the same binary passes `paths`/`--help` and fails
+`serve`/`init` with the Bun version error), not to this Gateway batch, and the
+Gateway protocol fixture and settings UI passed within the run. A coordinated
+proper-wrapper confirmation rerun (`dist/interactive/bun run script/test.ts`)
+is still required before any overall green claim.
 
 The current batch also adds durable **Session family usage** through a
 Kilo-owned read-only host RPC and the existing scrollable sidebar slot. It
@@ -1064,6 +1174,12 @@ was made. Keep this distinct from the earlier `/teams` timeout.
 Three consecutive isolated reruns of `test/tui.test.tsx` then passed both cases
 each time (6 passes / 39 assertions in total). They narrow the reproduction but
 do not prove the full-suite timeout fixed or pre-existing relative to this batch.
+User evidence from the embedded BB terminal adds a separate UI follow-up: after
+idle, missing text did not return when typing but did return after a resize. That
+is consistent with a redraw/render-invalidation problem, not proven data loss or
+a confirmed root cause. No Kilo redraw workaround or source fix is authorized
+from this observation. Keep it separate from the current compiled-startup test
+failures.
 
 Validation of this host/settings slice at
 `59b29de40966803e2c7cd734d439843fb773f6a6` plus the local Kilo worktree changes:

@@ -69,6 +69,31 @@ export const RemoteTextMessageSchema = z
   })
   .strict()
 
+// V1 FilePartInput is {type: "file", mime, filename?, url}; v1 materializes
+// https:// parts by fetching them. This adapter only admits inline data: URLs
+// (source: ecccd1f remote-attachments.ts) — every other URL variant is
+// rejected before any prompt is attempted.
+export const RemoteMessagePartSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), text: z.string().min(1) }).strict(),
+  z
+    .object({
+      type: z.literal("file"),
+      mime: z.string().min(1).max(255),
+      url: z.string().min(1),
+      filename: z.string().min(1).max(2_000).optional(),
+    })
+    .strict(),
+])
+
+export const RemoteMultipartMessageSchema = z
+  .object({
+    sessionID: z.string().min(1),
+    messageID: z.string().startsWith("msg").optional(),
+    parts: z.array(RemoteMessagePartSchema).min(1),
+  })
+  .strict()
+export type RemoteMessagePart = z.infer<typeof RemoteMessagePartSchema>
+
 export const RemoteCreateSessionSchema = z
   .object({
     protocolVersion: z.literal(1),
@@ -84,6 +109,9 @@ export const RemoteCreateSessionSchema = z
   .strict()
 
 export const RemoteCommandListSchema = z.object({ protocolVersion: z.literal(1) }).strict()
+
+// Same shape as v1 RemoteModelCatalog.Request (ecccd1f remote-model-catalog.ts).
+export const RemoteModelListSchema = z.object({ protocolVersion: z.literal(1) }).strict()
 
 export const RemoteDirectoryListSchema = z
   .object({ protocolVersion: z.literal(1), path: z.string().min(1).max(2_000).optional() })
