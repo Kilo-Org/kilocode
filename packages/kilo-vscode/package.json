@@ -207,6 +207,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleCaffeination",
+        "title": "Toggle Keep Awake",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"

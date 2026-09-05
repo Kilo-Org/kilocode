@@ -262,6 +262,11 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Geen branches gevonden.",
   "agentManager.import.noBranchesHint": "Plak hierboven een PR URL of maak een nieuwe worktree.",
   "agentManager.import.failed": "Importeren mislukt",
+  "agentManager.caffeination.toggle": "Houd de computer wakker",
+  "agentManager.caffeination.armed": "Modus om de computer wakker te houden ingeschakeld; klik om uit te schakelen",
+  "agentManager.caffeination.active": "Computer wordt wakker gehouden",
+  "agentManager.caffeination.unavailable":
+    "De modus om de computer wakker te houden is niet beschikbaar op dit platform",
   "agentManager.browser.title": "Browser",
   "agentManager.browser.url": "URL van lokale applicatie",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",

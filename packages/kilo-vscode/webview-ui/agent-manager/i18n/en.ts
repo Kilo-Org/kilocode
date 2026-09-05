@@ -273,6 +273,11 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No branches found.",
   "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
   "agentManager.import.failed": "Import failed",
+  "agentManager.caffeination.toggle": "Keep computer awake",
+  "agentManager.caffeination.armed": "Keep-awake mode enabled; click to disable",
+  "agentManager.caffeination.active": "Keeping computer awake",
+  "agentManager.caffeination.unavailable": "Keep-awake mode is unavailable on this platform",
+
   "agentManager.pr.error.gh_auth.title": "GitHub authentication required",
   "agentManager.pr.error.gh_auth.description": "Run 'gh auth login' in your terminal to restore PR status.",
   "agentManager.pr.error.gh_missing.title": "GitHub CLI not installed",

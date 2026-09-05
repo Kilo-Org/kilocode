@@ -258,6 +258,11 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ingen branches fundet.",
   "agentManager.import.noBranchesHint": "Indsæt en PR URL ovenfor eller opret et nyt Worktree.",
   "agentManager.import.failed": "Import mislykkedes",
+  "agentManager.caffeination.toggle": "Hold computeren vågen",
+  "agentManager.caffeination.armed": "Tilstanden til at holde computeren vågen er aktiveret; klik for at deaktivere",
+  "agentManager.caffeination.active": "Holder computeren vågen",
+  "agentManager.caffeination.unavailable":
+    "Tilstanden til at holde computeren vågen er ikke tilgængelig på denne platform",
   "agentManager.browser.title": "Browser",
   "agentManager.browser.url": "URL til lokal applikation",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",

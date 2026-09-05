@@ -1980,6 +1980,12 @@ export const MultiProjectSidebar: Story = {
   },
 }
 
+export const MultiProjectSidebar200: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List - minimum sidebar width",
+  parameters: { layout: "fullscreen" },
+}
+
 // ---------------------------------------------------------------------------
 // PR panel — review comments
 // ---------------------------------------------------------------------------
