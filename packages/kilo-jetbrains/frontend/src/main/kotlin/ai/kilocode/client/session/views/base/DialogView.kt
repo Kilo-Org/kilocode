@@ -308,6 +308,10 @@ open class DialogView(
         btn.text = text
     }
 
+    /**
+     * Toggle the card's chrome. Outlined (the default) paints the dialog surface fill plus the
+     * outline; disabling it drops both, leaving the content flush with the session backdrop.
+     */
     @RequiresEdt
     fun setOutlined(value: Boolean) {
         if (outlined == value) return
@@ -337,9 +341,18 @@ open class DialogView(
 
     // ---- contentColor override ----
 
-    override fun contentColor(): Color = SessionUiStyle.View.Surface.bgColor()
+    override fun contentColor(): Color =
+        if (outlined) SessionUiStyle.View.Dialog.bgColor() else SessionUiStyle.View.Surface.bgColor()
 
-    override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Outline.brightColor() else null
+    /**
+     * The painted surface depends on [outlined], which is still `false` while the super constructor
+     * assigns `background = contentColor()`, and it changes again on every [setOutlined] call.
+     * Deriving the background here keeps the reported color equal to the one the card actually
+     * paints instead of leaving a stale value behind from construction.
+     */
+    override fun getBackground(): Color = contentColor()
+
+    override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Dialog.outlineColor() else null
 
     // ---- private helpers ----
 
