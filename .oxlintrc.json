@@ -47,5 +47,20 @@
   "options": {
     "typeAware": true
   },
-  "ignorePatterns": ["**/node_modules", "**/dist", "**/.build", "**/.sst", "**/*.d.ts", "**/sdk.gen.ts"]
+  "ignorePatterns": ["**/node_modules", "**/dist", "**/.build", "**/.sst", "**/*.d.ts", "**/sdk.gen.ts"],
+  // First-party Kilo code only. Excludes packages/opencode (upstream OpenCode fork) except
+  // its kilo-named subdirectories, so this stays out of the way of upstream merges.
+  // See https://github.com/Kilo-Org/kilocode/pull/13369#discussion_r3844247936
+  "overrides": [
+    {
+      "files": ["packages/kilo-*/**", "packages/opencode/**/*kilo*/**"],
+      "rules": {
+        // Prefer `arr.at(-1)` / `arr.at(N)` over index access like `arr[arr.length - 1]` or `arr[1]`.
+        // Note: this intentionally does not flag `arr[0]` — both eslint-plugin-unicorn and this
+        // oxlint port special-case index 0 as unambiguous, so `snapshots[0]?.id` still passes.
+        // "warn" (not "error") because this is a new preference, not yet applied to existing code.
+        "unicorn/prefer-at": ["warn", { "checkAllIndexAccess": true }]
+      }
+    }
+  ]
 }
