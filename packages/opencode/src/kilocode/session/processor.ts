@@ -325,11 +325,28 @@ export namespace KiloSessionProcessor {
     if (input.msg.summary) return
     if (input.msg.finish !== "length") return
     if (input.step.reasoning && !input.step.text && !input.step.tool) {
-      log.warn("reasoning-only length stop", { messageID: input.msg.id })
-      return REASONING_LENGTH_WARNING
+      return // Handled by lengthFinishError
     }
     log.warn("length stop", { messageID: input.msg.id })
     return OUTPUT_LENGTH_WARNING
+  }
+
+  export function lengthFinishError(input: {
+    msg: MessageV2.Assistant
+    step: { reasoning: boolean; text: boolean; tool: boolean }
+  }) {
+    if (input.msg.summary) return false
+    if (input.msg.finish !== "length") return false
+    if (input.step.reasoning && !input.step.text && !input.step.tool) {
+      const err = new MessageV2.APIError({
+        message: REASONING_LENGTH_WARNING,
+        isRetryable: false,
+      }).toObject()
+      input.msg.error = err
+      log.warn("reasoning-only length stop error", { messageID: input.msg.id })
+      return err
+    }
+    return false
   }
 
   export function providerFinishError(msg: MessageV2.Assistant) {
