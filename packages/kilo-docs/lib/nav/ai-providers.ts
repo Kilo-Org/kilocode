@@ -38,6 +38,7 @@ export const AiProvidersNav: NavSection[] = [
         children: "Vercel AI Gateway",
       },
       { href: "/ai-providers/edenai", children: "Eden AI" },
+      { href: "/ai-providers/openzoo", children: "OpenZoo" },
     ],
   },
   {
