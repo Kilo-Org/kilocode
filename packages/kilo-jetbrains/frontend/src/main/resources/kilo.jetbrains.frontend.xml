@@ -163,6 +163,11 @@
                      defaultValue="true"
                      restartRequired="false"
                      overrides="false"/>
+        <registryKey key="kilo.list.fade"
+                     description="Fade list row titles and descriptions into the row background where they do not fit, instead of leaving a bare cut."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
     </extensions>
 
     <applicationListeners>

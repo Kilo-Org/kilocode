@@ -24,6 +24,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
@@ -67,7 +68,6 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -501,7 +501,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             val list = UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<ActiveListItem>
             val row = list.model.getElementAt(0) as ActiveListItem
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, true, true)
-            val title = components(comp).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(comp)
             val iter = title.iterator()
             assertTrue(iter.hasNext())
             iter.next()
