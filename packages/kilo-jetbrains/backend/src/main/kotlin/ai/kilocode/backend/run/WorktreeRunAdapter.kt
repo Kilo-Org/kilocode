@@ -174,7 +174,8 @@ internal object WorktreeRunAdapter {
         return if (rel.toString().isEmpty()) root.toString() else root.resolve(rel).normalize().toString()
     }
 
-    private fun env(worktree: String, repo: String) = mapOf(
+    /** Shared with [WorktreeRunDelegate] for delegated (Gradle-executed) configs. */
+    internal fun env(worktree: String, repo: String) = mapOf(
         WORKTREE_ENV to worktree,
         REPO_ENV to repo,
         // Neutralize an inherited Gradle debug session. When the IDE itself was launched by
