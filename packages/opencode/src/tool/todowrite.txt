@@ -23,6 +23,9 @@ Skip when:
 
 ## Rules
 - Update status in real time; don't batch completions
+- After creating a list, call this tool before starting the first item.
+- After completing each item, call this tool before starting the next item, with the completed item marked `completed` and the next item marked `in_progress`.
+- Do not complete multiple items or continue through multiple steps without updating the list between them.
 - Mark `completed` only after the required work is actually done, including any required verification. Never based on intent.
 - Keep exactly one `in_progress` while work remains
 - If blocked or partial, keep it `in_progress` and add a follow-up todo describing the blocker

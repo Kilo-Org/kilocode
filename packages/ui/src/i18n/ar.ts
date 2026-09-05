@@ -211,6 +211,7 @@ export const dict = {
   "ui.patch.action.created": "تم الإنشاء",
   "ui.patch.action.moved": "منقول",
   "ui.patch.action.patched": "تم تطبيق رقعة",
+  "ui.patch.action.plan": "خطة", // kilocode_change
 
   "ui.question.subtitle.answered": "تمت الإجابة عن {{count}}",
   "ui.question.answer.none": "(لا توجد إجابة)",
@@ -245,11 +246,17 @@ export const dict = {
   "ui.message.deleteQueued": "حذف الرسالة من قائمة الانتظار",
   "ui.messagePart.mcp.input": "الإدخال",
   "ui.messagePart.mcp.output": "الإخراج",
+  "ui.messagePart.board.read": "قراءة رسائل الوكلاء",
+  "ui.messagePart.board.all": "جميع الوكلاء",
+  "ui.messagePart.board.primary": "الوكيل الرئيسي",
+  "ui.messagePart.board.agent": "وكيل",
+  "ui.messagePart.board.route": "من {{from}} إلى {{to}}",
+  "ui.messagePart.board.empty": "لا توجد رسائل من الوكلاء",
+  "ui.messagePart.board.stored": "تم الحفظ فقط. لم يتم تأكيد التسليم أو القراءة.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "تم التغيير",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · تم الاحتفاظ بـ {{kept}} من {{total}} سطرًا",
   // kilocode_change end
 }

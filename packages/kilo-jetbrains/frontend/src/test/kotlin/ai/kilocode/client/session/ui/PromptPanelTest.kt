@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -18,7 +19,10 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.ide.actions.UndoRedoAction
@@ -693,6 +697,46 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue("items=$items", items.contains("new"))
     }
 
+    fun `test slash lookup reopens while typing after it closes`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        // The whole-token set does not open a lookup (matches a paste / programmatic set, not typing).
+        field.text = "/n"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+        assertNull("no lookup expected before typing", LookupManager.getActiveLookup(editor))
+
+        // A single keystroke inside the slash token reopens the completion, simulating the popup
+        // having closed during fast typing.
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.caretModel.offset, "e")
+        }
+        editor.caretModel.moveToOffset(editor.document.textLength)
+
+        val items = waitForLookupItems(editor)
+        assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test slash lookup refreshes when server commands load`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "/deploy"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val before = waitForLookupItems(editor)
+        assertFalse("before=$before", before.contains("deploy"))
+
+        rpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY, commands = listOf(CommandDto("deploy")))
+
+        assertTrue("expected deploy after load", waitForLookupItem(editor, "deploy"))
+    }
+
     fun `test prompt completion lookup is positioned above caret`() {
         rpc.searchResult = FileSearchResultDto(
             files = listOf(WorkspaceFileDto("src/deploy.ts", "deploy.ts")),
@@ -809,6 +853,21 @@ class PromptPanelTest : BasePlatformTestCase() {
         )
 
         assertFalse(components(panel).contains(panel.buttonForTest()))
+        // The session menu (auto-approve + sharing) has nothing to offer before a session exists,
+        // same reasoning as hiding the auto-approve shield itself.
+        assertFalse(buttons(panel).any { it.accessibleContext.accessibleName == KiloBundle.message("prompt.action.menu") })
+    }
+
+    fun `test session menu button shown by default and does not throw without a registered action`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        val menu = buttons(panel).single { it.accessibleContext.accessibleName == KiloBundle.message("prompt.action.menu") }
+        assertEquals(KiloBundle.message("prompt.action.menu"), menu.toolTipText)
+
+        // Kilo.Session.PromptMenu is not registered with ActionManager in the test fixture (the
+        // plugin's declared actions never are — see SessionContextMenuActionsTest), so this exercises
+        // the null-guard in showMenu() rather than a real popup.
+        menu.doClick()
     }
 
     fun `test hidden submit button still exposes send context from editor`() {
@@ -1006,6 +1065,33 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("High ▾", panel.reasoning.text)
     }
 
+    fun `test reasoning picker cycle advances and wraps`() {
+        val picker = ReasoningPicker()
+        var selected: ReasoningPicker.Item? = null
+        picker.onSelect = { selected = it }
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low"), ReasoningPicker.Item("high", "High")), "low")
+
+        picker.cycle()
+        assertEquals("high", picker.selectedForTest()?.id)
+        assertEquals("high", selected?.id)
+
+        picker.cycle()
+        assertEquals("low", picker.selectedForTest()?.id)
+    }
+
+    fun `test reasoning picker canCycle is false when hidden or single variant`() {
+        val picker = ReasoningPicker()
+
+        picker.setItems(emptyList())
+        assertFalse(picker.canCycle())
+
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low")), "low")
+        assertFalse(picker.canCycle())
+
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low"), ReasoningPicker.Item("high", "High")), "low")
+        assertTrue(picker.canCycle())
+    }
+
     fun `test reasoning picker aligns unchecked rows`() {
         val picker = ReasoningPicker()
         val low = ReasoningPicker.Item("low", "Low")
@@ -1169,6 +1255,26 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.isStopEnabled)
     }
 
+    fun `test selector tooltips include their cycle shortcut`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        assertEquals(KeymapUtil.createTooltipText("Select mode", "Kilo.Session.CycleMode"), panel.mode.toolTipText)
+        assertEquals(KeymapUtil.createTooltipText("Select model", "Kilo.Session.CycleModel"), panel.model.toolTipText)
+        assertEquals(
+            KeymapUtil.createTooltipText("Select reasoning effort", "Kilo.Session.CycleReasoning"),
+            panel.reasoning.toolTipText,
+        )
+    }
+
+    fun `test reset control tooltip includes its shortcut`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setResetVisible(true)
+
+        val reset = buttons(panel).first { it.accessibleContext.accessibleName == KiloBundle.message("model.picker.reset") }
+
+        assertEquals(KeymapUtil.createTooltipText(KiloBundle.message("model.picker.reset"), "Kilo.Session.ResetModel"), reset.toolTipText)
+    }
+
     fun `test send icon matches scroll button theme colors`() {
         assertTrue(resource("/icons/send.svg").contains("fill=\"#0066B8\""))
         assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
@@ -1298,6 +1404,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("make a plan", seen)
         assertFalse(enhance.isEnabled)
         assertTrue(enhance.icon is AnimatedIcon)
+        assertSame(SpinnerIcon.icon, enhance.icon)
         val icon = enhance.icon
 
         panel.setReady(true)
@@ -1521,6 +1628,16 @@ class PromptPanelTest : BasePlatformTestCase() {
             Thread.sleep(20)
         }
         return LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+    }
+
+    private fun waitForLookupItem(editor: Editor, value: String): Boolean {
+        repeat(50) {
+            UIUtil.dispatchAllInvocationEvents()
+            val items = LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+            if (items.contains(value)) return true
+            Thread.sleep(20)
+        }
+        return false
     }
 
     private fun acceptLookup(editor: Editor) {

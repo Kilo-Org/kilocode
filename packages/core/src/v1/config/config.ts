@@ -301,17 +301,20 @@ export const Info = Schema.Struct({
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
-      agent_requirements: Schema.optional(Schema.Boolean).annotate({
-        description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
-      }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
+      }),
+      task_model_selection: Schema.optional(Schema.Boolean).annotate({
+        description: "Allow task subagents to select a model, provider, and reasoning effort",
       }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
+      }),
+      shared_agent_board: Schema.optional(Schema.Boolean).annotate({
+        description: "Share discoveries between the main agent and subagents within one session",
       }),
       // kilocode_change end
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
@@ -332,14 +335,6 @@ export const Info = Schema.Struct({
       sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description:
           "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
-      }),
-      swe_pruner: Schema.optional(Schema.Boolean).annotate({
-        description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
-      }),
-      swe_pruner_model: Schema.optional(Schema.String).annotate({
-        description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({

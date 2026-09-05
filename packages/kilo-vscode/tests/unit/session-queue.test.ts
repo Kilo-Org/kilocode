@@ -4,12 +4,19 @@ import {
   messageTurns,
   partitionTurns,
   queuedUserMessageIDs,
+  removeQueuedMessage,
   stableMessageTurns,
   visibleMessages,
   visibleParts,
   type RevertBoundary,
 } from "../../webview-ui/src/context/session-queue"
-import type { Message, Part, SessionStatusInfo } from "../../webview-ui/src/types/messages"
+import type {
+  ExtensionMessage,
+  Message,
+  Part,
+  SessionStatusInfo,
+  WebviewMessage,
+} from "../../webview-ui/src/types/messages"
 
 const base = {
   sessionID: "session",
@@ -101,10 +108,53 @@ describe("queuedUserMessageIDs", () => {
     expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 
-  it("returns no queued messages while idle", () => {
+  it("returns no queued messages while idle without submitting flag", () => {
     const messages = [user("message_1"), user("message_2")]
 
     expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
+
+  it("queues follow-ups while idle when submitting is true", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(queuedUserMessageIDs(messages, { type: "idle" }, undefined, true)).toEqual(["message_2"])
+  })
+})
+
+describe("activeUserMessageID", () => {
+  it("returns undefined while idle and not submitting", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" })).toBeUndefined()
+  })
+
+  it("returns the pending user message while idle when submitting is true", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_1")
+  })
+
+  it("returns the next pending user message after finished turn when submitting is true", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop", time: { created: 1, completed: 2 } }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_3")
+  })
+})
+
+describe("active queued status boundary", () => {
+  it("keeps the active assistant status visible when a follow-up is queued", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 })
 
@@ -589,5 +639,59 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
+})
+
+describe("queued deletion cleanup", () => {
+  const setup = (timeout = 10_000) => {
+    const listeners = new Set<(message: ExtensionMessage) => void>()
+    const sent: WebviewMessage[] = []
+    const promise = removeQueuedMessage(
+      {
+        onMessage: (handler) => {
+          listeners.add(handler)
+          return () => {
+            listeners.delete(handler)
+          }
+        },
+        postMessage: (message) => {
+          sent.push(message)
+        },
+      },
+      "session",
+      "message",
+      timeout,
+    )
+    return {
+      promise,
+      listeners,
+      sent,
+      emit: (message: ExtensionMessage) => listeners.forEach((handler) => handler(message)),
+    }
+  }
+
+  it.each([true, false])("settles only the matching acknowledgment: %p", async (success) => {
+    const state = setup()
+    const request = state.sent.at(0)
+    if (request?.type !== "deleteMessage") throw new Error("Missing deletion request")
+    state.emit({ type: "connectionState", state: "connecting" })
+    state.emit({ ...request, type: "deleteMessageResult", requestID: "unrelated", success: true })
+    expect(state.listeners.size).toBe(1)
+    state.emit({ ...request, type: "deleteMessageResult", success })
+    expect(await state.promise).toBe(success)
+    expect(state.listeners.size).toBe(0)
+  })
+
+  const interruptions: Array<ExtensionMessage | undefined> = [
+    undefined,
+    { type: "connectionState", state: "disconnected" },
+    { type: "connectionState", state: "error" },
+    { type: "sessionDeleted", sessionID: "session" },
+  ]
+  it.each(interruptions)("releases the waiter and listener after timeout or interruption: %p", async (message) => {
+    const state = setup(1)
+    if (message) state.emit(message)
+    expect(await state.promise).toBe(false)
+    expect(state.listeners.size).toBe(0)
   })
 })

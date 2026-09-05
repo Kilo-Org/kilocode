@@ -285,11 +285,17 @@ const layer = Layer.effect(
       let pruned = 0
       const toPrune: SessionV1.ToolPart[] = []
       let turns = 0
+      let steps = 0
+      let recent = true
 
       loop: for (let msgIndex = msgs.length - 1; msgIndex >= 0; msgIndex--) {
         const msg = msgs[msgIndex]
         if (msg.info.role === "user") turns++
-        if (turns < 2) continue
+        if (msg.info.role === "assistant") {
+          if (msg.info.summary) recent = false
+          if (msg.info.time.completed && msg.info.finish && msg.info.finish !== "error" && !msg.info.error) steps++
+        }
+        if (turns < 2 && (!recent || steps <= 2)) continue
         if (msg.info.role === "assistant" && msg.info.summary) break loop
         for (let partIndex = msg.parts.length - 1; partIndex >= 0; partIndex--) {
           const part = msg.parts[partIndex]
@@ -345,6 +351,18 @@ const layer = Layer.effect(
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
           if (msg.info.role === "user" && !msg.parts.some((p) => p.type === "compaction")) {
+            const progress = input.messages
+              .slice(i + 1, idx)
+              .some(
+                (item) =>
+                  item.info.role === "assistant" &&
+                  (item.info.finish ||
+                    item.parts.some(
+                      (part) =>
+                        part.type === "tool" || ((part.type === "text" || part.type === "reasoning") && !!part.text),
+                    )),
+              )
+            if (progress) break
             replay = { info: msg.info, parts: msg.parts }
             messages = input.messages.slice(0, i)
             break
@@ -368,11 +386,12 @@ const layer = Layer.effect(
       const prior = completedCompactions(history)
       const hidden = new Set(prior.flatMap((item) => [item.userIndex, item.assistantIndex]))
       const previousSummary = prior.at(-1)?.summary
-      const selected = yield* select({
-        messages: history.filter((_, index) => !hidden.has(index)),
-        cfg,
-        model,
-      })
+      // kilocode_change start
+      const available = history.filter((_, index) => !hidden.has(index))
+      const selected = replay
+        ? { head: available, tail_start_id: undefined }
+        : yield* select({ messages: available, cfg, model })
+      // kilocode_change end
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
         "experimental.session.compacting",
@@ -520,6 +539,7 @@ const layer = Layer.effect(
             format: original.format,
             tools: original.tools,
             system: original.system,
+            editorContext: original.editorContext, // kilocode_change
           })
           KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
           for (const part of replay.parts) {
@@ -531,6 +551,7 @@ const layer = Layer.effect(
                 : part
             yield* session.updatePart({
               ...replayPart,
+              ...(replayPart.type === "text" && { synthetic: true }),
               id: PartID.ascending(),
               messageID: replayMsg.id,
               sessionID: input.sessionID,

@@ -5,11 +5,13 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
+import ai.kilocode.client.onboarding.FakeOnboardingController
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -51,7 +53,10 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private val requested = mutableListOf<JComponent>()
     private val notified = mutableListOf<Pair<String, String?>>()
     private val ui = mutableListOf<SessionUi>()
+    private val movedTo = mutableListOf<Triple<String?, String, String>>()
+    private var newWorktreeCalls = 0
     private val migration = FakeMigrationUiController()
+    private val onboarding = FakeOnboardingController()
 
     override fun setUp() {
         super.setUp()
@@ -171,6 +176,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     }
 
     fun `test deleting shown session removes it and falls back to next session`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
         val first = session("ses_1", updated = 3.0)
         val second = session("ses_2", updated = 2.0)
         rpc.listed += first
@@ -184,8 +191,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf(DIR to "ses_1", DIR to "ses_2"), created)
+        assertEquals(setOf(first.id), edt { manager.deleting() })
+        gate.complete(Unit)
         waitUntil { manager.deleting().isEmpty() }
         assertEquals(listOf(first.id to DIR), rpc.deletes.toList())
+        assertTrue(notified.toString(), notified.isEmpty())
     }
 
     fun `test deleting middle shown session falls back to next visible session`() {
@@ -370,6 +380,140 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
     }
 
+    fun `test base defaults to false until resolved`() {
+        val manager = manager(resolveBase = { false })
+
+        assertFalse(edt { manager.base() })
+        assertFalse(edt { manager.showsBranchDock })
+        assertFalse(edt { manager.supportsMoveToWorktree })
+        assertFalse(edt { manager.supportsNewWorktree })
+    }
+
+    fun `test base editor enables the branch dock and worktree flows once resolved`() {
+        val manager = manager(resolveBase = { true })
+
+        edt { manager.start() }
+        flush()
+
+        assertTrue(edt { manager.base() })
+        assertTrue(edt { manager.showsBranchDock })
+        assertTrue(edt { manager.supportsMoveToWorktree })
+        assertTrue(edt { manager.supportsNewWorktree })
+    }
+
+    fun `test a linked worktree tab keeps the dock and worktree flows off`() {
+        val manager = manager(resolveBase = { false })
+
+        edt { manager.start() }
+        flush()
+
+        assertFalse(edt { manager.base() })
+        assertFalse(edt { manager.showsBranchDock })
+        assertFalse(edt { manager.supportsMoveToWorktree })
+        assertFalse(edt { manager.supportsNewWorktree })
+    }
+
+    fun `test base is resolved only once across repeated start calls`() {
+        var calls = 0
+        val manager = manager(resolveBase = { calls++; true })
+
+        edt { manager.start() }
+        flush()
+        edt { manager.start() }
+        flush()
+
+        assertEquals(1, calls)
+        assertTrue(edt { manager.base() })
+    }
+
+    fun `test a start during the lookup neither repeats it nor opens a second session`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        var calls = 0
+        val gate = CompletableDeferred<Unit>()
+        val manager = manager(resolveBase = { calls++; gate.await(); true })
+
+        edt { manager.start() }
+        flush()
+        // The migration path calls start() again, and a tab shown twice can too, both while the lookup
+        // is still out.
+        edt { manager.start() }
+        flush()
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(1, calls)
+        assertEquals(listOf(DIR to "ses_1"), created)
+        assertTrue(edt { manager.base() })
+    }
+
+    fun `test a lookup that lands after disposal opens nothing`() {
+        rpc.listed += session("ses_1", updated = 1.0)
+        val gate = CompletableDeferred<Unit>()
+        val manager = manager(resolveBase = { gate.await(); true })
+
+        edt { manager.start() }
+        flush()
+        edt { Disposer.dispose(manager) }
+        gate.complete(Unit)
+        flush()
+
+        assertTrue("no session may open for a disposed editor, opened $created", created.isEmpty())
+        assertFalse(edt { manager.base() })
+    }
+
+    fun `test the first session still opens once base resolution settles`() {
+        rpc.listed += session("ses_old", updated = 1.0)
+        rpc.listed += session("ses_new", updated = 3.0)
+        val manager = manager(resolveBase = { true })
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(listOf(DIR to "ses_new"), created)
+    }
+
+    fun `test move to worktree delegates to the injected host only from the base editor`() {
+        val session = session("ses_1", updated = 1.0)
+        val base = manager(resolveBase = { true })
+        edt { base.start() }
+        flush()
+
+        edt { base.moveToWorktree(session.id, DIR) }
+
+        assertEquals(listOf(Triple(session.id, DIR, "worktree_editor")), movedTo)
+    }
+
+    fun `test move to worktree is a no-op from a linked worktree tab`() {
+        val session = session("ses_1", updated = 1.0)
+        val worktree = manager(resolveBase = { false })
+        edt { worktree.start() }
+        flush()
+
+        edt { worktree.moveToWorktree(session.id, DIR) }
+
+        assertTrue(movedTo.isEmpty())
+    }
+
+    fun `test new worktree delegates to the injected host only from the base editor`() {
+        val base = manager(resolveBase = { true })
+        edt { base.start() }
+        flush()
+
+        edt { base.newWorktree() }
+
+        assertEquals(1, newWorktreeCalls)
+    }
+
+    fun `test new worktree is a no-op from a linked worktree tab`() {
+        val worktree = manager(resolveBase = { false })
+        edt { worktree.start() }
+        flush()
+
+        edt { worktree.newWorktree() }
+
+        assertEquals(0, newWorktreeCalls)
+    }
+
     private fun detection() = LegacyMigrationDetectionDto(
         providers = listOf(MigrationProviderInfoDto("profile1", "anthropic", "claude-3", true, true, "anthropic")),
         mcpServers = emptyList(),
@@ -385,6 +529,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         del: (String, (Boolean, String?) -> Unit) -> Unit = controller::delete,
         adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { _, _, _ -> RenameWorktreeResultDto() },
         onAdopted: (WorktreeDto) -> Unit = {},
+        // Real hosts resolve this from KiloWorktreeService.list(dir); tests answer instantly and never
+        // touch the platform RPC layer, matching every other seam this manager already accepts.
+        resolveBase: suspend (String) -> Boolean = { false },
+        moveHost: (String?, String, String) -> Unit = { id, dir, surface -> movedTo += Triple(id, dir, surface) },
+        newWorktreeHost: () -> Unit = { newWorktreeCalls++ },
     ): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
@@ -404,11 +553,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
                     workspace,
                     sessions,
                     app,
-                    coroutines.scope,
+                    SessionUiFactory(coroutines.scope).scope(),
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
-                    migration = migration,
+                    onboarding = onboarding,
                     timers = timers,
                 ).also {
                     ui.add(it)
@@ -424,6 +573,9 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             migration = migration,
             adopt = adopt,
             onAdopted = onAdopted,
+            resolveBase = resolveBase,
+            moveHost = moveHost,
+            newWorktreeHost = newWorktreeHost,
         )
     }
 
@@ -448,7 +600,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private fun flush() = coroutines.drain()
 
     private fun waitUntil(block: () -> Boolean) {
-        assertTrue(coroutines.pumpUntil { edt(block) })
+        val done = coroutines.pumpUntil { edt(block) }
+        assertTrue("created=$created, deletes=${rpc.deletes}, notified=$notified", done)
     }
 
     private fun useInactiveDisposeTimeout() {

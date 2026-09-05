@@ -164,13 +164,14 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  readonly?: boolean
 }
 
 export type PartComponent = Component<MessagePartProps>
 
 export const PART_MAPPING: Record<string, PartComponent | undefined> = {}
 
-function relativizeProjectPath(path: string, directory?: string) {
+export function relativizeProjectPath(path: string, directory?: string) {
   if (!path) return ""
   if (!directory) return path
   if (directory === "/") return path
@@ -752,9 +753,12 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  edit?: { label: string; onClick: () => void; disabled?: boolean }
+  queuedDisabled?: boolean
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
+  onImageClick?: (url: string, filename?: string) => boolean
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -816,6 +820,7 @@ export function UserMessageDisplay(props: {
   })
 
   const openImagePreview = (url: string, alt?: string) => {
+    if (props.onImageClick?.(url, alt)) return
     dialog.show(() => <ImagePreview src={url} alt={alt} />)
   }
 
@@ -835,6 +840,7 @@ export function UserMessageDisplay(props: {
           icon="close-small"
           size="normal"
           variant="ghost"
+          disabled={props.queuedDisabled}
           onMouseDown={(e) => e.preventDefault()}
           onClick={(event) => {
             event.stopPropagation()
@@ -843,6 +849,28 @@ export function UserMessageDisplay(props: {
           aria-label={i18n.t("ui.message.deleteQueued")}
         />
       </Tooltip>
+    </Show>
+  )
+
+  const Edit = () => (
+    <Show when={props.edit}>
+      {(edit) => (
+        <Tooltip value={edit().label} placement="right" gutter={4}>
+          <IconButton
+            data-slot="user-message-edit"
+            icon="edit"
+            size="small"
+            variant="ghost"
+            disabled={props.queuedDisabled || edit().disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.stopPropagation()
+              edit().onClick()
+            }}
+            aria-label={edit().label}
+          />
+        </Tooltip>
+      )}
     </Show>
   )
 
@@ -885,6 +913,7 @@ export function UserMessageDisplay(props: {
         <Show when={!text() && !props.header && props.queued}>
           <div data-slot="user-message-queued-indicator">
             <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Edit />
             <Delete />
           </div>
         </Show>
@@ -904,6 +933,7 @@ export function UserMessageDisplay(props: {
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Edit />
                   <Delete />
                 </div>
               </GrowBox>
@@ -1049,6 +1079,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        readonly={props.readonly}
       />
     </Show>
   )
@@ -1073,6 +1104,7 @@ export interface ToolProps {
   locked?: boolean
   animate?: boolean
   reveal?: boolean
+  readonly?: boolean
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -1135,10 +1167,104 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
+function BoardRoute(props: { from?: unknown; to?: unknown; fromLabel?: unknown; toLabel?: unknown }) {
+  const i18n = useI18n()
+  const text = (value: unknown) => (typeof value === "string" ? value : "")
+  const from = () => text(props.from)
+  const to = () => text(props.to)
+  const label = (id: string, value: unknown) => {
+    if (id === "ALL") return i18n.t("ui.messagePart.board.all")
+    const title = text(value)
+    if (title.trim()) return title
+    if (id === "main") return i18n.t("ui.messagePart.board.primary")
+    return id ? `${i18n.t("ui.messagePart.board.agent")} · ${id.slice(-8)}` : i18n.t("ui.messagePart.board.agent")
+  }
+  const sender = () => label(from(), props.fromLabel)
+  const recipient = () => label(to(), props.toLabel)
+  const detail = (title: string, id: string) => (
+    <div data-slot="board-route-detail">
+      <span>{title}</span>
+      <Show when={id}>
+        <code>{id}</code>
+      </Show>
+    </div>
+  )
+  return (
+    <span
+      data-component="board-route"
+      data-broadcast={to() === "ALL"}
+      role="group"
+      aria-label={i18n.t("ui.messagePart.board.route", { from: sender(), to: recipient() })}
+    >
+      <Icon name="task" size="small" />
+      <Tooltip
+        class="board-route-member board-route-sender"
+        contentClass="board-route-tooltip"
+        value={detail(sender(), from())}
+      >
+        {sender()}
+      </Tooltip>
+      <Icon name="arrow-right" size="small" />
+      <span data-slot="board-route-recipient-icon" data-broadcast={to() === "ALL"}>
+        <Icon name="task" size="small" />
+        <Show when={to() === "ALL"}>
+          <Icon name="task" size="small" />
+        </Show>
+      </span>
+      <Tooltip
+        class="board-route-member board-route-recipient"
+        contentClass="board-route-tooltip"
+        value={detail(recipient(), to())}
+      >
+        {recipient()}
+      </Tooltip>
+    </span>
+  )
+}
+
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
   const i18n = useI18n()
+  const board = () => props.tool === "board_post" || props.tool === "board_read"
+  const record = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value)
+  const result = createMemo(() => {
+    if (!board() || !props.output) return undefined
+    try {
+      const value: unknown = JSON.parse(props.output)
+      return record(value) ? value : undefined
+    } catch {
+      return undefined
+    }
+  })
+  const messages = createMemo(() => {
+    const data = result()
+    if (!data) return undefined
+    const rows = props.tool === "board_post" ? [data] : data.messages
+    if (!Array.isArray(rows)) return undefined
+    const items = rows.filter(
+      (item): item is Record<string, unknown> & { body: string; from: string; to: string } =>
+        record(item) && typeof item.body === "string" && typeof item.from === "string" && typeof item.to === "string",
+    )
+    return items.length === rows.length ? items : undefined
+  })
+  const trigger = () => {
+    if (props.tool === "board_post")
+      return (
+        <BoardRoute
+          from={props.metadata.from ?? result()?.from}
+          to={props.metadata.to ?? result()?.to ?? props.input.to}
+          fromLabel={props.metadata.fromLabel ?? result()?.fromLabel}
+          toLabel={props.metadata.toLabel ?? result()?.toLabel}
+        />
+      )
+    if (props.tool === "board_read") {
+      const rows = messages()
+      return { title: i18n.t("ui.messagePart.board.read"), subtitle: rows ? String(rows.length) : undefined }
+    }
+    return { title: props.tool, subtitle: subtitle(), args: inputArgs() }
+  }
   const labelKeys = ["description", "query", "url", "filePath", "path", "pattern", "name"]
   const skipKeys = new Set(labelKeys)
 
@@ -1178,27 +1304,20 @@ function McpTool(props: ToolProps) {
   return (
     <Show
       when={!props.hideDetails}
-      fallback={
-        <BasicTool
-          hideDetails
-          icon="mcp"
-          status={props.status}
-          trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
-        />
-      }
+      fallback={<BasicTool hideDetails icon={board() ? "task" : "mcp"} status={props.status} trigger={trigger()} />}
     >
       <BasicTool
-        icon="mcp"
+        icon={board() ? "task" : "mcp"}
         status={props.status}
         tool={props.tool}
         partID={props.partID}
         callID={props.callID}
-        trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
+        trigger={trigger()}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         locked={props.locked}
       >
-        <Show when={formatted()}>
+        <Show when={!messages() && formatted()}>
           {(text) => (
             <>
               <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
@@ -1208,7 +1327,7 @@ function McpTool(props: ToolProps) {
             </>
           )}
         </Show>
-        <Show when={formattedOutput()}>
+        <Show when={!messages() && formattedOutput()}>
           {(text) => (
             <>
               <Show when={formatted()}>
@@ -1219,6 +1338,35 @@ function McpTool(props: ToolProps) {
                 <Markdown text={text()} />
               </div>
             </>
+          )}
+        </Show>
+        <Show when={messages()}>
+          {(rows) => (
+            <div data-component="board-messages">
+              <Show
+                when={rows().length}
+                fallback={<span data-slot="board-message-note">{i18n.t("ui.messagePart.board.empty")}</span>}
+              >
+                <For each={rows()}>
+                  {(message) => (
+                    <div data-slot="board-message">
+                      <Show when={props.tool === "board_read"}>
+                        <BoardRoute {...message} />
+                      </Show>
+                      <div data-slot="board-message-body">
+                        <Markdown text={message.body} />
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Show>
+              <Show when={props.tool === "board_post" && props.status === "completed"}>
+                <span data-slot="board-message-note">{i18n.t("ui.messagePart.board.stored")}</span>
+              </Show>
+              <Show when={typeof result()?.warning === "string" && String(result()?.warning)}>
+                {(warning) => <span data-slot="board-message-note">{warning()}</span>}
+              </Show>
+            </div>
           )}
         </Show>
       </BasicTool>
@@ -1272,6 +1420,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     forceOpen={props.forceOpen}
                     animate
                     reveal={props.animate}
+                    readonly={props.readonly}
                   />
                 )
               }
@@ -1349,6 +1498,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
+                readonly={props.readonly}
               />
             </ToolApprovalProvider>
           </Match>
@@ -1432,10 +1582,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!exists) {
       el.classList.remove("file-link-candidate")
       el.classList.remove("file-link")
+      el.classList.remove("plan-document-link")
       el.removeAttribute("data-file-candidate")
       el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-kind")
       el.removeAttribute("data-file-line")
       el.removeAttribute("data-file-col")
+      el.removeAttribute("title")
       return
     }
     // Strip ./ prefix for the click handler — VS Code resolves relative
@@ -1445,6 +1598,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     el.classList.add("file-link")
     el.setAttribute("data-file-path", clean)
     el.removeAttribute("data-file-candidate")
+    // A plan document gets a document glyph and a localized kind hint instead of
+    // an inline badge, so the reference stays readable inside a sentence.
+    el.classList.remove("plan-document-link")
+    el.removeAttribute("data-file-kind")
+    el.removeAttribute("title")
+    if (/(?:^|\/)(?:plans|\.plans?)\/.*\.md$/i.test(clean)) {
+      el.classList.add("plan-document-link")
+      el.setAttribute("data-file-kind", "plan")
+      el.setAttribute("title", i18n.t("ui.patch.action.plan"))
+    }
   }
 
   const dispatch = (el: HTMLElement, p: string) => {
@@ -1887,23 +2050,20 @@ function TaskLink(props: { href: string; text: string; onClick: (e: MouseEvent) 
   )
 }
 
-function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
+function ToolText(props: { text: string; delay?: number; animate?: boolean; onClick?: (event: MouseEvent) => void }) {
   let ref: HTMLSpanElement | undefined
   useToolFade(() => ref, { delay: props.delay, wipe: true, animate: props.animate })
 
   return (
-    <span ref={ref} data-slot="basic-tool-tool-subtitle">
+    <span
+      ref={ref}
+      data-slot="basic-tool-tool-subtitle"
+      classList={{ clickable: !!props.onClick }}
+      onClick={props.onClick}
+    >
       {props.text}
     </span>
   )
-}
-
-function swePruned(metadata: Record<string, unknown>) {
-  const value = metadata["swePruner"]
-  if (typeof value !== "object" || value === null) return undefined
-  const info = value as { kept?: unknown; total?: unknown }
-  if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
-  return { kept: info.kept, total: info.total }
 }
 
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
@@ -1933,6 +2093,7 @@ function ToolTriggerRow(props: {
   action?: JSX.Element
   animate?: boolean
   revealOnMount?: boolean
+  onClick?: (event: MouseEvent) => void
 }) {
   const reveal = useToolReveal(
     () => props.pending,
@@ -1952,7 +2113,9 @@ function ToolTriggerRow(props: {
         <span data-slot="basic-tool-tool-title">
           <TextShimmer text={props.title} active={props.pending} />
         </span>
-        <Show when={detail()}>{(text) => <ToolText text={text()} animate={detailAnimate()} />}</Show>
+        <Show when={detail()}>
+          {(text) => <ToolText text={text()} animate={detailAnimate()} onClick={props.onClick} />}
+        </Show>
       </div>
       <Show when={props.action}>{props.action}</Show>
     </div>
@@ -2034,7 +2197,6 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
     const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
@@ -2047,9 +2209,6 @@ ToolRegistry.register({
           hideDetails={!approval()?.approval.outsideWorkspace}
           {...props}
           icon="glasses"
-          onSubtitleClick={
-            data.openFile && props.input.filePath ? () => data.openFile!(props.input.filePath) : undefined
-          }
           trigger={
             <ToolTriggerRow
               title={i18n.t("ui.tool.read")}
@@ -2057,6 +2216,14 @@ ToolRegistry.register({
               subtitle={props.input.filePath ? getFilename(props.input.filePath) : ""}
               args={args}
               animate={props.reveal}
+              onClick={
+                data.openFile && props.input.filePath
+                  ? (event) => {
+                      event.stopPropagation()
+                      data.openFile!(props.input.filePath)
+                    }
+                  : undefined
+              }
             />
           }
         />
@@ -2067,9 +2234,9 @@ ToolRegistry.register({
               animate={props.reveal}
               onClick={data.openFile ? () => data.openFile!(filepath) : undefined}
             />
-          )}
+    )}
         </For>
-        <Show when={images().length > 0}>
+      <Show when={images().length > 0}>
           <div data-slot="tool-read-images">
             <For each={images()}>
               {(file) => (
@@ -2085,9 +2252,6 @@ ToolRegistry.register({
               )}
             </For>
           </div>
-        </Show>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
       </>
     )
@@ -2162,35 +2326,29 @@ ToolRegistry.register({
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
-      <>
-        <BasicTool
-          {...props}
-          icon="magnifying-glass-menu"
-          trigger={
-            <ToolTriggerRow
-              title={i18n.t("ui.tool.grep")}
-              pending={pending()}
-              subtitle={getDirectory(props.input.path)}
-              args={args}
-              animate={props.reveal}
-            />
-          }
-        >
-          <Show when={props.output}>
-            {(output) => (
-              <div data-component="tool-output" data-variant="preview" data-scrollable>
-                <Markdown text={output()} />
-              </div>
-            )}
-          </Show>
-        </BasicTool>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+      <BasicTool
+        {...props}
+        icon="magnifying-glass-menu"
+        trigger={
+          <ToolTriggerRow
+            title={i18n.t("ui.tool.grep")}
+            pending={pending()}
+            subtitle={getDirectory(props.input.path)}
+            args={args}
+            animate={props.reveal}
+          />
+        }
+      >
+        <Show when={props.output}>
+          {(output) => (
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
+              <Markdown text={output()} />
+            </div>
+          )}
         </Show>
-      </>
+      </BasicTool>
     )
   },
 })
@@ -2484,7 +2642,6 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
@@ -2517,38 +2674,33 @@ ToolRegistry.register({
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
 
     return (
-      <>
-        <BasicTool
-          {...props}
-          icon="console"
-          hasDetails
-          defaultOpen={props.defaultOpen ?? true}
-          onOpenChange={setOpen}
-          allowPendingToggle
-          trigger={
-            <div data-slot="basic-tool-tool-info-structured">
-              <div data-slot="basic-tool-tool-info-main">
-                <span data-slot="basic-tool-tool-title">
-                  <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-                </span>
-                <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
-              </div>
+      <BasicTool
+        {...props}
+        icon="console"
+        hasDetails
+        defaultOpen={props.defaultOpen ?? true}
+        onOpenChange={setOpen}
+        allowPendingToggle
+        trigger={
+          <div data-slot="basic-tool-tool-info-structured">
+            <div data-slot="basic-tool-tool-info-main">
+              <span data-slot="basic-tool-tool-title">
+                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
+              </span>
+              <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
             </div>
-          }
-        >
-          <Show when={mounted()}>
-            <BashHighlightedOutput
-              cmd={cmd()}
-              output={out()}
-              outputPath={props.metadata.outputPath}
-              active={open() || !!props.forceOpen}
-            />
-          </Show>
-        </BasicTool>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+          </div>
+        }
+      >
+        <Show when={mounted()}>
+          <BashHighlightedOutput
+            cmd={cmd()}
+            output={out()}
+            outputPath={props.metadata.outputPath}
+            active={open() || !!props.forceOpen}
+          />
         </Show>
-      </>
+      </BasicTool>
     )
   },
 })
@@ -2581,8 +2733,6 @@ ToolRegistry.register({
       })
     })
     const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
-    const canOpenFile = () => !!data.openFile && !!path()
-
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2592,19 +2742,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-
-      if (canOpenFile()) {
-        data.openFile!(path())
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2633,7 +2770,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2698,8 +2834,6 @@ ToolRegistry.register({
       return normalize(diff)
     })
     const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
-    const canOpenFile = () => !!data.openFile && !!props.input.filePath
-
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -2709,17 +2843,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-      if (canOpenFile()) {
-        data.openFile!(props.input.filePath!)
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2748,7 +2871,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2831,13 +2953,65 @@ ToolRegistry.register({
     const view = (file: ApplyPatchFile) => {
       const patch = file.patch ?? file.diff
       if (!patch) return
-      return normalize({
+      const value = normalize({
         file: file.relativePath,
         patch,
         additions: file.additions,
         deletions: file.deletions,
       })
+      // apply_patch can report a file whose payload is not a parsable unified
+      // diff. Rendering it yields an empty "+0 -0" pane, so treat such a file
+      // as having no preview instead of showing a blank diff.
+      if (!value.fileDiff.hunks.length) return
+      return value
     }
+    const openAllDiff = () => {
+      const diffs = files().flatMap((file) => {
+        const diff = view(file)
+        return diff
+          ? [{
+              file: file.relativePath,
+              patch: diff.patch,
+              status:
+                file.type === "add"
+                  ? ("added" as const)
+                  : file.type === "delete"
+                    ? ("deleted" as const)
+                    : ("modified" as const),
+              additions:
+                file.type === "add" && diff.additions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
+                  : diff.additions,
+              deletions:
+                file.type === "delete" && diff.deletions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
+                  : diff.deletions,
+            }]
+          : []
+      })
+      const first = diffs[0]
+      if (!data.openDiff || !first) return
+      data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
+    }
+    const allDiffAction = () => (
+      <Show when={data.openDiff && files().some((file) => view(file))}>
+        <span data-slot="tool-trigger-actions">
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+            <IconButton
+              icon="square-arrow-top-right"
+              size="small"
+              variant="ghost"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation()
+                openAllDiff()
+              }}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+            />
+          </Tooltip>
+        </span>
+      </Show>
+    )
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const single = createMemo(() => {
@@ -2906,14 +3080,6 @@ ToolRegistry.register({
                         path={file().relativePath.includes("/") ? getDirectory(file().relativePath) : undefined}
                         changes={{ additions: file().additions, deletions: file().deletions }}
                         animate={reveal()}
-                        onClick={
-                          data.openFile && file().filePath
-                            ? (e: MouseEvent) => {
-                                e.stopPropagation()
-                                data.openFile!(file().filePath)
-                              }
-                            : undefined
-                        }
                       />
                     )}
                   </Show>
@@ -2929,6 +3095,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              {allDiffAction()}
             </div>
           }
         >
@@ -2970,12 +3137,6 @@ ToolRegistry.register({
 
                                     <span
                                       data-slot="apply-patch-filename"
-                                      classList={{ clickable: !!data.openFile }}
-                                      onClick={(e: MouseEvent) => {
-                                        if (!data.openFile) return
-                                        e.stopPropagation()
-                                        data.openFile(file.filePath)
-                                      }}
                                     >
                                       {getFilename(file.relativePath)}
                                     </span>
@@ -3178,7 +3339,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
-        defaultOpen={false}
+        defaultOpen={completed() && !dismissed()}
         icon="bubble-5"
         trigger={
           <ToolTriggerRow

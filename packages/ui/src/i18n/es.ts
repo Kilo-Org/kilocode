@@ -199,6 +199,7 @@ export const dict = {
   "ui.patch.action.created": "Creado",
   "ui.patch.action.moved": "Movido",
   "ui.patch.action.patched": "Parcheado",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} respondidas",
   "ui.question.answer.none": "(sin respuesta)",
@@ -233,11 +234,19 @@ export const dict = {
   "ui.message.deleteQueued": "Eliminar mensaje en cola",
   "ui.messagePart.mcp.input": "Entrada",
   "ui.messagePart.mcp.output": "Salida",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Leer mensajes de los agentes",
+  "ui.messagePart.board.all": "Todos los agentes",
+  "ui.messagePart.board.primary": "Agente principal",
+  "ui.messagePart.board.agent": "Agente",
+  "ui.messagePart.board.route": "{{from}} a {{to}}",
+  "ui.messagePart.board.empty": "No hay mensajes de los agentes",
+  "ui.messagePart.board.stored": "Solo almacenado. La entrega y la lectura no están confirmadas.",
+  // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Modificado",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} de {{total}} líneas conservadas",
   // kilocode_change end
 }

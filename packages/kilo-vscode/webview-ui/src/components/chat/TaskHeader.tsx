@@ -19,6 +19,7 @@ import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-uti
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { BackgroundAgents } from "./BackgroundAgents"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -180,6 +181,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
 
   const revertTodo = (part: Part | undefined) => {
+    if (props.readonly) return
     if (session.status() !== "idle") return
     if (part?.type !== "tool") return
     if (!part.messageID) return
@@ -292,6 +294,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
         </div>
       </Show>
+      <BackgroundAgents readonly={props.readonly} />
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
@@ -317,7 +320,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                   const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
                   return (
                     <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
-                      <Checkbox readOnly checked={todo.status === "completed"} onClick={() => revertTodo(part())}>
+                      <Checkbox
+                        readOnly
+                        checked={todo.status === "completed"}
+                        onClick={props.readonly ? undefined : () => revertTodo(part())}
+                      >
                         <span
                           data-slot="task-header-todo-content"
                           data-completed={todo.status === "completed" ? "" : undefined}

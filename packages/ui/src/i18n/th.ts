@@ -195,6 +195,7 @@ export const dict = {
   "ui.patch.action.created": "สร้าง",
   "ui.patch.action.moved": "ย้าย",
   "ui.patch.action.patched": "แพตช์",
+  "ui.patch.action.plan": "แผน", // kilocode_change
 
   "ui.question.subtitle.answered": "ตอบแล้ว {{count}} ข้อ",
   "ui.question.answer.none": "(ไม่มีคำตอบ)",
@@ -229,11 +230,17 @@ export const dict = {
   "ui.message.deleteQueued": "ลบข้อความที่อยู่ในคิว",
   "ui.messagePart.mcp.input": "อินพุต",
   "ui.messagePart.mcp.output": "เอาต์พุต",
+  "ui.messagePart.board.read": "อ่านข้อความของเอเจนต์",
+  "ui.messagePart.board.all": "เอเจนต์ทั้งหมด",
+  "ui.messagePart.board.primary": "เอเจนต์หลัก",
+  "ui.messagePart.board.agent": "เอเจนต์",
+  "ui.messagePart.board.route": "จาก {{from}} ถึง {{to}}",
+  "ui.messagePart.board.empty": "ไม่มีข้อความจากเอเจนต์",
+  "ui.messagePart.board.stored": "จัดเก็บไว้เท่านั้น ยังไม่มีการยืนยันการส่งถึงหรือการอ่าน",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · เก็บไว้ {{kept}} จาก {{total}} บรรทัด",
   // kilocode_change end
 }

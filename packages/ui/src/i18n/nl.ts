@@ -188,6 +188,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Gemaakt",
   "ui.patch.action.moved": "Verplaatst",
   "ui.patch.action.patched": "Bijgewerkt",
+  "ui.patch.action.plan": "Plan", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} beantwoord",
   "ui.question.answer.none": "(geen antwoord)",
   "ui.question.review.notAnswered": "(niet beantwoord)",
@@ -209,12 +210,20 @@ export const dict: Record<string, string> = {
   "ui.message.deleteQueued": "Bericht in wachtrij verwijderen",
   "ui.messagePart.mcp.input": "Invoer",
   "ui.messagePart.mcp.output": "Uitvoer",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Berichten van agenten lezen",
+  "ui.messagePart.board.all": "Alle agenten",
+  "ui.messagePart.board.primary": "Hoofdagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} naar {{to}}",
+  "ui.messagePart.board.empty": "Geen berichten van agenten",
+  "ui.messagePart.board.stored": "Alleen opgeslagen. Er is geen bevestiging dat het bericht is afgeleverd of gelezen.",
+  // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Gewijzigd",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.tool.codesearch": "Code Search",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} van {{total}} regels behouden",
   // kilocode_change end
 }

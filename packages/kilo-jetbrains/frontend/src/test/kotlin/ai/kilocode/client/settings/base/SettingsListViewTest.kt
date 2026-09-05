@@ -4,11 +4,13 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListBadgeCell
 import ai.kilocode.client.ui.list.ActiveListActive
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -19,9 +21,9 @@ import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
+import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.activeListCellAt
 import ai.kilocode.client.ui.list.activeListCellBounds
 import com.intellij.icons.AllIcons
@@ -30,8 +32,10 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -43,6 +47,7 @@ import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.ListSelectionModel
@@ -198,6 +203,79 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test renderer draws the row title in bold`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // Weight is what separates the title from the muted description beside and below it.
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            iter.next()
+            assertEquals(SimpleTextAttributes.STYLE_BOLD, iter.textAttributes.style)
+            assertEquals("Alpha", iter.fragment)
+        }
+    }
+
+    fun `test renderer draws the row title in plain weight when configured`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal.copy(title = ActiveListWeight.PLAIN))
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            iter.next()
+            assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+            assertEquals("Alpha", iter.fragment)
+        }
+    }
+
+    fun `test renderer styles section header weight from config`() {
+        edt {
+            val first = sectionItem("one", "Alpha", "Local")
+            val second = sectionItem("two", "Beta", "Remote")
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val bold = ActiveListRenderer(model, ActiveListConfig.Equal)
+            val plain = ActiveListRenderer(model, ActiveListConfig.Equal.copy(header = ActiveListWeight.PLAIN))
+
+            bold.getListCellRendererComponent(list, second, 1, false, false)
+            plain.getListCellRendererComponent(list, second, 1, false, false)
+
+            assertTrue(components(bold).filterIsInstance<GroupHeaderSeparator>().single().font.isBold)
+            assertFalse(components(plain).filterIsInstance<GroupHeaderSeparator>().single().font.isBold)
+        }
+    }
+
+    fun `test renderer reads section divider visibility from config`() {
+        edt {
+            val first = sectionItem("one", "Alpha", "Local")
+            val second = sectionItem("two", "Beta", "Remote")
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val divider = ActiveListRenderer(model, ActiveListConfig.Equal)
+            val none = ActiveListRenderer(model, ActiveListConfig.Equal.copy(divider = false))
+
+            divider.getListCellRendererComponent(list, first, 0, false, false)
+            assertTrue(components(divider).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+            divider.getListCellRendererComponent(list, second, 1, false, false)
+            assertFalse(components(divider).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+
+            none.getListCellRendererComponent(list, first, 0, false, false)
+            assertTrue(components(none).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+            none.getListCellRendererComponent(list, second, 1, false, false)
+            assertTrue(components(none).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+        }
+    }
+
     fun `test narrow row squeezes title but keeps tags full width`() {
         edt {
             val row = object : ActiveListItem {
@@ -223,6 +301,27 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test leading badge renders before the title`() {
+        edt {
+            val badge = ActiveListBadge("#12", id = "badge", action = {})
+            val row = badgeItem("wt", "Implement feature", badge)
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            renderer.setSize(360, renderer.preferredSize.height)
+            layout(renderer)
+
+            val pill = components(renderer).filterIsInstance<ActiveListBadgeCell>().single()
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val pillX = SwingUtilities.convertPoint(pill.parent, pill.location, renderer).x
+            val titleX = SwingUtilities.convertPoint(title.parent, title.location, renderer).x
+
+            assertTrue(pillX + pill.width <= titleX)
+        }
+    }
+
     fun `test renderer centers leading icon vertically in the row`() {
         edt {
             val row = object : ActiveListItem {
@@ -235,13 +334,54 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val list = JBList(model)
             val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
             renderer.setSize(320, renderer.preferredSize.height)
             layout(renderer)
 
             val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
 
             assertTrue(kotlin.math.abs(centerY(renderer, icon) - renderer.height / 2) <= 1)
+        }
+    }
+
+    fun `test renderer recolors a tinted leading icon to the foreground on selection`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val icon = AllIcons.Nodes.Plugin
+                override val tinted = true
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            val mark = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // At rest the row keeps the icon's own theme color; a focused selection swaps in a
+            // foreground-tinted copy so the glyph matches the highlighted title.
+            assertNotSame(AllIcons.Nodes.Plugin, mark.icon)
+        }
+    }
+
+    fun `test renderer keeps an untinted colored icon on selection`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val icon = AllIcons.Nodes.Plugin
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // Colored status glyphs (running, question, error) opt out and keep their own hue: the
+            // leading label still holds the original icon by identity after a focused selection.
+            assertNotNull(components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin })
         }
     }
 
@@ -445,6 +585,20 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test focused selected row keeps description muted`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
     fun `test unfocused selected row paints inactive selection background`() {
         edt {
             val row = item("with", "Alpha", "Description")
@@ -560,15 +714,15 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val key = DataKey.create<ActiveListItem>("test.activeList.menu.edge")
             val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
             val view = ActiveListView("Empty", menu = menu) { _, _ -> }
-            view.update(listOf(metricsItem("with", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12")))))
+            view.update(listOf(metricsItem("with", "Alpha", ActiveListMetrics(files = 1, additions = 5, onChanges = {}))))
             layout(view)
 
             hover(view, center(view.list.getCellBounds(0, 0)))
             val cells = activeListCellBounds(view.list, 0, selected = true)
-            val pull = cells.getValue(ACTIVE_LIST_PR_CELL)
+            val changes = cells.getValue(ACTIVE_LIST_CHANGES_CELL)
             val menuArea = cells.getValue(ACTIVE_LIST_MENU_CELL)
 
-            assertEquals("menu glyph should touch trailing row content", pull.x + pull.width, menuArea.x)
+            assertEquals("menu glyph should touch trailing row content", changes.x + changes.width, menuArea.x)
         }
     }
 
@@ -744,7 +898,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UIUtil.getListForeground(true, true), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
         }
     }
 
@@ -767,7 +921,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test preserve no scroll keeps scroll position after row change`() {
+    fun `test refresh keeps scroll position after row change`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
             val rows = (0 until 30).map { item("row$it", "Row $it", null, ActiveListCell("level", "Allow", alwaysVisible = true)) }
@@ -785,7 +939,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val before = scroll.viewport.viewPosition.y
             assertTrue("expected a scrolled viewport", before > 0)
 
-            view.update(rows, ActiveListSelection.PreserveNoScroll)
+            view.update(rows, ActiveListSelection.Preserve)
             UIUtil.dispatchAllInvocationEvents()
 
             assertEquals(before, scroll.viewport.viewPosition.y)
@@ -801,17 +955,6 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)),
                 ActiveListSelection.Key("c"),
             )
-
-            assertEquals("c", view.selected()?.key)
-        }
-    }
-
-    fun `test update selects preferred index`() {
-        edt {
-            val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)))
-            view.list.selectedIndex = 1
-            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), ActiveListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
         }
@@ -927,13 +1070,13 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val calls = mutableListOf<String>()
             val onCellCalls = mutableListOf<String>()
             val view = ActiveListView("Empty") { key, id -> onCellCalls += "$key:$id" }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2, onChanges = { calls += "changes" }))))
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, additions = 3, deletions = 2, onChanges = { calls += "changes" }))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
             val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL)
-            assertEquals(KiloBundle.message("worktree.stats.tooltip", 0, 0, 3, 2), view.list.getToolTipText(event(view.list, center(area))))
+            assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.list.getToolTipText(event(view.list, center(area))))
 
             hover(view, center(area))
             assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
@@ -944,43 +1087,167 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test pr badge is hit tested and invokes its action`() {
+    fun `test compact file-only changes reuse the shared panel and open from the count or padding`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { _, _ -> calls += "fallback" }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, onChanges = { calls += "base" }))))
+            layout(view)
+
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+            val renderer = rendered(view)
+            val panel = components(renderer).filterIsInstance<ChangesPanel>().single()
+            val count = components(panel).filterIsInstance<JBLabel>().single { it.text == "1 file" }
+            val point = SwingUtilities.convertPoint(count, count.width / 2, count.height / 2, renderer)
+            val bounds = view.list.getCellBounds(0, 0)
+            point.translate(bounds.x, bounds.y)
+            assertTrue(panel.isVisible)
+            assertTrue(area.contains(point))
+            for (target in listOf(point, Point(area.x + area.width - 1, center(area).y))) {
+                click(view, target)
+                fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, target))
+            }
+
+            assertEquals(listOf("base", "base"), calls)
+            assertTrue(opened.isEmpty())
+        }
+    }
+
+    fun `test equal compact summaries keep row actions after renderer reuse and width changes`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { _, _ -> calls += "fallback" }
+            view.update(listOf(
+                metricsItem("first", "Alpha", ActiveListMetrics(files = 2, additions = 5, deletions = 1, base = "origin/main", onChanges = { calls += "first" })),
+                metricsItem("second", "Beta", ActiveListMetrics(files = 2, additions = 5, deletions = 1, base = "origin/main", onChanges = { calls += "second" })),
+                metricsItem("wide", "Gamma", ActiveListMetrics(files = 123, additions = 4567, base = "origin/develop", onChanges = { calls += "wide" })),
+                item("plain", "Delta", null),
+            ))
+            layout(view)
+            val renderer = rendered(view)
+            val panel = components(renderer).filterIsInstance<ChangesPanel>().single()
+            val retained = components(panel)
+
+            for (width in listOf(260, 480, 320)) {
+                calls.clear()
+                view.list.size = Dimension(width, 320)
+                view.list.doLayout()
+                UIUtil.dispatchAllInvocationEvents()
+                val first = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+                val second = activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+                activeListCellBounds(view.list, 2, selected = true)
+                assertTrue(activeListCellBounds(view.list, 3, selected = false).isEmpty())
+                paint(view.list)
+
+                assertEquals(first, activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL))
+                assertEquals(second, activeListCellBounds(view.list, 1, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL))
+                assertTrue(view.list.getCellBounds(0, 0).contains(first))
+                assertTrue(view.list.getCellBounds(1, 1).contains(second))
+                assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.list.getToolTipText(event(view.list, center(second))))
+                hover(view, center(second))
+                assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+                for (point in listOf(center(second), center(first))) {
+                    click(view, point)
+                    fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, point))
+                }
+                assertEquals(listOf("second", "first"), calls)
+                assertTrue(opened.isEmpty())
+                assertSame(panel, components(renderer).filterIsInstance<ChangesPanel>().single())
+                assertEquals(retained, components(panel))
+            }
+        }
+    }
+
+    fun `test compact summary clears hit regions for zero files and disables actions with the row`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> calls += "fallback" }
+            val row = metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, onChanges = { calls += "base" }))
+            view.update(listOf(row))
+            layout(view)
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+
+            view.update(listOf(object : ActiveListItem by row {
+                override val disabled = true
+            }))
+            layout(view)
+            assertNull(activeListCellAt(view.list, 0, center(area), selected = false))
+            hover(view, center(area))
+            assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+            click(view, center(area))
+            assertTrue(calls.isEmpty())
+
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(onChanges = { calls += "base" }))))
+            layout(view)
+            assertTrue(activeListCellBounds(view.list, 0, selected = false).isEmpty())
+            assertNull(activeListCellAt(view.list, 0, center(area), selected = false))
+            click(view, center(area))
+            assertTrue(calls.isEmpty())
+        }
+    }
+
+    fun `test leading badge is hit tested and invokes its action`() {
         edt {
             val calls = mutableListOf<String>()
             val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12"), onPr = { calls += "pr" }))))
+            view.update(listOf(badgeItem("wt", "Alpha", ActiveListBadge("#12", id = "badge", tooltip = "#12", action = { calls += "badge" }))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_PR_CELL)
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("badge")
             assertEquals("#12", view.list.getToolTipText(event(view.list, center(area))))
             hover(view, center(area))
             assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
 
             click(view, center(area))
-            assertEquals(listOf("pr"), calls)
+            assertEquals(listOf("badge"), calls)
         }
     }
 
-    fun `test pr badge uses custom tooltip when supplied`() {
+    fun `test leading badge uses custom tooltip when supplied`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12"), prTooltip = "PR details"))))
+            view.update(listOf(badgeItem("wt", "Alpha", ActiveListBadge("#12", id = "badge", tooltip = "Badge details", action = {}))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_PR_CELL)
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("badge")
 
-            assertEquals("PR details", view.list.getToolTipText(event(view.list, center(area))))
+            assertEquals("Badge details", view.list.getToolTipText(event(view.list, center(area))))
+        }
+    }
+
+    fun `test decorative badge is not hit tested`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(badgeItem("wt", "Alpha", ActiveListBadge("Local"))))
+            layout(view)
+
+            assertTrue(activeListCellBounds(view.list, 0, selected = false).isEmpty())
+        }
+    }
+
+    fun `test badge action without an id is inert`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(badgeItem("wt", "Alpha", ActiveListBadge("Local", action = { calls += "badge" }))))
+            layout(view)
+
+            assertTrue(activeListCellBounds(view.list, 0, selected = false).isEmpty())
+            click(view, center(view.list.getCellBounds(0, 0)))
+            assertTrue(calls.isEmpty())
         }
     }
 
     fun `test inert changes badge is not hit tested`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2))))
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, additions = 3, deletions = 2))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
@@ -991,6 +1258,237 @@ class SettingsListViewTest : BasePlatformTestCase() {
             assertNull(activeListCellAt(view.list, 0, center(area), selected = true))
             hover(view, center(area))
             assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test leading badge hit region ignores other rows`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(
+                listOf(
+                    badgeItem("wide", "Alpha", ActiveListBadge("#12345", id = "badge", action = { calls += "wide" })),
+                    badgeItem("narrow", "Beta", ActiveListBadge("#7", id = "badge", action = { calls += "narrow" })),
+                ),
+            )
+            view.list.size = Dimension(360, 160)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val wide = activeListCellBounds(view.list, 0, selected = false).getValue("badge")
+            val narrow = activeListCellBounds(view.list, 1, selected = false).getValue("badge")
+            // Both badges lead their title, so they share a left edge regardless of badge width.
+            assertEquals(wide.x, narrow.x)
+
+            // The renderer is one reused stamp: rendering the wide row, or a full paint pass over
+            // every row, must not move the narrow row's hit region.
+            activeListCellBounds(view.list, 0, selected = false)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue("badge"))
+            paint(view.list)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue("badge"))
+
+            click(view, center(narrow))
+            click(view, center(wide))
+            assertEquals(listOf("narrow", "wide"), calls)
+        }
+    }
+
+    fun `test secondary badge without metrics supports cursor click and tooltip with or without description`() {
+        edt {
+            for (note in listOf(null, "Description")) {
+                val calls = mutableListOf<String>()
+                val fallback = mutableListOf<String>()
+                val view = ActiveListView("Empty") { key, id -> fallback += "$key:$id" }
+                val row = secondaryItem(
+                    "row",
+                    "Alpha",
+                    ActiveListBadge("Ready", id = "badge", tooltip = "Badge details", action = { calls += "badge" }),
+                    note,
+                )
+                view.update(listOf(row))
+                layout(view)
+                view.list.clearSelection()
+
+                assertNull(row.metrics)
+                val area = activeListCellBounds(view.list, 0, selected = false).getValue("badge")
+                assertTrue(area.width > 0 && area.height > 0)
+                val renderer = rendered(view)
+                val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+                assertTrue(area.y >= topY(renderer, title) + title.height)
+                assertEquals("badge", activeListCellAt(view.list, 0, center(area), selected = false))
+                assertEquals("Badge details", view.list.getToolTipText(event(view.list, center(area))))
+                hover(view, center(area))
+                assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+
+                click(view, center(area))
+                assertEquals(listOf("badge"), calls)
+                assertTrue(fallback.isEmpty())
+                hover(view, Point(2, 2))
+                assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+            }
+        }
+    }
+
+    fun `test secondary badge is right aligned after metrics on the description line while title badges remain supported`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val row = object : ActiveListItem {
+                override val key = "row"
+                override val title = "Alpha"
+                override val description = "Description"
+                override val leading = listOf(ActiveListBadge("Local", id = "leading", action = { calls += "leading" }))
+                override val badges = listOf(ActiveListBadge("Ready", id = "trailing", action = { calls += "trailing" }))
+                override val secondaryBadges = listOf(ActiveListBadge("Details", id = "badge", action = { calls += "badge" }))
+                override val metrics = ActiveListMetrics(files = 1, additions = 5, deletions = 2, onChanges = { calls += "changes" })
+            }
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(row))
+            view.list.size = Dimension(480, 160)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val areas = activeListCellBounds(view.list, 0, selected = false)
+            val badge = areas.getValue("badge")
+            val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
+            val leading = areas.getValue("leading")
+            val trailing = areas.getValue("trailing")
+            val renderer = rendered(view)
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            val panel = rowPanel(renderer)
+            val text = (panel.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER)
+            val origin = SwingUtilities.convertPoint(text.parent, text.location, renderer)
+            val start = SwingUtilities.convertPoint(title.parent, title.location, renderer)
+            val description = SwingUtilities.convertPoint(desc.parent, desc.location, renderer)
+
+            assertTrue(description.x + desc.width <= changes.x)
+            assertTrue(changes.x + changes.width <= badge.x)
+            assertEquals(origin.x + text.width, badge.x + badge.width)
+            assertTrue(kotlin.math.abs(center(badge).y - center(changes).y) <= 1)
+            assertTrue(kotlin.math.abs(center(badge).y - centerY(renderer, desc)) <= 1)
+            assertTrue(badge.y >= start.y + title.height)
+            assertTrue(leading.x + leading.width <= start.x)
+            assertTrue(start.x + title.width <= trailing.x)
+            // A pill that labels the title stays next to it: only a list that opts into badgesRight
+            // sends its title badges out to the trailing edge the description line ends at.
+            assertTrue(trailing.x + trailing.width < badge.x + badge.width)
+            assertTrue(kotlin.math.abs(center(leading).y - centerY(renderer, title)) <= 1)
+            assertTrue(kotlin.math.abs(center(trailing).y - centerY(renderer, title)) <= 1)
+
+            click(view, center(leading))
+            click(view, center(trailing))
+            click(view, center(changes))
+            click(view, center(badge))
+            assertEquals(listOf("leading", "trailing", "changes", "badge"), calls)
+        }
+    }
+
+    fun `test secondary badge regions stay correct across renderer reuse row widths and rows without badges`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            val plain = item("plain", "Gamma", null)
+            assertTrue(plain.secondaryBadges.isEmpty())
+            view.update(listOf(
+                object : ActiveListItem by secondaryItem("wide", "Alpha", ActiveListBadge("Available", id = "badge", tooltip = "Wide", action = { calls += "wide" })) {
+                    override val metrics = ActiveListMetrics(files = 123, additions = 123, deletions = 9)
+                },
+                secondaryItem("narrow", "Beta", ActiveListBadge("On", id = "badge", tooltip = "Narrow", action = { calls += "narrow" })),
+                plain,
+            ))
+
+            for (width in listOf(260, 480, 320)) {
+                calls.clear()
+                view.list.size = Dimension(width, 240)
+                view.list.doLayout()
+                UIUtil.dispatchAllInvocationEvents()
+                val renderer = rendered(view)
+                val wide = activeListCellBounds(view.list, 0, selected = false).getValue("badge")
+                val cell = components(renderer).filterIsInstance<ActiveListBadgeCell>().single()
+                val narrow = activeListCellBounds(view.list, 1, selected = false).getValue("badge")
+                assertSame(cell, components(renderer).filterIsInstance<ActiveListBadgeCell>().single())
+                assertTrue(wide.width > narrow.width)
+                assertEquals(wide.x + wide.width, narrow.x + narrow.width)
+                assertTrue(view.list.getCellBounds(0, 0).contains(wide))
+                assertTrue(view.list.getCellBounds(1, 1).contains(narrow))
+                assertTrue(activeListCellBounds(view.list, 2, selected = false).isEmpty())
+                assertTrue(components(renderer).filterIsInstance<ActiveListBadgeCell>().none { it.isVisible })
+
+                paint(view.list)
+                assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue("badge"))
+                assertEquals(wide, activeListCellBounds(view.list, 0, selected = false).getValue("badge"))
+                assertEquals("Narrow", view.list.getToolTipText(event(view.list, center(narrow))))
+                assertEquals("Wide", view.list.getToolTipText(event(view.list, center(wide))))
+                assertNull(activeListCellAt(view.list, 0, center(narrow), selected = false))
+
+                val bounds = view.list.getCellBounds(2, 2)
+                val point = Point(center(narrow).x, bounds.y + center(narrow).y - view.list.getCellBounds(1, 1).y)
+                assertNull(activeListCellAt(view.list, 2, point, selected = false))
+                assertNull(view.list.getToolTipText(event(view.list, point)))
+                hover(view, point)
+                assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+                click(view, point)
+                assertTrue(calls.isEmpty())
+                click(view, center(narrow))
+                click(view, center(wide))
+                assertEquals(listOf("narrow", "wide"), calls)
+            }
+        }
+    }
+
+    fun `test progress hides secondary and title badges and restores their actions afterward`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val row = object : ActiveListItem {
+                override val key = "row"
+                override val title = "Alpha"
+                override val description = "Description"
+                override val leading = listOf(ActiveListBadge("Local", id = "leading", action = { calls += "leading" }))
+                override val badges = listOf(ActiveListBadge("Ready", id = "trailing", action = { calls += "trailing" }))
+                override val secondaryBadges = listOf(ActiveListBadge("Details", id = "badge", tooltip = "Badge details", action = { calls += "badge" }))
+                override val metrics = ActiveListMetrics(files = 1, additions = 5, onChanges = { calls += "changes" })
+            }
+            val pending = object : ActiveListItem by row {
+                override val progress = "Working"
+            }
+            val view = ActiveListView("Empty") { key, id -> calls += "$key:$id" }
+            view.update(listOf(row))
+            layout(view)
+            val areas = activeListCellBounds(view.list, 0, selected = false)
+            assertEquals(setOf("leading", "trailing", "badge", ACTIVE_LIST_CHANGES_CELL), areas.keys)
+
+            view.update(listOf(pending))
+            layout(view)
+            assertTrue(activeListCellBounds(view.list, 0, selected = false).isEmpty())
+            val renderer = rendered(view)
+            assertTrue(components(renderer).filterIsInstance<ActiveListBadgeCell>().none { it.isVisible })
+            assertTrue(components(renderer).filterIsInstance<JBLabel>().single { it.text == "Working" }.isVisible)
+            for (area in areas.values) {
+                assertNull(activeListCellAt(view.list, 0, center(area), selected = false))
+                hover(view, center(area))
+                assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+                click(view, center(area))
+            }
+            assertTrue(calls.isEmpty())
+
+            view.update(listOf(row))
+            layout(view)
+            val restored = activeListCellBounds(view.list, 0, selected = false)
+            assertEquals(areas, restored)
+            val area = restored.getValue("badge")
+            assertEquals("Badge details", view.list.getToolTipText(event(view.list, center(area))))
+            click(view, center(area))
+            assertEquals(listOf("badge"), calls)
+        }
+    }
+
+    private fun paint(list: JBList<*>) {
+        val image = UIUtil.createImage(list, list.width, list.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            list.paint(g)
+        } finally {
+            g.dispose()
         }
     }
 
@@ -1005,6 +1503,19 @@ class SettingsListViewTest : BasePlatformTestCase() {
         override val key = id
         override val title = name
         override val metrics = data
+    }
+
+    private fun badgeItem(id: String, name: String, badge: ActiveListBadge) = object : ActiveListItem {
+        override val key = id
+        override val title = name
+        override val leading = listOf(badge)
+    }
+
+    private fun secondaryItem(id: String, name: String, badge: ActiveListBadge, note: String? = null) = object : ActiveListItem {
+        override val key = id
+        override val title = name
+        override val description = note
+        override val secondaryBadges = listOf(badge)
     }
 
     private fun sectionItem(id: String, name: String, group: String) = object : ActiveListItem {
@@ -1041,6 +1552,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
         comp.setBounds(0, 0, view.list.width, bounds.height)
         layout(comp as Container)
         return actionCells(comp).filter { it.isVisible }.map { it.cellId }
+    }
+
+    private fun rendered(view: ActiveListView): ActiveListRenderer {
+        val list = view.list
+        val comp = list.cellRenderer.getListCellRendererComponent(list, list.model.getElementAt(0), 0, false, true)
+        comp.setSize(list.width, list.getCellBounds(0, 0).height)
+        layout(comp as Container)
+        return components(comp).filterIsInstance<ActiveListRenderer>().single()
     }
 
     private fun rowPanel(renderer: ActiveListRenderer): JPanel =

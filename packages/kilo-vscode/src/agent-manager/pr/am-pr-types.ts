@@ -1,4 +1,4 @@
-import type { PRState, ReviewDecision } from "../types"
+import type { PRState, PRStatus, ReviewDecision } from "../types"
 
 // Raw shapes returned by `gh pr view --json`
 
@@ -12,6 +12,7 @@ export interface GhComment {
   body?: string
   path?: string
   line?: number
+  originalLine?: number
   url?: string
   createdAt?: string
   diffHunk?: string
@@ -19,14 +20,34 @@ export interface GhComment {
 export interface GhThread {
   id?: string
   isResolved?: boolean
+  isOutdated?: boolean
   comments?: { nodes?: GhComment[] }
 }
 export interface GhReviewRequest {
   requestedReviewer?: GhAuthor
+  login?: string
+  avatarUrl?: string
 }
 export interface GhReview {
   author?: GhAuthor
   state?: string
+}
+
+export interface GhConversationComment {
+  id: string
+  author?: GhAuthor & { __typename?: string }
+  body?: string
+  createdAt?: string
+  url?: string
+}
+
+export interface GhReviewWithBody {
+  id: string
+  author?: GhAuthor & { __typename?: string }
+  body?: string
+  state?: string
+  submittedAt?: string
+  url?: string
 }
 
 export interface PRResult {
@@ -39,4 +60,6 @@ export interface PRResult {
   additions: number
   deletions: number
   files: number
+  checks?: PRStatus["checks"]
+  reviewers?: PRStatus["reviewers"]
 }

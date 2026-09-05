@@ -436,7 +436,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
           typeof part === "object" &&
           part.type !== "tool-approval-request" &&
           part.type !== "tool-approval-response" &&
-          !(part.type === "text" && part.text.startsWith("<environment_details>"))
+          !(part.type === "text" && part.text.trimStart().startsWith("<environment_details>"))
         ) {
           targetIndex = i
           break
@@ -1723,6 +1723,19 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
 export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_TOKEN_MAX): number {
   return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
+
+// kilocode_change start
+export function maxOutputTokensForRequest(input: {
+  model: Provider.Model
+  options: Record<string, any>
+  maxOutputTokens: number | undefined
+}): number | undefined {
+  if (input.model.api.npm === "@ai-sdk/cerebras" && input.options.max_completion_tokens !== undefined) {
+    return undefined
+  }
+  return input.maxOutputTokens
+}
+// kilocode_change end
 
 type JsonRecord = Record<string, unknown>
 

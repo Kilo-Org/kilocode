@@ -1,11 +1,16 @@
 import { describe, expect, it } from "bun:test"
-import { createRoot } from "solid-js"
-import { useSlashCommand } from "../../webview-ui/src/hooks/useSlashCommand"
+import { createRoot, createSignal } from "solid-js"
+import { useSlashCommand, type SlashCommandEntry } from "../../webview-ui/src/hooks/useSlashCommand"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 function setup(
   sandbox: () => void,
-  options: { enabled?: () => boolean; exclude?: () => Set<string>; include?: Set<string> } = {},
+  options: {
+    enabled?: () => boolean
+    exclude?: () => Set<string>
+    include?: Set<string>
+    extra?: SlashCommandEntry[]
+  } = {},
 ) {
   const sent: WebviewMessage[] = []
   const handlers = new Set<(message: ExtensionMessage) => void>()
@@ -22,6 +27,8 @@ function setup(
       { action: sandbox, enabled: options.enabled ?? (() => true) },
       options.exclude,
       options.include,
+      undefined,
+      options.extra,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -29,6 +36,71 @@ function setup(
   }
   return { ...root, fire, sent }
 }
+
+describe("worktree update slash action", () => {
+  it("uses the current worktree selection and preserves text after the action", () => {
+    const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          action: () => {
+            state.sent = state.selected
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, "/update-from-base".length)
+    state.selected = "second"
+    const entry = ctx.slash.results().find((item) => item.name === "update-from-base")!
+    ctx.slash.select(entry, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe("second")
+    expect(state.text).toBe(" keep this draft")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it("keeps the draft when a worktree action becomes unavailable", () => {
+    const state = { text: "/update-from-base", sent: false }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          enabled: () => false,
+          action: () => {
+            state.sent = true
+          },
+        },
+      ],
+    })
+    const textarea = { value: state.text } as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe(false)
+    expect(state.text).toBe("/update-from-base")
+    ctx.dispose()
+  })
+
+  it("hides the worktree action in Local and other prompt surfaces", () => {
+    const ctx = setup(() => {}, {
+      extra: [{ name: "update-from-base", hints: [], action: () => {} }],
+      exclude: () => new Set(["update-from-base"]),
+    })
+    ctx.slash.onInput("/update-from-base", 17)
+    expect(ctx.slash.results()).toEqual([])
+    ctx.dispose()
+  })
+})
 
 describe("useSlashCommand sandbox action", () => {
   it("supports the singular model alias", () => {
@@ -211,9 +283,11 @@ describe("useSlashCommand sandbox action", () => {
     expect(ctx.slash.results()).toContainEqual(
       expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
     )
+    expect(ctx.slash.results().find((command) => command.name === "review")?.description).not.toContain("worktree")
     ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
     expect(state.text).toBe("/review ")
     expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
       "review uncommitted",
       "review staged",
       "review unpushed",
@@ -242,6 +316,31 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
+  it("puts worktree review first when allowed and preserves the other options' order", () => {
+    const [allowed, setAllowed] = createSignal(false)
+    const ctx = setup(() => {}, { exclude: () => (allowed() ? new Set() : new Set(["review worktree"])) })
+
+    ctx.slash.onInput("/review ", 8)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+
+    setAllowed(true)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    ctx.dispose()
+  })
+
   it("preserves model, agent, and variant metadata on loaded server commands", () => {
     const ctx = setup(() => {})
 
@@ -266,6 +365,120 @@ describe("useSlashCommand sandbox action", () => {
     expect(matches[0]?.agent).toBe("code")
     expect(matches[0]?.model).toBe("openai/gpt-5.6-luna-fast")
     expect(matches[0]?.variant).toBe("xhigh")
+    ctx.dispose()
+  })
+})
+
+describe("slash command keyboard selection", () => {
+  it.each(["sandbox", "verify"])("leaves Shift+Tab unhandled with /%s selected", (name) => {
+    const draft = `/${name} keep this draft`
+    const state = { text: draft, prevented: 0, selected: 0, toggles: 0 }
+    const ctx = setup(() => state.toggles++)
+    const cursor = name.length + 1
+    const textarea = {
+      value: draft,
+      selectionStart: cursor,
+      setSelectionRange: (start: number) => (textarea.selectionStart = start),
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Tab",
+      shiftKey: true,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "verify", description: "Verify changes", hints: [] }],
+    })
+    ctx.slash.onInput(draft, cursor)
+    expect(ctx.slash.results()[0]?.name).toBe(name)
+
+    const handled = ctx.slash.onKeyDown(
+      event,
+      textarea,
+      (text) => (state.text = text),
+      () => state.selected++,
+    )
+
+    expect(handled).toBe(false)
+    expect(state).toEqual({ text: draft, prevented: 0, selected: 0, toggles: 0 })
+    expect(textarea.value).toBe(draft)
+    expect(textarea.selectionStart).toBe(cursor)
+    expect(ctx.slash.show()).toBe(true)
+    expect(ctx.slash.index()).toBe(0)
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it.each(["Enter", "Tab"] as const)("keeps %s selection aligned with the action-first menu", (key) => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["reload", "refresh"])
+    const handled = ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))
+
+    expect(handled).toBe(true)
+    expect(state.prevented).toBe(1)
+    expect(state.text).toBe("")
+    expect(textarea.value).toBe("")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }, { type: "reload" }])
+    ctx.dispose()
+  })
+
+  it("selects the second displayed result after ArrowDown", () => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    const down = {
+      key: "ArrowDown",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+    const enter = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    expect(ctx.slash.onKeyDown(down, textarea, (text) => (state.text = text))).toBe(true)
+    expect(ctx.slash.index()).toBe(1)
+    expect(ctx.slash.onKeyDown(enter, textarea, (text) => (state.text = text))).toBe(true)
+
+    expect(state.prevented).toBe(2)
+    expect(state.text).toBe("/refresh ")
+    expect(textarea.value).toBe("/refresh ")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
     ctx.dispose()
   })
 })

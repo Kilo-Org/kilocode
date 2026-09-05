@@ -1,5 +1,4 @@
 import { For, Show, type Component, type JSX } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -52,12 +51,21 @@ export interface TabBarProps {
   onRun: (id: string) => void
   onConfigureRun: () => void
   diffOpen: () => boolean
+  browserOpen: () => boolean
+  browserAutomation: () => boolean
+  onToggleBrowser: () => void
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
   prStatus: () => PRStatus | undefined
   prOpen: () => boolean
   onTogglePR: () => void
+  documentsOpen: () => boolean
+  documentsAvailable: () => boolean
+  onToggleDocuments: () => void
+  subagentsAvailable: () => boolean
+  subagentsOpen: () => boolean
+  onToggleSubagents: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -134,10 +142,14 @@ export const TabBar: Component<TabBarProps> = (props) => (
               <>
                 <Show when={isWorktree()}>
                   <>
-                    <Tooltip value={props.t("agentManager.open.tooltip")} placement="bottom">
-                      <Button size="small" variant="ghost" icon="folder" onClick={props.onOpen}>
-                        {props.t("agentManager.open.button")}
-                      </Button>
+                    <Tooltip value={props.t("agentManager.open.tooltip")} placement="bottom" openDelay={0}>
+                      <IconButton
+                        size="small"
+                        variant="ghost"
+                        icon="folder"
+                        aria-label={props.t("agentManager.open.button")}
+                        onClick={props.onOpen}
+                      />
                     </Tooltip>
                     <Tooltip
                       value={
@@ -146,18 +158,22 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           : props.t("agentManager.diff.applyBranchOnly")
                       }
                       placement="bottom"
+                      openDelay={0}
                     >
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        onClick={props.onApply}
-                        disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
-                      >
+                      <span class="am-tab-apply">
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="check"
+                          aria-label={props.t("agentManager.apply.globalButton")}
+                          aria-busy={applyBusy()}
+                          onClick={props.onApply}
+                          disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
+                        />
                         <Show when={applyBusy()}>
                           <Spinner class="am-apply-spinner" />
                         </Show>
-                        {props.t("agentManager.apply.globalButton")}
-                      </Button>
+                      </span>
                     </Tooltip>
                   </>
                 </Show>
@@ -169,14 +185,18 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     const configured = props.runConfigured
                     const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
                     return (
-                      <span
-                        class={`am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
-                      >
-                        <TooltipKeybind title={title()} keybind={props.bindings().runScript ?? ""} placement="bottom">
-                          <Button
+                      <span class={`am-split-button ${active() ? "am-run-active" : ""}`}>
+                        <TooltipKeybind
+                          title={title()}
+                          keybind={props.bindings().runScript ?? ""}
+                          placement="bottom"
+                          openDelay={0}
+                        >
+                          <IconButton
                             size="small"
                             variant="ghost"
                             icon={active() ? "stop" : "play"}
+                            aria-label={title()}
                             disabled={rs()?.state === "stopping"}
                             onClick={props.track(
                               "run_script",
@@ -186,23 +206,17 @@ export const TabBar: Component<TabBarProps> = (props) => (
                                 action: active() ? "stop" : configured() ? "run" : "configure",
                               }),
                             )}
-                          >
-                            {active() ? "Stop" : "Run"}
-                          </Button>
+                          />
                         </TooltipKeybind>
                         <DropdownMenu gutter={4} placement="bottom-end">
-                          <DropdownMenu.Trigger
-                            as={(p: Record<string, unknown>) => (
-                              <IconButton
-                                {...p}
-                                icon="chevron-down"
-                                size="small"
-                                variant="ghost"
-                                label={props.t("agentManager.run.options")}
-                                class="am-run-group-chevron"
-                              />
-                            )}
-                          />
+                          <Tooltip value={props.t("agentManager.run.options")} placement="bottom" openDelay={0}>
+                            <DropdownMenu.Trigger
+                              class="am-split-arrow"
+                              aria-label={props.t("agentManager.run.options")}
+                            >
+                              <Icon name="chevron-down" size="small" />
+                            </DropdownMenu.Trigger>
+                          </Tooltip>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content class="am-split-menu">
                               <DropdownMenu.Item
@@ -220,27 +234,52 @@ export const TabBar: Component<TabBarProps> = (props) => (
                 </Show>
                 <Show when={props.prStatus()}>
                   {(pr) => (
-                    <Tooltip value={`PR #${pr().number}`} placement="bottom">
+                    <Tooltip value={`PR #${pr().number}`} placement="bottom" openDelay={0}>
                       <IconButton
                         icon="pull-request"
                         size="small"
                         variant="ghost"
-                        label={`PR #${pr().number}`}
+                        aria-label={`PR #${pr().number}`}
                         class={props.prOpen() ? "am-tab-diff-btn-active" : ""}
                         onClick={props.onTogglePR}
                       />
                     </Tooltip>
                   )}
                 </Show>
+                <Show when={props.documentsAvailable()}>
+                  <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom" openDelay={0}>
+                    <IconButton
+                      icon="book-open-check"
+                      size="small"
+                      variant="ghost"
+                      aria-label={props.t("agentManager.documents.toggle")}
+                      class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleDocuments}
+                    />
+                  </Tooltip>
+                </Show>
+                <Show when={props.subagentsAvailable()}>
+                  <Tooltip value="Subagents" placement="bottom" openDelay={0}>
+                    <IconButton
+                      icon="task"
+                      size="small"
+                      variant="ghost"
+                      aria-label="Subagents"
+                      class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleSubagents}
+                    />
+                  </Tooltip>
+                </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}
                   keybind={props.bindings().toggleDiff ?? ""}
                   placement="bottom"
+                  openDelay={0}
                 >
                   <button
                     class={`am-diff-toggle-btn ${props.diffOpen() && !props.reviewActive() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
                     onClick={props.onToggleDiff}
-                    title={props.t("agentManager.diff.toggle")}
+                    aria-label={props.t("agentManager.diff.toggle")}
                   >
                     <Icon name="layers" size="small" />
                     <Show when={hasChanges()}>
@@ -254,16 +293,28 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     </Show>
                   </button>
                 </TooltipKeybind>
+                <Show when={props.browserAutomation()}>
+                  <Tooltip value={props.t("agentManager.browser.title")} placement="bottom" openDelay={0}>
+                    <IconButton
+                      icon="globe"
+                      size="small"
+                      variant="ghost"
+                      aria-label={props.t("agentManager.browser.title")}
+                      class={props.browserOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleBrowser}
+                    />
+                  </Tooltip>
+                </Show>
               </>
             )
           })()}
           <Show when={props.selection() !== null}>
-            <Tooltip value={props.t("command.review.toggle")} placement="bottom">
+            <Tooltip value={props.t("command.review.toggle")} placement="bottom" openDelay={0}>
               <IconButton
                 icon="expand"
                 size="small"
                 variant="ghost"
-                label={props.t("command.review.toggle")}
+                aria-label={props.t("command.review.toggle")}
                 class={props.reviewActive() ? "am-tab-diff-btn-active" : ""}
                 onClick={props.onToggleReview}
               />
@@ -272,7 +323,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
           {/* Terminal destination split button: the primary action
                follows the user's setting (VS Code integrated terminal
                or the embedded side panel), the dropdown picks which.
-               Cmd+Shift+T creates a terminal in the active terminal container. */}
+               Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}

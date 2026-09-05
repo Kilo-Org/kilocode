@@ -26,22 +26,16 @@ import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
-import { AbsolutePath, type DeepMutable } from "@opencode-ai/core/schema"
+import type { DeepMutable } from "@opencode-ai/core/schema" // kilocode_change
 // kilocode_change start
 import * as KiloAgent from "@/kilocode/agent"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import * as AgentRequirements from "@/kilocode/agent-requirements"
 import * as KiloReference from "@/kilocode/reference"
-import { MCP } from "@/mcp"
 // kilocode_change end
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
-import { Reference } from "@opencode-ai/core/reference"
-import { Location } from "@opencode-ai/core/location"
-import { PluginV2 } from "@opencode-ai/core/plugin"
-
-export type RequirementBlockedError = InstanceType<typeof AgentRequirements.BlockedError> // kilocode_change
+// kilocode_change
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -67,7 +61,6 @@ export const Info = Schema.Struct({
   variant: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
-  requirements: Schema.optional(AgentRequirements.Requirements), // kilocode_change
   steps: Schema.optional(Schema.Finite),
 }).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -79,14 +72,10 @@ const GeneratedAgent = Schema.Struct({
 })
 
 export interface Interface {
-  readonly get: (agent: string) => Effect.Effect<Info>
+  readonly get: (agent: string, cfg?: Config.Info) => Effect.Effect<Info> // kilocode_change
   readonly list: () => Effect.Effect<Info[]>
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
-  // kilocode_change start
-  readonly requirementStatus: (agent: string) => Effect.Effect<AgentRequirements.Result>
-  readonly guardRequirements: (agent: Info) => Effect.Effect<void, RequirementBlockedError>
-  // kilocode_change end
   readonly generate: (input: {
     description: string
     model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
@@ -100,7 +89,7 @@ export interface Interface {
   >
 }
 
-type State = Omit<Interface, "generate" | "requirementStatus" | "guardRequirements"> & { version: string } // kilocode_change
+type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
 
@@ -113,7 +102,6 @@ const layer = Layer.effect(
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
     const skill = yield* Skill.Service
-    const mcp = yield* MCP.Service // kilocode_change
     const provider = yield* Provider.Service
     const flags = yield* RuntimeFlags.Service // kilocode_change
     const locations = yield* LocationServiceMap.Service
@@ -123,17 +111,14 @@ const layer = Layer.effect(
         const cfg = yield* config.get()
         const skillDirs = yield* skill.dirs()
         // kilocode_change start - include global config dirs so agents can read them without prompting
-        const referenceDirs = yield* Effect.gen(function* () {
-          if (Object.keys(cfg.references ?? cfg.reference ?? {}).length) {
-            yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
-          }
-          yield* KiloReference.sync({
+        const referenceDirs = yield* KiloReference.list(
+          {
             references: cfg.references ?? cfg.reference ?? {},
             directory: ctx.directory,
             worktree: ctx.worktree,
-          })
-          return (yield* (yield* Reference.Service).list()).map((reference) => reference.path)
-        }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
+          },
+          locations,
+        ).pipe(Effect.map((references) => references.map((reference) => reference.path)))
         const whitelistedDirs = [
           Truncate.GLOB,
           path.join(Global.Path.tmp, "*"),
@@ -376,7 +361,6 @@ const layer = Layer.effect(
           // kilocode_change start - carry metadata as typed fields, never as provider options
           item.displayName = value.displayName ?? item.displayName
           item.source = value.source ?? item.source
-          item.requirements = value.requirements ?? item.requirements
           // kilocode_change end
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
@@ -528,43 +512,20 @@ const layer = Layer.effect(
     )
 
     // kilocode_change start - rebuild cached agents when permission-relevant config changes
-    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>) {
-      const cfg = yield* config.get()
+    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>, cfg?: Config.Info) {
+      const value = cfg ?? (yield* config.get())
       const s = yield* InstanceState.get(state)
-      if (s.version === KiloAgent.cacheKey(cfg)) return yield* select(s)
+      if (s.version === KiloAgent.cacheKey(value)) return yield* select(s)
       yield* InstanceState.invalidate(state)
       return yield* select(yield* InstanceState.get(state))
     })
 
-    const requirementStatus = Effect.fn("Agent.requirementStatus")(function* (name: string) {
-      const ctx = yield* InstanceState.context
-      return yield* AgentRequirements.status({
-        name,
-        directory: ctx.directory,
-        config,
-        skills: skill,
-        mcp,
-        agents: { get: (agent) => current((s) => s.get(agent)) },
-      })
-    })
-
-    const guardRequirements = Effect.fn("Agent.guardRequirements")(function* (agent: Info) {
-      const ctx = yield* InstanceState.context
-      yield* AgentRequirements.guard({
-        agent,
-        directory: ctx.directory,
-        config,
-        skills: skill,
-        mcp,
-        agents: { get: (name) => current((s) => s.get(name)) },
-      })
-    })
-    // kilocode_change end
-
     return Service.of({
-      get: Effect.fn("Agent.get")(function* (agent: string) {
-        return yield* current((s) => s.get(agent)) // kilocode_change
+      // kilocode_change start
+      get: Effect.fn("Agent.get")(function* (agent: string, cfg?: Config.Info) {
+        return yield* current((s) => s.get(agent), cfg)
       }),
+      // kilocode_change end
       list: Effect.fn("Agent.list")(function* () {
         return yield* current((s) => s.list()) // kilocode_change
       }),
@@ -574,10 +535,6 @@ const layer = Layer.effect(
       defaultAgent: Effect.fn("Agent.defaultAgent")(function* () {
         return yield* current((s) => s.defaultAgent()) // kilocode_change
       }),
-      // kilocode_change start
-      requirementStatus,
-      guardRequirements,
-      // kilocode_change end
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string
         model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
@@ -653,7 +610,7 @@ const locationServiceMapNode = LayerNode.make({
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Config.node, Auth.node, Plugin.node, Skill.node, Provider.node, MCP.node, RuntimeFlags.node, locationServiceMapNode], // kilocode_change
+  deps: [Config.node, Auth.node, Plugin.node, Skill.node, Provider.node, RuntimeFlags.node, locationServiceMapNode], // kilocode_change
 })
 
 export * as Agent from "./agent"

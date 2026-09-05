@@ -1,5 +1,12 @@
 export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
 
+export interface BaseUpdateRequest {
+  type: "agentManager.updateFromBase"
+  projectId?: string
+  worktreeId: string
+  sessionId?: string
+}
+
 export interface TerminalFont {
   fontFamily: string
   fontSize: number
@@ -55,6 +62,7 @@ import type {
   PRCheck,
   PRComment,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 export type {
   PRState,
@@ -63,7 +71,9 @@ export type {
   AggregateCheckStatus,
   PRCheck,
   PRComment,
+  PRCommentReply,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
@@ -82,11 +92,13 @@ export interface PRStatus {
     checks: PRCheck[]
   }
   reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
@@ -178,7 +190,11 @@ export interface LocalGitStats {
   behind: number
 }
 
-export type { ReviewCommentData as ReviewComment } from "../../../../src/shared/review-comments"
+export type {
+  ReviewCommentData as ReviewComment,
+  ReviewCommentEntry,
+  PRReviewCommentData,
+} from "../../../../src/shared/review-comments"
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.

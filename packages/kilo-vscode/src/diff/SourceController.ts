@@ -67,6 +67,9 @@ export class SourceController {
   private interval: ReturnType<typeof setInterval> | undefined
   private lastHash: string | undefined
   private epoch = 0
+  private visible = true
+  private options: ActivateOptions = {}
+  private readonly fetches = new Map<DiffSource, Promise<boolean>>()
 
   constructor(
     private readonly build: (id: string, ctx: PanelContext) => DiffSource,
@@ -87,10 +90,21 @@ export class SourceController {
     return this.interval !== undefined
   }
 
+  async setVisible(visible: boolean): Promise<void> {
+    if (this.visible === visible) return
+    this.visible = visible
+    if (!visible) {
+      this.stopPolling()
+      return
+    }
+    await this.resume()
+  }
+
   /** Dispose the active source and bump the epoch so in-flight fetches are dropped. */
   stop(): void {
     this.epoch++
     this.stopPolling()
+    this.fetches.clear()
     this.active?.dispose?.()
     this.active = undefined
     this.activeId = undefined
@@ -106,8 +120,8 @@ export class SourceController {
     const ctx = this.ctx
     if (!ctx) return
     this.stop()
-    const epoch = this.epoch
     this.activeId = id
+    this.options = opts
 
     const source = this.build(id, ctx)
     this.active = source
@@ -115,12 +129,7 @@ export class SourceController {
     this.send(this.messages.available?.(this.listAvailable(ctx), id))
     this.send(this.messages.capabilities?.(source.descriptor.capabilities))
 
-    if (opts.fetch === false) return
-
-    const keepPolling = await this.runFetch(source, epoch, true)
-    // Prevents the polling interval from starting after teardown or swap.
-    if (this.epoch !== epoch || this.activeId !== id) return
-    if (opts.poll !== false && keepPolling) this.startPolling(source, epoch)
+    await this.resume()
   }
 
   /**
@@ -151,7 +160,7 @@ export class SourceController {
     // Push fresh diffs immediately after a successful revert so the webview
     // doesn't have to wait for the next polling tick.
     if (result.ok && this.epoch === epoch && this.active === source) {
-      await this.runFetch(source, epoch, false)
+      await this.fetch(source, epoch, true, true)
     }
   }
 
@@ -160,7 +169,7 @@ export class SourceController {
     const source = this.active
     if (!source) return
     const epoch = this.epoch
-    await this.runFetch(source, epoch, true)
+    await this.fetch(source, epoch, true, true)
   }
 
   /**
@@ -177,6 +186,13 @@ export class SourceController {
       return
     }
     if (!source.fetchFile) {
+      this.send(this.messages.diffFile(source, file, null))
+      return
+    }
+    // Yield once so a worktree switch can advance the epoch before queued
+    // detail work enters the shared Git semaphore.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    if (this.epoch !== epoch || this.active !== source) {
       this.send(this.messages.diffFile(source, file, null))
       return
     }
@@ -237,12 +253,26 @@ export class SourceController {
     this.post(msg)
   }
 
+  private async resume(): Promise<void> {
+    const source = this.active
+    const epoch = this.epoch
+    if (!source || !this.visible || this.options.fetch === false) return
+    const keep = await this.fetch(source, epoch, true)
+    if (this.epoch !== epoch || this.active !== source || !this.visible) return
+    if (this.options.poll !== false && keep) this.startPolling(source, epoch)
+  }
+
   private startPolling(source: DiffSource, epoch: number): void {
     this.stopPolling()
+    let busy = false
     this.interval = setInterval(async () => {
+      if (busy) return
+      busy = true
       // Self-cancel when the tick reports the source is done
-      const keep = await this.runFetch(source, epoch, false)
-      if (!keep) this.stopPolling()
+      const keep = await this.fetch(source, epoch, false).finally(() => {
+        busy = false
+      })
+      if (!keep && this.epoch === epoch && this.active === source) this.stopPolling()
     }, DIFF_POLL_INTERVAL_MS)
   }
 
@@ -251,5 +281,24 @@ export class SourceController {
       clearInterval(this.interval)
       this.interval = undefined
     }
+  }
+
+  private fetch(source: DiffSource, epoch: number, initial: boolean, force = false): Promise<boolean> {
+    if (!this.visible) return Promise.resolve(false)
+    const current = this.fetches.get(source)
+    if (current && !force) return current
+    if (current) {
+      return current.then(() => {
+        if (this.epoch !== epoch || this.active !== source) return false
+        return this.fetch(source, epoch, initial)
+      })
+    }
+    const work = this.runFetch(source, epoch, initial)
+    this.fetches.set(source, work)
+    const clear = () => {
+      if (this.fetches.get(source) === work) this.fetches.delete(source)
+    }
+    void work.finally(clear).catch(() => undefined)
+    return work
   }
 }

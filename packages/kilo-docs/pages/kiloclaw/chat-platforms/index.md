@@ -5,6 +5,8 @@ description: "Use Kilo Chat or connect your KiloClaw agent to Telegram, Discord,
 
 # Chat Platforms
 
+{% partial file="kiloclaw-eol.md" /%}
+
 KiloClaw includes Kilo Chat as its first-party channel and also supports connecting your AI agent to messaging platforms so it can receive instructions and send responses directly in your chat apps. You can configure third-party channels from the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard#channels), or from the OpenClaw Control UI after accessing your instance.
 
 ## Kilo Chat

@@ -33,6 +33,7 @@ export type StatsOutMessage =
   | { type: "agentManager.worktreeStats"; projectId?: string; stats: WorktreeStats[] }
   | { type: "agentManager.localStats"; projectId?: string; stats: LocalStats }
   | { type: "agentManager.prStatus"; projectId?: string; worktreeId: string; pr: PRStatus | null }
+  | { type: "agentManager.prError"; projectId?: string; error: "gh_missing" | "gh_auth" | "fetch_failed" }
 
 type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktreeStats" | "agentManager.localStats" }>
 
@@ -79,6 +80,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     openExternal: deps.openExternal,
     log: deps.log,
     semaphore: deps.semaphore,
+    projectId: () => ctx.id,
   })
   return { stats, pr }
 }
@@ -122,13 +124,13 @@ export class ProjectPollers {
 
   /**
    * Reconcile pollers with the current expanded set: start pollers for
-   * expanded, trusted, non-active projects whose state is initialized, and
+   * expanded, non-active projects whose state is initialized, and
    * stop pollers for projects that were collapsed, removed, or activated.
    */
   sync(contexts: ProjectContexts): void {
     const wanted = new Set<string>()
     for (const snap of contexts.snapshots()) {
-      if (snap.active || !snap.expanded || !snap.trusted || snap.missing) continue
+      if (snap.active || !snap.expanded || snap.missing) continue
       const ctx = contexts.get(snap.id)
       if (!ctx?.peekState()) continue
       wanted.add(snap.id)
@@ -209,6 +211,7 @@ export function createPollers(opts: {
     openExternal: opts.openExternal,
     log: opts.log,
     semaphore: opts.semaphore,
+    projectId: opts.activeId,
   })
   const projects = new ProjectPollers({
     git: opts.git,

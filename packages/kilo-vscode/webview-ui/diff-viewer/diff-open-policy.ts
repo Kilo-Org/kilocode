@@ -2,6 +2,7 @@ import type { WorktreeFileDiff } from "../src/types/messages"
 
 export const LONG_DIFF_MARKER_FILE_COUNT = 50
 export const EXTREME_DIFF_CHANGED_LINES = 2_000
+const MAX_EAGER_BYTES = 256 * 1024
 
 export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
   return diff.additions + diff.deletions > EXTREME_DIFF_CHANGED_LINES
@@ -10,7 +11,9 @@ export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
 // The outer file-row virtualizer bounds the review DOM. Pierre only needs its
 // nested line virtualizer when a single file is extreme or lacks a hunk patch.
 export function shouldVirtualizeDiff(diff: WorktreeFileDiff): boolean {
-  return !diff.patch || isLargeDiffFile(diff)
+  return (
+    !diff.patch || isLargeDiffFile(diff) || diff.before.length > MAX_EAGER_BYTES || diff.after.length > MAX_EAGER_BYTES
+  )
 }
 
 export function isDiffExpandable(diff: WorktreeFileDiff): boolean {
@@ -28,6 +31,18 @@ export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
 
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return diffs.filter((diff) => diff.kind !== "image" && isDiffExpandable(diff)).map((diff) => diff.file)
+}
+
+export function reconcileOpenFiles(
+  diffs: WorktreeFileDiff[],
+  manual: string[] | undefined,
+  known: string[] = [],
+): { open: string[] | undefined; known: string[] } {
+  const files = expandableOpenFiles(diffs)
+  if (!manual) return { open: undefined, known: files }
+  const previous = new Set(known)
+  const added = files.filter((file) => !previous.has(file))
+  return { open: sanitizeOpenFiles(diffs, [...manual, ...added]), known: files }
 }
 
 export function allOpenFiles(diffs: WorktreeFileDiff[], open: string[]): boolean {

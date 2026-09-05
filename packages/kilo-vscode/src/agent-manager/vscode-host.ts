@@ -19,6 +19,8 @@ import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 
+const INTRO_KEY = "kilo.agentManager.introDismissed"
+
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
@@ -54,6 +56,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -85,6 +88,7 @@ export class VscodeHost implements Host {
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -101,15 +105,28 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -121,7 +138,11 @@ export class VscodeHost implements Host {
     }
     provider.setRemoteService(this.remoteService)
     provider.attachToWebview(panel.webview, {
-      onBeforeMessage: opts.onBeforeMessage,
+      onBeforeMessage: async (msg) => {
+        if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
+        if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
+        return null
+      },
     })
     provider.setStreamVisibility(panel.active && panel.visible)
     const streams = panel.onDidChangeViewState((event) =>
@@ -234,6 +255,10 @@ export class VscodeHost implements Host {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
   }
 
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
+  }
+
   readProjects(): unknown {
     return this.context.globalState.get("agentManager.projects")
   }
@@ -298,7 +323,7 @@ export class VscodeHost implements Host {
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
@@ -313,6 +338,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {
