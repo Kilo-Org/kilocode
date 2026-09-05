@@ -10,6 +10,7 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
+import { SlackMcp } from "@/kilocode/mcp/slack" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -155,8 +156,15 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
           yield* input.ctx.ask({ permission: input.entry.key, metadata: {}, patterns: ["*"], always: ["*"] })
           // Deliberately mirrors McpCatalog.convertTool's transport call so the MCP service stays free of tool-loop concerns.
           return yield* Effect.promise(async () => {
+            // kilocode_change start
+            const args = SlackMcp.message({
+              server: input.entry.server,
+              tool: input.entry.tool.def.name,
+              args: input.args,
+            })
             const raw = await input.entry.tool.client.callTool(
-              { name: input.entry.tool.def.name, arguments: input.args },
+              { name: input.entry.tool.def.name, arguments: args },
+              // kilocode_change end
               CallToolResultSchema,
               {
                 resetTimeoutOnProgress: true,

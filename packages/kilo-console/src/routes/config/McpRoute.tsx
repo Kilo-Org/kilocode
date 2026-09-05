@@ -43,6 +43,9 @@ export function McpRoute() {
           description="Install, configure, and manage Model Context Protocol servers available to Kilo agents."
           actions={
             <>
+              <Button icon="plus" variant="primary" disabled={Boolean(state.ctx.saving())} onClick={state.openSlack}>
+                Connect Slack
+              </Button>
               <Button icon="plus" variant="primary" disabled={Boolean(state.ctx.saving())} onClick={state.openMarket}>
                 Install MCP
               </Button>
@@ -451,6 +454,54 @@ export function McpRoute() {
                 </Button>
                 <Button variant="primary" disabled={Boolean(state.ctx.saving())} onClick={state.save}>
                   Save MCP
+                </Button>
+              </footer>
+            </aside>
+          </Show>
+
+          <Show when={state.mode() === "slack"}>
+            <div class="drawer-scrim" onClick={state.close} />
+            <aside class="provider-drawer mcp-drawer" aria-label="Connect Slack">
+              <header class="drawer-header">
+                <div>
+                  <h2>Connect Slack</h2>
+                  <span>Add Slack workspace context to Kilo agents using Slack's hosted MCP server.</span>
+                </div>
+                <Button variant="ghost" aria-label="Close Slack connection overlay" onClick={state.close}>
+                  X
+                </Button>
+              </header>
+
+              <div class="provider-form mcp-config-form">
+                <Card class="banner" variant="info">
+                  This prototype uses a Slack development app and per-user OAuth with PKCE. It can search channels and
+                  DMs you can access. Before writing, Kilo asks whether to draft only or draft and publish.
+                </Card>
+                <label class="wide required-field">
+                  Slack app Client ID
+                  <input
+                    value={state.slackClient()}
+                    spellcheck={false}
+                    placeholder="1234567890.1234567890"
+                    onInput={(event) => state.setSlackClient(event.currentTarget.value)}
+                  />
+                </label>
+                <p>
+                  Use the Client ID from a staging clone of the Kilo Slack Marketplace app. Do not enter a Client
+                  Secret; native clients use PKCE.
+                </p>
+              </div>
+
+              <footer class="drawer-footer">
+                <Button variant="ghost" onClick={state.close}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  disabled={Boolean(state.ctx.saving()) || !state.slackClient().trim()}
+                  onClick={state.installSlack}
+                >
+                  Add Slack connector
                 </Button>
               </footer>
             </aside>

@@ -34,6 +34,20 @@ export namespace KilocodeSystemPrompt {
     ]
   }
 
+  export function slack(input: unknown) {
+    if (!input || typeof input !== "object") return
+    const cfg = input as Record<string, unknown>
+    if (cfg.type !== "remote" || cfg.url !== "https://mcp.slack.com/mcp") return
+    return [
+      "Slack publishing policy:",
+      "- You may read channels, threads, files, direct messages, and group direct messages that the authenticated Slack user can access.",
+      "- When the user asks you to write or reply in Slack, do not call a Slack send-message tool immediately. First use the question tool to ask them to choose between Draft only and Draft and publish.",
+      "- Draft only: produce the proposed message in chat and do not call a Slack write tool.",
+      "- Draft and publish: publish only after that explicit choice. Append the exact final line `Written by Kilo` to every message you send to a channel, thread, direct message, or group direct message. Do not omit or alter the attribution.",
+      "- Do not create channels, add reactions, upload files, edit canvases, or modify lists through Slack unless separately requested and approved.",
+    ].join("\n")
+  }
+
   export function memoryBlocks(input: {
     ctx: MemoryPaths.Ctx
     sessionID?: string

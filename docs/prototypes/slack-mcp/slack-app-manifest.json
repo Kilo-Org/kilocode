@@ -1,0 +1,41 @@
+{
+  "display_information": {
+    "name": "Kilo Desktop Slack MCP Prototype",
+    "description": "Slack context and user-approved messaging for Kilo Desktop agents"
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "http://localhost:19876/mcp/oauth/callback"
+    ],
+    "scopes": {
+      "user": [
+        "channels:history",
+        "channels:read",
+        "files:read",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "mpim:history",
+        "mpim:read",
+        "mpim:write",
+        "chat:write",
+        "search:read.files",
+        "search:read.im",
+        "search:read.mpim",
+        "search:read.private",
+        "search:read.public",
+        "search:read.users",
+        "users:read"
+      ]
+    },
+    "pkce_enabled": true
+  },
+  "settings": {
+    "is_mcp_enabled": true,
+    "org_deploy_enabled": true,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": true
+  }
+}
