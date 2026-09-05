@@ -63,9 +63,13 @@
   border-left: 2px solid var(--icon-warning-base);
 }
 
-/* Align the action button label with the card content; small buttons have 12px inline padding */
-.provider-usage-list [data-slot="card-actions"] {
-  margin-left: -12px;
+.provider-usage-list [data-slot="card-actions"] [data-component="button"] {
+  max-width: 100%;
+  height: auto;
+  min-height: 24px;
+  padding-block: 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .provider-usage-loading {
