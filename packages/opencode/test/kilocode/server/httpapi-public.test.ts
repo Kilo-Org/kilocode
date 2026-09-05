@@ -51,11 +51,20 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "suggestion.shown",
       "session.network.asked",
       "background_process.updated",
-      "interactive_terminal.updated",
       "indexing.status",
     ]) {
       expect(spec).toContain(type)
     }
+  })
+
+  test("omits interactive terminal routes and events while preserving PTY routes", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const serialized = JSON.stringify(spec)
+    expect(serialized).not.toContain("interactive-terminal")
+    expect(serialized).not.toContain("interactive_terminal")
+    expect(serialized).not.toContain("InteractiveTerminal")
+    expect(spec.paths["/pty"]?.post).toBeDefined()
+    expect(spec.paths["/pty/{ptyID}/connect"]?.get).toBeDefined()
   })
 
   test("constrains embedding model metadata", () => {

@@ -858,7 +858,7 @@ export const layer = Layer.effect(
         role: "user",
         sessionID: input.sessionID,
         time: { created: Date.now() },
-        tools: { ...input.tools, ...input.ephemeralTools }, // kilocode_change - apply non-persistent remote tool restrictions
+        tools: input.tools,
         agent: ag.name,
         model: {
           providerID: model.providerID,
@@ -2574,7 +2574,6 @@ type PartInputUnion =
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
-  ephemeralTools?: Record<string, boolean>
 }
 // kilocode_change end
 

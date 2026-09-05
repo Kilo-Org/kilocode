@@ -122,7 +122,7 @@ Writes are denied everywhere else. The following rules still apply inside writab
 
 Shell commands and their child processes inherit the same restrictions. Kilo's file tools perform mutations through a sandboxed worker. Writable file handles are unavailable, so a tool that requires an open read-write handle may fail even for an allowed path.
 
-Direct filesystem access inside trusted integrations is confined only when the integration uses Kilo's sandbox-aware filesystem service. Interactive terminals, notebook execution, and starting or restarting a background process are unavailable while sandboxing is active because those processes do not yet run inside the same boundary.
+Direct filesystem access inside trusted integrations is confined only when the integration uses Kilo's sandbox-aware filesystem service. Notebook execution and starting or restarting a background process are unavailable while sandboxing is active because those processes do not yet run inside the same boundary.
 
 {% callout type="info" %}
 The sandbox is a write boundary, not a privacy boundary. It does not prevent an agent from reading files outside your workspace if your operating-system account can read them.
