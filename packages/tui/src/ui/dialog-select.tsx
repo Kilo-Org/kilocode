@@ -11,7 +11,7 @@ import { useTheme, selectedForeground } from "../context/theme"
 import { entries, filter, flatMap, groupBy, pipe } from "remeda"
 import { batch, createEffect, createMemo, createSignal, For, Show, type JSX, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import { useTerminalDimensions } from "@opentui/solid"
+import { useRenderer, useTerminalDimensions } from "@opentui/solid" // kilocode_change - renderer gates list jump keys while an input is focused
 import * as fuzzysort from "fuzzysort"
 import { isDeepEqual } from "remeda"
 import { useDialog, type DialogContext } from "./dialog"
@@ -225,6 +225,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   })
 
   const dimensions = useTerminalDimensions()
+  const renderer = useRenderer() // kilocode_change - gate list jump keys while an input is focused
   const height = createMemo(() => Math.min(rows(), Math.floor(dimensions().height / 2) - 6))
 
   const selected = createMemo(() => flat()[store.selected])
@@ -423,26 +424,9 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             move(10)
           },
         },
-        {
-          name: "dialog.select.home",
-          title: "First item",
-          category: "Dialog",
-          run() {
-            if (props.locked) return
-            setStore("input", "keyboard")
-            moveTo(0)
-          },
-        },
-        {
-          name: "dialog.select.end",
-          title: "Last item",
-          category: "Dialog",
-          run() {
-            if (props.locked) return
-            setStore("input", "keyboard")
-            moveTo(flat().length - 1)
-          },
-        },
+        // kilocode_change start - dialog.select.home/end live in the gated
+        // layer below so they do not shadow text editing in the filter input
+        // kilocode_change end
         {
           name: "dialog.select.submit",
           title: "Select item",
@@ -475,9 +459,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           "dialog.select.next",
           "dialog.select.page_up",
           "dialog.select.page_down",
-          "dialog.select.home",
-          "dialog.select.end",
-          "dialog.select.submit",
+          "dialog.select.submit", // kilocode_change - home/end stay with the focused input
         ]),
         ...visible.flatMap((item) => tuiConfig.keybinds.get(item.command)),
         ...(visible.length
@@ -503,6 +485,39 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       ],
     }
   })
+
+  // kilocode_change start - keep home/end text movement while the dialog filter
+  // holds text; they only jump the list while it is empty or not focused.
+  useBindings(() => ({
+    enabled: () => {
+      const editor = renderer.currentFocusedEditor
+      return editor !== input || store.filter.length === 0
+    },
+    commands: [
+      {
+        name: "dialog.select.home",
+        title: "First item",
+        category: "Dialog",
+        run() {
+          if (props.locked) return
+          setStore("input", "keyboard")
+          moveTo(0)
+        },
+      },
+      {
+        name: "dialog.select.end",
+        title: "Last item",
+        category: "Dialog",
+        run() {
+          if (props.locked) return
+          setStore("input", "keyboard")
+          moveTo(flat().length - 1)
+        },
+      },
+    ],
+    bindings: tuiConfig.keybinds.gather("dialog.select.jump", ["dialog.select.home", "dialog.select.end"]),
+  }))
+  // kilocode_change end
 
   let scroll: ScrollBoxRenderable | undefined
   const ref: DialogSelectRef<T> = {
