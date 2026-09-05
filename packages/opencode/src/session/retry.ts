@@ -130,7 +130,15 @@ function parseJSON(value: unknown) {
 export function policy(opts: {
   provider: string
   parse: (error: unknown) => Err
-  set: (input: { attempt: number; message: string; action?: Retryable["action"]; next: number }) => Effect.Effect<void>
+  // kilocode_change start - expose normalized provider errors to adaptive request controllers
+  set: (input: {
+    attempt: number
+    message: string
+    action?: Retryable["action"]
+    next: number
+    error?: Err
+  }) => Effect.Effect<void>
+  // kilocode_change end
   // kilocode_change start
   limit?: number
   offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
@@ -169,6 +177,7 @@ export function policy(opts: {
           message: retry.message,
           action: retry.action,
           next: now + wait,
+          error, // kilocode_change
         })
         return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
       })

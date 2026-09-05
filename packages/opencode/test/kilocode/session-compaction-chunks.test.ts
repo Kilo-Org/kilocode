@@ -1,5 +1,5 @@
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, describe, expect, mock, spyOn, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import fs from "fs/promises"
 import os from "os"
@@ -26,6 +26,7 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { SessionCompaction } from "../../src/session/compaction"
 import * as SessionProcessorModule from "../../src/session/processor"
 import type { SessionProcessor } from "../../src/session/processor"
+import { SessionRetry } from "../../src/session/retry"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { Session as SessionNs } from "../../src/session/session"
 import { SessionStatus } from "../../src/session/status"
@@ -173,7 +174,7 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
-function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false) {
+function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty: boolean | number = false) {
   const calls: string[] = []
   const outputs: number[] = []
   const bus = Bus.layer
@@ -207,7 +208,8 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
                   : calls.length === 1
                     ? "chunk one"
                     : "chunk two"
-                if (!empty)
+                const missing = empty === true || (typeof empty === "number" && calls.length <= empty)
+                if (!missing)
                   yield* sessions.updatePart({
                     id: PartID.ascending(),
                     messageID: input.assistantMessage.id,
@@ -251,7 +253,7 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
   }
 }
 
-async function failure(error?: MessageV2.Assistant["error"], empty = false) {
+async function failure(error?: MessageV2.Assistant["error"], empty: boolean | number = false) {
   await using tmp = await tmpdir()
   return provideTestInstance({
     directory: tmp.path,
@@ -268,7 +270,7 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
         }),
       )
 
-      const { rt } = fakeRuntime(undefined, error, empty)
+      const { rt, calls } = fakeRuntime(undefined, error, empty)
       try {
         const msgs = await svc.messages({ sessionID: session.id })
         const parent = msgs.at(-1)?.info.id
@@ -285,7 +287,8 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
         )
         const all = await svc.messages({ sessionID: session.id })
         const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
-        return { result, summary }
+        const temporary = all.filter((msg) => msg.info.role === "assistant" && !msg.info.summary)
+        return { result, summary, calls, temporary }
       } finally {
         await rt.dispose()
       }
@@ -402,9 +405,12 @@ describe("KiloCompactionChunks", () => {
   })
 
   test("reports empty chunk worker responses as API errors", async () => {
+    const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
     const result = await failure(undefined, true)
 
     expect(result.result).toBe("stop")
+    expect(result.calls).toHaveLength(3)
+    expect(result.temporary).toHaveLength(0)
     expect(result.summary?.info.role).toBe("assistant")
     if (result.summary?.info.role !== "assistant") return
     expect(result.summary.info.finish).toBe("error")
@@ -412,6 +418,18 @@ describe("KiloCompactionChunks", () => {
     if (result.summary.info.error?.name !== "APIError") return
     expect(result.summary.info.error.data.message).toBe("Compaction worker returned an empty response")
     expect(result.summary.info.error.data.isRetryable).toBe(true)
+    delay.mockRestore()
+  })
+
+  test("retries empty chunk worker responses before failing compaction", async () => {
+    const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+    const result = await failure(undefined, 1)
+
+    expect(result.result).toBe("continue")
+    expect(result.calls).toHaveLength(2)
+    expect(result.temporary).toHaveLength(0)
+    expect(result.summary?.parts.find((part) => part.type === "text")?.text).toBe("chunk two")
+    delay.mockRestore()
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {
