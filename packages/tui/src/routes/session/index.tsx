@@ -129,7 +129,7 @@ function goUpsellKeys(action: RetryAction) {
   }
 }
 
-const sessionBindingCommands = [
+export const sessionBindingCommands = [ // kilocode_change
   "session.share",
   "session.rename",
   "session.timeline",
@@ -145,8 +145,7 @@ const sessionBindingCommands = [
   "session.toggle.actions",
   "session.toggle.scrollbar",
   "session.toggle.generic_tool_output",
-  "session.first",
-  "session.last",
+  // kilocode_change - session.first/last stay gated to the unfocused layer so home/end are not stolen from a focused prompt textarea
   "session.messages_last_user",
   "session.message.next",
   "session.message.previous",
@@ -172,7 +171,7 @@ const sessionGlobalBindingCommands = [
   "session.half.page.down",
 ] as const
 
-const sessionGlobalUnfocusedBindingCommands = ["session.first", "session.last"] as const
+export const sessionGlobalUnfocusedBindingCommands = ["session.first", "session.last"] as const // kilocode_change
 
 const context = createContext<{
   width: number

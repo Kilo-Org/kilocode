@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { TextAttributes, type InputRenderable, type KeyEvent } from "@opentui/core"
-import { useKeyboard, type JSX } from "@opentui/solid"
+import { useKeyboard, useRenderer, type JSX } from "@opentui/solid" // kilocode_change
 import fuzzysort from "fuzzysort"
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import { RunFooterMenu, createFooterMenuState, type RunFooterMenuItem } from "./footer.menu"
@@ -138,6 +138,7 @@ function handleKey(input: {
   setQuery: (value: string) => void
   select: () => void
   close: () => void
+  focused: () => boolean // kilocode_change
 }) {
   const name = input.event.name.toLowerCase()
   const ctrl = input.event.ctrl && !input.event.meta && !input.event.shift && !input.event.super
@@ -147,6 +148,16 @@ function handleKey(input: {
     input.close()
     return
   }
+
+  // kilocode_change start - keep Home/End text editing while the filter field
+  // holds text; they only jump the list while the filter is empty or unfocused
+  if (name === "home" || name === "end") {
+    const field = input.field()
+    if (field && !field.isDestroyed && field.plainText.length > 0 && input.focused()) {
+      return
+    }
+  }
+  // kilocode_change end
 
   // kilocode_change start - treat ctrl+p as the up binding
   if (up(input.event)) {
@@ -360,6 +371,7 @@ export function RunCommandMenuBody(props: {
   onExit: () => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const skills = createMemo(() => (props.commands() ?? []).filter((item) => item.source === "skill"))
   const activeSubagentCount = createMemo(() => props.subagents().filter((item) => item.status === "running").length)
@@ -544,7 +556,7 @@ export function RunCommandMenuBody(props: {
       return
     }
 
-    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
+    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose, focused: () => renderer.currentFocusedEditor === field }) // kilocode_change
   })
 
   return (
@@ -591,6 +603,7 @@ export function RunSubagentSelectBody(props: {
   onRows?: (rows: number) => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const entries = createMemo<SubagentEntry[]>(() =>
     props.tabs().map((item) => {
@@ -650,7 +663,7 @@ export function RunSubagentSelectBody(props: {
     }
     // kilocode_change end
 
-    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
+    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose, focused: () => renderer.currentFocusedEditor === field }) // kilocode_change
   })
 
   return (
@@ -695,6 +708,7 @@ export function RunQueuedPromptSelectBody(props: {
   onRows?: (rows: number) => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const entries = createMemo<QueuedEntry[]>(() =>
     props.prompts().map((prompt) => ({
@@ -747,6 +761,7 @@ export function RunQueuedPromptSelectBody(props: {
         if (item) props.onEdit(item.prompt)
       },
       close: props.onClose,
+      focused: () => renderer.currentFocusedEditor === field, // kilocode_change
     })
   })
 
@@ -790,6 +805,7 @@ export function RunSkillSelectBody(props: {
   onSelect: (name: string) => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const entries = createMemo<SkillEntry[]>(() =>
     (props.commands() ?? [])
@@ -824,7 +840,7 @@ export function RunSkillSelectBody(props: {
       return
     }
 
-    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
+    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose, focused: () => renderer.currentFocusedEditor === field }) // kilocode_change
   })
 
   return (
@@ -868,6 +884,7 @@ export function RunVariantSelectBody(props: {
   onSelect: (variant: string | undefined) => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const entries = createMemo<VariantEntry[]>(() => [
     {
@@ -922,7 +939,7 @@ export function RunVariantSelectBody(props: {
       return
     }
 
-    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
+    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose, focused: () => renderer.currentFocusedEditor === field }) // kilocode_change
   })
 
   return (
@@ -966,6 +983,7 @@ export function RunModelSelectBody(props: {
   onSelect: (model: NonNullable<RunInput["model"]>) => void
 }) {
   let field: InputRenderable | undefined
+  const renderer = useRenderer() // kilocode_change
   const [query, setQuery] = createSignal("")
   const entries = createMemo<ModelEntry[]>(() =>
     (props.providers() ?? [])
@@ -1043,7 +1061,7 @@ export function RunModelSelectBody(props: {
       return
     }
 
-    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
+    handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose, focused: () => renderer.currentFocusedEditor === field }) // kilocode_change
   })
 
   return (
