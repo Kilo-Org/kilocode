@@ -31,6 +31,19 @@ The **Agents** tab of the Kilo Code tool window runs sessions in isolated git wo
 - **New Worktree / Move to Worktree toolbar** — sessions in the main checkout's tab show the same toolbar above the prompt that the **Agents** panel shows.
 - **Uncommitted changes** — the tab header reports the main checkout's uncommitted change counts, which are exactly what a move carries. Linked worktree tabs keep the plain session view.
 
+## Keyboard shortcuts
+
+The chat's mode, model, and reasoning effort pickers can be cycled from the keyboard. Each shortcut is a registered action, so it appears in **Settings → Keymap** and can be rebound.
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+1` | Cycle to the next mode |
+| `Ctrl+2` | Cycle to the next favorite model (or recommended model when no favorites are set) |
+| `Ctrl+3` | Cycle to the next reasoning effort for the current model |
+| `Ctrl+0` | Reset the model override to the default |
+
+The same `Ctrl` shortcuts apply on macOS (not `Cmd`). The shortcuts work from anywhere in a Kilo session — tool window, editor tab, or worktree session editor — and are also shown in the prompt bar's picker tooltips.
+
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.

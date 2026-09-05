@@ -153,6 +153,19 @@ Use the actions on an expanded thread to:
 
 The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
 
+#### PR comments
+
+Below the review threads, the **PR Comments** section shows top-level pull request discussion comments and review submissions (such as approvals or change requests that include a summary message). Review submissions display a status label, such as **Approved** or **Changes requested**, alongside the review body.
+
+Use the actions on each comment to:
+
+- **Send** the comment to the current agent, or to the active terminal when one is focused. Sent comments are marked so they are not sent again.
+- **Dismiss** a comment locally to hide it from the actionable list. Dismissed comments can be restored at any time; dismissal is local only and does not affect GitHub.
+- **Copy** the comment as Markdown
+- **Open on GitHub** at the comment
+
+A batch **Send** button above the list dispatches all actionable comments at once, automatically excluding bot comments, dismissed comments, and comments already sent. Bot comments are collapsed by default and marked with a bot badge.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
