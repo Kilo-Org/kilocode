@@ -7,6 +7,7 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
+import { KiloMinimal } from "@/kilocode/session/minimal" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -315,6 +316,25 @@ export const layer = Layer.effect(
       const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
       const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
 
+      // kilocode_change start
+      if (KiloMinimal.enabled(yield* config.get(), { name: firstInfo.agent })) {
+        const fresh = yield* sessions.get(input.session.id)
+        const title = KiloMinimal.title(firstUser.parts)
+        if (
+          KiloSessionPrompt.prepareAutoTitle({
+            sessionID: input.session.id,
+            title,
+            fresh,
+            isDefaultTitle: Session.isDefaultTitle,
+          })
+        ) {
+          yield* sessions
+            .setTitle({ sessionID: input.session.id, title })
+            .pipe(Effect.catchCause((cause) => KiloSessionPrompt.titleFailure(input.session.id, title, cause)))
+        }
+        return
+      }
+      // kilocode_change end
       const ag = yield* agents.get("title")
       if (!ag) return
       const mdl = ag.model
@@ -363,10 +383,7 @@ export const layer = Layer.effect(
       )
         return
       yield* sessions.setTitle({ sessionID: input.session.id, title: t }).pipe(
-        Effect.catchCause((cause) => {
-          KiloSessionPrompt.clearAutoTitleMark(input.session.id, t)
-          return Effect.logError("failed to generate title", { error: Cause.squash(cause) })
-        }),
+        Effect.catchCause((cause) => KiloSessionPrompt.titleFailure(input.session.id, t, cause)),
       )
       // kilocode_change end
     })
@@ -1675,6 +1692,7 @@ export const layer = Layer.effect(
           yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
           throw error
         }
+        const minimal = KiloMinimal.enabled(yield* config.get(), agent) // kilocode_change
         const maxSteps = agent.steps ?? Infinity
         const isLastStep = step >= maxSteps
         msgs = yield* SessionReminders.apply({ messages: msgs, agent, session }).pipe(
@@ -1776,17 +1794,21 @@ export const layer = Layer.effect(
           // kilocode_change start — ephemeral context injection + post-summary
           // media strip (keeps outgoing body under the gateway body-size limit
           // even when filterCompacted couldn't trim the pre-summary history).
-          KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
+          KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache, minimal })
           msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
           const [skills, env, mem, instructions, mcpInstructions] = yield* Effect.all([
-            sys.skills(agent),
-            sys.environment(model, lastUser.editorContext), // kilocode_change
-            KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }), // kilocode_change
+            minimal ? Effect.succeed(undefined) : sys.skills(agent),
+            minimal
+              ? Effect.succeed(KiloMinimal.environment(ctx, lastUser.editorContext))
+              : sys.environment(model, lastUser.editorContext),
+            minimal
+              ? Effect.succeed([])
+              : KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }),
             instruction.system().pipe(Effect.orDie),
-            sys.mcp(agent, session.permission),
+            minimal ? Effect.succeed(undefined) : sys.mcp(agent, session.permission),
           ])
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
             Effect.provideService(Database.Service, database),
@@ -1800,7 +1822,7 @@ export const layer = Layer.effect(
             msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
             msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-            KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
+            KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache, minimal })
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
             modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
               Effect.provideService(Database.Service, database),

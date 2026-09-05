@@ -887,6 +887,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
+  "settings.experimental.minimalMode.title": "Minimal 모드",
+  "settings.experimental.minimalMode.description":
+    "로컬 모델이나 소형 모델을 위해 간결한 프롬프트와 핵심 도구를 사용하는 최소 모드를 추가합니다. 모드 선택기에서 Minimal을 선택하세요. 프로젝트 규칙과 권한은 계속 적용됩니다.",
   "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
   "settings.experimental.taskModelSelection.description":
     "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",

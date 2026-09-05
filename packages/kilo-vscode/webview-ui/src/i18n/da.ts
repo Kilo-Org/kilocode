@@ -896,6 +896,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
+  "settings.experimental.minimalMode.title": "Minimal-tilstand",
+  "settings.experimental.minimalMode.description":
+    "Tilføjer en minimal tilstand til lokale eller mindre modeller med korte prompts og grundlæggende værktøjer. Vælg Minimal i tilstandsvælgeren. Projektregler og tilladelser forbliver aktive.",
   "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
   "settings.experimental.taskModelSelection.description":
     "Tillad eksplicit valg af model, udbyder og ræsonnementsindsats for Task-underagenter.",

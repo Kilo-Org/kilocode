@@ -3457,8 +3457,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const refreshAgents =
       partial.default_agent !== undefined ||
       partial.agent !== undefined ||
+      partial.experimental?.minimal_mode !== undefined ||
       project.default_agent !== undefined ||
-      project.agent !== undefined
+      project.agent !== undefined ||
+      project.experimental?.minimal_mode !== undefined
     const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
     const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
     if (!hasGlobal && !hasProject) return

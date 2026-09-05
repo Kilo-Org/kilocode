@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
+import z from "zod"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "../../src/permission"
 import { GlobalBus } from "../../src/bus/global"
@@ -95,6 +96,22 @@ describe("global config refresh", () => {
       expect((await update(target, "kilo")).status).toBe(200)
     } finally {
       GlobalBus.off("event", listener)
+    }
+  })
+
+  test("reloads Minimal registration after external flag edits without disposal", async () => {
+    await using global = await tmpdir()
+    await using workspace = await tmpdir({ config: { formatter: false, lsp: false } })
+    ;(Global.Path as { config: string }).config = global.path
+    await disposeAllInstances()
+    const target = app()
+
+    for (const enabled of [false, true, false]) {
+      await config(global.path, { experimental: { minimal_mode: enabled } })
+      const response = await target.request("/agent", { headers: { "x-kilo-directory": workspace.path } })
+      expect(response.status).toBe(200)
+      const agents = z.array(z.object({ name: z.string() })).parse(await response.json())
+      expect(agents.some((agent) => agent.name === "minimal")).toBe(enabled)
     }
   })
 

@@ -17,6 +17,8 @@ type Internals = {
     project?: Partial<Config>,
     globalUnset?: string[][],
     projectUnset?: string[][],
+    globalBindingId?: string,
+    projectBindingId?: string,
   ) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
   fetchAndSendConfigUpdated: () => Promise<void>
@@ -268,6 +270,36 @@ describe("KiloProvider indexing refresh", () => {
     await internal.handleUpdateConfig({ hide_prompt_training_models: true }, {}, [], [], global.id)
 
     expect(calls).toBe(1)
+  })
+
+  it.each(["global", "project"] as const)("refreshes modes when Minimal is toggled in %s config", async (scope) => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    const calls: string[] = []
+    internal.connectionState = "connected"
+    internal.fetchAndSendAgents = async () => {
+      calls.push("agents")
+    }
+    internal.fetchAndSendProviders = async () => {
+      calls.push("providers")
+    }
+
+    for (const value of [true, false]) {
+      const target = binding(internal, scope)
+      const patch = { experimental: { minimal_mode: value } }
+      await internal.handleUpdateConfig(
+        scope === "global" ? patch : {},
+        scope === "project" ? patch : {},
+        [],
+        [],
+        scope === "global" ? target.id : undefined,
+        scope === "project" ? target.id : undefined,
+      )
+      expect(conn.patches().at(-1)).toMatchObject({ scope, set: patch })
+    }
+
+    expect(calls).toEqual(["agents", "agents"])
   })
 
   it("passes scoped unset paths to the config overlay endpoint", async () => {

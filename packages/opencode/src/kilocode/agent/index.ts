@@ -12,6 +12,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { KilocodeConfigSources } from "../config/sources"
+import { KiloMinimal } from "../session/minimal"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -385,6 +386,7 @@ export function cacheKey(cfg: Config.Info) {
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
     shared_agent_board: cfg.experimental?.shared_agent_board,
+    minimal_mode: cfg.experimental?.minimal_mode,
     references: cfg.references,
     reference: cfg.reference,
   })
@@ -645,6 +647,16 @@ export function patchAgents(
     ),
     mode: "primary",
     native: true,
+  }
+
+  if (cfg.experimental?.minimal_mode && agents.code) {
+    agents.minimal = {
+      ...agents.code,
+      name: "minimal",
+      displayName: "Minimal",
+      description: "Code with a compact prompt and core tools. Project rules and permissions still apply.",
+      prompt: KiloMinimal.prompt,
+    }
   }
 
   hardenSystemAgents(agents)
