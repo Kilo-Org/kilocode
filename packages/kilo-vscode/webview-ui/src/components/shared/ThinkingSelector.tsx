@@ -15,6 +15,7 @@ import { useSession } from "../../context/session"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -74,6 +75,8 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     items[clamped]?.focus()
   }
 
+  const typeahead = createTypeahead(() => rows().map(display))
+
   function refocus() {
     requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
   }
@@ -83,6 +86,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       const items = rows()
       const idx = items.findIndex((v) => v === props.value)
       setFocused(idx >= 0 ? idx : 0)
+      typeahead.reset()
       setOpen(true)
       return
     }
@@ -136,6 +140,12 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       focusItem(len - 1)
       return
     }
+    if (e.key === " " && typeahead.active()) {
+      e.preventDefault()
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) focusItem(idx)
+      return
+    }
     if (e.key === " " || isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       if (cur >= 0 && cur < len) pick(items[cur])
@@ -145,6 +155,14 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       e.preventDefault()
       e.stopPropagation()
       onOpen(false)
+      return
+    }
+    if (isTypeaheadChar(e)) {
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) {
+        e.preventDefault()
+        focusItem(idx)
+      }
     }
   }
 
