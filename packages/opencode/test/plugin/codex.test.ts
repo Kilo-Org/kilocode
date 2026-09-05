@@ -266,6 +266,7 @@ describe("plugin.codex", () => {
     )
   })
 
+  // kilocode_change start - cover integer GPT major versions until the next upstream sync
   test.each([
     ["gpt-6-astra", true],
     ["gpt-6", true],
@@ -300,6 +301,7 @@ describe("plugin.codex", () => {
 
     expect(Object.keys(models)).toEqual(allowed ? [id] : [])
   })
+  // kilocode_change end
 
   test("deduplicates concurrent Codex token refreshes", async () => {
     let auth = {
