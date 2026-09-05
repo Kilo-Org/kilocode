@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Opdater",
+  "task.swarm.reset": "Nulstil tavle",
+  "task.swarm.resetTitle": "Nulstil denne tavle?",
+  "task.swarm.resetDescription":
+    "Ryd synlige beskeder? Samtaler og igangværende opgaver ændres ikke. Agenter kan sende nye beskeder.",
+  "task.swarm.loading": "Indlæser tavle...",
+  "task.swarm.failed": "Tavlen kunne ikke indlæses eller nulstilles. Prøv at opdatere den.",
 
   "command.provider.connect": "Tilslut udbyder",
 

@@ -217,8 +217,12 @@ import type {
   KilocodeRemoveSkillResponses,
   KilocodeRemoveSnapshotErrors,
   KilocodeRemoveSnapshotResponses,
+  KilocodeResetSessionBoardErrors,
+  KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeSessionBoardErrors,
+  KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -8506,6 +8510,89 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session/{sessionID}/drain",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Observe a session's shared board
+   *
+   * Read stored board messages without changing the board.
+   */
+  public sessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      before?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "before" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeSessionBoardResponses,
+      KilocodeSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Clear a session's shared board
+   *
+   * Clear visible messages without changing conversations or running tasks.
+   */
+  public resetSessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      revision: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "revision" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeResetSessionBoardResponses,
+      KilocodeResetSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board/reset",
       ...options,
       ...params,
       headers: {

@@ -713,3 +713,35 @@
   color: var(--vscode-foreground);
   background: var(--vscode-toolbar-hoverBackground);
 }
+
+.task-board[data-slot="dialog-content"] {
+  height: 100%;
+  min-height: 0;
+}
+
+.task-board [data-slot="dialog-body"] {
+  min-height: 0;
+}
+
+.task-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-board-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 20px 20px;
+}
+
+.task-board-list {
+  container-type: inline-size;
+}
+
+.task-board [role="alert"] {
+  margin: 0 20px 12px;
+}

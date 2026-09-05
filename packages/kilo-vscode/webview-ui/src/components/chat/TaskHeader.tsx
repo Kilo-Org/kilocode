@@ -19,6 +19,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { BackgroundAgents } from "./BackgroundAgents"
+import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -30,6 +31,7 @@ import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
+  projectId?: string
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -239,6 +241,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </Tooltip>
             )}
           </Show>
+          <SwarmBoard readonly={props.readonly} projectId={props.projectId} />
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton

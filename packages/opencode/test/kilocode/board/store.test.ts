@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { sql } from "drizzle-orm"
 import path from "node:path"
 import { Database } from "@opencode-ai/core/database/database"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import { BoardStore } from "@/kilocode/board/store"
 import { SessionID } from "@/session/schema"
 import { tmpdir } from "../../fixture/fixture"
@@ -45,6 +46,179 @@ const setup = <A, E>(effect: (db: Database.Interface["db"]) => Effect.Effect<A, 
   )
 
 describe("BoardStore", () => {
+  test("observes without creating a board and pages latest messages in chronological order", async () => {
+    await setup((db) =>
+      Effect.gen(function* () {
+        const input = { sessionID: id("child"), directory: "/", limit: 2 }
+        expect(yield* BoardStore.observe(input)).toEqual({
+          ownerSessionID: id("root"),
+          revision: 0,
+          messages: [],
+          hasMore: false,
+        })
+        expect(yield* db.all(sql`SELECT * FROM kilo_board`)).toEqual([])
+        const posts = yield* Effect.forEach(
+          Array.from({ length: 5 }, (_, index) => index),
+          (index) =>
+            BoardStore.post({
+              sessionID: id("root"),
+              messageID: `msg_view_${index}`,
+              to: "ALL",
+              type: "INFO",
+              body: `${index}`,
+            }),
+        )
+        const latest = yield* BoardStore.observe(input)
+        expect(latest).toEqual({
+          ownerSessionID: id("root"),
+          revision: 5,
+          messages: posts.slice(3),
+          hasMore: true,
+          cursor: posts.at(3)?.id,
+        })
+        const older = yield* BoardStore.observe({ ...input, before: latest.cursor })
+        expect(older.messages).toEqual(posts.slice(1, 3))
+        const first = yield* BoardStore.observe({ ...input, before: older.cursor })
+        expect(first.messages).toEqual(posts.slice(0, 1))
+        expect(first.hasMore).toBe(false)
+        expect(first.cursor).toBeUndefined()
+        expect(yield* db.all(sql`SELECT * FROM part`)).toEqual([])
+        expect((yield* BoardStore.observe({ ...input, directory: "/other" }).pipe(Effect.exit))._tag).toBe("Failure")
+        expect((yield* BoardStore.observe({ ...input, before: "board_missing" }).pipe(Effect.exit))._tag).toBe(
+          "Failure",
+        )
+      }),
+    )
+  })
+
+  test("compares canonical routed directories without admitting other worktrees", async () => {
+    await using tmp = await tmpdir()
+    await setup((db) =>
+      Effect.gen(function* () {
+        yield* db.update(SessionTable).set({ directory: tmp.path }).run()
+        const stored = yield* db.get<{ directory: string }>(sql`SELECT directory FROM session WHERE id = 'ses_root'`)
+        expect(stored?.directory).toBe(process.platform === "win32" ? tmp.path.replaceAll("\\", "/") : tmp.path)
+        const input = { sessionID: id("root"), directory: tmp.path }
+        const first = yield* BoardStore.post({
+          sessionID: id("child"),
+          messageID: "msg_directory",
+          to: "ALL",
+          type: "INFO",
+          body: "Same directory",
+        })
+        const dirs = [tmp.path, `${tmp.path}${path.sep}.`, `${tmp.path}${path.sep}`]
+        if (process.platform === "win32") {
+          dirs.push(
+            tmp.path.replaceAll("\\", "/"),
+            tmp.path.replace(/^[A-Z]:/i, (drive) => drive.toLowerCase()),
+          )
+        }
+        for (const directory of dirs) {
+          expect((yield* BoardStore.observe({ ...input, directory })).messages).toEqual([first])
+        }
+        for (const directory of [path.dirname(tmp.path), path.join(tmp.path, "nested"), `${tmp.path}-other`, ""]) {
+          expect((yield* BoardStore.observe({ ...input, directory }).pipe(Effect.flip)).message).toBe(
+            "Session is not in the routed directory",
+          )
+          expect((yield* BoardStore.reset({ ...input, directory, revision: 1 }).pipe(Effect.flip)).message).toBe(
+            "Session is not in the routed directory",
+          )
+        }
+        for (const directory of dirs) {
+          expect((yield* BoardStore.reset({ ...input, directory, revision: 1 })).messages).toEqual([])
+        }
+        expect(yield* db.get(sql`SELECT directory FROM session WHERE id = 'ses_root'`)).toEqual(stored)
+        yield* db.run(sql`UPDATE session SET directory = '' WHERE id = 'ses_root'`)
+        expect((yield* BoardStore.observe({ ...input, directory: process.cwd() }).pipe(Effect.flip)).message).toBe(
+          "Session is not in the routed directory",
+        )
+        expect(
+          (yield* BoardStore.reset({ ...input, directory: process.cwd(), revision: 1 }).pipe(Effect.flip)).message,
+        ).toBe("Session is not in the routed directory")
+      }),
+    )
+  })
+
+  test("resets visible history without breaking old cursors, replies, retries, or new posts", async () => {
+    await setup((db) =>
+      Effect.gen(function* () {
+        const input = { sessionID: id("root"), directory: "/" }
+        const args = {
+          sessionID: id("child"),
+          messageID: "msg_reset",
+          callID: "first",
+          to: "ALL",
+          type: "INFO" as const,
+          body: "Before reset",
+        }
+        const first = yield* BoardStore.post(args)
+        yield* db.run(sql`UPDATE kilo_board SET message_count = 1000, message_bytes = ${2 * 1024 * 1024}`)
+        expect((yield* BoardStore.post({ ...args, callID: "full" }).pipe(Effect.exit))._tag).toBe("Failure")
+        expect(
+          (yield* BoardStore.reset({ ...input, sessionID: id("child"), revision: 1 }).pipe(Effect.exit))._tag,
+        ).toBe("Failure")
+        expect((yield* BoardStore.reset({ ...input, directory: "/other", revision: 1 }).pipe(Effect.exit))._tag).toBe(
+          "Failure",
+        )
+        expect(yield* BoardStore.reset({ ...input, revision: 1 })).toEqual({
+          ownerSessionID: id("root"),
+          revision: 1,
+          messages: [],
+          hasMore: false,
+        })
+        expect(yield* BoardStore.activity({ sessionID: id("root"), after: 0 })).toEqual({ cursor: 1, message: 0 })
+        expect(yield* BoardStore.read({ sessionID: id("root"), since: first.id })).toMatchObject({
+          messages: [],
+          cursor: first.id,
+        })
+        expect(yield* BoardStore.post(args)).toEqual(first)
+        expect(
+          yield* db.get(sql`SELECT next_seq, cleared_seq, message_count, message_bytes, objective FROM kilo_board`),
+        ).toEqual({
+          next_seq: 2,
+          cleared_seq: 1,
+          message_count: 0,
+          message_bytes: 0,
+          objective: "Build the shared board",
+        })
+        const next = yield* BoardStore.post({ ...args, callID: "after", body: "After reset", reply_to: first.id })
+        expect((yield* BoardStore.read({ sessionID: id("root"), since: first.id })).messages).toEqual([next])
+        expect(yield* BoardStore.activity({ sessionID: id("root"), after: 1 })).toEqual({ cursor: 2, message: 2 })
+        expect((yield* BoardStore.observe({ ...input, before: first.id })).messages).toEqual([])
+        expect((yield* BoardStore.reset({ ...input, revision: 1 }).pipe(Effect.exit))._tag).toBe("Failure")
+        expect((yield* BoardStore.observe(input)).messages).toEqual([next])
+        expect(yield* db.all(sql`SELECT seq FROM kilo_board_message ORDER BY seq`)).toEqual([{ seq: 1 }, { seq: 2 }])
+        expect(yield* db.all(sql`SELECT id FROM session`)).toHaveLength(3)
+        expect(yield* db.all(sql`SELECT id FROM session_message`)).toHaveLength(1)
+      }),
+    )
+  })
+
+  test("bounds human pages by bytes without skipping older messages", async () => {
+    await setup(() =>
+      Effect.gen(function* () {
+        const posts = yield* Effect.forEach(
+          Array.from({ length: 10 }, (_, index) => index),
+          (index) =>
+            BoardStore.post({
+              sessionID: id("root"),
+              messageID: `msg_large_${index}`,
+              to: "ALL",
+              type: "INFO",
+              body: "x".repeat(3500),
+            }),
+        )
+        const input = { sessionID: id("root"), directory: "/", limit: 50 }
+        const latest = yield* BoardStore.observe(input)
+        expect(latest.hasMore).toBe(true)
+        expect(Buffer.byteLength(JSON.stringify(latest))).toBeLessThanOrEqual(32 * 1024)
+        const older = yield* BoardStore.observe({ ...input, before: latest.cursor })
+        expect([...older.messages, ...latest.messages]).toEqual(posts)
+        expect(older.hasMore).toBe(false)
+      }),
+    )
+  })
+
   test("resolves scope, objective, recipients, replies, and public formatting", async () => {
     const result = await setup((db) =>
       Effect.gen(function* () {

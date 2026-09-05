@@ -15305,6 +15305,241 @@
         ]
       }
     },
+    "/kilocode/session/{sessionID}/board": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.sessionBoard",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shared board snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionBoard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read stored board messages without changing the board.",
+        "summary": "Observe a session's shared board",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionBoard({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session/{sessionID}/board/reset": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.resetSessionBoard",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shared board after reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionBoard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clear visible messages without changing conversations or running tasks.",
+        "summary": "Clear a session's shared board",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["revision"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resetSessionBoard({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/heap/snapshot": {
       "post": {
         "tags": ["kilocode"],
@@ -22286,7 +22521,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -22385,7 +22620,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -22546,7 +22781,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -23074,7 +23309,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -39659,6 +39894,86 @@
         "required": ["error"],
         "additionalProperties": false
       },
+      "BoardMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "fromLabel": {
+            "type": "string"
+          },
+          "toLabel": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["INFO", "ASK", "RESULT", "HOLD", "VETO"]
+          },
+          "body": {
+            "type": "string"
+          },
+          "reply_to": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "timestamp", "from", "to", "type", "body"],
+        "additionalProperties": false
+      },
+      "SessionBoard": {
+        "type": "object",
+        "properties": {
+          "ownerSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMessage"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": ["ownerSessionID", "revision", "messages", "hasMore"],
+        "additionalProperties": false
+      },
+      "UnknownError1": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["UnknownError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
+        "additionalProperties": false
+      },
       "CommandFile": {
         "type": "object",
         "properties": {
@@ -41038,7 +41353,7 @@
         "required": ["_tag", "sessionID", "messageID", "message"],
         "additionalProperties": false
       },
-      "UnknownError1": {
+      "UnknownError2": {
         "type": "object",
         "properties": {
           "_tag": {

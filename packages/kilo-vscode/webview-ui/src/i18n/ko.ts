@@ -60,6 +60,14 @@ type Keys = keyof typeof en
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "보드",
+  "task.swarm.refresh": "새로 고침",
+  "task.swarm.reset": "보드 초기화",
+  "task.swarm.resetTitle": "이 보드를 초기화할까요?",
+  "task.swarm.resetDescription":
+    "표시된 메시지를 지울까요? 대화와 실행 중인 작업은 변경되지 않습니다. 에이전트는 새 메시지를 게시할 수 있습니다.",
+  "task.swarm.loading": "보드 로딩 중...",
+  "task.swarm.failed": "보드를 불러오거나 초기화할 수 없습니다. 새로 고침을 시도하세요.",
 
   "command.provider.connect": "공급자 연결",
 

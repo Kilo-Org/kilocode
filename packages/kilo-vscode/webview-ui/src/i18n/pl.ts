@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablica",
+  "task.swarm.refresh": "Odśwież",
+  "task.swarm.reset": "Zresetuj tablicę",
+  "task.swarm.resetTitle": "Zresetować tę tablicę?",
+  "task.swarm.resetDescription":
+    "Wyczyścić widoczne wiadomości? Rozmowy i trwające zadania pozostaną bez zmian. Agenci mogą publikować nowe wiadomości.",
+  "task.swarm.loading": "Ładowanie tablicy...",
+  "task.swarm.failed": "Nie udało się załadować lub zresetować tablicy. Spróbuj ją odświeżyć.",
 
   "command.provider.connect": "Połącz dostawcę",
 

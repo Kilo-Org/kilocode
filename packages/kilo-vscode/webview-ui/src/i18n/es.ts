@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablero",
+  "task.swarm.refresh": "Actualizar",
+  "task.swarm.reset": "Restablecer tablero",
+  "task.swarm.resetTitle": "¿Restablecer este tablero?",
+  "task.swarm.resetDescription":
+    "¿Borrar los mensajes visibles? Las conversaciones y las tareas en curso no cambian. Los agentes pueden publicar nuevos mensajes.",
+  "task.swarm.loading": "Cargando tablero...",
+  "task.swarm.failed": "No se pudo cargar o restablecer el tablero. Intenta actualizarlo.",
 
   "command.provider.connect": "Conectar proveedor",
 
