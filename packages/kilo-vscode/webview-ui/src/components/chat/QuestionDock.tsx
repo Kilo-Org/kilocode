@@ -9,6 +9,7 @@ import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
@@ -369,7 +370,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         <div data-slot="question-dock-header-content">
           <div data-slot="question-header-title">{summary()}</div>
           <Show when={store.collapsed}>
-            <div data-slot="question-collapsed-preview" dir="auto">
+            <div data-slot="question-collapsed-preview" dir={textDirection(questionText())}>
               {questionText()}
             </div>
           </Show>
@@ -414,7 +415,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text" dir="auto">
+            <div data-slot="question-text" dir={textDirection(questionText())}>
               {questionText()}
             </div>
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
@@ -444,11 +445,11 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                         </span>
                       </span>
                       <span data-slot="question-option-main">
-                        <span data-slot="option-label" dir="auto">
+                        <span data-slot="option-label" dir={textDirection(localized.label())}>
                           {localized.label()}
                         </span>
                         <Show when={localized.description()}>
-                          <span data-slot="option-description" dir="auto">
+                          <span data-slot="option-description" dir={textDirection(localized.description())}>
                             {localized.description()}
                           </span>
                         </Show>
@@ -527,10 +528,14 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   const answered = () => Boolean(value())
                   return (
                     <div data-slot="review-item">
-                      <span data-slot="review-label" dir="auto">
+                      <span data-slot="review-label" dir={textDirection(tr(language.t, q.questionKey, q.question))}>
                         {tr(language.t, q.questionKey, q.question)}
                       </span>
-                      <span data-slot="review-value" data-answered={answered()} dir="auto">
+                      <span
+                        data-slot="review-value"
+                        data-answered={answered()}
+                        dir={textDirection(answered() ? value() : language.t("ui.question.review.notAnswered"))}
+                      >
                         {answered() ? value() : language.t("ui.question.review.notAnswered")}
                       </span>
                     </div>

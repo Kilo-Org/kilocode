@@ -37,6 +37,7 @@
     "./*": "./src/components/*.tsx",
     "./file-path": "./src/file-path.ts",
     "./session-diff": "./src/components/session-diff.ts",
+    "./kilocode/*": "./src/kilocode/*.ts",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
     "./pierre/*": "./src/pierre/*.ts",
