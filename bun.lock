@@ -1010,6 +1010,8 @@
     "tree-sitter-bash",
   ],
   "patchedDependencies": {
+    "@ai-sdk/openai-compatible@2.0.41": "patches/@ai-sdk%2Fopenai-compatible@2.0.41.patch",
+    "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "@ai-sdk/xai@3.0.102": "patches/@ai-sdk%2Fxai@3.0.102.patch",
     "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
     "@ff-labs/fff-bun@0.9.4": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",

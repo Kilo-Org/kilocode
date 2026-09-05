@@ -274,6 +274,7 @@ export function Prompt(props: PromptProps) {
     if (!input || input.isDestroyed) return
     if (props.disabled) input.cursorColor = theme.backgroundElement
     if (!props.disabled) input.cursorColor = theme.text
+    if (tuiConfig.cursor && !vim.vimEnabled()) input.cursorStyle = tuiConfig.cursor // kilocode_change
   })
 
   const lastUserMessage = createMemo(() => {
@@ -1583,11 +1584,13 @@ export function Prompt(props: PromptProps) {
                   // setTimeout is a workaround and needs to be addressed properly
                   if (!input || input.isDestroyed) return
                   input.cursorColor = theme.text
+                  if (tuiConfig.cursor && !vim.vimEnabled()) input.cursorStyle = tuiConfig.cursor // kilocode_change
                 }, 0)
               }}
               onMouseDown={(r: MouseEvent) => r.target?.focus()}
               focusedBackgroundColor={theme.backgroundElement}
               cursorColor={props.disabled ? theme.backgroundElement : theme.text}
+              cursorStyle={tuiConfig.cursor}
               syntaxStyle={syntax()}
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">

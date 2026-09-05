@@ -283,6 +283,7 @@ const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
 // here gets re-applied from ours after taking theirs.
 const PRESERVE_SCRIPTS: Record<string, string[]> = {
   "package.json": [
+    "dev",
     "extension",
     "extension:isolated",
     "extension:isolated:clean",
