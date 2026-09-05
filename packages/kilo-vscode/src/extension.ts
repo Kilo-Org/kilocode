@@ -21,6 +21,7 @@ import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
+import { closeTaskTarget } from "./commands/close-task-target"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
@@ -379,6 +380,16 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Task-close commands stop work on whichever surface the user is on, so they
+  // resolve their target from real focus rather than from panel activation alone.
+  const taskTarget = () =>
+    closeTaskTarget<KiloProvider | AgentManagerProvider>({
+      sidebarFocused: provider.isFocused(),
+      sidebar: provider,
+      tab: activeTabProvider(),
+      agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined,
+    })
+
   // Sidebar menus use wrapper commands so this event measures real title button presses,
   // not programmatic opens, shortcuts, or editor title commands.
   const track = (button: string, command: string) => {
@@ -418,20 +429,10 @@ export async function activate(context: vscode.ExtensionContext) {
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
     vscode.commands.registerCommand("kilo-code.new.closeTask", () => {
-      if (agentManagerProvider.isActive()) {
-        agentManagerProvider.postMessage({ type: "action", action: "closeTask" })
-        return
-      }
-      const target = activeTabProvider() ?? provider
-      target.postMessage({ type: "action", action: "closeTask" })
+      taskTarget().postMessage({ type: "action", action: "closeTask" })
     }),
     vscode.commands.registerCommand("kilo-code.new.closeAllTasks", () => {
-      if (agentManagerProvider.isActive()) {
-        agentManagerProvider.postMessage({ type: "action", action: "closeAllTasks" })
-        return
-      }
-      const target = activeTabProvider() ?? provider
-      target.postMessage({ type: "action", action: "closeAllTasks" })
+      taskTarget().postMessage({ type: "action", action: "closeAllTasks" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()

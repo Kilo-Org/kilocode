@@ -394,7 +394,16 @@ export async function closeLifecycleSessions(
   if (entries.length === 0) return null
 
   await host.sessions.abort(entries.map((entry) => entry.id))
-  for (const entry of entries) host.sessions.forget(entry.id)
+  // Drop the sessions from state before stopping their processes. Process
+  // shutdown can be slow or unavailable, and while a closed session is still
+  // listed here any concurrent state push would restore the tabs the user just
+  // closed, because a webview with no remaining real tabs looks like a reload.
+  for (const entry of entries) {
+    host.sessions.forget(entry.id)
+    state?.removeSession(entry.id)
+    host.sessions.clearDirectory(entry.id)
+  }
+  if (state) host.push()
   // Per-session shutdown is independent, so one slow or unavailable session
   // must not hold up the rest of a bulk close.
   await Promise.all(
@@ -406,11 +415,6 @@ export async function closeLifecycleSessions(
       }
     }),
   )
-  for (const entry of entries) {
-    state?.removeSession(entry.id)
-    host.sessions.clearDirectory(entry.id)
-  }
-  if (state) host.push()
   host.log(`Closed sessions ${entries.map((entry) => entry.id).join(", ")}`)
   return null
 }

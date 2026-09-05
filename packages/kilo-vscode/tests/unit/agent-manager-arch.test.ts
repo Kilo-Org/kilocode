@@ -343,7 +343,11 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).not.toContain('type: "agentManager.forgetSession"')
     const close = getMethodBody("onCloseSessions")
     expect(close).toContain("await host.sessions.abort(")
-    expect(close.indexOf("await host.sessions.abort(")).toBeLessThan(close.indexOf("stopSessionProcesses("))
+    // Abort first, then drop the session from state, and only then stop its
+    // processes: a closed session left in state can be restored by a concurrent
+    // state push while a slow process shutdown is still running.
+    expect(close.indexOf("await host.sessions.abort(")).toBeLessThan(close.indexOf("state?.removeSession("))
+    expect(close.indexOf("state?.removeSession(")).toBeLessThan(close.indexOf("stopSessionProcesses("))
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 

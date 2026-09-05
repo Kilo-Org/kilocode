@@ -76,14 +76,17 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
 }
 
 describe("AgentManagerProvider closeSessions", () => {
-  it("aborts the agent before stopping processes and removing its tab", async () => {
+  // The session leaves Agent Manager state before its processes are stopped:
+  // process shutdown can be slow, and a state push that still listed the closed
+  // session would restore the tab the user just closed.
+  it("aborts the agent, drops the tab, then stops its processes", async () => {
     const { manager, stopped, aborted, cleared, removed, messages, events } = createManager({ dir: "/repo/worktree" })
 
     await manager.onCloseSessions(["s1"])
 
     expect(aborted).toEqual([["s1"]])
     expect(stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
-    expect(events).toEqual(["abort", "processes", "remove"])
+    expect(events).toEqual(["abort", "remove", "processes"])
     expect(removed).toEqual(["s1"])
     expect(cleared).toEqual(["s1"])
     expect(messages).toEqual([])

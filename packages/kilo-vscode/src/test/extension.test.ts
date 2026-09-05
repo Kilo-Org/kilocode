@@ -42,6 +42,7 @@ async function route(target: Target, others: Target[]) {
     assert.deepStrictEqual(
       current.messages,
       commands.map((command) => ({ type: "action", action: command.action })),
+      `others received: ${JSON.stringify(rest.map((item) => item.messages))}`,
     )
     for (const item of rest) assert.deepStrictEqual(item.messages, [])
   } finally {
