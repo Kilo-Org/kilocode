@@ -14,6 +14,31 @@ The JetBrains plugin provides the best native JetBrains UX for working with an A
 
 {% image src="/docs/img/jetbrains/plugin-auto-updates.png" alt="JetBrains Updates settings with Update plugins automatically enabled" width="900" caption="Enable automatic plugin updates to receive Kilo Code fixes and improvements." /%}
 
+### Install with bundled Kilo Core
+
+The Marketplace build is best for most users. Use the bundled Kilo Core build when your IDE cannot download the Kilo Core runtime after installation, such as on locked-down corporate networks, behind strict proxy or TLS inspection, in offline development environments, or where corporate policy blocks applications from downloading executables at runtime.
+
+The bundled build ships the JetBrains plugin with Kilo Core included. The install is larger, but first launch does not need a separate runtime download.
+
+1. Open **Settings → Plugins**
+2. Click the gear icon and choose **Manage Plugin Repositories...**
+3. Click **+** and add the Kilo Code repository URL:
+
+   ```text
+   https://kilo-org.github.io/kilocode/jetbrains/updatePlugins.xml
+   ```
+
+4. Click **OK**, then install or update **Kilo Code** from **Settings → Plugins**
+5. Restart the IDE if prompted
+
+{% image src="/docs/img/jetbrains/plugin-custom-repository-menu.png" alt="JetBrains Plugins settings with Manage Plugin Repositories selected from the gear menu" width="900" caption="Open Manage Plugin Repositories from the Plugins settings gear menu." /%}
+
+{% image src="/docs/img/jetbrains/plugin-custom-repository-url.png" alt="JetBrains Custom Plugin Repositories dialog with the Kilo Code repository URL added" width="700" caption="Add the Kilo Code custom plugin repository URL." /%}
+
+After restart, open the **Kilo Code** tool window and choose **... → Core**. The menu footer should show **Bundled Core** with the version and architecture.
+
+{% image src="/docs/img/jetbrains/plugin-bundled-core.png" alt="Kilo Code tool window Core menu showing Bundled Core and the current architecture" width="900" caption="Confirm that the plugin is using Bundled Core." /%}
+
 ### If you used the v7 EAP {% #jetbrains-early-access %}
 
 {% callout type="info" %}

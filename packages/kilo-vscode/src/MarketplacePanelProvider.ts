@@ -6,7 +6,7 @@ import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
-import type { KiloConnectionService } from "./services/cli-backend"
+import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { MarketplaceService } from "./services/marketplace"
 import {
   fetchMarketplaceData,
@@ -123,7 +123,15 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     )
     this.subscriptions.push(
       this.connection.onStateChange((state, err) => {
-        this.post({ type: "connectionState", state, ...(err ? { error: err.message } : {}) })
+        this.post({
+          type: "connectionState",
+          state,
+          ...(err ? { error: err.message } : {}),
+          ...(err instanceof ServerStartupError && {
+            userMessage: err.userMessage,
+            userDetails: err.userDetails,
+          }),
+        })
         if (state === "connected") void this.sync(false)
       }),
       this.connection.onLanguageChanged((locale) => this.post({ type: "languageChanged", locale })),
@@ -155,7 +163,15 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       await this.connection.connect(this.directory())
       await this.sync(this.statuses.size === 0)
     } catch (err) {
-      this.post({ type: "connectionState", state: "error", error: err instanceof Error ? err.message : String(err) })
+      this.post({
+        type: "connectionState",
+        state: "error",
+        error: err instanceof Error ? err.message : String(err),
+        ...(err instanceof ServerStartupError && {
+          userMessage: err.userMessage,
+          userDetails: err.userDetails,
+        }),
+      })
     }
   }
 

@@ -5,7 +5,7 @@ description: "Using Kilo Code on iOS and Android"
 
 # Mobile Apps
 
-Use Kilo Code from your phone to keep coding sessions moving while you are away from your desk. The mobile app connects to Cloud Agents, KiloClaw, and remote sessions from your local CLI or editor extensions.
+Use Kilo Code from your phone to keep coding sessions moving while you are away from your desk. The mobile app connects to Cloud Agents and remote sessions from your local CLI or editor extensions.
 
 {% callout type="info" title="Android app available now" %}
 Install Kilo Code for Android from [Google Play](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp).
@@ -16,30 +16,34 @@ Install Kilo Code for Android from [Google Play](https://play.google.com/store/a
 The mobile app lets you:
 
 - View and manage Kilo Code sessions, including remote CLI and extension sessions running on your local machine.
-- Chat with KiloClaw from your phone.
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
-- Create, onboard, and manage KiloClaw instances.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
+- Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
+
+## Privacy and telemetry
+
+On first launch, the app asks for your consent before enabling optional telemetry — product analytics, attribution, and performance tracing. Optional telemetry is pre-selected during onboarding; you can turn it off before accepting. No optional analytics starts before you make a choice.
+
+You can review or change your decision at any time in **Settings**. Declining optional telemetry keeps you signed in, and optional telemetry state stored on the device is stopped and discarded when you revoke consent or sign out.
 
 ## Kilo Pass and Billing
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
 {% imageGallery columns="3" width="220px" %}
-{% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
+{% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}
 
 {% image src="/docs/img/mobile-apps/new-session.webp" alt="Kilo Code mobile new session screen with coding mode selector" caption="Create a new Cloud Agent session and choose the right mode for the task." /%}
 
 {% image src="/docs/img/mobile-apps/session-chat.webp" alt="Kilo Code mobile session chat with an active coding task" caption="Review progress and continue coding conversations from the mobile app." /%}
 {% /imageGallery %}
 
-{% imageGallery columns="2" width="220px" %}
-{% image src="/docs/img/mobile-apps/kiloclaw-chat.webp" alt="KiloClaw chat in the Kilo Code mobile app" caption="Chat with KiloClaw on mobile." /%}
-
+{% imageGallery columns="1" width="220px" %}
 {% image src="/docs/img/mobile-apps/session-filters.webp" alt="Kilo Code mobile session filter panel for Cloud Extension CLI Slack and other platforms" caption="Filter sessions by platform and project, including Cloud, Extension, CLI, Slack, and other sessions." /%}
 {% /imageGallery %}
 
@@ -50,13 +54,30 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **Cloud Agent** — the managed cloud environment (the default).
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
-Remote sessions use the CLI's own defaults, so the composer skips model, mode, and repository selection; you type your first prompt in the chat after the session starts. Sessions started in an organization context always run on the Cloud Agent, so the picker does not appear there.
+Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
 
 A queued message shows a subtle **Queued** badge on its bubble. The badge clears when the message starts processing or when the queue drains or is cancelled. Queueing works for Cloud Agent sessions and for remote sessions on a connected `kilo remote` CLI instance.
+
+## Attachments in remote sessions
+
+When you connect the mobile app to a `kilo remote` CLI session, you can share files in both directions.
+
+### Sending files from your phone to the CLI
+
+Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote session. The CLI automatically processes them:
+
+- **Text, images, and PDFs** — the file content is converted to a `data:` URL and handed directly to the model as a file part. The model sees the content as if you had loaded it locally.
+- **Other file types** (binaries, archives, etc.) — the file is saved to a per-session scratch directory on the CLI machine. The session transcript shows the saved path, filename, file size, and MIME type. The agent can inspect the file with the `read` tool for text content or shell utilities for binary content.
+
+Attaching files from the phone is the mobile flow — this is separate from `kilo run --file <path>`, which attaches local files to a local prompt.
+
+### Receiving files from the CLI on your phone
+
+While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
 ## Reviewing GitHub pull requests
 

@@ -28,7 +28,16 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
+import { detectPrLink, readPrLinkOverride } from "@/kilo-sessions/pr-link"
+import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import {
+  clear as clearRenameMarks,
+  consumeAutoTitle,
+  consumeRenameAdoption,
+  markAutoTitle,
+  markRenameAdopted,
+} from "@/kilo-sessions/rename-adoptions"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -37,6 +46,8 @@ import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -60,6 +71,11 @@ export namespace KiloSessions {
       sessionID: string,
       input: { id: string; message: string },
     ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
+    readonly reportSessionTitle: (
+      sessionID: string,
+      title: string,
+      opts: { generated: boolean },
+    ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
   }
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
@@ -80,6 +96,18 @@ export namespace KiloSessions {
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
 
   const ttlMs = 10_000
+
+  /**
+   * Classify an `http_<status>` reason as a permanent (non-retryable) failure.
+   * 4xx client errors are permanent except 408 (Request Timeout) and 429
+   * (Too Many Requests), which are transient and should be retried.
+   */
+  function isPermanentHttpStatus(reason: string): boolean {
+    const match = reason.match(/^http_(\d+)$/)
+    if (!match) return false
+    const status = parseInt(match[1], 10)
+    return status >= 400 && status < 500 && status !== 408 && status !== 429
+  }
 
   function agentNotificationTimeoutMs(): number {
     const value = process.env["KILO_AGENT_NOTIFICATION_TIMEOUT_MS"]
@@ -230,9 +258,15 @@ export namespace KiloSessions {
     () => ingest.drain(),
     (err) => log.warn("ingest drain failed", { err }),
   )
+  KiloShutdown.register(drainIngest)
 
   export async function drainIngestForShutdown() {
     await drainIngest()
+  }
+
+  /** @internal - lifecycle regression coverage */
+  export function _queueIngestForTest(sessionId: string) {
+    return ingest.sync(sessionId, [{ type: "session_status", data: { status: "idle" } }])
   }
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
@@ -257,6 +291,79 @@ export namespace KiloSessions {
       remote ? remote.conn.heartbeat(opts) : Promise.reject(new Error("attachRemoteSession: no remote connection")),
     log: attachedLog,
   })
+
+  // kilocode_change - locally started sessions never announce to the remote
+  // connection, so the mobile live list (fed by per-connection attached ids)
+  // never shows them. Announce on the first turn (idempotent via
+  // AttachedState.announce) and detach on dispose, mirroring the create_session
+  // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
+  // fire-and-forget event handlers log failures instead of surfacing them.
+  // Per-session in-flight local announce tracker. A delete that races the
+  // announce — while it awaits the in-flight enable, or while the attach
+  // heartbeat is in flight — must converge on the same outcome instead of
+  // no-oping and leaving the dead id attached forever. `deleted` is set by
+  // detachLocalSession so an announce that has not yet attached can skip.
+  type LocalAnnounce = { promise: Promise<void>; deleted: boolean }
+  const localAnnounceInflight = new Map<string, LocalAnnounce>()
+
+  async function announceLocalSession(id: string) {
+    const existing = localAnnounceInflight.get(id)
+    if (existing) {
+      await existing.promise
+      return
+    }
+    const entry: LocalAnnounce = { promise: Promise.resolve(), deleted: false }
+    localAnnounceInflight.set(id, entry)
+    entry.promise = doAnnounceLocalSession(id, entry)
+    await entry.promise
+  }
+
+  async function doAnnounceLocalSession(id: string, entry: LocalAnnounce) {
+    try {
+      // Do not announce when remote is disabled. A first turn that races
+      // bootstrap auto-enable waits for the in-flight enable so the session
+      // still lands in the live list.
+      if (!remote && !enabling) return
+      const inflight = enabling
+      if (inflight) {
+        await inflight.catch(() => undefined)
+        if (!remote) return
+      }
+      // A delete that fired while we awaited the enable must cancel this
+      // announce so the dead session never lands in the live list.
+      if (entry.deleted) return
+      await attachRemoteSession(id)
+    } catch (error) {
+      log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    } finally {
+      if (localAnnounceInflight.get(id) === entry) localAnnounceInflight.delete(id)
+    }
+  }
+
+  // kilocode_change - detach a locally announced session on dispose so it leaves
+  // the live list. No-op for an unowned id (e.g. an app-spawned session already
+  // detached via exit_cli). Detaches the raw attached state without touching
+  // SessionStatus, because the session row is already gone on delete.
+  async function detachLocalSession(id: string) {
+    try {
+      // Converge with an in-flight announce: mark it deleted so it skips the
+      // attach, then wait for it to settle. If it already attached (the delete
+      // raced the attach heartbeat), the ownership check below still sees it
+      // and detaches it. Without this, a delete during the enable await no-ops
+      // (the id is not yet attached) and the announce then attaches the dead
+      // session forever.
+      const announce = localAnnounceInflight.get(id)
+      if (announce) {
+        announce.deleted = true
+        await announce.promise
+      }
+      if (!hasRemoteSession(id)) return
+      await attachedState.detach(id)
+    } catch (error) {
+      log.warn("local session detach failed", { sessionID: id, error: String(error) })
+    }
+  }
+
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -303,6 +410,54 @@ export namespace KiloSessions {
     await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
   }
 
+  // kilocode_change - PR link advertise (plan 8.2/8.4): resolve the worktree PR
+  // link (Storage override → detect) and persist it as a `session_pr_link`
+  // ingest item. The heartbeat alone does not write Postgres — ingest does.
+  type PrLinkTriple = { platform: string | null; prUrl: string | null; prNumber: number | null }
+
+  // Last triple synced per session id so the ~10s heartbeat does not re-ingest
+  // an unchanged link. Module-level (process-wide) like the instance advertisement.
+  const lastPrLinkTriple = new Map<string, string>()
+
+  async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
+    const key = JSON.stringify(triple)
+    if (lastPrLinkTriple.get(sessionId) === key) return
+    // Record the triple only after ingest accepts (queues) it. A missing client
+    // makes ingest.sync return false without queueing; recording before would
+    // poison the dedupe map and skip the persist after a later login.
+    const accepted = await ingest.sync(sessionId, [{ type: "session_pr_link", data: triple }])
+    if (accepted) lastPrLinkTriple.set(sessionId, key)
+  }
+
+  // Resolve the worktree PR link: a stored override wins (link or clear), then
+  // detection. Returns the heartbeat value (undefined when cleared or missing)
+  // and the ingest triple (undefined when nothing should be ingested — a
+  // missing detect is not a clear).
+  async function resolvePrLink(): Promise<{ prLink?: PrLink; triple?: PrLinkTriple }> {
+    const override = await readPrLinkOverride(Instance.worktree)
+    if (override) {
+      if ("cleared" in override) return { triple: { platform: null, prUrl: null, prNumber: null } }
+      return {
+        prLink: override,
+        triple: { platform: override.platform, prUrl: override.prUrl, prNumber: override.prNumber },
+      }
+    }
+    const detected = await detectPrLink()
+    if (detected) {
+      return {
+        prLink: detected,
+        triple: { platform: detected.platform, prUrl: detected.prUrl, prNumber: detected.prNumber },
+      }
+    }
+    return {}
+  }
+
+  async function syncPrLinkForSession(sessionId: string) {
+    const pr = await resolvePrLink()
+    if (!pr.triple) return
+    await syncPrLinkTriple(sessionId, pr.triple)
+  }
+
   async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(
@@ -315,6 +470,15 @@ export namespace KiloSessions {
     Effect.gen(function* () {
       const config = yield* Config.Service
       const sessions = yield* Session.Service
+
+      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
+        sessionID: string,
+        title: string,
+        opts: { generated: boolean },
+      ) {
+        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
+      })
+
       const state = yield* InstanceState.make(
         Effect.fn("KiloSessions.state")(function* (ctx) {
           if (ingestDisabled) return
@@ -332,18 +496,103 @@ export namespace KiloSessions {
             handlers.set(def.type, fn)
           }
 
+          // Last-known title per session so we only POST on actual title changes.
+          // Seed on Created and from existing rows at bootstrap so the first real
+          // rename (rename-before-prompt, or first rename after process restart)
+          // is not treated as a seed-only sighting and dropped (Decision 8).
+          const knownTitles = new Map<string, string>()
+          yield* sessions.list().pipe(
+            Effect.map((list) => {
+              for (const s of list) knownTitles.set(s.id, s.title)
+            }),
+            Effect.orElseSucceed(() => undefined),
+          )
           watch(Session.Event.Created, (evt) => {
-            const sessionID = evt.properties.info.id
+            const info = evt.properties.info
+            const sessionID = info.id
+            if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
           watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
-            await ingest.sync(sessionID, [
-              { type: "kilo_meta", data: await meta(sessionID) },
-              { type: "session", data: transport(session) },
-            ])
+            // Consume marks before the network hop so the 60s TTL does not span
+            // token resolution + ingest.sync. Advance knownTitles optimistically
+            // so a concurrent Updated sees sameTitle (no duplicate POST with a
+            // wrong generated flag). On ingest or title-POST failure restore
+            // prev + consumed marks so the next Updated re-derives and retries.
+            const prev = knownTitles.get(sessionID)
+            const sameTitle = prev === session.title
+            // Same-title Updated (setTitle no-op / double session.renamed): still
+            // consume a matching rename adoption after sync so the mark cannot
+            // stick and swallow a later real local rename (Decision 8).
+            const outcome = ((): { kind: "same" } | { kind: "adopted" } | { kind: "report"; generated: boolean } => {
+              if (sameTitle) return { kind: "same" }
+              // Consume marks before the network hop so the 60s TTL does not span
+              // token resolution + ingest.sync. Checks run even when prev is
+              // unknown — an unseeded mark must not leak past this handler.
+              if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
+              return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
+            })()
+            const restoreTitleState = () => {
+              // Only restore if this handler still owns the knownTitles slot.
+              // A concurrent handler may have advanced it to a newer title; in
+              // that case do not clobber it with this handler's stale prev.
+              if (knownTitles.get(sessionID) === session.title) {
+                if (prev === undefined) knownTitles.delete(sessionID)
+                else knownTitles.set(sessionID, prev)
+              }
+              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
+              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+            }
+            knownTitles.set(sessionID, session.title)
+            try {
+              await ingest.sync(sessionID, [
+                { type: "kilo_meta", data: await meta(sessionID, session) },
+                { type: "session", data: transport(session) },
+              ])
+              await syncPrLinkForSession(sessionID)
+            } catch (error) {
+              restoreTitleState()
+              log.error("session updated ingest failed", { sessionID, error })
+              return
+            }
+            if (outcome.kind === "same") consumeRenameAdoption(sessionID, session.title)
+            if (outcome.kind !== "report") return
+            // Production path goes through the Interface method (not private helper).
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            const reported = await AppRuntime.runPromise(
+              reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
+            )
+            if (!reported.ok) {
+              // Permanent failures (non-retryable 4xx client errors) mean the
+              // server rejected this title definitively; keep the new title so
+              // the next same-title Updated is a no-op instead of retrying
+              // forever. Transient failures (5xx, 408, 429, network errors,
+              // not_connected) still restore + retry.
+              const isPermanent = isPermanentHttpStatus(reported.reason)
+              if (isPermanent) {
+                log.warn("session title report permanent failure; title preserved", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              } else {
+                restoreTitleState()
+                log.warn("session title report failed; will retry on next Updated", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              }
+            }
+          })
+          watch(Session.Event.Deleted, (evt) => {
+            const sessionID = evt.properties.sessionID
+            knownTitles.delete(sessionID)
+            lastPrLinkTriple.delete(sessionID)
+            clearRenameMarks(sessionID)
+            // kilocode_change - detach a locally announced session on dispose.
+            void detachLocalSession(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -359,9 +608,13 @@ export namespace KiloSessions {
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          watch(Session.Event.TurnOpen, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
-          )
+          watch(Session.Event.TurnOpen, (evt) => {
+            const sessionID = evt.properties.sessionID
+            // kilocode_change - announce a locally started session on its first
+            // turn so it appears in the mobile live list.
+            void announceLocalSession(sessionID)
+            return ingest.sync(sessionID, [{ type: "session_open", data: {} }])
+          })
           watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
@@ -471,13 +724,13 @@ export namespace KiloSessions {
         )
       })
 
-      return Service.of({ init, sendAgentNotification })
+      return Service.of({ init, sendAgentNotification, reportSessionTitle })
     }),
   )
 
   export const defaultLayer = layer.pipe(
     Layer.provide(Bus.layer),
-    Layer.provide(Config.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(Config.node)),
     Layer.provide(Session.defaultLayer),
   )
 
@@ -487,9 +740,12 @@ export namespace KiloSessions {
   export const testLayer = Layer.succeed(Service, {
     init: () => Effect.void,
     sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
+    reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
   })
 
-  export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
+  export const node = LayerNode.suspend(() =>
+    LayerNode.make({ service: Service, layer, deps: [Bus.node, Config.node, Session.node] }),
+  )
 
   // kilocode_change - DEF-1: default advertisement for every successful
   // enableRemote() entry (covers `/remote` after auto-enable already connected).
@@ -547,7 +803,7 @@ export namespace KiloSessions {
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
         const [statusMap, permissions, questions] = await Promise.all([
-          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(SessionStatus.listAll()),
           AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
           AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
         ])
@@ -586,8 +842,20 @@ export namespace KiloSessions {
           ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
-        const instance = instanceAdvertisement
-        return { type: "heartbeat", sessions, ...(instance ? { instance } : {}) }
+        // kilocode_change - PR link advertise (plan 8.2): resolve once
+        // (worktree-scoped) and attach to every advertised row, then ingest the
+        // triple per session (deduped by last-sent triple).
+        const pr = await resolvePrLink()
+        if (pr.triple) {
+          for (const row of sessions) await syncPrLinkTriple(row.id, pr.triple)
+        }
+        const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Reuse the current session branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
+        return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 
       const conn = RemoteWS.connect({
@@ -643,6 +911,25 @@ export namespace KiloSessions {
             import("@/session/prompt"),
           ])
           await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.cancel(id)))
+        },
+        // kilocode_change - K1 W1 clone: import a cloud session in-process. The
+        // dynamic import keeps the HTTP handler graph out of the remote-sender
+        // module graph, mirroring the lazy cancelPrompt pattern.
+        importFromCloud: async (cloneId) => {
+          const [{ CloudSessionImportInProcess }, { AppRuntime }] = await Promise.all([
+            import("@/kilocode/server/import-cloud-session-in-process"),
+            import("@/effect/app-runtime"),
+          ])
+          const { session, diffs, directory } = await AppRuntime.runPromise(
+            CloudSessionImportInProcess.importSessionWithoutRestore(cloneId),
+          )
+          return {
+            session,
+            finalize: () =>
+              AppRuntime.runPromise(
+                CloudSessionImportInProcess.finalizeSessionImport({ sessionId: session.id, diffs, directory }),
+              ),
+          }
         },
       })
 
@@ -887,12 +1174,12 @@ export namespace KiloSessions {
       throw new Error(`Unable to share session ${sessionId}: ${response.status} ${response.statusText}`)
     }
 
-    const result = (await response.json()) as { public_id?: string }
-    if (!result.public_id) {
-      throw new Error(`Unable to share session ${sessionId}: server did not return a public id`)
+    const result = (await response.json()) as { share_token?: string }
+    if (!result.share_token) {
+      throw new Error(`Unable to share session ${sessionId}: server did not return a share token`)
     }
 
-    const url = `https://app.kilo.ai/s/${result.public_id}`
+    const url = `https://app.kilo.ai/s/${result.share_token}`
 
     await save(sessionId, {
       ...current,
@@ -1031,6 +1318,51 @@ export namespace KiloSessions {
     }
   }
 
+  async function reportTitleChange(
+    sessionID: string,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (ingestDisabled) {
+      return { ok: false, reason: "not_connected" }
+    }
+    const readiness = await withTimeout(
+      resolveReadiness(sessionID),
+      agentNotificationTimeoutMs(),
+      "session title readiness timed out",
+    ).catch(() => ({ ok: false, reason: "not_connected" }) as const)
+    if (!readiness.ok) {
+      log.warn("report session title skipped", { sessionID, reason: readiness.reason })
+      return readiness
+    }
+    return postSessionTitle(sessionID, readiness.client, title, generated)
+  }
+
+  async function postSessionTitle(
+    sessionID: string,
+    client: Client,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const response = await client.fetch(`${client.url}/api/session/${encodeURIComponent(sessionID)}/title`, {
+        method: "POST",
+        body: JSON.stringify({ title, generated }),
+      })
+      if (response.ok) {
+        log.info("session title reported", { sessionID, generated })
+        return { ok: true }
+      }
+      const reason = `http_${response.status}`
+      log.error("session title report failed", { sessionID, status: response.status })
+      return { ok: false, reason }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.error("session title report failed", { sessionID, error: reason })
+      return { ok: false, reason }
+    }
+  }
+
   export async function remove(sessionId: string) {
     const client = await getClient()
     if (!client) return
@@ -1090,7 +1422,7 @@ export namespace KiloSessions {
     await ingest.sync(sessionId, [
       {
         type: "kilo_meta",
-        data: await meta(sessionId),
+        data: await meta(sessionId, session),
       },
       {
         type: "session",
@@ -1114,6 +1446,7 @@ export namespace KiloSessions {
         data: { status: await deriveStatus(sessionId) },
       },
     ])
+    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
@@ -1160,10 +1493,10 @@ export namespace KiloSessions {
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
   }
 
-  async function meta(sessionId?: string) {
+  async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
-    const orgId = await getOrgId()
+    const orgId = await getOrgId(sessionId, info)
     const gitBranch = await branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)
 
@@ -1175,7 +1508,16 @@ export namespace KiloSessions {
     }
   }
 
-  async function getOrgId(): Promise<Uuid | undefined> {
+  /** Test seam: meta() without preloaded info (Session.get failure → env/auth fallback). */
+  export async function _metaForTests(sessionId?: string, info?: Session.Info | null) {
+    return meta(sessionId, info)
+  }
+
+  async function getOrgId(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    // Per-session org from metadata (remote create_session) wins over process-global env/auth.
+    const fromMeta = await resolveSessionOrg(sessionId, info)
+    if (fromMeta) return fromMeta
+
     const env = process.env["KILO_ORG_ID"]
     if (isUuid(env)) return env
 
@@ -1184,6 +1526,22 @@ export namespace KiloSessions {
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })
+  }
+
+  async function resolveSessionOrg(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    if (!sessionId) return undefined
+    const resolved =
+      info !== undefined
+        ? info
+        : await (async () => {
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(SessionID.make(sessionId)))).catch(
+              () => null,
+            )
+          })()
+    if (!resolved) return undefined
+    const raw = resolved.metadata?.orgId
+    return typeof raw === "string" && isUuid(raw) ? raw : undefined
   }
 
   function isUuid(value: string | undefined): value is Uuid {

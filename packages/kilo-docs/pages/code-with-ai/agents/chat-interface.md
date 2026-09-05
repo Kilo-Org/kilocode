@@ -63,11 +63,11 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent dropdown** - Switch between agents (e.g. Code, Ask, Plan) from the sidebar
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 
 **Providing context:**
 
-The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
 **Exporting local transcripts:**
 
@@ -89,7 +89,7 @@ You can also rename local sessions from **History** using the edit button or the
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent cycling** - Switch between agents using keybinds or slash commands
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 - **New task** - Start a new task, available using the `+` button at the top or `New Task` button above the chat input
 - **Worktree** - Continue the current task with it's git state and session history in the Agent Manager in an isolated worktree
 - **File changes** - Shows the number of lines changed and opens a diff view
@@ -110,6 +110,7 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
 - Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
+- Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**
 

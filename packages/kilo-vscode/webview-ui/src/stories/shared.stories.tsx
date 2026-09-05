@@ -72,7 +72,18 @@ const ACCESSIBLE_MODELS: EnrichedModel[] = [
     },
     autoRouting: { models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"] },
   },
-  { id: "omega", name: "Omega", providerID: "openai", providerName: "OpenAI", recommendedIndex: 1 },
+  {
+    id: "kilo-auto/frontier",
+    name: "Kilo Auto Frontier",
+    providerID: "kilo",
+    providerName: "Kilo",
+    recommendedIndex: 1,
+    options: {
+      description: "Routes each request to the strongest available models.",
+    },
+    autoRouting: { models: ["openai/gpt-5.5", "anthropic/claude-opus-4.6"] },
+  },
+  { id: "omega", name: "Omega", providerID: "openai", providerName: "OpenAI", recommendedIndex: 2 },
   { id: "alpha", name: "Alpha", providerID: "kilo", providerName: "Kilo" },
   { id: "bravo", name: "Bravo", providerID: "kilo", providerName: "Kilo" },
   { id: "charlie", name: "Charlie", providerID: "kilo", providerName: "Kilo" },
@@ -119,6 +130,28 @@ export const ModelSelectorSelectedFavorite: Story = {
     const session = {
       ...mockSessionValue(),
       favoriteModels: () => [{ providerID: "kilo", modelID: "alpha" }],
+    }
+
+    return (
+      <StoryProviders>
+        <SessionContext.Provider value={session as any}>
+          <AccessibleModelSelector />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const ModelSelectorMostUsed: Story = {
+  name: "ModelSelector - most used suggestions",
+  render: () => {
+    const session = {
+      ...mockSessionValue(),
+      modelUsageHistory: () => ({
+        "kilo/alpha": { count: 3, lastUsed: 100 },
+        "kilo/bravo": { count: 12, lastUsed: 200 },
+        "nvidia/nova": { count: 7, lastUsed: 300 },
+      }),
     }
 
     return (

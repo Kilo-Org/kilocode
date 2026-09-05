@@ -3,15 +3,18 @@ package ai.kilocode.client.testing
 import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
+import kotlinx.coroutines.CompletableDeferred
 
 class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var agents = emptyList<AgentDetailDto>()
     var skills = emptyList<SkillDto>()
+    var commandFiles = emptyList<CommandFileDto>()
     var mcps = emptyList<McpStatusDto>()
     var mcpConfigs = emptyMap<String, McpServerConfigDto>()
     val agentCalls = mutableListOf<String>()
@@ -19,6 +22,10 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     val skillRemovals = mutableListOf<Pair<String, String>>()
     val skillReloads = mutableListOf<String>()
     val skillSaves = mutableListOf<Triple<String, String, String>>()
+    val commandCalls = mutableListOf<String>()
+    val commandRemovals = mutableListOf<Pair<String, String>>()
+    val commandReloads = mutableListOf<String>()
+    val commandSaves = mutableListOf<Triple<String, String, String>>()
     val mcpCalls = mutableListOf<String>()
     val mcpConfigCalls = mutableListOf<String>()
     val mcpSaves = mutableListOf<Triple<String, String, McpConfigDto?>>()
@@ -33,6 +40,8 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var createError: Exception? = null
     var skillsError: Exception? = null
+    var commandFilesGate: CompletableDeferred<Unit>? = null
+    var commandFilesError: Exception? = null
     var removeError: Exception? = null
     var removeSkillError: Exception? = null
     var saveSkillError: Exception? = null
@@ -42,6 +51,9 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var removeSkillResult = true
     var reloadSkillResult = true
     var saveSkillResult = true
+    var removeCommandResult = true
+    var reloadCommandResult = true
+    var saveCommandResult = true
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = true
@@ -121,6 +133,36 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     override suspend fun commands(directory: String): List<CommandDto> {
         assertNotEdt("agentBehavior.commands")
         return emptyList()
+    }
+
+    override suspend fun commandFiles(directory: String): List<CommandFileDto> {
+        assertNotEdt("agentBehavior.commandFiles")
+        commandFilesGate?.await()
+        commandFilesError?.let { throw it }
+        commandCalls.add(directory)
+        return commandFiles
+    }
+
+    override suspend fun removeCommand(directory: String, location: String): Boolean {
+        assertNotEdt("agentBehavior.removeCommand")
+        commandRemovals.add(directory to location)
+        if (removeCommandResult) commandFiles = commandFiles.filterNot { it.location == location }
+        return removeCommandResult
+    }
+
+    override suspend fun reloadCommands(directory: String): Boolean {
+        assertNotEdt("agentBehavior.reloadCommands")
+        commandReloads.add(directory)
+        return reloadCommandResult
+    }
+
+    override suspend fun saveCommands(directory: String, edits: Map<String, String>): Boolean {
+        assertNotEdt("agentBehavior.saveCommands")
+        for ((location, content) in edits) commandSaves.add(Triple(directory, location, content))
+        if (saveCommandResult) commandFiles = commandFiles.map { command ->
+            edits[command.location]?.let { command.copy(content = it) } ?: command
+        }
+        return saveCommandResult
     }
 
     override suspend fun mcpStatus(directory: String): List<McpStatusDto> {

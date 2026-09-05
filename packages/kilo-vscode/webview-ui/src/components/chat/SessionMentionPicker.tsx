@@ -3,6 +3,7 @@
 import { onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { List } from "@kilocode/kilo-ui/list"
+import { filterSessions } from "../../hooks/file-mention-utils"
 import type { SessionSearchItem } from "../../types/messages"
 import { formatRelativeDate } from "../../utils/date"
 
@@ -40,9 +41,9 @@ export function SessionMentionPicker(props: Props) {
       }}
     >
       <List<SessionSearchItem>
-        items={props.sessions}
+        items={(query) => filterSessions(props.sessions, query)}
         key={(item) => item.id}
-        filterKeys={["title"]}
+        skipFilter={() => true}
         search={{ placeholder: "Search sessions", autofocus: true }}
         onSelect={(item) => {
           if (item) props.onSelect(item)
@@ -52,6 +53,7 @@ export function SessionMentionPicker(props: Props) {
           <span class="session-mention-item">
             <Icon name="history" class="file-mention-icon" />
             <span class="session-mention-title">{item.title}</span>
+            {item.worktreeName && <span class="session-mention-worktree">{item.worktreeName}</span>}
             <span class="session-mention-time">{formatRelativeDate(new Date(item.updated).toISOString())}</span>
           </span>
         )}

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { parsePatch } from "diff"
 import { Deferred, Effect, Layer } from "effect"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import fs from "fs/promises"
 import path from "path"
 import {
@@ -24,10 +25,8 @@ import { testEffect } from "../lib/effect"
 
 const weird = process.platform === "win32" ? "space file.txt" : "tab\tfile.txt"
 
-const layer = Layer.mergeAll(
-  Vcs.layer.pipe(Layer.provideMerge(Git.defaultLayer), Layer.provideMerge(EventV2Bridge.defaultLayer)),
-  CrossSpawnSpawner.defaultLayer,
-  FSUtil.defaultLayer,
+const layer = LayerNode.compile(
+  LayerNode.group([Vcs.node, Git.node, EventV2Bridge.node, FSUtil.node, CrossSpawnSpawner.node]),
 )
 const it = testEffect(layer)
 const worktreeIt = testEffect(Layer.mergeAll(layer, testInstanceStoreLayer))
@@ -333,4 +332,71 @@ describe("Vcs diff", () => {
       }),
     { git: true },
   )
+
+  // kilocode_change start
+  it.instance(
+    "diff('last-commit') returns changes from the most recent commit only",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "stale.txt"), "old\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "first"])
+        yield* write(path.join(test.directory, "fresh.txt"), "new\n")
+        yield* write(path.join(test.directory, "stale.txt"), "changed\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "second"])
+        yield* write(path.join(test.directory, "uncommitted.txt"), "working\n")
+
+        const vcs = yield* init()
+        const diff = yield* vcs.diff("last-commit")
+
+        const files = diff.map((item) => item.file).sort()
+        expect(files).toEqual(["fresh.txt", "stale.txt"])
+        expect(diff.find((item) => item.file === "uncommitted.txt")).toBeUndefined()
+        const fresh = diff.find((item) => item.file === "fresh.txt")
+        expect(fresh?.patch).toContain("diff --git")
+        expect(fresh?.patch).toContain("+new")
+        const stale = diff.find((item) => item.file === "stale.txt")
+        expect(stale?.patch).toContain("diff --git")
+        expect(stale?.patch).toContain("-old")
+        expect(stale?.patch).toContain("+changed")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "diff('last-commit') recovers patches when batch fetch is truncated",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "seed.txt"), "seed\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "seed"])
+
+        // Large file pushes the unified batch patch over MAX_TOTAL_PATCH_BYTES
+        // (10MB), but each individual file diff stays well under it. Smaller
+        // commits must still produce real patches via per-file fallback.
+        const big = "x".repeat(11 * 1024 * 1024)
+        yield* write(path.join(test.directory, "big.bin"), big)
+        yield* write(path.join(test.directory, "small.txt"), "tiny change\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "mixed sizes"])
+
+        const vcs = yield* init()
+        const diff = yield* vcs.diff("last-commit")
+
+        const files = diff.map((item) => item.file).sort()
+        expect(files).toEqual(["big.bin", "small.txt"])
+
+        const small = diff.find((item) => item.file === "small.txt")
+        expect(small?.patch).toContain("diff --git")
+        expect(small?.patch).toContain("+tiny change")
+
+        const bigItem = diff.find((item) => item.file === "big.bin")
+        expect(bigItem?.patch).toBeDefined()
+      }),
+    { git: true, timeout: 60_000 },
+  )
+  // kilocode_change end
 })

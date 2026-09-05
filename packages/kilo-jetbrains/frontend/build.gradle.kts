@@ -15,6 +15,8 @@ dependencies {
     intellijPlatform {
         intellijIdea(libs.versions.intellij.platform)
         bundledModule("intellij.platform.frontend")
+        bundledPlugin("org.jetbrains.plugins.terminal")
+        bundledModule("intellij.terminal.frontend")
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -24,6 +26,9 @@ dependencies {
     implementation(libs.commonmark.autolink)
     implementation(libs.commonmark.tables)
     implementation(libs.commonmark.strikethrough)
+    // Bundled explicitly rather than relied on as a transitive of commonmark-ext-autolink: the URL
+    // scanner is used directly to linkify code spans.
+    implementation(libs.autolink)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.zxing.core)
 

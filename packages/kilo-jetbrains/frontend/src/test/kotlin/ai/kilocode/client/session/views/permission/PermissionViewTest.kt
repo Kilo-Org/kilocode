@@ -7,10 +7,14 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.ui.md.MdCommon
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
@@ -164,6 +168,139 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Should not show state message for PENDING, got: $text", text.contains("Run this command?"))
     }
 
+    fun `test skill-shell bash permission shows skill-named header and verbatim commands`() {
+        view.show(
+            Permission(
+                id = "perm_skill",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("git status", "printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected skill-named header, got: $text", text.contains("Run shell commands from skill \"git-status\"?"))
+        assertFalse("Should not show generic header, got: $text", text.contains("Permission required"))
+        val label = view.codeLabelsForTest().single()
+        assertTrue("Expected first verbatim command, got: ${label.text}", label.text.contains("git status"))
+        assertTrue("Expected second verbatim command, got: ${label.text}", label.text.contains("printf hi"))
+    }
+
+    fun `test skill-shell permission without a skill name falls back to the generic header`() {
+        view.show(
+            Permission(
+                id = "perm_skill_noname",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true"),
+                    skillCommands = listOf("printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected fallback header, got: $text", text.contains("Permission required"))
+    }
+
+    fun `test skill-shell external_directory sibling shows the directory target, not the command list`() {
+        view.show(
+            Permission(
+                id = "perm_skill_dir",
+                sessionId = "ses",
+                name = "external_directory",
+                patterns = listOf("/tmp/*"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("cd /tmp && pwd"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        // The header still names the skill — both asks in the batch carry the same metadata.
+        assertTrue("Expected skill-named header, got: $text", text.contains("Run shell commands from skill \"git-status\"?"))
+        val label = view.codeLabelsForTest().single()
+        assertEquals("/tmp/*", label.text)
+        assertFalse("Should not show the verbatim command list, got: ${label.text}", label.text.contains("cd /tmp"))
+    }
+
+    fun `test skill-shell commands are escaped for control and bidi characters`() {
+        view.show(
+            Permission(
+                id = "perm_skill_escape",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    // \u202e (RLO) would otherwise reverse the trailing text in the prompt.
+                    skillCommands = listOf("rm \u202etxt.exe", "a\nb"),
+                ),
+            )
+        )
+
+        val label = view.codeLabelsForTest().single()
+        assertTrue("Expected escaped RLO, got: ${label.text}", label.text.contains("rm \\u202etxt.exe"))
+        assertTrue("Expected escaped newline, got: ${label.text}", label.text.contains("a\\nb"))
+        assertFalse("Raw control char must not reach the label", label.text.contains("\u202e"))
+    }
+
+    fun `test skill-shell header escapes control and bidi characters in the skill name`() {
+        view.show(
+            Permission(
+                id = "perm_skill_name_escape",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    // The skill name is untrusted SKILL.md frontmatter; a bidi override here
+                    // must not be able to reorder the header's attribution text.
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status\u202e"),
+                    skillCommands = listOf("printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected escaped RLO in header, got: $text", text.contains("git-status\\u202e"))
+        assertFalse("Raw control char must not reach the header, got: $text", text.contains("git-status\u202e"))
+    }
+
+    fun `test skill-shell permission never shows auto-approve rule toggles`() {
+        view.show(
+            Permission(
+                id = "perm_skill_norules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("git status"),
+                    // Simulates a future backend sending rule candidates alongside skillShell
+                    // metadata; approvals must still never be persisted for a skill batch.
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+    }
+
     fun `test non-bash patterns show action and path in editor`() {
         view.show(
             Permission(
@@ -202,7 +339,9 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Expected both patterns in label, got: ${labels[0].text}", labels[0].text.contains("test/*.kt"))
     }
 
-    fun `test diff preview renders only stat badge without duplicate file path`() {
+    fun `test diff preview renders collapsed then expands inline patch`() {
+        val opens = mutableListOf<Triple<List<DiffFileDto>, String, String>>()
+        view.setDiffOpener({ files, title, key -> opens.add(Triple(files, title, key)) }, "ses")
         view.show(
             Permission(
                 id = "perm6",
@@ -237,6 +376,112 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("-2", badge.removedLabelForTest().text)
         assertEquals("+1", badge.addedLabelForTest().text)
         assertNotSame("Removed and added labels should use different colors", badge.removedLabelForTest().foreground, badge.addedLabelForTest().foreground)
+        assertFalse(diffs.single().bodyCreated())
+
+        diffs.single().expand()
+
+        val expanded = diffs.single().codeEditorsForTest().single().text
+        assertTrue("Should render old line after expansion, got: $expanded", expanded.contains("old"))
+        assertTrue("Should render new line after expansion, got: $expanded", expanded.contains("new"))
+        assertFalse("Should strip hunk marker in editor preview, got: $expanded", expanded.contains("@@"))
+        assertFalse("Single-file permission diffs should not render an extra filename", findAll<JBLabel>(diffs.single()).any { it.text == "A.kt" })
+        assertTrue("Permission diffs should not render proposed filenames as links", findAll<FileLinkLabel>(diffs.single()).isEmpty())
+        assertTrue(diffs.single().bodyCreated())
+
+        diffs.single().openDiffForTest()
+
+        assertEquals(1, opens.size)
+        assertEquals("permission:ses:perm6", opens.single().third)
+        assertEquals("src/A.kt", opens.single().first.single().file)
+        assertEquals("@@ -1 +1 @@\n-old\n+new", opens.single().first.single().patch)
+    }
+
+    fun `test diff view exposes open diff toolbar target`() {
+        view.show(
+            Permission(
+                id = "perm_toolbar",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = "@@ -1 +1 @@\n-old\n+new",
+                            additions = 1,
+                            deletions = 1,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val diff = view.diffViewsForTest().single()
+        assertTrue(diff is SessionCopyTarget)
+        val target = diff as SessionCopyTarget
+        assertTrue(target.copyEligible)
+        assertSame(diff.openDiffButtonForTest(), target.copyToolbar)
+        assertSame(diff.openDiffAnchorForTest(), target.copyAnchor)
+        assertNull(target.copyText())
+    }
+
+    fun `test diff view does not expose toolbar without openable content`() {
+        view.show(
+            Permission(
+                id = "perm_toolbar_empty",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = null,
+                            additions = 1,
+                            deletions = 0,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        assertFalse((view.diffViewsForTest().single() as SessionCopyTarget).copyEligible)
+    }
+
+    fun `test diff hover sink drives popup`() {
+        val events = mutableListOf<Pair<PartView, Boolean>>()
+        view.setHoverSink { part, value -> events.add(part to value) }
+        view.show(
+            Permission(
+                id = "perm_hover",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = "@@ -1 +1 @@\n-old\n+new",
+                            additions = 1,
+                            deletions = 1,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val diff = view.diffViewsForTest().single()
+        assertNotNull(diff.headerPopup())
+
+        diff.setHovered(true)
+        diff.setHovered(false)
+
+        assertEquals(listOf(diff to true, diff to false), events)
+        diff.expand()
+        assertNull(diff.headerPopup())
     }
 
     fun `test diff preview shows no unavailable fallback text`() {
@@ -268,9 +513,10 @@ class PermissionViewTest : BasePlatformTestCase() {
         val badge = view.diffViewsForTest().single().badgeForTest()
         assertEquals("-1", badge.removedLabelForTest().text)
         assertEquals("+3", badge.addedLabelForTest().text)
+        assertFalse(view.diffViewsForTest().single().openDiffEnabledForTest())
     }
 
-    fun `test multiple diffs render each file separately`() {
+    fun `test multiple diffs render as one expandable group`() {
         view.show(
             Permission(
                 id = "perm_multi_diff",
@@ -298,14 +544,28 @@ class PermissionViewTest : BasePlatformTestCase() {
         )
 
         val diffs = view.diffViewsForTest()
-        assertEquals("Expected two diff views", 2, diffs.size)
-        assertEquals("-1", diffs[0].badgeForTest().removedLabelForTest().text)
-        assertEquals("+1", diffs[0].badgeForTest().addedLabelForTest().text)
-        assertEquals("-3", diffs[1].badgeForTest().removedLabelForTest().text)
-        assertEquals("+2", diffs[1].badgeForTest().addedLabelForTest().text)
+        assertEquals("Expected one grouped diff view", 1, diffs.size)
+        assertEquals("-4", diffs.single().badgeForTest().removedLabelForTest().text)
+        assertEquals("+3", diffs.single().badgeForTest().addedLabelForTest().text)
+        assertEquals("2 files", diffs.single().countTextForTest())
         // Patch content should not be in text
         val text = allText(view)
         assertFalse("Should not render patch markers, got: $text", text.contains("@@"))
+
+        diffs.single().expand()
+
+        val editors = diffs.single().codeEditorsForTest()
+        assertEquals(2, editors.size)
+        val expanded = editors.joinToString("\n") { it.text }
+        assertTrue("Should render first file diff after expansion, got: $expanded", expanded.contains("a"))
+        assertTrue("Should render first file diff after expansion, got: $expanded", expanded.contains("b"))
+        assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("c"))
+        assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("d"))
+        assertFalse("Should strip hunk markers in editor preview, got: $expanded", expanded.contains("@@"))
+        val labels = findAll<JBLabel>(diffs.single()).map { it.text }
+        assertTrue("Multi-file permission diffs should render filenames as plain text", labels.contains("A.kt"))
+        assertTrue("Multi-file permission diffs should render filenames as plain text", labels.contains("B.kt"))
+        assertTrue("Permission diffs should not render filenames as links", findAll<FileLinkLabel>(diffs.single()).isEmpty())
     }
 
     fun `test rule controls render collapsed when candidates exist`() {
@@ -640,11 +900,11 @@ class PermissionViewTest : BasePlatformTestCase() {
 
     // ------ shared card shell ------
 
-    fun `test view contains BaseSessionQuestionPanel after show`() {
+    fun `test view contains DialogView after show`() {
         view.show(permission())
 
-        val panels = findAll<BaseQuestionView>(view)
-        assertTrue("Expected a BaseSessionQuestionPanel after show", panels.isNotEmpty())
+        val panels = findAll<DialogView>(view)
+        assertTrue("Expected a DialogView after show", panels.isNotEmpty())
     }
 
     fun `test permission icon is rendered in header`() {
@@ -852,6 +1112,72 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test diff editors are lazy and disposed after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            view.show(
+                Permission(
+                    id = "perm_diff_$i",
+                    sessionId = "ses",
+                    name = "edit",
+                    patterns = listOf("src/A.kt"),
+                    always = emptyList(),
+                    meta = PermissionMeta(
+                        fileDiffs = listOf(
+                            PermissionFileDiff(
+                                file = "src/A.kt",
+                                patch = "@@ -1 +1 @@\n-old$i\n+new$i",
+                                additions = 1,
+                                deletions = 1,
+                            ),
+                        ),
+                    ),
+                ),
+            )
+            val diff = view.diffViewsForTest().single()
+            assertFalse(diff.bodyCreated())
+            diff.expand()
+            diff.codeEditorsForTest().forEach { it.getEditor(true) }
+            view.hideView()
+            UIUtil.dispatchAllInvocationEvents()
+            assertEquals(base, EditorFactory.getInstance().allEditors.size)
+        }
+    }
+
+    fun `test diff view is retained and keeps expansion across same-request re-render`() {
+        fun request(state: PermissionRequestState) = Permission(
+            id = "perm_retain_diff",
+            sessionId = "ses",
+            name = "edit",
+            patterns = listOf("src/A.kt"),
+            always = emptyList(),
+            meta = PermissionMeta(
+                fileDiffs = listOf(
+                    PermissionFileDiff(
+                        file = "src/A.kt",
+                        patch = "@@ -1 +1 @@\n-old\n+new",
+                        additions = 1,
+                        deletions = 1,
+                    ),
+                ),
+            ),
+            state = state,
+        )
+
+        view.show(request(PermissionRequestState.PENDING))
+        val diff = view.diffViewsForTest().single()
+        diff.expand()
+        assertTrue(diff.isExpanded())
+
+        // The RESPONDING tick re-renders the same request; the card must survive so the
+        // expanded inline preview is not torn down.
+        view.show(request(PermissionRequestState.RESPONDING))
+
+        assertSame(diff, view.diffViewsForTest().single())
+        assertTrue("Expanded preview should persist across re-render", diff.isExpanded())
     }
 
     fun `test stale rule command fields are released on rebuild`() {

@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -12,12 +14,16 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.failureText
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Insets
 import javax.swing.JComponent
 
@@ -62,6 +68,7 @@ class SessionMessageListPanel(
     private val cancelRevert: (() -> Unit)? = null,
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
     Insets(
@@ -79,15 +86,34 @@ class SessionMessageListPanel(
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
     private var revertingMessage: String? = null
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
+    private var seq = 0
+    private var stable = -1
+    private var pendingReflow = false
+    private var dead = false
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
+    var onReflow: ((Boolean) -> Unit)? = null
+    var outcome: SessionOutcomeView? = null
+        set(value) {
+            if (field === value) return
+            field?.let { remove(it) }
+            field = value
+            value?.applyStyle(style)
+            syncActive(model.state)
+            anchorFooter()
+            refresh()
+        }
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
-        isOpaque = true
         Disposer.register(parent, this)
+        (layout as? SessionLayout)?.maxWidth = { view ->
+            SessionUiStyle.SessionLayout.readableWidth(view, style.transcriptFont)
+        }
         applyStyle(style)
 
         model.addListener(parent) { event ->
@@ -157,12 +183,30 @@ class SessionMessageListPanel(
 
                 // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
+
+                is SessionModelEvent.MessageUpdated -> {
+                    // message.updated fires on every streamed metadata delta (time/tokens/cost). Only
+                    // relayout the transcript when something visible changed: the visible failure for
+                    // this turn, or the modified-files card when this message anchors a turn.
+                    val id = event.info.info.id
+                    val turn = msgToTurn[id]
+                    var changed = turn?.let(::syncFailures) == true
+                    if (changed && turn != null) (layout as? SessionLayout)?.forget(turn)
+                    // A failure landing on the tail decides whether the footer prints the reason or only
+                    // offers Retry, so the footer has to be re-evaluated with it.
+                    if (changed && id == tail()) syncActive()
+                    val view = turnViews[id]
+                    if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
+                        (layout as? SessionLayout)?.forget(view)
+                        changed = true
+                    }
+                    if (changed) refresh()
+                }
 
                 is SessionModelEvent.DiffUpdated -> {
                     banner?.update()
@@ -173,6 +217,31 @@ class SessionMessageListPanel(
 
         // Populate from any turns already present (e.g. existing session opened before panel was created)
         rebuild()
+    }
+
+    override fun addNotify() {
+        super.addNotify()
+        scheduleReflow()
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        // A reflow scheduled before the panel had a width parks itself in [pendingReflow]. The first
+        // layout that gives us a real width re-arms it, so the transcript is always measured on-screen
+        // instead of against the zero-width state a resize used to be the only escape from. Cheap and
+        // inert on the streaming path: pendingReflow is only set by a rebuild/clear that ran too early.
+        if (!pendingReflow || dead || width <= 0 || turnViews.isEmpty()) return
+        pendingReflow = false
+        scheduleReflow()
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        banner?.setDiffOpener(openDiff, sessionId)
+        permission?.setDiffOpener(openDiff, sessionId)
+        permission?.setHoverSink(::hover)
+        turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
     // ------ public lookup API ------
@@ -220,18 +289,40 @@ class SessionMessageListPanel(
         }
     }.trimEnd()
 
+    @RequiresEdt
+    internal fun reflow(): Boolean {
+        // Measuring at zero width reflows every HTML pane to a 1-char column and yields a bogus
+        // height. Defer until the panel has a real width (see doLayout) so a pass can never
+        // "stabilize" the transcript against a zero-width measurement.
+        if (width <= 0) {
+            pendingReflow = turnViews.isNotEmpty()
+            return false
+        }
+        val before = preferredSize.height
+        (layout as? SessionLayout)?.forgetAll()
+        revalidate()
+        doLayout()
+        val after = preferredSize.height
+        repaint()
+        return after != before
+    }
+
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
+            it.setDiffOpener(openDiff, sessionId)
+        }
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
+        syncFailures()
         syncReverted()
         add(tv)
         syncSettled()
@@ -258,8 +349,10 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(id, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
+        syncFailures()
         syncReverted()
         syncSettled()
 
@@ -271,6 +364,7 @@ class SessionMessageListPanel(
         for (msgId in tv.messageIds()) unregister(msgId)
         remove(tv)
         Disposer.dispose(tv)
+        syncFailures()
         syncSettled()
         anchorFooter()
         refresh()
@@ -288,13 +382,16 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
+                it.setDiffOpener(openDiff, sessionId)
+            }
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
+            tv.setDiffs(diffsOf(turn))
             tv.syncCopyToolbars()
             syncQueued(tv)
             add(tv)
@@ -303,23 +400,75 @@ class SessionMessageListPanel(
         syncActive(model.state)
         syncSettled(model.state)
         syncQueued()
+        syncFailures()
         syncReverted()
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
+        scheduleReflow()
         refresh()
+    }
+
+    /** Last message in the transcript, which is the only message the outcome footer can describe. */
+    private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
+
+    /** Failure the transcript already explains for the tail message, or null when it explains nothing. */
+    private fun explained(): String? = tail()?.let { failureText(model.message(it)?.info?.error) }
+
+    /** Apply failure visibility policy to every turn. */
+    private fun syncFailures(): Boolean {
+        var changed = false
+        for (view in turnViews.values) {
+            if (syncFailures(view)) {
+                (layout as? SessionLayout)?.forget(view)
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    /**
+     * Renders the failure the session is currently sitting on, and nothing else.
+     *
+     * Only the last turn can show one, and only on its final message:
+     * - a superseded turn shows nothing. Once the conversation moved past a failure it is history, and a
+     *   red card stranded between two later turns is noise the user cannot act on;
+     * - within the live turn, only the final attempt speaks. Retry continues a turn by appending another
+     *   assistant message, so each attempt keeps its own errored message and they would otherwise stack;
+     * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
+     *   that turn's outcome.
+     *
+     * This keeps the card and the footer in lockstep: both describe the tail, so wherever the reason is
+     * visible the Retry action is offered too (when the tail can be continued).
+     */
+    private fun syncFailures(view: TurnView): Boolean {
+        val live = turnViews.values.lastOrNull() === view
+        val ids = view.messageIds()
+        val last = ids.lastOrNull()
+        var changed = false
+        for (id in ids) {
+            val msg = msgToView[id] ?: continue
+            val error = model.message(id)?.info?.error?.takeIf { live && id == last }
+            changed = msg.syncError(error) || changed
+        }
+        return changed
     }
 
     private fun syncReverted() {
         for ((id, view) in msgToView) {
-            view.isVisible = !model.isRevertedMessage(id)
+            view.setReverted(model.isRevertedMessage(id))
         }
+        // Turn visibility tracks revert only, independent of a message being empty: an empty message
+        // hides its own row (MessageView.setReverted/syncVisibility), but the turn stays visible so its
+        // other content and modified-files card still render.
         for (view in turnViews.values) {
-            view.isVisible = view.messageIds().any { msgToView[it]?.isVisible == true }
+            view.isVisible = view.messageIds().any { !model.isRevertedMessage(it) }
         }
     }
 
     private fun clear() {
+        seq++
+        stable = -1
         clearHover()
         turnViews.values.forEach {
             remove(it)
@@ -336,6 +485,7 @@ class SessionMessageListPanel(
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
+        scheduleReflow()
         refresh()
     }
 
@@ -350,25 +500,51 @@ class SessionMessageListPanel(
                 setHiddenQuestionTool(state.question.tool)
                 permission?.hideView()
                 login?.hideView()
+                outcome?.hideView()
                 question?.show(state.question)
             }
             is SessionState.AwaitingPermission -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 login?.hideView()
+                outcome?.hideView()
                 permission?.show(state.permission)
             }
             is SessionState.LoginRequired -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
+                outcome?.hideView()
                 login?.show(state.message)
+            }
+            is SessionState.Error -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.hideView()
+                // The transcript card owns the reason whenever the failed message carries it, so the
+                // footer keeps only the action. Session-level errors — bad config, or a failure that hit
+                // before an assistant message existed — have no card, so they still print in full.
+                // Trimmed: the state message is the raw error text, while the card normalizes it.
+                if (explained() == state.message.trim()) outcome?.showRetry()
+                else outcome?.showError(state.message, state.kind)
+            }
+            is SessionState.TurnEnded -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.hideView()
+                // A failed turn close carries no message of its own; when the tail message explains
+                // itself the generic "stopped with an error" line is noise next to that card.
+                if (state.outcome == Outcome.FAILED && explained() != null) outcome?.showRetry()
+                else outcome?.showOutcome(state.outcome, state.finish)
             }
             else -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
+                outcome?.hideView()
             }
         }
     }
@@ -393,6 +569,15 @@ class SessionMessageListPanel(
         if (hiddenTool == ref) return
         hiddenTool = ref
         for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean) {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
+        if (!changed) return
+        reflow()
+        refresh()
     }
 
     private fun syncSettled(state: SessionState = model.state) {
@@ -420,14 +605,19 @@ class SessionMessageListPanel(
         if (question != null) remove(question)
         if (permission != null) remove(permission)
         if (login != null) remove(login)
+        if (outcome != null) remove(outcome)
         if (banner != null) remove(banner)
         remove(progress)
         if (question != null) add(question)
         if (permission != null) add(permission)
         if (login != null) add(login)
+        if (outcome != null) add(outcome)
         if (banner != null) add(banner)
         add(progress)
     }
+
+    private fun diffsOf(turn: ai.kilocode.client.session.model.Turn) =
+        model.message(turn.id)?.info?.summary?.diffs.orEmpty()
 
     private fun register(msgId: String, tv: TurnView, mv: MessageView) {
         msgToTurn[msgId] = tv
@@ -444,6 +634,53 @@ class SessionMessageListPanel(
     private fun refresh() {
         revalidate()
         repaint()
+    }
+
+    private fun scheduleReflow() {
+        if (dead) return
+        if (turnViews.isEmpty()) {
+            pendingReflow = false
+            return
+        }
+        stable = -1
+        val id = ++seq
+        ApplicationManager.getApplication().invokeLater {
+            reflowPass(id, REFLOW_PASSES, REFLOW_BUDGET)
+        }
+    }
+
+    @RequiresEdt
+    private fun reflowPass(id: Int, remaining: Int, budget: Int) {
+        if (dead || id != seq) return
+        if (turnViews.isEmpty()) return
+        if (width <= 0) {
+            // Not laid out yet. Stop polling and let doLayout re-arm once a real width arrives,
+            // rather than draining the pass budget against a zero-width height.
+            pendingReflow = true
+            return
+        }
+        val changed = reflow()
+        if (changed) onReflow?.invoke(true)
+        // [remaining] restarts while the height is still settling so the chain keeps re-measuring
+        // until it holds steady for REFLOW_PASSES consecutive passes. [budget] never resets and is
+        // the hard backstop that guarantees termination. See below for why both are needed.
+        if (remaining <= 0 || budget <= 0) {
+            stable = -1
+            return
+        }
+        val height = preferredSize.height
+        // A moving height only means the layout is still settling when nothing is streaming in. While
+        // [SessionState.Busy] deltas land every EDT cycle, so restarting the settle window on each one
+        // was the runaway that pinned the panel in a perpetual forgetAll()/re-measure loop — count the
+        // pass down instead so streaming settles in REFLOW_PASSES and hands off to the per-turn
+        // forgetTurn path. Every other state (idle, awaiting-permission/question, retry, offline —
+        // which recoverPending() can seed right after load) has no deltas arriving, so a moving height
+        // is genuine convergence and must keep restarting; [budget] caps that if a pane never settles.
+        val left = if (height == stable || model.state is SessionState.Busy) remaining - 1 else REFLOW_PASSES
+        stable = height
+        ApplicationManager.getApplication().invokeLater {
+            reflowPass(id, left, budget - 1)
+        }
     }
 
     /**
@@ -488,21 +725,26 @@ class SessionMessageListPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorBackground
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
         login?.applyStyle(style)
+        outcome?.applyStyle(style)
         banner?.applyStyle(style)
         progress.applyStyle(style)
+        reflow()
         refresh()
     }
 
     override fun dispose() {
+        dead = true
+        seq++
+        pendingReflow = false
         clearHover()
         question?.hideView()
         permission?.hideView()
         login?.hideView()
+        outcome?.hideView()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)
@@ -512,6 +754,16 @@ class SessionMessageListPanel(
         msgToView.clear()
         revertingMessage = null
         onHover = null
+        onReflow = null
         removeAll()
+    }
+
+    private companion object {
+        const val REFLOW_PASSES = 6
+
+        // Hard ceiling on total reflow passes per schedule, independent of height stability. Lets the
+        // layout settle across several height changes (HTML panes reflow asynchronously) while capping
+        // the work a streaming session can trigger, since its height never stabilizes.
+        const val REFLOW_BUDGET = REFLOW_PASSES * 4
     }
 }

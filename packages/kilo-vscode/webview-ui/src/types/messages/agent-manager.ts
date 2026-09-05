@@ -1,5 +1,12 @@
 export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
 
+export interface BaseUpdateRequest {
+  type: "agentManager.updateFromBase"
+  projectId?: string
+  worktreeId: string
+  sessionId?: string
+}
+
 export interface TerminalFont {
   fontFamily: string
   fontSize: number
@@ -45,36 +52,34 @@ export interface SectionState {
 }
 
 // ---------------------------------------------------------------------------
-// PR status types (mirrored from extension types.ts)
+// PR status types — sub-types live in agent-manager/pr/pr-types.ts
 // ---------------------------------------------------------------------------
 
-export type PRState = "open" | "draft" | "merged" | "closed"
-export type ReviewDecision = "approved" | "changes_requested" | "pending"
-export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
-export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
-
-export interface PRCheck {
-  name: string
-  status: CheckStatus
-  url?: string
-  duration?: string
-}
-
-export interface PRComment {
-  id: string
-  author: string
-  avatar?: string
-  body: string
-  file?: string
-  line?: number
-  url?: string
-  resolved: boolean
-  createdAt?: number
-}
+import type {
+  PRState,
+  ReviewDecision,
+  AggregateCheckStatus,
+  PRCheck,
+  PRComment,
+  PRReviewer,
+  PRConversationComment,
+} from "../../../agent-manager/pr/pr-types"
+export type {
+  PRState,
+  ReviewDecision,
+  CheckStatus,
+  AggregateCheckStatus,
+  PRCheck,
+  PRComment,
+  PRCommentReply,
+  PRReviewer,
+  PRConversationComment,
+} from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
   number: number
   title: string
+  body?: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -84,13 +89,16 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
+  reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
@@ -182,7 +190,11 @@ export interface LocalGitStats {
   behind: number
 }
 
-export type { ReviewCommentData as ReviewComment } from "../../../../src/shared/review-comments"
+export type {
+  ReviewCommentData as ReviewComment,
+  ReviewCommentEntry,
+  PRReviewCommentData,
+} from "../../../../src/shared/review-comments"
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.

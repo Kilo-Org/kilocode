@@ -7,17 +7,18 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.ui.SessionCodeScroll
+import ai.kilocode.client.session.ui.fileLinkHtml
+import ai.kilocode.client.session.ui.fileLinkText
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.editor.BashCommandHighlighter
-import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.VAlign
-import ai.kilocode.client.ui.layout.align
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.DataSink
@@ -44,7 +45,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -62,15 +62,16 @@ private val LOG = KiloLog.create(ToolParts::class.java)
 enum class ToolBodyMode { EDITOR, TEXT }
 
 class ToolParts(
-    val header: JPanel,
+    val header: PartHeader,
     val glyph: JBLabel,
     val title: JBLabel,
     val sub: JBLabel,
     val link: FileLinkLabel,
     val slot: JPanel,
     val state: JBLabel,
-    val center: JPanel,
-    val controls: JComponent,
+    val left: Stack,
+    val right: Stack,
+    val fill: JComponent,
     val extra: JBLabel? = null,
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
@@ -125,7 +126,7 @@ class FileLinkLabel(
     init {
         isVisible = false
         isFocusable = false
-        foreground = UiStyle.Colors.fg()
+        foreground = SessionUiStyle.Colors.foreground()
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         setRequestFocusEnabled(false)
         addMouseListener(object : MouseAdapter() {
@@ -137,8 +138,8 @@ class FileLinkLabel(
 
     @RequiresEdt
     fun setTarget(path: String?, text: String): Boolean {
-        val next = single(text.ifBlank { path.orEmpty() })
-        val value = if (next.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(next)}</u></nobr>")
+        val next = fileLinkText(text.ifBlank { path.orEmpty() })
+        val value = fileLinkHtml(next)
         var changed = false
         if (href != path) {
             href = path
@@ -191,7 +192,7 @@ class ToolBody private constructor(
 
     var foreground: Color
         @RequiresEdt
-        get() = area?.foreground ?: ed?.foreground ?: UiStyle.Colors.fg()
+        get() = area?.foreground ?: ed?.foreground ?: SessionUiStyle.Colors.foreground()
         @RequiresEdt
         set(value) {
             area?.foreground = value
@@ -306,29 +307,24 @@ class ToolBody private constructor(
             caret.isSelectionVisible = true
             lineWrap = wrap
             wrapStyleWord = wrap
-            foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
-            background = SessionUiStyle.View.Surface.bgColor()
+            foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
+            background = SessionUiStyle.Colors.codeBlockBackground()
             border = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             )
         }
 
-        private fun pane(view: JComponent, scrolls: Boolean) = JBScrollPane(view).apply {
-            border = JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            )
+        private fun pane(view: JComponent, scrolls: Boolean) = SessionCodeScroll(view).apply {
+            // No separator line: the card's transparent header-to-content gap already sets the body
+            // apart, so the body is a raised, rounded code surface matching the header block arc.
+            border = JBUI.Borders.empty()
             viewportBorder = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             ).takeIf { scrolls }
-            isOpaque = true
-            background = SessionUiStyle.View.Surface.bgColor()
-            viewport.background = SessionUiStyle.View.Surface.bgColor()
+            viewport.isOpaque = true
+            viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             horizontalScrollBarPolicy = if (scrolls) {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             } else {
@@ -370,9 +366,9 @@ private class ToolField(value: String, private var style: SessionEditorStyle, pr
             ed.setBorder(JBUI.Borders.empty())
             ed.scrollPane.border = JBUI.Borders.empty()
             ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ed.backgroundColor = SessionUiStyle.View.Surface.bgColor()
-            ed.scrollPane.background = SessionUiStyle.View.Surface.bgColor()
-            ed.scrollPane.viewport.background = SessionUiStyle.View.Surface.bgColor()
+            ed.backgroundColor = SessionUiStyle.Colors.codeBlockBackground()
+            ed.scrollPane.background = SessionUiStyle.Colors.codeBlockBackground()
+            ed.scrollPane.viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             ed.settings.isUseSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -404,68 +400,53 @@ internal fun toolParts(
 ): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val link = clip(FileLinkLabel(openFile))
-    val slot = Stack.fitHorizontal().apply {
+    val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        isOpaque = false
-        minimumSize = Dimension(0, minimumSize.height)
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val header = PartHeader().apply {
+        leading(glyph)
+        left(title)
+        titleGap()
+        fill(slot)
+        right(state)
     }
-    val controls = Stack.horizontal()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        center.add(title, BorderLayout.WEST)
-        center.add(slot, BorderLayout.CENTER)
-        add(glyph, BorderLayout.WEST)
-        add(center, BorderLayout.CENTER)
-        add(controls, BorderLayout.EAST)
-    }
-    val parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, mode = mode)
-    return parts.also {
-        controls.add(it.state)
-    }
+    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = slot, mode = mode)
 }
 
 @RequiresEdt
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val targets = List(count) {
         clip(JBLabel()).apply {
-            foreground = UiStyle.Colors.fg()
+            foreground = SessionUiStyle.Colors.foreground()
         }
     }
     val link = clip(FileLinkLabel())
-    val slot = Stack.fitHorizontal().apply {
+    val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
-    val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
-    val target = stack.align(HAlign.TRACK, VAlign.CENTER)
-    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        isOpaque = false
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val target = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
-        add(title, BorderLayout.WEST)
-        add(target, BorderLayout.CENTER)
+        targets.forEach { next(it) }
     }
-    val controls = Stack.horizontal()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        add(glyph, BorderLayout.WEST)
-        add(center, BorderLayout.CENTER)
-        add(controls, BorderLayout.EAST)
+    val header = PartHeader().apply {
+        leading(glyph)
+        left(title)
+        titleGap()
+        fill(target)
+        right(state)
     }
-    return ToolParts(header, glyph, title, sub, link, slot, state, center, controls, targets = targets, mode = ToolBodyMode.EDITOR).also {
-        controls.add(it.state)
-    }
+    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = target, targets = targets, mode = ToolBodyMode.EDITOR)
 }
 
 internal fun icon(tool: Tool) = when (tool.name) {
@@ -476,7 +457,7 @@ internal fun icon(tool: Tool) = when (tool.name) {
     "codesearch" -> SessionViewIcons.code
     "task" -> SessionViewIcons.task
     "bash" -> SessionViewIcons.console
-    "edit", "write", "apply_patch" -> SessionViewIcons.codeLines
+    "edit", "write", "apply_patch" -> SessionViewIcons.edit
     "todowrite", "todoread" -> SessionViewIcons.checklist
     "question" -> SessionViewIcons.bubble
     "skill" -> SessionViewIcons.brain
@@ -506,7 +487,7 @@ internal fun setText(label: JBLabel, text: String): Boolean {
 
 @RequiresEdt
 internal fun setTargetText(label: JBLabel, text: String): Boolean {
-    val value = single(text)
+    val value = fileLinkText(text)
     if (label.text == value) return false
     label.text = value
     return true
@@ -528,15 +509,10 @@ private fun <T : JBLabel> clip(label: T): T = label.apply {
 }
 
 private fun html(text: String): String {
-    val value = single(text)
+    val value = fileLinkText(text)
     if (value.isBlank()) return ""
     return XmlStringUtil.wrapInHtml("<nobr>${XmlStringUtil.escapeString(value)}</nobr>")
 }
-
-private fun single(text: String): String = text.lineSequence()
-    .map { it.trim() }
-    .filter { it.isNotEmpty() }
-    .joinToString(" ")
 
 @RequiresEdt
 internal fun show(parts: ToolParts, link: Boolean): Boolean {
@@ -588,7 +564,7 @@ internal fun color(tool: Tool) = when (tool.state) {
 internal fun titleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
-    UiStyle.Colors.fg()
+    SessionUiStyle.Colors.foreground()
 }
 
 internal fun stateText(tool: Tool) = when (tool.state) {
@@ -670,6 +646,19 @@ internal fun output(tool: Tool): String =
 internal fun preview(tool: Tool): String = if (tool.name == "bash") shellPreview(tool) else plainPreview(tool)
 
 internal fun body(tool: Tool): String = if (tool.name == "bash") shellBody(tool) else plainBody(tool)
+
+/** Fenced markdown of a tool's body text for the collapsed hover popup; empty when nothing to show. */
+internal fun toolBodyMarkdown(tool: Tool): String {
+    val text = body(tool)
+    if (text.isBlank()) return ""
+    val fence = fence(text)
+    return buildString {
+        append(fence).append('\n')
+        append(text)
+        if (!text.endsWith('\n')) append('\n')
+        append(fence)
+    }
+}
 
 private fun shellPreview(tool: Tool): String {
     val cmd = command(tool)
@@ -794,6 +783,16 @@ internal data class EditFileChange(
     val patch: String,
 )
 
+/**
+ * Cheap upper-bound line count of a unified patch, used to gate large-diff rendering before any
+ * editor is built. Counts raw patch lines (including hunk/file headers) so it slightly over-counts
+ * the rendered body — a conservative gate is fine, and it avoids parsing the diff twice.
+ */
+internal fun patchLineCount(patch: String): Int = if (patch.isEmpty()) 0 else patch.count { it == '\n' } + 1
+
+/** Total diff line count across the files touched by a multi-file apply_patch. */
+internal fun patchLineCount(files: List<EditFileChange>): Int = files.sumOf { patchLineCount(it.patch) }
+
 /** Per-file changes from an apply_patch tool; empty for single-file edit/write tools (`filediff`). */
 internal fun editFiles(tool: Tool): List<EditFileChange> =
     parseJsonArray(tool.metadata["files"])?.mapNotNull { element ->
@@ -855,13 +854,27 @@ internal fun diffStat(tool: Tool): Pair<Int, Int> {
     return added to removed
 }
 
-/** Display-only diff body without VCS/file metadata headers (Index, diff --git, ---, +++, etc.). */
-internal fun pureDiff(diff: String): String = diff.lineSequence()
-    .filterNot(::diffMeta)
-    .joinToString("\n")
-    .trim('\n')
+/**
+ * Display-only diff body. Strips the pre-hunk file/VCS headers (Index, diff --git, ---, +++, etc.)
+ * and the `@@` hunk markers, but keeps every in-hunk line verbatim — a deleted `-- ` comment that
+ * renders as `--- ...` is diff content, not a header, so it must survive here and in
+ * [ai.kilocode.client.diff.DiffLineNumbers.rows] for the gutter line numbers to stay aligned.
+ */
+internal fun pureDiff(diff: String): String {
+    val out = StringBuilder()
+    var hunk = false
+    diff.lineSequence().forEach { line ->
+        if (line.startsWith("@@")) {
+            hunk = true
+            return@forEach
+        }
+        if (!hunk && diffMeta(line)) return@forEach
+        out.append(line).append('\n')
+    }
+    return out.toString().trim('\n')
+}
 
-private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
+internal fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
     line.startsWith("====") ||
     line.startsWith("diff --git ") ||
     line.startsWith("@@") ||

@@ -1,19 +1,35 @@
-import { Component, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
 import type { BrowserSettings } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+
+const Header: Component<{ title: string }> = (props) => (
+  <h4
+    style={{
+      margin: "0 0 12px",
+      "padding-bottom": "10px",
+      "border-bottom": "1px solid var(--vscode-panel-border)",
+      color: "var(--text-base, var(--vscode-foreground))",
+      "font-size": "var(--kilo-font-size-18, 18px)",
+      "font-weight": 600,
+      "line-height": "1.4",
+    }}
+  >
+    {props.title}
+  </h4>
+)
 
 const BrowserTab: Component = () => {
   const { postMessage, onMessage } = useVSCode()
   const { t } = useLanguage()
+  const { globalConfig, projectConfig, updateGlobalConfig } = useConfig()
 
   const [settings, setSettings] = createSignal<BrowserSettings>({
-    enabled: false,
     useSystemChrome: true,
-    headless: false,
   })
 
   onMount(() => {
@@ -32,6 +48,12 @@ const BrowserTab: Component = () => {
     setSettings((prev) => ({ ...prev, [key]: value }))
     postMessage({ type: "updateSetting", key: `browserAutomation.${key}`, value })
   }
+
+  const updateWebsearch = (checked: boolean) => {
+    updateGlobalConfig({ web_search: checked })
+  }
+
+  const overridden = () => projectConfig().web_search !== undefined
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
@@ -52,43 +74,74 @@ const BrowserTab: Component = () => {
             "line-height": "1.5",
           }}
         >
-          {t("settings.browser.description")}
+          {t("settings.webTools.description")}
         </p>
       </div>
 
-      <Card>
-        {/* Enable toggle */}
-        <SettingsRow title={t("settings.browser.enable.title")} description={t("settings.browser.enable.description")}>
-          <Switch checked={settings().enabled} onChange={(checked: boolean) => update("enabled", checked)} hideLabel>
-            {t("settings.browser.enable.title")}
-          </Switch>
-        </SettingsRow>
-
-        {/* Use System Chrome */}
-        <SettingsRow
-          title={t("settings.browser.systemChrome.title")}
-          description={t("settings.browser.systemChrome.description")}
-        >
-          <Switch
-            checked={settings().useSystemChrome}
-            onChange={(checked: boolean) => update("useSystemChrome", checked)}
-            hideLabel
+      <div>
+        <Header title={t("settings.webTools.webSearch.title")} />
+        <Card>
+          <SettingsRow
+            title={t("settings.webTools.webSearch.enable")}
+            description={t("settings.webTools.webSearch.description")}
+            tag={() => t("settings.config.scope.global")}
+            last={!overridden()}
           >
-            {t("settings.browser.systemChrome.title")}
-          </Switch>
-        </SettingsRow>
+            <Switch checked={globalConfig().web_search ?? false} onChange={updateWebsearch} hideLabel>
+              {t("settings.webTools.webSearch.title")}
+            </Switch>
+          </SettingsRow>
+          <Show when={overridden()}>
+            <SettingsRow
+              title={t("settings.webTools.webSearch.enable")}
+              tag={() => t("settings.config.scope.local")}
+              last
+            >
+              <Switch checked={projectConfig().web_search ?? false} disabled hideLabel>
+                {`${t("settings.webTools.webSearch.title")} (${t("settings.config.scope.local")})`}
+              </Switch>
+            </SettingsRow>
+          </Show>
+        </Card>
+      </div>
 
-        {/* Headless mode */}
-        <SettingsRow
-          title={t("settings.browser.headless.title")}
-          description={t("settings.browser.headless.description")}
-          last
+      <div>
+        <Header title={t("settings.webTools.browserAutomation")} />
+        <p
+          style={{
+            margin: "0 0 12px",
+            color: "var(--vscode-descriptionForeground)",
+            "font-size": "var(--kilo-font-size-12)",
+            "line-height": "1.5",
+          }}
         >
-          <Switch checked={settings().headless} onChange={(checked: boolean) => update("headless", checked)} hideLabel>
-            {t("settings.browser.headless.title")}
-          </Switch>
-        </SettingsRow>
-      </Card>
+          {t("settings.browser.description")}
+        </p>
+        <Card>
+          {/* Use System Chrome */}
+          <SettingsRow
+            title={t("settings.browser.systemChrome.title")}
+            description={t("settings.browser.systemChrome.description")}
+          >
+            <Switch
+              checked={settings().useSystemChrome}
+              onChange={(checked: boolean) => update("useSystemChrome", checked)}
+              hideLabel
+            >
+              {t("settings.browser.systemChrome.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={t("settings.browser.headless.title")}
+            description={t("settings.browser.headless.description")}
+            last
+          >
+            <Switch checked disabled hideLabel>
+              {t("settings.browser.headless.title")}
+            </Switch>
+          </SettingsRow>
+        </Card>
+      </div>
     </div>
   )
 }

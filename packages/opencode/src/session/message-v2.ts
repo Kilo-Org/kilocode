@@ -1,5 +1,4 @@
-import { EventV2 } from "@opencode-ai/core/event"
-import { SessionID, MessageID, PartID } from "./schema"
+import { SessionID, MessageID } from "./schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import {
@@ -12,17 +11,16 @@ import {
   Info,
   OutputLengthError,
   Part,
-  StructuredOutputError,
   SubtaskPart,
   User,
   WithParts,
-  type ToolPart,
 } from "@opencode-ai/core/v1/session"
 
-export { EditorContext } from "@opencode-ai/core/v1/session" // kilocode_change
+export { EditorContext } from "@/kilocode/editor-context" // kilocode_change
 import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { Database } from "@opencode-ai/core/database/database"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { NotFoundError } from "@/storage/storage"
 import { and } from "drizzle-orm"
 import { desc } from "drizzle-orm"
@@ -42,6 +40,7 @@ import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import * as TextStream from "@/kilocode/text-stream" // kilocode_change
+import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { Effect, Schema } from "effect"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
@@ -92,16 +91,7 @@ export const Event = {
   Updated: SessionV1.Event.MessageUpdated,
   Removed: SessionV1.Event.MessageRemoved,
   PartUpdated: SessionV1.Event.PartUpdated,
-  PartDelta: EventV2.define({
-    type: "message.part.delta",
-    schema: {
-      sessionID: SessionID,
-      messageID: MessageID,
-      partID: PartID,
-      field: Schema.String,
-      delta: Schema.String,
-    },
-  }),
+  PartDelta: SessionV1.Event.PartDelta,
   PartRemoved: SessionV1.Event.PartRemoved,
 }
 
@@ -428,7 +418,16 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             const outputText = part.state.time.compacted
               ? "[Old tool result content cleared]"
               : truncateToolOutput(part.state.output, options?.toolOutputMaxChars)
-            const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
+            // kilocode_change start
+            const text = BoardNotice.output(outputText, part.state.time.compacted ? undefined : part.state.metadata)
+            // kilocode_change end
+            // kilocode_change start — do not replay send_file delivery attachments to the model;
+            // they are mobile delivery artifacts (up to 4 MiB base64), not model context.
+            const attachments =
+              part.state.time.compacted || options?.stripMedia || part.tool === "send_file"
+                ? []
+                : (part.state.attachments ?? [])
+            // kilocode_change end
 
             // For providers that don't support media in tool results, extract media files
             // (images, PDFs) to be sent as a separate user message
@@ -442,10 +441,10 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             const output =
               finalAttachments.length > 0
                 ? {
-                    text: outputText,
+                    text, // kilocode_change
                     attachments: finalAttachments,
                   }
-                : outputText
+                : text // kilocode_change
 
             assistantMessage.parts.push({
               type: ("tool-" + part.tool) as `tool-${string}`,
@@ -875,3 +874,4 @@ export function fromError(
 }
 
 export * as MessageV2 from "./message-v2"
+export const node = LayerNode.group([Database.node])

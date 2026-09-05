@@ -11,7 +11,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
 - **Dev with params**: `bun dev -- help`
-- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
+- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build. When asked to run an isolated VS Code/Kilo environment, use the CLI scripts instead of interactive launch configs: `bun run extension:isolated` reuses `.kilo-dev/`, and `bun run extension:isolated:clean` clears `.kilo-dev/` first. Pass an optional workspace path after `--`, for example `bun run extension:isolated -- ../sample-project`.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`). Includes the JetBrains plugin and requires Java 21; do not run `java -version` as a routine preflight. Only check Java when a Gradle/Java command fails with a Java-version or missing-Java error. If missing, install via SDKMAN: `sdk install java 21-tem && sdk use java 21-tem`. If SDKMAN is not installed, see https://sdkman.io/install.
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test ./test/tool/tool-define.test.ts` from `packages/opencode/`
@@ -87,11 +87,14 @@ Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributi
 
 - Keep things in one function unless composable or reusable
 - Avoid unnecessary destructuring. Instead of `const { a, b } = obj`, use `obj.a` and `obj.b` to preserve context
+- Avoid possibly out-of-bounds array access. Instead of `array[index] ?? {}`, use `array.at(index) ?? {}`. Instead of `array[array.length - 1]`, use `array.at(-1)`
 - Avoid `try`/`catch` where possible
 - Avoid using the `any` type
 - Prefer single word variable names where possible
 - Use Bun APIs when possible, like `Bun.file()`
 - Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
+- Always use `Promise.withResolvers<T>()` to create deferred promises; all supported runtimes provide it. Never capture `resolve` and `reject` from a `new Promise` executor in external variables or object properties.
+- Use `ref == null` to check for both `null` and `undefined` instead of `ref === undefined || ref === null`.
 
 ### Avoid let statements
 

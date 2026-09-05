@@ -1,3 +1,5 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
@@ -52,6 +54,10 @@ class TestLLM extends Context.Service<
   }
 >()("@test/IncompleteResponseRetryLLM") {}
 
+class State extends Context.Service<State, { readonly queue: Script[]; calls: number }>()(
+  "@test/IncompleteResponseRetryState",
+) {}
+
 function model(): Provider.Model {
   return {
     id: ref.modelID,
@@ -96,6 +102,18 @@ function success() {
   ]
 }
 
+function reasoning() {
+  const usage = new Usage({ outputTokens: 8, reasoningTokens: 8, totalTokens: 8 })
+  return [
+    LLMEvent.stepStart({ index: 0 }),
+    LLMEvent.reasoningStart({ id: "reasoning" }),
+    LLMEvent.reasoningDelta({ id: "reasoning", text: "Investigating the problem" }),
+    LLMEvent.reasoningEnd({ id: "reasoning" }),
+    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
+    LLMEvent.finish({ reason: "unknown", usage }),
+  ]
+}
+
 function retryable429() {
   return new APICallError({
     message: "429 status code (no body)",
@@ -107,63 +125,72 @@ function retryable429() {
   })
 }
 
-const llm = Layer.unwrap(
-  Effect.gen(function* () {
-    const queue: Script[] = []
-    let calls = 0
-    const push = (stream: Script) => {
-      queue.push(stream)
-      return Effect.void
-    }
-    return Layer.mergeAll(
-      Layer.succeed(
-        LLM.Service,
-        LLM.Service.of({
-          stream: () => {
-            calls += 1
-            return queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
-          },
-        }),
-      ),
-      Layer.succeed(
-        TestLLM,
-        TestLLM.of({
-          push,
-          reply: (...events) => push(Stream.make(...events)),
-          calls: Effect.sync(() => calls),
-        }),
-      ),
-    )
-  }),
-)
-
 const reference = Layer.mock(Reference.Service, {
   list: () => Effect.succeed([]),
 })
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const stateNode = LayerNode.make({
+  service: State,
+  layer: Layer.sync(State, () => State.of({ queue: [], calls: 0 })),
+  deps: [],
+})
+const llmNode = LayerNode.make({
+  service: LLM.Service,
+  layer: Layer.effect(
+    LLM.Service,
+    Effect.gen(function* () {
+      const state = yield* State
+      return LLM.Service.of({
+        stream: () => {
+          state.calls += 1
+          return state.queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
+        },
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const testNode = LayerNode.make({
+  service: TestLLM,
+  layer: Layer.effect(
+    TestLLM,
+    Effect.gen(function* () {
+      const state = yield* State
+      const push = (stream: Script) => Effect.sync(() => state.queue.push(stream)).pipe(Effect.asVoid)
+      return TestLLM.of({
+        push,
+        reply: (...events) => push(Stream.make(...events)),
+        calls: Effect.sync(() => state.calls),
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  AgentSvc.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  SessionSummary.node,
+  Image.node,
+  SessionStatus.node,
+  EventV2Bridge.node,
+  Database.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  LLM.node,
+  testNode,
+])
 const env = (event = false) =>
-  SessionProcessor.layer.pipe(
-    Layer.provideMerge(
-      Layer.mergeAll(
-        Session.defaultLayer,
-        Snapshot.defaultLayer,
-        AgentSvc.defaultLayer,
-        Permission.defaultLayer,
-        Plugin.defaultLayer,
-        Config.defaultLayer,
-        RuntimeFlags.layer({ experimentalEventSystem: event }),
-        reference,
-        SessionSummary.defaultLayer,
-        Image.defaultLayer,
-        SyncEvent.defaultLayer,
-        EventV2Bridge.defaultLayer,
-        Database.defaultLayer,
-        status,
-        llm,
-      ).pipe(Layer.provideMerge(infra)),
-    ),
-    Layer.provide(reference),
+  LayerNode.compile(root, [
+    [LLM.node, llmNode],
+    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: event })],
+  ]).pipe(
+    Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer, reference)),
   )
 
 const it = testEffect(env())
@@ -294,7 +321,57 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
-  it.effect("does not retry non-empty reasoning", () =>
+  it.effect("retries reasoning-only unknown responses", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...success())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(2)
+          expect(ctx.handle.message.finish).toBe("stop")
+          const parts = yield* MessageV2.parts(ctx.msg.id)
+          expect(parts.some((part) => part.type === "reasoning")).toBe(false)
+          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("bounds reasoning-only unknown retries", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...reasoning())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("stop")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(3)
+          expect(ctx.handle.message.finish).toBe("unknown")
+          expect(MessageV2.APIError.isInstance(ctx.handle.message.error)).toBe(true)
+          expect(yield* MessageV2.parts(ctx.msg.id)).toEqual([])
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("does not retry reasoning with a deliberate finish", () =>
     provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
@@ -302,24 +379,19 @@ describe("session processor incomplete response retry", () => {
           const usage = new Usage({})
           yield* ctx.test.reply(
             LLMEvent.stepStart({ index: 0 }),
-            LLMEvent.reasoningStart({ id: "reasoning-1" }),
-            LLMEvent.reasoningDelta({ id: "reasoning-1", text: "Investigating the problem" }),
-            LLMEvent.reasoningEnd({ id: "reasoning-1" }),
-            LLMEvent.reasoningStart({ id: "reasoning-2" }),
-            LLMEvent.reasoningDelta({ id: "reasoning-2", text: "Preparing the final answer" }),
-            LLMEvent.reasoningEnd({ id: "reasoning-2" }),
-            LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
-            LLMEvent.finish({ reason: "unknown", usage }),
+            LLMEvent.reasoningStart({ id: "reasoning" }),
+            LLMEvent.reasoningDelta({ id: "reasoning", text: "Complete reasoning" }),
+            LLMEvent.reasoningEnd({ id: "reasoning" }),
+            LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+            LLMEvent.finish({ reason: "stop", usage }),
           )
-          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
 
+          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
           expect(yield* ctx.test.calls).toBe(1)
-          expect(ctx.handle.message.finish).toBe("unknown")
-          const parts = yield* MessageV2.parts(ctx.msg.id)
-          expect(parts.filter((part) => part.type === "reasoning").map((part) => part.text)).toEqual([
-            "Investigating the problem",
-            "Preparing the final answer",
-          ])
+          expect(ctx.handle.message.finish).toBe("stop")
+          expect((yield* MessageV2.parts(ctx.msg.id)).find((part) => part.type === "reasoning")?.text).toBe(
+            "Complete reasoning",
+          )
         }),
       { git: true },
     ),
@@ -559,16 +631,23 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
-  eventIt.effect("does not retry when Event V2 mirroring is enabled", () =>
+  eventIt.effect("retries an empty response the same way when the event system flag is on", () =>
     provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const ctx = yield* setup(dir)
           yield* ctx.test.reply(...empty())
+          yield* ctx.test.reply(...success())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
-          expect(yield* ctx.test.calls).toBe(1)
-          expect(ctx.handle.message.finish).toBe("unknown")
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(2)
+          expect(ctx.handle.message.finish).toBe("stop")
         }),
       { git: true },
     ),

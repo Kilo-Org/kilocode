@@ -7,6 +7,8 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { Instance } from "../../src/kilocode/instance"
 import { provideTestInstance } from "../fixture/fixture"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
@@ -21,7 +23,10 @@ import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
-const session = makeRuntime(Session.Service, Session.defaultLayer)
+const session = makeRuntime(
+  Session.Service,
+  LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node])),
+)
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
     session.runPromise((svc) => svc.create(input)),
@@ -876,6 +881,26 @@ describe("plan_exit detection", () => {
       expect(text).toContain("plans/ or .plans/")
       expect(text).not.toContain("Default to")
       expect(text).not.toContain("A fallback plan file exists")
+    }))
+
+  test("plan reminders are separated from user text with blank lines", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const user = userMessage({ sessionID: session.id, agent: "plan", text: "write this to a file:" })
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      const parts = user.parts.filter((p): p is MessageV2.TextPart => p.type === "text")
+      expect(parts).toHaveLength(3)
+      expect(parts[0].text).toBe("write this to a file:")
+      for (const part of parts.slice(1)) {
+        expect(part.synthetic).toBe(true)
+        expect(part.text.startsWith("\n\n<system-reminder>")).toBe(true)
+      }
     }))
 
   test("PlanFollowup.ask shows prompt when plan text is on earlier assistant and last assistant is empty", () =>

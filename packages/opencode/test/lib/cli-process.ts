@@ -19,8 +19,10 @@
 // different return shape — see the TODO at the bottom of OpencodeCli.
 import { test, type TestOptions } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppProcess } from "@opencode-ai/core/process"
-import { Deferred, Duration, Effect, Layer, Queue, Scope, Stream } from "effect"
+import { Deferred, Duration, Effect, Layer, Queue, Schedule, Scope, Stream } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcess } from "effect/unstable/process"
 import path from "node:path"
@@ -88,7 +90,28 @@ export type RunResult = {
   readonly durationMs: number
 }
 
-export type SpawnOpts = { readonly timeoutMs?: number; readonly env?: Record<string, string> }
+export type RunHandle = {
+  readonly interrupt: () => void
+  readonly result: Effect.Effect<RunResult>
+  // kilocode_change start - raw stdin handle, usable only when the child was
+  // spawned through startRun with stdin: "pipe". Mirrors the acp handle's
+  // proc.stdin write/end pattern.
+  readonly stdin: {
+    readonly write: (text: string) => Promise<void>
+    readonly end: () => void
+  }
+  // kilocode_change end
+}
+
+// kilocode_change start - stdin mode for startRun. Default "ignore" preserves
+// the documented dodge in spawn(); "pipe" is supported by startRun only, so a
+// test can write or hold open the child's stdin.
+export type SpawnOpts = {
+  readonly timeoutMs?: number
+  readonly env?: Record<string, string>
+  readonly stdin?: "ignore" | "pipe"
+}
+// kilocode_change end
 
 // Typed equivalent of constructing argv for `opencode run`. New flags should
 // land here so tests stay grep-able and refactor-safe.
@@ -98,6 +121,7 @@ export type RunOpts = SpawnOpts & {
   readonly format?: "default" | "json"
   readonly command?: string
   readonly printLogs?: boolean
+  readonly permission?: Record<string, "ask" | "allow" | "deny">
   readonly extraArgs?: string[]
 }
 
@@ -153,6 +177,7 @@ export type AcpHandle = {
 export type OpencodeCli = {
   // High-level: run a single prompt against the test model. Short-lived.
   readonly run: (message: string, opts?: RunOpts) => Effect.Effect<RunResult>
+  readonly startRun: (message: string | undefined, opts?: RunOpts) => Effect.Effect<RunHandle, never, Scope.Scope> // kilocode_change - undefined message = no argv prompt
   // Spawn `opencode serve` and wait until it's listening. Long-lived: the
   // returned handle is killed when the caller's Scope closes. Fails if the
   // listening line doesn't appear within `readyTimeoutMs`.
@@ -191,16 +216,19 @@ export function withCliFixture<A, E>(
     const fs = yield* FSUtil.Service
     const appProc = yield* AppProcess.Service
 
-    // FileSystem.makeTempDirectoryScoped handles both creation and scope-tied
-    // cleanup — replaces the old mkdir + addFinalizer pair.
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "oc-cli-" })
+    const home = yield* fs.makeTempDirectory({ prefix: "oc-cli-" })
+    yield* Effect.addFinalizer(() =>
+      fs
+        .remove(home, { recursive: true })
+        .pipe(Effect.retry(Schedule.spaced("50 millis").pipe(Schedule.both(Schedule.recurs(20)))), Effect.ignore),
+    )
 
     const configJson = JSON.stringify(testProviderConfig(llm.url))
     const env = isolatedEnv(home, configJson)
 
     const spawn = Effect.fn("opencode.spawn")(function* (args: string[], opts?: SpawnOpts) {
       const start = Date.now()
-      const timeoutMs = opts?.timeoutMs ?? 30_000
+      const timeoutMs = opts?.timeoutMs ?? 45_000 // kilocode_change - current full CLI startup leaves less than 30s for multi-step runs
       // stdin: "ignore" so the child doesn't see a piped stdin and block
       // on `Bun.stdin.text()` (see src/cli/cmd/run.ts — non-TTY stdin is
       // consumed as the prompt). The old Process.run wrapper defaulted to
@@ -237,13 +265,13 @@ export function withCliFixture<A, E>(
       )
       return {
         exitCode: result.exitCode,
-        stdout: result.stdout.toString(),
-        stderr: result.stderr.toString(),
+        stdout: normalizeLines(result.stdout.toString()),
+        stderr: normalizeLines(result.stderr.toString()),
         durationMs: Date.now() - start,
       }
     })
 
-    const run = (message: string, opts?: RunOpts): Effect.Effect<RunResult> => {
+    const runArgs = (message: string | undefined, opts?: RunOpts) => { // kilocode_change - accepts undefined message for stdin-only runs
       const argv: string[] = ["run"]
       if (opts?.printLogs) argv.push("--print-logs")
       argv.push("--model", opts?.model ?? testModelID)
@@ -251,9 +279,80 @@ export function withCliFixture<A, E>(
       if (opts?.format) argv.push("--format", opts.format)
       if (opts?.command) argv.push("--command", opts.command)
       if (opts?.extraArgs) argv.push(...opts.extraArgs)
-      argv.push(message)
-      return spawn(argv, opts)
+      if (message !== undefined) argv.push(message) // kilocode_change - undefined message = no argv prompt (stdin-only run)
+      return argv
     }
+
+    const runOpts = (opts?: RunOpts): SpawnOpts | undefined => {
+      if (!opts?.permission) return opts
+      return {
+        ...opts,
+        env: {
+          ...opts.env,
+          KILO_CONFIG_CONTENT: JSON.stringify({
+            ...testProviderConfig(llm.url),
+            permission: opts.permission,
+          }),
+        },
+      }
+    }
+
+    const run = (message: string, opts?: RunOpts): Effect.Effect<RunResult> => {
+      return spawn(runArgs(message, opts), runOpts(opts))
+    }
+
+    const startRun = Effect.fn("opencode.startRun")(function* (message: string | undefined, opts?: RunOpts) { // kilocode_change - accepts undefined message for stdin-only runs
+      const start = Date.now()
+      const options = runOpts(opts)
+      // kilocode_change start - stdin "pipe" lets a test hold the child's stdin
+      // open (never write, never end) or feed it a prompt; "ignore" (default)
+      // keeps the documented dodge in spawn().
+      const stdinMode = options?.stdin ?? "ignore"
+      const proc = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bun.spawn(["bun", ...cliArgs, ...runArgs(message, opts)], {
+            // kilocode_change - cliArgs carries the solid preload
+            cwd: home,
+            env: { ...process.env, ...env, ...options?.env },
+            stdin: stdinMode,
+            stdout: "pipe",
+            stderr: "pipe",
+          }),
+        ),
+        (child) =>
+          Effect.promise(() => {
+            child.kill()
+            return child.exited
+          }).pipe(Effect.ignore),
+      )
+      const stdout = new Response(proc.stdout).text()
+      const stderr = new Response(proc.stderr).text()
+
+      return {
+        interrupt: () => proc.kill("SIGINT"),
+        stdin: {
+          // `proc.stdin.write` returns `number | Promise<number>`; await the
+          // promise form for backpressure, same as the acp handle's send.
+          write: async (text: string) => {
+            if (!proc.stdin) throw new Error(`startRun stdin.write: child was spawned with stdin: "${stdinMode}"`)
+            const ret = proc.stdin.write(text)
+            if (typeof ret !== "number") await ret
+          },
+          // proc.stdin.end() is idempotent in Bun; no try/catch needed.
+          end: () => {
+            if (!proc.stdin) throw new Error(`startRun stdin.end: child was spawned with stdin: "${stdinMode}"`)
+            proc.stdin.end()
+          },
+        },
+        result: Effect.promise(async () => ({
+          exitCode: await proc.exited,
+          stdout: normalizeLines(await stdout),
+          stderr: normalizeLines(await stderr),
+          durationMs: Date.now() - start,
+        })),
+      } satisfies RunHandle
+      // kilocode_change end
+    })
 
     const serve = Effect.fn("opencode.serve")(function* (opts?: ServeOpts) {
       const argv = ["serve"]
@@ -410,14 +509,18 @@ export function withCliFixture<A, E>(
       } satisfies AcpHandle
     })
 
-    const opencode: OpencodeCli = { run, serve, acp, spawn, expectExit, parseJsonEvents }
+    const opencode: OpencodeCli = { run, startRun, serve, acp, spawn, expectExit, parseJsonEvents }
 
     return yield* fn({ llm, home, opencode })
     // FetchHttpClient is provided so test bodies can `yield* HttpClient.HttpClient`
     // and hit endpoints on `opencode.serve()` without rolling their own fetch.
   }).pipe(
     Effect.provide(
-      Layer.mergeAll(TestLLMServer.layer, FetchHttpClient.layer, FSUtil.defaultLayer, AppProcess.defaultLayer),
+      Layer.mergeAll(
+        TestLLMServer.layer,
+        FetchHttpClient.layer,
+        AppNodeBuilder.build(LayerNode.group([FSUtil.node, AppProcess.node])),
+      ),
     ),
   )
 }
@@ -428,6 +531,10 @@ function parseJsonEvents(stdout: string): Array<Record<string, unknown>> {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>)
+}
+
+function normalizeLines(value: string) {
+  return value.replaceAll("\r\n", "\n")
 }
 
 // Convenience for the common assertion pattern. Dumps stderr/stdout when
@@ -465,8 +572,8 @@ export const cliIt = {
     body: (input: CliFixture) => Effect.Effect<A, E, Scope.Scope | HttpClient.HttpClient>,
     opts?: number | TestOptions,
   ) =>
-    // kilocode_change start - Windows CI cannot reliably start nested CLI trees concurrently
-    (process.platform === "win32" ? test : test.concurrent)(
+    // kilocode_change start - full CLI processes contend heavily during startup after the Effect graph migration
+    test.serial(
       name,
       () => Effect.runPromise(Effect.scoped(withCliFixture(body))),
       opts,

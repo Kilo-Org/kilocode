@@ -15,6 +15,11 @@ import { ProviderError } from "@/provider/error"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { reasoningSummary } from "./reasoning-summary"
+import type { Provider } from "@/provider/provider"
+import type { Auth } from "@/auth"
+import type { Config } from "@/config/config"
+import { organization, token } from "./catalog"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -95,6 +100,39 @@ export function patchConfigModel(cfg: any, existing: any) {
   }
 }
 
+const CUSTOM_PROVIDER_PACKAGES = new Set(["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"])
+const FALLBACK_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"]
+type Variants = NonNullable<Provider.Model["variants"]>
+type Generate = (model: Provider.Model) => Variants
+
+export function customProviderVariants(model: Provider.Model, npm: unknown, generate: Generate): Variants {
+  if (model.variants && Object.keys(model.variants).length > 0) return model.variants
+
+  const supported = typeof npm === "string" && CUSTOM_PROVIDER_PACKAGES.has(npm) && model.api.npm === npm
+  const variants = generate(model)
+  if (Object.keys(variants).length > 0) return variants
+  if (!model.capabilities.reasoning || !supported) return variants
+
+  return Object.fromEntries(
+    FALLBACK_EFFORTS.map((effort) => {
+      if (npm === "@ai-sdk/anthropic") {
+        return [effort, effort === "none" ? { thinking: { type: "disabled" } } : { effort }]
+      }
+      if (npm === "@ai-sdk/openai") {
+        return [
+          effort,
+          {
+            reasoningEffort: effort,
+            reasoningSummary: reasoningSummary(model),
+            include: ["reasoning.encrypted_content"],
+          },
+        ]
+      }
+      return [effort, { reasoningEffort: effort }]
+    }),
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Custom loaders (new or fully-replaced loaders)
 // ---------------------------------------------------------------------------
@@ -130,6 +168,24 @@ function useLanguageModel(sdk: any) {
 export function patchKiloProviderPrivacy(provider: { options?: Record<string, any> } | undefined, config: any) {
   if (!provider || config.hide_prompt_training_models !== true) return
   provider.options = { ...provider.options, dataCollection: "deny" }
+}
+
+export function patchKiloProviderAuth(
+  provider: Provider.Info | undefined,
+  config: Config.Info,
+  info: Auth.Info | undefined,
+) {
+  if (!provider) return
+  const options = config.provider?.kilo?.options
+  const key = token(options, info)
+  const org = organization(options, info)
+  if (key !== undefined) provider.options.kilocodeToken = key
+  if (org !== undefined) provider.options.kilocodeOrganizationId = org
+}
+
+export function publicKiloProvider(provider: Provider.Info): Provider.Info {
+  if (provider.id !== "kilo") return provider
+  return { ...provider, key: undefined, options: omit(provider.options, ["apiKey", "kilocodeToken"]) }
 }
 
 export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> {
@@ -170,9 +226,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         options,
         async getModel(sdk: KiloProvider, modelID: string) {
           const provider = input.models[modelID]?.ai_sdk_provider
-          if (provider === "alibaba") return sdk.alibaba(modelID)
           if (provider === "anthropic") return sdk.anthropic(modelID)
-          if (provider === "mistral") return sdk.mistral(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
           return sdk.languageModel(modelID)

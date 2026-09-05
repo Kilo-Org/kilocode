@@ -18,6 +18,27 @@ export function getWebviewFontSize(): number {
   return clamp(raw)
 }
 
+/**
+ * True when running inside Cursor rather than real VS Code (or another
+ * fork). Cursor's Secondary Side Bar support is known to be unreliable for
+ * extension-contributed `view/title` toolbars (see
+ * https://github.com/anthropics/claude-code/issues/31375 for the same class
+ * of bug in a different extension), so Cursor falls back to an in-webview
+ * navigation bar instead of the native toolbar that VS Code renders fine
+ * everywhere.
+ *
+ * This is a per-host choice, not a per-dock-location one: `WebviewView` (and
+ * the rest of the public API, checked against @types/vscode) exposes no way
+ * to ask "is my view currently in the primary or secondary side bar", so the
+ * webview fallback bar is Cursor's only option in both locations. Accepted
+ * trade-off: Cursor's primary side bar loses the single-line native look it
+ * had before this existed, in exchange for the Secondary Side Bar actually
+ * working, with zero guessing about dock position anywhere.
+ */
+export function isCursorHost(): boolean {
+  return vscode.env.appName.toLowerCase().includes("cursor")
+}
+
 function fontStyle(): string {
   const base = getWebviewFontSize()
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(base * size) / 13}px;`).join("\n      ")
@@ -41,14 +62,22 @@ export function buildWebviewHtml(
     title: string
     port?: number
     extraStyles?: string
+    /** Sidebar top bar visibility and telemetry surface for the shared webview bundle (App.tsx). Unused by the Agent Manager bundle. */
+    topBar?: boolean
+    topBarSurface?: string
+    agentManagerSettings?: boolean
+    browserAutomation?: boolean
+    introDismissed?: boolean
+    frameSrc?: string
+    sidebar?: "left" | "right"
   },
 ): string {
   const nonce = getNonce()
-  const csp = buildCspString(webview.cspSource, nonce, opts.port)
+  const csp = buildCspString(webview.cspSource, nonce, opts.port, opts.frameSrc)
   const markdownWorkerUri = opts.workerUri.toString().replace(/shiki-worker\.js$/, "markdown-shiki-worker.js")
 
   return `<!DOCTYPE html>
-<html lang="en" data-theme="kilo-vscode">
+<html lang="en" data-theme="kilo-vscode" data-sidebar="${opts.sidebar ?? ""}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -83,7 +112,7 @@ export function buildWebviewHtml(
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}"; window.KILO_MARKDOWN_SHIKI_WORKER_URI = "${markdownWorkerUri}";</script>
+  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}"; window.KILO_MARKDOWN_SHIKI_WORKER_URI = "${markdownWorkerUri}"; window.KILO_TOP_BAR = ${opts.topBar !== false}; window.KILO_TOP_BAR_SURFACE = "${opts.topBarSurface ?? "sidebar_title"}"; window.KILO_AGENT_MANAGER_SETTINGS = ${opts.agentManagerSettings === true}; window.KILO_BROWSER_AUTOMATION = ${opts.browserAutomation === true}; window.KILO_AGENT_MANAGER_INTRO_DISMISSED = ${opts.introDismissed === true};</script>
   <script nonce="${nonce}" src="${opts.scriptUri}"></script>
 </body>
 </html>`

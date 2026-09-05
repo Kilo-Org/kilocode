@@ -1,13 +1,15 @@
 import { test, expect, describe, afterEach, beforeEach, spyOn } from "bun:test"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent" // kilocode_change
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Cause, Effect, Exit, Layer, Option } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http"
-import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Config } from "@/config/config"
 import { ConfigManaged } from "@/config/managed"
 import { ConfigParse } from "../../src/config/parse"
-import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Npm } from "@opencode-ai/core/npm"
 
 import { InstanceRef } from "../../src/effect/instance-ref"
 import type { InstanceContext } from "../../src/project/instance-context"
@@ -43,13 +45,6 @@ import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect" // kilocode_change
 import { isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature" // kilocode_change
-
-/** Infra layer that provides FileSystem, Path, ChildProcessSpawner for test fixtures */
-const infra = CrossSpawnSpawner.defaultLayer.pipe(
-  Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
-)
-
-const testFlock = EffectFlock.defaultLayer
 
 const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
@@ -107,17 +102,12 @@ const configLayer = (
     client?: HttpClient.HttpClient
   } = {},
 ) =>
-  Config.layer.pipe(
-    Layer.provide(Git.defaultLayer), // kilocode_change
-    Layer.provide(testFlock),
-    Layer.provide(Env.defaultLayer),
-    Layer.provide(options.auth ?? AuthTest.empty),
-    Layer.provide(options.account ?? AccountTest.empty),
-    Layer.provideMerge(infra),
-    Layer.provide(NpmTest.noop),
-    Layer.provide(Layer.succeed(HttpClient.HttpClient, options.client ?? unexpectedHttp)),
-    Layer.provideMerge(FSUtil.defaultLayer),
-  )
+  LayerNode.compile(LayerNode.group([Config.node, FSUtil.node, Env.node, CrossSpawnSpawner.node]), [
+    [Auth.node, options.auth ?? AuthTest.empty],
+    [Account.node, options.account ?? AccountTest.empty],
+    [Npm.node, NpmTest.noop],
+    [httpClient, Layer.succeed(HttpClient.HttpClient, options.client ?? unexpectedHttp)],
+  ])
 
 const layer = configLayer()
 
@@ -180,7 +170,7 @@ const withInstanceDir = <A, E, R>(dir: string, effect: Effect.Effect<A, E, R>) =
     Effect.provideService(TestInstance, { directory: dir }),
     provideInstanceEffect(dir),
     Effect.provide(testInstanceStoreLayer),
-    Effect.provide(CrossSpawnSpawner.defaultLayer),
+    Effect.provide(LayerNode.compile(CrossSpawnSpawner.node)),
   )
 
 const withGlobalConfigDir = <A, E, R>(dir: string, effect: Effect.Effect<A, E, R>) =>
@@ -334,7 +324,7 @@ it.effect("creates global jsonc config with schema when no global configs exist"
 
       const content = yield* FSUtil.use.readFileString(path.join(dir, "kilo.jsonc")) // kilocode_change
       expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"') // kilocode_change
-    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
+    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
   ),
 )
 
@@ -349,7 +339,7 @@ it.effect("does not create global config when KILO_CONFIG_DIR is set", () =>
           yield* Config.use.get().pipe(provideInstanceEffect(dir))
 
           expect(yield* FSUtil.use.existsSafe(path.join(dir, "opencode.jsonc"))).toBe(false)
-        }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
+        }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
       ),
     )
   }),
@@ -582,10 +572,7 @@ it.instance("injects $schema into config without existing schema", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     // Config without $schema - should trigger auto-add
-    yield* FSUtil.use.writeWithDirs(
-      path.join(test.directory, "kilo.json"),
-      JSON.stringify({ username: "test-user" }),
-    )
+    yield* FSUtil.use.writeWithDirs(path.join(test.directory, "kilo.json"), JSON.stringify({ username: "test-user" }))
     const config = yield* Config.use.get()
     expect(config.username).toBe("test-user")
     expect(config.$schema).toBe("https://app.kilo.ai/config.json")
@@ -1141,7 +1128,32 @@ it.effect("does not try to install dependencies in read-only KILO_CONFIG_DIR", (
     yield* Effect.addFinalizer(() => FSUtil.use.chmod(readonly, 0o755).pipe(Effect.ignore))
 
     yield* withProcessEnv("KILO_CONFIG_DIR", readonly, Config.use.get().pipe(provideInstanceEffect(dir)))
-  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("ignores an inaccessible KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    if (process.platform === "win32") return
+
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "inaccessible")
+    yield* FSUtil.use.ensureDir(configDir)
+    yield* FSUtil.use.chmod(configDir, 0o000)
+    yield* Effect.addFinalizer(() => FSUtil.use.chmod(configDir, 0o755).pipe(Effect.ignore))
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("creates a missing KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "configdir")
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+
+    expect(yield* FSUtil.use.readFileString(path.join(configDir, ".gitignore"))).toContain("node_modules")
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
 )
 
 it.effect("installs dependencies in writable KILO_CONFIG_DIR", () =>
@@ -1159,7 +1171,7 @@ it.effect("installs dependencies in writable KILO_CONFIG_DIR", () =>
     )
 
     expect(yield* FSUtil.use.readFileString(path.join(configDir, ".gitignore"))).toContain("package-lock.json")
-  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
 )
 
 // Note: deduplication and serialization of npm installs is now handled by the
@@ -1574,6 +1586,23 @@ test("config parser preserves permission order while rejecting unknown top-level
   }
 })
 
+// kilocode_change start - preserve legacy agent requirement declarations without forwarding them
+test("config parser ignores legacy agent requirements", () => {
+  const config = ConfigParse.schema(
+    ConfigAgentV1.Info,
+    {
+      name: "demo",
+      requirements: { skills: ["needed"] },
+      custom: true,
+    },
+    "agent/demo.md",
+  )
+
+  expect(config.options).toEqual({ custom: true })
+  expect(config.options).not.toHaveProperty("requirements")
+})
+// kilocode_change end
+
 // MCP config merging tests
 
 // kilocode_change start - regression for `env` alias on local MCP entries
@@ -1822,17 +1851,12 @@ test("remote well-known config can use FetchHttpClient layer", async () => {
       Effect.scoped,
       Effect.provide(
         Layer.mergeAll(
-          Config.layer.pipe(
-            Layer.provide(Git.defaultLayer), // kilocode_change
-            Layer.provide(testFlock),
-            Layer.provide(FSUtil.defaultLayer),
-            Layer.provide(Env.defaultLayer),
-            Layer.provide(wellKnownAuth(server.url.origin)),
-            Layer.provide(AccountTest.empty),
-            Layer.provideMerge(infra),
-            Layer.provide(NpmTest.noop),
-            Layer.provide(FetchHttpClient.layer),
-          ),
+          LayerNode.compile(LayerNode.group([Config.node, FSUtil.node, Env.node, CrossSpawnSpawner.node]), [
+            [Auth.node, wellKnownAuth(server.url.origin)],
+            [Account.node, AccountTest.empty],
+            [Npm.node, NpmTest.noop],
+            [httpClient, FetchHttpClient.layer],
+          ]),
           testInstanceStoreLayer,
         ),
       ),

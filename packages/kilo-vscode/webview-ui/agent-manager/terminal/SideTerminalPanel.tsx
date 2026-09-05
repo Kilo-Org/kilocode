@@ -1,35 +1,30 @@
 /**
  * Right-side terminal panel for the Agent Manager inspector.
  *
- * Lives inside the shared `.am-diff-panel-wrapper` host next to the diff
- * and PR panels, so all three inspector modes share one resize handle
- * and one width.
+ * Lives inside the shared inspector host next to diff, PR, and subagent
+ * panels, so every mode uses the same persisted resize width. The tab row is
+ * the shared inspector strip used by subagents as well.
  *
- * A context can own several side terminals. The header is a tab strip
- * that reuses the top tab bar's `TerminalTabChrome` (same `am-tab*`
- * structure, same X close button) plus a `+` action to add terminals.
- * Tabs are drag-sortable via the same `@thisbeyond/solid-dnd` stack as
- * the top tab bar; the order lives in the terminal state, so it is
- * preserved across sidebar context switches for the webview's lifetime.
- * The strip stays visible even when empty so the `+` action is always
- * reachable.
- *
- * Visibility is opacity-based, never unmount: the xterm render loop
- * dies when its subtree leaves the paint tree (see `render.tsx`).
+ * Hidden slots are translated off-screen while keeping their layout
+ * box, never unmounted: xterm keeps its buffer, socket, and parser
+ * alive, while xterm's own render observer (IntersectionObserver on the
+ * screen element) pauses the render loop for hidden slots and replays a
+ * full refresh when a slot becomes visible again. Keeping the box means
+ * FitAddon can measure the panel (correct wrapping) even while hidden.
+ * `TerminalTab` still does an explicit fit + refresh on activation as
+ * insurance (see `render.tsx`).
  */
 
 import type { Accessor, Component } from "solid-js"
-import { For, Show, createEffect, createSignal } from "solid-js"
-import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
-import type { DragEvent } from "@thisbeyond/solid-dnd"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Show, createEffect } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
-import { ConstrainDragYAxis, SortableTabContainer } from "../../src/components/chat/TabDnd"
+import { InspectorTabStrip } from "../InspectorTabStrip"
 import { renderSideTerminalLayer } from "./render"
-import { TerminalTabChrome } from "./SortableTerminalTab"
+import { SortableTerminalTab } from "./SortableTerminalTab"
 import type { TerminalStateControls } from "./state"
 
 interface Props {
@@ -42,8 +37,16 @@ interface Props {
   onSelect: (terminalId: string) => void
   /** Kill one terminal. */
   onClose: (terminalId: string) => void
+  /** Kill every terminal of this context except the given one. */
+  onCloseOthers: (terminalId: string) => void
   /** Create a new side terminal for this context. */
   onStart: () => void
+  nextKeybind: string
+  closeKeybind: string
+  /** Deliberately stop a running script terminal. */
+  onStop: (terminalId: string) => void
+  onFocusPrompt: () => void
+  onFocusChange?: (focused: boolean) => void
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -52,26 +55,15 @@ export const SideTerminalPanel: Component<Props> = (props) => {
   createEffect(() => {
     panel.inert = !props.visible()
   })
-  const [dragging, setDragging] = createSignal<{ id: string; width: number } | undefined>()
   const sides = () => props.state.sidesForContext(props.contextKey())
   const ids = () => sides().map((term) => term.id)
+  const active = () => props.state.sideActiveFor(props.contextKey())
   const pending = () => props.state.pendingSide(props.contextKey())
-  const onDragStart = (event: DragEvent) => {
-    const id = event.draggable?.id
-    if (typeof id !== "string") return
-    // Pin the overlay to the tab's width: the overlay container uses
-    // min-width, so a long OSC title would otherwise overflow it and
-    // shift the visual center off the cursor (the "drag offset" bug).
-    const width = event.draggable?.layout.width ?? event.draggable?.node.getBoundingClientRect().width
-    setDragging({ id, width })
+  const close = (id: string, focus: { restore: () => void }) => {
+    props.onClose(id)
+    if (ids().length > 0) focus.restore()
   }
-  const onDragEnd = () => setDragging(undefined)
-  const onDragOver = (event: DragEvent) => {
-    const from = event.draggable?.id
-    const to = event.droppable?.id
-    if (typeof from !== "string" || typeof to !== "string") return
-    props.state.reorderSideDrag(props.contextKey(), from, to)
-  }
+
   return (
     <section
       ref={panel}
@@ -79,79 +71,72 @@ export const SideTerminalPanel: Component<Props> = (props) => {
       aria-label={t("agentManager.tab.terminal")}
       aria-hidden={!props.visible()}
     >
-      <div class="am-side-terminal-tabs">
-        <DragDropProvider
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragOver={onDragOver}
-          collisionDetector={closestCenter}
-        >
-          <DragDropSensors />
-          <ConstrainDragYAxis />
-          {/* Scrollable tab list — mirrors the top bar's .am-tab-list split
-              so the "+" action never scrolls away. role="tablist" only
-              when tabs exist: axe aria-required-children rejects an empty
-              tablist (and non-tab children like the add button). */}
-          <div
-            class="am-side-terminal-tablist"
-            role={sides().length > 0 ? "tablist" : undefined}
-            aria-label={sides().length > 0 ? t("agentManager.tab.terminal") : undefined}
-          >
-            <SortableProvider ids={ids()}>
-              <For each={sides()}>
-                {(term) => (
-                  <SortableTabContainer id={term.id} class="am-side-terminal-tab">
-                    <TerminalTabChrome
-                      label={props.state.title(term.id) ?? term.title}
-                      tooltip={props.state.title(term.id) ?? term.title}
-                      active={props.state.sideActiveFor(props.contextKey()) === term.id}
-                      role="tab"
-                      selected={props.state.sideActiveFor(props.contextKey()) === term.id}
-                      onSelect={() => props.onSelect(term.id)}
-                      onMiddleClick={(e: MouseEvent) => {
-                        if (e.button !== 1) return
-                        e.preventDefault()
-                        e.stopPropagation()
-                        props.onClose(term.id)
-                      }}
-                      onClose={(e: MouseEvent) => {
-                        e.stopPropagation()
-                        props.onClose(term.id)
-                      }}
-                    />
-                  </SortableTabContainer>
-                )}
-              </For>
-            </SortableProvider>
-          </div>
-          {/* Cursor-following clone of the dragged tab (same pattern as
-              the top tab bar). The overlay is what makes the in-list
-              original use solid-dnd's slot-compensated transform, so the
-              dragged tab tracks the cursor without a jump/offset. The
-              original stays dimmed in its slot via .am-tab-dragging. */}
-          <DragOverlay>
-            <Show when={dragging()}>
-              {(tab) => (
-                <div class="am-tab am-tab-overlay" style={{ width: `${tab().width}px` }}>
-                  <span class="am-tab-label">{props.state.title(tab().id) ?? t("agentManager.tab.terminal")}</span>
-                </div>
-              )}
-            </Show>
-          </DragOverlay>
-        </DragDropProvider>
-        <div class="am-side-terminal-add">
-          <Tooltip value={t("agentManager.terminal.add")} placement="bottom">
-            <IconButton
-              icon="plus"
-              size="small"
-              variant="ghost"
-              aria-label={t("agentManager.terminal.add")}
-              onClick={props.onStart}
+      <InspectorTabStrip
+        ids={ids}
+        active={active}
+        label={t("agentManager.tab.terminal")}
+        overlay={(id) => props.state.title(id) ?? t("agentManager.tab.terminal")}
+        onSelect={props.onSelect}
+        onReorder={(from, to) => props.state.reorderSideDrag(props.contextKey(), from, to)}
+        renderTab={(id, api) => {
+          const term = sides().find((item) => item.id === id)
+          if (!term) return null
+          return (
+            <SortableTerminalTab
+              id={term.id}
+              label={props.state.title(term.id) ?? term.title}
+              tooltip={props.state.title(term.id) ?? term.title}
+              status={props.state.scriptStatus(term.id)}
+              state={props.state.activity(term.id)}
+              showKeybind={false}
+              keybind={active() === term.id ? "" : props.nextKeybind}
+              closeKeybind={props.closeKeybind}
+              active={active() === term.id}
+              focused={props.state.sideFocusedId() === term.id}
+              role="tab"
+              selected={active() === term.id}
+              tabIndex={active() === term.id ? 0 : -1}
+              onKeyDown={(event) => api.focus.key(term.id, event)}
+              onSelect={() => props.onSelect(term.id)}
+              onMiddleClick={(event) => {
+                if (event.button !== 1) return
+                event.preventDefault()
+                event.stopPropagation()
+                close(term.id, api.focus)
+              }}
+              onClose={() => close(term.id, api.focus)}
+              onCloseOthers={() => props.onCloseOthers(term.id)}
+              onStop={(event) => {
+                event.stopPropagation()
+                props.onStop(term.id)
+              }}
             />
-          </Tooltip>
-        </div>
-      </div>
-      {renderSideTerminalLayer({ state: props.state, contextKey: props.contextKey, visible: props.visible })}
+          )
+        }}
+        action={(api) => (
+          <div class="am-side-terminal-add">
+            <Tooltip value={t("agentManager.terminal.add")} placement="bottom">
+              <IconButton
+                icon="plus"
+                size="small"
+                variant="ghost"
+                aria-label={t("agentManager.terminal.add")}
+                onClick={() => {
+                  api.release()
+                  props.onStart()
+                }}
+              />
+            </Tooltip>
+          </div>
+        )}
+      />
+      {renderSideTerminalLayer({
+        state: props.state,
+        contextKey: props.contextKey,
+        visible: props.visible,
+        onFocusPrompt: props.onFocusPrompt,
+        onFocusChange: props.onFocusChange,
+      })}
       <Show when={props.visible() && sides().length === 0 && pending()}>
         <div class="am-side-terminal-state" role="status">
           <Spinner />

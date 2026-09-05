@@ -13,6 +13,7 @@ import { CodexAuthPlugin } from "./openai/codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { CopilotAuthPlugin } from "./github-copilot/copilot"
+import { ModalPlugin } from "./modal/modal"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
@@ -76,6 +77,7 @@ function internalPlugins(flags: RuntimeFlags.Info): PluginInstance[] {
         experimentalWebSockets: experimentalWebSocketsEnabled({ enabled: flags.experimentalWebSockets }),
       }),
     CopilotAuthPlugin,
+    ModalPlugin,
     // kilocode_change start
     // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
     GitlabAuthPlugin as unknown as PluginInstance,
@@ -130,7 +132,7 @@ async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks:
   }
 }
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service
@@ -315,12 +317,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(RuntimeFlags.defaultLayer),
-)
-
-export const node = LayerNode.make(layer, [EventV2Bridge.node, Config.node, RuntimeFlags.node])
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [EventV2Bridge.node, Config.node, RuntimeFlags.node],
+})
 
 export * as Plugin from "."

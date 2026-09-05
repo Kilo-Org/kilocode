@@ -6,6 +6,7 @@ import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.cli.buildKiloCliEnv
 import ai.kilocode.backend.cli.KiloCliConfigPath
+import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.workspace.AgentData
 import ai.kilocode.backend.workspace.AgentInfo
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -15,19 +16,25 @@ import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
+import ai.kilocode.rpc.dto.SetupScriptKind
+import ai.kilocode.rpc.dto.SetupScriptTargetDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -248,7 +255,25 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
-    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+    override suspend fun branchDiff(directory: String, patches: Boolean): List<DiffFileDto> = withContext(Dispatchers.IO) {
+        val dir = file(clean(directory) ?: directory) ?: return@withContext emptyList()
+        GitComparison.open(dir, GitComparison.Mode.Base)?.files(patches).orEmpty()
+    }
+
+    override suspend fun localDiff(directory: String, patches: Boolean): List<DiffFileDto> = withContext(Dispatchers.IO) {
+        val dir = file(clean(directory) ?: directory) ?: return@withContext emptyList()
+        GitComparison.open(dir, GitComparison.Mode.Local)?.files(patches).orEmpty()
+    }
+
+    override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext null
+        if (!gitAvailable(base)) return@withContext null
+        git(base, "branch", "--show-current").trim().ifBlank {
+            git(base, "rev-parse", "--short", "HEAD").trim()
+        }.ifBlank { null }
+    }
+
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -256,7 +281,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             LOG.warn("No project available to open file: $path")
             return false
         }
-        navigate(project, vf, line, column)
+        navigate(project, vf, line, column, endLine)
         return true
     }
 
@@ -283,10 +308,20 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         globalConfig()
     })
 
-    private suspend fun openConfig(path: Path): Boolean {
+    override suspend fun setupScriptTarget(directory: String): SetupScriptTargetDto = withContext(Dispatchers.IO) {
+        resolveSetupScript(repoRoot(directory), SystemInfo.isWindows)
+    }
+
+    override suspend fun openSetupScript(directory: String): Boolean {
+        val resolved = withContext(Dispatchers.IO) { resolveSetupScript(repoRoot(directory), SystemInfo.isWindows) }
+        val content = if (resolved.kind == SetupScriptKind.POWERSHELL) SetupScriptTemplate.POWERSHELL else SetupScriptTemplate.POSIX
+        return openConfig(Path.of(resolved.path), content)
+    }
+
+    private suspend fun openConfig(path: Path, content: String = CONFIG): Boolean {
         val target = withContext(Dispatchers.IO) {
             Files.createDirectories(path.parent)
-            if (!Files.exists(path)) Files.writeString(path, CONFIG, StandardCharsets.UTF_8)
+            if (!Files.exists(path)) Files.writeString(path, content, StandardCharsets.UTF_8)
             path
         }
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -298,8 +333,11 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         return true
     }
 
+    private fun repoRoot(directory: String): Path =
+        file(clean(directory) ?: directory)?.takeIf { it.isAbsolute } ?: Path.of(directory).normalize()
+
     private fun localConfig(directory: String): Path {
-        val root = file(clean(directory) ?: directory)?.takeIf { it.isAbsolute } ?: Path.of(directory).normalize()
+        val root = repoRoot(directory)
         val dirs = LOCAL_DIRS.map { root.resolve(it) } + root
         val found = dirs.asSequence()
             .flatMap { dir -> (MODERN + LEGACY).asSequence().map { name -> dir.resolve(name) } }
@@ -334,8 +372,26 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         null
     }
 
-    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null) = suspendCancellableCoroutine { cont ->
+    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null, endLine: Int? = null) = suspendCancellableCoroutine { cont ->
         ApplicationManager.getApplication().invokeLater({
+            if (line != null && endLine != null) {
+                val editor = FileEditorManager.getInstance(project).openTextEditor(
+                    OpenFileDescriptor(project, file, (line - 1).coerceAtLeast(0), 0),
+                    true,
+                )
+                val doc = editor?.document
+                if (editor != null && doc != null && doc.lineCount > 0) {
+                    val start = (line - 1).coerceIn(0, doc.lineCount - 1)
+                    val end = (endLine - 1).coerceIn(start, doc.lineCount - 1)
+                    val from = doc.getLineStartOffset(start)
+                    val to = doc.getLineEndOffset(end)
+                    editor.selectionModel.setSelection(from, to)
+                    editor.caretModel.moveToOffset(from)
+                    editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+                }
+                if (cont.isActive) cont.resume(Unit)
+                return@invokeLater
+            }
             val descriptor = if (line == null) {
                 OpenFileDescriptor(project, file)
             } else {
@@ -395,6 +451,14 @@ class KiloWorkspaceRpcApiImpl internal constructor(
                 commands = state.commands.map(KiloWorkspaceDtoMapper::command),
                 skills = state.skills.map(KiloWorkspaceDtoMapper::skill),
             )
+            is KiloWorkspaceState.Unsupported -> KiloWorkspaceStateDto(
+                status = KiloWorkspaceStatusDto.UNSUPPORTED,
+                error = state.reason,
+            )
+            is KiloWorkspaceState.Missing -> KiloWorkspaceStateDto(
+                status = KiloWorkspaceStatusDto.MISSING,
+                error = state.path,
+            )
             is KiloWorkspaceState.Error -> KiloWorkspaceStateDto(
                 status = KiloWorkspaceStatusDto.ERROR,
                 error = state.message,
@@ -414,6 +478,35 @@ internal fun normalizeWorkspacePath(path: String): String? {
     } catch (_: Exception) {
         null
     }
+}
+
+// Candidate names in the .kilo/ directory, in resolution order. Disjoint by design: a POSIX script is
+// never resolved on Windows and vice versa, matching the VS Code extension.
+private val SETUP_POSIX_CANDIDATES = listOf(
+    "setup-script" to SetupScriptKind.POSIX,
+    "setup-script.sh" to SetupScriptKind.POSIX,
+)
+private val SETUP_WINDOWS_CANDIDATES = listOf(
+    "setup-script.ps1" to SetupScriptKind.POWERSHELL,
+    "setup-script.cmd" to SetupScriptKind.CMD,
+    "setup-script.bat" to SetupScriptKind.CMD,
+)
+private val SETUP_DEFAULT_POSIX = "setup-script" to SetupScriptKind.POSIX
+private val SETUP_DEFAULT_WINDOWS = "setup-script.ps1" to SetupScriptKind.POWERSHELL
+
+/**
+ * Resolves the worktree setup script in `<root>/.kilo/` for the given platform. POSIX and Windows
+ * candidate lists are disjoint (a POSIX script is never resolved on Windows and vice versa); the
+ * first existing candidate wins, otherwise the platform default path is returned with `exists = false`.
+ * Pure and unit-testable without touching [SystemInfo].
+ */
+internal fun resolveSetupScript(root: Path, windows: Boolean): SetupScriptTargetDto {
+    val dir = root.resolve(".kilo")
+    val candidates = if (windows) SETUP_WINDOWS_CANDIDATES else SETUP_POSIX_CANDIDATES
+    val found = candidates.firstOrNull { (name, _) -> Files.exists(dir.resolve(name)) }
+    val (name, kind) = found ?: (if (windows) SETUP_DEFAULT_WINDOWS else SETUP_DEFAULT_POSIX)
+    val raw = dir.resolve(name).toString()
+    return SetupScriptTargetDto(raw, FileUtil.getLocationRelativeToUserHome(raw, false), found != null, kind)
 }
 
 internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): String {

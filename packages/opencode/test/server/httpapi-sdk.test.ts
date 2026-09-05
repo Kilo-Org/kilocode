@@ -5,12 +5,14 @@ import { Deferred, Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
 import { HttpServer } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { validateSession } from "../../src/cli/tui/validate-session"
-import { InstanceBootstrap } from "../../src/project/bootstrap-service"
+import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { InstanceStore } from "../../src/project/instance-store"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -29,16 +31,12 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { Database } from "@opencode-ai/core/database/database"
 import { httpApiLayer } from "./httpapi-layer"
 
-const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
-const it = testEffect(
-  Layer.mergeAll(
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
-    Database.defaultLayer,
-    httpApiLayer,
-  ),
+const noopBootstrapLayer = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
+const appLayer = AppNodeBuilder.build(
+  LayerNode.group([FSUtil.node, CrossSpawnSpawner.node, InstanceStore.node, Database.node, SessionNs.node]),
+  [[InstanceStore.bootstrapNode, noopBootstrapLayer]],
 )
+const it = testEffect(Layer.mergeAll(appLayer, httpApiLayer))
 
 const original = {
   KILO_SERVER_PASSWORD: Flag.KILO_SERVER_PASSWORD,
@@ -47,7 +45,7 @@ const original = {
 
 type ServerPath = "default" | "raw"
 type Sdk = ReturnType<typeof createKiloClient>
-type SdkResult = { response: Response; data?: unknown; error?: unknown }
+type SdkResult = { response?: Response; data?: unknown; error?: unknown }
 type Captured = { status: number; data?: unknown; error?: unknown }
 type ProjectFixture = { sdk: Sdk; directory: string }
 type LlmProjectFixture = ProjectFixture & { llm: TestLLMServer["Service"] }
@@ -55,6 +53,7 @@ type TestServices =
   | FSUtil.Service
   | ChildProcessSpawner.ChildProcessSpawner
   | InstanceStore.Service
+  | SessionNs.Service
   | HttpServer.HttpServer
 type TestScope = Scope.Scope | TestServices
 
@@ -116,7 +115,7 @@ function call<T>(request: () => Promise<T>) {
 function capture(request: () => Promise<SdkResult>) {
   return call(request).pipe(
     Effect.map((result) => ({
-      status: result.response.status,
+      status: result.response!.status,
       data: result.data,
       error: result.error,
     })),
@@ -133,9 +132,9 @@ function captureThrown(request: () => Promise<unknown>) {
   })
 }
 
-function expectStatus(request: () => Promise<{ response: Response }>, status: number) {
+function expectStatus(request: () => Promise<{ response?: Response }>, status: number) {
   return call(request).pipe(
-    Effect.tap((result) => Effect.sync(() => expect(result.response.status).toBe(status))),
+    Effect.tap((result) => Effect.sync(() => expect(result.response!.status).toBe(status))),
     Effect.asVoid,
   )
 }
@@ -332,7 +331,7 @@ function seedMessage(directory: string, sessionID: string) {
           })
           return { message, part }
         }),
-      ).pipe(Effect.provide(SessionNs.defaultLayer)),
+      ),
     ),
   )
 }
@@ -352,12 +351,12 @@ describe("HttpApi SDK", () => {
       const health = yield* call(() => sdk.global.health())
       const log = yield* call(() => sdk.app.log({ service: "httpapi-sdk-test", level: "info", message: "hello" }))
 
-      expect(health.response.status).toBe(200)
+      expect(health.response!.status).toBe(200)
       expect(health.data).toMatchObject({ healthy: true })
       expect(yield* firstEvent((signal) => sdk.global.event({ signal }))).toMatchObject({
         payload: { type: "server.connected" },
       })
-      expect(log.response.status).toBe(200)
+      expect(log.response!.status).toBe(200)
       expect(log.data).toBe(true)
       yield* expectStatus(() => sdk.auth.set({ providerID: "test" }), 400)
     }),
@@ -374,21 +373,21 @@ describe("HttpApi SDK", () => {
         const v2session = yield* call(() => sdk.v2.session.create({ agent: "build" })) // kilocode_change
         const listed = yield* call(() => sdk.session.list({ roots: true, limit: 10 }))
 
-        expect(file.response.status).toBe(200)
+        expect(file.response!.status).toBe(200)
         expect(file.data).toMatchObject({ content: "hello" })
         // kilocode_change start
-        expect(raw.response.status).toBe(200)
+        expect(raw.response!.status).toBe(200)
         const body = raw.data
         if (!body) throw new Error("missing V2 file body")
         const content =
           body instanceof Blob ? yield* Effect.promise(() => body.text()) : Buffer.from(body as unknown as Uint8Array).toString()
         expect(content).toBe("hello")
         // kilocode_change end
-        expect(session.response.status).toBe(200)
+        expect(session.response!.status).toBe(200)
         expect(session.data).toMatchObject({ title: "sdk" })
-        expect({ status: v2session.response.status, error: v2session.error }).toEqual({ status: 200, error: undefined }) // kilocode_change
+        expect({ status: v2session.response!.status, error: v2session.error }).toEqual({ status: 200, error: undefined }) // kilocode_change
         expect(v2session.data).toMatchObject({ data: { location: { directory } } }) // kilocode_change
-        expect(listed.response.status).toBe(200)
+        expect(listed.response!.status).toBe(200)
         expect(listed.data?.map((item) => item.id)).toContain(session.data?.id)
 
         yield* Effect.all([
@@ -410,10 +409,15 @@ describe("HttpApi SDK", () => {
           workspaceID,
           onRequest: (value) => (request = value),
         })
-        const found = yield* call(() => sdk.v2.fs.find({ query: "hello", type: "file" }))
+        const found = yield* pollWithTimeout(
+          call(() => sdk.v2.fs.find({ query: "hello", type: "file" })).pipe(
+            Effect.map((result) => (result.data?.data.length ? result : undefined)),
+          ),
+          "SDK file search index was not ready",
+        )
         const url = new URL(request!.url)
 
-        expect(found.response.status).toBe(200)
+        expect(found.response!.status).toBe(200)
         expect(found.data).toMatchObject({ data: [{ path: "hello.txt", type: "file" }] })
         expect(url.searchParams.get("directory")).toBe(directory)
         expect(url.searchParams.get("workspace")).toBe(workspaceID)
@@ -427,7 +431,7 @@ describe("HttpApi SDK", () => {
           headers: { "x-kilo-directory": encodeURIComponent(directory) },
         })
         const legacySession = yield* call(() => legacy.v2.session.create({ agent: "build" }))
-        expect(legacySession.response.status).toBe(200)
+        expect(legacySession.response!.status).toBe(200)
         expect(legacySession.data).toMatchObject({ data: { location: { directory } } })
         // kilocode_change end
       }),

@@ -15,19 +15,36 @@ import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx")
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
+  path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
+  path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
+  path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/ReviewDiffItem.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
   path.join(ROOT, "webview-ui/diff-viewer/DiffEndMarker.tsx"),
@@ -37,10 +54,22 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/pr/PRBadge.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/InspectorTabStrip.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
@@ -50,17 +79,24 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
   // Shared components that consume agent-manager CSS classes (e.g. am-dropdown,
   // am-branch-item) used by both the agent manager and the diff viewer.
+  path.join(ROOT, "webview-ui/src/components/shared/ActivityIcon.tsx"),
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
+const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
+const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
+const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
+const RUN_DESTINATION_FILE = path.join(ROOT, "src/agent-manager/run/destination.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -115,7 +151,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -132,7 +168,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -145,6 +181,47 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 })
 
+describe("Browser module boundaries", () => {
+  it("keeps browser core independent from Agent Manager and VS Code context", () => {
+    const files = ["BrowserPanel.tsx", "controller.ts", "types.ts", "index.ts"]
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(ROOT, "webview-ui/browser", file), "utf-8")
+      expect(source).not.toMatch(/agent-manager|AgentManager|SidePanel|useVSCode|window\.postMessage/)
+    }
+  })
+
+  it("owns browser styles in the reusable module", () => {
+    const css = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"), "utf-8")
+    const browser = fs.readFileSync(path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"), "utf-8")
+    expect(css).not.toContain(".am-browser-")
+    expect(browser).toContain('import "./browser.css"')
+  })
+})
+
+describe("Agent Manager edit preview", () => {
+  it("provides a visible close action", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain('icon="close"')
+    expect(source).toContain('class="am-edit-preview-close"')
+    expect(source).toContain("onClick={props.state.close}")
+  })
+
+  it("drives every stacked file from one shared style control", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain("RadioGroup")
+    expect(source).toContain("styleSelect={false}")
+  })
+
+  it("sizes stacked files to their own diff instead of a fixed height", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-edit-preview-files > .am-review-layout")
+    expect(css).not.toContain("flex: 0 0 min(420px, 50%)")
+    const view = fs.readFileSync(path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"), "utf-8")
+    expect(view).toContain("value.fileDiff.hunks.length")
+    expect(view).toContain("virtualized={heavy()}")
+  })
+})
+
 describe("Agent Manager Provider Messages", () => {
   function getMethodBody(name: string): string {
     const project = new Project({ compilerOptions: { allowJs: true } })
@@ -152,7 +229,15 @@ describe("Agent Manager Provider Messages", () => {
     const cls = source.getFirstDescendantByKind(SyntaxKind.ClassDeclaration)
     const method = cls?.getMethod(name)
     expect(method, `method ${name} not found in AgentManagerProvider`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted lifecycle module so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    if (!delegated) return text
+    const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in provider-lifecycle`).toBeTruthy()
+    return fn!.getText()
   }
 
   /**
@@ -180,8 +265,38 @@ describe("Agent Manager Provider Messages", () => {
     expect(warmup).toBeLessThan(create)
   })
 
+  /**
+   * Regression: WorktreeDiffController calls getRoot() eagerly during
+   * construction, so the project contexts must exist before it is created.
+   * Constructing them later crashed extension activation at runtime.
+   */
+  it("creates project wiring before services that eagerly read the root", () => {
+    const text = fs.readFileSync(PROVIDER_FILE, "utf-8")
+    const wiring = text.indexOf("createProjectWiring(")
+    const diffs = text.indexOf("new WorktreeDiffController(")
+
+    expect(wiring).toBeGreaterThanOrEqual(0)
+    expect(diffs).toBeGreaterThanOrEqual(0)
+    expect(wiring).toBeLessThan(diffs)
+  })
+
+  /**
+   * Regression: project-management messages must be consumed before the
+   * state gate, because selectProject triggers the state initialization
+   * that later messages wait for.
+   */
+  it("handles project messages before state-gated dispatch", () => {
+    const body = getMethodBody("onMessage") + getMethodBody("dispatchMessage")
+    const projects = body.indexOf("handleProjectMessage(m, this.projects)")
+    const gate = body.indexOf("if (this.shouldWaitForState(m))")
+
+    expect(projects).toBeGreaterThanOrEqual(0)
+    expect(gate).toBeGreaterThanOrEqual(0)
+    expect(projects).toBeLessThan(gate)
+  })
+
   it("state-mutating messages wait for state initialization", () => {
-    const body = getMethodBody("shouldWaitForState")
+    const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
       "agentManager.setWorktreeOrder",
@@ -197,13 +312,13 @@ describe("Agent Manager Provider Messages", () => {
       expect(body, `${message} should wait for loaded state`).toContain(message)
     }
 
-    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+    expect(getMethodBody("dispatchMessage")).toContain("if (this.shouldWaitForState(m))")
   })
 
-  it("initializeState updates local git exclude before loading persisted state", () => {
-    const body = getMethodBody("initializeState")
-    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
-    const load = body.indexOf("const loaded = await state.load()")
+  it("context state init updates local git exclude before loading persisted state", () => {
+    const text = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/init.ts"), "utf-8")
+    const exclude = text.indexOf("ensureGitExclude(")
+    const load = text.indexOf("state.load()")
 
     expect(exclude).toBeGreaterThanOrEqual(0)
     expect(load).toBeGreaterThanOrEqual(0)
@@ -226,7 +341,7 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await this.panel?.sessions.abortSessions([sessionId])")
+    expect(getMethodBody("onCloseSession")).toContain("await host.sessions.abort([sessionId])")
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -273,7 +388,7 @@ describe("Agent Manager Model Picker", () => {
 
 describe("Agent Manager Worktree Actions", () => {
   it("opens the configuration dialog from the primary plus action", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"), "utf-8")
     const start = source.indexOf('<div class="am-split-button">')
     const end = source.indexOf("</div>", start)
     const actions = source.slice(start, end)
@@ -314,7 +429,6 @@ describe("Agent Manager Worktree Actions", () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
       contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
     }
-    const source = fs.readFileSync(TSX_FILE, "utf-8")
     const dialog = manifest.contributes.keybindings.find(
       (item) => item.command === "kilo-code.new.agentManager.newWorktree",
     )
@@ -324,8 +438,33 @@ describe("Agent Manager Worktree Actions", () => {
 
     expect(dialog).toMatchObject({ key: "ctrl+n", mac: "cmd+n" })
     expect(quick).toMatchObject({ key: "ctrl+shift+n", mac: "cmd+shift+n" })
-    expect(source).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
-    expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+    const bindings = fs.readFileSync(KEYBIND_DEFAULTS_FILE, "utf-8")
+    expect(bindings).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
+    expect(bindings).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+  })
+
+  it("reserves Cmd+Shift+M for the Agent Manager instead of Problems", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
+      contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
+    }
+    const removed = manifest.contributes.keybindings.find((item) => item.command === "-workbench.actions.view.problems")
+    const manager = manifest.contributes.keybindings.find((item) => item.command === "kilo-code.new.agentManagerOpen")
+
+    expect(removed).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+    expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+  })
+
+  it("routes prompt and side-terminal shortcut actions separately", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "newTerminalTab")')
+    const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
+    const action = source.slice(start, end)
+
+    expect(action).toContain('msg.action === "newTerminalTab"')
+    expect(action).toContain("termHandlers.requestNew()")
+    expect(action).toContain('msg.action === "newSideTerminal"')
+    expect(action).toContain("termHandlers.addSide()")
+    expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -347,9 +486,9 @@ describe("Agent Manager Worktree Actions", () => {
   })
 
   it("does not attribute the new-worktree shortcut to session promotion", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"), "utf-8")
 
-    expect(source).toContain('<Tooltip value={t("agentManager.session.openInWorktree")}')
+    expect(source).toContain('t("agentManager.session.openInWorktree")')
     expect(source).not.toContain("TooltipKeybind")
   })
 })
@@ -377,7 +516,19 @@ describe("Agent Manager Provider — onMessage routing", () => {
     setup()
     const method = cls.getMethod(name)
     expect(method, `method ${name} not found`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted handler modules so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    if (!delegated) return text
+    const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
+    const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in ${module}`).toBeTruthy()
+    // The multi-version flow spans prepare, provision, and initial-prompt helpers,
+    // so ordering assertions need the whole module, not just the orchestrator.
+    if (delegated[1] === "createMultiVersion") return lifecycle.getText()
+    return fn!.getText()
   }
 
   function provider(): string {
@@ -433,9 +584,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("syncOnSessionSwitch")
   })
 
+  it("does not activate inspector-only transcript loads", () => {
+    const text = body("onSessionMessage")
+    expect(text).toContain("m.focus === false")
+    expect(text.indexOf("m.focus === false")).toBeLessThan(text.indexOf("this.activeSessionId = m.sessionID"))
+  })
+
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
-    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
+    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
     expect(show).toBeGreaterThan(-1)
     expect(text).toContain('type: "terminalContextError"')
   })
@@ -447,12 +604,65 @@ describe("Agent Manager Provider — onMessage routing", () => {
   })
 
   it("onMessage delegates to cohesive routing groups", () => {
-    const text = body("onMessage")
+    const text = body("onMessage") + body("dispatchMessage")
     expect(text).toContain("onWorktreeMessage")
     expect(text).toContain("onSessionMessage")
     expect(text).toContain("onImportMessage")
     expect(text).toContain("onDiffMessage")
     expect(text).not.toContain("agentManager.requestState")
+  })
+
+  it("routes script terminal close and resize messages before user terminals", () => {
+    const text = body("dispatchMessage")
+    expect(text.indexOf("this.scripts.manager.intercept(m)")).toBeLessThan(
+      text.indexOf("this.terminalRouter.handle(m)"),
+    )
+  })
+
+  it("runs scripts through the vscode-free canonical PTY manager", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_FILE, "utf-8")
+    expect(text).toMatch(/client\.v2\.pty\s*\.create/)
+    expect(text).toContain("client.v2.pty.get")
+    expect(text).toContain("client.v2.pty.update")
+    expect(text).toContain("client.v2.pty.remove")
+    expect(text).not.toContain("vscode")
+  })
+
+  it("selects the Run adapter from the panel dropdown message", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_RUNTIME_FILE, "utf-8")
+    expect(text).toContain("pickRunStart")
+    expect(text).toContain("config.destination")
+    expect(text).not.toContain("readRunTerminalDestination")
+    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("config.destination"))
+  })
+
+  it("keeps the legacy integrated Run adapter isolated and removable", () => {
+    const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
+    expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("execution.terminate()")
+    expect(task).toContain("Promise.withResolvers<void>()")
+    expect(task).toContain("await ended.promise")
+    expect(task).toContain("STOP_TIMEOUT_MS")
+    expect(task).toContain("ended.resolve()")
+    expect(task.indexOf("vscode.tasks.onDidEndTaskProcess")).toBeLessThan(task.indexOf("vscode.tasks.taskExecutions"))
+    expect(task).toContain("Remove this")
+    const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
+    expect(dest).not.toContain('from "vscode"')
+    expect(dest).toContain("pickRunStart")
+    expect(dest).not.toContain("getConfiguration")
+  })
+
+  it("clears retained script terminals before removing worktree state", () => {
+    for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
+      const text = body(name)
+      expect(text).toContain("host.clearRun(worktreeId)")
+      expect(text.indexOf("host.clearRun(worktreeId)")).toBeLessThan(text.indexOf("state.removeWorktree"))
+    }
+    const deleted = body("onDeleteWorktree")
+    expect(deleted.indexOf("host.skipStats")).toBeLessThan(deleted.indexOf("host.removeRun"))
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts"), "utf-8")
+    expect(helper).toContain('manager.clear("run", worktreeId, projectId)')
+    expect(helper).toContain('manager.clear("setup", worktreeId, projectId)')
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------
@@ -461,12 +671,26 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * Regression: deletion must clean up both disk (manager) and state, then
    * push to webview. Missing any step leaves ghost worktrees or stale UI.
    */
-  it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
+  it("does not restore running indicators after a session is deleted", () => {
+    const lifecycle = body("onSessionLifecycle")
+    const status = body("onSessionStatus")
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/session-lifecycle.ts"), "utf-8")
+
+    expect(lifecycle).toContain("removed: this.removedSessions")
+    expect(lifecycle).toContain("busy: this.busySessions")
+    expect(helper).toContain("deps.removed.add(id)")
+    expect(helper).toContain("deps.busy.delete(id)")
+    expect(helper).toContain("if (deps.removed.has(info.id)) return")
+    expect(status).toContain("this.removedSessions.has(sid)")
+  })
+
+  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
     const text = body("onDeleteWorktree")
-    expect(text).toContain("manager.removeWorktree")
-    expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("clearSessionDirectory")
-    expect(text).toContain("this.pushState()")
+    expect(text).toContain(".kilocode.removeSnapshot")
+    expect(text).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
+      expect(body(name)).not.toContain("removeSnapshot")
+    }
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -478,8 +702,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onCreateWorktree runs setup script before creating session", () => {
     const text = body("onCreateWorktree")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
-    const sessionIdx = text.indexOf("createSessionInWorktree")
+    const setupIdx = text.indexOf("host.runSetup(")
+    const sessionIdx = text.indexOf("host.createSession(")
     expect(setupIdx, "setup script call must exist").toBeGreaterThan(-1)
     expect(sessionIdx, "session creation call must exist").toBeGreaterThan(-1)
     expect(setupIdx, "setup script must run before session creation").toBeLessThan(sessionIdx)
@@ -496,8 +720,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("multi-version creation registers each session after publishing its worktree mapping", () => {
     const text = body("onCreateMultiVersion")
-    const ready = text.indexOf("this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)")
-    const register = text.indexOf("this.panel?.sessions.registerSession(session)")
+    const ready = text.indexOf("host.notifyReady(session.id, wt.result, wt.worktree.id)")
+    const register = text.indexOf("host.sessions.register(session)")
     const initial = text.indexOf("agentManager.sendInitialMessage")
 
     expect(ready, "multi-version path must publish ready state").toBeGreaterThan(-1)
@@ -514,7 +738,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onPromoteSession runs setup script before modifying session", () => {
     const text = body("onPromoteSession")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
+    const setupIdx = text.indexOf("host.runSetup(")
     const moveIdx = text.indexOf("moveSession")
     expect(setupIdx).toBeGreaterThan(-1)
     expect(moveIdx).toBeGreaterThan(-1)
@@ -572,14 +796,16 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("class WorktreeDiffController")
     expect(text).toContain("buildWorktreePatch")
     expect(text).toContain("revertFile")
-    expect(text).toContain("diffSummary")
+    // Summary/detail diff data comes from the shared DiffSourceCatalog sources
+    // (workspace/staged/unstaged/session), not a bespoke in-controller pipeline.
+    expect(text).toContain("catalog.build")
     expect(text).toContain("shouldStopDiffPolling")
     expect(providerText).toContain("this.diffs")
   })
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    for (const value of ["createFromPR", "createWorktree", "this.busy(projectId)"]) expect(text).toContain(value)
     expect(body("onImportMessage")).toContain("this.importer")
   })
 
@@ -627,7 +853,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
         `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
       )
       expect(await run(kind, "setup")).toBe(
-        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+        `${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed`,
       )
       const duplicate = branch
         ? 'Branch "topic" is already checked out in another worktree'
@@ -654,7 +880,7 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
     // Find the agentManager.state handler block
     const start = tsx.indexOf('"agentManager.state"')
     expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
-    const snippet = tsx.slice(start, start + 800)
+    const snippet = tsx.slice(start, start + 1600)
     expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
     expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
       /isGitRepo.*false|false.*isGitRepo/,
@@ -704,7 +930,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     // Find the onStateChange callback that handles "connected"
     const connectedIdx = provider.indexOf('state === "connected"')
     expect(connectedIdx, '"connected" state handler must exist').toBeGreaterThan(-1)
-    const snippet = provider.slice(connectedIdx, connectedIdx + 800)
+    const end = provider.indexOf("this.unsubscribeNotificationDismiss", connectedIdx)
+    expect(end, "notification subscription must follow connection handler").toBeGreaterThan(connectedIdx)
+    const snippet = provider.slice(connectedIdx, end)
     expect(snippet, "must call flushPendingSessionRefresh from connected handler").toContain(
       'this.flushPendingSessionRefresh("sse-connected")',
     )
@@ -727,49 +955,6 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
 })
 
 // ---------------------------------------------------------------------------
-// handleChangeDefaultBaseBranch — listener leak fix
-// ---------------------------------------------------------------------------
-
-describe("Agent Manager — dialog listener cleanup", () => {
-  const tsx = fs.readFileSync(TSX_FILE, "utf-8")
-
-  /**
-   * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
-   * for branch data. Previously unsub() was only called inside selectBranch()
-   * and the Escape keydown handler. If the dialog closed via backdrop click or
-   * external dialog.close(), the listener leaked and stacked on every reopen.
-   *
-   * The fix ties unsub() to Solid's onCleanup inside the dialog.show() render
-   * function so it always disposes regardless of how the dialog closes.
-   */
-  it("handleChangeDefaultBaseBranch uses onCleanup(unsub) inside dialog.show", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    expect(fnStart, "handleChangeDefaultBaseBranch must exist").toBeGreaterThan(-1)
-
-    // Grab the function body (enough to cover the dialog.show callback)
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // The dialog.show callback must register onCleanup(unsub)
-    const showIdx = snippet.indexOf("dialog.show(")
-    expect(showIdx, "dialog.show() call must exist").toBeGreaterThan(-1)
-    const afterShow = snippet.slice(showIdx)
-    expect(afterShow, "onCleanup(unsub) must be inside dialog.show callback").toContain("onCleanup(unsub)")
-  })
-
-  it("selectBranch does not manually call unsub (handled by onCleanup)", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // Find the selectBranch function body
-    const selStart = snippet.indexOf("const selectBranch")
-    expect(selStart, "selectBranch must exist").toBeGreaterThan(-1)
-    const selEnd = snippet.indexOf("}", selStart + 50)
-    const selBody = snippet.slice(selStart, selEnd + 1)
-
-    expect(selBody, "selectBranch should not call unsub() directly").not.toContain("unsub()")
-  })
-})
-
 describe("SetupScriptRunner — task execution model", () => {
   const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
   const taskAdapter = fs.readFileSync(path.join(ROOT, "src/agent-manager/task-runner.ts"), "utf-8")
@@ -842,9 +1027,6 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
   },
-  "run/task.ts": {
-    note: "vscode adapter for Agent Manager run scripts",
-  },
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {
     note: "vscode config reader for integrated terminal font settings",
@@ -869,8 +1051,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 2000,
-    note: "diff and import workflows are extracted into cohesive domain services; extract more orchestration next",
+    maxLines: 1900,
+    note: "worktree lifecycle handlers extracted into provider-lifecycle.ts; extract more orchestration next",
   },
 }
 
@@ -885,6 +1067,16 @@ function agentManagerSourceFiles(): string[] {
 }
 
 describe("Agent Manager — VS Code import boundary", () => {
+  it("routes GitHub CLI execution through execGhRead", () => {
+    const gh = path.join(AGENT_MANAGER_DIR, "gh.ts")
+    const violations = agentManagerSourceFiles()
+      .map((file) => path.join(AGENT_MANAGER_DIR, file))
+      .filter((file) => file !== gh)
+      .filter((file) => /(["'])gh(?:\.exe)?\1/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.basename(file))
+    expect(violations).toEqual([])
+  })
+
   it("only allowlisted files may import vscode", () => {
     const violations: string[] = []
     for (const file of agentManagerSourceFiles()) {
@@ -979,7 +1171,6 @@ describe("Shared webview provider shell", () => {
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "AgentRequirementsProvider",
       "MemoryProvider",
       "FeedbackProvider",
     ])
@@ -1011,5 +1202,14 @@ describe("Shared webview provider shell", () => {
       "AgentManagerContent",
     ])
     expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
+  })
+})
+
+describe("Agent Manager worktree setup", () => {
+  it("retains the guarded setup error delay", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

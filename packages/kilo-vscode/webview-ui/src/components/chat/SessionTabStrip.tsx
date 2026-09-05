@@ -8,6 +8,7 @@ import { isPendingTab } from "../../utils/local-tabs"
 import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
+import { label, running } from "../../utils/session-activity"
 import { useVSCode } from "../../context/vscode"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
@@ -28,10 +29,8 @@ export const SessionTabStrip: Component = () => {
     if (isPendingTab(id)) return language.t("sidebar.session.newSession")
     return items().get(id)?.title || language.t("session.untitled")
   }
-  const working = (id: string) => {
-    const status = session.allStatusMap()[id]
-    return status?.type === "busy" || status?.type === "retry"
-  }
+  const state = (id: string) => (isPendingTab(id) ? "idle" : session.activityFor(id))
+  const working = (id: string) => running(state(id))
   const middle = (id: string, event: MouseEvent) => {
     if (event.button !== 1) return
     event.preventDefault()
@@ -62,7 +61,8 @@ export const SessionTabStrip: Component = () => {
       id,
       title: title(id),
       active: tabs.active() === id,
-      busy: working(id),
+      state: state(id),
+      stateLabel: language.t(label(state(id))),
       pending: isPendingTab(id),
     })),
   )
@@ -140,7 +140,8 @@ export const SessionTabStrip: Component = () => {
                         <SessionTab
                           title={title(id)}
                           active={tabs.active() === id}
-                          busy={working(id)}
+                          state={state(id)}
+                          stateLabel={language.t(label(state(id)))}
                           closeTitle={language.t("common.closeTab")}
                           closeLabel={language.t("common.closeTab")}
                           role="tab"
@@ -171,7 +172,6 @@ export const SessionTabStrip: Component = () => {
               close: language.t("common.closeTab"),
               current: language.t("session.tabs.switcher.current"),
               pending: language.t("session.tabs.switcher.pending"),
-              busy: language.t("session.tabs.switcher.busy"),
             }}
             onSelect={tabs.select}
             onRestore={focusPrompt}

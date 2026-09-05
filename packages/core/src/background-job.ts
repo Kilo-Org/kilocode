@@ -2,6 +2,7 @@ export * as BackgroundJob from "./background-job"
 
 import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Scope, SynchronizedRef } from "effect"
 import { Identifier } from "./id/id"
+import { makeGlobalNode } from "./effect/app-node"
 
 export type Status = "running" | "completed" | "error" | "cancelled"
 
@@ -136,7 +137,7 @@ export const make = Effect.gen(function* () {
       if (job.info.status !== "running") return [{ info: snapshot(job) }, jobs]
       const pending = job.pending - 1
       const output =
-        Exit.isSuccess(exit) && (!job.output || sequence > job.output.sequence)
+        Exit.isSuccess(exit) && exit.value && sequence > (job.output?.sequence ?? -1) // kilocode_change - empty outputs never clobber; only the latest non-empty result wins (#13469)
           ? { sequence, text: exit.value }
           : job.output
       if (Exit.isSuccess(exit) && pending > 0) {
@@ -359,6 +360,6 @@ export const make = Effect.gen(function* () {
   return Service.of({ list, get, start, extend, wait, waitForPromotion, promote, cancel })
 })
 
-export const layer = Layer.effect(Service, make)
+const layer = Layer.effect(Service, make)
 
-export const defaultLayer = layer
+export const node = makeGlobalNode({ service: Service, layer, deps: [] })

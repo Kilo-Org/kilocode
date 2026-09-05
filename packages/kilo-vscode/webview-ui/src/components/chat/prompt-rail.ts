@@ -9,25 +9,40 @@ export interface PromptRailItem {
   answer: string
 }
 
+export type PromptRailEntry =
+  | { type: "prompt"; item: PromptRailItem; index: number }
+  | { type: "overflow"; count: number; index: number }
+  | { type: "history" }
+
 const PROMPT_LIMIT = 160
 const ANSWER_LIMIT = 220
 
 /**
  * Height of the tallest card row (padding + a one-line prompt + a two-line
- * answer), and the unit the fit cap is measured in. Deliberately the worst
- * case rather than an average: "only show what fits" should stay true for a
- * card whose rows all wrap, not just for a lucky mix of short ones.
+ * answer). Sizes the navigator's virtualized rows; the rail's own fit cap is
+ * measured in tick spacing instead, since a tick is only a hairline.
  */
 export const ROW_HEIGHT = 76
 /** Vertical padding reserved at the top and bottom of the rail. */
 export const RAIL_INSET = 24
+/** Natural spacing between ticks, and the tightest they are allowed to pack. */
+export const TICK_STEP = 14
+export const TICK_MIN = 7
 
 /**
- * How many prompts fit the available transcript height. The card and the rail
- * always render the same set, so this one number drives both.
+ * How many ticks fit the available transcript height. Measured in tick
+ * spacing, not card row height: a tick is a 1.5px line, so the rail holds
+ * several times more prompts than the navigator can list at once, and
+ * summarizing at the card's row count would hide prompts that have room to
+ * show. The complete prompt list lives in the bounded navigator.
  */
 export function capacity(height: number): number {
-  return Math.floor((height - RAIL_INSET) / ROW_HEIGHT)
+  return Math.floor((height - RAIL_INSET) / TICK_MIN)
+}
+
+export function historyAction(before: number, after: number, more: boolean): "stop" | "load" | "jump" {
+  if (after <= before) return "stop"
+  return more ? "load" : "jump"
 }
 
 // The card never renders markdown — user message text shows literally, and
@@ -92,7 +107,38 @@ export function promptItems(rows: TranscriptRow[]): PromptRailItem[] {
   return items
 }
 
-export function railItems(items: PromptRailItem[], capacity: number): PromptRailItem[] {
+export function railEntries(items: PromptRailItem[], capacity: number, history = false): PromptRailEntry[] {
   if (capacity < 1) return []
-  return items.slice(-capacity)
+  if (!history && items.length <= capacity) {
+    return items.map((item, index) => ({ type: "prompt", item, index }))
+  }
+  if (capacity === 1) {
+    if (history) return [{ type: "history" }]
+    const index = items.length - 1
+    const item = items[index]
+    return item ? [{ type: "prompt", item, index }] : []
+  }
+  if (capacity === 2) {
+    const item = items.at(-1)
+    const latest = item ? [{ type: "prompt" as const, item, index: items.length - 1 }] : []
+    if (history) return [{ type: "history" }, ...latest]
+    const first = items[0]
+    return first ? [{ type: "prompt", item: first, index: 0 }, ...latest] : latest
+  }
+
+  const count = Math.min(items.length, capacity - 2)
+  const start = items.length - count
+  const recent = items.slice(start).map((item, offset) => ({
+    type: "prompt" as const,
+    item,
+    index: start + offset,
+  }))
+  const prefix: PromptRailEntry[] = history
+    ? [{ type: "history" }]
+    : items[0]
+      ? [{ type: "prompt", item: items[0], index: 0 }]
+      : []
+  const hidden = start - (history ? 0 : 1)
+  if (hidden < 1) return [...prefix, ...recent]
+  return [...prefix, { type: "overflow", count: hidden, index: history ? 0 : 1 }, ...recent]
 }

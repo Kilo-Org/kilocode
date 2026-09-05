@@ -12,11 +12,13 @@ import { EventID } from "./schema"
 import { Context, Effect, Layer, Schema as EffectSchema } from "effect"
 import type { DeepMutable } from "@opencode-ai/core/schema"
 import { EventV2 } from "@opencode-ai/core/event"
+import { EventManifest } from "@/event-manifest" // kilocode_change
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EffectBridge } from "@/effect/bridge"
 import * as EventWire from "@/kilocode/event-wire" // kilocode_change
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 // Keep `Event["data"]` mutable because projectors mutate the persisted shape
 // when writing to the database. Bus payloads (`Properties`) stay readonly —
@@ -213,7 +215,9 @@ export const layer = Layer.effect(Service)(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide([ProjectBus.defaultLayer, RuntimeFlags.defaultLayer]))
+export const defaultLayer = layer.pipe(
+  Layer.provide([ProjectBus.defaultLayer, AppNodeBuilder.build(RuntimeFlags.node)]), // kilocode_change
+)
 
 export const use = serviceUse(Service)
 
@@ -231,12 +235,12 @@ export function reset() {
 
 export function init(input: { projectors: Array<[Definition, ProjectorFunc]>; convertEvent?: ConvertEvent }) {
   projectors = new Map(input.projectors.map(([def, func]) => [versionedType(def.type, def.version), func]))
-  for (let entry of EventV2.registry.values()) {
-    if (!entry.sync) continue // kilocode_change - EventV2 stores legacy sync metadata under sync
+  for (const entry of EventManifest.Latest.values()) {
+    if (!entry.durable) continue // kilocode_change - mirror current durable events into legacy sync
     register({
       type: entry.type,
-      version: entry.sync.version, // kilocode_change
-      aggregate: entry.sync.aggregate, // kilocode_change
+      version: entry.durable.version, // kilocode_change
+      aggregate: entry.durable.aggregate, // kilocode_change
       properties: entry.data,
       schema: entry.data,
       wire: true, // kilocode_change
@@ -417,20 +421,19 @@ export function effectPayloads() {
         }).annotate({ identifier: `SyncEvent.${type}` }),
       )
       .toArray(),
-    ...EventV2.registry
-      .values()
+    ...EventManifest.Latest.values()
       .filter(
         (definition) =>
-          definition.sync !== undefined && // kilocode_change
-          !registry.has(versionedType(definition.type, definition.sync.version)), // kilocode_change
+          definition.durable !== undefined && // kilocode_change
+          !registry.has(versionedType(definition.type, definition.durable.version)), // kilocode_change
       )
       .map((definition) =>
         EffectSchema.Struct({
           type: EffectSchema.Literal("sync"),
-          name: EffectSchema.Literal(versionedType(definition.type, definition.sync!.version)), // kilocode_change
+          name: EffectSchema.Literal(versionedType(definition.type, definition.durable!.version)), // kilocode_change
           id: EffectSchema.String,
           seq: EffectSchema.Finite,
-          aggregateID: EffectSchema.Literal(definition.sync!.aggregate), // kilocode_change
+          aggregateID: EffectSchema.Literal(definition.durable!.aggregate), // kilocode_change
           data: definition.data,
         }).annotate({ identifier: `SyncEvent.${definition.type}` }),
       )

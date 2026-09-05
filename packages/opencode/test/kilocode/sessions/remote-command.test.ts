@@ -12,6 +12,36 @@ describe("RemoteCommand", () => {
     expect(RemoteCommand.ListRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
   })
 
+  test("validates list_directories requests and responses", () => {
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, path: "sub/dir" }).success).toBe(true)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 2 }).success).toBe(false)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
+    expect(RemoteCommand.ListDirectoriesRequest.safeParse({ protocolVersion: 1, path: "" }).success).toBe(false)
+    expect(
+      RemoteCommand.ListDirectoriesRequest.safeParse({
+        protocolVersion: 1,
+        path: "x".repeat(RemoteCommand.MAX_STRING_LENGTH + 1),
+      }).success,
+    ).toBe(false)
+
+    expect(
+      RemoteCommand.ListDirectoriesResponse.safeParse({
+        protocolVersion: 1,
+        path: "",
+        directories: [{ name: "src", path: "src" }],
+      }).success,
+    ).toBe(true)
+    expect(
+      RemoteCommand.ListDirectoriesResponse.safeParse({
+        protocolVersion: 1,
+        path: "",
+        directories: [],
+        extra: true,
+      }).success,
+    ).toBe(false)
+  })
+
   test("validates strict exit CLI requests", () => {
     expect(RemoteCommand.ExitRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
     expect(RemoteCommand.ExitRequest.safeParse({}).success).toBe(false)
@@ -727,6 +757,50 @@ describe("RemoteCommand", () => {
 
   // Even when the catalog advertises "compact" (the synthesized built-in),
   // a name not in the catalog must still be rejected.
+  test("resume commands appear from the current catalog", () => {
+    const catalog = RemoteCommand.build([
+      {
+        name: "resume-claude",
+        description: "import a Claude Code session transcript",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+      {
+        name: "resume-codex",
+        description: "import an OpenAI Codex session transcript",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+    ])
+
+    const names = catalog.commands.map((item) => item.name)
+    expect(names).toContain("resume-claude")
+    expect(names).toContain("resume-codex")
+    expect(names).toContain("compact")
+    expect(JSON.stringify(catalog)).not.toContain("template")
+    expect(JSON.stringify(catalog)).not.toContain("must-not-leak")
+    expect(catalog.commands.find((item) => item.name === "resume-claude")?.source).toBe("command")
+    expect(catalog.commands.find((item) => item.name === "resume-codex")?.source).toBe("command")
+  })
+
+  test("resume commands disappear from a catalog without them", () => {
+    const catalog = RemoteCommand.build([
+      {
+        name: "review",
+        description: "Review changes",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+    ])
+
+    const names = catalog.commands.map((item) => item.name)
+    expect(names).not.toContain("resume-claude")
+    expect(names).not.toContain("resume-codex")
+  })
+
   test("execute rejects arbitrary names even when the catalog advertises built-in compact", async () => {
     const calls: unknown[] = []
     const remote = RemoteCommand.create({

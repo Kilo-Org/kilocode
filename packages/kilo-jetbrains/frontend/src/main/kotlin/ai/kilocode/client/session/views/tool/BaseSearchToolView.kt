@@ -3,10 +3,11 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -19,7 +20,8 @@ abstract class BaseSearchToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts,
     private val repo: String? = null,
-) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }) {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -34,8 +36,6 @@ abstract class BaseSearchToolView(
     protected abstract fun viewName(): String
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
-        parts.targets.forEach { bindHeader(it) }
         applyStyle(style)
         sync()
     }
@@ -53,7 +53,7 @@ abstract class BaseSearchToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight() + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -63,7 +63,16 @@ abstract class BaseSearchToolView(
         item = content
         var changed = sync()
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        val md = toolBodyMarkdown(item)
+        return popup("tool", item.name, md.isNotBlank()) {
+            markdownPopupBody(style, md, options = POPUP_OPTS, foreground = bodyColor())
+        }
     }
 
     @RequiresEdt
@@ -104,7 +113,7 @@ abstract class BaseSearchToolView(
     @RequiresEdt
     internal fun headerComponent() = parts.header
     @RequiresEdt
-    internal fun centerComponent() = parts.center
+    internal fun centerComponent() = parts.fill
     @RequiresEdt
     internal fun targetComponents() = parts.targets
 
@@ -117,7 +126,15 @@ abstract class BaseSearchToolView(
         parts.targets.forEach { changed = setFont(it, style.regularFont) || changed }
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = applyBodyStyle() || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -129,7 +146,7 @@ abstract class BaseSearchToolView(
         changed = setForeground(parts.glyph, color(item)) || changed
         changed = setText(parts.title, toolTitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.weak()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Text.Secondary.foreground()) || changed
         changed = syncTargets() || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
@@ -138,6 +155,7 @@ abstract class BaseSearchToolView(
             body.foreground = bodyColor()
             changed = true
         }
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 
@@ -148,7 +166,7 @@ abstract class BaseSearchToolView(
             val text = values.getOrNull(index) ?: ""
             changed = setVisible(label, text.isNotBlank()) || changed
             changed = setTargetText(label, text) || changed
-            changed = setForeground(label, UiStyle.Colors.fg()) || changed
+            changed = setForeground(label, SessionUiStyle.Colors.foreground()) || changed
         }
         return changed
     }
@@ -176,7 +194,7 @@ abstract class BaseSearchToolView(
         return body.applyStyle(style)
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
 
     private fun bodyMaxHeight(): Int {
         val body = parts.content ?: return 0

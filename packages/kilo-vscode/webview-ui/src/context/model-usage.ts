@@ -46,6 +46,12 @@ export function tokenSummary(usage: SessionModelUsage): TokenSummary {
   }
 }
 
+export function cacheRate(model: SessionModelUsage["models"][number]) {
+  const total = model.tokens.input + model.tokens.cache.read + model.tokens.cache.write
+  if (total === 0) return "-"
+  return `${((model.tokens.cache.read / total) * 100).toFixed(1)}%`
+}
+
 export function groupModelUsage(models: SessionModelUsage["models"], providers: Record<string, Provider>) {
   const groups = new Map<string, { providerID: string; providerName: string; models: SessionModelUsage["models"] }>()
   for (const model of models) {

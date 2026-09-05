@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Session } from "./session"
@@ -13,7 +14,7 @@ import { Config } from "@/config/config"
 import { NotFoundError } from "@/storage/storage"
 
 import { Effect, Layer, Context } from "effect"
-import * as DateTime from "effect/DateTime"
+import * as DateTime from "effect/DateTime" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
@@ -26,22 +27,15 @@ import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { SessionEvent } from "@opencode-ai/core/session/event"
-import { SessionMessage } from "@opencode-ai/core/session/message"
+import { SessionEvent } from "@opencode-ai/core/session/event" // kilocode_change
+import { SessionMessage } from "@opencode-ai/core/session/message" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { EventV2 } from "@opencode-ai/core/event"
 import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { buildPrompt } from "@opencode-ai/core/session/compaction"
+import { SessionCompactionEvent } from "@opencode-ai/schema/session-compaction-event"
 
-export const Event = {
-  Compacted: EventV2.define({
-    type: "session.compacted",
-    schema: {
-      sessionID: SessionID,
-    },
-  }),
-}
+export const Event = SessionCompactionEvent
 
 export const PRUNE_MINIMUM = 20_000
 export const PRUNE_PROTECT = 40_000
@@ -177,7 +171,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Se
 
 export const use = serviceUse(Service)
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
@@ -291,11 +285,17 @@ export const layer = Layer.effect(
       let pruned = 0
       const toPrune: SessionV1.ToolPart[] = []
       let turns = 0
+      let steps = 0
+      let recent = true
 
       loop: for (let msgIndex = msgs.length - 1; msgIndex >= 0; msgIndex--) {
         const msg = msgs[msgIndex]
         if (msg.info.role === "user") turns++
-        if (turns < 2) continue
+        if (msg.info.role === "assistant") {
+          if (msg.info.summary) recent = false
+          if (msg.info.time.completed && msg.info.finish && msg.info.finish !== "error" && !msg.info.error) steps++
+        }
+        if (turns < 2 && (!recent || steps <= 2)) continue
         if (msg.info.role === "assistant" && msg.info.summary) break loop
         for (let partIndex = msg.parts.length - 1; partIndex >= 0; partIndex--) {
           const part = msg.parts[partIndex]
@@ -351,6 +351,18 @@ export const layer = Layer.effect(
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
           if (msg.info.role === "user" && !msg.parts.some((p) => p.type === "compaction")) {
+            const progress = input.messages
+              .slice(i + 1, idx)
+              .some(
+                (item) =>
+                  item.info.role === "assistant" &&
+                  (item.info.finish ||
+                    item.parts.some(
+                      (part) =>
+                        part.type === "tool" || ((part.type === "text" || part.type === "reasoning") && !!part.text),
+                    )),
+              )
+            if (progress) break
             replay = { info: msg.info, parts: msg.parts }
             messages = input.messages.slice(0, i)
             break
@@ -374,11 +386,12 @@ export const layer = Layer.effect(
       const prior = completedCompactions(history)
       const hidden = new Set(prior.flatMap((item) => [item.userIndex, item.assistantIndex]))
       const previousSummary = prior.at(-1)?.summary
-      const selected = yield* select({
-        messages: history.filter((_, index) => !hidden.has(index)),
-        cfg,
-        model,
-      })
+      // kilocode_change start
+      const available = history.filter((_, index) => !hidden.has(index))
+      const selected = replay
+        ? { head: available, tail_start_id: undefined }
+        : yield* select({ messages: available, cfg, model })
+      // kilocode_change end
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
         "experimental.session.compacting",
@@ -526,6 +539,7 @@ export const layer = Layer.effect(
             format: original.format,
             tools: original.tools,
             system: original.system,
+            editorContext: original.editorContext, // kilocode_change
           })
           KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
           for (const part of replay.parts) {
@@ -537,6 +551,7 @@ export const layer = Layer.effect(
                 : part
             yield* session.updatePart({
               ...replayPart,
+              ...(replayPart.type === "text" && { synthetic: true }),
               id: PartID.ascending(),
               messageID: replayMsg.id,
               sessionID: input.sessionID,
@@ -706,30 +721,22 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(SessionProcessor.defaultLayer),
-    Layer.provide(Agent.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(RuntimeFlags.defaultLayer),
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Database.defaultLayer), // kilocode_change
-  ),
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
-export const node = LayerNode.make(layer, [
-  Config.node,
-  Session.node,
-  Agent.node,
-  Plugin.node,
-  SessionProcessor.node,
-  Provider.node,
-  EventV2Bridge.node,
-  RuntimeFlags.node,
-  Database.node, // kilocode_change
-])
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [
+    Config.node,
+    Session.node,
+    Agent.node,
+    Plugin.node,
+    SessionProcessor.node,
+    Provider.node,
+    EventV2Bridge.node,
+    RuntimeFlags.node,
+    Database.node, // kilocode_change
+  ],
+})
 
 export * as SessionCompaction from "./compaction"

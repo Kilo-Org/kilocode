@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
@@ -14,14 +15,17 @@ import { tmpdir } from "../fixture/fixture"
 
 const projectID = ProjectV2.ID.make("proj_test")
 
-const runtime = makeRuntime(Database.Service, Database.defaultLayer)
+const runtime = makeRuntime(Database.Service, AppNodeBuilder.build(Database.node))
 const db = <A, E>(effect: Effect.Effect<A, E, Database.Service>) => runtime.runPromise(() => effect)
 
 async function prepare() {
   await db(
     Effect.gen(function* () {
       const { db } = yield* Database.Service
-      yield* db.delete(SessionTable).where(eq(SessionTable.id, SessionID.make(input().id))).run()
+      yield* db
+        .delete(SessionTable)
+        .where(eq(SessionTable.id, SessionID.make(input().id)))
+        .run()
       yield* db.delete(ProjectTable).where(eq(ProjectTable.id, projectID)).run()
       yield* db
         .insert(ProjectTable)
@@ -86,6 +90,46 @@ describe("SessionImportService.session", () => {
     const result = await SessionImportService.session(input())
 
     expect(result).toEqual({ ok: true, id: "ses_migrated_test", skipped: true })
+  })
+
+  test.each([false, true])("preserves imported fields with force=%s", async (force) => {
+    if (force) await SessionImportService.session(input())
+    const value = {
+      ...input(force),
+      shareURL: "https://example.test/session",
+      summary: { additions: 3, deletions: 2, files: 1, diffs: [] },
+      timeCreated: 11,
+      timeUpdated: 22,
+      timeCompacting: 33,
+      timeArchived: 44,
+    }
+    await SessionImportService.session(value)
+    const row = await db(
+      Database.Service.use(({ db }) =>
+        db
+          .select()
+          .from(SessionTable)
+          .where(eq(SessionTable.id, SessionID.make(value.id)))
+          .get(),
+      ),
+    )
+    expect(row).toMatchObject({
+      id: value.id,
+      project_id: value.projectID,
+      slug: value.slug,
+      directory: value.directory,
+      title: value.title,
+      version: value.version,
+      share_url: value.shareURL,
+      summary_additions: 3,
+      summary_deletions: 2,
+      summary_files: 1,
+      summary_diffs: [],
+      time_created: 11,
+      time_updated: 22,
+      time_compacting: 33,
+      time_archived: 44,
+    })
   })
 
   test("deletes and recreates the session when force is true", async () => {

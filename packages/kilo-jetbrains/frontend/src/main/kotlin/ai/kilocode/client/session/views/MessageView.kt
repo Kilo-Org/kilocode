@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
@@ -18,6 +19,8 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -27,13 +30,13 @@ import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.MessageErrorDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Point
 import java.awt.Graphics
@@ -65,6 +68,7 @@ class MessageView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -92,10 +96,14 @@ class MessageView(
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
     private var wrap: PromptWrap? = null
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
+    private var reverted = false
+    private var failure: MessageErrorView? = null
 
     init {
         isOpaque = false
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         border = assistantBorder()
 
         // Populate content that already exists (e.g. after loadHistory)
@@ -104,6 +112,52 @@ class MessageView(
             if (isHidden(content)) continue
             addPart(content)
         }
+        syncVisibility()
+    }
+
+    /**
+     * Show, update, or drop the failure this message ended with. Returns true when anything visible
+     * changed, so the panel only relayouts on a real change — `message.updated` also fires on every
+     * streamed token/cost delta.
+     *
+     * [SessionModel.upsertMessage] replaces the [Message] instance while this view keeps the original,
+     * so the error has to be passed in rather than read back off [msg].
+     */
+    @RequiresEdt
+    fun syncError(error: MessageErrorDto?): Boolean {
+        val text = failureText(error)
+        val existing = failure
+        if (text == null) {
+            if (existing == null) return false
+            failure = null
+            remove(existing)
+            refresh()
+            return true
+        }
+        if (existing != null) {
+            if (!existing.setText(text)) return false
+            refresh()
+            return true
+        }
+        val view = MessageErrorView().also {
+            it.applyStyle(style)
+            it.setText(text)
+        }
+        failure = view
+        add(view)
+        refresh()
+        return true
+    }
+
+    /** Insertion slot that keeps the failure card last, or -1 to append when there is none. */
+    private fun tail(): Int = failure?.let { components.indexOf(it) } ?: -1
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        // Rebind parts created before the opener was wired (e.g. history load), matching the
+        // late-binding TurnView already does for its ModifiedFilesView card.
+        for (view in parts.values) if (view is EditToolView) view.setDiffOpener(openDiff, sessionId)
     }
 
     /**
@@ -114,6 +168,16 @@ class MessageView(
         if (hidden == ref) return
         hidden = ref
         rebuildParts()
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
     }
 
     /** Add or update the renderer for [content]. */
@@ -200,12 +264,11 @@ class MessageView(
             }
         }
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item)
+        wrapPrompt(view)?.let { add(it, tail()) }
     }
 
     @RequiresEdt
@@ -215,7 +278,9 @@ class MessageView(
             it.hover = hover
             it.applyStyle(style)
             attachments = it
-            add(it)
+            val node = ensurePromptWrap()
+            promptBox?.add(it, BorderLayout.SOUTH)
+            if (node.parent == null) add(node, tail())
         }
         view.upsert(content)
         parts[content.id] = view
@@ -241,20 +306,23 @@ class MessageView(
 
     @RequiresEdt
     private fun replacePart(content: Content, existing: PartView) {
-        val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
+        // A replaced tool view is a direct child, so re-insert at its own slot. Only fall back to
+        // the prompt wrap's index when the replaced view is nested inside it, otherwise the wrap's
+        // lower index would push the replacement above the prompt bubble on user messages.
+        val at = (if (existing.parent !== this) components.indexOf(wrap) else components.indexOfFirst { it === existing })
+            .takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         aliases.values.removeAll { it == content.id }
         sources.keys.removeAll { it !in aliases }
-        detach(existing)
-        remove(existing)
+        removeView(existing)
+        if (existing === prompt) prompt = null
         Disposer.dispose(existing)
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item, at)
+        wrapPrompt(view)?.let { add(it, at) }
         syncBorder()
         refresh()
     }
@@ -282,10 +350,11 @@ class MessageView(
         }
         aliases.values.removeAll { it == contentId }
         sources.keys.removeAll { it !in aliases }
-        detach(view)
-        remove(view)
+        removeView(view)
         Disposer.dispose(view)
+        if (view === prompt) prompt = null
         syncBorder()
+        syncPromptWrap()
         refresh()
         return true
     }
@@ -313,10 +382,10 @@ class MessageView(
     @RequiresEdt
     private fun rebuildParts() {
         parts.values.distinct().forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -340,9 +409,9 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg)) { openAttachment(msg.info.id, it) }
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
+        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     }
 
     private fun syncPromptMentions() {
@@ -422,18 +491,21 @@ class MessageView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         for (view in parts.values) view.applyStyle(style)
+        failure?.applyStyle(style)
         refresh()
     }
 
     @RequiresEdt
     override fun dispose() {
         parts.values.forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
+        failure?.let { remove(it) }
+        failure = null
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -454,7 +526,11 @@ class MessageView(
             super.paintComponent(g)
             return
         }
-        paintPromptBox(g, this)
+        // Historical user prompts render their text as a plain child that relies on this surface fill,
+        // so paint it whenever the message has content. An empty user message (a bare turn anchor with
+        // no parts) lays out ~1px tall; painting its bubble there would leave a thin light stripe at
+        // the top of the turn, so skip it.
+        if (componentCount > 0) paintPromptBox(g, this)
         super.paintComponent(g)
     }
 
@@ -462,23 +538,39 @@ class MessageView(
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+            val arc = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
-            val x = pt.x
-            val y = pt.y
-            val w = box.width - 1
-            val h = box.height - 1
-            g2.color = style.editorScheme.defaultBackground
-            g2.fillRoundRect(x, y, box.width, box.height, arc, arc)
-            g2.color = SessionUiStyle.View.Outline.color()
-            if (w > 0 && h > 0) g2.drawRoundRect(x, y, w, h, arc, arc)
+            g2.color = SessionUiStyle.View.Prompt.bgColor(style)
+            g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
         } finally {
             g2.dispose()
         }
     }
 
+    /**
+     * Mark this message as reverted (rolled back). A reverted message is hidden regardless of its
+     * content; the panel drives this from the model's revert state.
+     */
+    @RequiresEdt
+    fun setReverted(value: Boolean) {
+        reverted = value
+        syncVisibility()
+    }
+
+    /**
+     * An empty message (no rendered parts) would otherwise lay out as a ~1px row and add a stray gap
+     * at the top of its turn — a bare user turn anchor is the common case. Keep such a message present
+     * for lookup/streaming but invisible so [ai.kilocode.client.session.ui.SessionLayout] skips it and
+     * its gap; it reappears as soon as content arrives. Reverted messages stay hidden either way.
+     */
+    @RequiresEdt
+    private fun syncVisibility() {
+        isVisible = componentCount > 0 && !reverted
+    }
+
     @RequiresEdt
     private fun refresh() {
+        syncVisibility()
         revalidate()
         repaint()
     }
@@ -490,19 +582,42 @@ class MessageView(
     }
 
     @RequiresEdt
-    private fun wrapPrompt(view: PartView): JComponent {
+    private fun removeView(view: PartView) {
+        detach(view)
+        view.parent?.remove(view)
+    }
+
+    @RequiresEdt
+    private fun wrapPrompt(view: PartView): JComponent? {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
+        val node = ensurePromptWrap()
+        val box = promptBox ?: return node
+        if (view.parent !== box) box.add(view, BorderLayout.CENTER)
+        node.bar.setActive(true)
+        return node.takeIf { it.parent == null }
+    }
+
+    @RequiresEdt
+    private fun ensurePromptWrap(): PromptWrap {
+        val existing = wrap
+        if (existing != null) return existing
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
-            it.add(view, BorderLayout.CENTER)
             promptBox = it
         }
-        val node = PromptWrap(box)
-        wrap = node
-        node.bar.setActive(true)
-        return node
+        return PromptWrap(box).also { wrap = it }
+    }
+
+    @RequiresEdt
+    private fun syncPromptWrap() {
+        val node = wrap ?: return
+        val box = promptBox ?: return
+        if (box.componentCount > 0) return
+        node.parent?.remove(node)
+        wrap = null
+        promptBox = null
     }
 
     private inner class PromptWrap(
@@ -580,7 +695,7 @@ class MessageView(
         private fun queue(onDelete: () -> Unit) = Stack.horizontal(UiStyle.Gap.sm()).also { row ->
             row.isOpaque = false
             row.next(JBLabel(KiloBundle.message("session.queued")).apply {
-                foreground = UIUtil.getContextHelpForeground()
+                foreground = SessionUiStyle.Text.Secondary.foreground()
             })
             row.next(toolbarButton(
                 ToolbarButtonAction(

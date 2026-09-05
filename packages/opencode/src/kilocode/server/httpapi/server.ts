@@ -6,7 +6,8 @@ import { corsVaryFix } from "@/server/routes/instance/httpapi/middleware/cors-va
 import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
 import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
 import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
-import { BackgroundJob } from "@/background/job"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { AppNodeBuilderV1 } from "@/effect/app-node-builder-v1" // kilocode_change - defaultLayer aliases are gone
 
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { agentBuilderHandlers } from "./handlers/agent-builder"
@@ -22,6 +23,7 @@ import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
 import { memoryHandlers } from "./handlers/memory"
+import { migrateHandlers } from "./handlers/migrate"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sandboxHandlers } from "./handlers/sandbox"
@@ -43,9 +45,10 @@ export const provide = Layer.provide([
   kiloGatewayHandlers,
   kilocodeHandlers,
   memoryHandlers,
+  migrateHandlers,
   networkHandlers,
   remoteHandlers,
-  sandboxHandlers.pipe(Layer.provide(BackgroundJob.defaultLayer)),
+  sandboxHandlers,
   sessionImportHandlers,
   suggestionHandlers,
   telemetryHandlers,
@@ -66,6 +69,7 @@ export function provideListener(opts?: CorsOptions) {
     fenceLayer,
     cors,
     KiloViewers.defaultLayer, // kilocode_change
+    AppNodeBuilderV1.build(EffectFlock.node),
     FetchHttpClient.layer,
     HttpServer.layerServices,
     Layer.succeed(CorsConfig)(opts),

@@ -7,7 +7,8 @@
 
 import { createEffect, createMemo, on, onCleanup } from "solid-js"
 import { useKeyboard, useRenderer } from "@opentui/solid"
-import { TextAttributes } from "@opentui/core"
+import { resolveRenderLib, TextAttributes } from "@opentui/core"
+import { KiloTerminalActivity } from "./terminal-activity"
 import * as Clipboard from "@tui/clipboard"
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
@@ -83,6 +84,17 @@ export function useSessionEffects(deps: {
   const session = createMemo(() => (deps.route.data.type === "session" ? deps.route.data.sessionID : undefined))
   let active = true
   const meta = { prev: "" }
+
+  KiloTerminalActivity.use({
+    enabled: process.env.KILO_TERMINAL_ACTIVITY,
+    session,
+    data: deps.sync.data,
+    subscribe: (handler) =>
+      deps.sdk.event.on("event", (event) => {
+        if (event.payload.type !== "sync") handler(event.payload)
+      }),
+    write: (data) => resolveRenderLib().writeOut(renderer.rendererPtr, data),
+  })
 
   function send() {
     const id = session()
@@ -279,10 +291,12 @@ export function init() {
         name: "permission.allow_everything",
         get title() {
           return isAllowEverything(sync.data.config.permission)
-            ? "Disable auto-approve mode"
-            : "Enable auto-approve mode"
+            ? "Disable saved auto-approve"
+            : "Enable saved auto-approve"
         },
-        desc: "Toggle auto-approve for all permission prompts, saved to global config",
+        // kilocode_change - the saved rule is server side, so it also stops VS Code, JetBrains and
+        // headless runs from prompting
+        desc: "Toggle auto-approve for all permission prompts, saved to global config and shared with every client",
         category: "System",
         slashName: "auto-approve",
         slashAliases: ["autoapprove", "approve-all", "approveall"],

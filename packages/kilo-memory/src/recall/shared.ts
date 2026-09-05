@@ -94,6 +94,7 @@ export namespace MemoryShared {
     ]
   }
 
+  /** @deprecated Memory audit persistence was removed. */
   export function audit(ops: MemoryOperations.Op[]) {
     return ops.map((item) =>
       item.action === "add"

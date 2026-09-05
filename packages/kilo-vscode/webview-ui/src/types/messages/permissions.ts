@@ -18,6 +18,8 @@ export interface PermissionFileDiff {
   patch?: string
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified"
+  files?: PermissionFileDiff[]
 }
 
 export interface PermissionPatchFile {
@@ -44,6 +46,9 @@ export interface PermissionRequest {
     files?: PermissionPatchFile[]
     description?: string
     heredoc?: boolean
+    skillShell?: boolean
+    commands?: string[]
+    skill?: string
   }
   message?: string
   tool?: { messageID: string; callID: string }

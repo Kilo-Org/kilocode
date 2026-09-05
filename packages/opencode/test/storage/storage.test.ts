@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import path from "path"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Exit, Layer } from "effect"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -11,7 +12,7 @@ import { testEffect } from "../lib/effect"
 
 const dir = path.join(Global.Path.data, "storage")
 
-const it = testEffect(Layer.mergeAll(Storage.defaultLayer, FSUtil.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(LayerNode.compile(LayerNode.group([Storage.node, FSUtil.node, CrossSpawnSpawner.node])))
 
 const scope = Effect.fnUntraced(function* () {
   const root = ["storage_test", crypto.randomUUID()]
@@ -23,41 +24,18 @@ const scope = Effect.fnUntraced(function* () {
   return { root, svc }
 })
 
-// remap(root) rewrites any path under Global.Path.data to live under `root` instead.
-// Used by remappedFs to build an FSUtil that Storage thinks is the real global
-// data dir but actually targets a tmp dir — letting migration tests stage legacy layouts.
-// NOTE: only the 6 methods below are intercepted. If Storage starts using a different
-// FSUtil method that touches Global.Path.data, add it here.
-function remap(root: string, file: string) {
-  if (file === Global.Path.data) return root
-  if (file.startsWith(Global.Path.data + path.sep)) return path.join(root, path.relative(Global.Path.data, file))
-  return file
-}
-
-function remappedFs(root: string) {
-  return Layer.effect(
-    FSUtil.Service,
-    Effect.gen(function* () {
-      const fs = yield* FSUtil.Service
-      return FSUtil.Service.of({
-        ...fs,
-        isDir: (file) => fs.isDir(remap(root, file)),
-        readJson: (file) => fs.readJson(remap(root, file)),
-        writeWithDirs: (file, content, mode) => fs.writeWithDirs(remap(root, file), content, mode),
-        readFileString: (file) => fs.readFileString(remap(root, file)),
-        remove: (file) => fs.remove(remap(root, file)),
-        glob: (pattern, options) =>
-          fs.glob(pattern, options?.cwd ? { ...options, cwd: remap(root, options.cwd) } : options),
-      })
-    }),
-  ).pipe(Layer.provide(FSUtil.defaultLayer))
-}
-
-// Layer.fresh forces a new Storage instance — without it, Effect's in-test layer cache
-// returns the outer testEffect's Storage (which uses the real FSUtil), not a new
-// one built on top of remappedFs.
-const remappedStorage = (root: string) =>
-  Layer.fresh(Storage.layer.pipe(Layer.provide(remappedFs(root)), Layer.provide(Git.defaultLayer)))
+// kilocode_change start - Storage rooted at `<root>/storage` via the injectable layer — migration
+// tests stage legacy layouts (e.g. `<root>/project`) as siblings, matching migration 1's
+// `../project` walk. Layer.fresh forces a new Storage instance — without it, Effect's in-test
+// layer cache returns the outer testEffect's Storage (rooted at the real data dir), not a new
+// one rooted at the tmp dir.
+const injectedStorage = (root: string) =>
+  Layer.fresh(
+    Storage.layerFromDir(path.join(root, "storage")).pipe(
+      Layer.provide(LayerNode.compile(LayerNode.group([FSUtil.node, Git.node]))),
+    ),
+  )
+// kilocode_change end
 
 describe("Storage", () => {
   it.live("round-trips JSON content", () =>
@@ -227,7 +205,7 @@ describe("Storage", () => {
           title: "legacy",
           summary: { additions: 5, deletions: 5 },
         })
-      }).pipe(Effect.provide(remappedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       expect(yield* fs.readFileString(path.join(storage, "migration"))).toBe("2")
     }),
@@ -269,7 +247,7 @@ describe("Storage", () => {
           role: "user",
           text: "hello",
         })
-      }).pipe(Effect.provide(remappedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       expect(yield* fs.readFileString(path.join(storage, "migration"))).toBe("2")
     }),
@@ -287,7 +265,7 @@ describe("Storage", () => {
       yield* Effect.gen(function* () {
         const svc = yield* Storage.Service
         expect(yield* svc.list(["project"])).toEqual([])
-      }).pipe(Effect.provide(remappedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       const exit = yield* fs.access(path.join(storage, "migration")).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)

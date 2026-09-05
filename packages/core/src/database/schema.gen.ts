@@ -86,6 +86,39 @@ export default {
           CONSTRAINT \`fk_event_aggregate_id_event_sequence_aggregate_id_fk\` FOREIGN KEY (\`aggregate_id\`) REFERENCES \`event_sequence\`(\`aggregate_id\`) ON DELETE CASCADE
         );
       `)
+      // kilocode_change start
+      yield* tx.run(`
+        CREATE TABLE \`kilo_board_message\` (
+          \`id\` text PRIMARY KEY,
+          \`board_root_session_id\` text NOT NULL,
+          \`seq\` integer NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`sender_session_id\` text NOT NULL,
+          \`recipient\` text NOT NULL,
+          \`type\` text NOT NULL,
+          \`body\` text NOT NULL,
+          \`reply_to\` text,
+          \`source_message_id\` text NOT NULL,
+          \`source_call_id\` text NOT NULL,
+          CONSTRAINT \`fk_kilo_board_message_board_root_session_id_kilo_board_root_session_id_fk\` FOREIGN KEY (\`board_root_session_id\`) REFERENCES \`kilo_board\`(\`root_session_id\`) ON DELETE CASCADE
+        );
+      `)
+      // kilocode_change end
+      // kilocode_change start
+      yield* tx.run(`
+        CREATE TABLE \`kilo_board\` (
+          \`root_session_id\` text PRIMARY KEY,
+          \`objective\` text NOT NULL,
+          \`objective_message_id\` text,
+          \`next_seq\` integer DEFAULT 1 NOT NULL,
+          \`message_count\` integer DEFAULT 0 NOT NULL,
+          \`message_bytes\` integer DEFAULT 0 NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_kilo_board_root_session_id_session_id_fk\` FOREIGN KEY (\`root_session_id\`) REFERENCES \`session\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      // kilocode_change end
       yield* tx.run(`
         CREATE TABLE \`permission\` (
           \`id\` text PRIMARY KEY,
@@ -149,11 +182,8 @@ export default {
         CREATE TABLE \`session_context_epoch\` (
           \`session_id\` text PRIMARY KEY,
           \`baseline\` text NOT NULL,
-          \`agent\` text DEFAULT 'build' NOT NULL,
           \`snapshot\` text NOT NULL,
           \`baseline_seq\` integer NOT NULL,
-          \`replacement_seq\` integer,
-          \`revision\` integer DEFAULT 0 NOT NULL,
           CONSTRAINT \`fk_session_context_epoch_session_id_session_id_fk\` FOREIGN KEY (\`session_id\`) REFERENCES \`session\`(\`id\`) ON DELETE CASCADE
         );
       `)
@@ -241,16 +271,40 @@ export default {
       `)
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
-      yield* tx.run(`CREATE UNIQUE INDEX \`permission_project_action_resource_idx\` ON \`permission\` (\`project_id\`,\`action\`,\`resource\`);`)
-      yield* tx.run(`CREATE INDEX \`message_session_time_created_id_idx\` ON \`message\` (\`session_id\`,\`time_created\`,\`id\`);`)
+      // kilocode_change start
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`kilo_board_message_board_seq_idx\` ON \`kilo_board_message\` (\`board_root_session_id\`,\`seq\`);`,
+      )
+      // kilocode_change end
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`permission_project_action_resource_idx\` ON \`permission\` (\`project_id\`,\`action\`,\`resource\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`message_session_time_created_id_idx\` ON \`message\` (\`session_id\`,\`time_created\`,\`id\`);`,
+      )
       yield* tx.run(`CREATE INDEX \`part_message_id_id_idx\` ON \`part\` (\`message_id\`,\`id\`);`)
       yield* tx.run(`CREATE INDEX \`part_session_idx\` ON \`part\` (\`session_id\`);`)
-      yield* tx.run(`CREATE INDEX \`session_input_session_pending_delivery_seq_idx\` ON \`session_input\` (\`session_id\`,\`promoted_seq\`,\`delivery\`,\`admitted_seq\`);`)
-      yield* tx.run(`CREATE UNIQUE INDEX \`session_input_session_admitted_seq_idx\` ON \`session_input\` (\`session_id\`,\`admitted_seq\`);`)
-      yield* tx.run(`CREATE UNIQUE INDEX \`session_input_session_promoted_seq_idx\` ON \`session_input\` (\`session_id\`,\`promoted_seq\`);`)
-      yield* tx.run(`CREATE UNIQUE INDEX \`session_message_session_seq_idx\` ON \`session_message\` (\`session_id\`,\`seq\`);`)
-      yield* tx.run(`CREATE INDEX \`session_message_session_type_seq_idx\` ON \`session_message\` (\`session_id\`,\`type\`,\`seq\`);`)
-      yield* tx.run(`CREATE INDEX \`session_message_session_time_created_id_idx\` ON \`session_message\` (\`session_id\`,\`time_created\`,\`id\`);`)
+      yield* tx.run(
+        `CREATE INDEX \`recall_part_search_idx\` ON \`part\` (\`session_id\`,\`id\`,\`message_id\`,json_extract("data", '$.type'),CASE WHEN json_extract("data", '$.type') = 'text' THEN coalesce(json_extract("data", '$.text'), '') WHEN json_extract("data", '$.type') = 'file' THEN trim(coalesce(json_extract("data", '$.filename'), '') || ' ' || CASE WHEN coalesce(json_extract("data", '$.url'), '') NOT LIKE 'data:%' THEN coalesce(json_extract("data", '$.url'), '') ELSE '' END || ' ' || coalesce(json_extract("data", '$.source.path'), '') || ' ' || coalesce(json_extract("data", '$.source.name'), '') || ' ' || CASE WHEN coalesce(json_extract("data", '$.source.uri'), '') NOT LIKE 'data:%' THEN coalesce(json_extract("data", '$.source.uri'), '') ELSE '' END || ' ' || coalesce(json_extract("data", '$.source.clientName'), '')) ELSE coalesce(json_extract("data", '$.state.error'), '') END) WHERE json_valid("part"."data") AND ((json_extract("part"."data", '$.type') = 'text' AND coalesce(json_extract("part"."data", '$.synthetic'), 0) = 0 AND coalesce(json_extract("part"."data", '$.ignored'), 0) = 0) OR json_extract("part"."data", '$.type') = 'file' OR (json_extract("part"."data", '$.type') = 'tool' AND json_extract("part"."data", '$.state.status') = 'error'));`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`session_input_session_pending_delivery_seq_idx\` ON \`session_input\` (\`session_id\`,\`promoted_seq\`,\`delivery\`,\`admitted_seq\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`session_input_session_admitted_seq_idx\` ON \`session_input\` (\`session_id\`,\`admitted_seq\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`session_input_session_promoted_seq_idx\` ON \`session_input\` (\`session_id\`,\`promoted_seq\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`session_message_session_seq_idx\` ON \`session_message\` (\`session_id\`,\`seq\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`session_message_session_type_seq_idx\` ON \`session_message\` (\`session_id\`,\`type\`,\`seq\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`session_message_session_time_created_id_idx\` ON \`session_message\` (\`session_id\`,\`time_created\`,\`id\`);`,
+      )
       yield* tx.run(`CREATE INDEX \`session_message_time_created_idx\` ON \`session_message\` (\`time_created\`);`)
       yield* tx.run(`CREATE INDEX \`session_project_idx\` ON \`session\` (\`project_id\`);`)
       yield* tx.run(`CREATE INDEX \`session_workspace_idx\` ON \`session\` (\`workspace_id\`);`)

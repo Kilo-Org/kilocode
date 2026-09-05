@@ -77,9 +77,10 @@ export function createPermissionBodyState(requestID: string): PermissionBodyStat
   }
 }
 
-export function permissionOptions(stage: PermissionStage): PermissionOption[] {
+export function permissionOptions(stage: PermissionStage, temporary?: boolean): PermissionOption[] {
+  // kilocode_change
   if (stage === "permission") {
-    return ["once", "always", "reject"]
+    return temporary ? ["once", "reject"] : ["once", "always", "reject"]
   }
 
   if (stage === "always") {
@@ -95,6 +96,17 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
   const info = toolPermissionInfo(request.permission, input, dict(request.metadata), pats)
   if (info) {
     return info
+  }
+
+  if (request.permission === "sandbox_escalation") {
+    const command = text(input.command)
+    return {
+      icon: "!",
+      title: "Allow Git operation outside the sandbox", // kilocode_change
+      lines: command
+        ? [`$ ${command}`, "This approval applies to this command only."]
+        : ["This approval applies to this command only."],
+    }
   }
 
   if (request.permission === "external_directory") {
@@ -123,6 +135,10 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
   }
 }
 
+export function temporaryPermission(request: PermissionRequest) {
+  return request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+}
+
 export function permissionAlwaysLines(request: PermissionRequest): string[] {
   if (request.always.length === 1 && request.always[0] === "*") {
     return [`This will allow ${request.permission} until Kilo is restarted.`] // kilocode_change
@@ -146,12 +162,14 @@ export function permissionReply(requestID: string, reply: PermissionReply["reply
   return {
     requestID,
     reply,
+    interactive: true, // kilocode_change - footer replies are human-driven; the server refuses non-interactive skill-shell approvals
     ...(message && message.trim() ? { message: message.trim() } : {}),
   }
 }
 
-export function permissionShift(state: PermissionBodyState, dir: -1 | 1): PermissionBodyState {
-  const list = permissionOptions(state.stage)
+export function permissionShift(state: PermissionBodyState, dir: -1 | 1, temporary?: boolean): PermissionBodyState {
+  // kilocode_change
+  const list = permissionOptions(state.stage, temporary) // kilocode_change
   if (list.length === 0) {
     return state
   }

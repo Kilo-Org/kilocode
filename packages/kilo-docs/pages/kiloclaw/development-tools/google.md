@@ -5,6 +5,8 @@ description: "Connect a dedicated Google account to KiloClaw for access to Gmail
 
 # Google Workspace Integration
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Connect a dedicated Google account to KiloClaw so it can interact with Google Workspace services — Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, People, Forms, Chat, Classroom, and Apps Script.
 
 {% callout type="warning" title="Use a dedicated Google account" %}

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { test, expect } from "bun:test"
 import os from "os"
@@ -14,14 +15,14 @@ import { MessageID, SessionID } from "../../src/session/schema"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Config } from "../../src/config/config"
 
-const events = EventV2Bridge.defaultLayer
+const events = AppNodeBuilder.build(EventV2Bridge.node)
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(Database.defaultLayer), Layer.provide(events)),
+  AppNodeBuilder.build(Permission.node),
   events,
-  CrossSpawnSpawner.defaultLayer,
-  InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
-).pipe(Layer.provide(RuntimeFlags.layer()), Layer.provide(Config.defaultLayer))
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(InstanceStore.node, [[InstanceStore.bootstrapNode, noopBootstrap]]), // kilocode_change
+).pipe(Layer.provide(RuntimeFlags.layer()), Layer.provide(AppNodeBuilder.build(Config.node)))
 const it = testEffect(Layer.mergeAll(env, RuntimeFlags.layer()))
 
 const rejectAll = (message?: string) =>

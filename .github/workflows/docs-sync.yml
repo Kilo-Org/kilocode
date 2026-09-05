@@ -66,13 +66,13 @@ jobs:
   sync:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    # Budget: 4 setup/collect + 90 triage + 120 edit + 2 verify + 10 fix + 2 upsert = 228 min, 12-minute reserve.
+    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 2 upsert = 238 min, 12-minute reserve.
     # These are ceilings, not costs: a caught-up run triages ~2 chunks and edits
     # ~1 batch and finishes in ~25 min. The old 35/50 pair was the binding
     # constraint on backlog drain — run 30306629290 deferred 54 PRs untriaged and
     # 31 unedited purely on budget, with no attempt made. See the throughput note
     # in the PR description for the arithmetic.
-    timeout-minutes: 240
+    timeout-minutes: 250
     env:
       # Both are required: without KILO_ORG_ID the gateway bills the key
       # owner's personal balance (402 "Add credits") instead of the org.
@@ -109,6 +109,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_SINCE: ${{ inputs.since }}
         run: node .github/docs-sync/watermark.mjs
+
+      - name: Learn from maintainer corrections
+        id: learn
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEARNINGS_BUDGET_MINUTES: "10"
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node .github/docs-sync/learn.mjs
 
       - name: Collect merged PRs
         id: collect
@@ -215,10 +224,15 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Write the learnings file
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        run: node .github/docs-sync/learn.mjs --apply
+
       - name: Upsert rolling PR
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
+          LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
           PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
           SINCE: ${{ steps.wm.outputs.since }}
           SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}

@@ -19,6 +19,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
 import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import { skillShellPrompt } from "@/kilocode/skills/display"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -192,6 +193,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               requestID: props.request.id,
               directory: props.directory,
               workspace: project.workspace.current(),
+              interactive: true, // kilocode_change - human answered this prompt
             })
           }}
         />
@@ -291,6 +293,20 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
+              // kilocode_change start - skill shell batches show the verbatim, escaped commands + skill title
+              const skillShell = skillShellPrompt(props.request.metadata)
+              if (skillShell) {
+                return {
+                  icon: "#",
+                  title: skillShell.title,
+                  body: (
+                    <box paddingLeft={1}>
+                      <For each={skillShell.commands}>{(cmd) => <text fg={theme.text}>{"$ " + cmd}</text>}</For>
+                    </box>
+                  ),
+                }
+              }
+              // kilocode_change end
               // kilocode_change start
               const meta = props.request.metadata ?? {}
               const desc =
@@ -317,6 +333,27 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 ),
               }
             }
+
+            // kilocode_change start - show sandbox escalation details and keep approval one-shot
+            if (permission === "sandbox_escalation") {
+              const meta = props.request.metadata ?? {}
+              const command = normalizeUrls(
+                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
+              )
+              return {
+                icon: "!",
+                title: "Allow Git operation outside the sandbox?",
+                body: (
+                  <box paddingLeft={1} flexDirection="column">
+                    <Show when={command}>
+                      <text fg={theme.text}>{"$ " + command}</text>
+                    </Show>
+                    <text fg={theme.textMuted}>This approval applies to this command only.</text>
+                  </box>
+                ),
+              }
+            }
+            // kilocode_change end
 
             if (permission === "task") {
               const type = typeof data.subagent_type === "string" ? data.subagent_type : "Unknown"
@@ -446,10 +483,13 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - hide "Always allow" for protected Kilo configuration access
-          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-            ? { once: "Allow once", reject: "Reject" }
-            : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
+          const options: Record<string, string> =
+            props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
+              ? { once: "Allow", reject: "Reject" }
+              : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+                ? { once: "Allow once", reject: "Reject" }
+                : { once: "Allow once", always: "Allow always", reject: "Reject" }
           // kilocode_change end
 
           const body = (
@@ -483,6 +523,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                   requestID: props.request.id,
                   directory: props.directory,
                   workspace: project.workspace.current(),
+                  interactive: true, // kilocode_change - human answered this prompt
                 })
               }}
             />

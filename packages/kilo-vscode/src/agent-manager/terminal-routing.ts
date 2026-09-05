@@ -34,6 +34,10 @@ export interface TerminalRoutingDeps {
   getRoot(): string | undefined
   /** Resolve a worktree id to its on-disk path, or undefined if unknown. */
   getWorktreePath(worktreeId: string): string | undefined
+  /** Project the current message is dispatched for; stamped onto
+   *  `terminal.created` so the webview can namespace its per-project
+   *  terminal state (worktree ids collide across projects). */
+  getProjectId(): string | undefined
   /** Output channel log — prefixed by the caller. */
   log(...args: unknown[]): void
   /** Send a message back to the webview. */
@@ -45,11 +49,15 @@ export interface TerminalRoutingDeps {
 /** True iff the message belongs to the terminal-tab subsystem. */
 function isTerminalMessage(
   m: AgentManagerInMessage,
-): m is Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }> {
+): m is Exclude<
+  Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }>,
+  { type: "agentManager.terminal.stop" | "agentManager.terminal.destinationSelected" }
+> {
   return (
     m.type === "agentManager.terminal.create" ||
     m.type === "agentManager.terminal.close" ||
-    m.type === "agentManager.terminal.resize"
+    m.type === "agentManager.terminal.resize" ||
+    m.type === "agentManager.terminal.restart"
   )
 }
 
@@ -80,13 +88,37 @@ export class TerminalRouter {
   handle(m: AgentManagerInMessage): boolean {
     if (!isTerminalMessage(m)) return false
     if (m.type === "agentManager.terminal.create") {
-      void this.handleCreate(m.createId, m.placement, m.worktreeId)
+      void this.handleCreate(m.createId, m.placement, m.worktreeId, m.cols, m.rows)
       return true
     }
     if (m.type === "agentManager.terminal.close") {
-      void this.manager.close(m.terminalId).then(() => {
-        this.deps.post({ type: "agentManager.terminal.closed", terminalId: m.terminalId })
+      void this.manager.close(m.terminalId).then((closed) => {
+        this.deps.post(
+          closed
+            ? { type: "agentManager.terminal.closed", terminalId: m.terminalId }
+            : {
+                type: "agentManager.terminal.error",
+                terminalId: m.terminalId,
+                message: "Failed to close terminal; it remains available for retry",
+              },
+        )
       })
+      return true
+    }
+    if (m.type === "agentManager.terminal.restart") {
+      void this.manager
+        .restart(m.terminalId, m.cols, m.rows)
+        .then((wsUrl) => {
+          if (!wsUrl) return
+          this.deps.post({ type: "agentManager.terminal.restarted", terminalId: m.terminalId, wsUrl })
+        })
+        .catch((error: unknown) => {
+          this.deps.post({
+            type: "agentManager.terminal.error",
+            terminalId: m.terminalId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        })
       return true
     }
     // resize
@@ -108,10 +140,27 @@ export class TerminalRouter {
     return manager.dispose()
   }
 
-  private async handleCreate(createId: string, placement: TerminalPlacement, worktreeId: string | null): Promise<void> {
+  blockDirectory(directory: string): Promise<() => void> {
+    return this.manager.blockDirectory(directory)
+  }
+
+  closeDirectory(directory: string): Promise<void> {
+    return this.manager.closeDirectory(directory)
+  }
+
+  private async handleCreate(
+    createId: string,
+    placement: TerminalPlacement,
+    worktreeId: string | null,
+    cols?: number,
+    rows?: number,
+  ): Promise<void> {
     const generation = this.generation
     const manager = this.manager
     const cwd = this.resolveCwd(worktreeId)
+    // Captured synchronously: the project scope is only current while the
+    // dispatch runs, not when the async create settles.
+    const pid = this.deps.getProjectId()
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
@@ -128,7 +177,7 @@ export class TerminalRouter {
       // Join the shared backend connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
       await this.deps.getClientAsync()
-      const created = await manager.create({ worktreeId, cwd, title })
+      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title, cols, rows })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
         return
@@ -138,6 +187,7 @@ export class TerminalRouter {
         createId,
         placement,
         worktreeId: created.worktreeId,
+        ...(pid ? { projectId: pid } : {}),
         terminalId: created.terminalId,
         title: created.title,
         wsUrl: created.wsUrl,

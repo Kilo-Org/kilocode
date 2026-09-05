@@ -29,6 +29,8 @@ This is especially useful for complex configuration like custom model definition
 
 Kilo reads JSONC config from a **global** location (`~/.config/kilo/kilo.jsonc`) and from your **project** (`kilo.jsonc`, or `.kilo/kilo.jsonc`). All clients — CLI, VS Code, and JetBrains — read the same files.
 
+If `kilo.json` or the legacy `opencode.json`, `opencode.jsonc`, or `config.json` files exist in the same locations, Kilo reads and deep-merges them as well. Clearing a setting in the Settings UI (for example, setting a model back to "Not set") removes it from every config file that contains it.
+
 {% callout type="warning" %}
 **Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
 {% /callout %}
@@ -102,6 +104,10 @@ Valid values are `expanded` and `collapsed`.
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+### Web Search
+
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
 
 ### Export and Import
 
@@ -180,6 +186,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -187,7 +194,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 ```json
 {
   "experimental": {
-    "codebase_search": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
@@ -207,3 +213,20 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 {% /tab %}
 {% /tabs %}
+
+### Kilo Swarm
+
+Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It is experimental and uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
+
+Enable **Kilo Swarm** in the VS Code **Experimental** settings, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`. It is off by default. This display name does not change the configuration key, tool names, stored board or session IDs, database migrations, history, or permissions.
+
+Use it when agents can benefit from discoveries during work:
+
+- **Search races:** agents try independent approaches to the same problem and share useful findings.
+- **Complementary teams:** agents work on different parts of a feature and share constraints or results.
+
+Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
+
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+
+All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.

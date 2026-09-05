@@ -1,23 +1,37 @@
 import { describe, expect } from "bun:test"
 import { ConfigProvider, Effect, Layer } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { it } from "../lib/effect"
 
 const fromConfig = (input: Record<string, unknown>) =>
-  RuntimeFlags.defaultLayer.pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown(input))))
+  AppNodeBuilder.build(RuntimeFlags.node).pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown(input))))
 
 const readFlags = RuntimeFlags.Service.useSync((flags) => flags)
 
 describe("RuntimeFlags", () => {
-  it.effect("defaultLayer defaults autoShare to false", () =>
+  it.effect("layer defaults autoShare to false", () =>
     Effect.gen(function* () {
       const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
 
       expect(flags.autoShare).toBe(false)
+      expect(flags.experimentalBackgroundSubagents).toBe(true) // kilocode_change
     }),
   )
 
-  it.effect("defaultLayer parses plugin flags from the active ConfigProvider", () =>
+  // kilocode_change start - preserve the background-subagent kill switch
+  it.effect("allows disabling background subagents explicitly", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(
+        Effect.provide(fromConfig({ KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "false" })),
+      )
+
+      expect(flags.experimentalBackgroundSubagents).toBe(false)
+    }),
+  )
+  // kilocode_change end
+
+  it.effect("layer parses plugin flags from the active ConfigProvider", () =>
     Effect.gen(function* () {
       const flags = yield* readFlags.pipe(
         Effect.provide(
@@ -50,7 +64,6 @@ describe("RuntimeFlags", () => {
       expect(flags.enableExperimentalModels).toBe(true)
       expect(flags.enableQuestionTool).toBe(true)
       expect(flags.experimentalReferences).toBe(true)
-      expect(flags.experimentalBackgroundSubagents).toBe(true)
       expect(flags.experimentalLspTy).toBe(false)
       expect(flags.experimentalLspTool).toBe(true)
       expect(flags.experimentalOxfmt).toBe(true)
@@ -64,7 +77,7 @@ describe("RuntimeFlags", () => {
     }),
   )
 
-  it.effect("defaultLayer parses KILO_EXPERIMENTAL_LSP_TY", () =>
+  it.effect("layer parses KILO_EXPERIMENTAL_LSP_TY", () =>
     Effect.gen(function* () {
       const flags = yield* readFlags.pipe(
         Effect.provide(

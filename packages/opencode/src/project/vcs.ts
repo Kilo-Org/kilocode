@@ -1,11 +1,13 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Effect, Layer, Context, Schema, Stream, Scope } from "effect"
+import { Effect, Layer, Context, Schema, Scope } from "effect"
 import { formatPatch, structuredPatch } from "diff"
 import { InstanceState } from "@/effect/instance-state"
 import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 import { Git } from "@/git"
+import { diffRefs, patchAllRefs, statsRefs } from "@/kilocode/git-refs" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
+import { VcsEvent } from "@opencode-ai/schema/vcs-event"
 
 const PATCH_CONTEXT_LINES = 2_147_483_647
 const MAX_PATCH_BYTES = 10_000_000
@@ -221,6 +223,66 @@ const diffAgainstRef = Effect.fnUntraced(function* (
   )
 })
 
+// kilocode_change start - diff for the last commit (HEAD vs HEAD~1)
+const lastCommitDiff = Effect.fnUntraced(function* (
+  git: Git.Interface,
+  cwd: string,
+  options?: DiffOptions,
+) {
+  if (!(yield* git.hasHead(cwd))) return []
+  const result = yield* git.run(["rev-parse", "--verify", "HEAD~1"], { cwd })
+  if (result.exitCode !== 0) return []
+  const parent = result.text().trim()
+  if (!parent) return []
+
+  const [list, stats, batchResult] = yield* Effect.all(
+    [
+      diffRefs(git, cwd, parent, "HEAD"),
+      statsRefs(git, cwd, parent, "HEAD"),
+      patchAllRefs(git, cwd, parent, "HEAD", {
+        context: options?.context ?? PATCH_CONTEXT_LINES,
+        maxOutputBytes: MAX_TOTAL_PATCH_BYTES,
+      }),
+    ],
+    { concurrency: 3 },
+  )
+
+  const statMap = nums(stats)
+  const batchPatches = splitGitPatch(batchResult).reduce((acc, patch, index) => {
+    const file = fileFromPatchChunk(patch) ?? list[index]?.file
+    if (!file) return acc
+    acc.set(file, (acc.get(file) ?? "") + patch)
+    return acc
+  }, new Map<string, string>())
+  const batch = { patches: batchPatches, capped: false }
+  const ref = `${parent}..HEAD`
+
+  const next: FileDiff[] = []
+  let total = 0
+  let capped = false
+  for (const item of list.toSorted((a, b) => a.file.localeCompare(b.file))) {
+    const stat = statMap.get(item.file)
+    const patch = yield* patchForItem(git, cwd, ref, item, batch, capped, options)
+    const result: { patch: string; capped: boolean } = capped
+      ? { patch, capped: true }
+      : totalPatch(item.file, patch, total)
+    capped = capped || result.capped
+    if (!capped) {
+      total += Buffer.byteLength(result.patch)
+    }
+    next.push({
+      file: item.file,
+      patch: result.patch,
+      additions: stat?.additions ?? 0,
+      deletions: stat?.deletions ?? 0,
+      status: item.status,
+    })
+  }
+
+  return next
+})
+// kilocode_change end
+
 const track = Effect.fnUntraced(function* (
   git: Git.Interface,
   cwd: string,
@@ -231,17 +293,10 @@ const track = Effect.fnUntraced(function* (
   return yield* diffAgainstRef(git, cwd, ref, options)
 })
 
-export const Mode = Schema.Literals(["git", "branch"])
+export const Mode = Schema.Literals(["git", "branch", "last-commit"]) // kilocode_change
 export type Mode = Schema.Schema.Type<typeof Mode>
 
-export const Event = {
-  BranchUpdated: EventV2.define({
-    type: "vcs.branch.updated",
-    schema: {
-      branch: Schema.optional(Schema.String),
-    },
-  }),
-}
+export const Event = VcsEvent
 
 export const Info = Schema.Struct({
   branch: Schema.optional(Schema.String),
@@ -301,7 +356,7 @@ interface State {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Vcs") {}
 
-export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const git = yield* Git.Service
@@ -384,6 +439,8 @@ export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Serv
           return yield* track(git, ctx.directory, (yield* git.hasHead(ctx.directory)) ? "HEAD" : undefined, options)
         }
 
+        if (mode === "last-commit") return yield* lastCommitDiff(git, ctx.directory, options) // kilocode_change
+
         if (!value.root) return []
         if (value.current && value.current === value.root.name) return []
         const ref = yield* git.mergeBase(ctx.directory, value.root.ref)
@@ -424,8 +481,6 @@ export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Serv
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Git.defaultLayer), Layer.provide(EventV2Bridge.defaultLayer))
-
-export const node = LayerNode.make(layer, [Git.node, EventV2Bridge.node])
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [Git.node, EventV2Bridge.node] })
 
 export * as Vcs from "./vcs"

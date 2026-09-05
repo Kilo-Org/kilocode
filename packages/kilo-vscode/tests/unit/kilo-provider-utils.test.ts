@@ -21,6 +21,7 @@ import type {
   Event,
   EventSessionStatus,
   EventSessionTurnClose,
+  EventSessionError,
   EventSandboxStatusChanged,
   EventPermissionAsked,
   EventPermissionReplied,
@@ -365,14 +366,54 @@ describe("mapSSEEventToWebviewMessage", () => {
     })
   })
 
-  it("maps session.turn.close to its terminal reason", () => {
+  it("maps session.turn.close with its event identity and terminal reason", () => {
     const event: EventSessionTurnClose = {
       id: "evt-turn",
       type: "session.turn.close",
       properties: { sessionID: "sess-1", reason: "interrupted" },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
-    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
+    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", eventID: "evt-turn", reason: "interrupted" })
+  })
+
+  it("forwards the parent session ID when a child turn closes", () => {
+    const event: EventSessionTurnClose = {
+      id: "evt-child-turn",
+      type: "session.turn.close",
+      properties: { sessionID: "child", parentID: "parent", reason: "completed" },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "child")).toEqual({
+      type: "sessionTurnClosed",
+      sessionID: "child",
+      eventID: "evt-child-turn",
+      reason: "completed",
+      parentID: "parent",
+    })
+  })
+
+  it("maps session errors with their event identity and message", () => {
+    const event: EventSessionError = {
+      id: "evt-error",
+      type: "session.error",
+      properties: {
+        sessionID: "sess-1",
+        error: {
+          name: "APIError",
+          data: {
+            message: "prompt_cache_breakpoint is not supported on this model",
+            isRetryable: false,
+          },
+        },
+      },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionError",
+      eventID: "evt-error",
+      sessionID: "sess-1",
+      error: event.properties.error,
+    })
   })
 
   it("maps permission.asked to permissionRequest", () => {

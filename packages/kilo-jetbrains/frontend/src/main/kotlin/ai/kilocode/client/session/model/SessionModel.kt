@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.ToolApprovalDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -498,6 +499,9 @@ class SessionModel {
                 existing.url = dto.url ?: ""
                 existing.filename = dto.filename
                 existing.source = dto.source
+                val range = range(existing.url)
+                existing.startLine = range?.first
+                existing.endLine = range?.last
             }
             is Tool -> {
                 val old = existing.childSessionId
@@ -507,6 +511,7 @@ class SessionModel {
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
+                existing.approval = dto.approval?.toModel()
                 existing.childSessionId = childID(existing)
                 if (old != null && old != existing.childSessionId) {
                     childRefs.remove(old)
@@ -552,13 +557,18 @@ class SessionModel {
                 url = dto.url ?: ""
                 filename = dto.filename
                 source = dto.source
+                val range = range(url)
+                startLine = range?.first
+                endLine = range?.last
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
+                messageID = dto.messageID
                 state = parseToolState(dto.state)
                 callId = dto.callID
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
+                approval = dto.approval?.toModel()
                 childSessionId = childID(this)
                 output = dto.output
                 error = dto.error
@@ -578,6 +588,20 @@ class SessionModel {
 
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
+    }
+
+    private fun range(url: String): IntRange? {
+        val query = runCatching { java.net.URI.create(url).rawQuery }.getOrNull() ?: return null
+        val args = query.split('&')
+            .mapNotNull {
+                val index = it.indexOf('=')
+                if (index < 0) return@mapNotNull null
+                it.substring(0, index) to it.substring(index + 1)
+            }
+            .toMap()
+        val start = args["start"]?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val end = args["end"]?.toIntOrNull()?.takeIf { it >= start } ?: start
+        return start..end
     }
 
     private fun trackChild(messageId: String, content: Content) {
@@ -907,6 +931,16 @@ private fun renderTool(tool: Tool): String {
     ).filterNotNull().joinToString("")
     return "tool#${tool.id} ${tool.name} [$state]$title$data"
 }
+
+private fun ToolApprovalDto.toModel() = ToolApproval(
+    source = source,
+    agent = agent,
+    rulePermission = rulePermission,
+    rulePattern = rulePattern,
+    ruleAction = ruleAction,
+    outsideWorkspace = outsideWorkspace,
+    outsideWorkspacePath = outsideWorkspacePath,
+)
 
 private fun renderMap(map: Map<String, String>): String =
     map.entries.sortedBy { it.key }.joinToString(",", "{", "}") { "${it.key}=${it.value}" }

@@ -2,22 +2,49 @@ package ai.kilocode.client
 
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.AgentManagerHost
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.applySidePanelMode
+import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.AgentManagerPanel
+import ai.kilocode.client.agentManager.sessionAttentionNeeded
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.AttentionDotIcon
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.DataProvider
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowContentUiType
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.platform.project.projectIdOrNull
+import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
+import com.intellij.ui.content.ContentManagerEvent
+import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.BorderLayout
+import javax.swing.JPanel
+
+/** Registered id of the Kilo Code tool window (`kilo.jetbrains.frontend.xml`'s `<toolWindow id=...>`). */
+const val KILO_TOOL_WINDOW_ID = "Kilo Code"
 
 /**
  * Creates the Kilo Code tool window and delegates session content management.
@@ -72,19 +99,121 @@ internal class KiloToolWindowSetupService(
     ) {
         try {
             val manager = SessionSidePanelManager(project, workspace)
-            val content = ContentFactory.getInstance().createContent(manager.component, "", false)
-            content.setDisposer(manager)
-            content.setPreferredFocusedComponent { manager.defaultFocusedComponent }
-            toolWindow.contentManager.addContent(content)
-            toolWindow.contentManager.setSelectedContent(content)
+
+            val worktrees = WorktreeController(
+                service<KiloWorktreeService>(),
+                workspace.directory,
+                cs,
+                activity = project.service<KiloSessionService>().activity,
+                abort = { id, dir -> project.service<KiloSessionService>().abort(id, dir) },
+            )
+            val agentManagerPanel = AgentManagerPanel(manager, worktrees, project)
+
+            val chat = object : JPanel(BorderLayout()), DataProvider {
+                override fun getData(dataId: String): Any? {
+                    if (SessionManager.KEY.`is`(dataId)) return manager
+                    if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return workspace
+                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.CHAT
+                    return null
+                }
+            }
+            chat.add(manager.component, BorderLayout.CENTER)
+            val agent = object : JPanel(BorderLayout()), DataProvider {
+                override fun getData(dataId: String): Any? {
+                    // Expose the shared manager here too so History works from the Agent Manager tab.
+                    if (SessionManager.KEY.`is`(dataId)) return manager
+                    if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return workspace
+                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.AGENT_MANAGER
+                    if (SidePanelKeys.WORKTREE_PANEL.`is`(dataId)) return agentManagerPanel
+                    return null
+                }
+            }
+            agent.add(agentManagerPanel.component, BorderLayout.CENTER)
+
+            toolWindow.setContentUiType(ToolWindowContentUiType.TABBED, null)
+            // Hide the "Kilo Code" id label in the header so only the content tabs remain.
+            toolWindow.component.putClientProperty(ToolWindowContentUi.HIDE_ID_LABEL, "true")
+
+            val factory = ContentFactory.getInstance()
+            val chatContent = factory.createContent(chat, KiloBundle.message("sidePanel.mode.branch"), false)
+            chatContent.applySidePanelMode(SidePanelMode.CHAT)
+            chatContent.setDisposer(manager)
+            chatContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
+            val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
+            agentContent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
+            agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
+            agentContent.putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
+            toolWindow.contentManager.addContent(chatContent)
+            toolWindow.contentManager.addContent(agentContent)
+            val agents = { toolWindow.contentManager.setSelectedContent(agentContent, true) }
+            // The chat branch dock's "New Worktree" action opens the Agent Manager's New Worktree
+            // dialog and only switches to that tab once the user confirms. The dialog is anchored on
+            // the chat panel because the Agents content may not be in a window hierarchy yet.
+            manager.onNewWorktree = {
+                Telemetry.send("New Worktree Clicked", mapOf("surface" to "chat_dock"))
+                agentManagerPanel.configure(anchor = chat, onCreate = { agents() })
+            }
+            manager.onMoveToWorktree = { id, dir ->
+                agents()
+                agentManagerPanel.move(id, dir)
+            }
+            // Same two flows, reachable from a worktree editor tab, which cannot see
+            // agentManagerPanel directly: see AgentManagerHost.
+            project.service<AgentManagerHost>().bind(
+                manager,
+                move = { id, dir, surface ->
+                    agents()
+                    agentManagerPanel.move(id, dir, surface)
+                },
+                newWorktree = {
+                    Telemetry.send("New Worktree Clicked", mapOf("surface" to "worktree_editor"))
+                    agentManagerPanel.configure(anchor = chat, onCreate = { agents() })
+                },
+            )
+            val listener = object : ContentManagerListener {
+                override fun selectionChanged(event: ContentManagerEvent) {
+                    if (event.operation != ContentManagerEvent.ContentOperation.add) return
+                    // Only on the way in: opening the Agent Manager is a deliberate act that often
+                    // follows an authorization or PR change made elsewhere, and this is the tab whose
+                    // banner and badges read gh state. Switching to Chat reveals no gh-dependent UI —
+                    // SessionUi re-reads branch/PR state itself once it becomes showing — so probing
+                    // then only spends a call to warm a cache nothing is waiting on.
+                    if (event.content !== agentContent) return
+                    // The coordinator folds a submit that cannot run now into one trailing probe, so
+                    // tab churn cannot stack up gh calls.
+                    service<GhStatusCoordinator>().sync("tab-switch")
+                    agentManagerPanel.refresh()
+                }
+            }
+            toolWindow.contentManager.addContentManagerListener(listener)
+            Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
+            toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
+
+            // Notification dot on the Agents tab: up for as long as any worktree session is waiting
+            // on the user or has failed. Viewing the tab must not clear it — only resolving the
+            // attention does, so the dot stays a reliable "something still needs you" signal.
+            val dot = cs.launch {
+                project.service<KiloSessionService>().activity.map(::sessionAttentionNeeded).collect { needed ->
+                    withContext(Dispatchers.Main) {
+                        agentContent.icon = if (needed) AttentionDotIcon else null
+                    }
+                }
+            }
+            Disposer.register(manager) { dot.cancel() }
 
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
+                ActionManager.getInstance().getAction("Kilo.NewWorktree"),
+                Separator.create(),
                 ActionManager.getInstance().getAction("Kilo.History"),
-                ActionManager.getInstance().getAction("Kilo.Settings"),
             )
             toolWindow.setTitleActions(actions)
+            // Settings moves off the toolbar into the header gear (options) menu: Open Settings…,
+            // Config Files, and Core, inlined from the declarative Kilo.SettingsGroup.
+            (ActionManager.getInstance().getAction("Kilo.SettingsGroup") as? ActionGroup)?.let {
+                toolWindow.setAdditionalGearActions(it)
+            }
         } catch (e: Exception) {
             Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "setup", "errorClass" to e::class.java.name))
             LOG.error("Failed to set up Kilo tool window content", e)

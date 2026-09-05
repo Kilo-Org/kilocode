@@ -20,17 +20,6 @@ const agents = Agent.Service.of({
   list: () => Effect.succeed([agentInfo]),
   defaultInfo: () => Effect.succeed(agentInfo),
   defaultAgent: () => Effect.succeed("code"),
-  requirementStatus: () =>
-    Effect.succeed({
-      agent: "code",
-      directory: "",
-      enabled: false,
-      state: "ready",
-      skills: [],
-      mcps: [],
-      vscode_extensions: [],
-    }),
-  guardRequirements: () => Effect.void,
   generate: () => Effect.succeed({ identifier: "code", whenToUse: "", systemPrompt: "" }),
 })
 
@@ -92,6 +81,7 @@ describe("notify_user tool", () => {
       Layer.succeed(KiloSessions.Service, KiloSessions.Service.of({
         init: () => Effect.void,
         sendAgentNotification: () => Effect.succeed({ ok: true }),
+        reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
       })),
       Layer.succeed(Agent.Service, agents),
       Layer.succeed(Truncate.Service, truncate),
@@ -113,6 +103,7 @@ describe("notify_user tool", () => {
     await expect(runNotifyTool({ message: "" }, {
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: true }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })).rejects.toBeDefined()
   })
 
@@ -120,6 +111,7 @@ describe("notify_user tool", () => {
     await expect(runNotifyTool({ message: "   \n  " }, {
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: true }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })).rejects.toBeDefined()
   })
 
@@ -127,6 +119,7 @@ describe("notify_user tool", () => {
     await expect(runNotifyTool({ message: "x".repeat(501) }, {
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: true }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })).rejects.toBeDefined()
   })
 
@@ -139,6 +132,7 @@ describe("notify_user tool", () => {
           calls.push({ sessionID, input })
           return { ok: true }
         }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "  hello world  " }, sessions)
@@ -153,6 +147,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "hello" }, sessions)
@@ -166,6 +161,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: true }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
     const send = spyOn(sessions, "sendAgentNotification")
 
@@ -180,6 +176,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: false, reason: "http_500" }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "hello" }, sessions)
@@ -192,6 +189,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_bootstrapped" }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "hello" }, sessions)
@@ -206,6 +204,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: false, reason: "bootstrap_timeout" }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "hello" }, sessions)
@@ -219,6 +218,7 @@ describe("notify_user tool", () => {
     const sessions = KiloSessions.Service.of({
       init: () => Effect.void,
       sendAgentNotification: () => Effect.succeed({ ok: true }),
+      reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" }),
     })
 
     const result = await runNotifyTool({ message: "ping" }, sessions)

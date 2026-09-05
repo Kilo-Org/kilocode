@@ -1,3 +1,5 @@
+import { TRANSIENT } from "@kilocode/kilo-memory/schema"
+
 type Event = {
   on(type: "memory.error", fn: (event: MemoryEvent) => void): void | (() => void)
 }
@@ -22,6 +24,7 @@ export namespace MemoryTuiEvents {
   }) {
     const handler = (event: MemoryEvent) => {
       if (event.properties.sessionID && event.properties.sessionID !== input.sessionID) return
+      if (event.properties.reason === TRANSIENT) return
       const detail = event.properties.detail
       if (!detail || typeof detail !== "object") {
         input.toast.show({

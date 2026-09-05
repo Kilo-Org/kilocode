@@ -1,7 +1,16 @@
+/**
+ * Legacy integrated terminal Run adapter.
+ *
+ * Kept while the Agent Manager terminal dropdown offers the "VS Code
+ * terminal" option so both execution paths can be compared. Remove this
+ * file together with that dropdown option and the integrated `pickRunStart`
+ * branch.
+ */
 import * as vscode from "vscode"
 import type { RunHandle } from "./manager"
 
 const GRACE_MS = 250
+const STOP_TIMEOUT_MS = 5_000
 
 export interface RunTaskConfig {
   worktreeId: string
@@ -37,6 +46,7 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
   }
 
   const execution = await vscode.tasks.executeTask(task)
+  const ended = Promise.withResolvers<void>()
   let closed = false
   let cleaned = false
   let grace: ReturnType<typeof setTimeout> | undefined
@@ -47,12 +57,14 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
     processListener.dispose()
     endListener.dispose()
     if (grace) clearTimeout(grace)
+    if (!closed) ended.resolve()
   }
 
   const finish = (exit: RunTaskExit = {}) => {
     if (closed) return
     closed = true
     cleanup()
+    ended.resolve()
     done(exit)
   }
 
@@ -66,8 +78,21 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
     grace = setTimeout(() => finish(), GRACE_MS)
   })
 
+  if (!vscode.tasks.taskExecutions.includes(execution)) finish()
+
   return {
-    stop: () => execution.terminate(),
+    stop: async () => {
+      if (closed) return
+      execution.terminate()
+      const timeout = setTimeout(() => {
+        ended.reject(new Error(`Run task did not stop: ${config.branch}`))
+      }, STOP_TIMEOUT_MS)
+      try {
+        await ended.promise
+      } finally {
+        clearTimeout(timeout)
+      }
+    },
     dispose: cleanup,
   }
 }

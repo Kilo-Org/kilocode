@@ -5,6 +5,8 @@ description: "Run tasks on a schedule using cron expressions"
 
 # Scheduled Triggers
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Scheduled triggers let your KiloClaw agent run tasks automatically on a recurring schedule. Instead of waiting for an external event, a scheduled trigger fires at the times you define using cron expressions. When it fires, the prompt template is rendered and delivered as a chat message to your KiloClaw instance, just like a webhook.
 
 Scheduled triggers are one trigger mode shared by KiloClaw and Cloud Agent. In

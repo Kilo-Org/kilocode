@@ -1,12 +1,13 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { Cause, Effect, Exit, Layer } from "effect"
+import { Cause, Effect, Exit, Layer, RcMap } from "effect"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import * as Reference from "../../src/kilocode/reference"
 import { Reference as CoreReference } from "@opencode-ai/core/reference"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Global } from "@opencode-ai/core/global"
-import { LocationServiceMap } from "@opencode-ai/core/location-layer"
+import { buildLocationServiceMap, LocationServiceMap } from "@opencode-ai/core/location-services"
 import { Location } from "@opencode-ai/core/location"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Config } from "../../src/config/config"
@@ -24,6 +25,37 @@ function remote() {
 }
 
 describe("configured references", () => {
+  test("does not initialize location services for an empty reference configuration", async () => {
+    await using tmp = await tmpdir()
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const map = yield* LocationServiceMap.Service
+        const references = yield* Reference.list({ references: {}, directory: tmp.path, worktree: tmp.path }, map)
+        return { references, keys: Array.from(yield* RcMap.keys(map.rcMap)) }
+      }).pipe(Effect.provide(buildLocationServiceMap()), Effect.scoped),
+    )
+    expect(result).toEqual({ references: [], keys: [] })
+  })
+
+  test("clears previously initialized references when configuration becomes empty", async () => {
+    await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const map = yield* LocationServiceMap.Service
+        const input = { directory: tmp.path, worktree: tmp.path }
+        const before = yield* Reference.list({ ...input, references: { docs: "./docs" } }, map)
+        const after = yield* Reference.list({ ...input, references: {} }, map)
+        const persisted = yield* CoreReference.Service.use((service) => service.list()).pipe(
+          Effect.provide(map.get(Location.Ref.make({ directory: AbsolutePath.make(tmp.path) }))),
+        )
+        return { before, after, persisted }
+      }).pipe(Effect.provide(buildLocationServiceMap()), Effect.scoped),
+    )
+    expect(result.before.map((reference) => reference.path)).toEqual([AbsolutePath.make(path.join(tmp.path, "docs"))])
+    expect(result.after).toEqual([])
+    expect(result.persisted).toEqual([])
+  }, 15_000)
+
   test("preserves interruption while materializing a repository", async () => {
     const cache = RepositoryCache.Service.of({ ensure: () => Effect.interrupt })
     const exit = await Effect.runPromiseExit(Reference.ensure(cache, remote()))
@@ -40,11 +72,10 @@ describe("configured references", () => {
       publish: (definition, data) =>
         Effect.succeed({ id: EventV2.ID.make("evt_reference_sync"), type: definition.type, data }),
     })
-    const layer = CoreReference.layer.pipe(
-      Layer.provide(cache),
-      Layer.provide(events),
-      Layer.provide(Global.defaultLayer),
-    )
+    const layer = AppNodeBuilder.build(CoreReference.node, [
+      [RepositoryCache.node, cache],
+      [EventV2.node, events],
+    ])
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -85,11 +116,10 @@ describe("configured references", () => {
         return Effect.succeed({ id: EventV2.ID.make(`evt_${updates.length}`), type: definition.type, data })
       },
     })
-    const layer = CoreReference.layer.pipe(
-      Layer.provide(cache),
-      Layer.provide(events),
-      Layer.provide(Global.defaultLayer),
-    )
+    const layer = AppNodeBuilder.build(CoreReference.node, [
+      [RepositoryCache.node, cache],
+      [EventV2.node, events],
+    ])
     const input = {
       references: { docs: { path: "./docs", description: "Internal documentation", hidden: true } },
       directory: "/workspace/src",
@@ -106,6 +136,31 @@ describe("configured references", () => {
     expect(updates).toEqual(["reference.updated"])
   })
 
+  test("sync replaces stale effective references", async () => {
+    const cache = Layer.mock(RepositoryCache.Service, {
+      ensure: () => Effect.die("unexpected Git materialization"),
+    })
+    const events = Layer.mock(EventV2.Service)({
+      publish: (definition, data) =>
+        Effect.succeed({ id: EventV2.ID.make("evt_reference_replace"), type: definition.type, data }),
+    })
+    const layer = AppNodeBuilder.build(CoreReference.node, [
+      [RepositoryCache.node, cache],
+      [EventV2.node, events],
+    ])
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* Reference.sync({ references: { stale: "./stale" }, directory: "/workspace", worktree: "/workspace" })
+        yield* Reference.sync({ references: { current: "./current" }, directory: "/workspace", worktree: "/workspace" })
+        return yield* (yield* CoreReference.Service).list()
+      }).pipe(Effect.provide(layer), Effect.scoped),
+    )
+
+    expect(result.map((item) => item.name)).toEqual(["current"])
+    expect(result[0]?.path).toBe(AbsolutePath.make(path.resolve("/workspace", "current")))
+  })
+
   test("initializes effective references before exposing location services", async () => {
     await using tmp = await tmpdir({
       config: {
@@ -116,11 +171,15 @@ describe("configured references", () => {
         },
       },
     })
-    const layer = locations.pipe(Layer.provide(Config.defaultLayer), Layer.provide(testInstanceStoreLayer))
+    const layer = locations.pipe(
+      Layer.provide(buildLocationServiceMap()),
+      Layer.provide(AppNodeBuilder.build(Config.node)),
+      Layer.provide(testInstanceStoreLayer),
+    )
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const map = yield* LocationServiceMap
+        const map = yield* LocationServiceMap.Service
         return yield* CoreReference.Service.use((reference) => reference.list()).pipe(
           Effect.provide(map.get(Location.Ref.make({ directory: AbsolutePath.make(tmp.path) }))),
         )

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
 import * as vscode from "vscode"
-import { openFileInEditor } from "../../src/review-utils"
+import { openFileInEditor, openRelativeFile } from "../../src/review-utils"
 
 const execute = spyOn(vscode.commands, "executeCommand")
 
@@ -25,5 +25,19 @@ describe("openFileInEditor", () => {
     const options = execute.mock.calls[0]?.[2] as vscode.TextDocumentShowOptions
     expect(options.selection?.start.line).toBe(6)
     expect(options.selection?.start.character).toBe(2)
+  })
+})
+
+describe("openRelativeFile", () => {
+  it("resolves diff paths from the selected repository", () => {
+    openRelativeFile("/repo/app_alpha", "README.md")
+
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_alpha/README.md")
+  })
+
+  it("rejects paths outside the selected repository", () => {
+    openRelativeFile("/repo/app_alpha", "../app_beta/README.md")
+
+    expect(execute).not.toHaveBeenCalled()
   })
 })

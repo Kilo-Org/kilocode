@@ -22,6 +22,7 @@ export interface Message {
   parentID?: string
   path?: { cwd: string; root: string }
   error?: { name: string; data?: Record<string, unknown> }
+  sessionErrorID?: string
   summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
@@ -58,6 +59,10 @@ export interface SessionInfo {
     files: number
     diffs?: SessionFileDiff[]
   } | null
+}
+
+export interface ProjectSessionInfo extends SessionInfo {
+  worktreeId: string | null
 }
 
 export type SessionUpdate = Partial<SessionInfo> & Pick<SessionInfo, "id">

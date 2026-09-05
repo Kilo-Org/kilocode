@@ -27,6 +27,7 @@ import {
   permissionReject,
   permissionRun,
   permissionShift,
+  temporaryPermission,
   type PermissionOption,
 } from "./permission.shared"
 import { footerWidthPolicy } from "./footer.width"
@@ -141,7 +142,8 @@ export function RunPermissionBody(props: {
   const info = createMemo(() => permissionInfo(props.request))
   const ft = createMemo(() => toolFiletype(info().file))
   const narrow = createMemo(() => footerWidthPolicy(dims().width).dialog.narrow)
-  const opts = createMemo(() => permissionOptions(state().stage))
+  const temporary = createMemo(() => temporaryPermission(props.request)) // kilocode_change
+  const opts = createMemo(() => permissionOptions(state().stage, temporary())) // kilocode_change
   const busy = createMemo(() => state().submitting)
   const title = createMemo(() => {
     if (state().stage === "always") {
@@ -165,7 +167,7 @@ export function RunPermissionBody(props: {
   })
 
   const shift = (dir: -1 | 1) => {
-    setState((prev) => permissionShift(prev, dir))
+    setState((prev) => permissionShift(prev, dir, temporary())) // kilocode_change
   }
 
   const submit = async (next: PermissionReply) => {

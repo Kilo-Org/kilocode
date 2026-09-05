@@ -1,6 +1,6 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
+import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
@@ -23,11 +23,14 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Cause, Effect, Option, Schema, Scope } from "effect"
 import * as Stream from "effect/Stream"
+import { InstanceState } from "@/effect/instance-state"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import {
+  AbortQuery, // kilocode_change
   CommandPayload,
+  DeleteMessageQuery, // kilocode_change
   DiffQuery,
   ForkPayload,
   InitPayload,
@@ -68,8 +71,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
+      const directory = ctx.query.directory ? yield* InstanceState.directory : undefined
       return yield* session.list({
-        directory: ctx.query.scope === "project" ? undefined : ctx.query.directory,
+        directory: ctx.query.scope === "project" ? undefined : directory,
         scope: ctx.query.scope,
         path: ctx.query.path,
         roots: ctx.query.roots,
@@ -105,7 +109,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       query: typeof DiffQuery.Type
     }) {
-      return yield* summary.diff({ sessionID: ctx.params.sessionID, messageID: ctx.query.messageID })
+      // kilocode_change start - pass full-content detail query fields through to the summary service
+      return yield* summary.diff({
+        sessionID: ctx.params.sessionID,
+        messageID: ctx.query.messageID,
+        full: ctx.query.full,
+        file: ctx.query.file,
+      })
+      // kilocode_change end
     })
 
     const messages = Effect.fn("SessionHttpApi.messages")(function* (ctx: {
@@ -222,10 +233,15 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
 
-    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* promptSvc.cancel(ctx.params.sessionID)
+    // kilocode_change start
+    const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: {
+      params: { sessionID: SessionID }
+      query: typeof AbortQuery.Type
+    }) {
+      yield* promptSvc.cancel(ctx.params.sessionID, ctx.query.scope)
       return true
     })
+    // kilocode_change end
 
     const init = Effect.fn("SessionHttpApi.init")(function* (ctx: {
       params: { sessionID: SessionID }
@@ -322,13 +338,19 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           Effect.catchCause((cause) => {
             if (Cause.hasInterruptsOnly(cause)) return Effect.void // kilocode_change - Stop is not an error
             return Effect.gen(function* () {
-              yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
               const error = Cause.squash(cause)
+              // kilocode_change start - keep SQLite lock failures out of local CLI logs
+              const busy = isBusy(error)
+              if (busy) {
+                yield* Effect.logWarning("prompt_async database busy", { sessionID: ctx.params.sessionID })
+              }
+              if (!busy) yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+              // kilocode_change end
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: AgentRequirementError.isInstance(error)
-                  ? error.toObject()
-                  : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+                error: busy // kilocode_change
+                    ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
+                    : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })
             })
           }),
@@ -388,15 +410,18 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const deleteMessage = Effect.fn("SessionHttpApi.deleteMessage")(function* (ctx: {
       params: { sessionID: SessionID; messageID: MessageID }
+      query: typeof DeleteMessageQuery.Type // kilocode_change
     }) {
       yield* requireSession(ctx.params.sessionID)
       // kilocode_change start - allow deleting prompts that are queued behind the active turn
-      const remove = yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
-        Effect.as(true),
-        Effect.catchTag("SessionBusyError", () =>
-          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
-        ),
-      )
+      const remove = yield* ctx.query.queued === true
+        ? KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID)
+        : runState.assertNotBusy(ctx.params.sessionID).pipe(
+            Effect.as(true),
+            Effect.catchTag("SessionBusyError", () =>
+              KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
+            ),
+          )
       // A false result means the message is not in the waiting list. It may have
       // already started, or the ID may be stale. Leave the message untouched.
       if (!remove) return false

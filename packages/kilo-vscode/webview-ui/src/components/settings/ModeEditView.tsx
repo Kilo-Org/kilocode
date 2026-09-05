@@ -10,6 +10,7 @@ import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentConfig, AgentInfo, PermissionConfig, PermissionRuleItem } from "../../types/messages"
+import { removable } from "./agent-behaviour-patches"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
 import { buildExport } from "./mode-io"
@@ -112,15 +113,17 @@ const ModeEditView: Component<Props> = (props) => {
               title={language.t("settings.agentBehaviour.exportMode")}
               onClick={exportMode}
             />
-            <IconButton
-              size="small"
-              variant="ghost"
-              icon="close"
-              onClick={() => {
-                const a = agent()
-                if (a) props.onRemove(a)
-              }}
-            />
+            <Show when={removable(agent())}>
+              <IconButton
+                size="small"
+                variant="ghost"
+                icon="close"
+                onClick={() => {
+                  const a = agent()
+                  if (a) props.onRemove(a)
+                }}
+              />
+            </Show>
           </div>
         </Show>
       </div>

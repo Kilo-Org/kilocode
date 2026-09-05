@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../services/cli-backend"
-import { appendOutput, getWorkspaceRoot, openWorkspaceRelativeFile } from "../review-utils"
+import { appendOutput, getWorkspaceRoot, openRelativeFile } from "../review-utils"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { buildWebviewHtml, getWebviewFontSize } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
@@ -13,6 +13,7 @@ type CommentHandler = (comments: unknown[], autoSend: boolean) => void
 
 export interface DiffViewerProviderOptions {
   sessionIdProvider?: () => string | undefined
+  sessionDirectoryProvider?: (sessionId: string) => string | undefined
 }
 
 /**
@@ -31,6 +32,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private fontConfigDisposable: vscode.Disposable | undefined
   private baseBranchOverride: string | undefined
   private readonly sessionIdProvider: () => string | undefined
+  private readonly sessionDirectoryProvider: (sessionId: string) => string | undefined
   private readonly output: vscode.OutputChannel
 
   constructor(
@@ -40,6 +42,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     opts: DiffViewerProviderOptions = {},
   ) {
     this.sessionIdProvider = opts.sessionIdProvider ?? (() => undefined)
+    this.sessionDirectoryProvider = opts.sessionDirectoryProvider ?? (() => undefined)
     this.output = vscode.window.createOutputChannel("Kilo Diff Panel")
   }
 
@@ -52,9 +55,16 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     if (this.panel && this.controller) {
       this.panel.reveal(this.panel.viewColumn ?? vscode.ViewColumn.One)
+      void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx.initialFile })
+      if (this.ctx.initialMarkdown !== undefined)
+        void this.panel.webview.postMessage({ type: "diffViewer.initialMarkdown", render: this.ctx.initialMarkdown })
       this.controller.setContext(this.ctx)
       const nextId = this.catalog.defaultSourceId(this.ctx)
-      if (nextId && nextId !== this.controller.currentId) this.swap(nextId)
+      if (nextId && nextId !== this.controller.currentId) {
+        this.swap(nextId)
+        return
+      }
+      void this.controller.reactivate()
       return
     }
 
@@ -70,13 +80,24 @@ export class DiffViewerProvider implements vscode.Disposable {
    * the source picker hidden — the view becomes a static "diff of this turn"
    * rather than the switchable workspace/session viewer.
    */
-  openFromCommand(arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }): void {
+  openFromCommand(arg?: {
+    sessionId?: string
+    turnId?: string
+    initialSourceId?: string
+    directory?: string
+    file?: string
+  }): void {
     const sessionId = arg?.sessionId ?? this.sessionIdProvider()
+    const explicit = !!arg && "directory" in arg
+    const dir = explicit ? arg.directory : sessionId ? this.sessionDirectoryProvider(sessionId) : undefined
     const turnInitialSourceId = arg?.turnId && sessionId ? turnSourceId(sessionId, arg.turnId) : undefined
     this.openPanel({
       workspaceRoot: getWorkspaceRoot(),
       sessionId,
+      dir,
       initialSourceId: turnInitialSourceId ?? arg?.initialSourceId,
+      initialFile: arg?.file,
+      ...(typeof arg?.file === "string" && /\.(md|mdx|markdown)$/i.test(arg.file) ? { initialMarkdown: true } : {}),
       hidePicker: !!turnInitialSourceId,
     })
   }
@@ -116,6 +137,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       (ctx) => this.catalog.listAvailable(ctx),
       (msg) => void panel.webview.postMessage(msg),
     )
+    this.controller.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err))
     if (this.ctx) this.controller.setContext(this.ctx)
 
     this.fontConfigDisposable?.dispose()
@@ -123,6 +145,9 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     this.panelDisposables.push(
       panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg as Record<string, unknown>)),
+      panel.onDidChangeViewState(() =>
+        this.controller?.setVisible(panel.visible).catch((err) => this.log("Failed to update diff visibility:", err)),
+      ),
       panel.onDidDispose(() => this.onPanelDisposed()),
     )
   }
@@ -182,14 +207,18 @@ export class DiffViewerProvider implements vscode.Disposable {
     },
     openFile: (msg) => {
       if (typeof msg.filePath !== "string") return
-      openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
+      openRelativeFile(
+        this.ctx?.dir ?? this.ctx?.workspaceRoot,
+        msg.filePath,
+        typeof msg.line === "number" ? msg.line : undefined,
+      )
     },
   }
 
   private async sendBranches(): Promise<void> {
     if (!this.panel) return
     try {
-      const result = await this.catalog.listWorkspaceBranches(this.baseBranchOverride)
+      const result = await this.catalog.listWorkspaceBranches(this.baseBranchOverride, this.ctx?.dir)
       if (!result || !this.panel) return
       void this.panel.webview.postMessage({
         type: "diffViewer.branches",
@@ -212,9 +241,12 @@ export class DiffViewerProvider implements vscode.Disposable {
       vscodeLanguage: vscode.env.language,
       languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
       fontSize: getWebviewFontSize(),
-      workspaceDirectory: getWorkspaceRoot(),
+      workspaceDirectory: this.ctx?.dir ?? getWorkspaceRoot(),
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
+    void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx?.initialFile })
+    if (this.ctx?.initialMarkdown !== undefined)
+      void this.panel.webview.postMessage({ type: "diffViewer.initialMarkdown", render: this.ctx.initialMarkdown })
     const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
     if (initial) this.swap(initial)
   }

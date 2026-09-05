@@ -1,5 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { llmClient } from "@opencode-ai/core/effect/layer-node-platform"
+import { llmClient } from "@opencode-ai/core/effect/app-node-platform"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Provider } from "@/provider/provider"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -9,7 +9,7 @@ import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
 import type { LLMEvent } from "@opencode-ai/llm"
-import { LLMClient, RequestExecutor, WebSocketExecutor } from "@opencode-ai/llm/route"
+import { LLMClient } from "@opencode-ai/llm/route"
 import type { LLMClientService } from "@opencode-ai/llm/route"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -312,7 +312,13 @@ const live: Layer.Layer<
           temperature: prepared.params.temperature,
           topP: prepared.params.topP,
           topK: prepared.params.topK,
-          maxOutputTokens: prepared.params.maxOutputTokens,
+          // kilocode_change start
+          maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
+            model: input.model,
+            options: prepared.params.options,
+            maxOutputTokens: prepared.params.maxOutputTokens,
+          }),
+          // kilocode_change end
           providerOptions: prepared.params.options,
           headers: prepared.headers,
           abort: input.abort,
@@ -374,27 +380,31 @@ const live: Layer.Layer<
             l.info("repairing tool call", { tool: failed.toolCall.toolName, repaired: lower }) // kilocode_change
             return { ...failed.toolCall, toolName: lower }
           }
-          return {
-            ...failed.toolCall,
-            input: JSON.stringify({
-              tool: failed.toolCall.toolName,
-              error: failed.error.message,
-            }),
-            toolName: "invalid",
-          }
+          // kilocode_change start - surface the original tool-name error instead of a
+          // repaired call to the hidden "invalid" tool, which activeTools excludes and
+          // therefore fails with a confusing "unavailable tool 'invalid'" error
+          return null
+          // kilocode_change end
         },
         temperature: prepared.params.temperature,
         topP: prepared.params.topP,
         topK: prepared.params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, prepared.params.options),
         activeTools: Object.keys(prepared.tools).filter((x) => x !== "invalid"),
+        // kilocode_change start
         tools: prepared.tools,
         toolChoice: input.toolChoice,
-        maxOutputTokens: prepared.params.maxOutputTokens,
+        maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
+          model: input.model,
+          options: prepared.params.options,
+          maxOutputTokens: prepared.params.maxOutputTokens,
+        }),
+        // kilocode_change end
         abortSignal: input.abort,
         ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
         maxRetries: input.retries ?? 0,
+        allowSystemInMessages: true, // kilocode_change - system prompts are trusted and intentionally included in messages
         messages: prepared.messages,
         model: wrapLanguageModel({
           model: language,
@@ -468,35 +478,24 @@ const live: Layer.Layer<
   }),
 )
 
-export const layer = live.pipe(Layer.provide(Permission.defaultLayer), Layer.provide(EventV2Bridge.defaultLayer))
-
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(
-      LLMClient.layer.pipe(Layer.provide(Layer.mergeAll(RequestExecutor.defaultLayer, WebSocketExecutor.layer))),
-    ),
-    Layer.provide(RuntimeFlags.defaultLayer),
-  ),
-)
-
 // kilocode_change start - session export stream observer
 export { normalizeUsageForExport, observeFullStreamForExport }
 // kilocode_change end
 export const hasToolCalls = LLMRequestPrep.hasToolCalls
 
-export const node = LayerNode.make(layer, [
-  Auth.node,
-  Config.node,
-  Provider.node,
-  Plugin.node,
-  Permission.node,
-  EventV2Bridge.node,
-  llmClient,
-  RuntimeFlags.node,
-])
+export const node = LayerNode.make({
+  service: Service,
+  layer: live,
+  deps: [
+    Auth.node,
+    Config.node,
+    Provider.node,
+    Plugin.node,
+    Permission.node,
+    EventV2Bridge.node,
+    llmClient,
+    RuntimeFlags.node,
+  ],
+})
 
 export * as LLM from "./llm"

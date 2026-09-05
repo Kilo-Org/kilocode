@@ -8,8 +8,6 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
-import { parseModelString } from "../../../../src/shared/provider-model"
-import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -24,7 +22,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, applySetting } = useConfig()
   const language = useLanguage()
   const imageModels = useImageModels()
   const vscode = useVSCode()
@@ -146,19 +144,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.codebaseSearch.title")}
-          description={language.t("settings.experimental.codebaseSearch.description")}
-        >
-          <Switch
-            checked={experimental().codebase_search ?? false}
-            onChange={(checked) => updateExperimental("codebase_search", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.codebaseSearch.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.imageGeneration.title")}
           description={language.t("settings.experimental.imageGeneration.description")}
         >
@@ -194,6 +179,19 @@ const ExperimentalTab: Component = () => {
         </Show>
 
         <SettingsRow
+          title={language.t("settings.experimental.sharedAgentBoard.title")}
+          description={language.t("settings.experimental.sharedAgentBoard.description")}
+        >
+          <Switch
+            checked={experimental().shared_agent_board ?? false}
+            onChange={(checked) => updateExperimental("shared_agent_board", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.sharedAgentBoard.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
         >
@@ -220,36 +218,43 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.swePruner.title")}
-          description={language.t("settings.experimental.swePruner.description")}
+          title={language.t("settings.experimental.multiProject.title")}
+          description={language.t("settings.experimental.multiProject.description")}
         >
           <Switch
-            checked={experimental().swe_pruner ?? false}
-            onChange={(checked) => updateExperimental("swe_pruner", checked)}
+            checked={settings().multiProject === true}
+            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
             hideLabel
           >
-            {language.t("settings.experimental.swePruner.title")}
+            {language.t("settings.experimental.multiProject.title")}
           </Switch>
         </SettingsRow>
 
-        <Show when={experimental().swe_pruner}>
-          <SettingsRow
-            title={language.t("settings.experimental.swePrunerModel.title")}
-            description={language.t("settings.experimental.swePrunerModel.description")}
+        <SettingsRow
+          title={language.t("settings.browser.enable.title")}
+          description={language.t("settings.browser.enable.description")}
+        >
+          <Switch
+            checked={settings().browserAutomation === true}
+            onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
+            hideLabel
           >
-            <ModelSelectorBase
-              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
-              onSelect={(providerID, modelID) =>
-                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
-              }
-              placement="bottom-start"
-              allowClear
-              clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.experimental.swePrunerModel.title")}
-              description={language.t("settings.experimental.swePrunerModel.description")}
-            />
-          </SettingsRow>
-        </Show>
+            {language.t("settings.browser.enable.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.taskModelSelection.title")}
+          description={language.t("settings.experimental.taskModelSelection.description")}
+        >
+          <Switch
+            checked={experimental().task_model_selection ?? false}
+            onChange={(checked) => updateExperimental("task_model_selection", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.taskModelSelection.title")}
+          </Switch>
+        </SettingsRow>
 
         {/* MCP timeout */}
         <SettingsRow

@@ -297,6 +297,72 @@ describe("RemoteProtocol", () => {
     }
   })
 
+  test.each(["cli", "remote"])("heartbeat preserves full %s instance metadata and capabilities", (kind) => {
+    const msg = {
+      type: "heartbeat" as const,
+      protocolVersion: "1.0.0",
+      sessions: [{ id: "s1", status: "busy", title: "Task", gitBranch: "feature/session-branch-is-not-truncated" }],
+      instance: {
+        name: "host",
+        projectName: "project",
+        version: "1.2.3",
+        kind,
+        startedAt: "2024-02-29T12:34:56.789Z",
+        gitBranch: "feature/current",
+      },
+      capabilities: { attachments: true, sessionClone: true },
+    }
+    expect(RemoteProtocol.Outbound.parse(JSON.parse(JSON.stringify(msg)))).toEqual(msg)
+  })
+
+  test("legacy instance field limits remain accepted", () => {
+    const instance = { name: "h".repeat(64), projectName: "p".repeat(64), version: "v".repeat(32) }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+  })
+
+  test.each(["terminal", "REMOTE", "", null, 1])("rejects invalid instance kind %j", (kind) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", kind }).success).toBe(false)
+  })
+
+  test.each([
+    "2026-08-28T12:34:56Z",
+    "2026-08-28T12:34:56.78Z",
+    "2026-08-28T12:34:56.7890Z",
+    "2026-08-28T12:34:56.789+00:00",
+    "2026-08-28T12:34:56.789",
+    "2026-02-29T12:34:56.789Z",
+    "2026-08-32T12:34:56.789Z",
+    "2026-13-01T12:34:56.789Z",
+    "2026-08-28T24:00:00.000Z",
+    "2026-08-28T12:60:00.000Z",
+    "2026-08-28T12:34:60.000Z",
+    "2026-08-28t12:34:56.789z",
+    "not-a-timestamp",
+    null,
+    0,
+  ])("rejects invalid instance start time %j", (startedAt) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", startedAt }).success).toBe(
+      false,
+    )
+  })
+
+  test.each(["a".repeat(24), '"\\\n\u0001'.repeat(6), "界".repeat(24), "\u{10400}".repeat(12)])(
+    "accepts 24 UTF-16 branch units and rejects one more: %j",
+    (gitBranch) => {
+      const instance = { name: "h", projectName: "p", gitBranch }
+      expect(RemoteProtocol.InstanceAdvertisement.parse(JSON.parse(JSON.stringify(instance)))).toEqual(instance)
+      expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: gitBranch + "a" }).success).toBe(
+        false,
+      )
+    },
+  )
+
+  test("instance branch can be empty but cannot be null", () => {
+    const instance = { name: "h", projectName: "p", gitBranch: "" }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: null }).success).toBe(false)
+  })
+
   test("instance advertisement version is optional", () => {
     const msg = {
       type: "heartbeat",
@@ -458,6 +524,107 @@ describe("RemoteProtocol", () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.type).toBe("heartbeat")
+    }
+  })
+
+  // kilocode_change - PR link advertise (plan 8.4)
+
+  test("session info accepts optional prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://github.com/o/r/pull/1", prNumber: 1 },
+        },
+      ],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "github",
+        prUrl: "https://github.com/o/r/pull/1",
+        prNumber: 1,
+      })
+    }
+  })
+
+  test("session info prLink optional (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toBeUndefined()
+    }
+  })
+
+  test("session info rejects empty prLink platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        { id: "s1", status: "busy", title: "t", prLink: { platform: "", prUrl: "https://x/pull/1", prNumber: 1 } },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects oversized prLink prUrl", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/" + "a".repeat(2048), prNumber: 1 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects non-positive prLink prNumber", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/pull/0", prNumber: 0 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("full heartbeat round-trips prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "gitlab", prUrl: "https://gitlab.com/g/p/-/merge_requests/7", prNumber: 7 },
+        },
+      ],
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "gitlab",
+        prUrl: "https://gitlab.com/g/p/-/merge_requests/7",
+        prNumber: 7,
+      })
     }
   })
 })

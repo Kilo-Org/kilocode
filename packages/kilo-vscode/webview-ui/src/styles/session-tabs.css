@@ -13,27 +13,39 @@
   background: var(--surface-base);
 }
 
+.am-tab-scroll-area,
 .session-tab-bar .am-tab-scroll-area {
   position: relative;
   display: flex;
   align-items: stretch;
-  flex: 1 1 auto;
   min-width: 0;
   height: 100%;
   overflow: hidden;
 }
 
+.am-tab-list-wrap,
 .session-tab-bar .am-tab-list-wrap {
   display: flex;
   align-items: stretch;
-  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   height: 100%;
 }
 
+.session-tab-bar .am-tab-scroll-area,
+.session-tab-bar .am-tab-list-wrap {
+  flex: 1 1 auto;
+}
+
+.am-tab-list,
 .session-tab-bar .am-tab-list {
   --am-tab-max-width: 240px;
+  -ms-overflow-style: none;
+}
+
+.am-tab-list,
+.session-tab-bar .am-tab-list,
+.am-inspector-tablist {
   --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
   align-items: stretch;
@@ -42,10 +54,11 @@
   height: 100%;
   overflow-x: auto;
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.session-tab-bar .am-tab-list::-webkit-scrollbar {
+.am-tab-list::-webkit-scrollbar,
+.session-tab-bar .am-tab-list::-webkit-scrollbar,
+.am-inspector-tablist::-webkit-scrollbar {
   display: none;
 }
 
@@ -74,6 +87,7 @@
   background: linear-gradient(to left, var(--surface-base) 0%, transparent 100%);
 }
 
+.am-tab-sortable,
 .session-tab-bar .am-tab-sortable {
   display: flex;
   width: var(--am-tab-width);
@@ -177,6 +191,27 @@
   flex-shrink: 0;
 }
 
+.session-tab-bar .am-tab-icon[data-activity="waiting"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="waiting"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="waiting"] {
+  --icon-base: var(--icon-warning-base);
+  color: var(--icon-warning-base);
+}
+
+.session-tab-bar .am-tab-icon[data-activity="error"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="error"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="error"] {
+  --icon-base: var(--icon-critical-base);
+  color: var(--icon-critical-base);
+}
+
+.session-tab-bar .am-tab-icon[data-activity="done"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="done"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="done"] {
+  --icon-base: var(--icon-success-base);
+  color: var(--icon-success-base);
+}
+
 .session-tab-bar .am-worktree-spinner {
   width: 16px;
   height: 16px;
@@ -267,11 +302,11 @@
 }
 
 .session-tab-switcher-meta {
-  color: var(--text-weak);
+  color: var(--text-base);
 }
 
 .session-tab-switcher-status {
-  color: var(--text-weak);
+  color: var(--text-base);
   font-weight: 500;
   line-height: 1;
   text-transform: uppercase;
@@ -298,7 +333,8 @@
 }
 
 /* Match tab context menus to dropdown-menu visuals on every tab surface. */
-.session-tab-menu {
+.session-tab-menu,
+.am-ctx-menu {
   min-width: 210px;
   border: 1px solid color-mix(in oklch, var(--border-base) 50%, transparent) !important;
   box-shadow: var(--shadow-md) !important;

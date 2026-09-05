@@ -1,8 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "169a0f0f-d58f-479f-b024-fa1c7b9a09db",
-  "prevIds": ["abd2f920-b822-49af-b8a7-2e48367d424f"],
+  "id": "fcf518b9-c8bc-4ee5-8e68-2608bffcef43",
+  "prevIds": [
+    "08cfecbf-f95d-404b-a76a-2afc564baa8b"
+  ],
   "ddl": [
     {
       "name": "workspace",
@@ -34,6 +36,14 @@
     },
     {
       "name": "event",
+      "entityType": "tables"
+    },
+    {
+      "name": "kilo_board_message",
+      "entityType": "tables"
+    },
+    {
+      "name": "kilo_board",
       "entityType": "tables"
     },
     {
@@ -548,6 +558,196 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "board_root_session_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sender_session_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recipient",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reply_to",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_message_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_call_id",
+      "entityType": "columns",
+      "table": "kilo_board_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "root_session_id",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "objective",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "objective_message_id",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "next_seq",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "message_count",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "message_bytes",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "permission"
     },
     {
@@ -904,16 +1104,6 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
-      "default": "'build'",
-      "generated": null,
-      "name": "agent",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "snapshot",
@@ -927,26 +1117,6 @@
       "default": null,
       "generated": null,
       "name": "baseline_seq",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "replacement_seq",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "revision",
       "entityType": "columns",
       "table": "session_context_epoch"
     },
@@ -1511,9 +1681,13 @@
       "table": "session_share"
     },
     {
-      "columns": ["project_id"],
+      "columns": [
+        "project_id"
+      ],
       "tableTo": "project",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1522,9 +1696,13 @@
       "table": "workspace"
     },
     {
-      "columns": ["active_account_id"],
+      "columns": [
+        "active_account_id"
+      ],
       "tableTo": "account",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -1533,9 +1711,13 @@
       "table": "account_state"
     },
     {
-      "columns": ["aggregate_id"],
+      "columns": [
+        "aggregate_id"
+      ],
       "tableTo": "event_sequence",
-      "columnsTo": ["aggregate_id"],
+      "columnsTo": [
+        "aggregate_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1544,9 +1726,43 @@
       "table": "event"
     },
     {
-      "columns": ["project_id"],
+      "columns": [
+        "board_root_session_id"
+      ],
+      "tableTo": "kilo_board",
+      "columnsTo": [
+        "root_session_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_kilo_board_message_board_root_session_id_kilo_board_root_session_id_fk",
+      "entityType": "fks",
+      "table": "kilo_board_message"
+    },
+    {
+      "columns": [
+        "root_session_id"
+      ],
+      "tableTo": "session",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_kilo_board_root_session_id_session_id_fk",
+      "entityType": "fks",
+      "table": "kilo_board"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
       "tableTo": "project",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1555,9 +1771,13 @@
       "table": "permission"
     },
     {
-      "columns": ["project_id"],
+      "columns": [
+        "project_id"
+      ],
       "tableTo": "project",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1566,9 +1786,13 @@
       "table": "project_directory"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1577,9 +1801,13 @@
       "table": "message"
     },
     {
-      "columns": ["message_id"],
+      "columns": [
+        "message_id"
+      ],
       "tableTo": "message",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1588,9 +1816,13 @@
       "table": "part"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1599,9 +1831,13 @@
       "table": "session_context_epoch"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1610,9 +1846,13 @@
       "table": "session_input"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1621,9 +1861,13 @@
       "table": "session_message"
     },
     {
-      "columns": ["project_id"],
+      "columns": [
+        "project_id"
+      ],
       "tableTo": "project",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1632,9 +1876,13 @@
       "table": "session"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1643,9 +1891,13 @@
       "table": "todo"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "tableTo": "session",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -1654,133 +1906,192 @@
       "table": "session_share"
     },
     {
-      "columns": ["email", "url"],
+      "columns": [
+        "email",
+        "url"
+      ],
       "nameExplicit": false,
       "name": "control_account_pk",
       "entityType": "pks",
       "table": "control_account"
     },
     {
-      "columns": ["project_id", "directory"],
+      "columns": [
+        "project_id",
+        "directory"
+      ],
       "nameExplicit": false,
       "name": "project_directory_pk",
       "entityType": "pks",
       "table": "project_directory"
     },
     {
-      "columns": ["session_id", "position"],
+      "columns": [
+        "session_id",
+        "position"
+      ],
       "nameExplicit": false,
       "name": "todo_pk",
       "entityType": "pks",
       "table": "todo"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "workspace_pk",
       "table": "workspace",
       "entityType": "pks"
     },
     {
-      "columns": ["name"],
+      "columns": [
+        "name"
+      ],
       "nameExplicit": false,
       "name": "data_migration_pk",
       "table": "data_migration",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "account_state_pk",
       "table": "account_state",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "account_pk",
       "table": "account",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "credential_pk",
       "table": "credential",
       "entityType": "pks"
     },
     {
-      "columns": ["aggregate_id"],
+      "columns": [
+        "aggregate_id"
+      ],
       "nameExplicit": false,
       "name": "event_sequence_pk",
       "table": "event_sequence",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "event_pk",
       "table": "event",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "kilo_board_message_pk",
+      "table": "kilo_board_message",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "root_session_id"
+      ],
+      "nameExplicit": false,
+      "name": "kilo_board_pk",
+      "table": "kilo_board",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "permission_pk",
       "table": "permission",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "project_pk",
       "table": "project",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "message_pk",
       "table": "message",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "part_pk",
       "table": "part",
       "entityType": "pks"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "nameExplicit": false,
       "name": "session_context_epoch_pk",
       "table": "session_context_epoch",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "session_input_pk",
       "table": "session_input",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "session_message_pk",
       "table": "session_message",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "session_pk",
       "table": "session",
       "entityType": "pks"
     },
     {
-      "columns": ["session_id"],
+      "columns": [
+        "session_id"
+      ],
       "nameExplicit": false,
       "name": "session_share_pk",
       "table": "session_share",
@@ -1825,6 +2136,24 @@
       "name": "event_aggregate_type_seq_idx",
       "entityType": "indexes",
       "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "board_root_session_id",
+          "isExpression": false
+        },
+        {
+          "value": "seq",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "kilo_board_message_board_seq_idx",
+      "entityType": "indexes",
+      "table": "kilo_board_message"
     },
     {
       "columns": [
@@ -1899,6 +2228,36 @@
       "where": null,
       "origin": "manual",
       "name": "part_session_idx",
+      "entityType": "indexes",
+      "table": "part"
+    },
+    {
+      "columns": [
+        {
+          "value": "session_id",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        },
+        {
+          "value": "message_id",
+          "isExpression": false
+        },
+        {
+          "value": "json_extract(\"data\", '$.type')",
+          "isExpression": true
+        },
+        {
+          "value": "CASE WHEN json_extract(\"data\", '$.type') = 'text' THEN coalesce(json_extract(\"data\", '$.text'), '') WHEN json_extract(\"data\", '$.type') = 'file' THEN trim(coalesce(json_extract(\"data\", '$.filename'), '') || ' ' || CASE WHEN coalesce(json_extract(\"data\", '$.url'), '') NOT LIKE 'data:%' THEN coalesce(json_extract(\"data\", '$.url'), '') ELSE '' END || ' ' || coalesce(json_extract(\"data\", '$.source.path'), '') || ' ' || coalesce(json_extract(\"data\", '$.source.name'), '') || ' ' || CASE WHEN coalesce(json_extract(\"data\", '$.source.uri'), '') NOT LIKE 'data:%' THEN coalesce(json_extract(\"data\", '$.source.uri'), '') ELSE '' END || ' ' || coalesce(json_extract(\"data\", '$.source.clientName'), '')) ELSE coalesce(json_extract(\"data\", '$.state.error'), '') END",
+          "isExpression": true
+        }
+      ],
+      "isUnique": false,
+      "where": "json_valid(\"part\".\"data\") AND ((json_extract(\"part\".\"data\", '$.type') = 'text' AND coalesce(json_extract(\"part\".\"data\", '$.synthetic'), 0) = 0 AND coalesce(json_extract(\"part\".\"data\", '$.ignored'), 0) = 0) OR json_extract(\"part\".\"data\", '$.type') = 'file' OR (json_extract(\"part\".\"data\", '$.type') = 'tool' AND json_extract(\"part\".\"data\", '$.state.status') = 'error'))",
+      "origin": "manual",
+      "name": "recall_part_search_idx",
       "entityType": "indexes",
       "table": "part"
     },

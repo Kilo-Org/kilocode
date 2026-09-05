@@ -8,9 +8,10 @@ import { Flag } from "../flag/flag"
 import { isAbsolute, join } from "path"
 import { existsSync } from "fs" // kilocode_change
 import { DbPreflight } from "../kilocode/db-preflight" // kilocode_change
+import { ensure as compat } from "../kilocode/database-compat" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
-import { LayerNode } from "../effect/layer-node"
+import { makeGlobalNode } from "../effect/app-node"
 
 const makeDatabase = EffectDrizzleSqlite.makeWithDefaults()
 type DatabaseShape = Effect.Success<typeof makeDatabase>
@@ -21,18 +22,21 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/storage/Database") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const db = yield* makeDatabase
 
-    yield* db.run("PRAGMA journal_mode = WAL")
-    yield* db.run("PRAGMA synchronous = NORMAL")
+    // kilocode_change start - install SQLite's busy handler before concurrent processes can race to recover the WAL
     yield* db.run("PRAGMA busy_timeout = 5000")
+    yield* db.run("PRAGMA journal_mode = WAL")
+    // kilocode_change end
+    yield* db.run("PRAGMA synchronous = NORMAL")
     yield* db.run("PRAGMA cache_size = -64000")
     yield* db.run("PRAGMA foreign_keys = ON")
     yield* db.run("PRAGMA wal_checkpoint(PASSIVE)")
     yield* DatabaseMigration.apply(db)
+    yield* compat(db) // kilocode_change - keep the shared database usable by released CLIs
 
     return { db }
   }).pipe(Effect.orDie),
@@ -40,7 +44,7 @@ export const layer = Layer.effect(
 
 export function layerFromPath(filename: string) {
   DbPreflight.assertWritable(filename) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
-  return layer.pipe(Layer.provide(sqliteLayer({ filename })))
+  return layer.pipe(Layer.provide(sqliteLayer({ filename, disableWAL: true }))) // kilocode_change - Database configures WAL after busy_timeout
 }
 
 export function path() {
@@ -63,11 +67,9 @@ export function path() {
   // kilocode_change end
 }
 
-export const defaultLayer = Layer.unwrap(
-  Effect.gen(function* () {
-    return layerFromPath(path())
-  }),
-).pipe(Layer.provide(Global.defaultLayer))
-
 // kilocode_change - resolve the database path when the layer builds, not at module evaluation, so KILO_DB overrides set after import (tests, embedded hosts) take effect
-export const node = LayerNode.make(Layer.unwrap(Effect.sync(() => layerFromPath(path()))), [])
+export const node = makeGlobalNode({
+  service: Service,
+  layer: Layer.unwrap(Effect.sync(() => layerFromPath(path()))),
+  deps: [],
+})

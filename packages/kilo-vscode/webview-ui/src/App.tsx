@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
@@ -6,13 +6,19 @@ import { useVSCode } from "./context/vscode"
 import { useServer } from "./context/server"
 import { useProvider } from "./context/provider"
 import { WorkStyleProvider } from "./context/work-style"
-import { useSession } from "./context/session"
+import { useSession, useSessionVisibility } from "./context/session"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
+import { SidebarTopBar } from "./components/chat/SidebarTopBar"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+import { useWorktreeMode } from "./context/worktree-mode"
+import { useDiffStyle } from "./context/diff-style"
+import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
+import { strongest } from "./utils/session-activity"
+import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -20,7 +26,7 @@ registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
-import { MigrationWizard } from "./components/migration" // legacy-migration
+import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
 import "./styles/chat.css"
@@ -50,6 +56,8 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const vscode = useVSCode()
   const prov = useProvider()
   const server = useServer()
+  const worktree = useWorktreeMode()
+  const diffStyle = useDiffStyle()
 
   // Memos for fields that change infrequently (not per-token) — cheap and
   // avoids allocating a fresh array/object on every consumer read.
@@ -119,12 +127,25 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.rejectQuestion(input.requestID)
   }
 
-  const open = (filePath: string, line?: number, column?: number) => {
-    vscode.postMessage({ type: "openFile", filePath, line, column })
+  const open = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    const event = new CustomEvent("kilo:open-file", {
+      cancelable: true,
+      detail: { filePath, line, column, sessionID },
+    })
+    if (!window.dispatchEvent(event)) return
+    vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
-  const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
-    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
+  const openDiff = (diff: PermissionFileDiff) => {
+    if (worktree) {
+      dispatchAgentManagerEditPreview({
+        diff,
+        sessionID: session.currentSessionID(),
+        initialDiffStyle: diffStyle?.style() ?? "unified",
+      })
+      return
+    }
+    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: diffStyle?.style() ?? "unified" })
   }
 
   const openUrl = (url: string) => {
@@ -138,17 +159,23 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   // File existence validation for code span candidates
   const pending = new Map<string, (existing: string[]) => void>()
   const counter = { n: 0 }
-  const validateFiles = (paths: string[]): Promise<string[]> => {
+  const validateFiles = (sessionID: string, paths: string[]): Promise<string[]> => {
     const id = `vf-${++counter.n}`
-    return new Promise((resolve) => {
-      pending.set(id, resolve)
-      vscode.postMessage({ type: "validateFiles", id, paths })
-      setTimeout(() => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
         if (pending.has(id)) {
           pending.delete(id)
-          resolve([])
+          // A timeout is not the same as "checked and none exist" — reject so
+          // callers don't cache a false negative for real files on a slow
+          // filesystem (see file-link-validator.ts).
+          reject(new Error("validateFiles timed out"))
         }
       }, 3000)
+      pending.set(id, (existing) => {
+        clearTimeout(timer)
+        resolve(existing)
+      })
+      vscode.postMessage({ type: "validateFiles", id, sessionID, paths })
     })
   }
   const handler = (event: MessageEvent) => {
@@ -194,14 +221,21 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
-  // legacy-migration: state-driven flag independent of currentView to avoid
-  // race conditions with SettingsEditorProvider's navigate messages.
-  const [migrationNeeded, setMigrationNeeded] = createSignal(false)
-  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
+  const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
+  const [migration, setMigration] = createSignal(false)
   const session = useSession()
   const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
+  const activity = createMemo(() =>
+    strongest([session.currentSessionID(), ...(tabs?.ids() ?? [])].map(session.activityFor)),
+  )
+  createEffect(() => vscode.postMessage({ type: "sessionActivity", state: activity() }))
+  useSessionVisibility(() =>
+    !migration() && (currentView() === "newTask" || currentView() === "subAgentViewer")
+      ? session.currentSessionID()
+      : undefined,
+  )
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -268,6 +302,7 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
+        setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
@@ -282,12 +317,6 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
-      }
-      // legacy-migration: state-driven migration wizard
-      if (message?.type === "migrationState") {
-        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
-        setMigrationSource(message.source)
-        setMigrationNeeded(message.needed)
       }
     }
     window.addEventListener("message", handler)
@@ -308,11 +337,32 @@ const AppContent: Component = () => {
     <SidebarEmptyState onSelectSession={handleSelectSession} onShowHistory={() => setCurrentView("history")} />
   )
 
+  // Set synchronously in the webview HTML by KiloProvider so it's available
+  // before this component ever mounts (see buildWebviewHtml/_getHtmlForWebview).
+  // False for dedicated single-purpose panels (Settings, Profile, Sub-Agent
+  // Viewer) always, and for the Sidebar/"Open in Tab" outside Cursor — real
+  // VS Code's native title bar toolbar already covers those. Defaults to
+  // true only when unset entirely (e.g. Storybook, which doesn't render the
+  // real page HTML).
+  const host = window as {
+    KILO_TOP_BAR?: boolean
+    KILO_TOP_BAR_SURFACE?: string
+    KILO_AGENT_MANAGER_SETTINGS?: boolean
+  }
+  const showTopBar = host.KILO_TOP_BAR !== false
+  const topBarSurface = host.KILO_TOP_BAR_SURFACE ?? "sidebar_title"
+
   return (
     <div class="container">
-      {/* legacy-migration start — state-driven overlay, independent of currentView */}
+      <Show when={showTopBar}>
+        <SidebarTopBar
+          onNewTask={() => handleViewAction("plusButtonClicked")}
+          onHistory={() => handleViewAction("historyButtonClicked")}
+          surface={topBarSurface}
+        />
+      </Show>
       <Show
-        when={migrationNeeded()}
+        when={migration()}
         fallback={
           <Switch
             fallback={
@@ -340,18 +390,22 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                providerUsage={server.providerUsage()}
+                providerUsageLoading={server.providerUsageLoading()}
+                providerUsageError={server.providerUsageError()}
                 deviceAuth={server.deviceAuth()}
                 onLogin={server.startLogin}
+                onRequestProviderUsage={server.requestProviderUsage}
+                onRefreshProviderUsage={server.refreshProviderUsage}
               />
             </Match>
             <Match when={currentView() === "settings"}>
               <Settings
                 tab={settingsTab()}
+                agentManagerProjectId={agentManagerProjectId()}
+                agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
-                onMigrationClick={(source) => {
-                  setMigrationSource(source)
-                  setMigrationNeeded(true)
-                }}
+                onMigrationClick={() => setMigration(true)}
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
@@ -360,13 +414,8 @@ const AppContent: Component = () => {
           </Switch>
         }
       >
-        <MigrationWizard
-          source={migrationSource()}
-          onBack={() => setMigrationNeeded(false)}
-          onComplete={() => setMigrationNeeded(false)}
-        />
+        <MigrationWizard onBack={() => setMigration(false)} onComplete={() => setMigration(false)} />
       </Show>
-      {/* legacy-migration end */}
     </div>
   )
 }

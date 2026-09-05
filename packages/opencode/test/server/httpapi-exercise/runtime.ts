@@ -14,6 +14,14 @@ export type Runtime = {
   tmpdir: (typeof import("../../fixture/fixture"))["tmpdir"]
 }
 
+// kilocode_change start - coverage only needs the OpenAPI group; bypass the full runtime import to keep
+// static route-coverage checks sub-second on CI
+export async function publicApi() {
+  const publicApiModule = await import("../../../src/server/routes/instance/httpapi/public")
+  return publicApiModule.PublicApi
+}
+// kilocode_change end
+
 let runtimePromise: Promise<Runtime> | undefined
 
 export function runtime() {

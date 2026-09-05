@@ -105,6 +105,8 @@ export namespace Telemetry {
   }
 
   export async function updateIdentity(token: string | null, accountId?: string): Promise<void> {
+    if (!isEnabled()) return
+
     const previousId = Identity.getDistinctId()
     await Identity.updateFromKiloAuth(token, accountId)
 
@@ -133,6 +135,12 @@ export namespace Telemetry {
   // CLI Lifecycle
   export function trackCliStart() {
     track(TelemetryEvent.CLI_START)
+  }
+
+  // Upload queued events without blocking. Call after bootstrap so the flush
+  // overlaps with command execution and shutdown() stays fast (#10242).
+  export function flushInBackground() {
+    Client.flushInBackground()
   }
 
   export function trackCliExit(exitCode?: number) {

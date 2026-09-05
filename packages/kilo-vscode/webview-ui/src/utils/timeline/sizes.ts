@@ -33,6 +33,21 @@ export function pinned(scroll: TimelineScroll, slack = BAR_W): boolean {
 
 // ── Content length ───────────────────────────────────────────────────
 
+function inputLength(input: unknown): number {
+  if (!input) return 0
+  if (typeof input === "string") return input.length
+  if (typeof input !== "object") return 4
+  let len = 2
+  for (const key in input as Record<string, unknown>) {
+    len += key.length + 3
+    const val = (input as Record<string, unknown>)[key]
+    if (typeof val === "string") len += val.length
+    else if (typeof val === "number" || typeof val === "boolean") len += 6
+    else if (val && typeof val === "object") len += 20
+  }
+  return len
+}
+
 function content(part: Part): number {
   switch (part.type) {
     case "text":
@@ -41,7 +56,7 @@ function content(part: Part): number {
       return (part as ReasoningPart).text?.length ?? 1
     case "tool": {
       const tp = part as ToolPart
-      const input = JSON.stringify(tp.state.input ?? {}).length
+      const input = inputLength(tp.state.input)
       const output = tp.state.status === "completed" ? (tp.state.output?.length ?? 0) : 0
       return Math.max(1, input + output)
     }
@@ -57,17 +72,28 @@ function content(part: Part): number {
 // ── Calculate sizes for all bars ─────────────────────────────────────
 
 export function sizes(parts: Part[]): BarSize[] {
-  if (parts.length === 0) return []
+  const len = parts.length
+  if (len === 0) return []
 
-  const raw = parts.map((p) => content(p))
-  const max = Math.max(...raw)
+  const raw: number[] = new Array(len)
+  let max = 1
+  for (let i = 0; i < len; i++) {
+    const c = content(parts[i]!)
+    raw[i] = c
+    if (c > max) max = c
+  }
 
-  return raw.map((c) => {
-    const cr = Math.min(1, c / Math.max(1, max))
-    return {
+  const range = MAX_HEIGHT - MIN_H - PAD
+  const result: BarSize[] = new Array(len)
+  for (let i = 0; i < len; i++) {
+    const c = raw[i]!
+    const cr = Math.min(1, c / max)
+    result[i] = {
       width: BAR_W,
-      height: Math.round(MIN_H + cr * (MAX_HEIGHT - MIN_H - PAD)),
+      height: Math.round(MIN_H + cr * range),
       content: c,
     }
-  })
+  }
+
+  return result
 }

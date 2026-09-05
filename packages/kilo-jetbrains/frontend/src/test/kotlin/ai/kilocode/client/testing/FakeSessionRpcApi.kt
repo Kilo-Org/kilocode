@@ -4,7 +4,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -15,7 +15,10 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CompletableDeferred
@@ -47,6 +50,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
     val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
+    val diffs = mutableMapOf<String, MutableList<DiffFileDto>>()
+    val diffSides = mutableMapOf<String, DiffFileDto>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -64,11 +69,22 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var cloudCursor: String? = null
     var importedCloudSession = session
 
+    /** Share/unshare call tracking and behaviour. */
+    val shares = mutableListOf<Triple<String, String, Boolean>>()
+    var shareUrl = "https://app.kilo.ai/s/token"
+    var shareThrows: Exception? = null
+
     /** Push chat events here; tests collect from [events]. */
     val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 64, replay = 64)
 
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
+
+    /** Push activity updates here. */
+    val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
+
+    /** Push session lifecycle changes here. */
+    val changes = MutableSharedFlow<SessionChangeDto>(extraBufferCapacity = 64)
 
     /** Pending permissions returned by [pendingPermissions]. */
     val pendingPermissionList = mutableListOf<PermissionRequestDto>()
@@ -90,6 +106,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var revertThrows: Exception? = null
     var unrevertThrows: Exception? = null
     var commandThrows: Exception? = null
+    var promptThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
     val commands = mutableListOf<CommandCall>()
     val attachmentParts = mutableListOf<AttachmentCall>()
@@ -99,13 +116,13 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val messageDeletes = mutableListOf<MessageDeleteCall>()
     var messageDeleteResult = true
     val unreverts = mutableListOf<Pair<String, String>>()
-    val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
     val questionRejects = mutableListOf<Pair<String, String>>()
     val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
     var deleteGate: CompletableDeferred<Unit>? = null
+    var deleteThrows: Exception? = null
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
@@ -114,6 +131,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val imports = mutableListOf<Pair<String, String>>()
     var creates = 0
         private set
+
+    /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
+    var createThrows: Exception? = null
 
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
@@ -126,6 +146,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun create(directory: String): SessionDto {
         assertNotEdt("create")
         creates++
+        createThrows?.let { throw it }
         return session
     }
 
@@ -153,6 +174,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deleteThrows?.let { throw it }
         deleteGate?.await()
         deletes.add(id to directory)
         listed.removeAll { it.id == id }
@@ -170,6 +192,23 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return session.copy(id = id, title = title)
     }
 
+    override suspend fun share(id: String, directory: String): SessionDto {
+        assertNotEdt("share")
+        shares.add(Triple(id, directory, true))
+        shareThrows?.let { throw it }
+        return current(id).copy(share = SessionShareDto(shareUrl))
+    }
+
+    override suspend fun unshare(id: String, directory: String): SessionDto {
+        assertNotEdt("unshare")
+        shares.add(Triple(id, directory, false))
+        shareThrows?.let { throw it }
+        return current(id).copy(share = null)
+    }
+
+    private fun current(id: String): SessionDto =
+        listed.firstOrNull { it.id == id } ?: session.copy(id = id)
+
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
         assertNotEdt("cloudSessions")
         cloudCalls.add(CloudCall(directory, cursor, limit, gitUrl))
@@ -185,6 +224,16 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
         assertNotEdt("statuses")
         return statuses
+    }
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> {
+        assertNotEdt("activity")
+        return activity
+    }
+
+    override suspend fun changes(): Flow<SessionChangeDto> {
+        assertNotEdt("changes")
+        return changes
     }
 
     override suspend fun setDirectory(id: String, directory: String) {
@@ -206,6 +255,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         assertNotEdt("prompt")
+        promptThrows?.let { throw it }
         prompts.add(Triple(id, directory, prompt))
     }
 
@@ -252,6 +302,16 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return histories[id]?.toList() ?: history.toList()
     }
 
+    override suspend fun diff(id: String, directory: String): List<DiffFileDto> {
+        assertNotEdt("diff")
+        return diffs[id]?.toList().orEmpty()
+    }
+
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        assertNotEdt("diffSides")
+        return diffSides[file.file]
+    }
+
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {
         assertNotEdt("attachmentPart")
         attachmentParts.add(AttachmentCall(id, directory, messageId, partId, attachmentKey))
@@ -271,13 +331,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return eventFlow?.invoke(id, directory) ?: events
     }
 
-    override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) {
-        assertNotEdt("updateConfig")
-        configs.add(directory to config)
-    }
+    var replyPermissionThrows: Exception? = null
 
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
+        replyPermissionThrows?.let { throw it }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 
