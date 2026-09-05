@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test"
-import { Cause, Effect, Exit } from "effect"
-import { guardChildMcpCall, type ChildMcpCtx } from "../../src/kilocode/gate/mcp-codemode"
+import { Effect, Exit } from "effect"
+import { decideChildMcp, type ChildMcpCtx } from "../../src/kilocode/gate/mcp-codemode"
 import type { McpJudgeInput, MessageView, Verdict } from "../../src/kilocode/gate/action-judge"
 
-// Exercises the Code Mode child-MCP wiring (code-mode.ts invokeChildTool -> guardChildMcpCall) WITHOUT a
-// live MCP server: fake makeJudge + fake execute. The generic McpGate.guardedExecute behavior is proven
-// separately (mcp-gate.test.ts); here we prove the ADAPTER derives identity/intent/child correctly and
-// hands off to the real gate + child call.
+// Exercises the Code Mode child-MCP adapter (code-mode.ts invokeChildTool -> decideChildMcp) WITHOUT a
+// live MCP server: the adapter only DECIDES the verdict from a fake judge; code-mode.ts applies it
+// (block -> throw; ask -> run the child call through DegradedGate.withDegraded(ctx) so the child MCP
+// tool's OWN permission ask becomes the degraded prompt). Here we prove the adapter derives
+// identity/intent/child correctly and returns the right verdict.
 const allowJudge = () => Effect.succeed<Verdict>({ decision: "allow", reasonCode: "matches_intent" })
 const blockJudge = () => Effect.succeed<Verdict>({ decision: "block", reasonCode: "off_intent" })
+const askJudge = () => Effect.succeed<Verdict>({ decision: "ask", reasonCode: "classifier_error" })
 const run = <A>(e: Effect.Effect<A>) => Effect.runPromise(e)
 const runExit = <A, E>(e: Effect.Effect<A, E>) => Effect.runPromiseExit(e)
-const causeText = (exit: Exit.Exit<unknown, unknown>) => (Exit.isFailure(exit) ? Cause.pretty(exit.cause) : "")
 
 const TOOL = { clientName: "github", def: { name: "create_issue" } }
 const ARGS = { title: "x", token: "SECRET-CANARY" }
@@ -32,71 +33,64 @@ const mkCtx = (over: Partial<ChildMcpCtx> = {}): ChildMcpCtx => ({
   ...over,
 })
 
-const counted = () => {
-  let ran = 0
-  return { execute: () => Effect.sync(() => { ran++; return "MCP_RESULT" }), calls: () => ran }
-}
-
-describe("guardChildMcpCall — Code Mode child-MCP gate wiring", () => {
-  test("allow -> child execute called EXACTLY once, returns its value", async () => {
-    const { execute, calls } = counted()
-    const out = await run(guardChildMcpCall({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => allowJudge, execute }))
-    expect(out).toBe("MCP_RESULT")
-    expect(calls()).toBe(1)
+describe("decideChildMcp — Code Mode child-MCP verdict routing", () => {
+  test("allow judge -> allow", async () => {
+    expect(await run(decideChildMcp({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => allowJudge }))).toEqual({
+      decision: "allow",
+      reasonCode: "matches_intent",
+    })
   })
 
-  test("block -> child execute NOT called", async () => {
-    const { execute, calls } = counted()
-    const exit = await runExit(guardChildMcpCall({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => blockJudge, execute }))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls()).toBe(0)
+  test("block judge -> block(off_intent)", async () => {
+    expect(await run(decideChildMcp({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => blockJudge }))).toEqual({
+      decision: "block",
+      reasonCode: "off_intent",
+    })
   })
 
-  test("child session (parentSessionID set) -> unverified_child_intent; judge and child execute NOT called", async () => {
+  test("ask judge (classifier infra failure) -> ask(classifier_error) [code-mode escalates to a prompt]", async () => {
+    expect(await run(decideChildMcp({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => askJudge }))).toEqual({
+      decision: "ask",
+      reasonCode: "classifier_error",
+    })
+  })
+
+  test("child session (parentSessionID set) -> block(unverified_child_intent); judge NOT called", async () => {
     let judged = 0
-    const { execute, calls } = counted()
-    const exit = await runExit(
-      guardChildMcpCall({
+    const v = await run(
+      decideChildMcp({
         tool: TOOL,
         args: ARGS,
         ctx: mkCtx({ parentSessionID: "parent-session" }),
         makeJudge: () => () => { judged++; return allowJudge() },
-        execute,
       }),
     )
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(causeText(exit)).toContain("unverified_child_intent")
+    expect(v).toEqual({ decision: "block", reasonCode: "unverified_child_intent" })
     expect(judged).toBe(0)
-    expect(calls()).toBe(0)
   })
 
-  test("missing intent (userMessageID not in messages) -> intent_missing; judge and child execute NOT called", async () => {
+  test("missing intent (userMessageID not in messages) -> block(intent_missing); judge NOT called", async () => {
     let judged = 0
-    const { execute, calls } = counted()
-    const exit = await runExit(
-      guardChildMcpCall({
+    const v = await run(
+      decideChildMcp({
         tool: TOOL,
         args: ARGS,
         ctx: mkCtx({ userMessageID: "absent" }),
         makeJudge: () => () => { judged++; return allowJudge() },
-        execute,
       }),
     )
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(causeText(exit)).toContain("intent_missing")
+    expect(v).toEqual({ decision: "block", reasonCode: "intent_missing" })
     expect(judged).toBe(0)
-    expect(calls()).toBe(0)
   })
 
   test("judge sees derived server + tool + argKeys and the turn intent (values never included)", async () => {
     let seen: McpJudgeInput | undefined
     await run(
-      guardChildMcpCall({
+      decideChildMcp({
         tool: TOOL,
         args: ARGS,
         ctx: mkCtx(),
         makeJudge: () => (mi) => { seen = mi; return allowJudge() },
-        execute: () => Effect.sync(() => "MCP_RESULT"),
       }),
     )
     expect(seen?.surface).toBe("mcp")
@@ -110,14 +104,19 @@ describe("guardChildMcpCall — Code Mode child-MCP gate wiring", () => {
   test("model from the turn-initiating message is threaded to the judge factory", async () => {
     let gotModel: unknown
     await run(
-      guardChildMcpCall({
+      decideChildMcp({
         tool: TOOL,
         args: ARGS,
         ctx: mkCtx(),
         makeJudge: (model) => { gotModel = model; return allowJudge },
-        execute: () => Effect.sync(() => "MCP_RESULT"),
       }),
     )
     expect(gotModel).toEqual(MODEL)
+  })
+
+  test("abort inside judge -> interruption propagates", async () => {
+    const abortJudge = () => Effect.interrupt as unknown as Effect.Effect<Verdict>
+    const exit = await runExit(decideChildMcp({ tool: TOOL, args: ARGS, ctx: mkCtx(), makeJudge: () => abortJudge }))
+    expect(Exit.isFailure(exit)).toBe(true)
   })
 })

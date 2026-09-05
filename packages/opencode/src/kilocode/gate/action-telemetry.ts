@@ -12,7 +12,7 @@ export interface ClassifierTelemetry {
   readonly sessionID: string
   /** tool-call id — correlates the verdict with a specific tool-part. */
   readonly callID: string
-  readonly decision: "allow" | "block"
+  readonly decision: "allow" | "block" | "ask"
   readonly reasonCode: string
   /** "providerID/modelID" — no secrets. */
   readonly model: string
@@ -40,7 +40,7 @@ const ALLOWED_KEYS = [
 export function buildRecord(input: {
   sessionID: string
   callID?: string
-  decision: "allow" | "block"
+  decision: "allow" | "block" | "ask"
   reasonCode: string
   providerID: string
   modelID: string

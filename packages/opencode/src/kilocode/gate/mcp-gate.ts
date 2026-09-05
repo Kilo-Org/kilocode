@@ -44,19 +44,3 @@ export function decide(deps: McpGateDeps): Effect.Effect<Verdict> {
     argKeys: argKeys(deps.args),
   })
 }
-
-/**
- * Run the gate, then the `execute` callback EXACTLY once on allow. A block throws (deny-and-continue →
- * tool error) and `execute` is NOT called. child-session / missing intent block before the judge; a
- * user/session abort inside the judge propagates as interruption (execute not called).
- */
-export function guardedExecute<A, E, R>(
-  deps: McpGateDeps,
-  execute: () => Effect.Effect<A, E, R>,
-): Effect.Effect<A, E, R> {
-  return Effect.gen(function* () {
-    const verdict = yield* decide(deps)
-    if (verdict.decision === "block") throw new Error(`Blocked by MCP gate (${verdict.reasonCode}).`)
-    return yield* execute()
-  })
-}

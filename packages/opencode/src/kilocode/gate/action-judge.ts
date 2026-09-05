@@ -17,7 +17,7 @@ import * as ActionTelemetry from "./action-telemetry"
 /** Opt-in via env so the classifier is inert until explicitly enabled. Separate from KILO_ACTION_GATE. */
 export const enabled = process.env["KILO_ACTION_CLASSIFIER"] === "1"
 
-/** How long the model call may take before we fail closed. */
+/** How long the model call may take before we fail SAFE (escalate to a manual approval / ask). */
 export const TIMEOUT_MS = 15_000
 
 // ---------------------------------------------------------------------------------------------------
@@ -36,17 +36,23 @@ export const MODEL_BLOCK_CODES = [
   "credential_access",
   "unrelated_change",
 ] as const
+// gate-only HARD block codes: always block, never escalate to ask.
 export const INTERNAL_BLOCK_CODES = [
   "intent_missing",
+  "unverified_child_intent", // gate-only: write in a sub-agent (child) session, intent not human-verified
+  "patch_parse_error", // gate-only: apply_patch patchText did not parse -> fail closed
+] as const
+// gate-only DEGRADED codes: the classifier ITSELF failed (infrastructure), so instead of a hard block
+// the gate fails SAFE by escalating to a one-shot manual approval (decision "ask"). Never model-produced.
+export const ASK_CODES = [
   "classifier_timeout",
   "classifier_error",
   "classifier_malformed",
   "classifier_unavailable",
-  "unverified_child_intent", // gate-only: write in a sub-agent (child) session, intent not human-verified
-  "patch_parse_error", // gate-only: apply_patch patchText did not parse -> fail closed
 ] as const
 const BLOCK_CODES = [...MODEL_BLOCK_CODES, ...INTERNAL_BLOCK_CODES] as const
 export type BlockCode = (typeof BLOCK_CODES)[number]
+export type AskCode = (typeof ASK_CODES)[number]
 
 // What the MODEL is allowed to return (generateObject + decode validate against this): allow pairs
 // ONLY with matches_intent; block pairs ONLY with a model block code. No internal codes, no crossings.
@@ -59,6 +65,8 @@ export const ModelVerdictSchema = Schema.Union([
 export const VerdictSchema = Schema.Union([
   Schema.Struct({ decision: Schema.Literal("allow"), reasonCode: Schema.Literal("matches_intent") }),
   Schema.Struct({ decision: Schema.Literal("block"), reasonCode: Schema.Literals(BLOCK_CODES) }),
+  // fail-safe escalation: an infrastructure failure of the classifier -> one-shot manual approval.
+  Schema.Struct({ decision: Schema.Literal("ask"), reasonCode: Schema.Literals(ASK_CODES) }),
 ])
 export type Verdict = Schema.Schema.Type<typeof VerdictSchema>
 
@@ -100,6 +108,7 @@ export interface McpJudgeInput {
 export type JudgeInput = ShellJudgeInput | WriteJudgeInput | McpJudgeInput
 
 const block = (reasonCode: BlockCode): Verdict => ({ decision: "block", reasonCode })
+const ask = (reasonCode: AskCode): Verdict => ({ decision: "ask", reasonCode })
 
 // ---------------------------------------------------------------------------------------------------
 // Pure helpers (no model, no services) — the routing surface.
@@ -193,8 +202,9 @@ export function route(input: { tripwireBlocked: boolean; readOnly: boolean; hasI
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Judge execution: wraps an injected judge with timeout / abort / error mapping (all fail closed to
-// a block verdict, EXCEPT user/session abort which propagates as interruption, not classifier_error).
+// Judge execution: wraps an injected judge with timeout / abort / error mapping. An infrastructure FAILURE
+// fails SAFE to an ASK (escalation to a one-shot manual approval), NOT a hard block, EXCEPT user/session
+// abort which propagates as interruption (not classifier_error).
 // ---------------------------------------------------------------------------------------------------
 
 export class MalformedVerdict extends Data.TaggedError("MalformedVerdict")<{}> {}
@@ -203,9 +213,10 @@ export class ProviderCallError extends Data.TaggedError("ProviderCallError")<{ r
 export type Judge = (input: JudgeInput) => Effect.Effect<Verdict, MalformedVerdict | ProviderCallError>
 
 /**
- * Run the judge exactly once. Timeout -> block(classifier_timeout); malformed model output ->
- * block(classifier_malformed); provider/network error -> block(classifier_error). A fired abort signal
- * interrupts instead of being reported as an error, so user/session cancellation halts the tool.
+ * Run the judge exactly once. An infrastructure FAILURE fails SAFE to an ASK (fail-safe escalation), not a
+ * hard block: timeout -> ask(classifier_timeout); malformed model output -> ask(classifier_malformed);
+ * provider/network error -> ask(classifier_error). A fired abort signal interrupts instead of being reported
+ * as an error, so user/session cancellation halts the tool.
  */
 export function runJudge(
   judge: Judge,
@@ -218,12 +229,12 @@ export function runJudge(
     if (opts.signal.aborted) return yield* Effect.interrupt
     const mapped = judge(input).pipe(
       Effect.catchTags({
-        MalformedVerdict: () => onAbortElse(block("classifier_malformed")),
-        ProviderCallError: () => onAbortElse(block("classifier_error")),
+        MalformedVerdict: () => onAbortElse(ask("classifier_malformed")),
+        ProviderCallError: () => onAbortElse(ask("classifier_error")),
       }),
     )
     const out = yield* mapped.pipe(Effect.timeoutOption(Duration.millis(opts.timeoutMs)))
-    if (Option.isNone(out)) return yield* onAbortElse(block("classifier_timeout"))
+    if (Option.isNone(out)) return yield* onAbortElse(ask("classifier_timeout"))
     return out.value
   })
 }
@@ -380,7 +391,7 @@ export function evaluate(
     const usageOut = opts.usageOut ?? {}
     const verdict =
       judge === "unavailable"
-        ? block("classifier_unavailable")
+        ? ask("classifier_unavailable")
         : yield* runJudge(judge, input, { signal: opts.signal, timeoutMs: opts.timeoutMs })
     ActionTelemetry.record(
       ActionTelemetry.buildRecord({
@@ -408,8 +419,8 @@ export function classify(
   callID = "",
   timeoutMs: number = TIMEOUT_MS,
 ): Effect.Effect<Verdict> {
-  // Fail closed: if the provider is not wired the classifier cannot verify the action, block it (below,
-  // via the "unavailable" judge) rather than silently allowing an unverified command through.
+  // Fail safe: if the provider is not wired the classifier cannot verify the action, so escalate to a
+  // one-shot manual approval (ask, below via the "unavailable" judge) rather than silently allowing it.
   const usageOut: UsageOut = {}
   const judge: Judge | "unavailable" = Option.isNone(providerOpt)
     ? "unavailable"

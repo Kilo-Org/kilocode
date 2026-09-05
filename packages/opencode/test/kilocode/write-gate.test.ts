@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Exit } from "effect"
-import { buildTargets, decide, guardedExecute, WRITE_TOOLS, enabled, type WriteGateDeps } from "../../src/kilocode/gate/write-gate"
+import { buildTargets, decide, WRITE_TOOLS, enabled, type WriteGateDeps } from "../../src/kilocode/gate/write-gate"
 import type { Verdict, WriteJudgeInput } from "../../src/kilocode/gate/action-judge"
 
 const CWD = "/work/project"
@@ -61,7 +61,7 @@ describe("WriteGate.buildTargets — op normalization (create/replace/overwrite/
   })
 })
 
-describe("WriteGate.decide / guardedExecute — behavioral (fake judge + execute callback)", () => {
+describe("WriteGate.decide — verdict routing (fake judge; surface applies allow/block/ask)", () => {
   const mkDeps = (over: Partial<WriteGateDeps>, judge: WriteGateDeps["judge"]): WriteGateDeps => ({
     tool: "write",
     isChildSession: false,
@@ -74,86 +74,54 @@ describe("WriteGate.decide / guardedExecute — behavioral (fake judge + execute
   })
   const allowJudge = () => Effect.succeed<Verdict>({ decision: "allow", reasonCode: "matches_intent" })
   const blockJudge = () => Effect.succeed<Verdict>({ decision: "block", reasonCode: "off_intent" })
+  const askJudge = () => Effect.succeed<Verdict>({ decision: "ask", reasonCode: "classifier_timeout" })
   const run = <A>(e: Effect.Effect<A>) => Effect.runPromise(e)
   const runExit = <A, E>(e: Effect.Effect<A, E>) => Effect.runPromiseExit(e)
 
-  test("child-session -> block; judge NOT called, execute NOT called", async () => {
+  test("child-session -> block(unverified_child_intent); judge NOT called", async () => {
     let judged = 0
-    let ran = 0
-    const deps = mkDeps({ isChildSession: true }, () => {
-      judged++
-      return allowJudge()
-    })
-    const exit = await runExit(guardedExecute(deps, () => Effect.sync(() => { ran++; return "OK" })))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(judged).toBe(0)
-    expect(ran).toBe(0)
-    const v = await run(decide(deps))
+    const v = await run(decide(mkDeps({ isChildSession: true }, () => { judged++; return allowJudge() })))
     expect(v).toEqual({ decision: "block", reasonCode: "unverified_child_intent" })
+    expect(judged).toBe(0)
   })
-  test("missing intent -> block; judge NOT called", async () => {
+  test("missing intent -> block(intent_missing); judge NOT called", async () => {
     let judged = 0
-    const deps = mkDeps({ intent: undefined }, () => {
-      judged++
-      return allowJudge()
-    })
-    expect(await run(decide(deps))).toEqual({ decision: "block", reasonCode: "intent_missing" })
+    expect(await run(decide(mkDeps({ intent: undefined }, () => { judged++; return allowJudge() })))).toEqual({ decision: "block", reasonCode: "intent_missing" })
     expect(judged).toBe(0)
   })
   test("invalid patch -> block(patch_parse_error); judge NOT called", async () => {
     let judged = 0
-    const deps = mkDeps({ tool: "apply_patch", args: { patchText: "garbage" } }, () => {
-      judged++
-      return allowJudge()
-    })
-    expect(await run(decide(deps))).toEqual({ decision: "block", reasonCode: "patch_parse_error" })
+    expect(await run(decide(mkDeps({ tool: "apply_patch", args: { patchText: "garbage" } }, () => { judged++; return allowJudge() })))).toEqual({ decision: "block", reasonCode: "patch_parse_error" })
     expect(judged).toBe(0)
   })
-  test("verdict allow -> execute called EXACTLY once", async () => {
-    let ran = 0
-    const out = await run(guardedExecute(mkDeps({}, allowJudge), () => Effect.sync(() => { ran++; return "OK" })))
-    expect(out).toBe("OK")
-    expect(ran).toBe(1)
+  test("judge allow -> allow", async () => {
+    expect(await run(decide(mkDeps({}, allowJudge)))).toEqual({ decision: "allow", reasonCode: "matches_intent" })
   })
-  test("verdict block -> execute NOT called", async () => {
-    let ran = 0
-    const exit = await runExit(guardedExecute(mkDeps({}, blockJudge), () => Effect.sync(() => { ran++; return "OK" })))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(ran).toBe(0)
+  test("judge block -> block(off_intent)", async () => {
+    expect(await run(decide(mkDeps({}, blockJudge)))).toEqual({ decision: "block", reasonCode: "off_intent" })
   })
-  test("abort inside judge propagates as interruption; execute NOT called", async () => {
-    let ran = 0
+  test("judge ask (classifier infra failure) -> ask(classifier_timeout) [surface will escalate to a prompt]", async () => {
+    expect(await run(decide(mkDeps({}, askJudge)))).toEqual({ decision: "ask", reasonCode: "classifier_timeout" })
+  })
+  test("abort inside judge -> interruption propagates", async () => {
     const abortJudge = () => Effect.interrupt as unknown as Effect.Effect<Verdict>
-    const exit = await runExit(guardedExecute(mkDeps({}, abortJudge), () => Effect.sync(() => { ran++; return "OK" })))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(ran).toBe(0)
+    expect(Exit.isFailure(await runExit(decide(mkDeps({}, abortJudge))))).toBe(true)
   })
   test("classifier payload carries NO file content — only targets(path+op)", async () => {
     let seen: WriteJudgeInput | undefined
-    const deps = mkDeps({ tool: "write", args: { filePath: "a", content: "SECRET-CANARY" } }, (i) => {
-      seen = i
-      return allowJudge()
-    })
-    await run(guardedExecute(deps, () => Effect.succeed("OK")))
+    await run(decide(mkDeps({ tool: "write", args: { filePath: "a", content: "SECRET-CANARY" } }, (i) => { seen = i; return allowJudge() })))
     expect(JSON.stringify(seen).includes("SECRET-CANARY")).toBe(false)
     expect(seen?.targets).toEqual([{ path: "/work/project/a", op: "create" }])
   })
-  test("apply_patch: ALL targets in ONE atomic judge decision before any side effect", async () => {
+  test("apply_patch: ALL targets in ONE atomic decision", async () => {
     let calls = 0
     let seen: WriteJudgeInput | undefined
     const patch = ["*** Begin Patch", "*** Add File: x.txt", "+hi", "*** Delete File: y.txt", "*** End Patch"].join("\n")
-    const deps = mkDeps({ tool: "apply_patch", args: { patchText: patch } }, (i) => {
-      calls++
-      seen = i
-      return allowJudge()
-    })
-    let ran = 0
-    await run(guardedExecute(deps, () => Effect.sync(() => { ran++; return "OK" })))
-    expect(calls).toBe(1) // single decision over all hunks
+    await run(decide(mkDeps({ tool: "apply_patch", args: { patchText: patch } }, (i) => { calls++; seen = i; return allowJudge() })))
+    expect(calls).toBe(1)
     expect(seen?.targets).toEqual([
       { path: "/work/project/x.txt", op: "create" },
       { path: "/work/project/y.txt", op: "delete" },
     ])
-    expect(ran).toBe(1)
   })
 })

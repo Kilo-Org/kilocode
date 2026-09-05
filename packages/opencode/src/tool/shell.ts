@@ -24,6 +24,7 @@ import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import * as ActionGate from "@/kilocode/gate/action-gate" // kilocode_change
 import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - reasoning-blind classifier (stage 2)
+import { ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval" // kilocode_change - degraded escalation metadata
 import { Provider } from "@/provider/provider" // kilocode_change - ActionJudge model access (via serviceOption)
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -286,12 +287,13 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
-const ask = Effect.fn("ShellTool.ask")(function* (
+export const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
   metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
+  degraded?: ActionJudge.AskCode, // kilocode_change - classifier-failure escalation: tag this real bash ask
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
@@ -317,12 +319,19 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     })
   }
 
-  if (scan.patterns.size === 0) return
+  // kilocode_change - degraded escalation reuses THIS real bash ask; force a prompt even with empty patterns.
+  const shellPatterns = scan.patterns.size === 0 ? (degraded ? [command] : []) : Array.from(scan.patterns)
+  if (shellPatterns.length === 0) return
   yield* ctx.ask({
     permission: ShellID.ToolID,
-    patterns: Array.from(scan.patterns),
-    always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
+    patterns: shellPatterns,
+    always: degraded ? [] : Array.from(scan.always),
+    metadata: {
+      command: normalizeUrls(command),
+      ...(description ? { description } : {}),
+      ...metadata,
+      ...(degraded ? { [ACTION_GATE_DEGRADED_KEY]: true, [ACTION_GATE_REASON_KEY]: degraded } : {}),
+    },
   })
 })
 
@@ -459,7 +468,9 @@ export const ShellPermission = Effect.gen(function* () {
         // kilocode_change end
         // kilocode_change start - ActionGate stage 2: reasoning-blind classifier (KILO_ACTION_CLASSIFIER=1).
         // Order: deterministic tripwire (above) -> proven read-only fast path -> classifier -> ask() below.
-        // A classifier block surfaces as a tool error (deny-and-continue), identical to the tripwire.
+        // A classifier block surfaces as a tool error (deny-and-continue); a classifier infra FAILURE (ask)
+        // tags the bash ask below as degraded so it force-prompts a human (fail-safe escalation).
+        let degradedReason: ActionJudge.AskCode | undefined = undefined
         if (ActionJudge.enabled) {
           const root = tree.rootNode
           const cmdList: ActionJudge.ShellCommand[] = commands(root).map((node) => {
@@ -496,11 +507,13 @@ export const ShellPermission = Effect.gen(function* () {
               ctx.sessionID,
               ctx.callID ?? "",
             )
+            // block -> tool error; ask (classifier infra failure) -> escalate via the real bash ask below.
             if (verdict.decision === "block") throw new Error(`Blocked by action classifier (${verdict.reasonCode}).`)
+            if (verdict.decision === "ask") degradedReason = verdict.reasonCode
           }
         }
         // kilocode_change end
-        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        yield* ask(ctx, scan, input.command, metadata, input.description, degradedReason) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
           yield* ctx.ask({

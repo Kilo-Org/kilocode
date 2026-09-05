@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Exit } from "effect"
-import { argKeys, decide, guardedExecute, enabled, type McpGateDeps } from "../../src/kilocode/gate/mcp-gate"
+import { argKeys, decide, enabled, type McpGateDeps } from "../../src/kilocode/gate/mcp-gate"
 import type { McpJudgeInput, Verdict } from "../../src/kilocode/gate/action-judge"
 
 const allowJudge = () => Effect.succeed<Verdict>({ decision: "allow", reasonCode: "matches_intent" })
@@ -65,46 +65,19 @@ describe("McpGate.decide / guard — behavioral (fake judge)", () => {
   })
 })
 
-describe("McpGate.guardedExecute — external MCP execute called exactly once on allow, never otherwise", () => {
-  const abortJudge = () => Effect.interrupt as unknown as Effect.Effect<Verdict>
-  const counted = () => {
-    let ran = 0
-    const exec = () => Effect.sync(() => { ran++; return "MCP_RESULT" })
-    return { exec, calls: () => ran }
-  }
-
-  test("allow -> execute called EXACTLY once, returns its value", async () => {
-    const { exec, calls } = counted()
-    const out = await run(guardedExecute(mkDeps({}, allowJudge), exec))
-    expect(out).toBe("MCP_RESULT")
-    expect(calls()).toBe(1)
+describe("McpGate.decide — verdict routing (fake judge; surface applies allow/block/ask)", () => {
+  const askJudge = () => Effect.succeed<Verdict>({ decision: "ask", reasonCode: "classifier_unavailable" })
+  test("allow -> allow", async () => {
+    expect(await run(decide(mkDeps({}, allowJudge)))).toEqual({ decision: "allow", reasonCode: "matches_intent" })
   })
-  test("block -> execute NOT called", async () => {
-    const { exec, calls } = counted()
-    const exit = await runExit(guardedExecute(mkDeps({}, blockJudge), exec))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls()).toBe(0)
+  test("block -> block(off_intent)", async () => {
+    expect(await run(decide(mkDeps({}, blockJudge)))).toEqual({ decision: "block", reasonCode: "off_intent" })
   })
-  test("child-session -> execute NOT called (judge not called either)", async () => {
-    let judged = 0
-    const { exec, calls } = counted()
-    const exit = await runExit(guardedExecute(mkDeps({ isChildSession: true }, () => { judged++; return allowJudge() }), exec))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls()).toBe(0)
-    expect(judged).toBe(0)
+  test("ask (classifier infra failure) -> ask(classifier_unavailable) [surface will escalate to a prompt]", async () => {
+    expect(await run(decide(mkDeps({}, askJudge)))).toEqual({ decision: "ask", reasonCode: "classifier_unavailable" })
   })
-  test("missing intent -> execute NOT called (judge not called either)", async () => {
-    let judged = 0
-    const { exec, calls } = counted()
-    const exit = await runExit(guardedExecute(mkDeps({ intent: undefined }, () => { judged++; return allowJudge() }), exec))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls()).toBe(0)
-    expect(judged).toBe(0)
-  })
-  test("abort inside judge -> interruption propagates; execute NOT called", async () => {
-    const { exec, calls } = counted()
-    const exit = await runExit(guardedExecute(mkDeps({}, abortJudge), exec))
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls()).toBe(0)
+  test("abort inside judge -> interruption propagates", async () => {
+    const abortJudge = () => Effect.interrupt as unknown as Effect.Effect<Verdict>
+    expect(Exit.isFailure(await runExit(decide(mkDeps({}, abortJudge))))).toBe(true)
   })
 })

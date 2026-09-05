@@ -25,8 +25,8 @@ import {
 
 // FAKE judges only — the real model (makeModelJudge/generateObject) is never invoked here; live
 // behaviour is covered by the two saved serve smoke-runs. We verify intent selection (exact turn,
-// no positional fallback), the read-only fast path, verdict/fail-closed/abort handling, provider-
-// absent fail-closed, real timeout cancellation, and the fixed reasonCode union.
+// no positional fallback), the read-only fast path, verdict / fail-safe escalation (ask) / abort handling,
+// provider-absent escalation to ask, real timeout cancellation, and the fixed reasonCode union.
 
 const CLEAN_FLAGS = { hasRedirect: false, hasSubstitution: false, hasError: false }
 const cmd = (executable: string, ...args: string[]): ShellCommand => ({ executable, args: [executable, ...args] })
@@ -121,7 +121,7 @@ describe("ActionJudge.route — ordering contract", () => {
   })
 })
 
-describe("ActionJudge.runJudge — verdict, fail-closed, abort, real cancellation", () => {
+describe("ActionJudge.runJudge — verdict, fail-safe escalation (ask), abort, real cancellation", () => {
   const allow: Judge = () => Effect.succeed({ decision: "allow", reasonCode: "matches_intent" })
   const blockMismatch: Judge = () => Effect.succeed({ decision: "block", reasonCode: "off_intent" })
   const failProvider: Judge = () => Effect.fail(new ProviderCallError({ cause: "network" }))
@@ -137,15 +137,15 @@ describe("ActionJudge.runJudge — verdict, fail-closed, abort, real cancellatio
     const v = await Effect.runPromise(runJudge(blockMismatch, input, { signal: openSignal(), timeoutMs: 1000 }))
     expect(v).toEqual({ decision: "block", reasonCode: "off_intent" })
   })
-  test("provider error -> block(classifier_error) (fail closed)", async () => {
+  test("provider error -> ask(classifier_error) (fail SAFE: escalate, not hard block)", async () => {
     const v = await Effect.runPromise(runJudge(failProvider, input, { signal: openSignal(), timeoutMs: 1000 }))
-    expect(v).toEqual({ decision: "block", reasonCode: "classifier_error" })
+    expect(v).toEqual({ decision: "ask", reasonCode: "classifier_error" })
   })
-  test("malformed verdict -> block(classifier_malformed) (fail closed)", async () => {
+  test("malformed verdict -> ask(classifier_malformed) (fail SAFE)", async () => {
     const v = await Effect.runPromise(runJudge(failMalformed, input, { signal: openSignal(), timeoutMs: 1000 }))
-    expect(v).toEqual({ decision: "block", reasonCode: "classifier_malformed" })
+    expect(v).toEqual({ decision: "ask", reasonCode: "classifier_malformed" })
   })
-  test("timeout -> block(classifier_timeout) AND cancels the underlying operation", async () => {
+  test("timeout -> ask(classifier_timeout) AND cancels the underlying operation", async () => {
     let cancelled = false
     const hanging: Judge = () =>
       Effect.tryPromise({
@@ -159,7 +159,7 @@ describe("ActionJudge.runJudge — verdict, fail-closed, abort, real cancellatio
         catch: () => new ProviderCallError({ cause: "x" }),
       })
     const v = await Effect.runPromise(runJudge(hanging, input, { signal: openSignal(), timeoutMs: 20 }))
-    expect(v).toEqual({ decision: "block", reasonCode: "classifier_timeout" })
+    expect(v).toEqual({ decision: "ask", reasonCode: "classifier_timeout" })
     expect(cancelled).toBe(true) // the interrupted judge actually aborted its in-flight promise
   })
   test("aborted signal interrupts (NOT classifier_error)", async () => {
@@ -225,16 +225,16 @@ describe("ActionJudge.evaluate — single terminal telemetry record", () => {
   })
   test("unavailable emits one record (classifier_unavailable)", async () => {
     const { verdict, records } = await runEval("unavailable")
-    expect(verdict).toEqual({ decision: "block", reasonCode: "classifier_unavailable" })
+    expect(verdict).toEqual({ decision: "ask", reasonCode: "classifier_unavailable" })
     expect(records.length).toBe(1)
     expect(records[0].reasonCode).toBe("classifier_unavailable")
   })
 })
 
-describe("ActionJudge.classify — provider absent fails closed", () => {
-  test("Option.none provider -> block(classifier_unavailable) (no fail-open)", async () => {
+describe("ActionJudge.classify — provider absent escalates to ask", () => {
+  test("Option.none provider -> ask(classifier_unavailable) (fail SAFE, no fail-open)", async () => {
     const v = await Effect.runPromise(classify(Option.none(), undefined, input, openSignal(), "test-session", "call-x", 1000))
-    expect(v).toEqual({ decision: "block", reasonCode: "classifier_unavailable" })
+    expect(v).toEqual({ decision: "ask", reasonCode: "classifier_unavailable" })
   })
 })
 
@@ -268,11 +268,19 @@ describe("ActionJudge — decision-bound reason codes (no contradictory verdicts
     )
     expect(blocked).toEqual({ decision: "block", reasonCode: "data_exposure" })
   })
-  test("internal block codes are valid on the full VerdictSchema (gate-generated)", async () => {
+  test("internal HARD block codes are valid on the full VerdictSchema (gate-generated)", async () => {
     const v = await Effect.runPromise(
-      Schema.decodeUnknownEffect(VerdictSchema)({ decision: "block", reasonCode: "classifier_timeout" }).pipe(Effect.orDie),
+      Schema.decodeUnknownEffect(VerdictSchema)({ decision: "block", reasonCode: "intent_missing" }).pipe(Effect.orDie),
     )
-    expect(v).toEqual({ decision: "block", reasonCode: "classifier_timeout" })
+    expect(v).toEqual({ decision: "block", reasonCode: "intent_missing" })
+  })
+  test("ask decision + degraded code is valid on the full VerdictSchema; block+classifier_* is NOT", async () => {
+    const v = await Effect.runPromise(
+      Schema.decodeUnknownEffect(VerdictSchema)({ decision: "ask", reasonCode: "classifier_timeout" }).pipe(Effect.orDie),
+    )
+    expect(v).toEqual({ decision: "ask", reasonCode: "classifier_timeout" })
+    const badExit = await runExit(Schema.decodeUnknownEffect(VerdictSchema)({ decision: "block", reasonCode: "classifier_timeout" }))
+    expect(Exit.isFailure(badExit)).toBe(true)
   })
 })
 

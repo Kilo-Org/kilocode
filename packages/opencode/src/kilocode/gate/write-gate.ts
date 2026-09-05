@@ -101,18 +101,3 @@ export function decide(deps: WriteGateDeps): Effect.Effect<Verdict> {
   if (!deps.intent) return Effect.succeed(block("intent_missing"))
   return deps.judge({ surface: "write", userIntent: deps.intent, cwd: deps.cwd, tool: deps.tool as WriteToolId, targets })
 }
-
-/**
- * Run the gate, then the `execute` callback EXACTLY once on allow. A block throws (deny-and-continue →
- * tool error). A user/session abort inside the judge propagates as interruption (not caught here).
- */
-export function guardedExecute<A, E, R>(
-  deps: WriteGateDeps,
-  execute: () => Effect.Effect<A, E, R>,
-): Effect.Effect<A, E, R> {
-  return Effect.gen(function* () {
-    const verdict = yield* decide(deps)
-    if (verdict.decision === "block") throw new Error(`Blocked by write gate (${verdict.reasonCode}).`)
-    return yield* execute()
-  })
-}

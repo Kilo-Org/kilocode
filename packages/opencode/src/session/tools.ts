@@ -35,6 +35,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - write-gate classifier
 import * as WriteGate from "@/kilocode/gate/write-gate" // kilocode_change - edit/write/apply_patch surface
 import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - generic MCP surface
+import * as DegradedGate from "@/kilocode/gate/degraded" // kilocode_change - fail-safe escalation approver
 import { InstanceState } from "@/effect/instance-state" // kilocode_change - workspace cwd for write targets
 import { existsSync } from "node:fs" // kilocode_change - create-vs-overwrite op normalization for write-gate
 
@@ -199,7 +200,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             // kilocode_change start - write-gate (KILO_WRITE_GATE=1): reasoning-blind classifier on
             // edit/write/apply_patch TARGETS before the built-in's own permission ask + fs write. shell is
             // gated in shell.ts; reads are not gated. Block = throw -> tool error (deny-and-continue).
-            const doExecute = () => SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            const doExecute = (c: Tool.Context) => SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, c))
             const result = yield* (WriteGate.enabled && WriteGate.WRITE_TOOLS.has(item.id)
               ? Effect.gen(function* () {
                   const dir = (yield* InstanceState.context).directory
@@ -208,8 +209,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                     ctx.userMessageID,
                   )
                   const providerOpt = yield* Effect.serviceOption(Provider.Service)
-                  return yield* WriteGate.guardedExecute(
-                    {
+                  return yield* DegradedGate.guardSurface({
+                    decide: WriteGate.decide({
                       tool: item.id,
                       isChildSession: input.session.parentID != null,
                       args,
@@ -217,11 +218,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                       exists: (p) => existsSync(p),
                       intent,
                       judge: (wi) => ActionJudge.classify(providerOpt, model, wi, ctx.abort, ctx.sessionID, ctx.callID ?? ""),
-                    },
-                    doExecute,
-                  )
+                    }),
+                    ctx,
+                    // degraded tags ONLY the action-level "edit" ask; the auxiliary external_directory ask is untouched.
+                    appliesTo: (p) => p === "edit",
+                    blockMessage: (rc) => `Blocked by write gate (${rc}).`,
+                    run: doExecute,
+                  })
                 })
-              : doExecute())
+              : doExecute(ctx))
             // kilocode_change end
             const output = {
               ...result,
@@ -516,15 +521,21 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { args },
           )
           // kilocode_change start - MCP gate (KILO_MCP_GATE=1): reasoning-blind classifier on the MCP call
-          // (server + tool + arg keys, NO values). guardedExecute runs the classifier BEFORE the external
-          // MCP execute and invokes it exactly once on allow; a block throws (deny-and-continue), so the
-          // external MCP call never happens. Active only in the generic wrapper (experimentalCodeMode OFF).
-          const runMcp = () =>
+          // (server + tool + arg keys, NO values). DegradedGate.guardSurface runs the classifier BEFORE the
+          // external MCP execute: allow -> run once; block -> throw (deny-and-continue); ask -> selective
+          // withDegraded so the external call never happens without a human. Generic wrapper only (experimentalCodeMode OFF).
+          const runMcp = (c: Tool.Context) =>
             SandboxPolicy.executeMcp(
               ctx.sessionID,
               entry,
               Effect.gen(function* () {
-                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                // envelope for the prompt: server + tool + argument KEYS only (never values).
+                yield* c.ask({
+                  permission: key,
+                  metadata: { server: entry.clientName, tool: entry.def.name, argKeys: McpGate.argKeys(args) },
+                  patterns: ["*"],
+                  always: ["*"],
+                })
                 return yield* Effect.promise(() => execute(args, opts))
               }),
             ).pipe(
@@ -544,19 +555,23 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                   ctx.userMessageID,
                 )
                 const providerOpt = yield* Effect.serviceOption(Provider.Service)
-                return yield* McpGate.guardedExecute(
-                  {
+                return yield* DegradedGate.guardSurface({
+                  decide: McpGate.decide({
                     server: entry.clientName,
                     tool: entry.def.name,
                     args,
                     isChildSession: input.session.parentID != null,
                     intent,
                     judge: (mi) => ActionJudge.classify(providerOpt, model, mi, ctx.abort, ctx.sessionID, ctx.callID ?? ""),
-                  },
-                  runMcp,
-                )
+                  }),
+                  ctx,
+                  // degraded tags ONLY the exposed MCP tool key ask; nothing else.
+                  appliesTo: (p) => p === key,
+                  blockMessage: (rc) => `Blocked by MCP gate (${rc}).`,
+                  run: runMcp,
+                })
               })
-            : runMcp())
+            : runMcp(ctx))
           // kilocode_change end
           yield* plugin.trigger(
             "tool.execute.after",

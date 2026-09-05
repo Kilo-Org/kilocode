@@ -1,0 +1,57 @@
+// kilocode_change - Fail-safe escalation ("ask") plumbing for the ActionGate. When the reasoning-blind
+// classifier ITSELF fails (timeout / provider error / malformed output / provider unavailable) the gate
+// does NOT hard-block; it escalates to a manual approval WITHOUT creating its own prompt. The surface runs
+// its NORMAL execute path through a ctx wrapped by `withDegraded`, which tags ONLY the tool's action-level
+// permission request (real permission + real patterns kept) with actionGateDegraded metadata and drops
+// `always` (so an approval persists no rule). A tool's AUXILIARY asks (e.g. external_directory before edit)
+// pass through untouched, so there is exactly ONE degraded action prompt. The permission layer force-asks
+// that real request, refuses non-interactive/auto allow, and shows one degraded ACTION prompt (a separate
+// normal external_directory prompt is still possible). Interactive approve -> the
+// tool proceeds; reject / headless denial -> the ask fails -> deny-and-continue (tool error); abort -> interrupt.
+import { Effect } from "effect"
+import type { Context } from "@/tool/tool"
+import type { AskCode, Verdict } from "./action-judge"
+import { ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval"
+
+type AskRequest = Parameters<Context["ask"]>[0]
+
+/**
+ * Wrap a Tool.Context so ONLY the action-level permission ask (the one whose permission satisfies
+ * `appliesTo`) is tagged as a degraded escalation: keeps its real permission/patterns/metadata, adds
+ * actionGateDegraded + reason, and forces `always: []`. Every other ask the tool makes (external_directory,
+ * etc.) passes through UNCHANGED. Does not mutate the original ctx.
+ */
+export function withDegraded(ctx: Context, reasonCode: AskCode, appliesTo: (permission: string) => boolean): Context {
+  const ask = (req: AskRequest) =>
+    appliesTo(req.permission)
+      ? ctx.ask({
+          ...req,
+          always: [],
+          metadata: { ...req.metadata, [ACTION_GATE_DEGRADED_KEY]: true, [ACTION_GATE_REASON_KEY]: reasonCode },
+        })
+      : ctx.ask(req)
+  return { ...ctx, ask }
+}
+
+/**
+ * The shared, testable surface orchestration used by write / generic MCP / Code Mode (shell mirrors it via
+ * its own bash ask). `decide` yields the verdict; block -> throw (tool error, deny-and-continue); ask -> run
+ * via selective withDegraded so the tool's OWN action prompt becomes the single degraded prompt; allow ->
+ * run unchanged. Unit-testable: inject a fake ctx that records which permission got the degraded tag and a
+ * fake `run` that counts executions.
+ */
+export function guardSurface<A, E, R>(params: {
+  readonly decide: Effect.Effect<Verdict>
+  readonly ctx: Context
+  readonly appliesTo: (permission: string) => boolean
+  readonly blockMessage: (reasonCode: string) => string
+  readonly run: (ctx: Context) => Effect.Effect<A, E, R>
+}): Effect.Effect<A, E, R> {
+  return Effect.gen(function* () {
+    const verdict = yield* params.decide
+    if (verdict.decision === "block") throw new Error(params.blockMessage(verdict.reasonCode))
+    const ctx =
+      verdict.decision === "ask" ? withDegraded(params.ctx, verdict.reasonCode, params.appliesTo) : params.ctx
+    return yield* params.run(ctx)
+  })
+}
