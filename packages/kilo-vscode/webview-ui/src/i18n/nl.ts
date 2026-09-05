@@ -706,6 +706,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
   "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.valkeyUrl.title": "Valkey-URL",
+  "settings.indexing.valkeyUrl.description": "Verbindings-URL voor de Valkey-vectoropslag.",
+  "settings.indexing.valkeyPassword.title": "Valkey-wachtwoord",
+  "settings.indexing.valkeyPassword.description": "Optioneel authenticatiewachtwoord voor Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Optioneel wachtwoord",
   "settings.indexing.fileExtensions.title": "Bestandsextensies",
   "settings.indexing.fileExtensions.description":
     "Door komma's gescheiden lijst met toegestane items. Laat leeg om de ingebouwde standaardwaarden te gebruiken.",

@@ -423,6 +423,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-nøgle",
   "settings.indexing.qdrantApiKey.description": "Valgfri API-nøgle til Qdrant-instansen.",
   "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøgle",
+  "settings.indexing.valkeyUrl.title": "Valkey URL",
+  "settings.indexing.valkeyUrl.description": "Forbindelses-URL til Valkey-vektorlageret.",
+  "settings.indexing.valkeyPassword.title": "Valkey-adgangskode",
+  "settings.indexing.valkeyPassword.description": "Valgfri adgangskode til Valkey-godkendelse.",
+  "settings.indexing.valkeyPassword.placeholder": "Valgfri adgangskode",
   "settings.indexing.fileExtensions.title": "Filtypenavne",
   "settings.indexing.fileExtensions.description":
     "Kommaadskilt tilladelsesliste. Lad feltet være tomt for at bruge de indbyggede standardindstillinger.",

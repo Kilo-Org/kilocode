@@ -424,6 +424,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "คีย์ API Qdrant",
   "settings.indexing.qdrantApiKey.description": "คีย์ API เสริมสำหรับอินสแตนซ์ Qdrant",
   "settings.indexing.qdrantApiKey.placeholder": "คีย์ API เสริม",
+  "settings.indexing.valkeyUrl.title": "URL ของ Valkey",
+  "settings.indexing.valkeyUrl.description": "URL สำหรับเชื่อมต่อกับที่เก็บเวกเตอร์ Valkey",
+  "settings.indexing.valkeyPassword.title": "รหัสผ่าน Valkey",
+  "settings.indexing.valkeyPassword.description": "รหัสผ่านการยืนยันตัวตนเสริมสำหรับ Valkey",
+  "settings.indexing.valkeyPassword.placeholder": "รหัสผ่านเสริม",
   "settings.indexing.fileExtensions.title": "นามสกุลไฟล์",
   "settings.indexing.fileExtensions.description":
     "รายการที่อนุญาตคั่นด้วยเครื่องหมายจุลภาค ปล่อยว่างไว้เพื่อใช้ค่าเริ่มต้นที่มีมาให้",

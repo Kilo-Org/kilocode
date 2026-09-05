@@ -708,6 +708,11 @@ export const dict = {
   "settings.indexing.providerField.description": "공급자별 연결 설정.",
   "settings.indexing.qdrantApiKey.description": "Qdrant 인스턴스에 대한 선택적 API 키입니다.",
   "settings.indexing.qdrantApiKey.placeholder": "선택적 API 키",
+  "settings.indexing.valkeyUrl.title": "Valkey URL",
+  "settings.indexing.valkeyUrl.description": "Valkey 벡터 저장소의 연결 URL입니다.",
+  "settings.indexing.valkeyPassword.title": "Valkey 비밀번호",
+  "settings.indexing.valkeyPassword.description": "Valkey의 선택적 인증 비밀번호입니다.",
+  "settings.indexing.valkeyPassword.placeholder": "선택적 비밀번호",
   "settings.indexing.fileExtensions.title": "파일 확장자",
   "settings.indexing.fileExtensions.description":
     "쉼표로 구분된 허용 목록입니다. 기본 제공 기본값을 사용하려면 비워 두세요.",

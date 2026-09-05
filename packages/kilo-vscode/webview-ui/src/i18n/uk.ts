@@ -703,6 +703,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Ключ API Qdrant",
   "settings.indexing.qdrantApiKey.description": "Необов'язковий ключ API для екземпляра Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Необов'язковий ключ API",
+  "settings.indexing.valkeyUrl.title": "URL Valkey",
+  "settings.indexing.valkeyUrl.description": "URL підключення до векторного сховища Valkey.",
+  "settings.indexing.valkeyPassword.title": "Пароль Valkey",
+  "settings.indexing.valkeyPassword.description": "Необов'язковий пароль автентифікації для Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Необов'язковий пароль",
   "settings.indexing.fileExtensions.title": "Розширення файлів",
   "settings.indexing.fileExtensions.description":
     "Список дозволених елементів, розділений комами. Залиште порожнім, щоб використовувати вбудовані значення за замовчуванням.",

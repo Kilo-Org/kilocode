@@ -900,6 +900,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-nøkkel",
   "settings.indexing.qdrantApiKey.description": "Valgfri API-nøkkel for Qdrant-instansen.",
   "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøkkel",
+  "settings.indexing.valkeyUrl.title": "Valkey URL",
+  "settings.indexing.valkeyUrl.description": "Tilkoblings-URL for Valkey-vektorlageret.",
+  "settings.indexing.valkeyPassword.title": "Valkey-passord",
+  "settings.indexing.valkeyPassword.description": "Valgfritt autentiseringspassord for Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Valgfritt passord",
   "settings.indexing.fileExtensions.title": "Filutvidelser",
   "settings.indexing.fileExtensions.description":
     "Kommaseparert tillatelsesliste. La stå tomt for å bruke de innebygde standardinnstillingene.",

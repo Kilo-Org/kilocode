@@ -381,6 +381,11 @@ export const dict = {
   "settings.indexing.providerField.description": "Paramètre de connexion spécifique au fournisseur.",
   "settings.indexing.qdrantApiKey.description": "Clé API optionnelle pour l'instance Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Clé API optionnelle",
+  "settings.indexing.valkeyUrl.title": "URL Valkey",
+  "settings.indexing.valkeyUrl.description": "URL de connexion pour le magasin de vecteurs Valkey.",
+  "settings.indexing.valkeyPassword.title": "Mot de passe Valkey",
+  "settings.indexing.valkeyPassword.description": "Mot de passe d'authentification optionnel pour Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Mot de passe optionnel",
   "settings.indexing.fileExtensions.title": "Extensions de fichier",
   "settings.indexing.fileExtensions.description":
     "Liste blanche séparée par des virgules. Laissez vide pour utiliser les valeurs par défaut intégrées.",

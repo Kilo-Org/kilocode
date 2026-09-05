@@ -425,6 +425,11 @@ export const dict = {
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcionalni API ključ",
+  "settings.indexing.valkeyUrl.title": "Valkey URL",
+  "settings.indexing.valkeyUrl.description": "URL za povezivanje s Valkey vektorskim skladištem.",
+  "settings.indexing.valkeyPassword.title": "Valkey lozinka",
+  "settings.indexing.valkeyPassword.description": "Opcionalna lozinka za autentifikaciju za Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Opcionalna lozinka",
   "settings.indexing.fileExtensions.title": "Ekstenzije datoteka",
   "settings.indexing.fileExtensions.description":
     "Lista dozvoljenih stavki odvojena zarezima. Ostavite prazno da biste koristili ugrađene zadane postavke.",

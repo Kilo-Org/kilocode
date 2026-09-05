@@ -698,6 +698,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "مفتاح API لـ Qdrant",
   "settings.indexing.qdrantApiKey.description": "مفتاح API اختياري لمثيل Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "مفتاح API اختياري",
+  "settings.indexing.valkeyUrl.title": "عنوان URL لـ Valkey",
+  "settings.indexing.valkeyUrl.description": "عنوان URL للاتصال بمخزن المتجهات Valkey.",
+  "settings.indexing.valkeyPassword.title": "كلمة مرور Valkey",
+  "settings.indexing.valkeyPassword.description": "كلمة مرور مصادقة اختيارية لـ Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "كلمة مرور اختيارية",
   "settings.indexing.fileExtensions.title": "امتدادات الملفات",
   "settings.indexing.fileExtensions.description":
     "قائمة سماح مفصولة بفواصل. اتركها فارغة لاستخدام الإعدادات الافتراضية المضمنة.",

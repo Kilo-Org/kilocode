@@ -897,6 +897,11 @@ export const dict = {
   "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
   "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcjonalny klucz API",
+  "settings.indexing.valkeyUrl.title": "URL Valkey",
+  "settings.indexing.valkeyUrl.description": "URL połączenia z magazynem wektorowym Valkey.",
+  "settings.indexing.valkeyPassword.title": "Hasło Valkey",
+  "settings.indexing.valkeyPassword.description": "Opcjonalne hasło uwierzytelniania dla Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Opcjonalne hasło",
   "settings.indexing.fileExtensions.title": "Rozszerzenia plików",
   "settings.indexing.fileExtensions.description":
     "Lista dozwolonych wartości rozdzielona przecinkami. Pozostaw puste, aby użyć wbudowanych wartości domyślnych.",
