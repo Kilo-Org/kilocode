@@ -305,12 +305,12 @@ describe("session processor empty tool-calls", () => {
 
           yield* handle.process(input)
           const parts = yield* MessageV2.parts(msg.id)
-          const warning = parts.find(
-            (part): part is MessageV2.TextPart =>
-              part.type === "text" && part.text === KiloSessionProcessor.REASONING_LENGTH_WARNING,
+          expect(handle.message.error).toEqual(
+            new MessageV2.APIError({
+              message: KiloSessionProcessor.REASONING_LENGTH_WARNING,
+              isRetryable: false,
+            }).toObject(),
           )
-
-          expect(warning?.ignored).toBe(true)
 
           const modelMsgs = yield* MessageV2.toModelMessagesEffect([{ info: handle.message, parts }], mdl)
           expect(JSON.stringify(modelMsgs)).not.toContain(KiloSessionProcessor.REASONING_LENGTH_WARNING)
