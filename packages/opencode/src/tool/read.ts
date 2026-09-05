@@ -1,5 +1,4 @@
 import { Effect, Schema, Scope } from "effect" // kilocode_change - stable object reads do not use Option
-import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as path from "path"
 import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
@@ -30,6 +29,7 @@ const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
+const Positive = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)) // kilocode_change - read pagination is 1-indexed
 
 // `offset` and `limit` were originally `z.coerce.number()` — the runtime
 // coercion was useful when the tool was called from a shell but serves no
@@ -38,12 +38,14 @@ const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
   filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
-  offset: Schema.optional(NonNegativeInt).annotate({
+  // kilocode_change start - reject zero before it falls back to line 1
+  offset: Schema.optional(Positive).annotate({
     description: "The line number to start reading from (1-indexed)",
   }),
-  limit: Schema.optional(NonNegativeInt).annotate({
+  limit: Schema.optional(Positive).annotate({
     description: "The maximum number of lines to read (defaults to 2000)",
   }),
+  // kilocode_change end
 })
 
 type Display =
