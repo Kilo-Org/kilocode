@@ -1647,6 +1647,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onInput={handleInput}
             onKeyDown={(e) => {
               if (speechDown(e)) return
+              const key = e.key.toLowerCase()
+              if ((e.ctrlKey || e.metaKey) && !e.altKey && (key === "z" || (key === "y" && !e.shiftKey))) {
+                e.stopPropagation()
+              }
               handleKeyDown(e)
             }}
             onKeyUp={(e) => {
