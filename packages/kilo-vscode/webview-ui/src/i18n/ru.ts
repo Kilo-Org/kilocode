@@ -1122,9 +1122,6 @@ export const dict = {
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
-  "settings.display.reasoningAutoCollapse.description":
-    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",

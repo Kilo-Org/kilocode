@@ -1063,9 +1063,6 @@ export const dict = {
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
   "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
-  "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",

@@ -1082,9 +1082,6 @@ export const dict = {
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
-  "settings.display.reasoningAutoCollapse.description":
-    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",

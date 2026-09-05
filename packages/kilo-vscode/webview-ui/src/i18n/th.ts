@@ -1102,9 +1102,6 @@ export const dict = {
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
-  "settings.display.reasoningAutoCollapse.description":
-    "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",

@@ -11,13 +11,17 @@ import {
 } from "solid-js"
 import { useConfig } from "./config"
 import { useVSCode } from "./vscode"
-import type { ExtensionMessage } from "../types/messages"
+import type { ExtensionMessage, ReasoningDisplay } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
 import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
 
 interface DisplayContextValue {
-  reasoningAutoCollapse: Accessor<boolean>
-  setReasoningAutoCollapse: (collapse: boolean) => void
+  reasoningDisplay: Accessor<ReasoningDisplay>
+  setReasoningDisplay: (mode: ReasoningDisplay) => void
+  inlineCodeBackground: Accessor<boolean>
+  setInlineCodeBackground: (enabled: boolean) => void
+  inlineCodeColor: Accessor<string | undefined>
+  setInlineCodeColor: (color: string | undefined) => void
   fontSize: Accessor<number>
   setFontSize: (size: number) => void
   // Shared throughput toggle — the same signal backs the per-message badge in
@@ -33,7 +37,11 @@ export const DisplayContext = createContext<DisplayContextValue>()
 export const DisplayProvider: ParentComponent = (props) => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
-  const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
+  const reasoningDisplay = createMemo<ReasoningDisplay>(
+    () => config().reasoning_display ?? (config().auto_collapse_reasoning === true ? "shortened" : "full_persist"),
+  )
+  const inlineCodeBackground = createMemo(() => config().inline_code_background === true)
+  const inlineCodeColor = createMemo(() => config().inline_code_color)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
   const [throughputVisible, setThroughputVisible] = createSignal(true)
   const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
@@ -56,13 +64,62 @@ export const DisplayProvider: ParentComponent = (props) => {
     applyFontSize(fontSize())
   })
 
+  // Keep the inherited shared-UI default unless the Kilo webview setting is explicitly enabled.
+  createEffect(() => {
+    const root = document.documentElement
+    const attribute = "data-kilo-inline-code-background"
+    root.toggleAttribute(attribute, inlineCodeBackground())
+    onCleanup(() => root.removeAttribute(attribute))
+  })
+
+  // Inline-code color override → CSS var read by chat.css [data-component="markdown"] :not(pre) > code.
+  // Only accept the #hex the color picker emits; any other value would make the
+  // `color: var(--kilo-inline-code-color, var(--syntax-string))` declaration invalid at
+  // computed-value time and drop the theme fallback. Unset/invalid removes the property.
+  createEffect(() => {
+    const root = document.documentElement
+    const property = "--kilo-inline-code-color"
+    const color = inlineCodeColor()?.trim()
+    if (color && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color)) {
+      root.style.setProperty(property, color)
+    } else {
+      root.style.removeProperty(property)
+    }
+    onCleanup(() => root.style.removeProperty(property))
+  })
+
+  // Pierre renders diff rows inside a shadow root. Publish inherited colors here;
+  // kilo-ui's renderer-owned unsafeCSS applies them inside that shadow root.
+  createEffect(() => {
+    const root = document.documentElement
+    const addition = "--kilo-diff-line-add-background"
+    const deletion = "--kilo-diff-line-delete-background"
+
+    if (config().diff_line_backgrounds === true) {
+      root.style.setProperty(addition, "var(--vscode-diffEditor-insertedLineBackground, rgba(46, 160, 67, 0.18))")
+      root.style.setProperty(deletion, "var(--vscode-diffEditor-removedLineBackground, rgba(248, 81, 73, 0.18))")
+    } else {
+      root.style.removeProperty(addition)
+      root.style.removeProperty(deletion)
+    }
+
+    onCleanup(() => {
+      root.style.removeProperty(addition)
+      root.style.removeProperty(deletion)
+    })
+  })
+
   onCleanup(unsubscribe)
 
   return (
     <DisplayContext.Provider
       value={{
-        reasoningAutoCollapse,
-        setReasoningAutoCollapse: (collapse) => updateConfig({ auto_collapse_reasoning: collapse }),
+        reasoningDisplay,
+        setReasoningDisplay: (mode) => updateConfig({ reasoning_display: mode }),
+        inlineCodeBackground,
+        setInlineCodeBackground: (enabled) => updateConfig({ inline_code_background: enabled || undefined }),
+        inlineCodeColor,
+        setInlineCodeColor: (color) => updateConfig({ inline_code_color: color?.trim() || undefined }),
         fontSize,
         setFontSize: (size) => {
           const next = clampFontSize(size)

@@ -1109,9 +1109,6 @@ export const dict = {
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
   "settings.display.fontSize.description": "اندازه قلم رابط کاربری وب‌ویو Kilo را مستقل از VS Code تنظیم کنید.",
-  "settings.display.reasoningAutoCollapse.title": "جمع‌شدن خودکار استدلال",
-  "settings.display.reasoningAutoCollapse.description":
-    "بلوک‌های استدلال را پس از اتمام نوشتن توسط عامل جمع می‌کند. برای نگه داشتن استدلال در حالت باز، این گزینه را خاموش بگذارید مگر اینکه خودتان آن را جمع کنید.",
   "settings.display.shiftTabCycle.title": "چرخش سطح استدلال با Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "در ورودی پرامپت، Shift+Tab را فشار دهید تا به سطح تلاش استدلال بعدی بروید. برای حفظ عملکرد Shift+Tab جهت ناوبری فوکوس صفحه‌کلید، این گزینه را غیرفعال کنید.",

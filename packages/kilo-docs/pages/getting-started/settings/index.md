@@ -81,13 +81,43 @@ You can also enable it in `kilo.jsonc`:
 
 ### Reasoning Blocks
 
-Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+Reasoning blocks show their full text while the agent is thinking and stay open by default in the VS Code chat UI. Choose how they display with **Reasoning Display** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
 
 ```json
 {
-  "auto_collapse_reasoning": true
+  "reasoning_display": "shortened"
 }
 ```
+
+- `collapsed` — hidden until you click to expand
+- `shortened` — scrolling preview while streaming, then collapse when finished
+- `full` — full text while streaming, then collapse when finished
+- `full_persist` — full text, stays open (default)
+
+### Inline Code
+
+Inline code keeps its current text-only appearance by default. Enable **Highlight Inline Code** in the Display tab, or set `inline_code_background` to `true`, to add a theme-aware background and spacing. You can independently set `inline_code_color` to a hex color:
+
+```json
+{
+  "inline_code_background": true,
+  "inline_code_color": "#9dbefe"
+}
+```
+
+Omit either setting to keep its current theme-controlled behavior.
+
+### Diff Line Backgrounds
+
+Diffs in the VS Code chat UI tint only the line numbers by default. Enable **Diff Line Backgrounds** in the Display tab, or set `diff_line_backgrounds` to `true`, to fill added and removed lines with a background color that matches the editor diff view:
+
+```json
+{
+  "diff_line_backgrounds": true
+}
+```
+
+Omit the setting to keep only the line numbers tinted.
 
 ### Terminal Command Blocks
 

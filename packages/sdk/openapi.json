@@ -34778,6 +34778,19 @@
           "auto_collapse_reasoning": {
             "type": "boolean"
           },
+          "reasoning_display": {
+            "type": "string",
+            "enum": ["collapsed", "shortened", "full", "full_persist"]
+          },
+          "inline_code_background": {
+            "type": "boolean"
+          },
+          "inline_code_color": {
+            "type": "string"
+          },
+          "diff_line_backgrounds": {
+            "type": "boolean"
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },

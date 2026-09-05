@@ -1026,9 +1026,6 @@ export const dict = {
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
   "settings.display.fontSize.title": "字體大小",
   "settings.display.fontSize.description": "獨立於 VS Code 調整 Kilo webview UI 的字體大小。",
-  "settings.display.reasoningAutoCollapse.title": "自動收合推理",
-  "settings.display.reasoningAutoCollapse.description":
-    "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",

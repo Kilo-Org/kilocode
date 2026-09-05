@@ -43,6 +43,8 @@ const PROMPT_INPUT_FILE = path.join(
 )
 const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
+const CHAT_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat.css")
+const DISPLAY_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/context/display.tsx")
 
 function check(code: string): { ok: boolean; output: string } {
   const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--conditions=browser", "-e", code], {
@@ -431,6 +433,18 @@ describe("Assistant transcript spacing contract (source)", () => {
     expect(css).toMatch(
       /\.vscode-session-turn\[data-row="assistant"\]:has\(> \.vscode-session-turn-assistant:empty\)\s*\{\s*padding-bottom: 0;/,
     )
+  })
+})
+
+describe("Inline code background contract (source)", () => {
+  it("keeps the Kilo-only chip treatment opt-in", () => {
+    const context = fs.readFileSync(DISPLAY_CONTEXT_FILE, "utf-8")
+    const css = fs.readFileSync(CHAT_CSS_FILE, "utf-8")
+
+    expect(context).toContain("config().inline_code_background === true")
+    expect(context).toContain("root.toggleAttribute(attribute, inlineCodeBackground())")
+    expect(css).toContain('html[data-kilo-inline-code-background] [data-component="markdown"] :not(pre) > code')
+    expect(css).toContain("--vscode-textCodeBlock-background")
   })
 })
 

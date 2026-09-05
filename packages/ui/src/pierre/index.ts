@@ -66,6 +66,27 @@ const unsafeCSS = `
   box-shadow: inset 0 0 0 9999px var(--diffs-bg-selection);
 }
 
+/* kilocode_change: optional "Diff Line Backgrounds" Display setting.
+   display.tsx publishes --kilo-diff-line-{add,delete}-background on <html>, which inherits into
+   the Pierre shadow root, ONLY when the setting is on; unset resolves to transparent, so the rule
+   is a no-op and the default appearance is unchanged (it does not touch background-color, which is
+   how Pierre tints rows). This lives in the shared Pierre unsafeCSS on purpose: the webview renders
+   diffs through several Pierre entry points (base and kilo-ui wrappers), and this is the single
+   stylesheet injected across all of them, so it is the only place the setting works consistently. */
+[data-diff][data-background] [data-line][data-line-type='change-addition'] {
+  background-image: linear-gradient(
+    var(--kilo-diff-line-add-background, transparent),
+    var(--kilo-diff-line-add-background, transparent)
+  ) !important;
+}
+
+[data-diff][data-background] [data-line][data-line-type='change-deletion'] {
+  background-image: linear-gradient(
+    var(--kilo-diff-line-delete-background, transparent),
+    var(--kilo-diff-line-delete-background, transparent)
+  ) !important;
+}
+
 [data-file] [data-line][data-comment-selected]:not([data-selected-line]) {
   box-shadow: inset 0 0 0 9999px var(--diffs-bg-selection);
 }

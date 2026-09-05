@@ -1105,9 +1105,6 @@ export const dict = {
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
-  "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
-  "settings.display.reasoningAutoCollapse.description":
-    "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",

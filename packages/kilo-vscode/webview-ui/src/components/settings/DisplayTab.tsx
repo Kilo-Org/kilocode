@@ -1,4 +1,4 @@
-import { type Component } from "solid-js"
+import { type Component, Show } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -6,7 +6,7 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
 import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
-import type { CodeEditDisplay, McpToolDisplay, TerminalCommandDisplay } from "../../types/messages"
+import type { CodeEditDisplay, McpToolDisplay, ReasoningDisplay, TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
@@ -28,6 +28,16 @@ const MCP_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.mcpTool.expanded" },
   { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
 ]
+
+const REASONING_OPTIONS: LayoutOption[] = [
+  { value: "collapsed", labelKey: "settings.display.reasoning.collapsed" },
+  { value: "shortened", labelKey: "settings.display.reasoning.shortened" },
+  { value: "full", labelKey: "settings.display.reasoning.full" },
+  { value: "full_persist", labelKey: "settings.display.reasoning.fullPersist" },
+]
+
+// Seeds the color picker when the user switches off "match theme"; also the input's fallback value.
+const DEFAULT_INLINE_CODE_COLOR = "#00ceb9"
 
 const DisplayTab: Component = () => {
   const { config, updateConfig, settings, updateSetting } = useConfig()
@@ -69,17 +79,73 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.display.reasoningAutoCollapse.title")}
-          description={language.t("settings.display.reasoningAutoCollapse.description")}
+          title={language.t("settings.display.reasoning.title")}
+          description={language.t("settings.display.reasoning.description")}
+        >
+          <Select
+            options={REASONING_OPTIONS}
+            current={REASONING_OPTIONS.find((o) => o.value === display.reasoningDisplay())}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as ReasoningDisplay
+              if (next === display.reasoningDisplay()) return
+              display.setReasoningDisplay(next)
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.inlineCodeBackground.title")}
+          description={language.t("settings.display.inlineCodeBackground.description")}
         >
           <Switch
-            checked={display.reasoningAutoCollapse()}
-            onChange={(checked: boolean) => {
-              display.setReasoningAutoCollapse(checked)
-            }}
+            checked={display.inlineCodeBackground()}
+            onChange={(checked: boolean) => display.setInlineCodeBackground(checked)}
             hideLabel
           >
-            {language.t("settings.display.reasoningAutoCollapse.title")}
+            {language.t("settings.display.inlineCodeBackground.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.inlineCodeColor.title")}
+          description={language.t("settings.display.inlineCodeColor.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <Switch
+              checked={!display.inlineCodeColor()}
+              onChange={(matchTheme: boolean) =>
+                display.setInlineCodeColor(matchTheme ? undefined : DEFAULT_INLINE_CODE_COLOR)
+              }
+            >
+              {language.t("settings.display.inlineCodeColor.matchTheme")}
+            </Switch>
+            <Show when={display.inlineCodeColor()}>
+              <input
+                type="color"
+                value={display.inlineCodeColor() ?? DEFAULT_INLINE_CODE_COLOR}
+                onInput={(event) => display.setInlineCodeColor(event.currentTarget.value)}
+                aria-label={language.t("settings.display.inlineCodeColor.title")}
+              />
+            </Show>
+          </div>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.diffLineBackgrounds.title")}
+          description={language.t("settings.display.diffLineBackgrounds.description")}
+        >
+          <Switch
+            checked={Boolean(config().diff_line_backgrounds)}
+            onChange={(checked: boolean) => updateConfig({ diff_line_backgrounds: checked || undefined })}
+            hideLabel
+          >
+            {language.t("settings.display.diffLineBackgrounds.title")}
           </Switch>
         </SettingsRow>
 
