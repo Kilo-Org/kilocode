@@ -380,6 +380,9 @@
         <action id="Kilo.WorktreeSession.MoveToWorktree"
                 class="ai.kilocode.client.actions.MoveWorktreeSessionAction"/>
 
+        <action id="Kilo.WorktreeSession.Fork"
+                class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
+
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
@@ -398,6 +401,7 @@
         </group>
 
         <group id="Kilo.WorktreeSession.RowMenu">
+            <reference ref="Kilo.WorktreeSession.Fork"/>
             <reference ref="Kilo.WorktreeSession.MoveToWorktree"/>
             <separator/>
             <reference ref="Kilo.WorktreeSession.Rename"/>
@@ -414,6 +418,9 @@
         <!-- Text and descriptions come from KiloBundle via action.<id>.text / .description. -->
         <action id="Kilo.Session.AutoApprove"
                 class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
+
+        <action id="Kilo.Session.Fork"
+                class="ai.kilocode.client.actions.ForkSessionAction"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
@@ -443,6 +450,8 @@
         <group id="Kilo.Session.ContextMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
+            <reference ref="Kilo.Session.Fork"/>
+            <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
@@ -463,6 +472,8 @@
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.Fork"/>
             <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
