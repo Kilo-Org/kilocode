@@ -19,7 +19,7 @@ agent ID wins over a Kilo compatibility default.
 | Explore and system/delegated agents | Existing v2 agents are not removed or rewritten | Preserved. |
 | Orchestrator | Deprecated v1 agent | Intentionally not resurrected. |
 | Custom agent collision | Existing `ask` or `debug` ID is left unchanged | User config takes precedence. |
-| Plan prompt files and `plan_exit` lifecycle | V2 has a native Plan agent, scoped plan-directory permissions, and reminder lifecycle, but no matching public legacy file/exit seam | Not ported. The policy deliberately does not rewrite Plan, avoiding overrides of user Plan config. |
+| Plan prompt files and `plan_exit` lifecycle | A separate Kilo-owned post replacement reuses the bound native question tool, validates `.kilo/plans` files, and gates implementation handoff | Ported in `plan-policy.ts`; configured Plan agents remain untouched. See [Plan evidence](plan-v2-parity.md). |
 
 The focused test starts an isolated loopback host with the bundled Bun 1.4.0 runtime,
 uses production `launch()` registration, and inspects agents through the public
@@ -27,10 +27,18 @@ client. It checks native permission evaluation and drives denied Ask shell and
 Debug read requests with a loopback fake model. No live credentials or paid
 inference are used. Existing custom Ask/Debug and Plan definitions remain intact.
 
-The rename is presentation, not an ID migration. This slice does not add a
-`code` alias for CLI/API/config inputs or rewrite existing sessions. Those v1
-compatibility inputs need separate validation under the open built-in-agent
-inventory row. No default/core execution or permission behavior changes here.
+The rename is presentation, not a stored-ID migration. A headless compatibility
+follow-up now resolves explicit `run --agent code` after location plugin
+activation: an actual registered `code` agent wins; otherwise the command uses
+native `build`. Both create and resume use that resolved ID. Two real-host tests
+exercise each case with paginated history (12 assertions). No session rewrite
+or generic API alias is introduced. Native `Agent.selectedDefault` already
+falls back from absent configured `code` to `build`; a real custom `code` wins.
+The new default-agent regression executes a loopback model and reads the
+assistant projection, proving those two cases plus explicit `ask` selection.
+Session creation alone defers that choice. This is upstream reuse, not a new
+configuration rewrite. The complete agent-policy target passes 2 tests with
+36 assertions after this addition.
 
 Rename follow-up validation (bundled Bun 1.4.0): `test/tui.test.tsx`,
 `test/agent-policy.test.ts` and `test/model-picker-ui.test.tsx` — **4 pass,

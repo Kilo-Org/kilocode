@@ -541,10 +541,12 @@
       "name": "@kilocode/cli",
       "version": "0.0.0-internal",
       "dependencies": {
+        "@ai-sdk/openai-compatible": "2.0.41",
         "@effect/platform-node": "catalog:",
         "@kilocode/client": "workspace:*",
         "@kilocode/gateway": "workspace:*",
         "@kilocode/indexing": "workspace:*",
+        "@kilocode/kilo-memory": "workspace:*",
         "@opencode-ai/client": "workspace:*",
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/plugin": "workspace:*",
@@ -621,6 +623,19 @@
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "packages/kilo-memory": {
+      "name": "@kilocode/kilo-memory",
+      "version": "0.0.0-internal",
+      "dependencies": {
+        "effect": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/latex": {
@@ -2061,6 +2076,8 @@
     "@kilocode/gateway": ["@kilocode/gateway@workspace:packages/kilo-gateway"],
 
     "@kilocode/indexing": ["@kilocode/indexing@workspace:packages/kilo-indexing"],
+
+    "@kilocode/kilo-memory": ["@kilocode/kilo-memory@workspace:packages/kilo-memory"],
 
     "@kobalte/core": ["@kobalte/core@0.13.13", "", { "dependencies": { "@floating-ui/dom": "^1.5.1", "@internationalized/number": "^3.2.1", "@kobalte/utils": "^0.9.2", "@solid-primitives/props": "^3.1.8", "@solid-primitives/resize-observer": "^2.0.26", "solid-presence": "^0.2.0", "solid-prevent-scroll": "^0.1.11" }, "peerDependencies": { "solid-js": "^1.9.8" } }, "sha512-czBC+IQdOgJoW7DJjeh0rht7SPmTPgWsKg7Jo3RHMfwx028WxJtDylx9dJuJuD/GUae15+E4nYafu8LwuixFYQ=="],
 

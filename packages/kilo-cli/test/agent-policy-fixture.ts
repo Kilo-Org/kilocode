@@ -18,13 +18,14 @@ const model = Bun.serve({
       : transcript.includes("Exercise debug permissions")
         ? "debug"
         : undefined
-    const tool = body.messages.at(-1)?.role === "tool"
-      ? undefined
-      : agent === undefined
+    const tool =
+      body.messages.at(-1)?.role === "tool"
         ? undefined
-        : agent === "ask"
-        ? { name: "shell", arguments: JSON.stringify({ command: "git status" }) }
-        : { name: "read", arguments: JSON.stringify({ path: "secret.txt", offset: 0, limit: 10 }) }
+        : agent === undefined
+          ? undefined
+          : agent === "ask"
+            ? { name: "shell", arguments: JSON.stringify({ command: "git status" }) }
+            : { name: "read", arguments: JSON.stringify({ path: "secret.txt", offset: 0, limit: 10 }) }
     if (tool) calls.push(`${agent}:${tool.name}`)
     const delta = tool
       ? { tool_calls: [{ index: 0, id: `call_${tool.name}`, type: "function", function: tool }] }
@@ -71,7 +72,15 @@ try {
         const location = { location: { directory: process.env.KILO_AGENT_POLICY_CWD! } }
         yield* Effect.promise(() => client.plugin.awaitActivation(location))
         const agents = (yield* Effect.promise(() => client.agent.list(location))).data
-        if (!exercise) return { agents }
+        if (!exercise) {
+          const session = yield* Effect.promise(() => client.session.create(location))
+          yield* Effect.promise(() => client.session.prompt({ sessionID: session.id, text: "Exercise default agent" }))
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) }),
+          )
+          const messages = yield* Effect.promise(() => client.message.list({ sessionID: session.id, order: "asc" }))
+          return { agents, defaultAgent: messages.data.find((message) => message.type === "assistant")?.agent }
+        }
         const run = (agent: string) =>
           Effect.promise(async () => {
             const session = await client.session.create({

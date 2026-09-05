@@ -25,6 +25,9 @@ export const SETTINGS_FIELD_KEYS = [
   "snapshots",
   "websearch",
   "warming",
+  "compaction.auto",
+  "compaction.buffer",
+  "compaction.keep.tokens",
   "tool_output.max_lines",
   "tool_output.max_bytes",
 ] as const
@@ -48,6 +51,10 @@ export type SettingsFieldKind = typeof Kind.Type
 
 const Origin = Schema.Literals(["profile", "project", "unset"])
 
+/** Optimistic edit token: null means the target did not exist when read. */
+export const SettingsExpected = Schema.Struct({ path: Schema.String, revision: Schema.NullOr(Schema.String) })
+export type SettingsExpected = typeof SettingsExpected.Type
+
 /** Stored configuration values travel as JSON, exactly as written to the document. */
 export const SettingsValue = Schema.Json
 export type SettingsValue = typeof SettingsValue.Type
@@ -58,6 +65,7 @@ export const SettingsScopeState = Schema.Struct({
   path: Schema.String,
   exists: Schema.Boolean,
   writable: Schema.Boolean,
+  expected: Schema.optional(SettingsExpected),
   /** Present only when the scope cannot be written; never carries file content. */
   reason: Schema.optional(Schema.String),
 })
@@ -68,6 +76,8 @@ export const SettingsFieldState = Schema.Struct({
   title: Schema.String,
   description: Schema.String,
   kind: Kind,
+  /** Integer input bound; omitted preserves the positive-integer default. */
+  minimum: Schema.optional(Schema.Finite),
   /** Offered values for `choice` fields, in presentation order. */
   options: Schema.optional(Schema.Array(Schema.Struct({ title: Schema.String, value: SettingsValue }))),
   /** Raw stored values per scope, omitted where the scope does not define the field. */
@@ -99,8 +109,12 @@ export const SettingsChange = Schema.Struct({
 export type SettingsChange = typeof SettingsChange.Type
 
 const readInput = Schema.toStandardSchemaV1(Schema.Struct({}))
-const setInput = Schema.toStandardSchemaV1(Schema.Struct({ scope: Scope, key: FieldKey, value: SettingsValue }))
-const resetInput = Schema.toStandardSchemaV1(Schema.Struct({ scope: Scope, key: FieldKey }))
+const setInput = Schema.toStandardSchemaV1(
+  Schema.Struct({ scope: Scope, key: FieldKey, value: SettingsValue, expected: Schema.optional(SettingsExpected) }),
+)
+const resetInput = Schema.toStandardSchemaV1(
+  Schema.Struct({ scope: Scope, key: FieldKey, expected: Schema.optional(SettingsExpected) }),
+)
 const rpcErrors = { "kilocode.settings": Schema.toStandardSchemaV1(Schema.Undefined) }
 
 /**

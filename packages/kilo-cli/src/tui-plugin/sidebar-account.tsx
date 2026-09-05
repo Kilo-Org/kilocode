@@ -77,7 +77,7 @@ export function AccountSidebar(
       return
     }
     controller = new AbortController()
-    const signal = linkedSignal(controller, props.signal)
+    const signal = props.signal ? AbortSignal.any([controller.signal, props.signal]) : controller.signal
     setState({ kind: "loading" })
     try {
       const value = await props.client.kilocode.balance(requestOptions(ref, signal))
@@ -229,11 +229,4 @@ export function accountRequestIdentity(
     account?.currentOrganizationID ?? "personal",
     account?.selectionAvailable ?? false,
   ].join("\u0000")
-}
-
-function linkedSignal(controller: AbortController, outer: AbortSignal | undefined) {
-  if (!outer) return controller.signal
-  if (outer.aborted) controller.abort()
-  outer.addEventListener("abort", () => controller.abort(), { once: true })
-  return controller.signal
 }

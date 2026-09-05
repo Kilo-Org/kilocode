@@ -5,8 +5,12 @@ import { createMemo, createSignal } from "solid-js"
 import { KiloLogo } from "./logo"
 import { installMemoryUi } from "./memory"
 import { installMemorySidebar } from "./sidebar-memory"
+import { installIndexingSidebar } from "./sidebar-indexing"
+import { installRoutedModelSidebar } from "./sidebar-routed-model"
+import { installUsageSidebar } from "./sidebar-usage"
 import { installAccountSidebar } from "./sidebar-account"
 import { installSettingsUi } from "./settings"
+import { installRemoteUi } from "./remote"
 import { installPrivacyUi, type PrivacyUi } from "./privacy"
 
 const Options = Schema.Struct({
@@ -67,8 +71,16 @@ export default Plugin.define({
       render: () => {
         installMemoryUi(ctx, { client, signal: controller.signal })
         installMemorySidebar(ctx, { client, signal: controller.signal })
+        installIndexingSidebar(ctx, { client, signal: controller.signal })
+        installRoutedModelSidebar(ctx)
         installSettingsUi(ctx, { client, signal: controller.signal })
+        installRemoteUi(ctx, { client, signal: controller.signal })
         setPrivacy(installPrivacyUi(ctx, { client, signal: controller.signal }))
+        installUsageSidebar(ctx, {
+          client,
+          privacy: () => privacy()?.enabled() ?? true,
+          signal: controller.signal,
+        })
         installAccountSidebar(ctx, {
           client,
           account,

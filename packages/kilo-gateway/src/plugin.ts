@@ -12,7 +12,7 @@ import {
   type Profile,
 } from "./gateway.js"
 import { fetchAccountBalance } from "./account.js"
-import { fetchModelMetadata } from "./models.js"
+import { fetchCatalogModels, fetchModelMetadata, type CatalogModel } from "./models.js"
 import { registerSessions, type SessionServices } from "./session.js"
 
 export interface GatewayContext {
@@ -35,6 +35,8 @@ const organizationHeader = "X-KILOCODE-ORGANIZATIONID"
 type Loaded = {
   readonly server: string
   readonly organizationID?: string | null
+  /** Undefined means the scoped model request failed; never reuse another account's snapshot. */
+  readonly models?: readonly CatalogModel[]
 }
 
 type AccountFailure =
@@ -123,13 +125,20 @@ export const registerGateway = Effect.fn(function* (
         const base = yield* Effect.try(() => serverUrl(metadata.server ?? options.server))
         const token = credential.type === "oauth" ? credential.access : credential.key
         const selected = resolveSelection(yield* fetchProfile(base, token), organizationID)
-        return {
+        const current = {
           current: {
             server: base,
             ...(selected.selectionAvailable ? { organizationID: selected.currentOrganizationID } : {}),
           },
           invalid: !selected.selectionAvailable,
         }
+        if (!selected.selectionAvailable) return current
+        const models = yield* fetchCatalogModels({
+          token,
+          server: base,
+          organizationID: selected.currentOrganizationID,
+        }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+        return { ...current, current: { ...current.current, ...(models === undefined ? {} : { models }) } }
       }).pipe(
         Effect.exit,
         Effect.tap((result) =>
@@ -187,6 +196,10 @@ export const registerGateway = Effect.fn(function* (
       provider.headers = headers(provider.headers)
       if (loaded.invalid) provider.activation = "disabled"
     })
+    const models = loaded.current?.models
+    const team = loaded.current?.organizationID !== null && loaded.current?.organizationID !== undefined
+    const replace = models !== undefined && (team || models.length > 0)
+    const disabled = new Set([...item.models].flatMap(([id, model]) => (model.enabled ? [] : [id])))
     item.models.forEach((_, id) => {
       editor.model.update("kilo", id, (model) => {
         model.settings = { ...model.settings, baseURL }
@@ -196,8 +209,27 @@ export const registerGateway = Effect.fn(function* (
           variant.headers = headers(variant.headers)
         })
         if (loaded.invalid) model.enabled = false
+        if (!loaded.invalid && !disabled.has(id) && (team || replace))
+          model.enabled = models?.some((item) => item.id === id) ?? false
       })
     })
+    if (loaded.invalid || models === undefined) return
+    for (const source of models) {
+      editor.model.update("kilo", source.id, (model) => {
+        model.name = source.name
+        model.settings = { ...model.settings, baseURL }
+        model.headers = headers(model.headers)
+        if (!disabled.has(source.id)) model.enabled = true
+        if (source.limit) model.limit = source.limit
+        if (source.cost) model.cost = [source.cost]
+        if (source.capabilities) model.capabilities = source.capabilities
+        if (source.variants) {
+          const variants = new Map(source.variants.map((item) => [item.id, item]))
+          model.variants.forEach((item) => variants.set(item.id, item))
+          model.variants = [...variants.values()]
+        }
+      })
+    }
   })
   yield* ctx.rpc.register(KiloGateway.Definition, {
     profile: (_, call) =>

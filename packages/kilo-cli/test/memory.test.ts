@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test"
-import { mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { createClient } from "@kilocode/client"
+import { Memory } from "@kilocode/kilo-memory/memory"
+import { MemoryFiles } from "@kilocode/kilo-memory/store"
 import type { OpenCodeEvent } from "@opencode-ai/client"
 import { AbsolutePath } from "@opencode-ai/schema/schema"
 import { ProjectID } from "@opencode-ai/schema/project-id"
@@ -12,6 +14,12 @@ import type { ToolEditor } from "@opencode-ai/plugin/effect/tool"
 import type { Tool } from "@opencode-ai/schema/tool"
 import { Effect, Stream } from "effect"
 import { launch } from "../src/interactive-server"
+import {
+  createMemoryCaptureGate,
+  memoryTurnsAfterMarker,
+  memoryTurnsFor,
+  memoryTurnsSinceBaseline,
+} from "../src/memory-capture"
 import type { Layout } from "../src/paths"
 import {
   createMemoryPlugin,
@@ -67,6 +75,185 @@ test("parses explicit project memory commands", () => {
     operation: "auto",
     mode: "on",
   })
+})
+
+test("groups completed assistant steps under their promoted user message", () => {
+  const turns = memoryTurnsFor(
+    [
+      { type: "user", text: "first request" },
+      { type: "assistant", id: "msg_first_step", content: [{ type: "text", text: "first step" }] },
+      { type: "assistant", id: "msg_first_complete", content: [{ type: "text", text: "first completion" }] },
+      { type: "user", text: "second request" },
+      { type: "assistant", id: "msg_second_complete", content: [{ type: "text", text: "second completion" }] },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1],
+  )
+
+  expect(turns).toHaveLength(2)
+  expect(turns[0]).toMatchObject({
+    user: "first request",
+    assistant: "first step first completion",
+    lastAssistantID: "msg_first_complete",
+  })
+  expect(turns[1]).toMatchObject({ user: "second request", lastAssistantID: "msg_second_complete" })
+  expect(memoryTurnsAfterMarker(turns, null).map((turn) => turn.lastAssistantID)).toEqual([
+    "msg_first_complete",
+    "msg_second_complete",
+  ])
+  expect(memoryTurnsAfterMarker(turns, "msg_first_complete").map((turn) => turn.lastAssistantID)).toEqual([
+    "msg_second_complete",
+  ])
+})
+
+test("uses only the first and last filtered assistant snapshot boundaries for a capture group", () => {
+  const turns = memoryTurnsFor(
+    [
+      { type: "user", text: "snapshot boundary request" },
+      {
+        type: "assistant",
+        id: "msg_snapshot_first",
+        snapshot: { start: "snap_group_start", end: "snap_ignored_middle" },
+        content: [{ type: "text", text: "first response step" }],
+      },
+      {
+        type: "assistant",
+        id: "msg_snapshot_last",
+        snapshot: { start: "snap_ignored_last_start", end: "snap_group_end" },
+        content: [{ type: "text", text: "last response step" }],
+      },
+      {
+        type: "user",
+        text: "missing boundary request",
+      },
+      {
+        type: "assistant",
+        id: "msg_snapshot_missing",
+        snapshot: { start: "snap_missing_start" },
+        content: [{ type: "text", text: "missing end" }],
+      },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1],
+  )
+
+  expect(String(turns[0]?.snapshots?.start)).toBe("snap_group_start")
+  expect(String(turns[0]?.snapshots?.end)).toBe("snap_group_end")
+  expect(turns[1]?.snapshots).toBeUndefined()
+})
+
+test("keeps consecutive promoted users in the assistant group that answers them", () => {
+  const turns = memoryTurnsFor(
+    [
+      { type: "user", text: "first steer detail" },
+      { type: "user", text: "second steer detail" },
+      { type: "user", text: "third steer detail" },
+      { type: "assistant", id: "msg_batch_complete", content: [{ type: "text", text: "batch answer" }] },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1],
+  )
+
+  expect(turns).toMatchObject([
+    {
+      user: "first steer detail second steer detail third steer detail",
+      assistant: "batch answer",
+      lastAssistantID: "msg_batch_complete",
+    },
+  ])
+})
+
+test("uses only completed Kilo recall tool metadata as recall provenance", () => {
+  const model = { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1]
+  const recalled = memoryTurnsFor(
+    [
+      { type: "user", text: "Find the saved project decision" },
+      {
+        type: "assistant",
+        id: "msg_recalled",
+        content: [
+          { type: "text", text: "The decision is to use Bun." },
+          {
+            type: "tool",
+            name: "kilo_memory_recall",
+            state: { status: "completed", metadata: { count: 1 } },
+          },
+        ],
+      },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    model,
+  )
+  expect(recalled[0]?.recalledMemory).toBe(true)
+
+  const empty = memoryTurnsFor(
+    [
+      { type: "user", text: "Find the saved project decision" },
+      {
+        type: "assistant",
+        id: "msg_empty_recall",
+        content: [
+          { type: "text", text: "No saved decision matched." },
+          {
+            type: "tool",
+            name: "kilo_memory_recall",
+            state: { status: "completed", metadata: { count: 0 } },
+          },
+        ],
+      },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    model,
+  )
+  expect(empty[0]?.recalledMemory).toBe(false)
+})
+
+test("captures every complete group observed after an opted-in execution start without replaying older groups", () => {
+  const turns = memoryTurnsFor(
+    [
+      { type: "user", text: "before auto enabled" },
+      { type: "assistant", id: "msg_before", content: [{ type: "text", text: "old result" }] },
+      { type: "user", text: "first observed execution" },
+      { type: "assistant", id: "msg_first", content: [{ type: "text", text: "first result" }] },
+      { type: "user", text: "second observed execution" },
+      { type: "assistant", id: "msg_second", content: [{ type: "text", text: "second result" }] },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1],
+  )
+  const gate = createMemoryCaptureGate()
+  gate.open({ root: "/tmp/memory", sessionID: "ses_memory" as never, assistantIDs: ["msg_before"] })
+  const baseline = gate.take({ root: "/tmp/memory", sessionID: "ses_memory" as never })
+
+  expect(baseline).toBeDefined()
+  const eligible = memoryTurnsSinceBaseline(turns, baseline!, "msg_before")
+  expect(eligible.map((turn) => turn.lastAssistantID)).toEqual(["msg_first", "msg_second"])
+  expect(eligible[0]?.recent).not.toContain("before auto enabled")
+  expect(eligible[1]?.recent).toContain("first observed execution")
+  expect(eligible[1]?.recent).not.toContain("before auto enabled")
+  expect(gate.take({ root: "/tmp/memory", sessionID: "ses_memory" as never })).toBeUndefined()
+
+  gate.open({ root: "/tmp/memory", sessionID: "ses_memory" as never, assistantIDs: ["msg_second"] })
+  gate.clear("/tmp/memory")
+  expect(gate.take({ root: "/tmp/memory", sessionID: "ses_memory" as never })).toBeUndefined()
+})
+
+test("keeps an errored terminal group bounded to its user text for fallback capture", () => {
+  const turns = memoryTurnsFor(
+    [
+      { type: "user", text: "Capture this sufficiently detailed failed request without provider diagnostics." },
+      {
+        type: "assistant",
+        id: "msg_failed",
+        content: [],
+        error: { type: "provider", message: "provider diagnostics must not be copied" },
+      },
+    ] as unknown as Parameters<typeof memoryTurnsFor>[0],
+    { providerID: "fixture", id: "chat" } as Parameters<typeof memoryTurnsFor>[1],
+    "error",
+  )
+
+  expect(turns).toMatchObject([
+    {
+      user: "Capture this sufficiently detailed failed request without provider diagnostics.",
+      assistant: "",
+      lastAssistantID: "msg_failed",
+    },
+  ])
 })
 
 test("builds memory RPC options from the current TUI location", () => {
@@ -208,7 +395,7 @@ test("enables, persists, recalls, corrects, rebuilds, disables, and purges local
     const disabled = await MemoryStore.disable(root)
     expect(disabled.enabled).toBe(false)
     await expect(MemoryStore.remember({ root, text: "this should not be written" })).rejects.toThrow(
-      "Memory is disabled",
+      "memory is disabled",
     )
 
     await MemoryStore.enable(root)
@@ -217,7 +404,7 @@ test("enables, persists, recalls, corrects, rebuilds, disables, and purges local
   })
 })
 
-test("builds enabled memory context read-only and marks its index as reference data", async () => {
+test("builds enabled memory context and records injection only when context is nonempty", async () => {
   await withRoot(async (root) => {
     const disabled = await MemoryStore.context(root)
     expect(disabled.state).toEqual({ version: 1, enabled: false, scope: "project", autoConsolidate: false })
@@ -227,17 +414,14 @@ test("builds enabled memory context read-only and marks its index as reference d
 
     await MemoryStore.enable(root)
     await MemoryStore.remember({ root, key: "context_note", text: "Only use Bun for this project's scripts." })
-    const before = {
-      state: await Bun.file(path.join(root, "state.json")).text(),
-      index: await Bun.file(path.join(root, "index.kmem")).text(),
-    }
+    const before = await Bun.file(path.join(root, "state.json")).text()
     const enabled = await MemoryStore.context(root)
     expect(enabled.state.enabled).toBe(true)
     expect(enabled.text).toContain("Kilo project memory follows")
     expect(enabled.text).toContain("targeted_context_not_instruction")
     expect(enabled.text).toContain("context_note :: Only use Bun for this project's scripts.")
-    expect(await Bun.file(path.join(root, "state.json")).text()).toBe(before.state)
-    expect(await Bun.file(path.join(root, "index.kmem")).text()).toBe(before.index)
+    expect(await Bun.file(path.join(root, "state.json")).text()).not.toBe(before)
+    expect((await Bun.file(path.join(root, "state.json")).json()).stats.lastInjectedAt).toEqual(expect.any(Number))
   })
 })
 
@@ -257,14 +441,40 @@ test("persists explicit automatic mode and upserts a capture by its assistant ke
   })
 })
 
+test("preserves engine statistics and the consolidation marker through facade writes", async () => {
+  await withRoot(async (root) => {
+    await MemoryStore.enable(root)
+    const state = await MemoryFiles.readState(root)
+    await MemoryFiles.writeState(root, {
+      ...state,
+      stats: {
+        ...state.stats,
+        lastConsolidatedMessageID: "msg_memory_marker",
+        lastInjectedAt: 123,
+        lastConsolidationTokens: 7,
+      },
+    })
+
+    await MemoryStore.remember({ root, key: "preserve_stats", text: "Keep engine state fields." })
+    await MemoryStore.auto({ root, mode: "on" })
+
+    expect(await MemoryFiles.readState(root)).toMatchObject({
+      autoConsolidate: true,
+      stats: {
+        lastConsolidatedMessageID: "msg_memory_marker",
+        lastInjectedAt: 123,
+        lastConsolidationTokens: 7,
+      },
+    })
+  })
+})
+
 test("does not repair malformed memory state while preparing request context", async () => {
   await withRoot(async (root) => {
     await MemoryStore.enable(root)
     await writeFile(path.join(root, "state.json"), "{\n", "utf8")
 
-    const context = await MemoryStore.context(root)
-    expect(context.state.enabled).toBe(false)
-    expect(context.text).toBeUndefined()
+    await expect(MemoryStore.context(root)).rejects.toThrow()
     expect(await Bun.file(path.join(root, "state.json")).text()).toBe("{\n")
     expect((await readdir(root)).some((item) => item.startsWith("state.json.bad-"))).toBe(false)
   })
@@ -278,14 +488,14 @@ test("rejects secret-like explicit writes without changing the local memory", as
   })
 })
 
-test("recovers a malformed state as disabled and preserves a diagnostic copy", async () => {
+test("keeps malformed state bytes unchanged on ordinary reads", async () => {
   await withRoot(async (root) => {
     await MemoryStore.enable(root)
     await writeFile(path.join(root, "state.json"), "{\n", "utf8")
 
-    const state = await MemoryStore.state(root)
-    expect(state.enabled).toBe(false)
-    expect((await readdir(root)).some((item) => item.startsWith("state.json.bad-"))).toBe(true)
+    await expect(MemoryStore.state(root)).rejects.toThrow()
+    expect(await Bun.file(path.join(root, "state.json")).text()).toBe("{\n")
+    expect((await readdir(root)).some((item) => item.startsWith("state.json.bad-"))).toBe(false)
   })
 })
 
@@ -476,6 +686,29 @@ test("serves immediate memory status and persistence through typed RPC without s
           expect(final.state.enabled).toBe(true)
           expect(shown.sources["project.md"]).toContain("rpc_note :: Persist this RPC memory without a session prompt.")
           expect(recalled.hits.map((item) => item.key)).toContain("rpc_note")
+          yield* Effect.promise(() => Memory.context({ root: final.root, sessionID: session.id }))
+          const injected = yield* Effect.promise(() => rpc.status({}, location))
+          expect(injected.activity).toMatchObject({
+            lastInjectedAt: expect.any(Number),
+            lastInjectedBytes: expect.any(Number),
+            lastInjectedTokens: expect.any(Number),
+          })
+          yield* Effect.promise(() =>
+            Memory.recordSession({
+              root: final.root,
+              sessionID: "ses_rpc_digest",
+              topic: "RPC digest proof",
+              summary: "The reusable engine stores this real session digest for RPC recall.",
+              time: 1,
+            }),
+          )
+          const digest = yield* Effect.promise(() => rpc.recall({ query: "reusable engine session digest" }, location))
+          expect(digest.hits).toContainEqual(
+            expect.objectContaining({
+              source: expect.stringContaining("ses_rpc_digest"),
+              text: expect.stringContaining("reusable engine"),
+            }),
+          )
           expect(yield* Effect.promise(() => client.message.list({ sessionID: session.id }))).toEqual(before.messages)
           expect(yield* Effect.promise(() => client.session.inbox.list({ sessionID: session.id }))).toEqual(
             before.inbox,
@@ -777,9 +1010,15 @@ test("runs one auxiliary consolidation only after memory and auto mode are expli
     async fetch(request) {
       if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
       const body: { messages?: Array<{ content?: string }> } = await request.json()
-      const automatic = JSON.stringify(body.messages).includes("Write one concise, durable project-memory fact")
+      const automatic =
+        JSON.stringify(body.messages).includes("session digest updater") ||
+        JSON.stringify(body.messages).includes("typed memory consolidation step")
       requests[automatic ? "auxiliary" : "primary"]++
-      const content = automatic ? "Use Bun 1.4 for this project's package scripts." : "Primary fixture response"
+      const content = JSON.stringify(body.messages).includes("typed memory consolidation step")
+        ? `{"operations":[{"op":"upsert_project_fact","key":"package_runtime","value":"Use Bun 1.4 for this project's package scripts."}],"skipped":[]}`
+        : automatic
+          ? '{"topic":"memory fixture","summary":"Memory consolidation fixture completed."}'
+          : "Primary fixture response"
       return new Response(
         [
           {
@@ -878,9 +1117,356 @@ test("runs one auxiliary consolidation only after memory and auto mode are expli
   }
 }, 30_000)
 
+test("coalesces queued opted-in steers without sending pre-opt-in history to auxiliary capture", async () => {
+  await using input = await fixture()
+  const directory = await realpath(input.cwd)
+  await writeFile(path.join(directory, "tracked-before-memory-capture.txt"), "before\n")
+  await Bun.spawn(["git", "init"], { cwd: directory, stdout: "ignore", stderr: "ignore" }).exited
+  await Bun.spawn(["git", "add", "tracked-before-memory-capture.txt"], {
+    cwd: directory,
+    stdout: "ignore",
+    stderr: "ignore",
+  }).exited
+  await Bun.spawn(
+    [
+      "git",
+      "-c",
+      "user.name=Memory Fixture",
+      "-c",
+      "user.email=memory-fixture@example.test",
+      "commit",
+      "-m",
+      "baseline",
+    ],
+    { cwd: directory, stdout: "ignore", stderr: "ignore" },
+  ).exited
+  const auxiliary: string[] = []
+  let holdPrimary = false
+  let releasePrimary: (() => void) | undefined
+  let primaryStarted: (() => void) | undefined
+  const started = new Promise<void>((resolve) => {
+    primaryStarted = resolve
+  })
+  const model = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      const body: { messages?: Array<{ content?: string }> } = await request.json()
+      const contents = JSON.stringify(body.messages)
+      const automatic =
+        contents.includes("session digest updater") || contents.includes("typed memory consolidation step")
+      if (automatic) auxiliary.push(contents)
+      if (holdPrimary && !automatic) {
+        holdPrimary = false
+        primaryStarted?.()
+        await new Promise<void>((resolve) => {
+          releasePrimary = resolve
+        })
+      }
+      const content = contents.includes("typed memory consolidation step")
+        ? '{"operations":[],"skipped":["fixture"]}'
+        : automatic
+          ? '{"topic":"memory fixture","summary":"Memory consolidation fixture completed."}'
+          : "Primary fixture response"
+      return new Response(
+        [
+          {
+            id: "memory-steer-batch",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "chat",
+            choices: [{ index: 0, delta: { role: "assistant", content }, finish_reason: null }],
+          },
+          {
+            id: "memory-steer-batch",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "chat",
+            choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+          },
+        ]
+          .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
+          .join("") + "data: [DONE]\n\n",
+        { headers: { "content-type": "text/event-stream" } },
+      )
+    },
+  })
+  const layout = makeInteractiveLayout(path.join(input.directory, "memory-steer-batch-interactive"), input.home)
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* launch(layout, {
+            models: false,
+            recover: false,
+            content: JSON.stringify({
+              snapshots: true,
+              model: "fixture/chat",
+              providers: {
+                fixture: {
+                  package: "aisdk:@ai-sdk/openai-compatible",
+                  settings: { baseURL: `http://127.0.0.1:${model.port}/v1`, apiKey: "fixture" },
+                  models: { chat: {} },
+                },
+              },
+            }),
+          })
+          const client = createClient({
+            baseUrl: server.url,
+            headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
+          })
+          const location = { location: { directory } }
+          yield* Effect.promise(() => client.plugin.awaitActivation(location))
+          const rpc = client.rpc(MemoryRpc.Definition)
+          const session = yield* Effect.promise(() =>
+            client.session.create({
+              title: "Memory steer batch fixture",
+              location: location.location,
+              model: { providerID: "fixture", id: "chat" },
+            }),
+          )
+          yield* Effect.promise(() =>
+            client.session.prompt({ sessionID: session.id, text: "pre-opt-in history must not replay" }),
+          )
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) }),
+          )
+          expect(auxiliary).toEqual([])
+
+          yield* Effect.promise(() => rpc.enable({}, location))
+          yield* Effect.promise(() => rpc.auto({ mode: "on" }, location))
+          holdPrimary = true
+          yield* Effect.promise(() => client.session.prompt({ sessionID: session.id, text: "eligible steer first" }))
+          yield* Effect.promise(() => started)
+          yield* Effect.promise(() => writeFile(path.join(directory, "memory-diff-proof.txt"), "captured\n"))
+          yield* Effect.promise(() => client.session.prompt({ sessionID: session.id, text: "eligible steer second" }))
+          yield* Effect.promise(() => client.session.prompt({ sessionID: session.id, text: "eligible steer third" }))
+          releasePrimary?.()
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) }),
+          )
+
+          yield* Effect.tryPromise({
+            try: async () => {
+              for (let attempt = 0; attempt < 800; attempt++) {
+                if (
+                  auxiliary.some(
+                    (body) => body.includes("eligible steer second") && body.includes("eligible steer third"),
+                  )
+                )
+                  return
+                await Bun.sleep(50)
+              }
+              throw new Error("Timed out waiting for the source engine's idle coalesced capture")
+            },
+            catch: (error) => error,
+          })
+          const captured = auxiliary.join("\n")
+          expect(captured).toContain("eligible steer first")
+          expect(captured).toContain("eligible steer second")
+          expect(captured).toContain("eligible steer third")
+          expect(captured).not.toContain("pre-opt-in history must not replay")
+          expect(captured).toContain("added memory-diff-proof.txt +1 -0")
+        }),
+      ),
+    )
+  } finally {
+    await model.stop(true)
+  }
+}, 50_000)
+
+test("records a bounded fallback digest after an execution failure without an auxiliary model call", async () => {
+  await using input = await fixture()
+  const requests = { primary: 0, auxiliary: 0 }
+  const model = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      const body = await request.text()
+      if (body.includes("session digest updater") || body.includes("typed memory consolidation step")) {
+        requests.auxiliary++
+      } else {
+        requests.primary++
+      }
+      return Response.json({ error: { message: "fixture invalid request" } }, { status: 400 })
+    },
+  })
+  const layout = makeInteractiveLayout(path.join(input.directory, "memory-failure-interactive"), input.home)
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* launch(layout, {
+            models: false,
+            recover: false,
+            content: JSON.stringify({
+              model: "fixture/chat",
+              providers: {
+                fixture: {
+                  package: "aisdk:@ai-sdk/openai-compatible",
+                  settings: { baseURL: `http://127.0.0.1:${model.port}/v1`, apiKey: "fixture" },
+                  models: { chat: {} },
+                },
+              },
+            }),
+          })
+          const client = createClient({
+            baseUrl: server.url,
+            headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
+          })
+          const location = { location: { directory: input.cwd } }
+          yield* Effect.promise(() => client.plugin.awaitActivation(location))
+          const rpc = client.rpc(MemoryRpc.Definition)
+          yield* Effect.promise(() => rpc.enable({}, location))
+          yield* Effect.promise(() => rpc.auto({ mode: "on" }, location))
+          const session = yield* Effect.promise(() =>
+            client.session.create({
+              title: "Memory execution failure fixture",
+              location: location.location,
+              model: { providerID: "fixture", id: "chat" },
+            }),
+          )
+          yield* Effect.promise(() =>
+            client.session.prompt({
+              sessionID: session.id,
+              text: "failure-lifecycle-proof preserve this detailed project request when the configured provider fails before replying",
+            }),
+          )
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) }),
+          )
+          yield* Effect.tryPromise({
+            try: async () => {
+              for (let attempt = 0; attempt < 100; attempt++) {
+                const status = await rpc.status({}, location)
+                const digests = await MemoryFiles.recentSessions(status.root, 20, 480)
+                if (
+                  digests.some(
+                    (digest) =>
+                      digest.id === session.id && digest.fallback && digest.summary.includes("failure-lifecycle-proof"),
+                  )
+                )
+                  return
+                await Bun.sleep(25)
+              }
+              throw new Error("Timed out waiting for an execution-error fallback digest")
+            },
+            catch: (error) => error,
+          })
+          expect(requests.primary).toBeGreaterThan(0)
+          expect(requests.auxiliary).toBe(0)
+        }),
+      ),
+    )
+  } finally {
+    await model.stop(true)
+  }
+}, 30_000)
+
+test("records a bounded fallback digest when a held local model execution is interrupted", async () => {
+  await using input = await fixture()
+  const started = Promise.withResolvers<void>()
+  const aborted = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  const model = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      const body = await request.text()
+      if (body.includes("session digest updater") || body.includes("typed memory consolidation step")) {
+        return new Response("unexpected auxiliary capture", { status: 500 })
+      }
+      started.resolve()
+      request.signal.addEventListener("abort", () => aborted.resolve(), { once: true })
+      await release.promise
+      return new Response(null, { status: 499 })
+    },
+  })
+  const layout = makeInteractiveLayout(path.join(input.directory, "memory-interrupted-interactive"), input.home)
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* launch(layout, {
+            models: false,
+            recover: false,
+            content: JSON.stringify({
+              model: "fixture/chat",
+              providers: {
+                fixture: {
+                  package: "aisdk:@ai-sdk/openai-compatible",
+                  settings: { baseURL: `http://127.0.0.1:${model.port}/v1`, apiKey: "fixture" },
+                  models: { chat: {} },
+                },
+              },
+            }),
+          })
+          const client = createClient({
+            baseUrl: server.url,
+            headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
+          })
+          const location = { location: { directory: input.cwd } }
+          yield* Effect.promise(() => client.plugin.awaitActivation(location))
+          const rpc = client.rpc(MemoryRpc.Definition)
+          yield* Effect.promise(() => rpc.enable({}, location))
+          yield* Effect.promise(() => rpc.auto({ mode: "on" }, location))
+          const session = yield* Effect.promise(() =>
+            client.session.create({
+              title: "Memory interrupted execution fixture",
+              location: location.location,
+              model: { providerID: "fixture", id: "chat" },
+            }),
+          )
+          yield* Effect.promise(async () => {
+            await client.session.prompt({
+              sessionID: session.id,
+              text: "interrupted-lifecycle-proof preserve this detailed project request when the local model is cancelled",
+            })
+            await started.promise
+            await client.session.interrupt({ sessionID: session.id })
+            await client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+          })
+          yield* Effect.tryPromise({
+            try: async () => {
+              for (let attempt = 0; attempt < 100; attempt++) {
+                const status = await rpc.status({}, location)
+                const digests = await MemoryFiles.recentSessions(status.root, 20, 480)
+                if (
+                  digests.some(
+                    (digest) =>
+                      digest.id === session.id &&
+                      digest.fallback &&
+                      digest.summary.includes("interrupted-lifecycle-proof"),
+                  )
+                )
+                  return
+                await Bun.sleep(25)
+              }
+              throw new Error("Timed out waiting for an execution-interrupted fallback digest")
+            },
+            catch: (error) => error,
+          })
+        }),
+      ),
+    )
+    await Promise.race([
+      aborted.promise,
+      Bun.sleep(1_000).then(() => Promise.reject(new Error("Timed out waiting for primary HTTP cancellation"))),
+    ])
+  } finally {
+    release.resolve()
+    await model.stop(true)
+  }
+}, 30_000)
+
 test("cancels an in-flight auxiliary capture before an isolated host restart", async () => {
   await using input = await fixture()
   const started = Promise.withResolvers<void>()
+  const aborted = Promise.withResolvers<void>()
   const release = Promise.withResolvers<void>()
   const model = Bun.serve({
     hostname: "127.0.0.1",
@@ -888,9 +1474,12 @@ test("cancels an in-flight auxiliary capture before an isolated host restart", a
     async fetch(request) {
       if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
       const body: { messages?: Array<{ content?: string }> } = await request.json()
-      const automatic = JSON.stringify(body.messages).includes("Write one concise, durable project-memory fact")
+      const automatic =
+        JSON.stringify(body.messages).includes("session digest updater") ||
+        JSON.stringify(body.messages).includes("typed memory consolidation step")
       if (automatic) {
         started.resolve()
+        request.signal.addEventListener("abort", () => aborted.resolve(), { once: true })
         await release.promise
       }
       const content = automatic ? "This must not survive the stopped host." : "Primary fixture response"
@@ -955,9 +1544,14 @@ test("cancels an in-flight auxiliary capture before an isolated host restart", a
             await client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
             await started.promise
           })
+          yield* Effect.promise(() => rpc.disable({}, location))
         }),
       ),
     )
+    await Promise.race([
+      aborted.promise,
+      Bun.sleep(1_000).then(() => Promise.reject(new Error("Timed out waiting for auxiliary HTTP cancellation"))),
+    ])
     release.resolve()
     await Bun.sleep(50)
     await Effect.runPromise(

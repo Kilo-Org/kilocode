@@ -85,6 +85,12 @@ export const RemoteCreateSessionSchema = z
 
 export const RemoteCommandListSchema = z.object({ protocolVersion: z.literal(1) }).strict()
 
+export const RemoteDirectoryListSchema = z
+  .object({ protocolVersion: z.literal(1), path: z.string().min(1).max(2_000).optional() })
+  .strict()
+
+export const RemoteDropQueuedMessageSchema = z.object({ messageID: z.string().startsWith("msg").max(2_000) }).strict()
+
 export const RemoteSendCommandSchema = z
   .object({
     protocolVersion: z.literal(1),

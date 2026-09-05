@@ -2,14 +2,20 @@ import { define, type Context } from "@opencode-ai/plugin/effect/plugin"
 import type { Plugin } from "@opencode-ai/plugin/effect/plugin"
 import type { RpcHandlers } from "@opencode-ai/plugin/effect/rpc"
 import { Tool } from "@opencode-ai/schema/tool"
+import { Memory } from "@kilocode/kilo-memory/memory"
+import { MemoryRecall } from "@kilocode/kilo-memory/recall"
+import { MemoryPaths } from "@kilocode/kilo-memory/paths"
+import { MemoryFiles } from "@kilocode/kilo-memory/store"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { MemoryTimers } from "@kilocode/kilo-memory/effect/timers"
 import type { Info } from "@opencode-ai/schema/location"
 import { Effect, Schema } from "effect"
 import { createHash } from "node:crypto"
-import { chmod, lstat, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { installMemoryCapture } from "./memory-capture"
+import { createMemoryCaptureGate, installMemoryCapture } from "./memory-capture"
 import { MEMORY_HELP, MEMORY_USAGE, parseMemoryCommand, type ParsedMemoryCommand } from "./memory-command"
-import { MemoryRpc } from "./memory-rpc"
+import type { MemoryDiffReader } from "./memory-diff"
+import { MemoryRpc, type MemoryRpcStatus } from "./memory-rpc"
 import type { ToolAuthorizationInput, ToolAuthorizer } from "./tool-authorization"
 
 export { MemoryRpc }
@@ -23,9 +29,9 @@ export {
 export type { MemoryOperation, ParsedMemoryCommand } from "./memory-command"
 
 /**
- * The v2 memory port is deliberately local and explicit. It does not inspect
- * transcripts, call a model, or synchronize anything outside the supplied
- * data directory.
+ * Local project memory over the reusable Kilo engine. Auxiliary model-backed
+ * capture requires both memory and automatic consolidation to be enabled.
+ * Storage remains under the host-supplied isolated data directory.
  */
 export const MEMORY_PLUGIN_ID = "kilo.memory"
 export const MEMORY_INDEX_MAX_BYTES = 8_192
@@ -35,12 +41,6 @@ export const MEMORY_LINE_MAX_CHARS = 240
 const sources = ["project.md", "environment.md", "corrections.md"] as const
 export type Source = (typeof sources)[number]
 
-const sourceSeed: Record<Source, string> = {
-  "project.md": "# Project Memory\n\n## Facts\n\n## Decisions\n\n## Constraints\n\n## Open Questions\n",
-  "environment.md": "# Environment Memory\n\n## Commands\n\n## Paths\n\n## Tooling\n",
-  "corrections.md": "# Corrective Memory\n\n## Corrections\n",
-}
-
 export type MemoryState = {
   readonly version: 1
   readonly enabled: boolean
@@ -48,7 +48,7 @@ export type MemoryState = {
   readonly autoConsolidate: boolean
 }
 
-export type MemoryFiles = {
+export type MemoryFilePaths = {
   readonly root: string
   readonly state: string
   readonly manifest: string
@@ -85,6 +85,7 @@ export type Status = {
   readonly state: MemoryState
   readonly exists: { readonly state: boolean; readonly index: boolean }
   readonly index: Index
+  readonly activity?: MemoryRpcStatus["activity"]
 }
 
 export type Show = {
@@ -94,7 +95,7 @@ export type Show = {
   readonly index: string
 }
 
-export type RecallHit = Entry & { readonly source: Source; readonly score: number }
+export type RecallHit = Entry & { readonly source: string; readonly score: number }
 export type Recall = {
   readonly query: string
   readonly hits: readonly RecallHit[]
@@ -116,11 +117,11 @@ export type MemoryPluginOptions = {
   readonly root?: string | ((location: Info) => string)
   /** Host-owned execution approval for model-initiated memory operations. */
   readonly authorize?: ToolAuthorizer
+  /** Optional host snapshot-diff reader; absence keeps capture diff evidence unavailable. */
+  readonly readSnapshotDiff?: MemoryDiffReader
 }
 
 export type MemoryLocation = Pick<Info, "directory" | "project">
-
-const queues = new Map<string, Promise<void>>()
 
 /** Resolve a stable project-scoped memory folder under an application-owned data root. */
 export function memoryRoot(input: { readonly data: string; readonly location: MemoryLocation }) {
@@ -131,28 +132,18 @@ export function memoryRoot(input: { readonly data: string; readonly location: Me
   return path.join(data, "memory", `${display}-${hash}`)
 }
 
-function createState(enabled = false): MemoryState {
-  return { version: 1, enabled, scope: "project", autoConsolidate: false }
-}
-
-function filesForRoot(root: string): MemoryFiles {
+function filesForRoot(root: string): MemoryFilePaths {
+  const files = MemoryPaths.files(root)
   return {
     root,
-    state: path.join(root, "state.json"),
-    manifest: path.join(root, "manifest.json"),
-    index: path.join(root, "index.kmem"),
-    project: path.join(root, "project.md"),
-    environment: path.join(root, "environment.md"),
-    corrections: path.join(root, "corrections.md"),
-    ignore: path.join(root, ".gitignore"),
+    state: files.state,
+    manifest: files.manifest,
+    index: files.index,
+    project: files.project,
+    environment: files.environment,
+    corrections: files.corrections,
+    ignore: files.ignore,
   }
-}
-
-function sourcePath(root: string, source: Source) {
-  const current = filesForRoot(root)
-  if (source === "project.md") return current.project
-  if (source === "environment.md") return current.environment
-  return current.corrections
 }
 
 function absolute(input: string, label: string) {
@@ -160,277 +151,26 @@ function absolute(input: string, label: string) {
   return path.normalize(input)
 }
 
-function missing(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT"
+// Preserve the preview's existing root identity; the engine receives this root
+// explicitly instead of choosing a new storage location for existing projects.
+function slug(input: string) {
+  return (
+    input
+      .normalize("NFKC")
+      .trim()
+      .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "project"
+  )
 }
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
-function slug(input: string) {
-  const value = input
-    .normalize("NFKC")
-    .trim()
-    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
-  return value.replace(/^-+|-+$/g, "").slice(0, 48) || "project"
-}
-
-function key(input: string) {
-  const value = input
-    .normalize("NFKC")
-    .trim()
-    .replace(/[^\p{L}\p{N}._-]+/gu, "_")
-  if (value) return value.slice(0, 80)
-  return `memory_${createHash("sha1").update(input).digest("hex").slice(0, 12)}`
-}
-
-function normalize(input: string) {
-  return input.normalize("NFKC").toLowerCase().replaceAll(/\s+/g, " ").trim()
-}
-
-function terms(input: string) {
-  return [...new Set(normalize(input).match(/[\p{L}\p{N}]+/gu) ?? [])]
-}
-
-function brief(input: string, max: number) {
-  return input
-    .trim()
-    .replaceAll(/[\x00-\x1f\x7f]+/g, " ")
-    .replaceAll(/\s+/g, " ")
-    .slice(0, max)
-    .trim()
-}
-
-function isSecretLike(input: string) {
-  return /-----BEGIN [^-]*PRIVATE KEY-----|(?:api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*\S+/i.test(input)
-}
-
-async function guard(file: string, kind?: "file" | "directory") {
-  const info = await lstat(file).catch((error: unknown) => {
-    if (missing(error)) return undefined
-    throw error
-  })
-  if (info?.isSymbolicLink()) {
-    if (process.platform === "darwin" && ["/var", "/tmp", "/etc"].includes(path.resolve(file))) return stat(file)
-    throw new Error(`memory path rejects symlink: ${file}`)
-  }
-  if (info && kind === "file" && !info.isFile()) throw new Error(`memory path is not a file: ${file}`)
-  if (info && kind === "directory" && !info.isDirectory()) throw new Error(`memory path is not a directory: ${file}`)
-  return info
-}
-
-async function guardParents(input: string) {
-  const absolutePath = path.resolve(input)
-  const root = path.parse(absolutePath).root
-  const parts = absolutePath.slice(root.length).split(path.sep).filter(Boolean)
-  let current = root
-  for (const part of parts) {
-    current = path.join(current, part)
-    await guard(current)
-  }
-}
-
-async function ensureDirectory(directory: string) {
-  const absolutePath = absolute(directory, "memory path")
-  const root = path.parse(absolutePath).root
-  const parts = absolutePath.slice(root.length).split(path.sep).filter(Boolean)
-  let current = root
-  for (const part of parts) {
-    current = path.join(current, part)
-    const info = await guard(current)
-    if (info) continue
-    await mkdir(current, { mode: 0o700 })
-    await chmod(current, 0o700).catch((error: unknown) => {
-      if (process.platform === "win32") return
-      throw error
-    })
-  }
-}
-
-async function readExisting(file: string) {
-  await guardParents(path.dirname(file))
-  const info = await guard(file)
-  if (!info) return undefined
-  if (!info.isFile()) throw new Error(`memory path is not a file: ${file}`)
-  return readFile(file, "utf8")
-}
-
-async function writeAtomic(file: string, text: string) {
-  await ensureDirectory(path.dirname(file))
-  await guard(file)
-  const temporary = `${file}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(temporary, text, { encoding: "utf8", mode: 0o600, flag: "wx" })
-  try {
-    await chmod(temporary, 0o600).catch((error: unknown) => {
-      if (process.platform === "win32") return
-      throw error
-    })
-    await rename(temporary, file)
-    await chmod(file, 0o600).catch((error: unknown) => {
-      if (process.platform === "win32") return
-      throw error
-    })
-  } finally {
-    await rm(temporary, { force: true })
-  }
-}
-
-async function queue<T>(root: string, action: () => Promise<T>) {
-  const previous = queues.get(root) ?? Promise.resolve()
-  let release = () => {}
-  const current = new Promise<void>((resolve) => {
-    release = resolve
-  })
-  queues.set(root, current)
-  await previous.catch(() => undefined)
-  try {
-    return await action()
-  } finally {
-    release()
-    if (queues.get(root) === current) queues.delete(root)
-  }
-}
-
-function parseState(input: unknown): MemoryState {
-  if (typeof input !== "object" || input === null || Array.isArray(input))
-    throw new SyntaxError("memory state must be an object")
-  const version = Reflect.get(input, "version")
-  if (version !== undefined && version !== 1) throw new SyntaxError("unsupported memory state version")
-  const enabled = Reflect.get(input, "enabled")
-  const autoConsolidate = Reflect.get(input, "autoConsolidate")
-  return {
-    version: 1,
-    enabled: typeof enabled === "boolean" ? enabled : false,
-    scope: "project",
-    autoConsolidate: typeof autoConsolidate === "boolean" ? autoConsolidate : false,
-  }
-}
-
-async function readState(root: string, repair = true) {
-  const current = filesForRoot(root)
-  const text = await readExisting(current.state)
-  if (text === undefined) return createState()
-  try {
-    return parseState(JSON.parse(text))
-  } catch (error) {
-    if (!(error instanceof SyntaxError)) throw error
-    if (!repair) return createState()
-    await writeAtomic(`${current.state}.bad-${Date.now()}`, text)
-    await rm(current.state, { force: true })
-    const state = createState()
-    await writeState(root, state)
-    return state
-  }
-}
-
-async function writeState(root: string, state: MemoryState) {
-  await writeAtomic(filesForRoot(root).state, `${JSON.stringify(state, null, 2)}\n`)
-}
-
-async function owned(root: string) {
-  const text = await readExisting(filesForRoot(root).manifest)
-  if (text === undefined) return false
-  try {
-    const value: unknown = JSON.parse(text)
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      !Array.isArray(value) &&
-      "kind" in value &&
-      value.kind === "kilo-memory" &&
-      "version" in value &&
-      value.version === 1
-    )
-  } catch {
-    return false
-  }
-}
-
-async function scaffold(root: string) {
-  const current = filesForRoot(root)
-  await ensureDirectory(root)
-  await ensureDirectory(path.join(root, "sessions"))
-  await writeIfMissing(current.ignore, "*\n!.gitignore\n")
-  for (const source of sources) await writeIfMissing(sourcePath(root, source), sourceSeed[source])
-  if (!(await owned(root))) {
-    await writeAtomic(current.manifest, `${JSON.stringify({ kind: "kilo-memory", version: 1 }, null, 2)}\n`)
-  }
-  const state = { ...(await readState(root)), enabled: true } satisfies MemoryState
-  await writeState(root, state)
-  const index = await buildIndex(root)
-  await writeAtomic(current.index, index.text)
-  return state
-}
-
-async function writeIfMissing(file: string, text: string) {
-  await ensureDirectory(path.dirname(file))
-  if (await guard(file)) return
-  await writeAtomic(file, text)
-}
-
-function parseMemoryMarkdown(text: string, defaultSection = "Facts") {
-  let section = defaultSection
-  return text.split("\n").flatMap((raw): Entry[] => {
-    const value = raw.trim()
-    if (value.startsWith("## ")) {
-      section = value.slice(3).trim() || section
-      return []
-    }
-    if (!value.startsWith("- ") || !value.includes(" :: ")) return []
-    const index = value.indexOf(" :: ")
-    const item = { section, key: value.slice(2, index).trim(), text: value.slice(index + 4).trim() }
-    return item.key && item.text ? [item] : []
-  })
-}
-
-function entryLine(item: Pick<Entry, "key" | "text">) {
-  return `- ${item.key} :: ${item.text}`
-}
-
-function upsertMarkdown(text: string, section: string, item: Pick<Entry, "key" | "text">) {
-  const marker = `## ${section}`
-  const lines = text.split("\n")
-  const at = lines.findIndex((line) => line.trim() === marker)
-  if (at === -1) return `${text.trimEnd()}\n\n${marker}\n${entryLine(item)}\n`
-  const end = lines.findIndex((line, index) => index > at && line.trim().startsWith("## "))
-  const stop = end === -1 ? lines.length : end
-  const prefix = `${item.key} ::`
-  const replacement = entryLine(item)
-  const existing = lines.findIndex(
-    (line, index) =>
-      index > at && index < stop && line.trim().startsWith("- ") && line.trim().slice(2).startsWith(prefix),
-  )
-  if (existing >= 0) {
-    lines[existing] = replacement
-    return lines.join("\n")
-  }
-  lines.splice(at + 1, 0, replacement)
-  return lines.join("\n")
-}
-
-function removeMarkdown(text: string, match: (item: Entry) => boolean) {
-  let section = "Facts"
-  let removed = 0
-  const lines = text.split("\n").filter((raw) => {
-    const value = raw.trim()
-    if (value.startsWith("## ")) {
-      section = value.slice(3).trim() || section
-      return true
-    }
-    if (!value.startsWith("- ") || !value.includes(" :: ")) return true
-    const index = value.indexOf(" :: ")
-    const item = { section, key: value.slice(2, index).trim(), text: value.slice(index + 4).trim() }
-    if (!item.key || !item.text || !match(item)) return true
-    removed++
-    return false
-  })
-  return { text: lines.join("\n"), removed }
-}
-
 function cap(input: string, max = MEMORY_INDEX_MAX_BYTES): Index {
   const bytes = Buffer.byteLength(input)
-  if (bytes <= max) return { text: input, bytes, tokens: estimateTokens(input), truncated: false }
+  if (bytes <= max) return { text: input, bytes, tokens: Math.ceil([...input].length / 4), truncated: false }
   const suffix = "\n[truncated]"
   const budget = Math.max(0, max - Buffer.byteLength(suffix))
   let text = ""
@@ -439,180 +179,26 @@ function cap(input: string, max = MEMORY_INDEX_MAX_BYTES): Index {
     text += character
   }
   const output = `${text.trimEnd()}${suffix}`
-  return { text: output, bytes: Buffer.byteLength(output), tokens: estimateTokens(text), truncated: true }
-}
-
-function estimateTokens(input: string) {
-  return Math.ceil([...input].length / 4)
-}
-
-async function buildIndex(root: string) {
-  const sections = await Promise.all(
-    sources.map(async (source) => {
-      const text = (await readExisting(sourcePath(root, source))) ?? ""
-      const entries = parseMemoryMarkdown(text)
-      return entries.length ? [`## ${source}`, ...entries.map(entryLine)] : []
-    }),
-  )
-  return cap(["# Kilo Memory Index", ...sections.flat()].join("\n"))
-}
-
-async function rebuildRoot(root: string) {
-  return queue(root, async () => {
-    const state = await readState(root)
-    if (!state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-    const index = await buildIndex(root)
-    await writeAtomic(filesForRoot(root).index, index.text)
-    return index
-  })
-}
-
-function validateText(text: string, label: string) {
-  const value = brief(text, MEMORY_TEXT_MAX_CHARS)
-  if (!value) throw new Error(`${label} is required`)
-  if (isSecretLike(value)) throw new Error("memory operation rejected secret-like content")
-  return value
-}
-
-async function rememberRoot(
-  root: string,
-  input: { readonly text: string; readonly key?: string; readonly correction?: boolean; readonly automatic?: boolean },
-) {
-  return queue(root, async () => {
-    const state = await readState(root)
-    if (!state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-    if (input.automatic && !state.autoConsolidate) throw new Error("Automatic memory capture is disabled")
-    const value = validateText(input.text, input.correction ? "Correction" : "Memory text")
-    const source: Source = input.correction ? "corrections.md" : "project.md"
-    const section = input.correction ? "Corrections" : "Facts"
-    const item = { key: key(input.key ?? value), text: brief(value, MEMORY_LINE_MAX_CHARS) }
-    const filename = sourcePath(root, source)
-    const prior = (await readExisting(filename)) ?? sourceSeed[source]
-    const next = upsertMarkdown(prior, section, item)
-    const changed = next !== prior
-    if (changed) await writeAtomic(filename, next.endsWith("\n") ? next : `${next}\n`)
-    const index = await buildIndex(root)
-    await writeAtomic(filesForRoot(root).index, index.text)
-    return {
-      operationCount: changed ? 1 : 0,
-      added: changed ? 1 : 0,
-      removed: 0,
-      source,
-      index,
-    } satisfies Change
-  })
-}
-
-async function forgetRoot(root: string, query: string) {
-  return queue(root, async () => {
-    const state = await readState(root)
-    if (!state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-    const needle = normalize(query)
-    if (!needle) throw new Error("Memory query is required")
-    const normalizedKey = normalize(key(query))
-    let removed = 0
-    for (const source of sources) {
-      const filename = sourcePath(root, source)
-      const prior = (await readExisting(filename)) ?? ""
-      const next = removeMarkdown(prior, (item) => {
-        const aliases = [item.key, `${source}:${item.key}`, `${source}:${item.section}:${item.key}`, item.text]
-        return aliases.some((alias) => normalize(alias) === needle || normalize(alias) === normalizedKey)
-      })
-      if (next.removed === 0) continue
-      removed += next.removed
-      await writeAtomic(filename, next.text.endsWith("\n") ? next.text : `${next.text}\n`)
-    }
-    const index = await buildIndex(root)
-    await writeAtomic(filesForRoot(root).index, index.text)
-    return { operationCount: removed ? 1 : 0, added: 0, removed, source: "project.md" as const, index } satisfies Change
-  })
-}
-
-async function readStatus(root: string): Promise<Status> {
-  await guardParents(root)
-  await guard(root)
-  const state = await readState(root)
-  const indexText = (await readExisting(filesForRoot(root).index)) ?? ""
-  return {
-    root,
-    state,
-    exists: {
-      state: (await guard(filesForRoot(root).state, "file")) !== undefined,
-      index: (await guard(filesForRoot(root).index, "file")) !== undefined,
-    },
-    index: cap(indexText),
-  }
-}
-
-async function readShow(root: string): Promise<Show> {
-  const state = await readState(root)
-  const entries = await Promise.all(
-    sources.map(async (source) => [source, (await readExisting(sourcePath(root, source))) ?? ""] as const),
-  )
-  return {
-    root,
-    state,
-    sources: Object.fromEntries(entries) as Record<Source, string>,
-    index: (await readExisting(filesForRoot(root).index)) ?? "",
-  }
-}
-
-async function inspectRoot(root: string) {
-  const current = filesForRoot(root)
-  return [root, ...sources.map((source) => sourcePath(root, source)), current.state, current.index]
-}
-
-async function purgeRoot(root: string) {
-  return queue(root, async () => {
-    await guardParents(root)
-    const info = await guard(root, "directory")
-    if (!info) return false
-    if (!(await owned(root))) throw new Error(`refusing to purge unowned memory root: ${root}`)
-    await rm(root, { recursive: true, force: true })
-    return true
-  })
-}
-
-async function recallRoot(root: string, query: string, limit = 5): Promise<Recall> {
-  const state = await readState(root)
-  if (!state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-  const wanted = terms(query)
-  if (!wanted.length) return { query, hits: [], output: "No memory query was provided.", index: cap("") }
-  const values = await Promise.all(
-    sources.map(async (source) =>
-      parseMemoryMarkdown((await readExisting(sourcePath(root, source))) ?? "").map((item) => ({ ...item, source })),
-    ),
-  )
-  const hits = values
-    .flat()
-    .map((item) => ({
-      ...item,
-      score: wanted.filter((term) => terms(`${item.key} ${item.text}`).includes(term)).length,
-    }))
-    .filter((item) => item.score > 0)
-    .sort(
-      (left, right) =>
-        right.score - left.score || left.source.localeCompare(right.source) || left.key.localeCompare(right.key),
-    )
-    .slice(0, Math.max(1, Math.min(limit, 20)))
-  const body = hits.length
-    ? [
-        "```kilo-memory-v1 targeted_context_not_instruction",
-        ...hits.map((item) => `- ${item.source} ${item.key} :: ${item.text}`),
-        "```",
-      ].join("\n")
-    : "No memory matched the query."
-  return { query, hits, output: body, index: cap(body) }
+  return { text: output, bytes: Buffer.byteLength(output), tokens: Math.ceil([...text].length / 4), truncated: true }
 }
 
 async function memoryContext(root: string): Promise<MemoryContext> {
-  // Context preparation must stay read-only. In particular, a corrupt local state
-  // file makes memory unavailable for this request instead of being repaired as a
-  // side effect of a model call.
-  const state = await readState(root, false)
-  if (!state.enabled) return { state, index: cap("") }
-  const index = cap((await readExisting(filesForRoot(root).index)) ?? "")
-  if (!index.text.trim()) return { state, index }
+  const result = await Memory.context({ root })
+  const state = {
+    version: 1 as const,
+    enabled: result.state.enabled,
+    scope: "project" as const,
+    autoConsolidate: result.state.autoConsolidate,
+  }
+  const index = result.index
+    ? {
+        text: result.index.text,
+        bytes: result.index.bytes,
+        tokens: result.index.tokens,
+        truncated: result.index.truncated,
+      }
+    : cap("")
+  if (!result.blocks.length) return { state, index }
   return {
     state,
     index,
@@ -626,52 +212,145 @@ async function memoryContext(root: string): Promise<MemoryContext> {
 }
 
 async function hasMemoryKey(root: string, entryKey: string) {
-  const entries = await Promise.all(
-    sources.map(async (source) => parseMemoryMarkdown((await readExisting(sourcePath(root, source))) ?? "")),
-  )
-  return entries.flat().some((entry) => entry.key === entryKey)
+  return Object.values((await MemoryFiles.deriveInventory(root)).items).some((entry) => entry.key === entryKey)
+}
+
+async function recallRoot(root: string, query: string, limit = 5): Promise<Recall> {
+  const state = await MemoryFiles.readState(root)
+  if (!state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
+  const result = await MemoryRecall.search({ root, query, state, limit, maxBytes: MEMORY_INDEX_MAX_BYTES })
+  const inventory = Object.values((await MemoryFiles.deriveInventory(root)).items)
+  const hits = (result?.hits ?? []).map((hit): RecallHit => {
+    const entry = inventory.find((item) => item.file === hit.source && `${item.key} :: ${item.text}` === hit.text)
+    return {
+      section: entry?.section ?? hit.kind,
+      key: entry?.key ?? hit.id ?? hit.kind,
+      text: entry?.text ?? hit.text,
+      source: hit.source,
+      score: hit.score,
+    }
+  })
+  const output = result?.block ?? "No memory matched the query."
+  return { query, hits, output, index: cap(output) }
+}
+
+function visibleState(state: Awaited<ReturnType<typeof MemoryFiles.readState>>): MemoryState {
+  return {
+    version: 1,
+    enabled: state.enabled,
+    scope: "project",
+    autoConsolidate: state.autoConsolidate,
+  }
+}
+
+function visibleIndex(index: {
+  readonly text: string
+  readonly bytes: number
+  readonly tokens: number
+  readonly truncated: boolean
+}): Index {
+  return {
+    text: index.text,
+    bytes: index.bytes,
+    tokens: index.tokens,
+    truncated: index.truncated,
+  }
+}
+
+function visibleChange(result: Awaited<ReturnType<typeof Memory.remember>>, source: Source): Change {
+  return {
+    operationCount: result.result.operationCount,
+    added: result.result.added,
+    removed: result.result.removed,
+    source,
+    index: visibleIndex(result.result.index),
+  }
+}
+
+async function engineStatus(root: string): Promise<Status> {
+  const result = await Memory.status({ root })
+  return {
+    root,
+    state: visibleState(result.state),
+    exists: result.exists,
+    index: {
+      text: result.index.preview,
+      bytes: result.index.bytes,
+      tokens: result.index.estimatedTokens,
+      truncated: false,
+    },
+    activity: {
+      lastInjectedAt: result.state.stats.lastInjectedAt,
+      lastInjectedBytes: result.state.stats.lastInjectedBytes,
+      lastInjectedTokens: result.state.stats.lastInjectedTokens,
+      lastSessionSavedAt: result.state.stats.lastSessionSavedAt,
+      lastTypedConsolidationAt: result.state.stats.lastTypedConsolidationAt,
+      lastOperationCount: result.state.stats.lastOperationCount,
+    },
+  }
+}
+
+async function engineShow(root: string): Promise<Show> {
+  const result = await Memory.show({ root })
+  return {
+    root,
+    state: visibleState(result.state),
+    sources: {
+      "project.md": result.sources.project,
+      "environment.md": result.sources.environment,
+      "corrections.md": result.sources.corrections,
+    },
+    index: result.index,
+  }
 }
 
 export namespace MemoryStore {
   export const files = filesForRoot
-  export const parseMarkdown = parseMemoryMarkdown
 
-  export const enable = (root: string) => queue(root, () => scaffold(root))
-  export const state = readState
-  export const status = readStatus
-  export const show = readShow
-  export const inspect = inspectRoot
-  export const rebuild = rebuildRoot
-  export const remember = (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
-    rememberRoot(input.root, input)
-  export const correct = (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
-    rememberRoot(input.root, { ...input, correction: true })
-  export const forget = (input: { readonly root: string; readonly query: string }) =>
-    forgetRoot(input.root, input.query)
+  export const enable = async (root: string) => visibleState((await Memory.enable({ root })).state)
+  export const state = async (root: string) => visibleState(await MemoryFiles.readState(root))
+  export const status = engineStatus
+  export const show = engineShow
+  export const inspect = async (root: string) => {
+    const files = filesForRoot(root)
+    return [root, ...sources.map((source) => MemoryPaths.source(root, source)), files.state, files.index]
+  }
+  export const rebuild = async (root: string) => visibleIndex((await Memory.rebuild({ root })).index)
+  export const remember = async (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
+    visibleChange(await Memory.remember(input), "project.md")
+  export const correct = async (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
+    visibleChange(await Memory.correct(input), "corrections.md")
+  export const forget = async (input: { readonly root: string; readonly query: string }) =>
+    visibleChange(await Memory.forget(input), "project.md")
   export const recall = (input: { readonly root: string; readonly query: string; readonly limit?: number }) =>
     recallRoot(input.root, input.query, input.limit)
   export const context = memoryContext
-  export const captureState = (root: string) => readState(root, false)
+  export const captureState = async (root: string) => visibleState(await MemoryFiles.readState(root))
   export const hasKey = hasMemoryKey
-  export const secretLike = isSecretLike
-  export const autoRemember = (input: { readonly root: string; readonly text: string; readonly key: string }) =>
-    rememberRoot(input.root, { ...input, automatic: true })
-  export const auto = (input: { readonly root: string; readonly mode: "on" | "off" }) =>
-    queue(input.root, async () => {
-      const state = await readState(input.root)
-      const next = { ...state, autoConsolidate: input.mode === "on" } satisfies MemoryState
-      await writeState(input.root, next)
-      return next
+  export const autoRemember = async (input: { readonly root: string; readonly text: string; readonly key: string }) => {
+    const state = await MemoryFiles.readState(input.root)
+    if (!state.autoConsolidate) throw new Error("Automatic memory capture is disabled")
+    const result = await Memory.apply({
+      root: input.root,
+      trigger: "turn-close",
+      ops: [{ action: "add", key: input.key, text: input.text }],
     })
-  export const disable = (root: string) =>
-    queue(root, async () => {
-      const state = await readState(root)
-      if (!state.enabled) return state
-      const next = { ...state, enabled: false } satisfies MemoryState
-      await writeState(root, next)
-      return next
-    })
-  export const purge = purgeRoot
+    return visibleChange(result, "project.md")
+  }
+  export const auto = async (input: { readonly root: string; readonly mode: "on" | "off" }) => {
+    if (input.mode === "off") MemoryTimers.clear(input.root)
+    return visibleState(
+      (await Memory.configure({ root: input.root, settings: { autoConsolidate: input.mode === "on" } })).state,
+    )
+  }
+  export const disable = async (root: string) => {
+    MemoryTimers.clear(root)
+    return visibleState((await Memory.disable({ root })).state)
+  }
+  export const purge = async (root: string) => {
+    MemoryTimers.clear(root)
+    return (await Memory.purge({ root })).purged
+  }
 }
 
 function rootFor(options: MemoryPluginOptions, location: Info) {
@@ -682,7 +361,11 @@ function rootFor(options: MemoryPluginOptions, location: Info) {
 }
 
 /** Registerable handlers for the public RPC definition. Failures stay in the declared RPC error channel. */
-export function createMemoryRpcHandlers(options: MemoryPluginOptions, location: Info) {
+export function createMemoryRpcHandlers(
+  options: MemoryPluginOptions,
+  location: Info,
+  resetCapture?: (root: string) => void,
+) {
   const root = () => rootFor(options, location)
   return {
     status: (_input, call) =>
@@ -697,17 +380,29 @@ export function createMemoryRpcHandlers(options: MemoryPluginOptions, location: 
       }),
     enable: (_input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.enable(root()),
+        try: () => {
+          const memoryRoot = root()
+          resetCapture?.(memoryRoot)
+          return MemoryStore.enable(memoryRoot)
+        },
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     disable: (_input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.disable(root()),
+        try: () => {
+          const memoryRoot = root()
+          resetCapture?.(memoryRoot)
+          return MemoryStore.disable(memoryRoot)
+        },
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     auto: (input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.auto({ root: root(), mode: input.mode }),
+        try: () => {
+          const memoryRoot = root()
+          resetCapture?.(memoryRoot)
+          return MemoryStore.auto({ root: memoryRoot, mode: input.mode })
+        },
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     inspect: (_input, call) =>
@@ -737,7 +432,11 @@ export function createMemoryRpcHandlers(options: MemoryPluginOptions, location: 
       }),
     purge: (_input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.purge(root()),
+        try: () => {
+          const memoryRoot = root()
+          resetCapture?.(memoryRoot)
+          return MemoryStore.purge(memoryRoot)
+        },
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     recall: (input, call) =>
@@ -748,21 +447,32 @@ export function createMemoryRpcHandlers(options: MemoryPluginOptions, location: 
   } satisfies RpcHandlers<typeof MemoryRpc.Definition>
 }
 
-async function commandText(parsed: ParsedMemoryCommand, root: string) {
+async function commandText(parsed: ParsedMemoryCommand, root: string, resetCapture?: (root: string) => void) {
   if (parsed.kind === "help") return MEMORY_HELP
   if (parsed.kind === "usage") return `${parsed.reason}\n\n${MEMORY_USAGE}`
   if (parsed.kind === "show") return MemoryStore.show(root).then((result) => renderShow(result))
-  if (parsed.operation === "enable") return MemoryStore.enable(root).then(() => "Memory enabled.")
-  if (parsed.operation === "disable") return MemoryStore.disable(root).then(() => "Memory disabled.")
-  if (parsed.operation === "auto")
+  if (parsed.operation === "enable") {
+    resetCapture?.(root)
+    return MemoryStore.enable(root).then(() => "Memory enabled.")
+  }
+  if (parsed.operation === "disable") {
+    resetCapture?.(root)
+    return MemoryStore.disable(root).then(() => "Memory disabled.")
+  }
+  if (parsed.operation === "auto") {
+    resetCapture?.(root)
     return MemoryStore.auto({ root, mode: parsed.mode }).then(
       (state) => `Memory automatic consolidation ${state.autoConsolidate ? "enabled" : "disabled"}.`,
     )
+  }
   if (parsed.operation === "status") return MemoryStore.status(root).then((result) => renderStatus(result))
   if (parsed.operation === "inspect") return MemoryStore.inspect(root).then((result) => result.join("\n"))
   if (parsed.operation === "rebuild")
     return MemoryStore.rebuild(root).then((result) => `Memory index rebuilt (${result.tokens} estimated tokens).`)
-  if (parsed.operation === "purge") return MemoryStore.purge(root).then(() => "Memory purged.")
+  if (parsed.operation === "purge") {
+    resetCapture?.(root)
+    return MemoryStore.purge(root).then(() => "Memory purged.")
+  }
   if (parsed.operation === "remember")
     return MemoryStore.remember({ root, text: parsed.text }).then((result) => `Memory saved (${result.added} change).`)
   if (parsed.operation === "correct")
@@ -831,7 +541,8 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
     id: MEMORY_PLUGIN_ID,
     effect: (ctx) =>
       Effect.fn("KiloMemoryPlugin.effect")(function* (ctx: Context) {
-        yield* ctx.rpc.register(MemoryRpc.Definition, createMemoryRpcHandlers(options, ctx.location))
+        const capture = createMemoryCaptureGate()
+        yield* ctx.rpc.register(MemoryRpc.Definition, createMemoryRpcHandlers(options, ctx.location, capture.clear))
         yield* ctx.command.transform((editor) =>
           editor.add({
             name: "memory",
@@ -844,7 +555,7 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
                 )
                 if (!parsed) return
                 const text = yield* Effect.tryPromise({
-                  try: () => commandText(parsed, rootFor(options, ctx.location)),
+                  try: () => commandText(parsed, rootFor(options, ctx.location), capture.clear),
                   catch: toolError,
                 })
                 yield* ctx.session.synthetic({
@@ -858,9 +569,8 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
           }),
         )
 
-        // This is the v2 public request seam. It is intentionally read-only: persisted state changes
-        // remain explicit commands or tool calls, while every enabled model request sees the same
-        // bounded local index without gaining a durable synthetic message.
+        // This public request seam appends only bounded local reference context. A nonempty enabled
+        // injection records its real stats, but never admits a durable synthetic message.
         yield* ctx.session.hook("context", (event) =>
           Effect.tryPromise({
             try: () => MemoryStore.context(rootFor(options, ctx.location)),
@@ -875,7 +585,9 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
             Effect.catch(() => Effect.void),
           ),
         )
-        yield* installMemoryCapture(ctx, () => rootFor(options, ctx.location))
+        yield* installMemoryCapture(ctx, () => rootFor(options, ctx.location), MemoryService.make(), capture, {
+          readSnapshotDiff: options.readSnapshotDiff,
+        })
         yield* ctx.tool.transform((editor) => {
           editor.add({
             name: "kilo_memory_save",

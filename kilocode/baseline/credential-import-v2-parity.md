@@ -13,6 +13,12 @@ available over the public HTTP/RPC client.
 - The v2 credential schema supports a key plus arbitrary metadata and an OAuth
   value with method ID, refresh/access tokens, expiry, and arbitrary metadata:
   `packages/schema/src/credential.ts`.
+- V1 well-known credentials store their source origin as the auth record key,
+  the manifest environment name as `key`, and its value as `token`. V2's
+  public `integration.wellknown.add` discovers that origin; its WellKnown
+  config loader resolves the discovered `manifest.auth.env` from the selected
+  key credential for the same normalized origin. The v2 legacy credential
+  migration uses this same origin-plus-key mapping.
 - V1 Kilo uses OAuth `accountId` only as its selected organization. Its getter
   returns it only for OAuth
   (`ecccd1f:packages/kilo-gateway/src/server/handlers.ts:getOrganizationId`),
@@ -47,6 +53,13 @@ available over the public HTTP/RPC client.
   `device`, the validated explicit server, and `accountId` to
   `organizationID`. An absent v1 account ID becomes explicit personal
   `organizationID: null`.
+- A v1 well-known entry is accepted only when its explicitly supplied origin
+  currently exposes the exact saved environment key. The importer first uses
+  the public discovery endpoint at the selected Location, then uses the
+  in-process writer to store the token as that normalized origin's key
+  credential. Discovery is reported without the token; if a later credential
+  write fails, the report records the discovered origin because the public API
+  has no add-and-write transaction or rollback operation.
 - Proven v1-to-v2 OAuth mappings are deliberately finite: OpenAI uses
   `chatgpt-browser` with `accountId` renamed to `metadata.accountID`; GitHub
   Copilot uses `device` with only `enterpriseUrl` metadata; xAI uses `device`
@@ -67,8 +80,9 @@ available over the public HTTP/RPC client.
   process `KILO_API_URL` or a default. The import refuses Kilo OAuth without an
   explicit validated `gatewayServer`; it never infers a server or maps
   `enterpriseUrl`.
-- Generic OAuth, well-known credentials, the OAuth dummy API-key sentinel, and
-  malformed entries remain refused. `opencode` OAuth is also refused because
+- Generic OAuth, the OAuth dummy API-key sentinel, malformed entries, and
+  well-known entries whose current manifest does not retain the saved
+  environment key remain refused. `opencode` OAuth is also refused because
   v2 needs `server` and `orgID` metadata that v1's generic `accountId` and
   `enterpriseUrl` cannot recover. No generic provider-to-method-ID table is
   used. Unsupported provider metadata is refused rather than silently dropped.

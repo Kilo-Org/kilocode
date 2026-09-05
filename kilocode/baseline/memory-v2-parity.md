@@ -5,27 +5,70 @@ This record compares the bounded v2 port to `origin/main` at
 behavior from the intentionally smaller v2 port; it is not a proposal to
 recreate the v1 memory engine.
 
-## Reopened after user smoke test — 2026-09-05
+## Historical reopening after user smoke test — 2026-09-05
 
 The previous completed inventory status was too broad. Remote main was verified
 read-only to still be `ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7`. Its existing
 `dialog-memory.tsx` and `memory-palette.tsx` provide a selectable help menu,
 structured status/source/stored-item views, autosave activity, refresh and
-scrolling. Current v2 `tui-plugin/memory.tsx` instead uses generic alert dialogs.
-This is an intentionally reduced reimplementation, not an old modal copied
-verbatim, and does not establish the requested latest-main parity.
+scrolling. At reopening, v2 `tui-plugin/memory.tsx` instead used generic alerts.
+That was a reduced reimplementation, not an old modal copied verbatim, and did
+not establish the requested latest-main parity. The replacement and current
+evidence are recorded below and in `memory-ui-v2-parity.md`.
 
 The duplicate-command regression was insufficient: it counts only occurrences
 of the local description. The native palette separately repeats suggested
-commands under Suggested and their normal category; Kilo Memory currently
-sets `suggested: true`. Inline autocomplete and the palette need distinct
-positive/negative checks, including actual row counts. The user's exact inline
-case has not yet been reproduced and must not be blamed on an old process.
+commands under Suggested and their normal category; Kilo Memory then set
+`suggested: true`. Inline autocomplete and the palette required distinct
+positive/negative checks, including actual row counts. Both are now covered;
+the issue was not dismissed as an old process.
 
-Engine/capture limitations below remain real missing capabilities, not merely
-visual omissions. The plan now marks Memory in-progress. Existing passing
-tests validate the bounded adapter only. This correction changes documentation,
-not production code.
+The engine/capture findings also reopened the coarse row. The subsequent
+engine replacement and lifecycle tests below supersede the old compact
+adapter; row credit still follows the integrated acceptance review.
+
+## Reusable engine port — 2026-09-05
+
+The source-backed engine now lives in the Kilo-owned
+`packages/kilo-memory/src` tree, copied from local `origin/main` at
+`ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7`. Its storage, markdown,
+index/recall, digest, typed-consolidation, session-lock, and port abstractions
+remain standalone (Effect and Zod only); the unused v1 HTTP adapter is not
+ported.
+
+Two deliberate v2 safety deltas apply. Fresh state defaults
+`autoConsolidate` to false, and malformed state reads fail closed without the
+v1 package's backup/delete/rewrite recovery. Existing preview roots retain the
+same `kilo-memory` v1 manifest and source markdown names. The old compact
+state expands in memory; only an intentional mutation may persist the added
+engine statistics.
+
+The v2 host adapts only public plugin APIs: execution started/succeeded/failed/
+interrupted events, `session.context`, `session.get`, the selected session
+model, and `generate.text`. It uses the reusable per-session lock and capture
+pipeline. V2 exposes an execution-drain rather than a per-promoted-turn event.
+At an observed Started event, only while the root is already enabled with auto
+mode on, the adapter snapshots completed assistant IDs. Its terminal capture
+then accepts every complete group not in that baseline; the persisted marker
+only deduplicates a matching eligible group, never authorizes replay from a
+period when auto mode was off. Missing Started evidence (including activation
+or enablement mid-execution) skips the terminal capture. Enable/disable/auto/
+purge clear that scope-local baseline. Failed and interrupted drains use the
+engine's bounded no-model fallback digest path.
+
+The host now provides the optional `readSnapshotDiff` reader. Only after
+Started-baseline filtering does it use a capture group's first filtered
+assistant `snapshot.start` and last filtered assistant `snapshot.end`, in the
+session's owning Location scope. Missing bounds or a failed read omit `diffs`,
+which the engine represents as unavailable rather than no edits; a successful
+empty diff remains an honest empty list. Recall provenance is available from
+the completed public `kilo_memory_recall` tool result and its positive
+`metadata.count`, so short recall echoes are suppressed without a heuristic.
+The public generation result has text but not provider usage, so v2 does not
+infer provider cost. This loses no shipped v1 gate: the reusable consolidation
+path records cost as zero, and the v1 lifecycle caller never supplies the lower
+port's optional `memoryModel` argument. Neither host exposes a dedicated memory
+model setting merely because that lower-level argument exists.
 
 ## Shipped v1 behavior
 
@@ -64,10 +107,11 @@ not production code.
   `packages/kilo-cli/src/memory-plugin.ts`; upstream v2's public hook is
   applied immediately before request dispatch by
   `packages/core/src/session/model-request.ts`.
-- The injection is read-only and non-durable: it never emits a synthetic
-  message, rebuilds an index, repairs malformed state, captures a transcript,
-  or runs a second model call. It is marked as reference data rather than
-  instructions.
+- Injection never emits a synthetic message or runs a second model call. A
+  disabled root creates no files or calls; an enabled nonempty reference block
+  records real injection statistics through the reusable engine. Ordinary
+  malformed-state reads fail closed without backup/delete/rewrite. It is marked
+  as reference data rather than instructions.
 - V2 exposes the real `auto on|off` control through the same command, RPC, and
   TUI paths, persisted as `autoConsolidate` with a default of `false` in
   `packages/kilo-cli/src/memory-plugin.ts`. Auxiliary capture is eligible only
@@ -81,21 +125,34 @@ not production code.
   a plugin instance without a host authorizer fails closed at tool execution.
 - `packages/kilo-cli/src/memory-capture.ts` uses only public v2 plugin APIs:
   `ctx.event.subscribe`, `ctx.session.get/context`, and `ctx.generate.text`.
-  A scoped subscription observes `session.execution.succeeded`, verifies the
-  session's Location before reading the project state, snapshots the latest
-  complete user/assistant text pair, rejects secret-like source/output text,
-  and saves at most one `auto_<assistant-message-id>` note. The stable key and
-  serialized subscription make repeated completion observations idempotent.
+  One `MemoryService` lives for the plugin scope, preserving engine session
+  locks across closes. Started execution cancels a pending idle flush; scope
+  teardown clears owned timers and signals. Real public child `parentID` is
+  passed to the engine, which excludes child sessions.
 - The v2 completion boundary is an execution drain, not v1's individual
-  turn-close lifecycle: `packages/core/src/session/execution.ts` publishes one
-  `session.execution.succeeded` after a coalesced drain. Consequently one v2
-  capture snapshots the latest completed pair per succeeded execution. If a
-  drain contains multiple promoted prompts, earlier pairs are not separately
-  consolidated. Exact v1 per-turn parity would require a new public event that
-  exposes turn boundaries; no private runner hook or replacement engine was
-  added here.
-- V2 records no injected-at/bytes/tokens/session statistics because its state
-  has no equivalent durable fields. It makes no claim of those v1 metrics.
+  turn-close lifecycle. The adapter groups all settled assistant steps with the
+  consecutive promoted user messages they answer, rather than dropping every
+  user but the last in a steering batch. Its Started-time baseline admits only
+  later groups, including when there is no persisted marker. Before the engine
+  receives a view, `recent` is rebuilt exclusively from those eligible groups,
+  so pre-consent/context-compacted text cannot leak through its auxiliary
+  context. The source engine's interval behavior remains unchanged: a later
+  eligible close schedules the final eligible bounded `recent` view for idle
+  flush, instead of forcing extra model calls. Failed/interrupted terminal
+  events write only the reusable engine's bounded fallback digest and make no
+  auxiliary model call.
+- The optional host snapshot reader resolves only an eligible capture group's
+  first filtered-assistant start and last filtered-assistant end in that
+  session's Location scope. Missing bounds or reader failures omit the diff
+  field, which remains unavailable rather than a fabricated empty diff. A
+  successful no-change result is the only path that supplies `[]`. Completed
+  public `kilo_memory_recall` results provide exact positive-count recall
+  provenance. `ctx.generate.text` is an Effect; the adapter runs it with the
+  engine abort signal through `Effect.runPromise(..., { signal })`. That
+  standard interruption reaches the public host generation/HTTP path: the
+  held-model fixture observes its request abort when memory is disabled. Its
+  public result carries text only, so no provider usage/cost value is used as a
+  capture gate or displayed as inferred cost.
 - No personal/global scope, cloud sync, or retention contract is inferred.
   Personal scope is explicitly unsupported by both implementations.
 
@@ -108,6 +165,23 @@ not production code.
   and a real host with a local fake model proving that no auxiliary call occurs
   until both memory and auto mode are explicitly enabled, that `auto off` stops
   later calls, and that ask/reject/allow/deny decisions happen before memory
-  mutation. The transform test also proves a missing authorizer fails closed.
+  mutation. Its held-primary steer-batch fixture proves all three opted-in
+  promoted inputs reach auxiliary capture while pre-opt-in text does not. It
+  also proves Started-time multi-group selection excludes prior groups, exact
+  completed recall provenance, execution-error and
+  held-execution-interrupted fallback-digest persistence with no auxiliary
+  call, and held auxiliary-request cancellation. The transform test also
+  proves a missing authorizer fails closed.
 - `packages/kilo-cli/test/memory-ui.test.tsx` covers the production TUI command
   through an isolated host and asserts it performs no session or model work.
+- `packages/kilo-cli/test/memory-diff.test.ts` creates real Git snapshots in a
+  session Location scope, proves the normalized structured diff, and proves an
+  invalid snapshot is unavailable. The normal fake-model host fixture uses a
+  committed Git project and canonicalizes its Location directory with
+  `realpath` before activation and session creation. It proves the auxiliary
+  prompt receives `added memory-diff-proof.txt +1 -0`. The earlier missing
+  bounds were a macOS fixture-only `/var` versus `/private/var` alias: the
+  Session Location used the former while the Project/Snapshot worktree used the
+  latter, so snapshot scope's raw relative-path check reported the Location
+  outside the project. This is a Location-path canonicalization limitation,
+  not general normal-host snapshot absence.

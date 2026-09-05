@@ -27,8 +27,20 @@ export function fixture() {
     modelsStatus: 200,
     models: {
       data: [
-        { id: "kilo/auto", preferredIndex: 1, autoRouting: { models: ["kilo/balanced", "kilo/free"] } },
-        { id: "kilo/balanced", preferredIndex: 2, supported_parameters: ["tools"] },
+        {
+          id: "kilo/auto",
+          name: "Kilo Auto",
+          context_length: 128000,
+          preferredIndex: 1,
+          autoRouting: { models: ["kilo/balanced", "kilo/free"] },
+        },
+        {
+          id: "kilo/balanced",
+          name: "Kilo Balanced",
+          context_length: 128000,
+          preferredIndex: 2,
+          supported_parameters: ["tools"],
+        },
       ],
     } as unknown,
     expiresIn: 60,

@@ -7,6 +7,7 @@ import { DialogVariant } from "./dialog-variant"
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
 import { useData } from "../context/data"
+import { useTheme } from "../context/theme"
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
 import { useTuiApp, type TuiModelGroup } from "../context/runtime" // kilocode_change - host-owned picker presentation
@@ -16,6 +17,7 @@ export function DialogModel(props: { providerID?: string }) {
   const data = useData()
   const dialog = useDialog()
   const location = useLocation()
+  const theme = useTheme("elevated")
   const presentation = useTuiApp().modelPicker // kilocode_change - do not fork native picker/preferences
   const [query, setQuery] = createSignal("")
   const favoritePriority = new Set(local.model.favorite().map(modelPreferenceKey))
@@ -26,8 +28,9 @@ export function DialogModel(props: { providerID?: string }) {
   )
   const models = createMemo(() => data.location.model.list(location.ref) ?? [])
 
-  // kilocode_change - refresh scoped display metadata; never retain a previous account's groups
+  // kilocode_change - metadata is display-only but must not reorder an actionable cold list
   const [groups, setGroups] = createSignal<ReadonlyArray<TuiModelGroup>>([])
+  const [groupState, setGroupState] = createSignal<"loading" | "ready" | "fallback">("ready")
   createEffect(() => {
     const input = {
       location: location.ref,
@@ -36,17 +39,27 @@ export function DialogModel(props: { providerID?: string }) {
     const controller = new AbortController()
     setGroups([])
     onCleanup(() => controller.abort())
+    if (!presentation?.groups || !input.models.some((model) => model.providerID === "kilo")) {
+      setGroupState("ready")
+      return
+    }
+    setGroupState("loading")
     void presentation
-      ?.groups?.(input, controller.signal)
+      .groups(input, controller.signal)
       .then((value) => {
-        if (!controller.signal.aborted) setGroups(value)
+        if (controller.signal.aborted) return
+        setGroups(value)
+        setGroupState("ready")
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (!controller.signal.aborted) setGroupState("fallback")
+      })
   })
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
   const options = createMemo(() => {
+    if (groupState() === "loading") return []
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? local.model.favorite() : []
@@ -66,7 +79,14 @@ export function DialogModel(props: { providerID?: string }) {
             releaseDate: model.time.released,
             description: provider?.name ?? model.providerID,
             category,
-            footer: free(model) ? "Free" : undefined,
+            // kilocode_change - host disclosures also follow native favorites and recents
+            footer:
+              [
+                free(model) ? "Free" : undefined,
+                groups().find((group) => group.providerID === model.providerID && group.modelID === model.id)?.footer,
+              ]
+                .filter(Boolean)
+                .join(" · ") || undefined,
             onSelect: () => {
               onSelect(model.providerID, model.id)
             },
@@ -102,7 +122,7 @@ export function DialogModel(props: { providerID?: string }) {
             description: favorite ? "(Favorite)" : undefined,
             category: connected() ? (group?.category ?? provider?.name ?? model.providerID) : undefined, // kilocode_change
             groupOrder: group?.order, // kilocode_change - metadata ordering, never model identity
-            footer: free(model) ? "Free" : undefined,
+            footer: [free(model) ? "Free" : undefined, group?.footer].filter(Boolean).join(" · ") || undefined, // kilocode_change - host-owned disclosures
             onSelect() {
               onSelect(model.providerID, model.id)
             },
@@ -161,31 +181,51 @@ export function DialogModel(props: { providerID?: string }) {
   return (
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
       options={options()}
-      actions={[
-        {
-          command: "model.dialog.provider",
-          title: connected() ? "Connect an integration" : "View all integrations",
-          selection: "none",
-          onTrigger() {
-            dialog.replace(() => (
-              <DialogIntegration
-                onConnected={(providerID) => dialog.replace(() => <DialogModel providerID={providerID} />)}
-              />
-            ))
-          },
-        },
-        {
-          command: "model.dialog.favorite",
-          title: "Favorite",
-          hidden: !connected(),
-          onTrigger: (option) => {
-            local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
-          },
-        },
-      ]}
+      actions={
+        groupState() === "loading"
+          ? []
+          : [
+              {
+                command: "model.dialog.provider",
+                title: connected() ? "Connect an integration" : "View all integrations",
+                selection: "none",
+                onTrigger() {
+                  dialog.replace(() => (
+                    <DialogIntegration
+                      onConnected={(providerID) => dialog.replace(() => <DialogModel providerID={providerID} />)}
+                    />
+                  ))
+                },
+              },
+              {
+                command: "model.dialog.favorite",
+                title: "Favorite",
+                hidden: !connected(),
+                onTrigger: (option) => {
+                  local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+                },
+              },
+            ]
+      }
       onFilter={setQuery}
       flat={true}
       skipFilter={true}
+      renderFilter={groupState() !== "loading"}
+      locked={groupState() === "loading"}
+      emptyView={
+        groupState() === "loading" ? (
+          <box paddingLeft={4} paddingRight={4}>
+            <text>Loading Kilo model metadata…</text>
+          </box>
+        ) : undefined
+      }
+      footer={
+        groupState() === "fallback" ? (
+          <text fg={theme.text.feedback.warning.default}>
+            Could not load Kilo model metadata; showing available models.
+          </text>
+        ) : undefined
+      }
       title={title()}
       current={local.model.current()}
       focusCurrent={false}

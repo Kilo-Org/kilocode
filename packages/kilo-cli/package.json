@@ -17,10 +17,12 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "2.0.41",
     "@effect/platform-node": "catalog:",
     "@kilocode/gateway": "workspace:*",
     "@kilocode/client": "workspace:*",
     "@kilocode/indexing": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@opencode-ai/client": "workspace:*",
     "@opencode-ai/core": "workspace:*",
     "@opencode-ai/plugin": "workspace:*",

@@ -54,6 +54,15 @@ export type CredentialDecision =
     }
   | {
       readonly source: string
+      readonly kind: "wellknown"
+      readonly supported: true
+      readonly integrationID: string
+      readonly environmentKey: string
+      readonly token: string
+      readonly label: string
+    }
+  | {
+      readonly source: string
       readonly kind: "api-key" | "oauth" | "wellknown" | "unknown"
       readonly supported: false
       readonly reason: string
@@ -64,7 +73,7 @@ export type ConfigKeyDecision =
   | { readonly key: string; readonly supported: true }
   | { readonly key: string; readonly supported: false; readonly reason: string; readonly paths?: ReadonlyArray<string> }
 
-type MigratedConfig = ReturnType<typeof ConfigMigrateV1.migrate>
+type MigratedConfig = ReturnType<typeof ConfigMigrateV1.migrate> & { readonly privacy_mode?: boolean }
 
 export interface ImportPlan {
   readonly sources: { readonly auth?: ImportSourceFacts; readonly config?: ImportSourceFacts }
@@ -89,6 +98,9 @@ export interface ImportClient {
     readonly list: (input?: {
       readonly location?: ImportLocation
     }) => Promise<{ readonly data: ReadonlyArray<ImportIntegrationInfo> }>
+    readonly wellknown: {
+      readonly add: (input: { readonly url: string; readonly location?: ImportLocation }) => Promise<unknown>
+    }
     readonly connect: {
       readonly key: (input: {
         readonly integrationID: string
@@ -105,12 +117,24 @@ export interface AppliedCredential {
   readonly label: string
 }
 
+export interface AppliedWellKnownSource {
+  readonly origin: string
+}
+
+type WellKnownPreparation =
+  | {
+      readonly integrations: ReadonlyArray<ImportIntegrationInfo>
+      readonly sources: ReadonlyArray<AppliedWellKnownSource>
+    }
+  | { readonly reason: string; readonly sources: ReadonlyArray<AppliedWellKnownSource> }
+
 export type ImportResult =
   | {
       readonly status: "applied"
       readonly plan: ImportPlan
       readonly credentials: ReadonlyArray<AppliedCredential>
       readonly configKeys: ReadonlyArray<string>
+      readonly wellKnownSources: ReadonlyArray<AppliedWellKnownSource>
     }
   | { readonly status: "refused"; readonly plan: ImportPlan; readonly reason: string }
   | {
@@ -119,6 +143,7 @@ export type ImportResult =
       readonly reason: string
       readonly appliedCredentials: ReadonlyArray<AppliedCredential>
       readonly configWritten: boolean
+      readonly wellKnownSources: ReadonlyArray<AppliedWellKnownSource>
     }
 
 export interface ImportReportCredential {
@@ -139,6 +164,7 @@ export interface ImportReport {
   readonly configKeys: ReadonlyArray<ConfigKeyDecision>
   readonly writtenConfigKeys?: ReadonlyArray<string>
   readonly appliedCredentials?: ReadonlyArray<AppliedCredential>
+  readonly wellKnownSources?: ReadonlyArray<AppliedWellKnownSource>
   readonly configWritten?: boolean
 }
 
@@ -265,6 +291,7 @@ export async function applyV1Import(input: {
       await client.integration.list(input.location === undefined ? undefined : { location: input.location })
     ).data
     for (const entry of supported) {
+      if (entry.kind === "wellknown") continue
       const integration = integrations.find((item) => item.id === entry.integrationID)
       if (!integration)
         return refused(plan, `Integration "${entry.integrationID}" is not registered in this v2 profile`)
@@ -293,6 +320,7 @@ export async function applyV1Import(input: {
 
   if (client) {
     const conflicts = supported
+      .filter((entry) => entry.kind !== "wellknown")
       .filter((entry) =>
         integrations
           .find((item) => item.id === entry.integrationID)
@@ -302,7 +330,58 @@ export async function applyV1Import(input: {
     if (conflicts.length > 0 && !input.allowOverwrite) return refused(plan, conflicts.join("; "))
   }
 
-  if (changed.length > 0) await writeConfig(layout, merged)
+  const discovered = client
+    ? await prepareWellKnownSources(client, supported, input.location)
+    : { sources: [] as AppliedWellKnownSource[], integrations }
+  if ("reason" in discovered && discovered.sources.length === 0) return refused(plan, discovered.reason)
+  if ("reason" in discovered)
+    return {
+      status: "failed",
+      plan,
+      reason: discovered.reason,
+      appliedCredentials: [],
+      configWritten: false,
+      wellKnownSources: discovered.sources,
+    }
+  integrations = discovered.integrations
+  const wellKnownSources = discovered.sources
+  if (client) {
+    const conflicts = supported
+      .filter((entry) => entry.kind === "wellknown")
+      .flatMap((entry) => {
+        const integration = integrations.find((item) => item.id === entry.integrationID)
+        if (!integration) return [`Well-known integration "${entry.integrationID}" was not registered after discovery`]
+        if (!integration.methods.some((method) => method.type === "command" && method.id === "login"))
+          return [`Well-known integration "${entry.integrationID}" has no login command after discovery`]
+        if (!integration.connections.some((connection) => connection.type === "credential") || input.allowOverwrite)
+          return []
+        return [`Integration "${entry.integrationID}" already has a stored credential connection`]
+      })
+    if (conflicts.length > 0)
+      return {
+        status: "failed",
+        plan,
+        reason: conflicts.join("; "),
+        appliedCredentials: [],
+        configWritten: false,
+        wellKnownSources,
+      }
+  }
+
+  if (changed.length > 0) {
+    try {
+      await writeConfig(layout, merged)
+    } catch {
+      return {
+        status: "failed",
+        plan,
+        reason: "Configuration could not be written into the isolated profile",
+        appliedCredentials: [],
+        configWritten: false,
+        wellKnownSources,
+      }
+    }
+  }
 
   const applied: AppliedCredential[] = []
   if (client) {
@@ -315,11 +394,12 @@ export async function applyV1Import(input: {
           reason: `Credential for "${entry.integrationID}" could not be imported: the profile server rejected or could not process the request`,
           appliedCredentials: applied,
           configWritten: changed.length > 0,
+          wellKnownSources,
         }
       applied.push({ integrationID: entry.integrationID, label: entry.label })
     }
   }
-  return { status: "applied", plan, credentials: applied, configKeys: changed }
+  return { status: "applied", plan, credentials: applied, configKeys: changed, wellKnownSources }
 }
 
 export async function importV1Config(input: ImportInput): Promise<ImportResult> {
@@ -355,16 +435,79 @@ export function reportV1Import(input: ImportPlan | ImportResult): ImportReport {
     credentials,
     configKeys: plan.configKeys,
     ...(input.status === "applied"
-      ? { writtenConfigKeys: input.configKeys, appliedCredentials: input.credentials }
+      ? {
+          writtenConfigKeys: input.configKeys,
+          appliedCredentials: input.credentials,
+          ...(input.wellKnownSources.length > 0 ? { wellKnownSources: input.wellKnownSources } : {}),
+        }
       : {}),
     ...(input.status === "failed"
-      ? { appliedCredentials: input.appliedCredentials, configWritten: input.configWritten }
+      ? {
+          appliedCredentials: input.appliedCredentials,
+          configWritten: input.configWritten,
+          ...(input.wellKnownSources.length > 0 ? { wellKnownSources: input.wellKnownSources } : {}),
+        }
       : {}),
   }
 }
 
 function requiresCredentialWriter(entry: Extract<CredentialDecision, { readonly supported: true }>) {
-  return entry.kind === "oauth" || entry.metadata !== undefined
+  return entry.kind === "oauth" || entry.kind === "wellknown" || entry.metadata !== undefined
+}
+
+async function prepareWellKnownSources(
+  client: ImportClient,
+  entries: ReadonlyArray<Extract<CredentialDecision, { readonly supported: true }>>,
+  location: ImportLocation | undefined,
+): Promise<WellKnownPreparation> {
+  const wellknown = entries.filter((entry) => entry.kind === "wellknown")
+  for (const entry of wellknown) {
+    if (!(await matchesWellKnownEnvironment(entry.integrationID, entry.environmentKey)))
+      return {
+        reason: `Well-known source "${entry.integrationID}" does not expose the v1 authentication environment key`,
+        sources: [] as AppliedWellKnownSource[],
+      }
+  }
+  const sources: AppliedWellKnownSource[] = []
+  for (const entry of wellknown) {
+    try {
+      await client.integration.wellknown.add({
+        url: entry.integrationID,
+        ...(location === undefined ? {} : { location }),
+      })
+    } catch {
+      return {
+        reason: `Well-known source "${entry.integrationID}" could not be discovered by the profile server`,
+        sources,
+      }
+    }
+    sources.push({ origin: entry.integrationID })
+  }
+  try {
+    return {
+      sources,
+      integrations: (await client.integration.list(location === undefined ? undefined : { location })).data,
+    }
+  } catch {
+    return {
+      reason: "Well-known sources were discovered but the profile inventory could not be refreshed",
+      sources,
+    }
+  }
+}
+
+async function matchesWellKnownEnvironment(origin: string, environmentKey: string) {
+  try {
+    const response = await fetch(`${origin}/.well-known/opencode`)
+    if (!response.ok) return false
+    const manifest = await response.json()
+    if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) return false
+    const auth = (manifest as Record<string, unknown>).auth
+    if (typeof auth !== "object" || auth === null || Array.isArray(auth)) return false
+    return (auth as Record<string, unknown>).env === environmentKey
+  } catch {
+    return false
+  }
 }
 
 async function writeImportedCredential(
@@ -374,6 +517,15 @@ async function writeImportedCredential(
   location: ImportLocation | undefined,
 ) {
   try {
+    if (entry.kind === "wellknown") {
+      await writer!({
+        kind: "api-key",
+        integrationID: entry.integrationID,
+        key: entry.token,
+        label: entry.label,
+      })
+      return
+    }
     if (entry.kind === "oauth") {
       if (entry.integrationID === "kilo")
         await writer!({
@@ -461,12 +613,21 @@ function planCredentials(
         ...(extras.length > 0 ? { metadataKeys: extras } : {}),
       }
     }
-    if (decoded.type === "wellknown")
-      return unsupported(
-        providerKey,
-        "wellknown",
-        "v2 has no well-known credential type and the public client API cannot import an existing well-known token",
-      )
+    if (decoded.type === "wellknown") {
+      if (!decoded.key.trim())
+        return unsupported(providerKey, "wellknown", "Well-known authentication environment key is empty")
+      if (!decoded.token.trim())
+        return unsupported(providerKey, "wellknown", "Well-known authentication token is empty")
+      return {
+        source: providerKey,
+        kind: "wellknown",
+        supported: true,
+        integrationID,
+        environmentKey: decoded.key,
+        token: decoded.token,
+        label: "Imported from v1",
+      }
+    }
     if (!decoded.key.trim()) return unsupported(providerKey, "api-key", "Credential key is empty")
     if (decoded.key === oauthDummyKey)
       return unsupported(providerKey, "api-key", "Value is the v1 OAuth runtime sentinel, not a real credential")
@@ -616,6 +777,10 @@ function planConfig(
   parsed: Record<string, unknown>,
 ): { keys: ConfigKeyDecision[]; patch: MigratedConfig } {
   const normalized = normalizeNulls(parsed)
+  // Kilo v1 and the isolated v2 PrivacyStore consume the same boolean key.
+  // It is intentionally not added to the upstream schema or migration engine.
+  if (parsed.privacy_mode !== undefined && typeof parsed.privacy_mode !== "boolean")
+    throw new Error(`${filepath} does not match the v1 configuration schema`)
   let info: ConfigV1.Info
   let patch: MigratedConfig
   try {
@@ -628,6 +793,7 @@ function planConfig(
   const recognized = Object.keys(ConfigV1.Info.fields)
   const baseline = JSON.stringify(patch)
   const keys = Object.keys(parsed).map((key): ConfigKeyDecision => {
+    if (key === "privacy_mode") return { key, supported: true }
     if (nulledKeys(parsed).includes(key)) return { key, supported: true }
     const leaves = leafPaths(parsed[key], [key])
     if (leaves.length === 0) {
@@ -646,7 +812,10 @@ function planConfig(
       paths: dropped.slice(0, 20).map(formatPath),
     }
   })
-  return { keys, patch }
+  return {
+    keys,
+    patch: { ...patch, ...(typeof parsed.privacy_mode === "boolean" ? { privacy_mode: parsed.privacy_mode } : {}) },
+  }
 }
 
 function nulledKeys(parsed: Record<string, unknown>): ReadonlyArray<string> {

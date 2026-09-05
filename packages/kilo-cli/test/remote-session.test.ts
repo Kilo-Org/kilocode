@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { createClient } from "@kilocode/client"
 import { Effect } from "effect"
+import { mkdir, symlink } from "node:fs/promises"
 import path from "node:path"
 import { launch } from "../src/interactive-server"
 import { createRemoteSessionPlugin } from "../src/remote-session"
@@ -11,7 +12,9 @@ test("translates supported v1 relay frames through a local WebSocket and isolate
   await using input = await fixture()
   const opened = Promise.withResolvers<void>()
   const frames: unknown[] = []
-  let socket: { send(data: string): void } | undefined
+  const connectionIDs: string[] = []
+  let connections = 0
+  let socket: { send(data: string): void; close(code?: number, reason?: string): void } | undefined
   const relay = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -20,11 +23,13 @@ test("translates supported v1 relay frames through a local WebSocket and isolate
       if (url.pathname !== "/api/user/cli") return new Response(null, { status: 404 })
       expect(url.searchParams.get("token")).toBe("fixture-bearer")
       expect(url.searchParams.get("connectionId")).toMatch(/^[0-9a-f-]{36}$/)
+      connectionIDs.push(url.searchParams.get("connectionId") ?? "")
       if (server.upgrade(request)) return
       return new Response(null, { status: 400 })
     },
     websocket: {
       open(ws) {
+        connections++
         socket = ws
         opened.resolve()
       },
@@ -71,6 +76,56 @@ test("translates supported v1 relay frames through a local WebSocket and isolate
           })
           socket?.send(JSON.stringify({ type: "subscribe", sessionId: session.id }))
           yield* Effect.promise(() => waitFor(() => Promise.resolve(frames.length >= 2)))
+
+          yield* Effect.promise(() => mkdir(path.join(input.cwd, "remote-child")))
+          const outside = path.join(input.directory, "remote-session-outside")
+          yield* Effect.promise(() => mkdir(outside))
+          yield* Effect.promise(() => symlink(outside, path.join(input.cwd, "remote-escape"), "dir"))
+          socket?.send(
+            JSON.stringify({
+              type: "command",
+              id: "directories-1",
+              command: "list_directories",
+              data: { protocolVersion: 1 },
+            }),
+          )
+          const directoryResponse = yield* Effect.promise(() =>
+            awaitFrame(frames, (frame) => response(frame, "directories-1")),
+          )
+          expect(directoryResponse).toEqual({
+            type: "response",
+            id: "directories-1",
+            result: {
+              protocolVersion: 1,
+              path: "",
+              directories: expect.arrayContaining([{ name: "remote-child", path: "remote-child" }]),
+            },
+          })
+          expect(
+            isRecord(directoryResponse) &&
+              isRecord(directoryResponse.result) &&
+              Array.isArray(directoryResponse.result.directories) &&
+              directoryResponse.result.directories.some(
+                (directory) => isRecord(directory) && directory.name === "remote-escape",
+              ),
+          ).toBe(false)
+
+          socket?.send(
+            JSON.stringify({
+              type: "command",
+              id: "create-child-1",
+              command: "create_session",
+              data: { protocolVersion: 1, directory: "remote-child" },
+            }),
+          )
+          expect(yield* Effect.promise(() => awaitFrame(frames, (frame) => response(frame, "create-child-1")))).toEqual(
+            {
+              type: "response",
+              id: "create-child-1",
+              error: "invalid create_session directory",
+            },
+          )
+          expect((yield* Effect.promise(() => client.session.list({ directory: input.cwd }))).data).toHaveLength(1)
 
           socket?.send(
             JSON.stringify({
@@ -125,6 +180,19 @@ test("translates supported v1 relay frames through a local WebSocket and isolate
 
           socket?.send(
             JSON.stringify({
+              type: "command",
+              id: "command-preflight-1",
+              command: "send_command",
+              sessionId: session.id,
+              data: { protocolVersion: 1, command: "relay_missing_command", arguments: "" },
+            }),
+          )
+          expect(
+            yield* Effect.promise(() => awaitFrame(frames, (frame) => response(frame, "command-preflight-1"))),
+          ).toEqual({ type: "response", id: "command-preflight-1", error: "unknown slash command" })
+
+          socket?.send(
+            JSON.stringify({
               type: "system",
               event: "session.renamed",
               data: { sessionId: session.id, title: "Relay renamed" },
@@ -151,13 +219,40 @@ test("translates supported v1 relay frames through a local WebSocket and isolate
             result: {},
           })
           socket?.send(
-            JSON.stringify({ type: "command", id: "unsupported-1", command: "drop_queued_message", data: {} }),
+            JSON.stringify({
+              type: "command",
+              id: "drop-foreign-1",
+              command: "drop_queued_message",
+              sessionId: session.id,
+              data: { messageID: "msg_not_admitted_by_remote" },
+            }),
           )
-          expect(yield* Effect.promise(() => awaitFrame(frames, (frame) => response(frame, "unsupported-1")))).toEqual({
-            type: "response",
-            id: "unsupported-1",
-            error: "unsupported command: drop_queued_message",
-          })
+          expect(yield* Effect.promise(() => awaitFrame(frames, (frame) => response(frame, "drop-foreign-1")))).toEqual(
+            {
+              type: "response",
+              id: "drop-foreign-1",
+              error: "message not queued",
+            },
+          )
+
+          const beforeReconnect = frames.length
+          socket?.close()
+          expect(yield* Effect.promise(() => waitFor(() => Promise.resolve(connections === 2)))).toBe(true)
+          expect(connectionIDs).toHaveLength(2)
+          expect(connectionIDs[0]).toBe(connectionIDs[1])
+          expect(
+            yield* Effect.promise(() =>
+              waitFor(() =>
+                Promise.resolve(
+                  frames.slice(beforeReconnect).some((frame) => isRecord(frame) && frame.type === "heartbeat"),
+                ),
+              ),
+            ),
+          ).toBe(true)
+
+          socket?.close(4401, "unauthorized")
+          yield* Effect.promise(() => Bun.sleep(1_250))
+          expect(connections).toBe(2)
         }),
       ),
     )

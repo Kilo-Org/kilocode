@@ -1,5 +1,8 @@
-import { Effect, Schema } from "effect"
+import { Effect, Option, Schema } from "effect"
 import type { KiloModels } from "@opencode-ai/schema/kilocode/models"
+import { Money } from "@opencode-ai/schema/money"
+import { Model } from "@opencode-ai/schema/model"
+import { PositiveInt } from "@opencode-ai/schema/schema"
 import type { GatewayAccount } from "./plugin.js"
 import { fetchAuthenticatedJSON } from "./gateway.js"
 
@@ -9,14 +12,87 @@ const Response = Schema.Struct({
   data: Schema.Array(
     Schema.Struct({
       id: Schema.String,
+      name: Schema.String,
+      context_length: PositiveInt,
+      max_completion_tokens: Schema.optionalKey(Schema.NullOr(Schema.Finite)),
+      top_provider: Schema.optionalKey(
+        Schema.Struct({ max_completion_tokens: Schema.optionalKey(Schema.NullOr(Schema.Finite)) }),
+      ),
+      pricing: Schema.optionalKey(
+        Schema.Struct({
+          prompt: Schema.optionalKey(Schema.NullOr(Schema.String)),
+          completion: Schema.optionalKey(Schema.NullOr(Schema.String)),
+          input_cache_write: Schema.optionalKey(Schema.NullOr(Schema.String)),
+          input_cache_read: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        }),
+      ),
+      architecture: Schema.optionalKey(
+        Schema.Struct({
+          input_modalities: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.String))),
+          output_modalities: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.String))),
+        }),
+      ),
       preferredIndex: Schema.optionalKey(Schema.Finite),
+      hasUserByokAvailable: Schema.optionalKey(Schema.Boolean),
+      mayTrainOnYourPrompts: Schema.optionalKey(Schema.Boolean),
       supported_parameters: Schema.optionalKey(Schema.Array(Schema.String)),
-      autoRouting: Schema.optionalKey(Schema.Struct({ models: Schema.Array(Schema.String) })),
+      // The catalog record remains usable when this optional presentation field is malformed.
+      autoRouting: Schema.optionalKey(Schema.Unknown),
+      opencode: Schema.optionalKey(
+        Schema.Struct({
+          // This is the one v1 opencode extension v2's public catalog can represent directly.
+          variants: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Json))),
+          // V1 tolerates malformed values for these fields. V2 has no equivalent model-owned surface.
+          prompt: Schema.optionalKey(Schema.Unknown),
+          ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
+        }),
+      ),
     }),
   ),
 })
 
+type SourceModel = (typeof Response.Type)["data"][number]
+
+const AutoRouting = Schema.Struct({ models: Schema.Array(Schema.String) })
+const decodeAutoRouting = Schema.decodeUnknownOption(AutoRouting)
+
+export type CatalogModel = {
+  readonly id: string
+  readonly name: string
+  readonly recommendedIndex?: number
+  readonly autoRouting?: { readonly models: readonly string[] }
+  readonly hasUserByokAvailable?: boolean
+  readonly mayTrainOnYourPrompts?: boolean
+  readonly variants?: readonly Model.Variant[]
+  readonly limit?: { readonly context: number; readonly output: number }
+  readonly cost?: {
+    readonly input: Money.USDPerMillionTokens
+    readonly output: Money.USDPerMillionTokens
+    readonly cache: { readonly read: Money.USDPerMillionTokens; readonly write: Money.USDPerMillionTokens }
+  }
+  readonly capabilities?: { readonly tools: true; readonly input: string[]; readonly output: string[] }
+}
+
 export function fetchModelMetadata(account: GatewayAccount) {
+  return fetchCatalogModels(account).pipe(
+    Effect.map((models): KiloModels.Entry[] =>
+      models.map((model) => ({
+        id: model.id,
+        ...(model.recommendedIndex !== undefined ? { recommendedIndex: model.recommendedIndex } : {}),
+        ...(model.autoRouting ? { autoRouting: { models: [...model.autoRouting.models] } } : {}),
+        ...(model.hasUserByokAvailable === undefined ? {} : { hasUserByokAvailable: model.hasUserByokAvailable }),
+        ...(model.mayTrainOnYourPrompts === undefined ? {} : { mayTrainOnYourPrompts: model.mayTrainOnYourPrompts }),
+      })),
+    ),
+  )
+}
+
+/** Maps the Gateway's OpenRouter record into the portion of v2's native catalog it can represent. */
+export function fetchCatalogModels(account: GatewayAccount) {
+  return fetch(account).pipe(Effect.map((response) => response.data.filter(supportsTools).map(catalogModel)))
+}
+
+function fetch(account: GatewayAccount) {
   const path =
     account.organizationID === null
       ? "/api/openrouter/models"
@@ -27,15 +103,73 @@ export function fetchModelMetadata(account: GatewayAccount) {
     path,
     Response,
     account.organizationID ? { "X-KILOCODE-ORGANIZATIONID": account.organizationID } : {},
-  ).pipe(
-    Effect.map((response): KiloModels.Entry[] =>
-      response.data
-        .filter((model) => model.supported_parameters === undefined || model.supported_parameters.includes("tools"))
-        .map((model) => ({
-          id: model.id,
-          ...(model.preferredIndex !== undefined ? { recommendedIndex: model.preferredIndex } : {}),
-          ...(model.autoRouting ? { autoRouting: model.autoRouting } : {}),
-        })),
-    ),
   )
+}
+
+function supportsTools(model: SourceModel) {
+  return model.supported_parameters === undefined || model.supported_parameters.includes("tools")
+}
+
+function catalogModel(model: SourceModel): CatalogModel {
+  const output = positiveInteger(model.top_provider?.max_completion_tokens ?? model.max_completion_tokens)
+  const inputPrice = perMillion(model.pricing?.prompt)
+  const outputPrice = perMillion(model.pricing?.completion)
+  const cacheRead = perMillion(model.pricing?.input_cache_read)
+  const cacheWrite = perMillion(model.pricing?.input_cache_write)
+  const input = modalities(model.architecture?.input_modalities)
+  const outputModalities = modalities(model.architecture?.output_modalities)
+  return {
+    id: model.id,
+    name: model.name,
+    ...(model.preferredIndex === undefined ? {} : { recommendedIndex: model.preferredIndex }),
+    ...(model.autoRouting === undefined
+      ? {}
+      : Option.match(decodeAutoRouting(model.autoRouting), {
+          onNone: () => ({}),
+          onSome: (autoRouting) => ({ autoRouting }),
+        })),
+    ...(model.hasUserByokAvailable === undefined ? {} : { hasUserByokAvailable: model.hasUserByokAvailable }),
+    ...(model.mayTrainOnYourPrompts === undefined ? {} : { mayTrainOnYourPrompts: model.mayTrainOnYourPrompts }),
+    ...(model.opencode?.variants === undefined
+      ? {}
+      : {
+          variants: Object.entries(model.opencode.variants).map(([id, settings]) => ({
+            id: Model.VariantID.make(id),
+            settings,
+          })),
+        }),
+    limit: { context: model.context_length, output: output ?? Math.ceil(model.context_length * 0.2) },
+    ...(inputPrice === undefined || outputPrice === undefined
+      ? {}
+      : {
+          cost: {
+            input: Money.USDPerMillionTokens.make(inputPrice),
+            output: Money.USDPerMillionTokens.make(outputPrice),
+            cache: {
+              read: Money.USDPerMillionTokens.make(cacheRead ?? 0),
+              write: Money.USDPerMillionTokens.make(cacheWrite ?? 0),
+            },
+          },
+        }),
+    capabilities: { tools: true, input: input ?? ["text"], output: outputModalities ?? ["text"] },
+  }
+}
+
+function positiveInteger(value: number | null | undefined) {
+  if (value === undefined || value === null || !Number.isInteger(value) || value <= 0) return
+  return value
+}
+
+function perMillion(value: string | null | undefined) {
+  if (value === undefined || value === null || value.trim() === "") return
+  const parsed = Number(value)
+  const result = parsed * 1_000_000
+  if (!Number.isFinite(parsed) || !Number.isFinite(result) || parsed < 0) return
+  return result
+}
+
+function modalities(value: readonly string[] | null | undefined) {
+  if (value === undefined || value === null) return
+  const result = value.filter((item) => ["text", "audio", "image", "video", "pdf"].includes(item))
+  return result.includes("text") ? result : ["text", ...result]
 }

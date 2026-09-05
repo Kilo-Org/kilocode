@@ -206,8 +206,9 @@ do not imply the work has been committed, merged, deployed, or released.
 The completion denominator is frozen at **43 active capability rows** (44
 including the obsolete Console row). Count only `done` and verified
 `upstream-equivalent`; partial implementations receive no completion credit.
-The overnight target of 60% therefore requires **26 covered rows**, without
-splitting rows or discarding unresolved product capabilities to reach it.
+The current requested target of 70% requires **31 covered rows** (72.1%),
+without splitting rows or discarding unresolved product capabilities to reach
+it. The earlier 60% target required 26 rows and remains historical below.
 
 | Capability | Owner | Phase | Status |
 |---|---|---|---|
@@ -219,7 +220,7 @@ splitting rows or discarding unresolved product capabilities to reach it.
 | `kilo serve` / daemon / attach | 2 host | 1 | done |
 | Generated JS SDK | upstream `@opencode-ai/client`; Kilo = plugin/RPC typings only if published | 1 | upstream-equivalent |
 | Session share / unshare / fork-from-share | 3 plugin + Kilo backend; Protocol only if fork-from-share needs it | 1 | in-progress |
-| Memory (`/memory`) | 3 + `kilo-memory`; latest-main UI/engine parity reopened below | 3 | in-progress |
+| Memory (`/memory`) | 3 + reused `kilo-memory`; current-main UI/engine gate reconciled below | 3 | done |
 | Codebase indexing | 3 + `kilo-indexing` | 3 | done |
 | Sandbox tool shells (macOS/Linux) | 3 + `kilo-sandbox` (`shell.hook` / tool path) | 3 | done |
 | Sandbox PTY / MCP / git spawn policy | 2 host, or explicitly out of scope | 3 | not-started |
@@ -242,7 +243,7 @@ splitting rows or discarding unresolved product capabilities to reach it.
 | `kilo cloud` CLI client | 2 + Gateway | 4 | done |
 | Updater / update channel / packaging | 2 host (consequence of kilo-cli path) | 4 | not-started |
 | ACP | 2 host (upstream in `packages/cli`, not exported) | 4 | done |
-| Credential import (`auth.json` → v2) | 2 host | 6 | started |
+| Credential import (`auth.json` → v2) | 2 host; explicit opt-in, source-proven mappings and fail-closed refusals | 6 | done |
 | `kilo.jsonc` key mapping (Kilo-only keys) | 2 host | 6 | started |
 | V1 schema-diff + fixture import test | 2 host | 6 | done |
 | VS Code sidebar chat | 2 Protocol client | 5 | not-started |
@@ -386,10 +387,10 @@ exist** in the native picker; this profile has none saved. Preserve native
 favorites, recents, search and selection persistence; neither seed favorites
 nor silently import the v1 preference store.
 
-The Gateway row was reopened for the catalog/presentation gaps below. Memory
-is now also reopened following the latest-main parity correction below, so
-current coverage is **24/43 (55.8%)**. The earlier 25/43 and 26/43 checkpoints are historical,
-not a claim that these newly identified gaps are complete. Keep the denominator
+The Gateway and Memory rows were reopened for the parity gaps below. That
+reopening reduced coverage to **24/43 (55.8%)**. The subsequently verified
+credential-import and Memory gates bring current coverage to **26/43 (60.5%)**. Earlier
+checkpoints do not establish that the reopened gaps are complete. Keep the denominator
 at 43. Kilo built-in agents and custom Plan behavior belong to the existing
 in-progress CLI TUI remainder row. The completed custom-agent discovery and
 CLI inventory-listing rows do not establish built-in Kilo mode parity.
@@ -402,24 +403,32 @@ equals local `ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7`; this is not newly
 landed UI after our reference snapshot. Current main's
 `packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx`
 already has a selectable command menu, structured status/source/item panels,
-auto-save activity, refresh, and scroll/page controls. Our `tui-plugin/memory.tsx`
-is a simplified alert-based replacement, not that UI port.
+auto-save activity, refresh, and scroll/page controls. At reopening, our
+`tui-plugin/memory.tsx` was a simplified alert-based replacement. The current
+batch now reuses the engine and supplies a native selectable menu plus
+structured, refreshable Status/Show panels through existing public UI seams.
 
-- [ ] Replace plain help/status/show alerts with source-backed current-main
+- [x] Replace plain help/status/show alerts with source-backed current-main
   interaction parity through v2 UI seams; do not fabricate unsupported fields.
-- [ ] Prove one actionable memory entry in both slash autocomplete and command
-  palette. Existing regression counts one local description, not all matching
-  entries. `suggested: true` separately duplicates Memory in the unfiltered
-  palette's Suggested and Kilo sections. The user's exact inline case remains
-  to be identified; do not dismiss it as a stale process without evidence.
-- [ ] Reconcile the full memory feature contract before restoring row credit:
-  v2's latest-pair note capture is not v1's complete digest/consolidation and
-  turn-close lifecycle; durable autosave/injection statistics are absent.
-  Audit reusable current-main engine code before adding more custom adapters.
+- [x] Prove one actionable memory entry in both slash autocomplete and command
+  palette. The real-renderer regression now counts actionable rows in both;
+  `suggested: false` removes the extra Suggested entry while retaining the
+  command. No stale-process assumption is used to dismiss the report.
+- [x] Reconcile the full memory feature contract before restoring row credit:
+  the real current-main digest/consolidation engine, durable autosave/injection
+  statistics and opted-in execution grouping are now ported. The integrated
+  snapshot reader passes a real canonical Git/model fixture (`+1/-0`), while
+  missing bounds remain unavailable. Independent source review confirms v1
+  never supplies a dedicated memory-model setting and its consolidation cost
+  is hardcoded zero; absent v2 provider usage is not a lost shipped gate.
+  The focused engine suite has 171 passing tests; host/diff/UI has 31. V2
+  execution-drain grouping remains explicitly different from v1 per-turn
+  events, with opt-in baseline, steering, interruption and cancellation proofs.
 
 See [memory boundary and correction](../kilocode/baseline/memory-v2-parity.md).
 Previously passing tests remain evidence for their bounded implementation,
-not proof of latest-main product parity. No runtime code changed in this audit.
+not proof of latest-main product parity. The subsequent runtime/UI work is
+documented in [Memory UI evidence](../kilocode/baseline/memory-ui-v2-parity.md).
 
 Source comparison uses local v1 `origin/main` at
 `ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7` and the current v2 checkout based on
@@ -432,7 +441,7 @@ This is source evidence, not a fresh deployed Gateway response capture.
   presentation policy; Kilo supplies its priority, upstream keeps `opencode`
   first. Preserve explicit user model choices and other connected providers;
   presentation priority must not silently switch a session's model.
-- [ ] **Recommended models:** trace Gateway recommendation metadata through
+- [x] **Recommended models:** trace Gateway recommendation metadata through
   the v2 catalog and render the Kilo recommendation ordering/group. V1
   `packages/kilo-gateway/src/api/models.ts` maps `preferredIndex` to
   `recommendedIndex`; its VS Code selector consumes this field. That is
@@ -440,9 +449,14 @@ This is source evidence, not a fresh deployed Gateway response capture.
   layout. Use actual catalog metadata, not a hardcoded popular-model list.
   Audit remaining Kilo model groups/badges and record reuse versus missing
   deltas individually; a generic provider list is not full presentation parity.
-  The extension source also groups **Most Used** from model-usage history;
-  compare that explicitly with v2 Recents rather than assuming equivalence.
-- [ ] **Picker first-render consistency:** user confirms correct final groups
+  Source correction: v1 CLI uses Favorites and Recent, matching the native v2
+  selection-history surface. **Most Used** is a separate VS Code count/timestamp
+  feature, not a CLI acceptance gate; it remains in the product-client inventory.
+  The scoped catalog now carries real recommendation order; source BYOK and
+  training-disclosure flags appear in native rows, including favorites/recents.
+  Missing flags are not privacy guarantees. A real team-switch fixture proves
+  personal labels are cleared. This is not the full v1 model-info panel.
+- [x] **Picker first-render consistency:** user confirms correct final groups
   but sees the native ungrouped list first for about a second. Current
   `DialogModel` initializes/clears groups before awaiting the Kilo metadata
   request; `createModelPicker` fetches on each dialog open with no cache.
@@ -450,7 +464,10 @@ This is source evidence, not a fresh deployed Gateway response capture.
   Prefer account-scoped metadata ready before display, with an honest loading
   state for a cold request and usable failure fallback. Test delayed responses,
   reopening, keyboard selection and invalidation on account/location changes;
-  never reuse another account's recommendations. This is diagnosed, not fixed.
+  never reuse another account's recommendations. Cold loading, failure fallback,
+  ready-empty search and confirmed close/reopen are now tested (two fresh RPCs,
+  no cache); the real renderer additionally proves a personal-to-team switch
+  replaces inventory and waits for fresh scoped metadata before selection.
 - [ ] **Kilo auto models:** preserve real `kilo-auto/*` catalog IDs and
   `autoRouting` metadata through discovery, grouping, selection and execution.
   V1's model adapter carries `autoRouting`; its constants reference
@@ -476,10 +493,15 @@ This is source evidence, not a fresh deployed Gateway response capture.
   UI name lookup also respects other registered/custom names and falls back
   to the ID only when no agent metadata is available. Real TUI coverage checks
   Code in picker/composer/history and switching while assistant records retain
-  `agent: build`. This display fix does not claim that v1 `--agent code` or
-  `default_agent: code` aliases have been migrated to the native v2 ID; those
-  input/config compatibility cases remain part of the open built-in-agent row.
-- [ ] **Kilo custom Plan workflow:** compare v1 `native-plan-prompt.txt`,
+  `agent: build`. Headless `run --agent code` now resolves native `build` only
+  when no real custom `code` agent is registered; create and resume are both
+  host-tested with paginated history. Native default resolution already handles
+  `default_agent: code` by falling back to `build` when no real `code` agent
+  exists; a local-model host test proves that resolved assistant identity,
+  custom `code` precedence and explicit `ask` selection without a config
+  override. Session creation alone defers agent resolution. Explicit generic
+  API `agent: code` remains unsupported; clients must use advertised IDs.
+- [x] **Kilo custom Plan workflow:** compare v1 `native-plan-prompt.txt`,
   `tool/plan.ts`, `plan-file.ts` and `plan-followup.ts` under
   `packages/opencode/src/kilocode/` against v2's `packages/core/src/plugin/plan.ts`.
   Port the missing context-first, one-question-at-a-time planning guidance,
@@ -488,14 +510,19 @@ This is source evidence, not a fresh deployed Gateway response capture.
   A renamed native Plan agent or copied prompt alone is insufficient. Verify
   user rejection/cancellation cannot begin implementation and custom agents
   do not accidentally inherit built-in-only restrictions.
+  Nine real-host tests now cover native Form approval, rejection/cancellation,
+  refinement, invalid/free-form choices, saved paths, custom-agent precedence,
+  configured denials, and model-preserving new-session handoff. The Kilo-owned
+  post replacement reuses the bound native question executor and changes no
+  shared Core path. See [Plan evidence](../kilocode/baseline/plan-v2-parity.md).
 
 #### Right-sidebar parity — user smoke-test follow-up
 
 The current `packages/kilo-cli/src/tui-plugin/tui.tsx` now registers additive
 memory and account-credit views through native sidebar slots. The remaining
 sections and broader validation below are still open. Track this work under
-the existing CLI TUI remainder row; after reopening Memory, current coverage
-is **24/43 (55.8%)**.
+the existing CLI TUI remainder row; current coarse coverage, including the
+completed credential and Memory gates, is **26/43 (60.5%)**.
 
 - [ ] **Memory:** show actual project/session-scoped state, distinguishing
   loading, unavailable, disabled and enabled; trace activity indicators to real
@@ -534,6 +561,60 @@ is **24/43 (55.8%)**.
   implementation batch, with no live account calls implicitly authorized.
 
 #### Local implementation checkpoint — 2026-09-05
+
+Latest integrated validation after checkpoint `047ffd045f`: **420 CLI tests,
+0 failures, 2615 assertions across 73 files** (354.22s), including the compiled
+preview/ACP build and real local host/TUI fixtures. Gateway: **43 pass / 325
+assertions**. Reused Memory engine: **171 pass / 648 assertions**. CLI, Gateway,
+Memory, TUI and Schema package typechecks pass. These are local fixture checks,
+not deployment or release validation; no live account or paid inference was
+used and nothing was pushed.
+
+The current batch also adds durable **Session family usage** through a
+Kilo-owned read-only host RPC and the existing scrollable sidebar slot. It
+aggregates settled assistant records across project-bounded parent descendants,
+not native session/global counters, and excludes fork provenance and auxiliary
+records. Tests cover nonzero costs/cache/reasoning, foreign-project exclusion,
+in-flight omission, privacy, completion refresh and native narrow/wide sidebar
+behavior. See [usage evidence](../kilocode/baseline/sidebar-usage-v2-parity.md).
+This does not close the entire sidebar row: v1 background-process supervision,
+PR metadata, throughput and model benchmarks remain separately unported or
+unverified. Generic Persistent PTY is not a substitute for that process engine.
+
+The 70% batch closes the local credential-import and reconciled Memory rows.
+For credentials, API keys and metadata,
+source-proven Kilo/OpenAI/Copilot/xAI OAuth mappings, and well-known origin/env
+credentials all use the actual isolated host writer; unsupported mappings and
+conflicts are explicitly refused. The current count is **26/43 (60.5%)**;
+the 70% target is still **31/43**, not rounded-up partial credit. This is not
+provider authorization or deployment verification and does not close config
+mapping or the overall Phase 6 cutover gate. See
+[credential evidence](../kilocode/baseline/credential-import-v2-parity.md).
+
+Kilo `privacy_mode` now imports as the same boolean consumed by the isolated
+PrivacyStore (both enabled and disabled are tested); invalid values are refused
+without echoing content. Other unmapped Kilo-only configuration remains partial.
+Settings gained stale-dialog path/revision checks and native v2 automatic
+compaction, token-buffer and retained-token controls (zero is supported by the
+native budget schema). Seventeen settings/real-TUI tests pass. No v1 context
+percentage or pruning behavior is inferred from those controls; the broader
+settings row is still open.
+
+The current local batch adds [real indexing status in the sidebar](../kilocode/baseline/sidebar-indexing-v2-parity.md)
+through existing slots and a read-only scoped RPC. The disabled fixture proves
+that merely displaying it does not start indexing or admit model work. This
+does not close the remaining sidebar sections or increase coarse-row credit.
+The Memory sidebar additionally reads real persisted injection/save activity
+and reconciles asynchronous saves while enabled; its isolated renderer test
+proves an engine injection appears without model work and survives resizing.
+
+`/remote` now has a bounded, explicitly confirmed control adapter through the
+validated Gateway account. Normal-host tests prove default OFF, no-credential
+refusal, explicit enable/disable and credential-change cleanup; real TUI tests
+prove cancellation makes no relay request. Reconnect, directory listing,
+command preflight and owned inbox cancellation are locally tested. Legacy
+transcript forwarding and broader relay compatibility remain open, so this
+does not close the Remote row. See [Remote evidence](../kilocode/baseline/remote-v2-parity.md).
 
 [Model/agent/sidebar batch evidence](../kilocode/baseline/model-sidebar-v2-parity.md)
 records the tested subset: Gateway-first presentation, actual-metadata

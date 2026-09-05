@@ -5,8 +5,9 @@ import type { LocationRef } from "@opencode-ai/client" // kilocode_change - publ
 export type TuiModelGroup = Readonly<{
   providerID: string
   modelID: string
-  category: string
-  order: number
+  category?: string
+  order?: number
+  footer?: string
 }>
 export type TuiModelPicker = Readonly<{
   preferredProviderID?: string

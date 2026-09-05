@@ -102,8 +102,8 @@ export function installSettingsUi(ctx: Plugin.Context, options: SettingsUiOption
             if (!edit) return
             const reset = "reset" in edit
             const change = reset
-              ? await rpc.reset({ scope, key }, request)
-              : await rpc.set({ scope, key, value: edit.value }, request)
+              ? await rpc.reset({ scope, key, expected: selected.expected }, request)
+              : await rpc.set({ scope, key, value: edit.value, expected: selected.expected }, request)
             ctx.ui.toast.show({
               title: "Kilo settings",
               message: changeMessage(change, field, reset),
@@ -152,8 +152,9 @@ async function editValue(
   if (!value) return { reset: true }
   if (field.kind !== "integer") return { value }
   const parsed = Number(value)
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    ctx.ui.toast.show({ title: field.title, message: "Enter a positive whole number", variant: "error" })
+  const minimum = field.minimum ?? 1
+  if (!Number.isSafeInteger(parsed) || parsed < minimum) {
+    ctx.ui.toast.show({ title: field.title, message: `Enter a whole number of at least ${minimum}`, variant: "error" })
     return undefined
   }
   return { value: parsed }

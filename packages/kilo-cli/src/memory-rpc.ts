@@ -56,6 +56,16 @@ export const MemoryRpcStatus = Schema.Struct({
   state: stateSchema,
   exists: Schema.Struct({ state: Schema.Boolean, index: Schema.Boolean }),
   index: indexSchema,
+  activity: Schema.optional(
+    Schema.Struct({
+      lastInjectedAt: Schema.NullOr(Schema.Finite),
+      lastInjectedBytes: Schema.Finite,
+      lastInjectedTokens: Schema.Finite,
+      lastSessionSavedAt: Schema.NullOr(Schema.Finite),
+      lastTypedConsolidationAt: Schema.NullOr(Schema.Finite),
+      lastOperationCount: Schema.Finite,
+    }),
+  ),
 })
 export type MemoryRpcStatus = Schema.Schema.Type<typeof MemoryRpcStatus>
 
@@ -71,7 +81,7 @@ export const MemoryRpcRecall = Schema.Struct({
   query: Schema.String,
   hits: Schema.Array(
     Schema.Struct({
-      source: Schema.Literals(sources),
+      source: Schema.String,
       section: Schema.String,
       key: Schema.String,
       text: Schema.String,

@@ -5,6 +5,7 @@ import path from "node:path"
 import { createClient } from "@kilocode/client"
 import { Effect } from "effect"
 import { launch } from "../src/interactive-server"
+import { createPrivacyStore } from "../src/privacy-settings"
 import type { Layout } from "../src/paths"
 import type { CredentialWriter, ImportCredential } from "../src/credential-import"
 import {
@@ -66,6 +67,9 @@ function stubClient(
   return {
     integration: {
       list: async () => ({ data: integrations }),
+      wellknown: {
+        add: async () => {},
+      },
       connect: {
         key: async (input) => {
           calls.push(input)
@@ -229,12 +233,12 @@ test("refuses invalid Kilo account IDs and keeps an absent account ID as persona
   expect(personalPlan.credentials[0]).toMatchObject({ supported: true, organizationID: null })
 })
 
-test("plans metadata-bearing API credentials for the host writer and refuses non-portable values", async () => {
+test("plans metadata-bearing API and well-known credentials for the host writer", async () => {
   await using input = await sandbox()
   const auth = await input.write(
     "auth.json",
     JSON.stringify({
-      openai: { type: "wellknown", key: "k", token: "t" },
+      "https://wellknown.example/": { type: "wellknown", key: "TOKEN", token: "wellknown-token-secret" },
       xai: { type: "api", key: "kilo-oauth-dummy-key" },
       snowflake: { type: "api", key: "k", metadata: { region: "us-east-1" } },
       broken: { type: "api" },
@@ -242,16 +246,21 @@ test("plans metadata-bearing API credentials for the host writer and refuses non
   )
   const plan = await planV1Import({ auth })
   expect(plan.credentials.map((entry) => [entry.source, entry.kind, entry.supported])).toEqual([
-    ["openai", "wellknown", false],
+    ["https://wellknown.example/", "wellknown", true],
     ["xai", "api-key", false],
     ["snowflake", "api-key", true],
     ["broken", "unknown", false],
   ])
   const wellknown = plan.credentials[0]
-  if (!wellknown.supported) expect(wellknown.reason).toContain("well-known")
+  expect(wellknown).toMatchObject({
+    integrationID: "https://wellknown.example",
+    environmentKey: "TOKEN",
+    token: "wellknown-token-secret",
+  })
   const metadata = plan.credentials[2]
   expect(metadata).toMatchObject({ metadata: { region: "us-east-1" } })
   expect(JSON.stringify(reportV1Import(plan))).not.toContain("us-east-1")
+  expect(JSON.stringify(reportV1Import(plan))).not.toContain("wellknown-token-secret")
 })
 
 test("requires the host writer for metadata API keys without exposing metadata to reports", async () => {
@@ -442,10 +451,10 @@ test("plans proven config mappings and reports unmapped Kilo-only keys", async (
   const plan = await planV1Import({ config })
   const supported = plan.configKeys.filter((key) => key.supported).map((key) => key.key)
   expect([...supported].sort()).toEqual(
-    ["$schema", "autoupdate", "autoshare", "default_agent", "model", "small_model", "username"].sort(),
+    ["$schema", "autoupdate", "autoshare", "default_agent", "model", "small_model", "username", "privacy_mode"].sort(),
   )
   const unmapped = plan.configKeys.filter((key) => !key.supported)
-  expect(unmapped.map((key) => key.key).sort()).toEqual(["indexing", "logLevel", "privacy_mode"].sort())
+  expect(unmapped.map((key) => key.key).sort()).toEqual(["indexing", "logLevel"].sort())
   expect(unmapped.find((key) => key.key === "logLevel")?.reason).toContain("not carried")
   expect(unmapped.find((key) => key.key === "indexing")?.paths).toContain("indexing.enabled")
   expect(plan.config.model).toEqual({ providerID: "anthropic", model: "claude-x" })
@@ -581,6 +590,9 @@ test("runs preflight before any target read or credential call", async () => {
         calls.push("list")
         return { data: [keyIntegration("anthropic")] }
       },
+      wellknown: {
+        add: async () => {},
+      },
       connect: {
         key: async (request) => {
           calls.push(request)
@@ -657,14 +669,35 @@ test("overwrites conflicting config keys only with the explicit allowOverwrite o
   expect(written.shell).toBe("/bin/zsh")
 })
 
+test.each([true, false])(
+  "imports the Kilo privacy bit consumed by the isolated privacy store (%s)",
+  async (enabled) => {
+    await using input = await sandbox()
+    const config = await input.write("kilo.json", { privacy_mode: enabled })
+    const before = await Bun.file(config).text()
+    const plan = await planV1Import({ config })
+    expect(plan.configKeys).toEqual([{ key: "privacy_mode", supported: true }])
+    expect(await applyV1Import({ layout: input.layout, plan })).toMatchObject({ status: "applied" })
+    expect(await createPrivacyStore({ layout: input.layout }).read()).toEqual({ enabled, scope: "profile" })
+    expect(await Bun.file(config).text()).toBe(before)
+  },
+)
+
+test("refuses an invalid privacy value without reflecting its contents", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", { privacy_mode: "sk-private-value" })
+  await expect(planV1Import({ config })).rejects.toThrow(`${config} does not match the v1 configuration schema`)
+  expect(await Bun.file(input.layout.config).exists()).toBe(false)
+})
+
 test("refuses unmapped config keys by default and imports the mapped subset only with allowUnmapped", async () => {
   await using input = await sandbox()
-  const config = await input.write("kilo.json", { username: "u", privacy_mode: true })
+  const config = await input.write("kilo.json", { username: "u", indexing: { enabled: true } })
   const plan = await planV1Import({ config })
   const refused = await applyV1Import({ layout: input.layout, plan })
   expect(refused.status).toBe("refused")
   if (refused.status !== "refused") return
-  expect(refused.reason).toContain("privacy_mode")
+  expect(refused.reason).toContain("indexing")
   expect(await Bun.file(input.layout.config).exists()).toBe(false)
   const allowed = await applyV1Import({ layout: input.layout, plan, allowUnmapped: true })
   expect(allowed.status).toBe("applied")
@@ -744,6 +777,9 @@ test("reports a failed credential apply honestly without echoing server errors",
   const client: ImportClient = {
     integration: {
       list: async () => ({ data: [keyIntegration("anthropic")] }),
+      wellknown: {
+        add: async () => {},
+      },
       connect: {
         key: async (request) => {
           throw new Error(`Invalid API key "${request.key}" for ${request.integrationID}`)
@@ -962,5 +998,140 @@ test("imports Kilo OAuth through the isolated host writer and exact device integ
     expect(observed.connected).toBe(true)
   } finally {
     await gateway.stop(true)
+  }
+})
+
+test("imports v1 well-known credentials through native discovery and the host writer", async () => {
+  await using input = await sandbox()
+  const wellknown = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      if (new URL(request.url).pathname !== "/.well-known/opencode") return new Response(null, { status: 404 })
+      return Response.json({ auth: { command: ["login"], env: "V1_TOKEN" } })
+    },
+  })
+  try {
+    const observed = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const endpoint = yield* launch(input.layout, { models: false, recover: false })
+          const client = createClient({
+            baseUrl: endpoint.url,
+            headers: { authorization: `Basic ${btoa(`opencode:${endpoint.auth.password}`)}` },
+          })
+          const location = { directory: input.root }
+          yield* Effect.promise(() => client.plugin.awaitActivation({ location }))
+          const origin = wellknown.url.origin
+          const auth = yield* Effect.promise(() =>
+            input.write("auth.json", {
+              [`${origin}/`]: { type: "wellknown", key: "V1_TOKEN", token: "wellknown-secret" },
+            }),
+          )
+          const plan = yield* Effect.promise(() => planV1Import({ auth }))
+          const result = yield* Effect.promise(() =>
+            applyV1Import({ layout: input.layout, client, writeCredential: endpoint.importCredential, location, plan }),
+          )
+          const integration = (yield* Effect.promise(() => client.integration.list({ location }))).data.find(
+            (item) => item.id === origin,
+          )
+          return { result, integration }
+        }),
+      ),
+    )
+    expect(observed.result.status).toBe("applied")
+    if (observed.result.status !== "applied") return
+    expect(observed.result.wellKnownSources).toEqual([{ origin: wellknown.url.origin }])
+    expect(observed.integration?.methods).toContainEqual({
+      id: "login",
+      type: "command",
+      label: "Log in",
+      command: ["login"],
+    })
+    expect(observed.integration?.connections.some((connection) => connection.type === "credential")).toBe(true)
+    expect(JSON.stringify(reportV1Import(observed.result))).not.toContain("wellknown-secret")
+  } finally {
+    await wellknown.stop(true)
+  }
+})
+
+test("refuses a v1 well-known token when the live manifest names another environment key", async () => {
+  await using input = await sandbox()
+  const wellknown = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => Response.json({ auth: { command: ["login"], env: "CURRENT_TOKEN" } }),
+  })
+  try {
+    const auth = await input.write("auth.json", {
+      [wellknown.url.origin]: { type: "wellknown", key: "V1_TOKEN", token: "wellknown-secret" },
+    })
+    const plan = await planV1Import({ auth })
+    const calls: unknown[] = []
+    const result = await applyV1Import({
+      layout: input.layout,
+      client: {
+        integration: {
+          list: async () => ({ data: [] }),
+          wellknown: { add: async (request) => calls.push(request) },
+          connect: { key: async () => {} },
+        },
+      },
+      writeCredential: async () => {},
+      plan,
+    })
+    expect(result.status).toBe("refused")
+    if (result.status !== "refused") return
+    expect(result.reason).toContain("does not expose the v1 authentication environment key")
+    expect(calls).toEqual([])
+    expect(JSON.stringify(reportV1Import(result))).not.toContain("wellknown-secret")
+  } finally {
+    await wellknown.stop(true)
+  }
+})
+
+test("reports a discovered well-known source when its credential write fails", async () => {
+  await using input = await sandbox()
+  const wellknown = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => Response.json({ auth: { command: ["login"], env: "V1_TOKEN" } }),
+  })
+  try {
+    const origin = wellknown.url.origin
+    const auth = await input.write("auth.json", {
+      [origin]: { type: "wellknown", key: "V1_TOKEN", token: "wellknown-secret" },
+    })
+    const plan = await planV1Import({ auth })
+    let inventoryCalls = 0
+    const result = await applyV1Import({
+      layout: input.layout,
+      client: {
+        integration: {
+          list: async () => {
+            inventoryCalls += 1
+            return {
+              data:
+                inventoryCalls === 1
+                  ? []
+                  : [{ id: origin, methods: [{ id: "login", type: "command" }], connections: [] }],
+            }
+          },
+          wellknown: { add: async () => {} },
+          connect: { key: async () => {} },
+        },
+      },
+      writeCredential: async () => {
+        throw new Error("credential rejected")
+      },
+      plan,
+    })
+    expect(result.status).toBe("failed")
+    if (result.status !== "failed") return
+    expect(result.wellKnownSources).toEqual([{ origin }])
+    expect(reportV1Import(result).wellKnownSources).toEqual([{ origin }])
+    expect(JSON.stringify(reportV1Import(result))).not.toContain("wellknown-secret")
+  } finally {
+    await wellknown.stop(true)
   }
 })

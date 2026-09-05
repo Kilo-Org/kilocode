@@ -1,0 +1,378 @@
+import { expect, test } from "bun:test"
+import { OpenCode } from "@opencode-ai/client"
+import { Permission } from "@opencode-ai/core/permission"
+import type { Context } from "@opencode-ai/plugin/effect/plugin"
+import type { ToolEditor } from "@opencode-ai/plugin/effect/tool"
+import type { Tool } from "@opencode-ai/schema/tool"
+import { Effect } from "effect"
+import { mkdir, writeFile } from "node:fs/promises"
+import path from "node:path"
+import { launch } from "../src/interactive-server"
+import type { Layout } from "../src/paths"
+import { createPlanPolicy } from "../src/plan-policy"
+import { fixture } from "./fixture"
+
+test("Kilo Plan uses the native question form and only implements after Continue here", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(interactiveLayout(input.directory, input.home), plan, async (host) => {
+    await host.client.plugin.awaitActivation({ location: { directory: input.cwd } })
+    const planAgent = (await host.client.agent.list({ location: { directory: input.cwd } })).data.find(
+      (agent) => agent.id === "plan",
+    )
+    expect(planAgent).toBeDefined()
+    expect(
+      Permission.evaluate("edit", path.join(input.cwd, ".kilo", "plans", "approved.md"), planAgent!.permissions).effect,
+    ).toBe("allow")
+    expect(Permission.evaluate("edit", path.join(input.cwd, "src", "index.ts"), planAgent!.permissions).effect).toBe(
+      "deny",
+    )
+    expect(Permission.evaluate("shell", "git status", planAgent!.permissions).effect).toBe("deny")
+    const session = await host.client.session.create({
+      location: { directory: input.cwd },
+      agent: "plan",
+      model: { providerID: "fixture", id: "chat" },
+    })
+    await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+    const form = await waitFor(async () => (await host.client.form.list({ sessionID: session.id })).at(0))
+    expect(form).toMatchObject({ title: "Questions", metadata: { kind: "question" } })
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("plan")
+    expect(host.calls()).toBeGreaterThanOrEqual(1)
+
+    await host.client.form.reply({ sessionID: session.id, formID: form.id, answer: { q0: "Continue here" } })
+    await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("build")
+    expect(JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)).toContain(plan)
+  })
+}, 20_000)
+
+test("Kilo Plan cancellation leaves the planning session untouched", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(interactiveLayout(input.directory, input.home), plan, async (host) => {
+    const session = await host.client.session.create({
+      location: { directory: input.cwd },
+      agent: "plan",
+      model: { providerID: "fixture", id: "chat" },
+    })
+    await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+    const form = await waitFor(async () => (await host.client.form.list({ sessionID: session.id })).at(0))
+    await host.client.form.cancel({ sessionID: session.id, formID: form.id })
+    await waitFor(async () =>
+      (await host.client.form.list({ sessionID: session.id })).length === 0 ? true : undefined,
+    )
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("plan")
+    expect(JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)).not.toContain(
+      "Implement the approved plan",
+    )
+  })
+}, 20_000)
+
+test("Kilo Plan fails closed when the host omits plan_exit authorization", async () => {
+  let planExit: Tool.Info | undefined
+  const build = { permissions: [] }
+  const context = {
+    location: { directory: "/tmp/kilo-plan-policy" },
+    agent: {
+      transform: (callback: Parameters<Context["agent"]["transform"]>[0]) =>
+        Effect.sync(() =>
+          callback({
+            get: (id: string) => (id === "build" ? build : undefined),
+            update: (_id: string, update: (agent: { permissions: never[] }) => void) => update({ permissions: [] }),
+          } as never),
+        ),
+    },
+    tool: {
+      transform: (callback: Parameters<Context["tool"]["transform"]>[0]) =>
+        Effect.sync(() =>
+          callback({
+            get: () => undefined,
+            add: (tool: Tool.Info) => {
+              planExit = tool
+            },
+          } as unknown as ToolEditor),
+        ),
+    },
+  } as unknown as Context
+  await Effect.runPromise(Effect.scoped(createPlanPolicy().effect(context)))
+  await expect(
+    Effect.runPromise(
+      planExit!.execute({ path: ".kilo/plans/approved.md" }, {
+        sessionID: "ses_plan",
+        agent: "plan",
+        messageID: "msg_plan",
+        id: "call_plan",
+        progress: () => Effect.void,
+      } as never),
+    ),
+  ).rejects.toMatchObject({ message: "Tool authorization is unavailable" })
+})
+
+test("Kilo Plan starts a code session only after Start new session", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(interactiveLayout(input.directory, input.home), plan, async (host) => {
+    const session = await host.client.session.create({
+      location: { directory: input.cwd },
+      agent: "plan",
+      model: { providerID: "fixture", id: "selected" },
+    })
+    await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+    const form = await waitFor(async () => (await host.client.form.list({ sessionID: session.id })).at(0))
+    expect((await host.client.session.list({ directory: input.cwd })).data).toHaveLength(1)
+    await host.client.form.reply({ sessionID: session.id, formID: form.id, answer: { q0: "Start new session" } })
+    const next = await waitFor(async () => {
+      const sessions = (await host.client.session.list({ directory: input.cwd })).data
+      return sessions.find((item) => item.id !== session.id)
+    })
+    await host.client.session.wait({ sessionID: next.id }, { signal: AbortSignal.timeout(10_000) })
+    expect(next.agent).toBe("build")
+    expect(next.model).toMatchObject({ providerID: "fixture", id: "selected" })
+    expect(JSON.stringify((await host.client.message.list({ sessionID: next.id })).data)).toContain(plan)
+  })
+}, 20_000)
+
+test("Kilo Plan keeps refining after the native completion form", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(interactiveLayout(input.directory, input.home), plan, async (host) => {
+    const session = await host.client.session.create({
+      location: { directory: input.cwd },
+      agent: "plan",
+      model: { providerID: "fixture", id: "chat" },
+    })
+    await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+    const form = await waitFor(async () => (await host.client.form.list({ sessionID: session.id })).at(0))
+    await host.client.form.reply({ sessionID: session.id, formID: form.id, answer: { q0: "Keep refining" } })
+    await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("plan")
+    expect(JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)).not.toContain(
+      "Implement the approved plan",
+    )
+  })
+}, 20_000)
+
+test("Kilo Plan rejects free-form completion answers without leaving Plan mode", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(interactiveLayout(input.directory, input.home), plan, async (host) => {
+    const session = await host.client.session.create({
+      location: { directory: input.cwd },
+      agent: "plan",
+      model: { providerID: "fixture", id: "chat" },
+    })
+    await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+    const form = await waitFor(async () => (await host.client.form.list({ sessionID: session.id })).at(0))
+    await host.client.form.reply({ sessionID: session.id, formID: form.id, answer: { q0: "Implement everything now" } })
+    await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("plan")
+    const messages = JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)
+    expect(messages).toContain("requires one of the listed completion choices")
+    expect(messages).not.toContain("Implement the approved plan")
+  })
+}, 20_000)
+
+test("Kilo Plan carries configured plan_exit denials into the native Plan agent", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(
+    interactiveLayout(input.directory, input.home),
+    plan,
+    async (host) => {
+      await host.client.plugin.awaitActivation({ location: { directory: input.cwd } })
+      const agent = (await host.client.agent.list({ location: { directory: input.cwd } })).data.find(
+        (item) => item.id === "plan",
+      )
+      expect(Permission.evaluate("plan_exit", "*", agent!.permissions).effect).toBe("deny")
+      const session = await host.client.session.create({
+        location: { directory: input.cwd },
+        agent: "plan",
+        model: { providerID: "fixture", id: "chat" },
+      })
+      await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+      await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+      expect(await host.client.form.list({ sessionID: session.id })).toEqual([])
+      expect(JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)).toContain(
+        "Unknown tool: plan_exit",
+      )
+    },
+    { permissions: [{ action: "plan_exit", resource: "*", effect: "deny" }] },
+  )
+}, 20_000)
+
+test("Kilo Plan rejects invalid saved paths and calls from non-Plan agents without opening a form", async () => {
+  await using input = await fixture()
+  await mkdir(path.join(input.cwd, ".kilo", "plans"), { recursive: true })
+  for (const agent of ["plan", "build"]) {
+    await withHost(interactiveLayout(input.directory, input.home), "outside.md", async (host) => {
+      const session = await host.client.session.create({
+        location: { directory: input.cwd },
+        agent,
+        model: { providerID: "fixture", id: "chat" },
+      })
+      await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+      await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+      expect(await host.client.form.list({ sessionID: session.id })).toEqual([])
+      const messages = JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)
+      expect(messages).toContain(
+        agent === "plan" ? "Plan file must be under this project's .kilo/plans directory" : "built-in Plan agent",
+      )
+    })
+  }
+}, 20_000)
+
+test("a configured Plan agent remains authoritative and cannot use Kilo's native handoff", async () => {
+  await using input = await fixture()
+  const plan = await savedPlan(input.cwd)
+  await withHost(
+    interactiveLayout(input.directory, input.home),
+    plan,
+    async (host) => {
+      await host.client.plugin.awaitActivation({ location: { directory: input.cwd } })
+      const configured = (await host.client.agent.list({ location: { directory: input.cwd } })).data.find(
+        (agent) => agent.id === "plan",
+      )
+      expect(configured).toMatchObject({ system: "Project Plan prompt wins." })
+      expect(Permission.evaluate("question", "*", configured!.permissions).effect).toBe("deny")
+      const session = await host.client.session.create({
+        location: { directory: input.cwd },
+        agent: "plan",
+        model: { providerID: "fixture", id: "chat" },
+      })
+      await host.client.session.prompt({ sessionID: session.id, text: "Make a plan" })
+      await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+      expect(await host.client.form.list({ sessionID: session.id })).toEqual([])
+      expect(JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)).toContain(
+        "built-in Plan agent",
+      )
+    },
+    {
+      agents: {
+        plan: {
+          system: "Project Plan prompt wins.",
+          permissions: [{ action: "question", resource: "*", effect: "deny" }],
+        },
+      },
+    },
+  )
+}, 20_000)
+
+async function savedPlan(directory: string) {
+  const file = path.join(directory, ".kilo", "plans", "approved.md")
+  await mkdir(path.dirname(file), { recursive: true })
+  await writeFile(file, "# Approved plan\n\n1. Implement the change.\n")
+  return ".kilo/plans/approved.md"
+}
+
+function interactiveLayout(root: string, home: string): Layout {
+  const paths = {
+    home,
+    data: path.join(root, "data"),
+    config: path.join(root, "config"),
+    cache: path.join(root, "cache"),
+    state: path.join(root, "state"),
+    tmp: path.join(root, "tmp"),
+    bin: path.join(root, "cache", "bin"),
+    log: path.join(root, "data", "log"),
+    repos: path.join(root, "data", "repos"),
+  }
+  return {
+    channel: "interactive",
+    paths,
+    roots: [paths.data, paths.cache, paths.config, paths.state, paths.tmp],
+    database: path.join(paths.data, "kilo2.db"),
+    config: path.join(paths.config, "kilo.jsonc"),
+    tuiConfig: path.join(paths.config, "tui.json"),
+    telemetryConfig: path.join(paths.config, "telemetry.json"),
+    password: path.join(paths.state, "server.password"),
+    pty: path.join(paths.tmp, "pty"),
+  }
+}
+
+async function withHost(
+  layout: Parameters<typeof launch>[0],
+  plan: string,
+  run: (host: { readonly client: ReturnType<typeof OpenCode.make>; readonly calls: () => number }) => Promise<void>,
+  config: object = {},
+) {
+  let requests = 0
+  let planExit = false
+  const model = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      const body = (await request.json()) as { stream?: boolean; tools?: unknown }
+      if (!body.stream) return Response.json({ choices: [{ message: { role: "assistant", content: "fixture" } }] })
+      requests++
+      const requestedPlan = JSON.stringify(body).includes("plan_exit")
+      const tool =
+        requestedPlan && !planExit ? { name: "plan_exit", arguments: JSON.stringify({ path: plan }) } : undefined
+      planExit ||= tool !== undefined
+      return completion(tool)
+    },
+  })
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* launch(layout, {
+            models: false,
+            recover: false,
+            content: JSON.stringify({
+              ...config,
+              model: "fixture/chat",
+              providers: {
+                fixture: {
+                  package: "aisdk:@ai-sdk/openai-compatible",
+                  settings: { baseURL: `${model.url.origin}/v1`, apiKey: "fixture" },
+                  models: { chat: {}, selected: {} },
+                },
+              },
+            }),
+          })
+          yield* Effect.promise(() =>
+            run({
+              client: OpenCode.make({
+                baseUrl: server.url,
+                headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
+              }),
+              calls: () => requests,
+            }),
+          )
+        }),
+      ),
+    )
+  } finally {
+    await model.stop(true)
+  }
+}
+
+function completion(tool?: { readonly name: string; readonly arguments: string }) {
+  const delta = tool
+    ? { tool_calls: [{ index: 0, id: "call_plan_exit", type: "function", function: tool }] }
+    : { role: "assistant", content: "Fixture complete" }
+  const finish = tool ? "tool_calls" : "stop"
+  return new Response(
+    [
+      { choices: [{ index: 0, delta, finish_reason: null }] },
+      { choices: [{ index: 0, delta: {}, finish_reason: finish }] },
+    ]
+      .map(
+        (frame) =>
+          `data: ${JSON.stringify({ id: "plan-policy", object: "chat.completion.chunk", model: "chat", created: 1, ...frame })}\n\n`,
+      )
+      .join("") + "data: [DONE]\n\n",
+    { headers: { "content-type": "text/event-stream" } },
+  )
+}
+
+async function waitFor<T>(fn: () => Promise<T | undefined>, milliseconds = 8_000): Promise<T> {
+  const started = Date.now()
+  while (Date.now() - started < milliseconds) {
+    const value = await fn()
+    if (value !== undefined) return value
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  throw new Error(`waitFor timed out after ${milliseconds}ms`)
+}

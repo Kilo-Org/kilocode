@@ -46,7 +46,7 @@ export function MemorySidebar(props: {
     }
 
     const current = ++revision
-    setLoading(true)
+    setLoading(status() === undefined)
     setUnavailable(false)
     try {
       const value = await rpc.status({}, memoryUiRequestOptions(props.context, props.signal, ref))
@@ -68,9 +68,20 @@ export function MemorySidebar(props: {
         const ref = location()
         return `${props.sessionID}\u0000${ref?.directory ?? ""}\u0000${ref?.workspaceID ?? ""}`
       },
-      () => void refresh(),
+      () => {
+        setStatus(undefined)
+        void refresh()
+      },
     ),
   )
+
+  // Consolidation can finish after the execution event. Reconcile its persisted
+  // activity while enabled, without starting a model or polling disabled memory.
+  createEffect(() => {
+    if (!status()?.state.enabled) return
+    const interval = setInterval(() => void refresh(), 5000)
+    onCleanup(() => clearInterval(interval))
+  })
 
   const unsubscribe = subscribeMemoryUiRefresh(props.context, () => void refresh())
   const stopExecutionEvents = props.context.data.on("session.execution.succeeded", (event) => {
@@ -112,6 +123,20 @@ export function MemorySidebar(props: {
                 <text fg={theme.text.feedback.success.default}>Enabled</text>
                 <text fg={theme.text.subdued}>Auto: {value().state.autoConsolidate ? "On" : "Off"}</text>
                 <text fg={theme.text.subdued}>Data: {value().index.tokens.toLocaleString()} estimated tokens</text>
+                <Show when={value().activity?.lastInjectedAt != null}>
+                  <text fg={theme.text.subdued}>Injected: {value().activity?.lastInjectedTokens} estimated tokens</text>
+                </Show>
+                <Show when={value().activity?.lastSessionSavedAt != null}>
+                  <text fg={theme.text.subdued}>
+                    Last save:{" "}
+                    {new Date(value().activity!.lastSessionSavedAt!).toLocaleString(undefined, {
+                      month: "numeric",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </text>
+                </Show>
                 <Show when={value().index.truncated}>
                   <text fg={theme.text.subdued}>Data truncated</text>
                 </Show>

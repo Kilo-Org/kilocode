@@ -7,6 +7,8 @@ export const Entry = Schema.Struct({
   id: Schema.String,
   recommendedIndex: Schema.optionalKey(Schema.Finite),
   autoRouting: Schema.optionalKey(Schema.Struct({ models: Schema.Array(Schema.String) })),
+  hasUserByokAvailable: Schema.optionalKey(Schema.Boolean),
+  mayTrainOnYourPrompts: Schema.optionalKey(Schema.Boolean),
 })
 export type Entry = typeof Entry.Type
 

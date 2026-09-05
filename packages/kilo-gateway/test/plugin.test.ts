@@ -83,8 +83,10 @@ const harness = Effect.fn(function* (input: { storage?: Map<string, Schema.Json>
     model: {
       get: (_, id) => state.record.models.get(id),
       update: (_, id, update) => {
-        const model = state.record.models.get(id)
-        if (model) update(model)
+        const model = state.record.models.get(id) ?? Model.Info.default(Provider.ID.make("kilo"), Model.ID.make(id))
+        if (!state.record.models.has(id))
+          state.record = { ...state.record, models: new Map([...state.record.models, [id, model]]) }
+        update(model)
       },
       remove: () => {
         throw new Error("Unexpected model removal")
@@ -414,6 +416,195 @@ test("model metadata RPC uses the validated account scope", async () => {
         authorization: "Bearer private-key",
         organizationID: "selected",
       })
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("catalog drops malformed optional Auto routing without dropping its valid model", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "kilo/auto",
+        name: "Kilo Auto",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        autoRouting: { models: "not-an-array" },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      expect(yield* host.models().list({}, call())).toEqual([{ id: "kilo/auto" }])
+      expect(host.state.record.models.get("kilo/auto")).toMatchObject({
+        enabled: true,
+        capabilities: { tools: true, input: ["text"], output: ["text"] },
+      })
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("catalog projects Kilo disclosures and variants without replacing configured variants", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "fixture",
+        name: "Fixture from Kilo",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        hasUserByokAvailable: true,
+        mayTrainOnYourPrompts: false,
+        opencode: {
+          family: "fixture",
+          variants: {
+            low: { reasoningEffort: "low" },
+            variant: { reasoningEffort: "must-not-replace-configured-variant" },
+          },
+          prompt: "codex",
+          ai_sdk_provider: "openai-compatible",
+        },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      const model = host.state.record.models.get("fixture")!
+      expect(model.name).toBe("Fixture from Kilo")
+      expect(model.variants.find((item) => item.id === "low")?.settings).toMatchObject({ reasoningEffort: "low" })
+      expect(model.variants.find((item) => item.id === "variant")?.settings).not.toHaveProperty("reasoningEffort")
+      expect(yield* host.models().list({}, call())).toEqual([
+        { id: "fixture", hasUserByokAvailable: true, mayTrainOnYourPrompts: false },
+      ])
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("catalog requires the Gateway name and context fields", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [{ id: "incomplete", name: "Incomplete", context_length: 0, supported_parameters: ["tools"] }],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      expect(host.state.record.models.has("incomplete")).toBe(false)
+      expect(host.state.record.models.get("fixture")?.enabled).toBe(false)
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("catalog rejects overflowing and malformed OpenRouter prices", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "price-overflow",
+        name: "Price Overflow",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        pricing: { prompt: "1e308", completion: "0" },
+      },
+      {
+        id: "price-suffix",
+        name: "Price Suffix",
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        pricing: { prompt: "0.1 USD", completion: "0" },
+      },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+
+      expect(host.state.record.models.get("price-overflow")?.cost).toEqual([])
+      expect(host.state.record.models.get("price-suffix")?.cost).toEqual([])
+    }).pipe(Effect.scoped),
+  )
+})
+
+test("scoped Gateway catalog creates API-only Auto models and never reuses a failed team snapshot", async () => {
+  using backend = fixture()
+  backend.state.models = {
+    data: [
+      {
+        id: "kilo-auto/free",
+        name: "Kilo Auto Free",
+        context_length: 128000,
+        max_completion_tokens: 16000,
+        preferredIndex: 1,
+        supported_parameters: ["tools"],
+        architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
+        pricing: { prompt: "0", completion: "0", input_cache_read: "0", input_cache_write: "0" },
+      },
+      { id: "unsupported", name: "Unsupported", context_length: 1000, supported_parameters: ["temperature"] },
+    ],
+  }
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const host = yield* harness()
+      host.state.credential = Credential.Key.make({
+        type: "key",
+        key: "private-key",
+        metadata: { server: backend.url, organizationID: "selected" },
+      })
+      yield* registerGateway(host.ctx, { server: backend.url })
+      const auto = host.state.record.models.get("kilo-auto/free")
+      expect(auto).toMatchObject({
+        name: "Kilo Auto Free",
+        enabled: true,
+        limit: { context: 128000, output: 16000 },
+        capabilities: { tools: true, input: ["text", "image"], output: ["text"] },
+      })
+      expect(Number(auto?.cost[0]?.input)).toBe(0)
+      expect(Number(auto?.cost[0]?.output)).toBe(0)
+      expect(auto?.cost[0]?.cache).toMatchObject({ read: 0, write: 0 })
+      expect(host.state.record.models.get("fixture")?.enabled).toBe(false)
+      expect(host.state.record.models.has("unsupported")).toBe(false)
+      expect(backend.requests.at(-1)).toMatchObject({
+        path: "/api/organizations/selected/models",
+        authorization: "Bearer private-key",
+        organizationID: "selected",
+      })
+
+      backend.state.modelsStatus = 503
+      yield* host.notify()
+      expect(host.state.record.models.has("kilo-auto/free")).toBe(false)
+      expect(host.state.record.models.get("fixture")?.enabled).toBe(false)
+
+      yield* host.rpc()["organization.set"]({ organizationID: null }, call())
+      expect(host.state.record.models.get("fixture")?.enabled).toBe(true)
+      expect(backend.requests.at(-1)).toMatchObject({ path: "/api/openrouter/models", organizationID: null })
     }).pipe(Effect.scoped),
   )
 })

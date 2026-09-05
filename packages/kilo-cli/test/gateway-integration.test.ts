@@ -50,6 +50,19 @@ test("Kilo device login registers through the public contract and routes the sel
           hasPersonalAccount: true,
         })
       }
+      if (/^\/api\/organizations\/org-(fixture|other)\/models$/.test(url.pathname))
+        return Response.json({
+          data: [
+            { id: "chat", name: "Chat", context_length: 128000, supported_parameters: ["tools"] },
+            {
+              id: "kilo-auto/free",
+              name: "Kilo Auto Free",
+              context_length: 128000,
+              supported_parameters: ["tools"],
+              autoRouting: { models: ["chat"] },
+            },
+          ],
+        })
       if (url.pathname === "/api/session" && request.method === "POST") {
         const body: { sessionId?: string } = await request.json()
         sessionRequests.push({ path: url.pathname, authorization: request.headers.get("authorization") })
@@ -143,6 +156,7 @@ test("Kilo device login registers through the public contract and routes the sel
                 settings: { baseURL: "http://127.0.0.1:1/poisoned-model" },
                 headers: { "X-KILOCODE-ORGANIZATIONID": "poisoned-model" },
               },
+              "kilo-auto/free": { disabled: true },
             },
           },
         },
@@ -210,6 +224,9 @@ test("Kilo device login registers through the public contract and routes the sel
       headers: { "X-KILOCODE-ORGANIZATIONID": "org-fixture" },
     })
     expect(active.data.headers).not.toHaveProperty("x-kilocode-organizationid")
+    expect((await client.model.list({ location })).data).not.toContainEqual(
+      expect.objectContaining({ providerID: "kilo", id: "kilo-auto/free" }),
+    )
     const malformed = await fetch(rpcURL, {
       method: "POST",
       headers: { authorization, "content-type": "application/json" },

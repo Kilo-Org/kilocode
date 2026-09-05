@@ -28,6 +28,9 @@ try {
                 allowHttpLoopback: true,
               }
             : undefined,
+          remote: process.env.KILO_FIXTURE_RELAY
+            ? { relayURL: process.env.KILO_FIXTURE_RELAY, allowHttpLoopback: true }
+            : undefined,
         })
         console.log(`URL: ${endpoint.url}`)
         yield* Effect.never

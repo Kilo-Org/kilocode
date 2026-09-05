@@ -60,9 +60,9 @@ test("agent policy uses the bundled Bun host and public client contract", async 
     mode: "subagent",
     system: "Project prompt wins.",
   })
-  expect(Permission.evaluate("shell", "git status", custom.agents.find((agent) => agent.id === "ask")!.permissions).effect).toBe(
-    "allow",
-  )
+  expect(
+    Permission.evaluate("shell", "git status", custom.agents.find((agent) => agent.id === "ask")!.permissions).effect,
+  ).toBe("allow")
   expect(custom.agents.find((agent) => agent.id === "plan")).toMatchObject({
     description: "Project-owned Plan overlay",
     system: "Project Plan prompt wins.",
@@ -81,8 +81,29 @@ type Agent = {
 
 type Host = {
   readonly agents: Agent[]
+  readonly defaultAgent?: string
   readonly runtime?: { readonly calls: string[]; readonly askPermissions: number; readonly debugPermissions: number }
 }
+
+test("native default-agent fallback already resolves Code configuration without duplicating the coding agent", async () => {
+  const native = await host({ default_agent: "code" }, false)
+  expect(native.defaultAgent).toBe("build")
+  expect(native.agents.filter((agent) => agent.name === "Code").map((agent) => agent.id)).toEqual(["build"])
+  expect(native.agents.find((agent) => agent.id === "code")).toBeUndefined()
+
+  const custom = await host(
+    {
+      default_agent: "code",
+      agents: { code: { mode: "primary", system: "Project-owned coding policy." } },
+    },
+    false,
+  )
+  expect(custom.defaultAgent).toBe("code")
+  expect(custom.agents.find((agent) => agent.id === "code")?.system).toBe("Project-owned coding policy.")
+
+  const explicit = await host({ default_agent: "ask" }, false)
+  expect(explicit.defaultAgent).toBe("ask")
+})
 
 async function host(config: object, exercise = true) {
   await using input = await fixture()
@@ -105,6 +126,10 @@ async function run(binary: string, args: string[], env?: NodeJS.ProcessEnv) {
     stdin: "ignore",
     timeout: 30_000,
   })
-  const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+  const [code, stdout, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ])
   return { code, stdout, stderr }
 }

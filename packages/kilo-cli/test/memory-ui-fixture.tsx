@@ -61,22 +61,56 @@ const task = Effect.runPromise(
           autocomplete.split("\n").filter((line) => line.includes("Manage explicit local project memory")).length,
           1,
         )
+        const memoryEntries = autocomplete.split("\n").filter((line) => /┃ \/memory(?:\s|$)/.test(line))
+        assert.equal(
+          memoryEntries.length,
+          1,
+          `slash completion must expose one executable /memory entry, not both the local and server command: ${memoryEntries.join("\\n")}`,
+        )
         setup.mockInput.pressKey("c", { ctrl: true })
         await setup.waitForFrame((frame) => !frame.includes("Manage explicit local project memory"), { maxPasses: 600 })
+        setup.mockInput.pressKey("p", { ctrl: true })
+        const palette = await setup.waitForFrame(
+          (frame) => frame.includes("Commands") && frame.includes("Manage explicit local project memory"),
+          { maxPasses: 600 },
+        )
+        const paletteEntries = palette.split("\n").filter((line) => line.trimStart().startsWith("Memory "))
+        assert.equal(
+          paletteEntries.length,
+          1,
+          `palette must expose one actionable Memory command: ${paletteEntries.join("\\n")}`,
+        )
+        setup.mockInput.pressEscape()
+        await setup.waitForFrame((frame) => !frame.includes("Commands"), { maxPasses: 600 })
 
         const command = async (input: string, message: string) => {
           await setup.mockInput.typeText(input)
           setup.mockInput.pressEnter()
           await setup.waitForFrame((frame) => frame.includes(message), { maxPasses: 600 })
-          setup.mockInput.pressEnter()
-          await setup.waitForFrame((frame) => !frame.includes(message), { maxPasses: 600 })
         }
 
-        await command("/memory status", "Memory disabled.")
+        const dialog = async (input: string, message: string) => {
+          await command(input, message)
+          setup.mockInput.pressEscape()
+          await setup.waitForFrame((frame) => !frame.includes(message), { maxPasses: 600 })
+          await Bun.sleep(10)
+        }
+
         await command("/memory enable", "Memory enabled.")
         await command("/memory auto on", "Automatic consolidation enabled.")
         await command("/memory remember ui regression note", "Memory saved (1 change).")
-        await command("/memory show", "ui regression note")
+
+        const selectMemoryAction = async (index: number) => {
+          setup.mockInput.pressKey("p", { ctrl: true })
+          await setup.waitForFrame((frame) => frame.includes("Commands") && frame.includes("Memory"), {
+            maxPasses: 600,
+          })
+          await setup.mockInput.typeText("Memory")
+          setup.mockInput.pressEnter()
+          await setup.waitForFrame((frame) => frame.includes("Select a local memory action"), { maxPasses: 600 })
+          for (let current = 0; current < index; current++) setup.mockInput.pressArrow("down")
+          setup.mockInput.pressEnter()
+        }
 
         const final = await rpc.status({}, { location })
         const shown = await rpc.show({}, { location })
@@ -86,6 +120,25 @@ const task = Effect.runPromise(
         assert.equal(final.root, initial.root)
         assert(shown.sources["project.md"].includes("ui_regression_note :: ui regression note"))
         assert.equal(shown.root, initial.root)
+
+        await selectMemoryAction(0)
+        await setup.waitForFrame((frame) => frame.includes("Automatic consolidation"), { maxPasses: 600 })
+        setup.mockInput.pressEscape()
+        await selectMemoryAction(1)
+        await setup.waitForFrame((frame) => frame.includes("ui regression note"), { maxPasses: 600 })
+        setup.mockInput.pressEscape()
+
+        const beforeCancelledPrompt = await rpc.show({}, { location })
+        await selectMemoryAction(7)
+        await setup.waitForFrame((frame) => frame.includes("Memory remember"), { maxPasses: 600 })
+        setup.mockInput.pressEscape()
+        await Bun.sleep(10)
+        assert.equal(
+          (await rpc.show({}, { location })).sources["project.md"],
+          beforeCancelledPrompt.sources["project.md"],
+        )
+
+        await dialog("/memory show", "ui regression note")
 
         const after = await client.session.list({ directory: location.directory })
         assert.equal(after.data.length, 0)

@@ -30,6 +30,8 @@ const task = Effect.runPromise(
       })
       yield* Effect.promise(() => store.set({ scope: "profile", key: "default_agent", value: "build" }))
       yield* Effect.promise(() => store.set({ scope: "profile", key: "tool_output.max_lines", value: 123 }))
+      yield* Effect.promise(() => store.set({ scope: "profile", key: "compaction.auto", value: false }))
+      yield* Effect.promise(() => store.set({ scope: "profile", key: "compaction.keep.tokens", value: 512 }))
 
       const endpoint = yield* launch(input, { models: false, recover: false })
       const client = createClient({
@@ -44,6 +46,8 @@ const task = Effect.runPromise(
       assert(document?.type === "document", `host did not load ${input.config}`)
       assert.equal(document.info.default_agent, "build")
       assert.equal(document.info.tool_output?.max_lines, 123)
+      assert.equal(document.info.compaction?.auto, false)
+      assert.equal(document.info.compaction?.keep?.tokens, 512)
 
       const rpc = client.rpc(SettingsRpc.Definition)
       const initial = yield* Effect.promise(() => rpc.read({}, { location }))
@@ -116,24 +120,34 @@ const task = Effect.runPromise(
         await select("Snapshots", (frame) => frame.includes("Current in profile: false"))
         await select("Unset", (frame) => frame.includes("Snapshots removed from the profile scope."))
 
+        // Native compaction budgets allow zero; output limits still require a positive value.
+        await scope()
+        await prompt("Compaction token buffer")
+        await setup.mockInput.typeText("0")
+        setup.mockInput.pressEnter()
+        await settled("Compaction token buffer updated in the profile scope.")
+
         const snapshot = await rpc.read({}, { location })
         assert.deepEqual(field(snapshot, "tool_output.max_bytes").values, { profile: 4096 })
         assert.deepEqual(field(snapshot, "tool_output.max_lines").values, { profile: 123 })
         assert.deepEqual(field(snapshot, "snapshots").values, {})
         assert.equal(field(snapshot, "snapshots").source, "unset")
+        assert.deepEqual(field(snapshot, "compaction.buffer").values, { profile: 0 })
 
         // The document keeps every unrelated key the UI never touched.
         const stored = (await Bun.file(input.config).json()) as Record<string, unknown>
         assert.equal(stored["default_agent"], "build")
         assert.deepEqual(stored["tool_output"], { max_lines: 123, max_bytes: 4096 })
         assert.equal(Object.hasOwn(stored, "snapshots"), false)
+        assert.deepEqual(stored["compaction"], { auto: false, keep: { tokens: 512 }, buffer: 0 })
 
         // Project writes stay refused without the host opt-in.
         await assert.rejects(rpc.set({ scope: "project", key: "snapshots", value: true }, { location }))
 
         const after = await client.session.list({ directory })
         assert.equal(after.data.length, 0)
-        for (const session of after.data) assert.deepEqual(await client.session.inbox.list({ sessionID: session.id }), [])
+        for (const session of after.data)
+          assert.deepEqual(await client.session.inbox.list({ sessionID: session.id }), [])
 
         await setup.mockInput.typeText("/exit")
         setup.mockInput.pressEnter()

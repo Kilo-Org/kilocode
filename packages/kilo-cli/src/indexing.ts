@@ -8,6 +8,7 @@ import type { Info } from "@opencode-ai/schema/location"
 import { Effect, Schema } from "effect"
 import path from "node:path"
 import type { ToolAuthorizationInput, ToolAuthorizer } from "./tool-authorization"
+import { IndexingRpc } from "./indexing-rpc"
 
 /**
  * V2 host for the Kilo codebase-indexing engine. It drives the real
@@ -83,10 +84,7 @@ export function pendingIndexingStatus(): IndexingStatus {
  * Start indexing for one Location. A disabled project and a failed
  * initialization both return an inert host, so callers only check `available`.
  */
-export async function startIndexing(
-  options: IndexingPluginOptions,
-  location: IndexingLocation,
-): Promise<IndexingHost> {
+export async function startIndexing(options: IndexingPluginOptions, location: IndexingLocation): Promise<IndexingHost> {
   if (options.settings?.enabled !== true) {
     return inert(disabledIndexingStatus("Codebase indexing is disabled for this project."))
   }
@@ -160,6 +158,7 @@ export function createIndexingPlugin(options: IndexingPluginOptions = {}): Plugi
       Effect.fn("KiloIndexingPlugin.effect")(function* (ctx: Context) {
         const host = yield* Effect.promise(() => startIndexing(options, ctx.location))
         yield* Effect.addFinalizer(() => Effect.promise(() => host.dispose()))
+        yield* ctx.rpc.register(IndexingRpc, { status: () => Effect.sync(host.status) })
         if (!host.available) return
 
         yield* ctx.tool.transform((editor) => {

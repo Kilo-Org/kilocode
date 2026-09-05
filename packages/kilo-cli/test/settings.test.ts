@@ -8,6 +8,70 @@ import { createPrivacyStore } from "../src/privacy-settings"
 
 const secret = "sk-planted-provider-secret"
 
+test("native compaction controls preserve sibling fields and accept zero token budgets", async () => {
+  await using host = await isolated()
+  await host.writeProfile('{ "compaction": { "auto": false, "keep": { "tokens": 300 } } }')
+  const store = createSettingsStore({ layout: host.layout, project: host.project(true) })
+  await store.set({ scope: "profile", key: "compaction.buffer", value: 0 })
+  await store.set({ scope: "project", key: "compaction.auto", value: true })
+  await store.set({ scope: "project", key: "compaction.keep.tokens", value: 0 })
+  const snapshot = await store.read()
+  expect(snapshot.fields.find((field) => field.key === "compaction.buffer")).toMatchObject({
+    minimum: 0,
+    values: { profile: 0 },
+    source: "profile",
+  })
+  expect(snapshot.fields.find((field) => field.key === "compaction.keep.tokens")).toMatchObject({
+    values: { profile: 300, project: 0 },
+    source: "project",
+  })
+  expect(await Bun.file(host.layout.config).json()).toEqual({
+    compaction: { auto: false, keep: { tokens: 300 }, buffer: 0 },
+  })
+  for (const value of [-1, 0.5, "300", null])
+    await expect(store.set({ scope: "profile", key: "compaction.buffer", value })).rejects.toThrow()
+  await store.reset({ scope: "project", key: "compaction.keep.tokens" })
+  expect((await store.read()).fields.find((field) => field.key === "compaction.keep.tokens")).toMatchObject({
+    values: { profile: 300 },
+    source: "profile",
+  })
+})
+
+test("dialog revisions refuse stale set/reset and first-write collisions", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+  const absent = (await store.read()).scopes[0].expected!
+  expect(absent).toEqual({ path: host.layout.config, revision: null })
+  await host.writeProfile('{ "snapshots": false }')
+  await expect(store.set({ scope: "profile", key: "snapshots", value: true, expected: absent })).rejects.toThrow(
+    "Configuration changed",
+  )
+
+  const expected = (await store.read()).scopes[0].expected!
+  expect(expected.revision).toMatch(/^[a-f0-9]{64}$/)
+  await host.writeProfile('{ "snapshots": true, "shell": "/bin/sh" }')
+  await expect(store.reset({ scope: "profile", key: "snapshots", expected })).rejects.toThrow("Configuration changed")
+  expect(await Bun.file(host.layout.config).json()).toEqual({ snapshots: true, shell: "/bin/sh" })
+
+  const current = (await store.read()).scopes[0].expected!
+  expect(await store.set({ scope: "profile", key: "snapshots", value: false, expected: current })).toMatchObject({
+    changed: true,
+  })
+  expect(await Bun.file(host.layout.config).json()).toEqual({ snapshots: false, shell: "/bin/sh" })
+})
+
+test("a changed project target refuses a dialog edit instead of writing a different file", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(true) })
+  const expected = (await store.read()).scopes[1].expected!
+  await Bun.write(path.join(host.directory, "kilo.jsonc"), '{ "snapshots": false }')
+  await expect(store.set({ scope: "project", key: "snapshots", value: true, expected })).rejects.toThrow(
+    "Configuration changed",
+  )
+  expect(await Bun.file(path.join(host.directory, "kilo.jsonc")).json()).toEqual({ snapshots: false })
+  expect(await Bun.file(expected.path).exists()).toBe(false)
+})
+
 test("concurrent settings locations and privacy preserve each other's profile edits", async () => {
   await using host = await isolated()
   await host.writeProfile('{ "shell": "/bin/sh" }')
@@ -36,7 +100,7 @@ test("reports both scopes and leaves the project scope unwritable without the ex
 
   const snapshot = await store.read()
 
-  expect(snapshot.scopes[0]).toEqual({
+  expect(snapshot.scopes[0]).toMatchObject({
     scope: "profile",
     path: host.layout.config,
     exists: false,
@@ -94,7 +158,7 @@ test("writes profile fields while preserving comments, unrelated keys, and the f
     websearch: { provider: "random" },
   })
   expect(fieldOf(snapshot, "model").source).toBe("profile")
-  expect(snapshot.scopes[0]).toEqual({ scope: "profile", path: host.layout.config, exists: true, writable: true })
+  expect(snapshot.scopes[0]).toMatchObject({ scope: "profile", path: host.layout.config, exists: true, writable: true })
   expect((await stat(host.layout.config)).mode & 0o777).toBe(0o644)
   // Only managed fields are ever reported, so unrelated secrets never leave the file.
   expect(JSON.stringify(snapshot)).not.toContain(secret)
@@ -144,7 +208,7 @@ test("project values fold every loaded document and writes target the highest-pr
   const target = path.join(nested, ".kilo", "kilo.jsonc")
 
   const snapshot = await store.read()
-  expect(snapshot.scopes[1]).toEqual({ scope: "project", path: target, exists: true, writable: true })
+  expect(snapshot.scopes[1]).toMatchObject({ scope: "project", path: target, exists: true, writable: true })
   // An ancestor document contributes shell even though it is not the write target.
   expect(fieldOf(snapshot, "shell").values).toEqual({ project: "/bin/from-ancestor" })
   expect(fieldOf(snapshot, "tool_output.max_bytes").values).toEqual({ project: 222 })
@@ -231,7 +295,7 @@ test("follows the host and drops an invalid field instead of reporting it as con
   const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
 
   const snapshot = await store.read()
-  expect(snapshot.scopes[0]).toEqual({ scope: "profile", path: host.layout.config, exists: true, writable: true })
+  expect(snapshot.scopes[0]).toMatchObject({ scope: "profile", path: host.layout.config, exists: true, writable: true })
   expect(fieldOf(snapshot, "model").values).toEqual({})
   expect(fieldOf(snapshot, "model").source).toBe("unset")
   expect(fieldOf(snapshot, "shell").values).toEqual({ profile: "/bin/dash" })

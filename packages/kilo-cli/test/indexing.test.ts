@@ -11,8 +11,15 @@ import type { Tool } from "@opencode-ai/schema/tool"
 import { Effect } from "effect"
 import { launch } from "../src/interactive-server"
 import type { Layout } from "../src/paths"
-import { createIndexingPlugin, indexingRoot, startIndexing, type IndexingHost, type IndexingLocation } from "../src/indexing"
+import {
+  createIndexingPlugin,
+  indexingRoot,
+  startIndexing,
+  type IndexingHost,
+  type IndexingLocation,
+} from "../src/indexing"
 import type { ToolAuthorizationInput } from "../src/tool-authorization"
+import { IndexingRpc } from "../src/indexing-rpc"
 import { fixture } from "./fixture"
 
 const DIMENSION = 256
@@ -160,7 +167,14 @@ function toolCapture(directory: string) {
     callback(editor)
     return Effect.succeed({ dispose: Effect.succeed(undefined) })
   }
-  return { added, context: { location: location(directory), tool: { transform } } as unknown as Context }
+  return {
+    added,
+    context: {
+      location: location(directory),
+      tool: { transform },
+      rpc: { register: () => Effect.succeed({ dispose: Effect.void }) },
+    } as unknown as Context,
+  }
 }
 
 test("derives the index root from the isolated state directory", () => {
@@ -283,15 +297,12 @@ test("fails closed when semantic_search has no host authorizer", async () => {
       expect(capture.added).toHaveLength(1)
       await expect(
         Effect.runPromise(
-          capture.added[0]!.execute(
-            { query: "must not search" },
-            {
-              sessionID: "ses_indexing_no_authorizer",
-              agent: "build",
-              messageID: "msg_indexing_no_authorizer",
-              id: "call_indexing_no_authorizer",
-            } as unknown as Tool.Context,
-          ),
+          capture.added[0]!.execute({ query: "must not search" }, {
+            sessionID: "ses_indexing_no_authorizer",
+            agent: "build",
+            messageID: "msg_indexing_no_authorizer",
+            id: "call_indexing_no_authorizer",
+          } as unknown as Tool.Context),
         ),
       ).rejects.toThrow("Tool authorization is unavailable")
     } finally {
@@ -312,9 +323,7 @@ test("stays disabled and starts no engine when the project has not enabled index
       totalFiles: 0,
       percent: 0,
     })
-    await expect(host.search({ query: "anything" })).rejects.toThrow(
-      "Codebase indexing is disabled for this project.",
-    )
+    await expect(host.search({ query: "anything" })).rejects.toThrow("Codebase indexing is disabled for this project.")
     expect(await Bun.file(path.join(indexingRoot(state), "lancedb")).exists()).toBe(false)
     await host.dispose()
   })
@@ -340,10 +349,7 @@ test("reports an unreachable embedding service as a v1-shaped error status", asy
     const { server } = embeddingServer()
     const port = server.port
     await server.stop(true)
-    const host = await startIndexing(
-      { state, settings: settings(`http://127.0.0.1:${port}`) },
-      location(workspace),
-    )
+    const host = await startIndexing({ state, settings: settings(`http://127.0.0.1:${port}`) }, location(workspace))
     try {
       const deadline = Date.now() + 20_000
       while (Date.now() < deadline && host.status().state !== "Error") await Bun.sleep(50)
@@ -401,7 +407,10 @@ test("disabled indexing transmits no source code and creates no index", async ()
   await withWorkspace(async ({ workspace, state }) => {
     const { server, requests } = embeddingServer()
     try {
-      const host = await startIndexing({ state, settings: { ...settings(server.url.origin), enabled: false } }, location(workspace))
+      const host = await startIndexing(
+        { state, settings: { ...settings(server.url.origin), enabled: false } },
+        location(workspace),
+      )
       expect(host.available).toBe(false)
       expect(host.status().state).toBe("Disabled")
       expect(requests).toEqual([])
@@ -464,6 +473,9 @@ test("host wiring: the model calls semantic_search and the public history carrie
           expect(table).toStartWith(`${path.basename(input.cwd)}-`)
           // The engine embedded the fixture source before any model turn runs.
           yield* Effect.promise(() => embeddedAuth(embedded))
+          const status = yield* Effect.promise(() => client.rpc(IndexingRpc).status({}, scope))
+          expect(["In Progress", "Complete"]).toContain(status.state)
+          expect(status.message).not.toContain("local-test-key")
 
           const session = yield* Effect.promise(() =>
             client.session.create({ title: "Indexing host fixture", ...scope }),
@@ -732,7 +744,9 @@ async function runIndexingAuthorizationCase(input: {
               client.permission.reply({ sessionID: session.id, requestID: asked.id, reply: input.reply! }),
             )
           }
-          yield* Effect.promise(() => client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(20_000) }))
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(20_000) }),
+          )
           const transcript = JSON.stringify(yield* Effect.promise(() => client.message.list({ sessionID: session.id })))
           return { asked, transcript }
         } finally {
@@ -751,7 +765,9 @@ function isIndexingPermissionAsked(event: OpenCodeEvent, sessionID: string): eve
 async function waitForIndexingPermission(events: readonly OpenCodeEvent[], sessionID: string) {
   const deadline = Date.now() + 8_000
   while (Date.now() < deadline) {
-    const event = events.find((item): item is IndexingPermissionAskedEvent => isIndexingPermissionAsked(item, sessionID))
+    const event = events.find((item): item is IndexingPermissionAskedEvent =>
+      isIndexingPermissionAsked(item, sessionID),
+    )
     if (event) return event.data
     await Bun.sleep(20)
   }

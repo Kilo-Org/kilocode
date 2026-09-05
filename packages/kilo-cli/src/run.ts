@@ -43,13 +43,21 @@ export async function run(client: OpenCodeClient, input: RunInput, signal?: Abor
   )
   throwIfAborted(signal)
 
+  // Kilo v1 named its coding agent `code`; v2 retains `build` as the native ID.
+  // An explicitly registered `code` agent always wins over the compatibility alias.
+  const agent =
+    input.agent === "code"
+      ? (await client.agent.list({ location: sessionLocation }, { signal })).data.some((item) => item.id === "code")
+        ? "code"
+        : "build"
+      : input.agent
   const session = input.sessionID
     ? await client.session.get({ sessionID: input.sessionID }, { signal })
     : await client.session.create(
         {
           location: sessionLocation,
           model: input.model,
-          agent: input.agent,
+          agent,
         },
         { signal },
       )
@@ -79,8 +87,8 @@ export async function run(client: OpenCodeClient, input: RunInput, signal?: Abor
   if (signal?.aborted) onAbort()
 
   try {
-    if (input.sessionID && input.agent) {
-      await client.session.switchAgent({ sessionID, agent: input.agent }, { signal })
+    if (input.sessionID && agent) {
+      await client.session.switchAgent({ sessionID, agent }, { signal })
     }
     if (input.sessionID && input.model) {
       await client.session.switchModel({ sessionID, model: input.model }, { signal })

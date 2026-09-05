@@ -7,6 +7,7 @@ import assert from "node:assert/strict"
 import { launch } from "../src/interactive-server"
 import { layout } from "../src/paths"
 import { MemoryRpc } from "../src/memory-rpc"
+import { MemoryStore } from "../src/memory-plugin"
 import { runTui } from "../src/tui"
 
 const setup = await createTestRenderer({ width: 160, height: 40, useThread: false, kittyKeyboard: true })
@@ -54,6 +55,20 @@ const task = Effect.runPromise(
           (frame) => frame.includes("Memory") && frame.includes("Enabled") && frame.includes("Auto: Off"),
           { maxPasses: 600 },
         )
+
+        // Actual engine injection statistics arrive independently of a terminal
+        // execution event, so the sidebar must refresh from persisted state.
+        await rpc.remember({ text: "sidebar activity fixture" }, { location })
+        const status = await rpc.status({}, { location })
+        await MemoryStore.context(status.root)
+        const injected = await rpc.status({}, { location })
+        assert(injected.activity?.lastInjectedAt)
+        await setup.waitForFrame(
+          (frame) => frame.includes(`Injected: ${injected.activity!.lastInjectedTokens} estimated tokens`),
+          { maxPasses: 600 },
+        )
+        setup.resize(140, 45)
+        await setup.waitForFrame((frame) => frame.includes("Injected:") && frame.includes("Memory"), { maxPasses: 600 })
 
         await command("/memory disable", "Memory disabled.")
         await setup.waitForFrame(

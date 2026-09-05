@@ -47,10 +47,13 @@ External-sessions lists candidates only in the explicitly supplied source direct
 it reports invalid transcripts, reads no ambient histories, and creates no sessions.
 Import-v1 previews explicitly named auth/config files without opening a store.
 --apply imports supported keys into the isolated profile; conflicts, existing
-JSONC comments, unsupported OAuth/well-known credentials, and unmapped fields are refused.
+JSONC comments, unproven OAuth mappings, changed well-known manifests, and unmapped fields are refused.
+Well-known import discovers only the explicitly supplied origin, verifies its saved
+environment key, and stores the token through the local host credential writer.
 Kilo device OAuth requires an explicit --gateway-server origin: v1 auth files do
 not record the server. Known Kilo team/personal selection and key metadata are preserved.
 Sources are never changed; reports omit credential material and config values.
+Run --agent code uses a registered custom Code agent when present, otherwise native build.
 /privacy on|off hides Kilo account labels in the TUI and asks before /teams or
 /profile reveals them. It does not hide upstream paths, session text, or tool output.
 All commands use the isolated kilo2 interactive store. One-shot commands require

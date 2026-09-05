@@ -8,11 +8,11 @@ import { ConfigModel } from "@opencode-ai/schema/config/model"
 import { ConfigWarming } from "@opencode-ai/schema/config/warming"
 import { ConfigWebSearch } from "@opencode-ai/schema/config/websearch"
 import type { Location } from "@opencode-ai/schema/location"
-import { PositiveInt } from "@opencode-ai/schema/schema"
+import { NonNegativeInt, PositiveInt } from "@opencode-ai/schema/schema"
 import { FSUtil } from "@opencode-ai/util/fs-util"
 import { Effect, Layer, Option, Schema } from "effect"
 import { applyEdits, modify, parse, type ParseError } from "jsonc-parser"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { chmod, lstat, mkdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { preflight, type Layout } from "./paths"
@@ -23,6 +23,7 @@ import {
   SETTINGS_UNSUPPORTED_NOTE,
   SettingsRpc,
   type SettingsChange,
+  type SettingsExpected,
   type SettingsFieldKey,
   type SettingsFieldState,
   type SettingsScope,
@@ -68,8 +69,13 @@ export interface SettingsStore {
     readonly scope: SettingsScope
     readonly key: SettingsFieldKey
     readonly value: unknown
+    readonly expected?: SettingsExpected
   }): Promise<SettingsChange>
-  reset(input: { readonly scope: SettingsScope; readonly key: SettingsFieldKey }): Promise<SettingsChange>
+  reset(input: {
+    readonly scope: SettingsScope
+    readonly key: SettingsFieldKey
+    readonly expected?: SettingsExpected
+  }): Promise<SettingsChange>
 }
 
 interface FieldDefinition {
@@ -78,6 +84,7 @@ interface FieldDefinition {
   readonly title: string
   readonly description: string
   readonly kind: SettingsFieldState["kind"]
+  readonly minimum?: number
   /** Decoder for the native schema the written value must satisfy. */
   readonly decode: (value: unknown) => Option.Option<unknown>
   readonly options?: SettingsFieldState["options"]
@@ -146,6 +153,32 @@ const definitions: readonly FieldDefinition[] = [
     decode: Schema.decodeUnknownOption(ConfigWarming.Warming),
   },
   {
+    key: "compaction.auto",
+    path: ["compaction", "auto"],
+    title: "Automatic compaction",
+    description: "Compact session history automatically when it approaches the model context limit",
+    kind: "boolean",
+    decode: Schema.decodeUnknownOption(Schema.Boolean),
+  },
+  {
+    key: "compaction.buffer",
+    path: ["compaction", "buffer"],
+    title: "Compaction token buffer",
+    description: "Token headroom used by native v2 compaction, not a context percentage",
+    kind: "integer",
+    minimum: 0,
+    decode: Schema.decodeUnknownOption(NonNegativeInt),
+  },
+  {
+    key: "compaction.keep.tokens",
+    path: ["compaction", "keep", "tokens"],
+    title: "Compaction retained tokens",
+    description: "Recent-history token budget retained by native v2 compaction",
+    kind: "integer",
+    minimum: 0,
+    decode: Schema.decodeUnknownOption(NonNegativeInt),
+  },
+  {
     key: "tool_output.max_lines",
     path: ["tool_output", "max_lines"],
     title: "Tool output line limit",
@@ -178,14 +211,29 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
   return {
     read,
     set: (input) =>
-      serializeConfigWrite(options.layout.config, () => apply(input.scope, input.key, { set: input.value })),
-    reset: (input) => serializeConfigWrite(options.layout.config, () => apply(input.scope, input.key, { reset: true })),
+      serializeConfigWrite(options.layout.config, () =>
+        apply(input.scope, input.key, { set: input.value }, input.expected),
+      ),
+    reset: (input) =>
+      serializeConfigWrite(options.layout.config, () => apply(input.scope, input.key, { reset: true }, input.expected)),
   }
 
   async function read(): Promise<SettingsSnapshot> {
     const scopes = [await profileProjection(), await projectProjection()]
     return {
-      scopes: scopes.map((projection) => projection.state),
+      scopes: await Promise.all(
+        scopes.map(async (projection) => ({
+          ...projection.state,
+          ...(projection.state.writable
+            ? {
+                expected: {
+                  path: projection.state.path,
+                  revision: projection.state.exists ? revision(await text(projection.state.path)) : null,
+                },
+              }
+            : {}),
+        })),
+      ),
       fields: definitions.map((field) => state(field, scopes)),
       restartRequired: options.watched !== true,
       note: SETTINGS_UNSUPPORTED_NOTE,
@@ -196,6 +244,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
     scope: SettingsScope,
     key: SettingsFieldKey,
     value: { readonly set: unknown } | { readonly reset: true },
+    expected?: SettingsExpected,
   ): Promise<SettingsChange> {
     const field = definitions.find((item) => item.key === key)
     if (!field) throw new Error(`Unknown Kilo setting: ${key}`)
@@ -204,6 +253,8 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
     if ("set" in value && Option.isNone(field.decode(value.set)))
       throw new Error(`The supplied value is not valid for ${key}`)
     const before = target.exists ? await text(target.path) : ""
+    if (expected && (expected.path !== target.path || expected.revision !== (target.exists ? revision(before) : null)))
+      throw new Error("Configuration changed since this dialog was opened. Reopen Kilo settings and try again.")
     const parsed = before === "" ? {} : json(before, target.path)
     for (const [index, segment] of field.path.slice(0, -1).entries()) {
       const parent = at(parsed, field.path.slice(0, index + 1))
@@ -352,10 +403,15 @@ function state(field: FieldDefinition, scopes: readonly ScopeProjection[]): Sett
     title: field.title,
     description: field.description,
     kind: field.kind,
+    ...(field.minimum === undefined ? {} : { minimum: field.minimum }),
     ...(field.options ? { options: field.options } : {}),
     values,
     source: values.project !== undefined ? "project" : values.profile !== undefined ? "profile" : "unset",
   }
+}
+
+function revision(source: string) {
+  return createHash("sha256").update(source).digest("hex")
 }
 
 /**
@@ -469,12 +525,12 @@ export function createSettingsRpcHandlers(
       }),
     set: (input, call) =>
       Effect.tryPromise({
-        try: () => store.set({ scope: input.scope, key: input.key, value: input.value }),
+        try: () => store.set(input),
         catch: (error) => call.error("kilocode.settings", message(error)),
       }),
     reset: (input, call) =>
       Effect.tryPromise({
-        try: () => store.reset({ scope: input.scope, key: input.key }),
+        try: () => store.reset(input),
         catch: (error) => call.error("kilocode.settings", message(error)),
       }),
   }

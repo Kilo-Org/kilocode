@@ -3,6 +3,7 @@ import { createGatewayPlugin, type GatewayOptions } from "@kilocode/gateway"
 import type { Plugin } from "@opencode-ai/plugin/effect/plugin"
 import { SdkPlugins } from "@opencode-ai/core/plugin/sdk"
 import { Credential } from "@opencode-ai/core/credential"
+import { Database } from "@opencode-ai/core/database/database"
 import { Session } from "@opencode-ai/core/session"
 import { Instance } from "@opencode-ai/core/instance/service"
 import { PermissionSaved } from "@opencode-ai/core/permission/saved"
@@ -27,7 +28,13 @@ import { type Layout } from "./paths"
 import { prepare } from "./storage"
 import { createReviewPolicy } from "./review-policy"
 import { createAgentPolicy, agentPolicyPhase } from "./agent-policy"
+import { createPlanPolicy } from "./plan-policy"
+import { createRoutedModelPlugin } from "./routed-model-plugin"
 import { createMemoryPlugin } from "./memory-plugin"
+import { createMemoryDiffReader } from "./memory-diff"
+import { createSessionFamilyUsageReader } from "./session-usage"
+import { createSessionUsagePlugin } from "./session-usage-plugin"
+import { createDisabledIndexingPlugin } from "./indexing-disabled"
 import { createSettingsPlugin } from "./settings"
 import { createPrivacyPlugin } from "./privacy"
 import { createSkillPolicy } from "./skill-policy"
@@ -53,6 +60,7 @@ export function launch(
     swarm?: boolean
     disableSkillShell?: boolean
     cloud?: CloudServiceOrigins & { allowHttpLoopback?: boolean }
+    remote?: { relayURL: string; allowHttpLoopback?: boolean }
     lock?: Pick<Flock.Options, "staleMs" | "timeoutMs">
   } = {},
 ) {
@@ -97,9 +105,21 @@ export function launch(
       saved: Context.get(context, PermissionSaved.Service),
     }
     const authorize = createToolAuthorizer(toolServices)
+    yield* plugins.register(
+      createSessionUsagePlugin({
+        read: createSessionFamilyUsageReader(Context.get(context, Database.Service)),
+      }),
+    )
     const skillFiles = yield* FSUtil.Service.pipe(Effect.provide(FSUtil.layer), Effect.provide(NodeFileSystem.layer))
     yield* plugins.register(createReviewPolicy())
-    yield* plugins.register(createMemoryPlugin({ data: input.paths.data, authorize }))
+    yield* plugins.register(
+      createMemoryPlugin({
+        data: input.paths.data,
+        authorize,
+        readSnapshotDiff: createMemoryDiffReader(toolServices),
+      }),
+    )
+    if (!options.indexing) yield* plugins.register(createDisabledIndexingPlugin())
     yield* plugins.register(createSettingsPlugin({ layout: input, project: options.projectConfig }))
     yield* plugins.register(createPrivacyPlugin({ layout: input }))
     if (options.swarm) {
@@ -121,6 +141,7 @@ export function launch(
     }
     for (const plugin of options.plugins ?? []) yield* plugins.register(plugin)
     yield* plugins.register(createAgentPolicy(), { phase: agentPolicyPhase })
+    yield* plugins.register(createPlanPolicy({ authorize }), { phase: "post" })
     if (options.sandbox?.enabled) yield* plugins.register(createSandboxPlugin(options.sandbox), { phase: "post" })
     yield* plugins.register(
       createSkillPolicy({
@@ -139,24 +160,39 @@ export function launch(
     if (options.gateway) {
       const transfer = Context.get(context, SessionTransfer.Service)
       const { registerCloud } = yield* Effect.promise(() => import("./cloud-plugin"))
+      const { registerRemote } = yield* Effect.promise(() => import("./remote-plugin"))
+      const { OpenCode } = yield* Effect.promise(() => import("@opencode-ai/client"))
       const { DEFAULT_CLOUD_AGENT_ORIGIN, DEFAULT_WEB_APP_ORIGIN } = yield* Effect.promise(
         () => import("./cloud/origin"),
       )
       yield* plugins.register(
-        createGatewayPlugin(
-          options.gateway,
-          { import: transfer.import },
-          registerCloud(
-            options.cloud ?? {
-              agentOrigin: DEFAULT_CLOUD_AGENT_ORIGIN,
-              webAppOrigin: DEFAULT_WEB_APP_ORIGIN,
-            },
-            { allowHttpLoopback: options.cloud?.allowHttpLoopback },
-          ),
+        createGatewayPlugin(options.gateway, { import: transfer.import }, (ctx, account) =>
+          Effect.gen(function* () {
+            yield* registerCloud(
+              options.cloud ?? {
+                agentOrigin: DEFAULT_CLOUD_AGENT_ORIGIN,
+                webAppOrigin: DEFAULT_WEB_APP_ORIGIN,
+              },
+              { allowHttpLoopback: options.cloud?.allowHttpLoopback },
+            )(ctx, account)
+            yield* registerRemote({
+              // Source: ecccd1f kilo-sessions/kilo-sessions.ts remoteEnable.
+              // Registration is inert; only an explicit authenticated RPC enables it.
+              relayURL: options.remote?.relayURL ?? "https://ingest.kilosessions.ai",
+              allowHttpLoopback: options.remote?.allowHttpLoopback,
+              client: () =>
+                OpenCode.make({
+                  baseUrl: urls()[0],
+                  headers: { authorization: `Basic ${btoa(`opencode:${password}`)}` },
+                }),
+            })(ctx, account)
+          }),
         ),
         { phase: "post" },
       )
     }
+    // Catalog discovery must run first: Gateway can add API-only Auto models.
+    yield* plugins.register(createRoutedModelPlugin(), { phase: "post" })
     const http = yield* NodeHttpServer.make(() => listener, { host: "127.0.0.1", port: 0 })
     yield* Effect.addFinalizer(() => Effect.sync(() => listener.closeAllConnections()))
     const router = Context.get(context, HttpRouter.HttpRouter).asHttpEffect()

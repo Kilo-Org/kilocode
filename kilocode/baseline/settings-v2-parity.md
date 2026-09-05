@@ -45,7 +45,7 @@ none exists, and it does not shadow native `/settings`, which touches no
 | `scope: "global"` | the global config directory is disabled (`Config.configured({ global: false })`) and the profile file is passed as the explicit config source | scope is named `profile`, targeting `layout.config` supplied by the host |
 | project scope always active | project documents are opt-in (`ProjectConfig.configured({ enabled })`, `--project-config`) | the project scope reports `writable: false` with the opt-in reason and refuses writes |
 | project target = first existing candidate | the host loads every eligible project document, and `.kilocode/kilo.jsonc` outranks `.kilo/kilo.jsonc`, which outranks a root `kilo.jsonc`, which outranks `kilo.json` | project values fold every document `ProjectConfig.readProjectEntries` returns; the write target is the highest-priority loaded document, or `.kilo/kilo.jsonc` when none exists |
-| revision-based conflict detection | no equivalent | not implemented in this slice (see limitations) |
+| revision-based conflict detection | Kilo-owned optimistic edit token | TUI passes the snapshot's path and SHA-256 revision; a changed target/content is refused before applying the edit. |
 
 Sources: `packages/kilo-cli/src/host.ts:22`, `src/paths.ts`,
 `src/project-config.ts`, `packages/core/src/config.ts:186`,
@@ -64,6 +64,9 @@ offered. Each row names that consumer.
 | `snapshots` | boolean | `packages/core/src/config/plugin/snapshot.ts:16` |
 | `websearch` | `false` or `{ provider }` | `packages/core/src/config/plugin/websearch.ts:14` |
 | `warming` | boolean (a stored object form is preserved, not editable here) | `packages/core/src/plugin/warming.ts:19` |
+| `compaction.auto` | boolean | `packages/core/src/config/plugin/compaction.ts` configures native automatic compaction |
+| `compaction.buffer` | non-negative integer, tokens (not a percentage) | same plugin; `session/compaction.ts` subtracts the buffer from model input/context limits |
+| `compaction.keep.tokens` | non-negative integer, including zero | same plugin; `session/compaction.ts` selects the retained recent-history tail |
 | `tool_output.max_lines` | positive integer | `packages/core/src/config/plugin/tool-output.ts:16`, `packages/core/src/shell.ts:233` |
 | `tool_output.max_bytes` | positive integer | same |
 
@@ -71,7 +74,7 @@ offered. Each row names that consumer.
 
 | Group | Fields | Why |
 |---|---|---|
-| Accumulating or secret-bearing collections | `agents`, `permissions`, `mcp`, `providers`, `commands`, `formatter`, `lsp`, `references`, `instructions`, `skills`, `plugins`, `experimental`, `media`, `compaction`, `watcher` | they merge or concatenate across documents rather than resolving last-wins, and provider or MCP entries can carry credentials |
+| Accumulating or secret-bearing collections | `agents`, `permissions`, `mcp`, `providers`, `commands`, `formatter`, `lsp`, `references`, `instructions`, `skills`, `plugins`, `experimental`, `media`, `watcher` | they merge or concatenate across documents rather than resolving last-wins, and provider or MCP entries can carry credentials |
 | Parsed but unconsumed | `update`, `share`, `username`, `enterprise` | no consumer exists outside `packages/core/src/v1/config/migrate.ts` and `packages/core/test/config/config.test.ts` at this baseline, so presenting them as working settings would be false |
 | Metadata | `$schema` | not a user setting |
 
@@ -113,12 +116,20 @@ runs the upstream engine over their own file.
 
 ## Limitations
 
-- No revision or external conflict detection. A concurrent external editor's
-  changes can be overwritten, unlike v1's `expected: {path, revision}`.
+- The dialog now carries `expected: {path, revision}` (null for a missing
+  target). Content changes, first-write collisions, and a changed project target
+  are refused with a reopen message. This is an optimistic stale-dialog check,
+  not a cross-process filesystem transaction; an external write after the
+  check can still race the rename. Direct callers that omit the optional token
+  retain the previous immediate-edit behavior.
 - Resolution covers the two managed scopes only. Values from sources outside them
   (well-known or managed manifests, `OPENCODE_CONFIG_CONTENT`) are not represented.
 - Reset edits only the write target. A lower-priority project document may still
   contribute the key afterwards, which the snapshot then reports honestly.
+- Compaction is a verified leaf-wise exception to the collection limitation:
+  the native plugin applies each defined `auto`, `buffer`, and `keep.tokens`
+  leaf in document order. The dialog uses these existing v2 meanings, without
+  converting v1 percentage thresholds or claiming v1 prune-policy equivalence.
 - Loaded configuration changes take effect on host restart: the preview disables
   config file watching (`packages/kilo-cli/src/host.ts:18`), and the only other
   reload triggers are credential switches, well-known updates, and a ten-minute
