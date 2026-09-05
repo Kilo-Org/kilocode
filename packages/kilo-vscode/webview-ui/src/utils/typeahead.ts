@@ -52,6 +52,14 @@ export function createTypeahead(getLabels: () => string[]) {
       return extendedIdx
     }
 
+    // A bare space carries no search intent of its own: splitting it alone yields
+    // empty word chunks that trivially prefix-match any multi-word label. Only
+    // restart the buffer from a non-whitespace character.
+    if (/^\s$/.test(char)) {
+      reset()
+      return -1
+    }
+
     const restarted = char.toLowerCase()
     const restartedIdx = match(restarted, labels)
     buffer = restartedIdx >= 0 ? char : ""

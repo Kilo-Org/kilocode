@@ -84,6 +84,16 @@ describe("createTypeahead", () => {
     expect(typeahead.type("p")).toBe(AGENTS.indexOf("Plan"))
   })
 
+  it("does not spuriously match a multi-word label when restarting from a bare space", () => {
+    const typeahead = createTypeahead(() => AGENTS)
+    typeahead.type("a") // Ask
+    typeahead.type("s") // still Ask
+    // "as " doesn't extend-match anything, and a lone space carries no search
+    // intent, so this must fail rather than jump to the first multi-word label.
+    expect(typeahead.type(" ")).toBe(-1)
+    expect(typeahead.active()).toBe(false)
+  })
+
   it("reads labels lazily so list changes are picked up", () => {
     const labels = ["Low"]
     const typeahead = createTypeahead(() => labels)
