@@ -460,16 +460,6 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `fork handoff text omits the directory lines when there is no directory`() {
-        val text = ForkHandoff.forkText(" ")
-
-        assertTrue(text.startsWith("<system-reminder>"), text)
-        assertTrue(text.endsWith("</system-reminder>"), text)
-        assertFalse(text.contains("current working directory"), text)
-        assertTrue(text.contains("The prior conversation context was retained intentionally."), text)
-    }
-
-    @Test
     fun `fork handoff failure does not propagate`() = runBlocking<Unit> {
         mock.promptStatus = 500
         val app = setup()

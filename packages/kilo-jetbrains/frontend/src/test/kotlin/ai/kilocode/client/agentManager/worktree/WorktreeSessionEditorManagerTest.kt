@@ -283,6 +283,32 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(FakeSessionRpcApi.ForkCall(session.id, DIR, "msg_3"), rpc.forks.single())
     }
 
+    fun `test a second fork of the same session is ignored while the first is in flight`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        val gate = CompletableDeferred<Unit>()
+        rpc.forkGate = gate
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        // A hover icon or menu item is easy to hit twice before the RPC answers.
+        edt { manager.forkSession(session.id) }
+        pump()
+        edt { manager.forkSession(session.id) }
+        pump()
+
+        assertEquals(1, rpc.forks.size)
+
+        gate.complete(Unit)
+        waitUntil { rpc.forks.size == 1 && created.any { it.second == "ses_1_fork" } }
+
+        // Once the first settles the latch is released, so a later fork is allowed again.
+        edt { manager.forkSession(session.id) }
+        flush()
+        assertEquals(2, rpc.forks.size)
+    }
+
     fun `test fork failure notifies and keeps the current session shown`() {
         val session = session("ses_1", updated = 1.0)
         rpc.listed += session

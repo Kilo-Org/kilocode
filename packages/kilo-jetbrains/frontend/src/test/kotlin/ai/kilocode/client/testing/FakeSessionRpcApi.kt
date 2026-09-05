@@ -136,9 +136,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var createThrows: Exception? = null
 
     /** Fork call tracking. [forked] is what [fork] returns; when null it derives one from the source. */
-    val forks = mutableListOf<ForkCall>()
+    val forks = java.util.concurrent.CopyOnWriteArrayList<ForkCall>()
     var forked: SessionDto? = null
     var forkThrows: Exception? = null
+
+    /** Holds [fork] open so a test can observe the window a second request would land in. */
+    var forkGate: CompletableDeferred<Unit>? = null
 
     data class ForkCall(val id: String, val directory: String, val messageId: String?)
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
@@ -159,6 +162,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun fork(id: String, directory: String, messageId: String?): SessionDto {
         assertNotEdt("fork")
         forks.add(ForkCall(id, directory, messageId))
+        forkGate?.await()
         forkThrows?.let { throw it }
         val source = listed.firstOrNull { it.id == id } ?: session
         return forked ?: source.copy(id = "${id}_fork", directory = directory, title = "${source.title} (fork #1)")

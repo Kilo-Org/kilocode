@@ -238,8 +238,15 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     }
 
     /**
-     * Offered for any real session, including one mid-turn: the CLI detaches in-flight tool calls
-     * while it copies, so a fork does not have to wait for the turn to finish.
+     * Offered for any real session, including one mid-turn -- matching the Agent Manager surfaces this
+     * mirrors, which gate fork only on the tab already existing (VS Code's idle check lives in its
+     * sidebar path alone, see packages/kilo-vscode/src/kilo-provider/fork-session.ts).
+     *
+     * A mid-turn fork is a snapshot, not a handover: the CLI detaches only in-flight subagent (`task`)
+     * calls, so any other tool part that was pending or running is copied with that status and stays
+     * unresolved in the fork, and whatever the source streams after the copy is absent. The model
+     * never sees a dangling call -- history rewrites unfinished tool calls as interrupted -- so this
+     * costs transcript fidelity, not correctness.
      */
     @RequiresEdt
     internal fun canFork(item: SessionDto?): Boolean = canDelete(item)

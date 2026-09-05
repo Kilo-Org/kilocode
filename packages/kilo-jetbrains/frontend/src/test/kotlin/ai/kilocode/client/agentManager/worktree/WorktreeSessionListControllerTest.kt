@@ -100,6 +100,24 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertNotNull(controller.session("ses_1"))
     }
 
+    fun `test fork does not clobber the shared sessions flow`() {
+        // The shared flow reflects the primary workspace; forking in a worktree must leave it alone.
+        rpc.listed += session("ses_main", "Main")
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) { sessions.list("/repo") }
+        assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
+
+        rpc.listed.clear()
+        rpc.listed += session("ses_wt", "Worktree")
+        controller.reload()
+        drain()
+
+        controller.fork("ses_wt", null) { _, _ -> }
+        drain()
+        // The forked row lands in this worktree's own model, and the primary snapshot is untouched.
+        assertTrue(controller.sessions().any { it.id == "ses_wt_fork" })
+        assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
+    }
+
     fun `test fork forwards the message id for a per-message fork`() {
         rpc.listed += session("ses_1", "One")
         controller.reload()
