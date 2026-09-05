@@ -10,6 +10,7 @@ function setup(
     exclude?: () => Set<string>
     include?: Set<string>
     extra?: SlashCommandEntry[]
+    includeSources?: Set<"command" | "mcp" | "skill">
   } = {},
 ) {
   const sent: WebviewMessage[] = []
@@ -29,6 +30,7 @@ function setup(
       options.include,
       undefined,
       options.extra,
+      options.includeSources,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -127,6 +129,25 @@ describe("useSlashCommand sandbox action", () => {
 
     ctx.slash.onInput("/models", 7)
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+    ctx.dispose()
+  })
+
+  it("keeps skill commands available when the worktree menu restricts built-ins", () => {
+    const ctx = setup(() => {}, {
+      include: new Set(["models", "agents", "variant", "sandbox"]),
+      includeSources: new Set(["skill"]),
+    })
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "project-skill", description: "A relative-path project skill", source: "skill", hints: [] },
+        { name: "project-command", description: "A regular project command", source: "command", hints: [] },
+      ],
+    })
+
+    ctx.slash.onInput("/project", 8)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["project-skill"])
     ctx.dispose()
   })
 
