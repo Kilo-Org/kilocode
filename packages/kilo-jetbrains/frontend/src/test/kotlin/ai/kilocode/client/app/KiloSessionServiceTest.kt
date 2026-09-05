@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlin.test.assertFailsWith
 
 @Suppress("UnstableApiUsage")
@@ -179,6 +180,61 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         service.activity.first { "ses_asking" !in it }
 
         assertEquals(mapOf("ses_failed" to SessionActivityKind.ERROR), service.activitySnapshot())
+    }
+
+    fun `test a permission answered inside the grace window never reaches the activity flow`() = runBlocking(Dispatchers.Default) {
+        val seen = mutableListOf<Map<String, SessionActivityDto>>()
+        val job = launch { service.activity.collect { seen += it } }
+
+        // Mirrors a JetBrains auto-approved edit: the CLI still asks, the client replies `once`
+        // right away, so the permission and its resolution land back to back.
+        rpc.activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.PERMISSION))
+        rpc.activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING))
+
+        service.activity.first { it["ses_1"]?.kind == SessionActivityKindDto.RUNNING }
+        job.cancelAndJoin()
+
+        assertTrue(seen.none { it["ses_1"]?.kind == SessionActivityKindDto.PERMISSION })
+    }
+
+    fun `test a permission still pending after the grace window reaches the activity flow`() = runBlocking(Dispatchers.Default) {
+        service = KiloSessionService(project, scope, rpc, grace = 50)
+
+        rpc.activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.PERMISSION))
+
+        val result = service.activity.first { it["ses_1"]?.kind == SessionActivityKindDto.PERMISSION }
+
+        assertEquals(SessionActivityKindDto.PERMISSION, result["ses_1"]?.kind)
+    }
+
+    fun `test a session entering attention does not hold back the rest of the snapshot`() = runBlocking(Dispatchers.Default) {
+        service = KiloSessionService(project, scope, rpc, grace = 5_000)
+
+        // One snapshot, three sessions: only the one newly waiting on the user may be held.
+        rpc.activity.value = mapOf(
+            "ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.PERMISSION),
+            "ses_2" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+            "ses_3" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING),
+        )
+
+        // A 5s grace would time this out if the whole map were delayed with the permission.
+        val settled = withTimeout(1_000) { service.activity.first { it.size == 2 } }
+
+        assertEquals(SessionActivityKindDto.ERROR, settled["ses_2"]?.kind)
+        assertEquals(SessionActivityKindDto.RUNNING, settled["ses_3"]?.kind)
+        assertNull(settled["ses_1"])
+    }
+
+    fun `test clearing activity is not delayed`() = runBlocking(Dispatchers.Default) {
+        service = KiloSessionService(project, scope, rpc, grace = 5_000)
+        rpc.activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING))
+        service.activity.first { it["ses_1"]?.kind == SessionActivityKindDto.RUNNING }
+
+        rpc.activity.value = emptyMap()
+
+        // A 5s grace would time this out if clearing were delayed with it.
+        val cleared = withTimeout(1_000) { service.activity.first { it.isEmpty() } }
+        assertTrue(cleared.isEmpty())
     }
 
     private fun session(id: String, title: String) = SessionDto(

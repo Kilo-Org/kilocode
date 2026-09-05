@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.session.SessionActivityKind
@@ -11,6 +12,7 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -65,6 +67,12 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.BorderLayout
 import java.awt.Color
@@ -140,6 +148,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         run = run?.button,
     )
     private val splitter = OnePixelSplitter(false, 0.25f)
+    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var dirty: WorktreeDirtyDto? = null
@@ -396,12 +405,20 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         return controller.sessions().count { it.id !in deleting }
     }
 
+    /**
+     * [SessionHost.activity] carries every session the CLI knows, in every directory, including `task`
+     * subagents that have no row here. Only this worktree's listed sessions can be reached by
+     * expanding the list, so only they may badge the toggle.
+     */
     @RequiresEdt
-    private fun syncToggle() = toggle.update(
-        expanded(),
-        count(),
-        attention(manager.activity(), manager.currentKey(), manager.deleting()),
-    )
+    private fun syncToggle() {
+        val ids = controller.sessions().mapTo(mutableSetOf()) { it.id }
+        toggle.update(
+            expanded(),
+            count(),
+            attention(manager.activity().filterKeys { it in ids }, manager.currentKey(), manager.deleting()),
+        )
+    }
 
     @RequiresEdt
     private fun expanded(): Boolean = splitter.firstComponent != null
@@ -601,6 +618,13 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
             onPr = { value -> pr = value[key]; syncHeader() },
             onDirty = { value -> dirty = value[key]; syncHeader() },
         )
+        // Nothing else re-reads activity: onListChanged only fires for the open session's own state
+        // changes, so a badge for a background session would otherwise never clear.
+        cs.launch {
+            target.service<KiloSessionService>().activity.collectLatest {
+                edt({ !Disposer.isDisposed(this@WorktreeSessionEditorPanel) }) { sync() }
+            }
+        }
     }
 
     @RequiresEdt
@@ -627,6 +651,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     override fun dispose() {
         manager.onPresent = null
         manager.onListChanged = null
+        cs.cancel()
     }
 
     private inner class NewAction : DumbAwareAction(

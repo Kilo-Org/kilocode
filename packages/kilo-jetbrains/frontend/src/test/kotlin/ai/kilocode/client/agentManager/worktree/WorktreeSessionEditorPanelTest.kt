@@ -40,6 +40,8 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -435,6 +437,43 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         flush()
 
         assertEquals("2", edt { (badge(view) as FilledBadgeIcon).text })
+    }
+
+    fun `test hidden toggle ignores activity for a session outside this worktree`() {
+        val view = view(stored = false)
+        // "ses_other" is not in rpc.listed, e.g. a session in a foreign directory or an
+        // auto-approved `task` subagent -- neither has a row here, so it must not badge the toggle.
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING, "ses_other" to SessionActivityKind.QUESTION)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        val icon = edt { badge(view) as FilledBadgeIcon }
+        assertEquals("2", icon.text)
+    }
+
+    fun `test the toggle badge follows activity without the open session changing state`() {
+        project.replaceService(KiloSessionService::class.java, sessions, testRootDisposable)
+        val view = view(stored = false, target = project)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertEquals("2", edt { (badge(view) as FilledBadgeIcon).text })
+
+        // onListChanged only fires for the open session's own state changes, so a background
+        // session's activity would otherwise never reach this panel without its own subscription.
+        manager.kinds = mapOf("ses_2" to SessionActivityKind.QUESTION)
+        rpc.activity.value = mapOf("ses_2" to SessionActivityDto(DIR, SessionActivityKindDto.RUNNING))
+
+        assertTrue(coroutines.pumpUntil { edt { badge(view) } === SessionActivityKind.QUESTION.icon() })
+
+        manager.kinds = emptyMap()
+        rpc.activity.value = emptyMap()
+
+        assertTrue(coroutines.pumpUntil { edt { (badge(view) as? FilledBadgeIcon)?.text } == "2" })
     }
 
     fun `test editor kind delegates preferred focus to panel`() {
