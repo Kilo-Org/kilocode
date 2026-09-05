@@ -54,10 +54,9 @@ class AdvancedConfigurable(
         save(settings)
         val indexWorktreesChanged = value.indexWorktrees != panel.savedIndexWorktrees()
         panel.sync()
-        if (indexWorktreesChanged) {
-            val cs = scope ?: newScope().also { scope = it }
-            cs.launch { app.setIndexWorktrees(value.indexWorktrees) }
-        }
+        // Runs on the app scope, not ours: OK calls apply() then disposeUIResources(), which cancels
+        // this configurable's scope before a coroutine launched here could reach the RPC.
+        if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
     }
 
     override fun reset() {

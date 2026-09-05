@@ -182,13 +182,26 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var indexWorktrees = false
     val indexWorktreesSaves = mutableListOf<Boolean>()
 
+    /** When set, [indexWorktrees] awaits this deferred, emulating a slow split-mode fetch. */
+    var indexWorktreesGate: CompletableDeferred<Unit>? = null
+
+    /** When set, [setIndexWorktrees] awaits this deferred before recording the save. */
+    var indexWorktreesSaveGate: CompletableDeferred<Unit>? = null
+
+    /** Incremented as soon as [setIndexWorktrees] is entered, before it awaits any gate. */
+    var indexWorktreesSaveAttempts = 0
+        private set
+
     override suspend fun indexWorktrees(): Boolean {
         assertNotEdt("indexWorktrees")
+        indexWorktreesGate?.await()
         return indexWorktrees
     }
 
     override suspend fun setIndexWorktrees(value: Boolean) {
         assertNotEdt("setIndexWorktrees")
+        indexWorktreesSaveAttempts += 1
+        indexWorktreesSaveGate?.await()
         indexWorktrees = value
         indexWorktreesSaves.add(value)
     }

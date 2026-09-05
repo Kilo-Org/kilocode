@@ -28,7 +28,10 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     private val level = ComboBox(DefaultComboBoxModel(LogConfig.LogLevel.all.toTypedArray()))
     private val mode = ComboBox(DefaultComboBoxModel(LogConfig.ContentMode.all.toTypedArray()))
     private val preview = JBTextField().apply { columns = 6 }
-    private val indexWorktrees = SettingsToggle {}
+
+    /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
+    private var touched = false
+    private val indexWorktrees = SettingsToggle { touched = true }
 
     private var saved = current()
 
@@ -84,6 +87,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         mode.selectedItem = saved.mode
         preview.text = saved.preview.toString()
         indexWorktrees.isSelected = saved.indexWorktrees
+        touched = false
     }
 
     fun sync() {
@@ -101,9 +105,14 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     /** The index-worktrees value as of the last [sync] (or the initial fetch via [refreshIndexWorktrees]). */
     fun savedIndexWorktrees(): Boolean = saved.indexWorktrees
 
-    /** Populates the toggle with the value fetched asynchronously from the backend. */
+    /**
+     * Populates the toggle with the value fetched asynchronously from the backend. The fetch is a
+     * no-op once the user has flipped the toggle: in split mode the RPC can land after they acted,
+     * and overwriting then would silently discard their choice and clear [modified].
+     */
     @RequiresEdt
     fun refreshIndexWorktrees(value: Boolean) {
+        if (touched) return
         saved = saved.copy(indexWorktrees = value)
         indexWorktrees.isSelected = value
     }
