@@ -873,8 +873,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-id, der sendes til dit eget transskriptionsendpoint, for eksempel whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "Tale til tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Brug en OpenAI-kompatibel transskriptions-API i stedet for Kilo Gateway. Modeller læses fra /models, og lyd sendes til /audio/transcriptions. Lad feltet stå tomt for at bruge Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Tale til tekst-API-nøgle",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token, der sendes til den egne transskriptions-basis-URL. Gemmes i din Kilo-konfigurationsfil.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text, eller angiv en egen transskriptions-basis-URL nedenfor.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",

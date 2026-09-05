@@ -2707,6 +2707,8 @@ export type Config = {
     native_notebook_tools?: boolean
     task_model_selection?: boolean
     speech_to_text_model?: string
+    speech_to_text_base_url?: string
+    speech_to_text_api_key?: string
     openTelemetry?: boolean
     shared_agent_board?: boolean
     primary_tools?: Array<string>

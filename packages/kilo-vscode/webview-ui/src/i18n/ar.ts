@@ -851,8 +851,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
   "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "معرّف النموذج الذي يُرسل إلى نقطة النهاية المخصصة للنسخ، مثل whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "عنوان URL الأساسي لتحويل الصوت إلى نص",
+  "settings.models.speechToTextBaseUrl.description":
+    "استخدم واجهة نسخ متوافقة مع OpenAI بدلاً من Kilo Gateway. تُقرأ النماذج من /models ويُرسل الصوت إلى /audio/transcriptions. اتركه فارغًا لاستخدام Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "مفتاح API لتحويل الصوت إلى نص",
+  "settings.models.speechToTextApiKey.description":
+    "رمز Bearer يُرسل إلى عنوان URL الأساسي المخصص للنسخ. يُخزَّن في ملف إعدادات Kilo لديك.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
+    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text، أو حدد أدناه عنوان URL أساسيًا مخصصًا للنسخ.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",

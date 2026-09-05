@@ -859,8 +859,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
   "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "รหัสโมเดลที่ส่งไปยังปลายทางการถอดเสียงของคุณเอง เช่น whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "URL พื้นฐานสำหรับแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextBaseUrl.description":
+    "ใช้ API การถอดเสียงที่เข้ากันได้กับ OpenAI แทน Kilo Gateway โมเดลจะอ่านจาก /models และเสียงจะถูกส่งไปยัง /audio/transcriptions เว้นว่างไว้เพื่อใช้ Kilo Gateway",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "คีย์ API สำหรับแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextApiKey.description":
+    "โทเค็น Bearer ที่ส่งไปยัง URL พื้นฐานการถอดเสียงของคุณเอง จัดเก็บอยู่ในไฟล์ตั้งค่า Kilo ของคุณ",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
+    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text หรือกำหนด URL พื้นฐานสำหรับการถอดเสียงเองด้านล่าง",
   "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
   "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",

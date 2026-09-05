@@ -2,6 +2,7 @@ import { routeSuggestionWebviewMessage } from "./handlers/suggestion"
 import * as ModelState from "./model-state"
 import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import type { SpeechToTextSource } from "../speech-to-text/source"
 import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
@@ -22,6 +23,7 @@ type Ctx = {
   openSessions: (ids: string[]) => void
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
+  speechToTextSource: () => SpeechToTextSource | undefined
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
@@ -141,6 +143,12 @@ export async function routeEarlyMessage(
   }
   const background = await routeBackgroundMessage(message, ctx)
   return (
-    background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))
+    background ??
+    (await routeInputToolMessage(message, {
+      connection: ctx.connection,
+      dir: ctx.dir,
+      post: ctx.post,
+      speechSource: ctx.speechToTextSource,
+    }))
   )
 }

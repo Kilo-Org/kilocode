@@ -169,6 +169,7 @@ import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
 import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
 import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
+import { resolveSpeechToTextSource, type SpeechToTextConfig, type SpeechToTextSource } from "./speech-to-text/source"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
 import {
@@ -1083,6 +1084,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.updateTitle()
           },
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
+          speechToTextSource: () => this.speechToTextSource(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
           cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
@@ -2977,8 +2979,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
+  private speechToTextSource(): SpeechToTextSource | undefined {
+    const cached = this.cachedConfigMessage as { config?: SpeechToTextConfig } | null
+    return resolveSpeechToTextSource(cached?.config)
+  }
+
   private async fetchAndSendSpeechToTextModels(): Promise<void> {
-    const result = await fetchSpeechToTextModels(this.connectionService, this.getWorkspaceDirectory())
+    const result = await fetchSpeechToTextModels(
+      this.connectionService,
+      this.getWorkspaceDirectory(),
+      undefined,
+      this.speechToTextSource(),
+    )
     if (!result.ok) {
       this.postMessage({ type: "speechToTextModelsLoaded" as const, models: [...SPEECH_TO_TEXT_MODELS] })
       return

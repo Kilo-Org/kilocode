@@ -35187,6 +35187,12 @@
               "speech_to_text_model": {
                 "type": "string"
               },
+              "speech_to_text_base_url": {
+                "type": "string"
+              },
+              "speech_to_text_api_key": {
+                "type": "string"
+              },
               "openTelemetry": {
                 "type": "boolean"
               },
