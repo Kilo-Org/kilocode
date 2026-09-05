@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunStateDto
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
@@ -61,6 +62,11 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         assertEquals("worker", rows[5].templateText)
         assertTrue(rows[6] is Separator)
         assertEquals(KiloBundle.message("worktree.run.open.frame"), rows[7].templateText)
+
+        // A started row is the same green run glyph as the idle rows below it, wearing the shared live
+        // badge — not the neutral triangle the worktree list uses, and not a second badge built here.
+        assertSame(WorktreeIcons.live(AllIcons.Actions.Execute), rows[4].templatePresentation.icon)
+        assertSame(AllIcons.Actions.Execute, rows[5].templatePresentation.icon)
 
         perform(rows[1])
         assertEquals(listOf(state), stops)

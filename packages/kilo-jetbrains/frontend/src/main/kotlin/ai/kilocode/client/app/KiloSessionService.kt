@@ -221,6 +221,23 @@ class KiloSessionService internal constructor(
         return session
     }
 
+    /**
+     * Fork session [id] into [dir], copying its history into a new session. With [messageId] the
+     * fork truncates at that message. Caller awaits the result.
+     *
+     * Deliberately does not refresh the shared [sessions] flow: forking is only offered from
+     * directory-scoped worktree surfaces, which keep their own model, so refreshing here would
+     * replace the primary workspace's snapshot with a worktree's listing (the same hazard
+     * [sessionsFor] exists for). The caller inserts the returned session itself, and the CLI's
+     * `session.created` reaches every directory-scoped list through [changes].
+     */
+    suspend fun fork(id: String, dir: String, messageId: String? = null): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session fork=true message=${messageId != null} dir=${ChatLogSummary.dir(dir)}")
+        val session = call { fork(id, dir, messageId) }
+        log.info("${ChatLogSummary.sid(session.id)} kind=session fork=true ok=true forkedFrom=${ChatLogSummary.sid(id)}")
+        return session
+    }
+
     /** Delete a session. */
     fun delete(id: String, dir: String) {
         cs.launch {

@@ -1,8 +1,8 @@
 import * as fs from "fs/promises"
-import { binaryFile } from "../diff/shared/binary"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
 import type { GitOps } from "./GitOps"
+import { measure } from "./git-stats-snapshot"
 import { check, collect, fileSize, MAX_DETAIL_BYTES, readAfter, summarize, type Meta } from "./local-diff-batch"
 import { createDiffCache } from "./local-diff-cache"
 import type { WorktreeDiffEntry } from "./types"
@@ -10,10 +10,6 @@ import type { WorktreeDiffEntry } from "./types"
 type Status = Meta["status"]
 
 type Log = (...args: unknown[]) => void
-
-/** Cap untracked file reads so line-counting a multi-megabyte log file does
- *  not stall the poll. Matches `GitOps.workingTreeStats()`. */
-const MAX_UNTRACKED_BYTES = 1_000_000
 
 /** Cap per-side reads in the detail view. Opening very large tracked files
  *  used to spike `kilo serve`; now that the detail path runs in the
@@ -170,18 +166,6 @@ async function sizes(git: GitOps, dir: string, anc: string, meta: Meta, signal?:
   ])
 }
 
-async function lineCount(file: string): Promise<number> {
-  const stat = await fs.lstat(file).catch(() => undefined)
-  if (!stat || stat.size === 0) return 0
-  if (stat.size > MAX_UNTRACKED_BYTES) return 0
-  const content = stat.isSymbolicLink()
-    ? await fs.readlink(file).catch(() => "")
-    : await fs.readFile(file, "utf-8").catch(() => "")
-  if (!content) return 0
-  if (content.endsWith("\n")) return content.split("\n").length - 1
-  return content.split("\n").length
-}
-
 function statusFromCode(code: string): Status {
   if (code === "A") return "added"
   if (code === "D") return "deleted"
@@ -252,18 +236,17 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
       paths.slice(index, index + MAX_SUMMARY_FILES).map(async (file): Promise<Meta | undefined> => {
         const full = resolveInside(dir, file)
         if (!full) return undefined
-        const exists = await fs.lstat(full).catch(() => undefined)
-        if (!exists) return undefined
-        const binary = await binaryFile(full)
+        const value = await measure(full)
+        if (!value) return undefined
         return {
           file,
-          additions: binary ? 0 : await lineCount(full),
+          additions: value.count,
           deletions: 0,
           status: "added",
           tracked: false,
           generatedLike: generatedLike(file),
-          binary,
-          stamp: await statStamp(dir, file),
+          binary: value.binary,
+          stamp: value.stamp,
         }
       }),
     )
@@ -321,18 +304,17 @@ async function detailMeta(
     })
     check(signal)
     if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
-    const exists = await fs.lstat(full).catch(() => undefined)
-    if (!exists) return undefined
-    const binary = await binaryFile(full)
+    const value = await measure(full)
+    if (!value) return undefined
     return {
       file,
-      additions: binary ? 0 : await lineCount(full),
+      additions: value.count,
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
-      binary,
-      stamp: await statStamp(dir, file),
+      binary: value.binary,
+      stamp: value.stamp,
     }
   }
 

@@ -62,6 +62,7 @@ import type {
   PRCheck,
   PRComment,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 export type {
   PRState,
@@ -72,6 +73,7 @@ export type {
   PRComment,
   PRCommentReply,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
@@ -96,6 +98,7 @@ export interface PRStatus {
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number

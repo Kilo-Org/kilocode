@@ -125,7 +125,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const selectAfterDelete = (id: string) => {
     if (!active() || props.selection !== id) return
     const ids = new Set(store.managedSessions().map((item) => item.worktreeId))
-    const order = buildSidebarOrder(top(), sorted(), sections(), members, true)
+    const order = buildSidebarOrder(top(), sorted(), sections(), members, id)
       .filter((item) => item.type === "wt")
       .map((item) => item.id)
     const next = nextSelectionAfterDelete(
@@ -134,8 +134,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       (id) => ids.has(id) && !props.busy(id) && !store.staleWorktreeIds().has(id),
     )
     if (next === LOCAL) return props.onSelectLocal(props.project.id)
-    const section = sections().find((item) => item.id === worktrees().find((wt) => wt.id === next)?.sectionId)
-    if (section?.collapsed) post({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })
     props.onSelectWorktree(props.project.id, next)
   }
 

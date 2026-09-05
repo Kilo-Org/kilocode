@@ -4,6 +4,18 @@
 
 ### Minor Changes
 
+- [#13764](https://github.com/Kilo-Org/kilocode/pull/13764) [`17c915b`](https://github.com/Kilo-Org/kilocode/commit/17c915b2a0687dc1dfe977c45bfedf2dc92b5db0) - Cycle Kilo mode, model, and reasoning effort from the chat with Ctrl+1, Ctrl+2, and Ctrl+3, and reset the model override with Ctrl+0. The same Ctrl shortcuts apply on macOS, they show up in the prompt bar's tooltips, and they can be rebound from Settings > Keymap.
+
+## 7.6.0
+
+### Minor Changes
+
+- [#13756](https://github.com/Kilo-Org/kilocode/pull/13756) [`f20ab7f`](https://github.com/Kilo-Org/kilocode/commit/f20ab7f885955c43ba97eaed1d335c920660dfeb) - Move a session into a new worktree directly from the base checkout's worktree editor tab: a "Move to Worktree" entry now leads its session list's row menu, and sessions there get the same New Worktree / Move to Worktree toolbar above the prompt that the tool window shows. The tab's header now also reports the base checkout's uncommitted changes, the ones a move would carry.
+
+## 7.6.0
+
+### Minor Changes
+
 - [#13566](https://github.com/Kilo-Org/kilocode/pull/13566) [`024733e`](https://github.com/Kilo-Org/kilocode/commit/024733efef372d12c9bdfb92cbec954f756cd2a5) - Add an Integrations settings page with a GitHub toggle. Turning it off stops Kilo from running the GitHub CLI, hides pull request badges and pull request import, and can be done straight from the gh warning banner.
 
 - [#13569](https://github.com/Kilo-Org/kilocode/pull/13569) [`57b0d10`](https://github.com/Kilo-Org/kilocode/commit/57b0d1085de54cd392938f6830f85c428a885f2a) - Render all Mermaid diagram types natively in JetBrains chat: class, state, ER, gantt, pie, user journey, quadrant, requirement, git graph, C4, mindmap, timeline, sankey, XY chart, block, packet, kanban, architecture, radar, and treemap now join flowcharts and sequence diagrams.

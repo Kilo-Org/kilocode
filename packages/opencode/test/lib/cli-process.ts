@@ -93,9 +93,25 @@ export type RunResult = {
 export type RunHandle = {
   readonly interrupt: () => void
   readonly result: Effect.Effect<RunResult>
+  // kilocode_change start - raw stdin handle, usable only when the child was
+  // spawned through startRun with stdin: "pipe". Mirrors the acp handle's
+  // proc.stdin write/end pattern.
+  readonly stdin: {
+    readonly write: (text: string) => Promise<void>
+    readonly end: () => void
+  }
+  // kilocode_change end
 }
 
-export type SpawnOpts = { readonly timeoutMs?: number; readonly env?: Record<string, string> }
+// kilocode_change start - stdin mode for startRun. Default "ignore" preserves
+// the documented dodge in spawn(); "pipe" is supported by startRun only, so a
+// test can write or hold open the child's stdin.
+export type SpawnOpts = {
+  readonly timeoutMs?: number
+  readonly env?: Record<string, string>
+  readonly stdin?: "ignore" | "pipe"
+}
+// kilocode_change end
 
 // Typed equivalent of constructing argv for `opencode run`. New flags should
 // land here so tests stay grep-able and refactor-safe.
@@ -161,7 +177,7 @@ export type AcpHandle = {
 export type OpencodeCli = {
   // High-level: run a single prompt against the test model. Short-lived.
   readonly run: (message: string, opts?: RunOpts) => Effect.Effect<RunResult>
-  readonly startRun: (message: string, opts?: RunOpts) => Effect.Effect<RunHandle, never, Scope.Scope>
+  readonly startRun: (message: string | undefined, opts?: RunOpts) => Effect.Effect<RunHandle, never, Scope.Scope> // kilocode_change - undefined message = no argv prompt
   // Spawn `opencode serve` and wait until it's listening. Long-lived: the
   // returned handle is killed when the caller's Scope closes. Fails if the
   // listening line doesn't appear within `readyTimeoutMs`.
@@ -255,7 +271,7 @@ export function withCliFixture<A, E>(
       }
     })
 
-    const runArgs = (message: string, opts?: RunOpts) => {
+    const runArgs = (message: string | undefined, opts?: RunOpts) => { // kilocode_change - accepts undefined message for stdin-only runs
       const argv: string[] = ["run"]
       if (opts?.printLogs) argv.push("--print-logs")
       argv.push("--model", opts?.model ?? testModelID)
@@ -263,7 +279,7 @@ export function withCliFixture<A, E>(
       if (opts?.format) argv.push("--format", opts.format)
       if (opts?.command) argv.push("--command", opts.command)
       if (opts?.extraArgs) argv.push(...opts.extraArgs)
-      argv.push(message)
+      if (message !== undefined) argv.push(message) // kilocode_change - undefined message = no argv prompt (stdin-only run)
       return argv
     }
 
@@ -285,16 +301,20 @@ export function withCliFixture<A, E>(
       return spawn(runArgs(message, opts), runOpts(opts))
     }
 
-    const startRun = Effect.fn("opencode.startRun")(function* (message: string, opts?: RunOpts) {
+    const startRun = Effect.fn("opencode.startRun")(function* (message: string | undefined, opts?: RunOpts) { // kilocode_change - accepts undefined message for stdin-only runs
       const start = Date.now()
       const options = runOpts(opts)
+      // kilocode_change start - stdin "pipe" lets a test hold the child's stdin
+      // open (never write, never end) or feed it a prompt; "ignore" (default)
+      // keeps the documented dodge in spawn().
+      const stdinMode = options?.stdin ?? "ignore"
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
           Bun.spawn(["bun", ...cliArgs, ...runArgs(message, opts)], {
             // kilocode_change - cliArgs carries the solid preload
             cwd: home,
             env: { ...process.env, ...env, ...options?.env },
-            stdin: "ignore",
+            stdin: stdinMode,
             stdout: "pipe",
             stderr: "pipe",
           }),
@@ -310,6 +330,20 @@ export function withCliFixture<A, E>(
 
       return {
         interrupt: () => proc.kill("SIGINT"),
+        stdin: {
+          // `proc.stdin.write` returns `number | Promise<number>`; await the
+          // promise form for backpressure, same as the acp handle's send.
+          write: async (text: string) => {
+            if (!proc.stdin) throw new Error(`startRun stdin.write: child was spawned with stdin: "${stdinMode}"`)
+            const ret = proc.stdin.write(text)
+            if (typeof ret !== "number") await ret
+          },
+          // proc.stdin.end() is idempotent in Bun; no try/catch needed.
+          end: () => {
+            if (!proc.stdin) throw new Error(`startRun stdin.end: child was spawned with stdin: "${stdinMode}"`)
+            proc.stdin.end()
+          },
+        },
         result: Effect.promise(async () => ({
           exitCode: await proc.exited,
           stdout: normalizeLines(await stdout),
@@ -317,6 +351,7 @@ export function withCliFixture<A, E>(
           durationMs: Date.now() - start,
         })),
       } satisfies RunHandle
+      // kilocode_change end
     })
 
     const serve = Effect.fn("opencode.serve")(function* (opts?: ServeOpts) {

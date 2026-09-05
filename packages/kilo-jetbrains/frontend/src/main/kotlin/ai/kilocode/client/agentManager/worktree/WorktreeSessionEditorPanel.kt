@@ -131,7 +131,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         onCell = { _, _ -> },
         onOpen = { row, focus -> open(row, focus) },
         menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
-            (row as? SessionRow)?.session?.takeIf { canMove(it) || canRename(it) || canDelete(it) }
+            (row as? SessionRow)?.session?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
         }),
     )
     private val run = if (project != null && worktree.directory.isNotBlank()) {
@@ -244,6 +244,26 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     internal fun moveRow(item: SessionDto) {
         if (!canMove(item)) return
         manager.moveToWorktree(item.id, worktree.directory)
+    }
+
+    /**
+     * Offered for any real session, including one mid-turn -- matching the Agent Manager surfaces this
+     * mirrors, which gate fork only on the tab already existing (VS Code's idle check lives in its
+     * sidebar path alone, see packages/kilo-vscode/src/kilo-provider/fork-session.ts).
+     *
+     * A mid-turn fork is a snapshot, not a handover: the CLI detaches only in-flight subagent (`task`)
+     * calls, so any other tool part that was pending or running is copied with that status and stays
+     * unresolved in the fork, and whatever the source streams after the copy is absent. The model
+     * never sees a dangling call -- history rewrites unfinished tool calls as interrupted -- so this
+     * costs transcript fidelity, not correctness.
+     */
+    @RequiresEdt
+    internal fun canFork(item: SessionDto?): Boolean = canDelete(item)
+
+    @RequiresEdt
+    internal fun forkRow(item: SessionDto) {
+        if (!canFork(item)) return
+        manager.forkSession(item.id, surface = "worktree_session_list")
     }
 
     @RequiresEdt

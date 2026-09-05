@@ -20,11 +20,13 @@ internal class MessageToolbar(
     actions: List<ToolbarButtonAction> = emptyList(),
     tooltip: String = KiloBundle.message("session.copy.hover"),
 ) : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
-    constructor(text: () -> String?, revert: (() -> Unit)?) : this(
+    /** The hover toolbar of a user prompt bubble: fork this message, roll back to it, copy it. */
+    constructor(text: () -> String?, revert: (() -> Unit)?, fork: (() -> Unit)? = null) : this(
         text,
-        actions = revert?.let {
-            listOf(ToolbarButtonAction(AllIcons.Actions.Rollback, KiloBundle.message("revert.message.rollback"), it))
-        }.orEmpty(),
+        actions = listOfNotNull(
+            fork?.let { ToolbarButtonAction(AllIcons.Vcs.Branch, KiloBundle.message("session.fork.message"), it) },
+            revert?.let { ToolbarButtonAction(AllIcons.Actions.Rollback, KiloBundle.message("revert.message.rollback"), it) },
+        ),
         tooltip = KiloBundle.message("session.copy.prompt"),
     )
 

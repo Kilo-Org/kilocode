@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { execFileSync } from "node:child_process"
-import { createKiloClient } from "@kilocode/sdk/v2/client"
+import { createKiloClient, type QuestionRequest } from "@kilocode/sdk/v2/client"
 import { ProjectContext } from "../../src/agent-manager/project/context"
 import { baseUpdatePrompt, handleBaseUpdate } from "../../src/agent-manager/base-update"
 import type { BaseUpdateRequest } from "../../webview-ui/src/types/messages/agent-manager"
@@ -41,22 +41,24 @@ afterEach(async () => {
   rmSync(root, { recursive: true, force: true })
 })
 
-function backend() {
-  const requests: Array<{ path: string; directory: string | null; body?: unknown }> = []
+function backend(failure?: string) {
+  const requests: Array<{ method: string; path: string; directory: string | null; body?: unknown }> = []
   const errors: string[] = []
   const routes: unknown[] = []
   const statuses: Record<string, { type: string }> = {}
   const permissions: unknown[] = []
+  const questions: QuestionRequest[] = []
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
       const url = new URL(request.url)
       const directory = url.searchParams.get("directory")
-      const body = request.method === "POST" ? await request.json() : undefined
-      requests.push({ path: url.pathname, directory, body })
+      const body = request.headers.get("content-type")?.includes("application/json") ? await request.json() : undefined
+      requests.push({ method: request.method, path: url.pathname, directory, body })
+      if (url.pathname === failure) return Response.json({ message: "Blocker unavailable" }, { status: 500 })
       if (url.pathname === "/session/status") return Response.json(statuses)
       if (url.pathname === "/permission") return Response.json(permissions)
-      if (url.pathname === "/question") return Response.json([])
+      if (url.pathname === "/question") return Response.json(questions)
       if (url.pathname === "/mcp") return Response.json({})
       if (url.pathname.endsWith("/prompt_async")) return new Response(null, { status: 204 })
       return Response.json({ id: "ses_target", title: "Target", directory, time: { created: 1, updated: 1 } })
@@ -86,7 +88,7 @@ function backend() {
     },
   }
   const request: BaseUpdateRequest = { type: "agentManager.updateFromBase", projectId: ctx.id, worktreeId: wt.id }
-  return { requests, errors, routes, statuses, permissions, host, request }
+  return { requests, errors, routes, statuses, permissions, questions, host, request }
 }
 
 it("uses the saved base and remote, not the current default or cleanup branch", () => {
@@ -109,11 +111,8 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
   expect(text).toContain("Never merge a stale tracking ref")
   for (const safeguard of [
     "FETCH_HEAD^{commit}",
-    "git stash, --autostash",
+    "Do not use the shared stash stack or --autostash",
     "merge.autoStash",
-    "Do not discard",
-    "stage, or commit pre-existing edits",
-    "uncommitted changes in this worktree block",
     "intended resolution is unclear, stop and ask",
     "merge or rebase is already in progress",
     "HEAD is detached",
@@ -123,6 +122,26 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
     "Do not push",
   ])
     expect(text).toContain(safeguard)
+})
+
+it("asks the agent to preserve local work without asking the user to choose a method", () => {
+  const text = baseUpdatePrompt(wt)
+  for (const safeguard of [
+    "Preserve all staged, unstaged, and untracked changes",
+    "verified recovery copy unique to this worktree and this update before changing them",
+    "Never restore or remove another worktree's recovery data",
+    "Git's internal temporary merge state is allowed if it does not change the shared stash stack",
+    "If preservation cannot be verified, stop and ask before clearing any edits",
+    "You may temporarily clear backed-up edits to merge the base",
+    "restore local changes and their staging state",
+    "leave unfinished work uncommitted",
+    "Keep pre-existing edits out of the merge commit",
+    "Keep the recovery copy until restoration is verified",
+    "Do not ask me to choose a preservation method",
+  ])
+    expect(text).toContain(safeguard)
+  expect(text).not.toContain("stop and ask how to preserve them")
+  expect(text).not.toContain("Do not discard, overwrite, stage, or commit pre-existing edits")
 })
 
 it("sends one prompt to the owning worktree, queues on its busy session, and leaves drafts alone", async () => {
@@ -201,6 +220,61 @@ it("creates a session in the target worktree without replacing the user's active
   expect(ctx.stateManager().getSession("ses_target")?.worktreeId).toBe(wt.id)
   expect(api.requests.filter((item) => item.path === "/session")).toHaveLength(1)
   expect(api.requests.filter((item) => item.path.endsWith("/prompt_async"))).toHaveLength(1)
+})
+
+it("lets the backend queue the update prompt before dismissing target questions", async () => {
+  const api = backend()
+  ctx.stateManager().addSession("ses_other", wt.id)
+  ctx.stateManager().addSession("ses_target", wt.id)
+  api.statuses.ses_target = { type: "busy" }
+  api.permissions.push({ id: "perm_other", sessionID: "ses_other" })
+  api.questions.push(
+    { id: "que_other", sessionID: "ses_other", questions: [] },
+    ...["que_first", "que_second"].map((id) => ({
+      id,
+      sessionID: "ses_target",
+      questions: [
+        { header: "Plan", question: "Ready to implement?", options: [{ label: "Yes", description: "Start" }] },
+      ],
+    })),
+  )
+  await handleBaseUpdate({ ...api.request, sessionId: "ses_target" }, ctx, api.host)
+  expect(api.errors).toEqual([])
+  expect(api.requests.every((item) => item.directory === wt.path)).toBe(true)
+  expect(api.requests.filter((item) => item.method === "POST").map((item) => item.path)).toEqual([
+    "/session/ses_target/prompt_async",
+  ])
+})
+
+it.each(["/question", "/permission"])("does not prompt when blocker lookup fails at %s", async (failure) => {
+  const api = backend(failure)
+  ctx.stateManager().addSession("ses_target", wt.id)
+  api.questions.push({
+    id: "que_target",
+    sessionID: "ses_target",
+    questions: [{ header: "Plan", question: "Ready to implement?", options: [] }],
+  })
+  await handleBaseUpdate(api.request, ctx, api.host)
+  expect(api.errors).toHaveLength(1)
+  expect(api.requests.map((item) => item.path)).toContain(failure)
+  expect(api.requests.some((item) => item.method === "POST")).toBe(false)
+  expect(api.questions).toHaveLength(1)
+})
+
+it("leaves questions pending when a permission blocks the target session", async () => {
+  const api = backend()
+  ctx.stateManager().addSession("ses_target", wt.id)
+  api.permissions.push({ id: "perm_target", sessionID: "ses_target" })
+  api.questions.push({
+    id: "que_target",
+    sessionID: "ses_target",
+    questions: [{ header: "Plan", question: "Ready to implement?", options: [] }],
+  })
+  await handleBaseUpdate(api.request, ctx, api.host)
+  expect(api.errors).toHaveLength(1)
+  expect(api.errors.at(0)).toContain("pending permission")
+  expect(api.requests.some((item) => item.method === "POST")).toBe(false)
+  expect(api.questions).toHaveLength(1)
 })
 
 it("rejects wrong ownership, competing sessions, and pending permissions", async () => {
