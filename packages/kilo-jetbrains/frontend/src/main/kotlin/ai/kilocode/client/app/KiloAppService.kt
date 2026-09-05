@@ -345,6 +345,26 @@ class KiloAppService internal constructor(
         }
     }
 
+    /** Whether Kilo-managed worktrees under `.kilo/worktrees` are indexed by their containing project. */
+    suspend fun indexWorktrees(): Boolean = try {
+        call { indexWorktrees() }
+    } catch (e: Exception) {
+        LOG.warn("index worktrees read failed", e)
+        false
+    }
+
+    /**
+     * Persist the worktree-indexing setting and reindex every open project. Runs on the app-lifetime
+     * [scope] so the write and the reindex it triggers survive the settings dialog closing on OK.
+     */
+    fun setIndexWorktreesAsync(value: Boolean): Job = cs.launch {
+        try {
+            call { setIndexWorktrees(value) }
+        } catch (e: Exception) {
+            LOG.warn("index worktrees apply failed", e)
+        }
+    }
+
     private fun setModelState(state: ModelStateDto) {
         _models.value = state
         _favorites.value = state.favorite
