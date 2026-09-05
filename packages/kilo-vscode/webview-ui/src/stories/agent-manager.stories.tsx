@@ -1382,15 +1382,26 @@ export const TabBarSingleTab: Story = {
 
 const MockFullContextActions = () => (
   <div class="am-tab-actions">
-    <span class="am-split-button am-run-group">
+    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
+      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Apply selected worktree changes to local branch" keybind="" placement="bottom">
+      <IconButton
+        icon="check"
+        size="small"
+        variant="ghost"
+        aria-label="Apply selected worktree changes to local branch"
+      />
+    </TooltipKeybind>
+    <span class="am-split-button">
       <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
-        <Button size="small" variant="ghost" icon="play">
-          Run
-        </Button>
+        <IconButton size="small" variant="ghost" icon="play" aria-label="Run" />
       </TooltipKeybind>
-      <button class="am-split-arrow" aria-label="Run options">
-        <Icon name="chevron-down" size="small" />
-      </button>
+      <TooltipKeybind title="Run options" keybind="" placement="bottom">
+        <button class="am-split-arrow" aria-label="Run options">
+          <Icon name="chevron-down" size="small" />
+        </button>
+      </TooltipKeybind>
     </span>
     <TooltipKeybind title="Pull request" keybind="" placement="bottom">
       <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
@@ -1961,7 +1972,6 @@ export const MultiProjectSidebar: Story = {
             t={t}
             onSearchRef={() => {}}
             onShortcuts={() => {}}
-            onHelp={() => {}}
             onHistory={() => {}}
           />
         </div>

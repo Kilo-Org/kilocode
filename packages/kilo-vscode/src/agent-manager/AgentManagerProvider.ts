@@ -393,12 +393,12 @@ export class AgentManagerProvider implements Disposable {
     this.panel = ctx
     this.browserLifecycle.replay()
 
-    this.statsPoller.setVisible(ctx.visible)
-    this.projectPollers.setVisible(ctx.visible)
+    for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(ctx.visible)
+    this.diffs.setVisible(ctx.visible).catch((err) => this.log("Failed to update diff visibility:", err))
     this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
-      this.statsPoller.setVisible(visible)
-      this.projectPollers.setVisible(visible)
+      for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(visible)
+      this.diffs.setVisible(visible).catch((err) => this.log("Failed to update diff visibility:", err))
       this.visiblePresence.flush()
     })
 

@@ -223,6 +223,11 @@ export const dict = {
   "agentManager.pr.comment.openOnGitHub": "Open on GitHub",
   "agentManager.pr.comment.resolveFailed": "Could not resolve. {{error}}",
   "agentManager.pr.comment.unresolveFailed": "Could not unresolve. {{error}}",
+  "agentManager.pr.conversation.title": "PR Comments",
+  "agentManager.pr.conversation.dismiss": "Dismiss",
+  "agentManager.pr.conversation.restore": "Restore",
+  "agentManager.pr.conversation.sendAll": "Send {{count}} to agent",
+  "agentManager.pr.conversation.sendAllToTerminal": "Send {{count}} to terminal",
   "agentManager.review.collapsedOnly": "{{count}} collapsed",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} collapsed, {{large}} large",
   "agentManager.review.largeFileCollapsed": "Large file (collapsed)",
@@ -277,7 +282,6 @@ export const dict = {
     "A worktree is a separate folder and branch for a task. Your agents can work side by side without editing the same files.",
   "agentManager.intro.graph.agent": "Kilo agent",
   "agentManager.intro.graph.pr": "Pull request",
-  "agentManager.intro.graph.conflict": "If changes conflict",
   "agentManager.intro.stage1.title": "Your repository",
   "agentManager.intro.stage1.text": "Local files stay unchanged",
   "agentManager.intro.stage2.title": "Example: two tasks in parallel",
@@ -288,8 +292,9 @@ export const dict = {
   "agentManager.intro.stage4.title": "Bring changes back when you are ready",
   "agentManager.intro.stage4.text":
     "Ask the agent in each worktree to open a pull request. Or use Apply in the diff panel to copy changes to Local.",
-  "agentManager.intro.conflictText":
-    "Ask the agent in the worktree to merge its original base branch and resolve conflicts, then review the result. Avoid git stash: stashes are shared across worktrees.",
+  "agentManager.intro.updateTitle": "Resolve conflicts with Kilo",
+  "agentManager.intro.updateText":
+    "Before applying changes to Local or merging a pull request, run /update-from-base in that worktree's session. Kilo merges the latest base changes and resolves conflicts there first.",
   "agentManager.intro.prDetection":
     "PR badges update automatically for each worktree branch (GitHub CLI sign-in required).",
   "agentManager.intro.checksRunning": "Checks running",

@@ -18,8 +18,11 @@ export interface CommentState {
   pending: Record<string, boolean>
   /** threadId -> message from a resolve that failed. */
   errors: Record<string, string>
+  /** commentId -> dismissed locally without sending. */
+  dismissed: Record<string, boolean>
   open: boolean
   doneOpen: boolean
+  conversationOpen: boolean
 }
 
 export interface CommentAnchor {
@@ -32,8 +35,10 @@ const BLANK: CommentState = Object.freeze({
   sent: {},
   pending: {},
   errors: {},
+  dismissed: {},
   open: true,
   doneOpen: false,
+  conversationOpen: true,
 })
 
 const [all, setAll] = createSignal<Record<string, CommentState>>({})

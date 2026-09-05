@@ -1,5 +1,66 @@
 # @kilocode/cli
 
+## 7.5.14
+
+## 7.5.13
+
+## 7.5.12
+
+## 7.5.11
+
+### Minor Changes
+
+- [#13727](https://github.com/Kilo-Org/kilocode/pull/13727) [`ce274e6`](https://github.com/Kilo-Org/kilocode/commit/ce274e6762255e2318a477dd225f629ed6708e17) - Support agent-defined default answers for single-select questions, with Enter confirmation in the CLI and VS Code.
+
+- [#13629](https://github.com/Kilo-Org/kilocode/pull/13629) [`c0eba39`](https://github.com/Kilo-Org/kilocode/commit/c0eba39ef5cfdd96ce2e220850c091dc9473f848) - Introduce Kilo Swarm, an opt-in shared board scoped to a main session and its task descendants, with persistent session history and fixed activity notices in tool results. Enable Kilo Swarm in Experimental settings for parallel solution attempts or complementary work, not every task. Post messages with `board_post` and read peer messages explicitly with `board_read`, without treating them as user requests or approval. Posting a message does not guarantee delivery or reading, or start an agent. Keep `experimental.shared_agent_board`, tool names, stored identifiers, history, and permissions unchanged.
+
+  Keep background task status available for models without a reasoning variant.
+
+  Warn when a direct board post targets a task known to be inactive, without restarting it.
+
+  Keep peer content out of user turns and privileged instructions. Coalesce activity notices on genuine tool results, with message bodies available only through explicit reads. Preserve the parent's model and reasoning settings when background tasks finish.
+
+### Patch Changes
+
+- [#13730](https://github.com/Kilo-Org/kilocode/pull/13730) [`64123bc`](https://github.com/Kilo-Org/kilocode/commit/64123bc8a9706df100b949e48118e278d88ca9be) - Show the target session and full outgoing prompt when asking permission to send a prompt through Agent Manager.
+
+- [#13763](https://github.com/Kilo-Org/kilocode/pull/13763) [`86c1928`](https://github.com/Kilo-Org/kilocode/commit/86c1928c4a380e014e95b9e05e30ca1557c4fb42) - Bound the piped-stdin wait of `kilo run` when the prompt comes from argv, so a launcher-held-open stdin pipe cannot hang the boot.
+
+- [#13744](https://github.com/Kilo-Org/kilocode/pull/13744) [`4b85267`](https://github.com/Kilo-Org/kilocode/commit/4b85267aedde11c6992034c237464588ae192922) - Let subagents continue and return their findings when a tool permission is denied, without allowing the denied operation.
+
+- [#13696](https://github.com/Kilo-Org/kilocode/pull/13696) [`da0fb3d`](https://github.com/Kilo-Org/kilocode/commit/da0fb3d6e7432e214a8a863acb1021feaa2a1ad2) - Use plain-text diagrams in CLI Ask mode instead of recommending Mermaid, while preserving Mermaid guidance in VS Code and JetBrains.
+
+- [#13709](https://github.com/Kilo-Org/kilocode/pull/13709) [`162e30d`](https://github.com/Kilo-Org/kilocode/commit/162e30d2348051f6092e99e4ff6f988ac1f5f0be) - Avoid repeated shared-board activity notices after successful reads while keeping unread and concurrent activity discoverable.
+
+- [#13759](https://github.com/Kilo-Org/kilocode/pull/13759) [`c330a00`](https://github.com/Kilo-Org/kilocode/commit/c330a000f312a594405b5950cca7b5630bdb9545) - Clarify Explore's Bash allowlist and when to select an agent with the required execution permissions while preserving the no-change scope.
+
+- [#13752](https://github.com/Kilo-Org/kilocode/pull/13752) [`2f4bc4c`](https://github.com/Kilo-Org/kilocode/commit/2f4bc4c2065cef02b89ff7fb2e0953cc7b95eb89) - Restore OpenCode-specific request headers for OpenCode providers instead of Kilo providers.
+
+- [#13713](https://github.com/Kilo-Org/kilocode/pull/13713) [`bf7555d`](https://github.com/Kilo-Org/kilocode/commit/bf7555d5ae68da43b131da9fda41f33b27d3ae1f) - Prune old tool outputs during long single-turn subagent runs while preserving recent working context and protected tools.
+
+- [#13692](https://github.com/Kilo-Org/kilocode/pull/13692) [`8c077fb`](https://github.com/Kilo-Org/kilocode/commit/8c077fbee7fa253c53201dbbf2161b1423cce724) Thanks [@WebReflection](https://github.com/WebReflection)! - Use organization model defaults in VS Code while preserving valid preferences. Return consistent defaults from the CLI provider APIs, respect environment credential overrides, and prevent public-model fallbacks for Org accounts.
+
+- [#13590](https://github.com/Kilo-Org/kilocode/pull/13590) [`22df919`](https://github.com/Kilo-Org/kilocode/commit/22df919bd9f012cb538d9facd3d22cb66af55ed7) Thanks [@maphew](https://github.com/maphew)! - Stop applying plan-mode edit restrictions to custom agents named `architect`. The restrictions now apply only to the built-in plan agent, so a custom architect — including an org or marketplace agent — keeps its own configured edit permissions instead of being locked to plan directories.
+
+- [#13729](https://github.com/Kilo-Org/kilocode/pull/13729) [`b8e1dae`](https://github.com/Kilo-Org/kilocode/commit/b8e1daecebd779b11cf63114b47d62b625876978) - Keep balance lookup errors in the CLI log instead of printing them over the terminal interface.
+
+- [#13578](https://github.com/Kilo-Org/kilocode/pull/13578) [`961bae3`](https://github.com/Kilo-Org/kilocode/commit/961bae3463d697714a889aefc021fcd5c8631cfd) Thanks [@maphew](https://github.com/maphew)! - Use standard CLI keybinds for multiple-choice questions in `kilo run`: Space toggles an option and Enter advances to the next question (or the review tab). Previously Enter toggled, which made it easy to submit before finishing a selection.
+
+- [#13732](https://github.com/Kilo-Org/kilocode/pull/13732) [`beb84eb`](https://github.com/Kilo-Org/kilocode/commit/beb84eb506a3f6f3af9ce9ff2d28df8b260114f6) - Show session titles and agent icons in board communication routes, with readable long-name tooltips and each message body shown once. Expose available agent execution state and report inactive or unknown recipients without implying delivery or reading.
+
+- [#13736](https://github.com/Kilo-Org/kilocode/pull/13736) [`2f500b0`](https://github.com/Kilo-Org/kilocode/commit/2f500b05a15ac6d0ad896908095f8657a9f9b580) - Clarify when agents should share discoveries and read updates while the experimental shared agent board is enabled.
+
+- Updated dependencies [[`bbc26e4`](https://github.com/Kilo-Org/kilocode/commit/bbc26e425a6c75ec012ae6fc739e21320ec3a8a7), [`8c077fb`](https://github.com/Kilo-Org/kilocode/commit/8c077fbee7fa253c53201dbbf2161b1423cce724), [`ce274e6`](https://github.com/Kilo-Org/kilocode/commit/ce274e6762255e2318a477dd225f629ed6708e17), [`b8e1dae`](https://github.com/Kilo-Org/kilocode/commit/b8e1daecebd779b11cf63114b47d62b625876978), [`c0eba39`](https://github.com/Kilo-Org/kilocode/commit/c0eba39ef5cfdd96ce2e220850c091dc9473f848)]:
+  - @kilocode/kilo-indexing@7.5.10
+  - @kilocode/kilo-gateway@7.5.10
+  - @kilocode/sdk@7.6.0
+  - @kilocode/kilo-telemetry@7.5.10
+  - @kilocode/plugin@7.5.10
+  - @opencode-ai/tui@7.5.10
+  - @opencode-ai/ui@7.5.10
+  - @opencode-ai/server@7.5.10
+  - @kilocode/plugin-atomic-chat@7.5.10
+
 ## 7.5.9
 
 ### Patch Changes
