@@ -18,8 +18,9 @@ endpoint.
 2. Fund its wallet: `npx openzoo address` prints the address — send USDC on
    Solana or Base. `npx openzoo balance` shows what is left.
 3. Pick a model id from the live catalogue at
-   `http://localhost:8402/v1/models` (free to fetch). Ids are namespaced,
-   like `z-ai/glm-5.3-flash`.
+   `http://localhost:8402/v1/models` (free to fetch). Ids are bare model
+   names, like `claude-sonnet-5` or `gpt-4o-mini`; `auto` lets the proxy pick a
+   model per request.
 
 ## Configure Kilo Code
 
@@ -45,8 +46,8 @@ in `~/.config/kilo/kilo.json` or `./kilo.json`:
     "openzoo": {
       "npm": "@ai-sdk/openai-compatible",
       "models": {
-        "z-ai/glm-5.3-flash": {
-          "name": "GLM 5.3 Flash",
+        "auto": {
+          "name": "OpenZoo Auto",
         },
       },
       "options": {
@@ -55,7 +56,7 @@ in `~/.config/kilo/kilo.json` or `./kilo.json`:
       },
     },
   },
-  "model": "openzoo/z-ai/glm-5.3-flash",
+  "model": "openzoo/auto",
 }
 ```
 
