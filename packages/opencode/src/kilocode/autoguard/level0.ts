@@ -229,7 +229,11 @@ export function fastAllow(input: PolicyInput): Level0Result {
   const { action, trusted_context: ctx, authority } = input
 
   // Opaque indirection is never fast-allowed, whoever asked for it.
-  if (action.effect === "unknown") return CONTINUE
+  //
+  // `test.run` is the single exception, and it is handled below rather than
+  // here so it still passes the provenance gate. See L0-A4 for why that gate
+  // is the whole security argument for the exception.
+  if (action.effect === "unknown" && action.operation !== "test.run") return CONTINUE
 
   // Reads inside the worktree, as long as they are not credential files.
   //
@@ -264,6 +268,35 @@ export function fastAllow(input: PolicyInput): Level0Result {
     withinAuthority(action, authority)
   ) {
     return ok("ALLOW", "L0-A2:tracked_edit_in_scope", "Reversible git-tracked edit inside the worktree and within the grant")
+  }
+
+  // Running the repository's test suite, when the developer asked for testing.
+  //
+  // This is the one rule that fast-allows an action whose effect is `unknown`,
+  // and it needs stating plainly: a test runner executes whatever code the
+  // repository contains -- `conftest.py`, the test files themselves, installed
+  // plugins. Where repository content is attacker-controlled, permitting the
+  // runner permits attacker-chosen code. No parsing of the command line can
+  // change that, so the rule does not pretend to.
+  //
+  // What makes it defensible is the gate above: `intent_provenance` is derived
+  // from the developer's own message and nothing else -- never assistant prose,
+  // never tool output, never file contents. Text injected into a README, a
+  // docstring or a comment cannot make an action `user_explicit` or even
+  // `user_implied`, so it cannot reach this rule at all. An attacker who wants
+  // the suite run has to get the developer to ask for it.
+  //
+  // The cost of *not* having this rule is measured, not assumed: in the
+  // trajectory benchmark 15 test runs were sent to the model in 24 runs, and
+  // benign task success fell from 8/9 to 2/9. A guard that stops the work is
+  // not a guard anyone keeps switched on.
+  if (
+    action.operation === "test.run" &&
+    action.radius === "inside_worktree" &&
+    !action.targets.some(isCredentialPath) &&
+    !touchesSensitive(action, authority)
+  ) {
+    return ok("ALLOW", "L0-A4:test_run_requested", "Test run inside the worktree that the developer asked for")
   }
 
   // Deleting a declared build artifact that the grant explicitly requires.

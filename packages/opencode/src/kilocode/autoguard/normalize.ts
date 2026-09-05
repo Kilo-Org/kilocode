@@ -294,6 +294,66 @@ function flagsOf(tokens: string[]): Record<string, unknown> {
   return flags
 }
 
+/**
+ * Test runners recognised as such, so the rule layer can reason about them.
+ *
+ * Deliberately narrow. `npm test`, `yarn test`, `make test` and friends are
+ * NOT here: they run whatever script the repository declares, which is a
+ * general executor wearing a test runner's name.
+ */
+const TEST_RUNNERS = [
+  /^pytest$/,
+  /^py\.test$/,
+]
+
+/** `python -m pytest`, `python3 -m unittest`, and nothing else. */
+const PYTHON_TEST_MODULES = new Set(["pytest", "unittest"])
+
+/**
+ * Flags that turn pytest back into a general executor.
+ *
+ * `-p` loads an arbitrary plugin module, `-c`/`--config-file`/`--rootdir`
+ * relocate which files are collected, and `--pdb` drops into an interactive
+ * interpreter. Any of these and the invocation stops being "run this
+ * repository's tests", so it keeps the opaque classification.
+ *
+ * The list is per-runner on purpose: the same letter means different things to
+ * different tools. `-s` disables output capture in pytest but names the start
+ * directory in `unittest discover`, and `-p` loads a plugin in pytest but is a
+ * filename pattern in unittest. A shared list would either miss a real escape
+ * or reject an ordinary invocation -- it rejected `python -m unittest discover
+ * -s tests`, which is how this was caught.
+ */
+const PYTEST_ESCAPE_FLAGS =
+  /^(-p|--plugin|-c|--config-file|--rootdir|--pdb|--pdbcls|--import-mode)$/
+
+/**
+ * `unittest` has no plugin-loading flag: `-s`/`-t` only move the start and top
+ * directories, and where they point is already checked by the radius of the
+ * resulting targets rather than by pattern-matching the flag.
+ */
+const UNITTEST_ESCAPE_FLAGS = /^(--locals)$/
+
+function testRunnerTargets(tokens: string[]): string[] | null {
+  const verb = tokens[0] ?? ""
+  let rest = tokens.slice(1)
+  let escapes = PYTEST_ESCAPE_FLAGS
+
+  if (!TEST_RUNNERS.some((r) => r.test(verb))) {
+    // `python -m pytest ...` / `python3 -m unittest ...`
+    if (!/^python3?$/.test(verb) || tokens[1] !== "-m") return null
+    const module = tokens[2] ?? ""
+    if (!PYTHON_TEST_MODULES.has(module)) return null
+    escapes = module === "unittest" ? UNITTEST_ESCAPE_FLAGS : PYTEST_ESCAPE_FLAGS
+    rest = tokens.slice(3)
+  }
+
+  if (rest.some((t) => escapes.test(t))) return null
+  // `discover` is a subcommand, not a path; keeping it would give the action a
+  // target that does not exist and drag the radius check off a real path.
+  return rest.filter((t) => !t.startsWith("-") && t !== "discover")
+}
+
 /** Parse one shell segment into an action, ignoring provenance. */
 function normalizeShellSegment(
   segment: string,
@@ -312,6 +372,23 @@ function normalizeShellSegment(
       radius: widestRadius(targets, ctx),
       reversible: "local_untracked",
       options,
+    }
+  }
+
+  // A recognised test runner. The effect stays `unknown` on purpose: running
+  // tests executes whatever code the repository contains, and calling that
+  // anything else would be a lie. What this branch buys is a *name* for the
+  // action, so one narrow rule can permit it under conditions an attacker
+  // cannot satisfy, instead of it being indistinguishable from `./deploy.sh`.
+  const testTargets = testRunnerTargets(tokens)
+  if (testTargets) {
+    return {
+      operation: "test.run",
+      targets: testTargets,
+      effect: "unknown",
+      radius: widestRadius(testTargets, ctx),
+      reversible: "local_untracked",
+      options: { ...options, runner: verb },
     }
   }
 

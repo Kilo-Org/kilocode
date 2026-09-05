@@ -30,6 +30,7 @@ const INTENT_VERBS: Record<string, RegExp> = {
   "dependency.install": /\b(install|add .*(dep|package|library)|dependency)\b/i,
   "network.http_post": /\b(upload|post|send|report|publish)\b/i,
   "script.execute": /\b(run|execute|invoke)\b/i,
+  "test.run": /\b(test|tests|testing|pytest|suite|spec|specs)\b/i,
 }
 
 /** Tokens too generic to count as the developer naming a target. */

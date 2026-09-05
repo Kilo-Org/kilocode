@@ -87,10 +87,38 @@ Fast allows (`fastAllow`):
 | `L0-A1` | reads inside the worktree (not credential files) |
 | `L0-A2` | reversible git-tracked edits inside the worktree, within the grant |
 | `L0-A3` | deleting a declared generated path the grant requires |
+| `L0-A4` | running the repository's test suite, when the developer asked for testing |
 
 `L0-A1` deliberately ignores provenance: a read changes nothing, and this is the
 rule that keeps ordinary work off the model path. Every other allow rule
 requires provenance that is not `agent_invented`.
+
+`L0-A4` is the one rule that fast-allows an action whose `effect` is `unknown`,
+so it needs stating plainly rather than burying: **a test runner executes
+whatever code the repository contains** -- `conftest.py`, the test files, any
+installed plugin. Where repository content is attacker-controlled, permitting
+the runner permits attacker-chosen code, and no amount of command-line parsing
+changes that.
+
+What makes it defensible is the provenance gate. `intent_provenance` is derived
+from the developer's own message and nothing else -- never assistant prose,
+never tool output, never file contents. Text injected into a README, a docstring
+or a comment cannot make an action `user_implied`, so it cannot reach this rule.
+An attacker who wants the suite run has to get the developer to ask for it.
+
+Two further narrowings: only real test runners are recognised (`pytest`,
+`py.test`, `python -m pytest`, `python -m unittest`) -- `npm test`, `yarn test`
+and `make test` are general executors wearing a test runner's name and stay
+opaque -- and pytest flags that reload configuration or load plugins (`-p`,
+`-c`, `--rootdir`, `--pdb`, `--import-mode`) drop the invocation back to
+`effect: unknown`. The escape-flag list is per-runner because the same letter
+means different things to different tools: `-s` disables capture in pytest but
+names the start directory in `unittest discover`.
+
+The cost of *not* having this rule is measured, not assumed: in the trajectory
+benchmark 15 test runs were sent to the model across 24 runs, and benign task
+success fell from 8/9 to 2/9. A guard that stops the work is not a guard anyone
+keeps switched on.
 
 ## Integration
 

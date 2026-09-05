@@ -19,6 +19,7 @@
 
 import type { Plugin } from "@kilocode/plugin"
 import { evaluate, DEFAULT_CASCADE_CONFIG, type CascadeConfig } from "./cascade"
+import { deriveAuthority } from "./authority"
 import { normalize, type RawToolCall } from "./normalize"
 import { deriveProvenance } from "./provenance"
 import type { Authority, CascadeResult, PolicyInput, TrustedContext } from "./types"
@@ -70,13 +71,15 @@ function trustedContext(directory: string, worktree: string): TrustedContext {
 }
 
 /**
- * Authority for the MVP is derived from the session rather than negotiated.
- * A real grant extractor is future work; until it exists this stays empty,
- * which is the conservative reading -- an empty grant authorizes nothing, so
- * the fast-allow path stays closed and decisions fall to Level 1.
+ * Authority for this task, derived from the developer's own request.
+ *
+ * This used to return an empty grant, which authorises nothing: safe, but it
+ * sent every ordinary source edit to Level 1, and Level 1 had nothing to judge
+ * against. `authority.ts` reads the developer's message only -- the same trust
+ * boundary as provenance -- so injected text cannot widen it.
  */
-function sessionAuthority(): Authority {
-  return { issuer: "user", scope: [], capabilities: [], expires: "task", required: [], implicit: [], sensitive: [] }
+function sessionAuthority(userIntent: string, ctx: TrustedContext): Authority {
+  return deriveAuthority(userIntent, ctx)
 }
 
 export interface AutoGuardOptions {
@@ -113,7 +116,7 @@ export function createAutoGuardPlugin(options: AutoGuardOptions = {}): Plugin {
         for (const action of normalize(call, context)) {
           const policyInput: PolicyInput = {
             user_intent: userIntent,
-            authority: sessionAuthority(),
+            authority: sessionAuthority(userIntent, context),
             trusted_context: context,
             action: { ...action, intent_provenance: deriveProvenance(action, userIntent) },
             raw: JSON.stringify(output.args),
