@@ -288,6 +288,26 @@ describe("buildFamilyCosts", () => {
     expect(costs.get("s3")).toBeCloseTo(0.1)
   })
 
+  it("uses the session total when only a page of messages is loaded", () => {
+    const family = new Set(["s1"])
+    const messages = { s1: [msg("recent", "assistant", 0.25)] }
+    const sessions = { s1: { cost: 1 } }
+
+    const costs = buildFamilyCosts(family, messages, sessions)
+
+    expect(costs.get("s1")).toBe(1)
+  })
+
+  it("keeps a newer loaded-message total above a stale session total", () => {
+    const family = new Set(["s1"])
+    const messages = { s1: [msg("old", "assistant", 0.75), msg("live", "assistant", 0.5)] }
+    const sessions = { s1: { cost: 1 } }
+
+    const costs = buildFamilyCosts(family, messages, sessions)
+
+    expect(costs.get("s1")).toBe(1.25)
+  })
+
   it("subtracts each subagent's propagated total from its parent (single child)", () => {
     // Backend contract: parent's message.info.cost already includes the
     // child's total. Parent total $0.15 = parent own $0.05 + child $0.10.

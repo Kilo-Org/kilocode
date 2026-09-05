@@ -150,9 +150,10 @@ describe("sessionToWebview", () => {
   })
 
   it("preserves id and title", () => {
-    const result = sessionToWebview(makeSession({ id: "abc", title: "My Session" }))
+    const result = sessionToWebview(makeSession({ id: "abc", title: "My Session", cost: 1.25 }))
     expect(result.id).toBe("abc")
     expect(result.title).toBe("My Session")
+    expect(result.cost).toBe(1.25)
   })
 
   it("produces valid ISO format", () => {
