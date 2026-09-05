@@ -68,6 +68,8 @@ class MessageView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    // Forks the session at this message. Null on surfaces that cannot fork (sidebar, read-only tabs).
+    private val fork: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
@@ -627,6 +629,7 @@ class MessageView(
         val bar = MessageToolbar(
             { prompt?.copyMarkdown(trim = false) },
             revert?.let { fn -> { fn(msg.info.id) } },
+            fork?.let { fn -> { fn(msg.info.id) } },
         )
         private val placeholder = bar.placeholder()
         private var reverting = false

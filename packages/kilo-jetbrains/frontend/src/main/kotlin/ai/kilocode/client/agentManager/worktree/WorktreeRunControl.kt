@@ -10,7 +10,6 @@ import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunConfigListDto
 import ai.kilocode.rpc.dto.RunStateDto
-import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
@@ -80,7 +79,7 @@ internal class WorktreeRunControl(
     private fun sync(next: List<RunStateDto>) {
         if (states == next) return
         states = next
-        button.icon = if (next.isEmpty()) AllIcons.Actions.Execute else ExecutionUtil.getLiveIndicator(AllIcons.Actions.Execute)
+        button.icon = if (next.isEmpty()) AllIcons.Actions.Execute else WorktreeIcons.runIndicator
     }
 
     @RequiresEdt

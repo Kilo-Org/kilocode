@@ -1,12 +1,19 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.ConflictDotIcon
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.mergeLabel
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -21,6 +28,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
+import java.awt.event.MouseEvent
 import javax.swing.JScrollPane
 import javax.swing.JSeparator
 import javax.swing.ScrollPaneConstants
@@ -65,14 +74,170 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         assertTrue("expected the check counts, got $lines", lines.contains("4 checks passed"))
     }
 
+    fun `test the popup names what the conversation count is counting`() {
+        val body = body()
+
+        edt {
+            body.update(
+                stats = null,
+                pull = pr(GhReview.APPROVED, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)),
+                name = "feature-x",
+                dirty = null,
+            )
+        }
+
+        // The row shows a bare number beside a glyph; this is where it becomes a sentence.
+        val lines = labels(body)
+        assertTrue("expected the conversation counts, got $lines", lines.contains("3 of 8 review conversations unresolved"))
+    }
+
+    /**
+     * The merge verdict has no glyph in the row's strip — it is marked on the changes badge instead — so the
+     * popup is the only surface that states it in words, and it has to open the page that shows the conflict.
+     */
+    fun `test a conflicting merge gets its own clickable line under the changes`() {
+        val browser = installBrowser()
+        val body = body()
+
+        edt {
+            body.update(
+                stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, base = "origin/main"),
+                pull = pr(GhReview.APPROVED, GhChecksDto()).copy(merge = GhMerge.CONFLICTING),
+                name = "feature-x",
+                dirty = null,
+            )
+            layout(body)
+        }
+
+        val lines = labels(body)
+        assertTrue("expected the merge verdict, got $lines", lines.contains(mergeLabel("origin/main")))
+        val line = edt { hovers(body).first() }
+        // Marked with the same red dot the changes badge is marked with, so the words and the mark match.
+        val label = edt { components(line).filterIsInstance<JBLabel>().single() }
+        assertSame(ConflictDotIcon, edt { label.icon })
+        assertEquals(Cursor.HAND_CURSOR, edt { line.cursor.type })
+        assertEquals(mergeLabel("origin/main"), edt { line.accessibleContext.accessibleName })
+
+        edt { click(line) }
+
+        // The conversation page, which is where GitHub prints the conflict and offers the web editor.
+        assertEquals(listOf("https://example.test/pr/7"), browser.urls)
+        // Above the verdicts, and under the summary whose badge carries the mark.
+        edt {
+            val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
+            val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
+            assertTrue(bottom(body, changes) <= top(body, label))
+            assertTrue(bottom(body, label) <= top(body, review))
+        }
+    }
+
+    fun `test a merging branch has no merge line`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.APPROVED, GhChecksDto()).copy(merge = GhMerge.CLEAN), "feature-x", null) }
+
+        // Merging cleanly is the normal state, and a line for it would push the verdicts down to report
+        // that nothing is wrong.
+        val lines = labels(body)
+        assertTrue("expected no merge line, got $lines", lines.none { it.contains("Merge conflicts") })
+    }
+
+    fun `test a settled conversation drops its line`() {
+        val body = body()
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)), "feature-x", null) }
+        assertTrue(labels(body).contains("3 of 8 review conversations unresolved"))
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 0)), "feature-x", null) }
+
+        // Every thread resolved is nothing outstanding, not "0 unresolved".
+        val lines = labels(body)
+        assertTrue("the stale conversation line must be gone, got $lines", lines.none { it.contains("conversations") })
+    }
+
+    fun `test each verdict line is a hoverable click target`() {
+        val browser = installBrowser()
+        val body = body()
+
+        edt {
+            body.update(
+                stats = null,
+                pull = pr(
+                    GhReview.APPROVED,
+                    GhChecksDto(GhChecks.FAILED, total = 5, failed = 2),
+                    GhCommentsDto(total = 8, unresolved = 3),
+                ),
+                name = "feature-x",
+                dirty = null,
+            )
+        }
+
+        val lines = edt { hovers(body) }
+        assertEquals(3, lines.size)
+        assertTrue("every line must read as clickable, got $lines", edt { lines.all { it.cursor.type == Cursor.HAND_CURSOR } })
+
+        // Each line already states its verdict, so the tooltip carries only the click hint. Repeating
+        // "2 of 5 checks failed" over a line that reads exactly that tells the user nothing.
+        assertEquals(
+            listOf(
+                "<html>Click to open the pull request conversation in your browser.</html>",
+                "<html>Click to open the pull request in your browser.</html>",
+                "<html>Click to open the checks in your browser.</html>",
+            ),
+            edt { lines.map { it.toolTipText } },
+        )
+        // Announced by its sentence rather than by the hint, which alone would not say what opens.
+        assertEquals(
+            listOf("3 of 8 review conversations unresolved", "Review approved", "2 of 5 checks failed"),
+            edt { lines.map { it.accessibleContext.accessibleName } },
+        )
+
+        edt { lines.forEach { click(it) } }
+
+        // The popup is the one surface that says "2 of 5 checks failed" in words, so that line goes to the
+        // log rather than the conversation the other two open.
+        assertEquals(
+            listOf(
+                "https://example.test/pr/7",
+                "https://example.test/pr/7",
+                "https://example.test/pr/7/checks",
+            ),
+            browser.urls,
+        )
+    }
+
+    fun `test the tooltip covers the whole line, not just its text`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto(), GhCommentsDto(total = 8, unresolved = 3)), "feature-x", null) }
+
+        // The pill is the click target, so a tooltip only on the label would go quiet over the padding the
+        // user is just as likely to be pointing at.
+        val line = edt { hovers(body).single() }
+        val label = edt { components(line).filterIsInstance<JBLabel>().single() }
+        assertEquals(edt { line.toolTipText }, edt { label.toolTipText })
+    }
+
+    fun `test a hidden verdict line is not a click target`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.NONE, GhChecksDto()), "feature-x", null) }
+
+        // The lines are retained and only hidden, so a stale action behind an invisible row would still be
+        // reachable by the keyboard if the slot were left in the column.
+        assertTrue(edt { hovers(body).isEmpty() })
+    }
+
     fun `test verdict lines are hidden when github reports neither`() {
         val body = body()
 
         edt { body.update(null, pr(GhReview.NONE, GhChecksDto()), "feature-x", null) }
 
-        // A PR with no reviewers and no CI must not leave two empty rows in the popup.
+        // A PR with no reviewers, no CI, and nothing unresolved must not leave three empty rows.
         val lines = labels(body)
-        assertTrue("expected no verdict lines, got $lines", lines.none { it.contains("Review") || it.contains("check") })
+        assertTrue(
+            "expected no verdict lines, got $lines",
+            lines.none { it.contains("Review") || it.contains("check") || it.contains("conversations") },
+        )
     }
 
     fun `test a required but ungiven review is not stated`() {
@@ -102,7 +267,11 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         edt {
             body.update(
                 stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, ahead = 2, base = "origin/main"),
-                pull = pr(GhReview.APPROVED, GhChecksDto(GhChecks.PASSED, total = 4, passed = 4)),
+                pull = pr(
+                    GhReview.APPROVED,
+                    GhChecksDto(GhChecks.PASSED, total = 4, passed = 4),
+                    GhCommentsDto(total = 8, unresolved = 3),
+                ),
                 name = "feature-x",
                 dirty = WorktreeDirtyDto(path, additions = 2, files = 1),
             )
@@ -116,12 +285,17 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
             val rule = components(body).filterIsInstance<JSeparator>().single { it.orientation == SwingConstants.HORIZONTAL }
             val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
             val checks = components(body).filterIsInstance<JBLabel>().single { it.text == "4 checks passed" }
+            val comments = components(body)
+                .filterIsInstance<JBLabel>()
+                .single { it.text == "3 of 8 review conversations unresolved" }
 
-            // The state pill and the title share the first line; everything else gets its own.
+            // The state pill and the title share the first line; everything else gets its own, in the same
+            // order as the glyph strip above them.
             assertTrue(kotlin.math.abs(middle(body, badge) - middle(body, title)) <= 2)
             assertTrue(bottom(body, title) <= top(body, rule))
             assertTrue(bottom(body, rule) <= top(body, changes))
-            assertTrue(bottom(body, changes) <= top(body, review))
+            assertTrue(bottom(body, changes) <= top(body, comments))
+            assertTrue(bottom(body, comments) <= top(body, review))
             assertTrue(bottom(body, review) <= top(body, checks))
             // One row for every counter, committed and uncommitted alike.
             val counters = components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }
@@ -203,6 +377,27 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
 
     private fun body(): WorktreeRowPopupBody = edt { WorktreeRowPopupBody(openDiff = {}, onLocal = {}) }
 
+    /**
+     * The verdict lines' hover areas, in popup order. Areas inside the embedded [PrHeaderView] are left out
+     * — that widget has its own five and its own tests — and so is any line that is currently hidden, since
+     * a reader cannot reach it.
+     */
+    @RequiresEdt
+    private fun hovers(body: WorktreeRowPopupBody): List<HoverArea> {
+        val header = components(body).filterIsInstance<PrHeaderView>().single()
+        return components(body)
+            .filterIsInstance<HoverArea>()
+            .filter { !SwingUtilities.isDescendingFrom(it, header) }
+            .filter { area -> generateSequence<Component>(area) { it.parent }.all { it.isVisible } }
+    }
+
+    @RequiresEdt
+    private fun click(target: Component) {
+        target.dispatchEvent(
+            MouseEvent(target, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false, MouseEvent.BUTTON1),
+        )
+    }
+
     /** The title's styled fragments, which is where the full text lives once the line is too long. */
     @RequiresEdt
     private fun fragments(title: SimpleColoredComponent): List<String> {
@@ -239,8 +434,8 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun middle(body: WorktreeRowPopupBody, child: Component): Int = top(body, child) + child.height / 2
 
-    private fun pr(review: GhReview, checks: GhChecksDto) =
-        WorktreePrDto(path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks)
+    private fun pr(review: GhReview, checks: GhChecksDto, comments: GhCommentsDto = GhCommentsDto()) =
+        WorktreePrDto(path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks, comments)
 
     /** Text of every visible label in the body, which is what a reader actually sees. */
     private fun labels(body: WorktreeRowPopupBody): List<String> = edt {
