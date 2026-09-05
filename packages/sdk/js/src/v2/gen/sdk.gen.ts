@@ -71,6 +71,8 @@ import type {
   ConfigUpdateResponses,
   ConfigWarningsErrors,
   ConfigWarningsResponses,
+  DisabledProvidersListErrors,
+  DisabledProvidersListResponses,
   EnhancePromptEnhanceErrors,
   EnhancePromptEnhanceResponses,
   EventSubscribeResponse,
@@ -5654,6 +5656,7 @@ export class Config3 extends HeyApiClient {
       }
       diff_style?: "auto" | "stacked"
       mouse?: boolean
+      vim?: boolean
       attention?: {
         enabled?: boolean
         notifications?: boolean
@@ -5681,6 +5684,7 @@ export class Config3 extends HeyApiClient {
             { in: "body", key: "scroll_acceleration" },
             { in: "body", key: "diff_style" },
             { in: "body", key: "mouse" },
+            { in: "body", key: "vim" },
             { in: "body", key: "attention" },
           ],
         },
@@ -6553,6 +6557,42 @@ export class CommitMessage extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class DisabledProviders extends HeyApiClient {
+  /**
+   * List disabled providers
+   *
+   * List providers hidden by the disabled_providers config so the settings UI can re-enable them.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      DisabledProvidersListResponses,
+      DisabledProvidersListErrors,
+      ThrowOnError
+    >({
+      url: "/provider/disabled",
+      ...options,
+      ...params,
     })
   }
 }
@@ -11978,6 +12018,11 @@ export class KiloClient extends HeyApiClient {
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+  }
+
+  private _disabledProviders?: DisabledProviders
+  get disabledProviders(): DisabledProviders {
+    return (this._disabledProviders ??= new DisabledProviders({ client: this.client }))
   }
 
   private _enhancePrompt?: EnhancePrompt
