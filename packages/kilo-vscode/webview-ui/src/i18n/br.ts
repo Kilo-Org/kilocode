@@ -827,7 +827,8 @@ export const dict = {
   "settings.browser.description":
     "Quando ativado, o agente de IA pode interagir com páginas da web — navegar, clicar, digitar e capturar telas. Uma janela do Chrome será aberta para que você possa acompanhar o trabalho do agente.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
-  "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
+  "settings.browser.enable.description":
+    "Ativar o navegador do Agent Manager específico de cada sessão para aplicações locais e páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
   "settings.browser.systemChrome.description":
     "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",

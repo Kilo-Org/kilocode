@@ -1,9 +1,16 @@
-import { diagnostic, type BrowserBroker, type BrowserState } from "../services/browser-automation"
+import { BrowserLaunchError, diagnostic, type BrowserBroker, type BrowserState } from "../services/browser-automation"
 import type { AgentManagerInMessage, AgentManagerOutMessage } from "./types"
 import type { ProjectContexts } from "./project/contexts"
 import type { Host } from "./host"
 
 type BrowserMessage = Extract<AgentManagerInMessage, { type: `agentManager.browser.${string}` }>
+type Dependencies = {
+  host: Host
+  contexts: ProjectContexts
+  browser: BrowserBroker
+  post: (message: AgentManagerOutMessage) => void
+  log: (...args: unknown[]) => void
+}
 
 function position(message: BrowserMessage): { x: number; y: number; width: number; height: number } | undefined {
   if (
@@ -22,6 +29,7 @@ function fail(
   m: BrowserMessage,
   error: string,
   state?: BrowserState,
+  missing?: BrowserState["missing"],
 ): void {
   if (m.type === "agentManager.browser.inspect") {
     deps.post({
@@ -47,6 +55,7 @@ function fail(
     status: "error",
     errors: 0,
     error,
+    missing,
   })
 }
 
@@ -62,16 +71,47 @@ function route(contexts: ProjectContexts, message: BrowserMessage): { project: s
   return directory ? { project: ctx.id, directory } : undefined
 }
 
-function action(
-  m: BrowserMessage,
-  deps: {
-    host: Host
-    contexts: ProjectContexts
-    browser: BrowserBroker
-    post: (message: AgentManagerOutMessage) => void
-    log: (...args: unknown[]) => void
-  },
-): boolean {
+function streaming(m: BrowserMessage, project: string, deps: Dependencies): boolean {
+  if (m.type === "agentManager.browser.viewport") {
+    if (!m.browserId || typeof m.navigation !== "number" || !Number.isInteger(m.navigation) || !m.viewport) return true
+    void deps.browser.viewport(m.sessionId, project, m.browserId, m.navigation, m.viewport).catch((error: unknown) => {
+      deps.log("Browser stream failed:", error)
+      fail(deps, m, diagnostic(error), deps.browser.get(m.sessionId, project))
+    })
+    return true
+  }
+  if (m.type === "agentManager.browser.acknowledge") {
+    if (m.identity && typeof m.sequence === "number") {
+      deps.browser.acknowledge(m.sessionId, project, m.identity, m.sequence)
+    }
+    return true
+  }
+  if (m.type !== "agentManager.browser.interact") return false
+  const identity = m.identity
+  const event = m.event
+  if (!identity || !event) return true
+  void (async () => {
+    if (!deps.browser.accepts(m.sessionId, project, identity)) return
+    if (event.kind === "clipboard") {
+      await deps.browser.interact(
+        m.sessionId,
+        project,
+        identity,
+        event,
+        deps.host.readClipboard?.bind(deps.host),
+        (text) => deps.host.copyToClipboard(text),
+      )
+      return
+    }
+    await deps.browser.interact(m.sessionId, project, identity, event)
+  })().catch((error: unknown) => {
+    deps.log("Browser input failed:", error)
+    fail(deps, m, diagnostic(error), deps.browser.get(m.sessionId, project))
+  })
+  return true
+}
+
+function action(m: BrowserMessage, deps: Dependencies): boolean {
   const scope = route(deps.contexts, m)
   if (!scope) {
     fail(deps, m, "Browser session is not available in the selected project.")
@@ -82,6 +122,7 @@ function action(
     if (current) deps.post(browserMessage(current))
     return true
   }
+  if (streaming(m, scope.project, deps)) return true
   if (m.type === "agentManager.browser.devtools") {
     void deps.browser
       .devtools(m.sessionId, scope.project, m.theme === "light" ? "light" : "dark")
@@ -102,20 +143,21 @@ function action(
   if (m.type === "agentManager.browser.open") {
     if (!m.url) return true
     void deps.browser
-      .open({ projectId: scope.project, sessionId: m.sessionId, directory: scope.directory }, m.url)
+      .open({ projectId: scope.project, sessionId: m.sessionId, directory: scope.directory }, m.url, false)
       .catch((error: unknown) => {
         deps.log("Browser open failed:", error)
-        const current = deps.browser.get(m.sessionId, scope.project)
-        if (current) {
-          deps.post(browserMessage(current))
-          return
-        }
-        fail(deps, m, diagnostic(error, m.url))
+        fail(
+          deps,
+          m,
+          diagnostic(error, m.url),
+          deps.browser.get(m.sessionId, scope.project),
+          error instanceof BrowserLaunchError ? error.missing : undefined,
+        )
       })
     return true
   }
   if (m.type === "agentManager.browser.refresh") {
-    void deps.browser.refresh(m.sessionId, scope.project).catch((error: unknown) => {
+    void deps.browser.refresh(m.sessionId, scope.project, false).catch((error: unknown) => {
       deps.log("Browser refresh failed:", error)
       const current = deps.browser.get(m.sessionId, scope.project)
       if (current) deps.post(browserMessage(current))
@@ -153,22 +195,14 @@ function action(
       })
     return true
   }
+  if (m.type !== "agentManager.browser.close") return false
   void deps.browser
     .close(m.sessionId, scope.project)
     .catch((error: unknown) => deps.log("Browser close failed:", error))
   return true
 }
 
-export function handleBrowserMessage(
-  message: AgentManagerInMessage,
-  deps: {
-    host: Host
-    contexts: ProjectContexts
-    browser: BrowserBroker
-    post: (message: AgentManagerOutMessage) => void
-    log: (...args: unknown[]) => void
-  },
-): boolean {
+export function handleBrowserMessage(message: AgentManagerInMessage, deps: Dependencies): boolean {
   if (!message.type.startsWith("agentManager.browser.")) return false
   const m = message as BrowserMessage
   if (!deps.host.isTrusted()) {
@@ -196,6 +230,7 @@ export function browserMessage(state: BrowserState): AgentManagerOutMessage {
     errors: state.errors,
     logs: state.logs,
     error: state.error,
+    missing: state.missing,
     frameError: state.frameError,
   }
 }

@@ -266,14 +266,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Вставте URL PR вище або створіть нове робоче дерево.",
   "agentManager.import.failed": "Імпортування не вдалося",
   "agentManager.browser.title": "Браузер",
-  "agentManager.browser.url": "URL локальної програми",
+  "agentManager.browser.url": "Адреса",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Відкрити",
   "agentManager.browser.refresh": "Оновити браузер",
   "agentManager.browser.close": "Закрити браузер",
   "agentManager.browser.inspect": "Вибрати елемент",
   "agentManager.browser.devtoolsTitle": "Інструменти розробника",
-  "agentManager.browser.empty": "Відкрийте локальну програму, щоб переглянути її тут.",
+  "agentManager.browser.empty":
+    "Відкрийте локальну програму або загальнодоступну HTTPS-сторінку, щоб переглянути її тут.",
+  "agentManager.browser.requirement":
+    "Потрібен Google Chrome або сумісний браузер Playwright Chromium. Браузери не встановлюються автоматично.",
+  "agentManager.browser.missingTitle": "Браузер не знайдено",
+  "agentManager.browser.missingChrome":
+    "Google Chrome не знайдено. Встановіть Chrome для використання функції «Автоматизація браузера», а потім повторіть спробу.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium не знайдено. Встановіть сумісний браузер або увімкніть «Використовувати системний Chrome» у розділі «Налаштування браузера».",
+  "agentManager.browser.downloadChrome": "Завантажити Chrome",
+  "agentManager.browser.settings": "Налаштування браузера",
   "agentManager.browser.noSession": "Спочатку виберіть сесію Agent Manager.",
   "agentManager.browser.screenshotAlt": "Поточна сторінка браузера",
   "agentManager.browser.errors": "Проблеми браузера: {{count}}",

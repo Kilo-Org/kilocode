@@ -45,7 +45,7 @@ function profile(mode: Profile["network"]["mode"]): Profile {
   }
 }
 
-function serve(fetch: (request: Request) => Response) {
+function serve(fetch: (request: Request) => Response | Promise<Response>) {
   return Effect.acquireRelease(
     Effect.sync(() => Bun.serve({ hostname: "127.0.0.1", port: 0, fetch })),
     (server) => Effect.promise(() => server.stop(true)),
@@ -203,6 +203,71 @@ describe("model HTTP tool network policy", () => {
     }).pipe(Effect.scoped)
   })
 
+  for (const url of ["https://www.google.com/", "https://www.google.com/search?q=browser"]) {
+    it.instance(`forwards approved public HTTPS (${url}) through only the authenticated loopback broker`, () => {
+      let requests = 0
+      let approvals = 0
+      return Effect.gen(function* () {
+        const server = yield* serve(async (request) => {
+          requests++
+          expect(approvals).toBe(1)
+          expect(request.method).toBe("POST")
+          expect(new URL(request.url).pathname).toBe("/browser/open")
+          expect(request.headers.get("authorization")).toBe("Bearer browser-secret")
+          expect(await request.json()).toMatchObject({ url, sessionID: ctx.sessionID })
+          return Response.json({
+            browserId: "public-browser",
+            sessionId: ctx.sessionID,
+            status: "ready",
+            url,
+            errors: 0,
+          })
+        })
+        const http = yield* HttpClient.HttpClient
+        const env = yield* Env.Service
+        yield* env.set("KILO_BROWSER_BROKER_URL", server.url.origin)
+        yield* env.set("KILO_BROWSER_BROKER_TOKEN", "browser-secret")
+        const info = yield* BrowserOpenTool
+        const browser = yield* info.init()
+        const result = yield* run(
+          profile("deny"),
+          ToolNetwork.tool(
+            ToolNetwork.builtin({ id: "browser_open" }),
+            browser.execute(
+              { url },
+              {
+                ...ctx,
+                ask: (request) =>
+                  Effect.gen(function* () {
+                    approvals++
+                    expect(request.permission).toBe("browser_open")
+                    expect(request.patterns).toEqual(["navigate:https://www.google.com"])
+                    expect(request.always).toEqual([])
+                    expect(yield* enabled).toBe(true)
+                  }),
+              },
+            ),
+          ).pipe(
+            Effect.tap(() =>
+              Effect.gen(function* () {
+                expect(yield* enabled).toBe(true)
+                const exit = yield* Effect.exit(http.get(server.url.toString()))
+                expect(Exit.isFailure(exit)).toBe(true)
+                if (Exit.isFailure(exit)) {
+                  expect(Cause.pretty(exit.cause)).toContain("Sandbox denied outbound network access")
+                }
+              }),
+            ),
+          ),
+        )
+        expect(requests).toBe(1)
+        expect(approvals).toBe(1)
+        expect(result.metadata.status).toBe("ready")
+        expect(result.metadata.url).toBe(url)
+      }).pipe(Effect.scoped)
+    })
+  }
+
   it.instance("rejects browser broker redirects without contacting their target", () => {
     let requests = 0
     return Effect.gen(function* () {
@@ -244,6 +309,14 @@ describe("model HTTP tool network policy", () => {
       const browser = yield* info.init()
       for (const url of [
         "https://localhost:3018/",
+        "https://localhost./",
+        "https://private.localhost/",
+        "https://127.0.0.1/",
+        "https://10.0.0.1/",
+        "https://169.254.169.254/",
+        "https://[::1]/",
+        "https://[::ffff:127.0.0.1]/",
+        "https://user:secret@example.com/",
         "http://example.com/",
         "http://user:secret@localhost:3018/",
         "http://[::1]:3018/",

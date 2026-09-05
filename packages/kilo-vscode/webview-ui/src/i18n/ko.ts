@@ -816,7 +816,8 @@ export const dict = {
   "settings.browser.description":
     "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description":
+    "로컬 애플리케이션과 공개 HTTPS 페이지를 위한 세션별 Agent Manager 브라우저를 활성화합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",

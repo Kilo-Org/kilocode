@@ -823,7 +823,8 @@ export const dict = {
   "settings.browser.description":
     "Når aktiveret kan AI-agenten interagere med websider — navigere, klikke, skrive og tage skærmbilleder. Et Chrome-vindue åbnes, så du kan se agenten arbejde.",
   "settings.browser.enable.title": "Aktivér browserautomatisering",
-  "settings.browser.enable.description": "Registrér Playwright MCP-serveren hos CLI-backend'en.",
+  "settings.browser.enable.description":
+    "Aktivér den sessionsspecifikke browser i Agent Manager til lokale applikationer og offentlige HTTPS-sider.",
   "settings.browser.systemChrome.title": "Brug system-Chrome",
   "settings.browser.systemChrome.description":
     "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans.",

@@ -257,14 +257,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Wklej URL PR powyżej lub utwórz nowy Worktree.",
   "agentManager.import.failed": "Import nie powiódł się",
   "agentManager.browser.title": "Przeglądarka",
-  "agentManager.browser.url": "URL lokalnej aplikacji",
+  "agentManager.browser.url": "Adres",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Otwórz",
   "agentManager.browser.inspect": "Wybierz element",
   "agentManager.browser.devtoolsTitle": "Narzędzia deweloperskie",
   "agentManager.browser.refresh": "Odśwież przeglądarkę",
   "agentManager.browser.close": "Zamknij przeglądarkę",
-  "agentManager.browser.empty": "Otwórz lokalną aplikację, aby wyświetlić ją tutaj.",
+  "agentManager.browser.empty":
+    "Otwórz lokalną aplikację lub publiczną stronę HTTPS, aby wyświetlić jej podgląd tutaj.",
+  "agentManager.browser.requirement":
+    "Wymaga Google Chrome lub zgodnej przeglądarki Playwright Chromium. Przeglądarki nie są instalowane automatycznie.",
+  "agentManager.browser.missingTitle": "Nie znaleziono przeglądarki",
+  "agentManager.browser.missingChrome":
+    "Nie znaleziono Google Chrome. Zainstaluj Chrome, aby korzystać z funkcji „Automatyzacja przeglądarki”, a następnie spróbuj ponownie.",
+  "agentManager.browser.missingChromium":
+    "Nie znaleziono Playwright Chromium. Zainstaluj zgodną przeglądarkę lub włącz opcję „Użyj systemowego Chrome” w sekcji „Ustawienia przeglądarki”.",
+  "agentManager.browser.downloadChrome": "Pobierz Chrome",
+  "agentManager.browser.settings": "Ustawienia przeglądarki",
   "agentManager.browser.noSession": "Najpierw wybierz sesję aplikacji Agent Manager.",
   "agentManager.browser.screenshotAlt": "Bieżąca strona przeglądarki",
   "agentManager.browser.errors": "Problemy przeglądarki: {{count}}",

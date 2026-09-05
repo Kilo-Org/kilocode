@@ -261,14 +261,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Collez une URL de PR ci-dessus ou créez un nouveau Worktree.",
   "agentManager.import.failed": "Échec de l'importation",
   "agentManager.browser.title": "Navigateur",
-  "agentManager.browser.url": "URL de l'application locale",
+  "agentManager.browser.url": "Adresse",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Ouvrir",
   "agentManager.browser.inspect": "Sélectionner l'élément",
   "agentManager.browser.devtoolsTitle": "Outils de développement",
   "agentManager.browser.refresh": "Actualiser le navigateur",
   "agentManager.browser.close": "Fermer le navigateur",
-  "agentManager.browser.empty": "Ouvrez une application locale pour l'afficher ici en aperçu.",
+  "agentManager.browser.empty":
+    "Ouvrez une application locale ou une page HTTPS publique pour en afficher un aperçu ici.",
+  "agentManager.browser.requirement":
+    "Nécessite Google Chrome ou un navigateur Playwright Chromium compatible. Les navigateurs ne sont pas installés automatiquement.",
+  "agentManager.browser.missingTitle": "Navigateur introuvable",
+  "agentManager.browser.missingChrome":
+    "Google Chrome est introuvable. Installez Chrome pour utiliser « Automatisation du navigateur », puis réessayez.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium est introuvable. Installez un navigateur compatible ou activez « Utiliser le Chrome système » dans « Paramètres du navigateur ».",
+  "agentManager.browser.downloadChrome": "Télécharger Chrome",
+  "agentManager.browser.settings": "Paramètres du navigateur",
   "agentManager.browser.noSession": "Sélectionnez d'abord une session dans Agent Manager.",
   "agentManager.browser.screenshotAlt": "Page actuelle du navigateur",
   "agentManager.browser.errors": "Problèmes du navigateur : {{count}}",

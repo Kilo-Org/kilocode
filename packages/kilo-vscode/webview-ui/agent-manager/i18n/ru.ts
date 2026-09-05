@@ -259,14 +259,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Вставьте URL PR выше или создайте новый Worktree.",
   "agentManager.import.failed": "Ошибка импорта",
   "agentManager.browser.title": "Браузер",
-  "agentManager.browser.url": "URL локального приложения",
+  "agentManager.browser.url": "Адрес",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Открыть",
   "agentManager.browser.refresh": "Обновить браузер",
   "agentManager.browser.close": "Закрыть браузер",
   "agentManager.browser.inspect": "Выбрать элемент",
   "agentManager.browser.devtoolsTitle": "Инструменты разработчика",
-  "agentManager.browser.empty": "Откройте локальное приложение, чтобы просмотреть его здесь.",
+  "agentManager.browser.empty":
+    "Откройте локальное приложение или общедоступную HTTPS-страницу для предварительного просмотра здесь.",
+  "agentManager.browser.requirement":
+    "Требуется Google Chrome или совместимый браузер Playwright Chromium. Браузеры не устанавливаются автоматически.",
+  "agentManager.browser.missingTitle": "Браузер не найден",
+  "agentManager.browser.missingChrome":
+    "Google Chrome не найден. Установите Chrome для использования функции «Автоматизация браузера», затем повторите попытку.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium не найден. Установите совместимый браузер или включите «Использовать системный Chrome» в разделе «Настройки браузера».",
+  "agentManager.browser.downloadChrome": "Скачать Chrome",
+  "agentManager.browser.settings": "Настройки браузера",
   "agentManager.browser.noSession": "Сначала выберите сеанс Agent Manager.",
   "agentManager.browser.screenshotAlt": "Текущая страница браузера",
   "agentManager.browser.errors": "Проблемы браузера: {{count}}",

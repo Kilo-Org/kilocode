@@ -259,14 +259,24 @@ export const dict = {
   "agentManager.import.noBranchesHint": "Indsæt en PR URL ovenfor eller opret et nyt Worktree.",
   "agentManager.import.failed": "Import mislykkedes",
   "agentManager.browser.title": "Browser",
-  "agentManager.browser.url": "URL til lokal applikation",
+  "agentManager.browser.url": "Adresse",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åbn",
   "agentManager.browser.inspect": "Vælg element",
   "agentManager.browser.devtoolsTitle": "Udviklerværktøjer",
   "agentManager.browser.refresh": "Opdater browser",
   "agentManager.browser.close": "Luk browser",
-  "agentManager.browser.empty": "Åbn en lokal applikation for at få vist en forhåndsvisning her.",
+  "agentManager.browser.empty":
+    "Åbn en lokal applikation eller en offentlig HTTPS-side for at få vist en forhåndsvisning her.",
+  "agentManager.browser.requirement":
+    "Kræver Google Chrome eller en kompatibel Playwright Chromium-browser. Browsere installeres ikke automatisk.",
+  "agentManager.browser.missingTitle": "Browser ikke fundet",
+  "agentManager.browser.missingChrome":
+    "Google Chrome blev ikke fundet. Installer Chrome for at bruge Browserautomatisering, og prøv igen.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium blev ikke fundet. Installer en kompatibel browser, eller aktivér “Brug system-Chrome” under “Browserindstillinger”.",
+  "agentManager.browser.downloadChrome": "Download Chrome",
+  "agentManager.browser.settings": "Browserindstillinger",
   "agentManager.browser.noSession": "Vælg først en session i Agent Manager.",
   "agentManager.browser.screenshotAlt": "Aktuel browserside",
   "agentManager.browser.errors": "Browserproblemer: {{count}}",

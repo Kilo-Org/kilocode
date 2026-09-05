@@ -797,7 +797,8 @@ export const dict = {
   "settings.browser.description":
     "Configure the browser runtime used by the experimental Agent Manager browser. The page preview stays in Agent Manager.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Enable the session-scoped Agent Manager browser for local applications.",
+  "settings.browser.enable.description":
+    "Enable the session-scoped Agent Manager browser for local applications and public HTTPS pages.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
     "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
