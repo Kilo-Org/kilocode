@@ -617,6 +617,7 @@ export const dict = {
   "profile.usage.source.direct": "Doğrudan",
   "profile.usage.state.stale": "Son güncellenen kullanım verileri gösteriliyor.",
   "profile.usage.state.unavailable": "Kullanım verileri kullanılamıyor.",
+  "profile.usage.state.empty": "Herhangi bir kullanım sınırı bildirilmedi.",
   "profile.usage.plan.pastDue": "Plan: Ödeme gecikmiş",
   "profile.usage.plan.canceling": "Plan: Dönem sonunda iptal edilecek",
   "profile.usage.plan.unknown": "Plan: Durum bilinmiyor",

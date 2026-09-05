@@ -661,6 +661,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "最後に更新された使用状況を表示しています。",
   "profile.usage.state.unavailable": "使用状況を取得できません。",
+  "profile.usage.state.empty": "使用量の上限は報告されていません。",
   "profile.usage.plan.pastDue": "プラン：支払い期限切れ",
   "profile.usage.plan.canceling": "プラン：期間終了時に解約",
   "profile.usage.plan.unknown": "プラン：ステータス不明",

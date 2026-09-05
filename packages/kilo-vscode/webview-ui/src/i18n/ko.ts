@@ -621,6 +621,7 @@ export const dict = {
   "profile.usage.source.direct": "직접",
   "profile.usage.state.stale": "마지막으로 업데이트된 사용량을 표시합니다.",
   "profile.usage.state.unavailable": "사용량을 확인할 수 없습니다.",
+  "profile.usage.state.empty": "보고된 사용량 한도가 없습니다.",
   "profile.usage.plan.pastDue": "요금제: 결제 기한 지남",
   "profile.usage.plan.canceling": "요금제: 기간 종료 시 취소",
   "profile.usage.plan.unknown": "요금제: 상태 알 수 없음",

@@ -620,6 +620,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "De laatst bijgewerkte gebruiksgegevens worden weergegeven.",
   "profile.usage.state.unavailable": "Gebruiksgegevens niet beschikbaar.",
+  "profile.usage.state.empty": "Geen gebruikslimieten gemeld.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling achterstallig",
   "profile.usage.plan.canceling": "Abonnement: Wordt aan het einde van de periode opgezegd",
   "profile.usage.plan.unknown": "Abonnement: Status onbekend",

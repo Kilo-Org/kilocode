@@ -628,6 +628,7 @@ export const dict = {
   "profile.usage.source.direct": "Direto",
   "profile.usage.state.stale": "Exibindo os dados de uso da última atualização.",
   "profile.usage.state.unavailable": "Dados de uso indisponíveis.",
+  "profile.usage.state.empty": "Nenhum limite de uso informado.",
   "profile.usage.plan.pastDue": "Plano: Pagamento em atraso",
   "profile.usage.plan.canceling": "Plano: Cancela no fim do período",
   "profile.usage.plan.unknown": "Plano: Status desconhecido",

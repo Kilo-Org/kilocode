@@ -658,6 +658,7 @@ export const dict = {
   "profile.usage.source.direct": "โดยตรง",
   "profile.usage.state.stale": "กำลังแสดงข้อมูลการใช้งานที่อัปเดตล่าสุด",
   "profile.usage.state.unavailable": "ไม่มีข้อมูลการใช้งาน",
+  "profile.usage.state.empty": "ไม่มีการรายงานขีดจำกัดการใช้งาน",
   "profile.usage.plan.pastDue": "แผน: ค้างชำระ",
   "profile.usage.plan.canceling": "แผน: ยกเลิกเมื่อสิ้นสุดรอบ",
   "profile.usage.plan.unknown": "แผน: ไม่ทราบสถานะ",
