@@ -665,13 +665,6 @@ export async function activate(context: vscode.ExtensionContext) {
       connectionService.dispose()
     },
   })
-
-  // Extension-test hosts drive the contributed commands through the real command
-  // registry, so expose the live surfaces they assert against. Normal activation
-  // returns nothing and keeps the public extension API closed.
-  if (context.extensionMode === vscode.ExtensionMode.Test) {
-    return { sidebar: provider, agentManager: agentManagerProvider, activeTab: activeTabProvider }
-  }
 }
 
 export async function deactivate() {
