@@ -415,6 +415,13 @@ export const {
         }
 
         // kilocode_change start
+        case "session.idle": {
+          setStore("session_status", event.properties.sessionID, { type: "idle" })
+          break
+        }
+        // kilocode_change end
+
+        // kilocode_change start
         case "background_process.updated": {
           const info = event.properties.info
           deleted.delete(info.id)
@@ -538,6 +545,7 @@ export const {
         case "message.removed": {
           touchMessage(event.properties.sessionID, event.properties.messageID)
           const messages = store.message[event.properties.sessionID]
+          if (!messages) break // kilocode_change
           const result = at(messages, event.properties.messageID) // kilocode_change - list is time-ordered, not id-sorted
           if (result.found) {
             setStore(
@@ -594,6 +602,7 @@ export const {
         case "message.part.removed": {
           touchPart(event.properties.sessionID, event.properties.partID)
           const parts = store.part[event.properties.messageID]
+          if (!parts) break // kilocode_change
           const result = search(parts, event.properties.partID, (p) => p.id)
           if (result.found) {
             setStore(
