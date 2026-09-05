@@ -69,6 +69,24 @@ function input(ctx: TrustedContext, text: string, tool: string, args: Record<str
 }
 
 describe("canonical resources", () => {
+  test("unknown reading restrictions suspend reads and supported prohibitions cover recursive content search", async () => {
+    const { controller, root } = fixture()
+    await controller.message("s", { id: "m", text: "Avoid looking inside src/." })
+    expect(
+      (await controller.prepare("s", { tool: "read", arguments: { filePath: "src/parser.py" } })).result.decision,
+    ).toBe("ask")
+    for (const text of ["Do not read src/parser.py.", "Не читай src/parser.py."]) {
+      const session = text
+      await controller.message(session, { id: "m", text })
+      expect(
+        (await controller.prepare(session, { tool: "read", arguments: { filePath: "src/parser.py" } })).result.decision,
+      ).toBe("deny")
+      expect(
+        (await controller.prepare(session, { tool: "grep", arguments: { path: root, pattern: "original" } })).result
+          .decision,
+      ).toBe("deny")
+    }
+  })
   test("an unparsed restriction survives unrelated messages and restarts until addressed", async () => {
     const { ctx, root, controller } = fixture()
     await controller.message("s", { id: "m", text: "Fix src/parser.py. Avoid changing verification assets." })
@@ -135,6 +153,53 @@ describe("canonical resources", () => {
 })
 
 describe("authority", () => {
+  test("purpose clauses and parent grants do not turn verification resources into editable source", () => {
+    const { ctx, root } = fixture()
+    const contract = update(undefined, "s", { id: "m", text: "Fix src to make tests pass." }, ctx)
+    expect(authorize(contract, "code.modify", path.join(root, "src/parser.py"))).toBe(true)
+    expect(authorize(contract, "code.modify", path.join(root, "tests/test.py"))).toBe(false)
+    expect(authorize(contract, "test.run", path.join(root, "tests"))).toBe(true)
+    const broad = update(undefined, "s", { id: "m", text: `Fix ${root}/.` }, ctx)
+    expect(authorize(broad, "code.modify", path.join(root, "src/parser.py"))).toBe(true)
+    expect(authorize(broad, "code.modify", path.join(root, "tests/test.py"))).toBe(false)
+    const explicit = update(broad, "s", { id: "next", text: "Fix tests/test.py." }, ctx)
+    expect(authorize(explicit, "code.modify", path.join(root, "tests/test.py"))).toBe(true)
+    const restricted = update(explicit, "s", { id: "stop", text: "Do not modify src and tests." }, ctx)
+    expect(restricted.prohibitions.map((g) => g.resource.key)).toEqual([
+      path.join(root, "src"),
+      path.join(root, "tests"),
+    ])
+    expect(authorize(restricted, "code.modify", path.join(root, "src/parser.py"))).toBe(false)
+    expect(authorize(restricted, "code.modify", path.join(root, "tests/test.py"))).toBe(false)
+  })
+  test("host catalog changes invalidate earlier grants on resume and on a new user message", async () => {
+    const { ctx, controller, root } = fixture()
+    await controller.message("s", { id: "m", text: "Fix src/parser.py." })
+    const before = controller.contract("s")
+    const catalog = { ...ctx.catalog!, verification: ["tests", "src"] }
+    controller.context.catalog = catalog
+    const resumed = controller.contract("s")
+    expect(resumed.version).toBeGreaterThan(before.version)
+    expect(resumed.grants).toEqual([])
+    const updated = update(before, "s", { id: "next", text: "Run tests." }, { ...ctx, catalog })
+    expect(authorize(updated, "code.modify", path.join(root, "src/parser.py"))).toBe(false)
+    expect(authorize(updated, "test.run", path.join(root, "tests"))).toBe(true)
+  })
+  test("child approvals cannot exceed the parent and grandparent revocation reaches descendants", async () => {
+    const { ctx, controller, root } = fixture()
+    await controller.message("p", { id: "m", text: "Fix src/parser.py." })
+    controller.inherit("p", "c")
+    controller.inherit("c", "g")
+    const request = await controller.prepare("c", { tool: "write", arguments: { filePath: "src/other.py" } })
+    expect(request.result.decision).toBe("ask")
+    expect(request.pending?.candidates).toEqual([])
+    const child = controller.contract("c")
+    child.grants.push(...grammar({ id: "answer", text: "Fix src/other.py." }, ctx).grants)
+    controller.store.write(child)
+    expect(authorize(controller.contract("c"), "code.modify", path.join(root, "src/other.py"))).toBe(false)
+    await controller.message("p", { id: "stop", text: "Do not modify src/parser.py." })
+    expect(authorize(controller.contract("g"), "code.modify", path.join(root, "src/parser.py"))).toBe(false)
+  })
   test.each([
     ["Fix src/parser.py. Do not modify tests/test_parse.py.", "code.modify", "tests/test_parse.py"],
     ["Do not delete dist/. Fix src/parser.py.", "filesystem.delete", "dist"],
@@ -205,6 +270,16 @@ describe("authority", () => {
 })
 
 describe("finite execution profiles", () => {
+  test("host revocation of test execution trust is rechecked before the process starts", async () => {
+    const { controller } = fixture()
+    controller.context.test_profile = { trusted_code: true }
+    await controller.message("s", { id: "m", text: "Run tests." })
+    const prepared = await controller.prepare("s", { tool: "bash", arguments: { command: "pytest -q tests" } })
+    expect(prepared.result.decision).toBe("allow")
+    controller.verify(prepared)
+    controller.context.test_profile.trusted_code = false
+    expect(() => controller.verify(prepared)).toThrow("execution_profile_changed")
+  })
   test.each([
     "pytest --rootdir=/tmp/other",
     "pytest --rootdir /tmp/other",

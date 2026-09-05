@@ -2,7 +2,7 @@ import type { ScriptedAnswer } from "./scripted"
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync } from "node:fs"
 import path from "node:path"
 import os from "node:os"
-import { authority } from "./authority"
+import { authority, canonicalCatalog } from "./authority"
 import { ContractStore, authorize, inherited, pending, propose, reply, update } from "./contract"
 import { canonical, digest, inside, resource } from "./resources"
 import { isCredentialPath, normalizeCall, type RawToolCall } from "./normalize"
@@ -133,8 +133,16 @@ export class Controller {
   contract(session: string): TaskContract {
     const contract = this.store.read(session) ?? update(undefined, session, { id: "empty", text: "" }, this.context)
     if (!this.store.read(session)) this.store.write(contract)
+    const catalog = canonicalCatalog(this.context)
+    if (digest(catalog) !== digest(contract.catalog)) {
+      this.store.write(
+        { ...contract, catalog, grants: [], pending: [], version: contract.version + 1 },
+        contract.version,
+      )
+      return this.contract(session)
+    }
     if (!contract.parent_id) return contract
-    const parent = this.store.read(contract.parent_id)
+    const parent = this.store.read(contract.parent_id) ? this.contract(contract.parent_id) : undefined
     if (!parent?.active) {
       if (contract.active)
         this.store.write(
@@ -143,7 +151,8 @@ export class Controller {
         )
       return this.store.read(session)!
     }
-    if (contract.parent_version === parent.version) return contract
+    const grants = contract.grants.filter((g) => authorize(parent, g.operation, g.resource.key))
+    if (contract.parent_version === parent.version && grants.length === contract.grants.length) return contract
     const next = {
       ...contract,
       parent_version: parent.version,
@@ -151,7 +160,7 @@ export class Controller {
       pending: [],
       prohibitions: [...parent.prohibitions, ...contract.prohibitions],
       uncertainties: [...(parent.uncertainties ?? []), ...(contract.uncertainties ?? [])],
-      grants: contract.grants.filter((g) => authorize(parent, g.operation, g.resource.key)),
+      grants,
     }
     this.store.write(next, contract.version)
     return next
@@ -383,7 +392,8 @@ export class Controller {
                 (r) =>
                   (r.kind === "file" || r.kind === "directory") &&
                   inside(contract.workspace, r.key) &&
-                  !authorize(contract, action.operation, r.key),
+                  !authorize(contract, action.operation, r.key) &&
+                  (!contract.parent_id || authorize(this.contract(contract.parent_id), action.operation, r.key)),
               )
               .filter(
                 () =>
@@ -429,13 +439,13 @@ export class Controller {
     const before = prepared.ir.actions.flatMap((a) => a.resources ?? []).map((r) => [r.key, r.identity])
     const after = fresh.actions.flatMap((a) => a.resources ?? []).map((r) => [r.key, r.identity])
     if (initial && digest(before) !== digest(after)) throw new Error("resource_changed_before_execution")
-    if (this.profile(fresh, current).config_hash !== prepared.profile.config_hash)
-      throw new Error("test_configuration_changed")
+    const profile = this.profile(fresh, current)
+    if (digest(profile) !== digest(prepared.profile)) throw new Error("execution_profile_changed")
     if (
       !this.options.observe &&
       prepared.inputs.some(
         (input) =>
-          constraints({ ...input, contract: current }).length ||
+          constraints({ ...input, contract: current, profile }).length ||
           hardDeny({ ...input, contract: current }).verdict === "DENY",
       )
     )

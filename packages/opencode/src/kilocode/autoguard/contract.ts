@@ -13,7 +13,7 @@ import {
 } from "node:fs"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
-import { authority, catalog, grammar } from "./authority"
+import { authority, catalog, canonicalCatalog, grammar } from "./authority"
 import { canonical, covers, digest, inside } from "./resources"
 import { endpoint, type Level1Config } from "./level1"
 import { strictJSON } from "./json"
@@ -168,8 +168,10 @@ export function update(
     ...(previous?.uncertainties ?? []).filter((m) => !resolved || !clarified.includes(m.id)),
     ...(parsed.ambiguous ? [message] : []),
   ]
-  // An unparsed restriction must not leave earlier grants silently active.
-  const grants = parsed.ambiguous ? [] : [...(previous?.grants ?? []), ...parsed.grants]
+  const catalog = canonicalCatalog(ctx)
+  // A host role change or an unparsed restriction invalidates earlier grants.
+  const retained = previous && digest(previous.catalog) === digest(catalog) ? previous.grants : []
+  const grants = parsed.ambiguous ? [] : [...retained, ...parsed.grants]
   const prohibitions = [...(previous?.prohibitions ?? []), ...parsed.prohibitions]
   return {
     schema_version: 1,
@@ -185,7 +187,7 @@ export function update(
     ),
     prohibitions,
     uncertainties,
-    catalog: catalog(ctx),
+    catalog,
     pending: [],
     proposals: [],
     extractor_failure: parsed.ambiguous ? "ambiguous_grammar" : null,
@@ -218,7 +220,17 @@ export function authorize(contract: TaskContract, operation: string, target: str
     !contract.prohibitions.some(
       (g) => (g.operation === operation || g.operation === "*") && covers(g.resource, target),
     ) &&
-    contract.grants.some((g) => g.operation === operation && covers(g.resource, target))
+    contract.grants.some(
+      (g) =>
+        g.operation === operation &&
+        covers(g.resource, target) &&
+        (!["code.modify", "config.modify"].includes(operation) ||
+          contract.catalog.verification.every(
+            (p) =>
+              !inside(canonical(p, contract.workspace), target) ||
+              inside(canonical(p, contract.workspace), g.resource.key),
+          )),
+    )
   )
 }
 

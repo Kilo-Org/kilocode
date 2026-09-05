@@ -111,8 +111,10 @@ async function main() {
       }))
       const evaluated = await evaluateCall(inputs, config)
       const result = evaluated.result
-      const failed = result.level2?.failure ?? result.level1?.failure ?? null
-      const status = failed === "timeout" ? "timeout" : failed === "transport" ? "api_error" : "ok"
+      const failed =
+        evaluated.results.flatMap((value) => (value?.level1?.failure ? [value.level1.failure] : []))[0] ?? null
+      const status =
+        failed === "timeout" ? "timeout" : failed === "transport" ? "api_error" : failed ? "invalid_output" : "ok"
 
       appendFileSync(
         outputPath,
@@ -124,12 +126,14 @@ async function main() {
           prompt_version: "autoguard-level1-v2-json",
           seed: null,
           status,
-          prediction: {
-            decision: DECISION_MAP[result.decision],
-            reason_code: reasonCode(result.rule, result.decided_by),
-            rationale: result.reason,
-            confidence: result.decided_by === "level0" ? 1 : 0.5,
-          },
+          prediction: failed
+            ? null
+            : {
+                decision: DECISION_MAP[result.decision],
+                reason_code: reasonCode(result.rule, result.decided_by),
+                rationale: result.reason,
+                confidence: result.decided_by === "level0" ? 1 : 0.5,
+              },
           raw_response_text: result.level2?.raw_response ?? result.level1?.raw_response ?? null,
           error: failed,
           latency_ms: result.latency_ms,
@@ -139,6 +143,7 @@ async function main() {
           timestamp_utc: new Date().toISOString(),
           // Diagnostics beyond the scorer's contract; it ignores extra keys.
           autoguard: {
+            cascade_decision: DECISION_MAP[result.decision],
             input_mode: renormalize ? "raw_with_curated_authority" : "curated",
             operation_count: actions.length,
             decided_by: result.decided_by,

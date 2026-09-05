@@ -4,6 +4,14 @@ import type { Authority, ContractMessage, Grant, ResourceCatalog, TaskContract, 
 export function catalog(ctx: TrustedContext): ResourceCatalog {
   return ctx.catalog ?? { source: [], verification: [], generated_output: ctx.generated_paths }
 }
+export function canonicalCatalog(ctx: TrustedContext): ResourceCatalog {
+  const value = catalog(ctx)
+  return {
+    source: value.source.map((p) => canonical(p, ctx.cwd)),
+    verification: value.verification.map((p) => canonical(p, ctx.cwd)),
+    generated_output: value.generated_output.map((p) => canonical(p, ctx.cwd)),
+  }
+}
 
 export function namedPaths(text: string, ctx: TrustedContext): string[] {
   const known = Object.values(catalog(ctx)).flat()
@@ -37,21 +45,25 @@ export function grammar(
   for (const source of clauses) {
     const clause = source.trim()
     if (!clause) continue
+    const unread = clause.match(/^(?:(?:do not|don['’]t|never)\s+read|не\s+читай(?:те)?)\s+(.+)$/iu)
     const preserve =
       clause.match(/^(?:keep|leave)\s+(.+?)\s+(?:unchanged|intact|untouched)$/iu) ??
       clause.match(/^(?:оставь|сохрани)\s+(.+?)\s+без изменений$/iu)
-    if (preserve) {
-      const paths = namedPaths(preserve[1], ctx)
-      if (!paths.length) ambiguous = true
-      for (const target of paths)
-        for (const operation of ["code.modify", "filesystem.delete"])
-          prohibitions.push({
-            operation,
-            resource: resource(target, ctx),
-            source: message.id,
-            evidence: clause,
-            confirmed: "grammar",
-          })
+    const restriction = unread ?? preserve
+    if (restriction) {
+      const paths = namedPaths(restriction[1], ctx)
+      if (!paths.length || /\b(?:except|unless)\b|(?:^|\s)кроме\s/iu.test(restriction[1])) ambiguous = true
+      for (const target of paths) {
+        try {
+          const item = resource(target, ctx)
+          for (const operation of unread
+            ? ["filesystem.read", "filesystem.grep", "filesystem.search"]
+            : ["code.modify", "filesystem.delete"])
+            prohibitions.push({ operation, resource: item, source: message.id, evidence: clause, confirmed: "grammar" })
+        } catch {
+          ambiguous = true
+        }
+      }
       continue
     }
     const match = clause.match(verbs) ?? clause.match(russian)
@@ -67,11 +79,12 @@ export function grammar(
       : /^(run|execute|test|запуст|запуска)/u.test(verb)
         ? "test.run"
         : "code.modify"
-    const object = clause
+    const operand = clause
       .slice(match[0].length)
       .split(
-        /\b(?:so that|so|because|using|based on|according to|after|before|from|for|with|without|but|except|unless|and)\b|(?:чтобы|используя|после|согласно|кроме|но|для)\s/iu,
+        /\b(?:so that|so|to|because|using|based on|according to|after|before|from|for|with|without|but|except|unless)\b|(?:чтобы|используя|после|согласно|кроме|но|для)\s/iu,
       )[0]
+    const object = negative ? operand : operand.split(/\band\b/iu)[0]
     if (/\b(except|unless|only if|not)\b|(?:^|\s)(кроме|не|только если)(?:\s|$)/iu.test(object)) {
       ambiguous = true
       continue
@@ -108,6 +121,14 @@ export function grammar(
           continue
         }
         if (
+          operation === "code.modify" &&
+          roles.verification.some((p) => inside(canonical(p, ctx.cwd), item.key)) &&
+          object.trim().replace(/^[`"']|[`"']$/g, "") !== target
+        ) {
+          ambiguous = true
+          continue
+        }
+        if (
           operation === "filesystem.delete" &&
           !roles.generated_output.some((x) => inside(canonical(x, ctx.cwd), item.key))
         ) {
@@ -123,7 +144,7 @@ export function grammar(
   // The verification role is implied by this supported task form, never write access to tests.
   if (
     grants.some((g) => g.operation === "code.modify" || g.operation === "filesystem.delete") &&
-    /tests?.{0,80}fail|тест.{0,80}пада|so.{0,30}(?:they|tests?) pass|чтобы.{0,30}тест/isu.test(message.text)
+    /tests?.{0,80}fail|тест.{0,80}пада|(?:so|to make).{0,30}(?:they|tests?) pass|чтобы.{0,30}тест/isu.test(message.text)
   ) {
     const paths = roles.verification.length ? roles.verification : [ctx.workspace_root]
     for (const target of paths)

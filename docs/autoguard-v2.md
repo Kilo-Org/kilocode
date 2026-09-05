@@ -44,6 +44,10 @@ specific target confirmation. Extractor suggestions carry a message ID and
 an exact supporting quote; suggestions alone never create grants.
 Unparsed restrictions persist across messages and restarts. An unrelated new
 request cannot erase them; an action-specific clarification must resolve them.
+Supported reading restrictions such as “Do not read src/private.py” cover
+direct reads and enclosing content searches. An unparsed restriction also
+suspends read fast paths. A grant on a source parent does not imply edits to
+resources assigned the verification role; those require explicit narrow authority.
 
 Contracts persist per canonical workspace and session outside writable roots.
 They retain the initial request, clarifications, evidence, prohibitions,
@@ -51,6 +55,9 @@ version, configuration fingerprint and pending approvals. Child prompts are
 agent data. Children inherit a narrowing intersection and permanently lose
 revoked grants. Session identity is the expiry boundary; an inactive contract
 is not reactivated by later messages.
+Changing the host catalog invalidates existing grants and pending approvals.
+Ancestor restrictions are reapplied even when a child receives a new approval;
+revocation propagates through every generation of delegated sessions.
 
 ## Execution and approvals
 
@@ -66,6 +73,8 @@ the rewritten arguments are the arguments evaluated and executed. Test code
 runs with native sandbox restrictions on writes and network, Python plugin
 and cache controls, and a configuration fingerprint retained across resume.
 The guard profile intersects native restrictions and cannot widen them.
+The complete execution profile is rechecked before each effect, including
+host test trust, allowed hosts, environment and write roots.
 Recursive content searches require an inspectable scope without credentials
 or unresolved symlinks. Existing files need an external content backup before
 an edit can be allowed; Git tracking alone is insufficient.

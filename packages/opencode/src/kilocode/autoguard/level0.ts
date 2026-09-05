@@ -149,12 +149,15 @@ export function hardDeny(input: PolicyInput): Level0Result {
   if (
     input.contract?.prohibitions.some(
       (g) =>
-        (g.operation === action.operation || g.operation === "*") &&
+        (g.operation === action.operation ||
+          g.operation === "*" ||
+          (g.operation === "code.modify" && action.operation === "config.modify")) &&
         action.targets.some(
           (t) =>
             g.resource.key === t ||
             (g.resource.kind === "directory" && inside(g.resource.key, t)) ||
-            ((action.operation === "test.run" || action.effect === "mutation_irreversible") &&
+            ((["test.run", "filesystem.grep", "filesystem.search"].includes(action.operation) ||
+              action.effect === "mutation_irreversible") &&
               inside(t, g.resource.key)),
         ),
     )
@@ -290,6 +293,7 @@ export function constraints(input: PolicyInput): string[] {
   if (a.uncertainty?.length) return a.uncertainty
   if (input.contract && !input.contract.active) return ["inactive_contract"]
   if (a.operation === "session.coordinate") return []
+  if (input.contract?.uncertainties?.length) return ["unresolved_user_restriction"]
   if (a.operation === "task.delegate") return input.contract?.active ? [] : ["missing_parent_contract"]
   if (a.operation === "skill.read") return a.options.shell_disabled === true ? [] : ["skill_shell_not_gated"]
   if (!a.targets.length) return ["missing_target"]
@@ -299,7 +303,6 @@ export function constraints(input: PolicyInput): string[] {
     if (missing.length) return missing
   }
   if (a.effect === "read") return a.radius === "inside_worktree" ? [] : ["read_outside_workspace"]
-  if (input.contract?.uncertainties?.length) return ["unresolved_user_restriction"]
   if (input.contract && !a.targets.every((t) => authorize(input.contract!, a.operation, t)))
     return ["missing_authority"]
   if (!input.contract && !withinAuthority(a, input.authority, input.trusted_context)) return ["missing_authority"]
