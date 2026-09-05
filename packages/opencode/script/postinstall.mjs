@@ -9,7 +9,10 @@ import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
+// kilocode_change start - allow test suite to point to root package.json
+const packageJsonPath = process.env.KILO_TEST_PACKAGE_JSON ?? path.join(__dirname, "package.json")
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"))
+// kilocode_change end
 
 // kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
@@ -23,8 +26,10 @@ const archMap = {
   arm: "arm",
 }
 
-const platform = platformMap[os.platform()] ?? os.platform()
-const arch = archMap[os.arch()] ?? os.arch()
+// kilocode_change start - test hooks for CI environment simulation
+const platform = process.env.KILO_TEST_PLATFORM ?? (platformMap[os.platform()] ?? os.platform())
+const arch = process.env.KILO_TEST_ARCH ?? (archMap[os.arch()] ?? os.arch())
+// kilocode_change end
 const base = `@kilocode/cli-${platform}-${arch}`
 const sourceBinary = platform === "windows" ? "kilo.exe" : "kilo"
 const targetBinary = path.join(__dirname, "bin", ".kilo")
@@ -79,6 +84,7 @@ function supportsAvx2() {
 
 function isMusl() {
   if (platform !== "linux") return false
+  if (process.env.KILO_TEST_IS_MUSL !== undefined) return process.env.KILO_TEST_IS_MUSL === "true" // kilocode_change
 
   try {
     if (fs.existsSync("/etc/alpine-release")) return true
@@ -171,12 +177,34 @@ function copyBinary(source) {
 // kilocode_change end
 
 function verifyBinary() {
+  if (process.env.KILO_TEST_BINARY_WORKS !== undefined) return process.env.KILO_TEST_BINARY_WORKS === "true" // kilocode_change
+  
   const result = childProcess.spawnSync(targetBinary, ["--version"], {
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"], // kilocode_change - capture output to surface errors
     windowsHide: true,
   })
+  // kilocode_change start - log failure reason so the root cause is visible
+  if (result.status !== 0) {
+    const out = (result.stdout || "").toString().trim()
+    const err = (result.stderr || "").toString().trim()
+    if (out) console.error(`[kilo] binary verification stdout: ${out}`)
+    if (err) console.error(`[kilo] binary verification stderr: ${err}`)
+    if (result.error) console.error(`[kilo] binary verification error: ${result.error.message}`)
+  }
+  // kilocode_change end
   return result.status === 0
 }
+
+// kilocode_change start - check if a package name is compatible with the current libc
+function isLibcCompatible(name) {
+  const musl = isMusl()
+  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
+  // prevent installing a musl package on a glibc system and vice versa
+  if (nameIsMusl && !musl) return false
+  if (!nameIsMusl && musl && name.startsWith("@kilocode/cli-linux-")) return false
+  return true
+}
+// kilocode_change end
 
 function main() {
   if (platform === "windows") {
@@ -185,6 +213,12 @@ function main() {
   }
 
   for (const name of packageNames()) {
+    // kilocode_change start - skip packages incompatible with the current libc
+    if (!isLibcCompatible(name)) {
+      console.log(`[kilo] skipping ${name}: incompatible libc`)
+      continue
+    }
+    // kilocode_change end
     try {
       copyBinary(resolveBinary(name))
       if (verifyBinary()) return
@@ -193,11 +227,16 @@ function main() {
       try {
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
-        const result = childProcess.spawnSync(
-          "npm",
-          ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
-          { stdio: "inherit", windowsHide: true },
-        )
+        let result;
+        if (process.env.KILO_TEST_NPM === "skip") {
+          result = { status: 1 } // kilocode_change - mock failed install for tests
+        } else {
+          result = childProcess.spawnSync(
+            "npm",
+            ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
+            { stdio: "inherit", windowsHide: true },
+          )
+        }
         if (result.status !== 0) continue
         copyBinary(path.join(temp, "node_modules", name, "bin", sourceBinary))
         if (verifyBinary()) return
