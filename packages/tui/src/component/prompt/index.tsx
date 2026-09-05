@@ -352,8 +352,21 @@ export function Prompt(props: PromptProps) {
       // Keep command line --agent if specified.
       if (!args.agent) local.agent.set(msg.agent)
       if (msg.model && !primary.model && !args.agent) {
-        local.model.set(msg.model)
-        local.model.variant.set(msg.model.variant)
+        // kilocode_change start - a model the catalog dropped must not be pinned, and its variant
+        // must not leak onto the model that stays selected
+        const restored = KiloSessionTuiSync.restore({ model: msg.model, valid: local.model.isValid })
+        if (restored.type === "apply") {
+          local.model.set(restored.model)
+          local.model.variant.set(restored.model.variant)
+        }
+        if (restored.type === "stale") {
+          toast.show({
+            variant: "warning",
+            message: `${restored.model.providerID}/${restored.model.modelID} is no longer available - pick a model to continue`,
+            duration: 5000,
+          })
+        }
+        // kilocode_change end
       }
     }
   })

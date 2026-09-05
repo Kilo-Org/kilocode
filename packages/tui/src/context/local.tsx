@@ -302,6 +302,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         get ready() {
           return modelStore.ready
         },
+        // kilocode_change start - let callers check the live catalog before restoring a remembered model
+        isValid: isModelValid,
+        // kilocode_change end
         // kilocode_change start - expose persisted per-agent pick separately from overrides
         saved(name: string) {
           return modelStore.model[name]

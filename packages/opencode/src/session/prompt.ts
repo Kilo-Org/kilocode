@@ -9,6 +9,7 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
+import { KiloModelRecovery } from "@/kilocode/session/model-recovery" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { SessionTranscript } from "@/kilocode/session/transcript" // kilocode_change
@@ -813,18 +814,38 @@ export const layer = Layer.effect(
         .where(eq(SessionTable.id, sessionID))
         .get()
         .pipe(Effect.orDie)
-      if (current?.model) {
-        return {
-          providerID: ProviderV2.ID.make(current.model.providerID),
-          modelID: ModelV2.ID.make(current.model.id),
-          ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
-        }
+      // kilocode_change start - never keep prompting with a model the live catalog no longer has
+      const inCatalog = (candidate: KiloModelRecovery.Candidate) =>
+        KiloModelRecovery.firstAvailable([candidate], (model) => provider.getModel(model.providerID, model.modelID))
+
+      const stored: KiloModelRecovery.Candidate | undefined = current?.model
+        ? {
+            providerID: ProviderV2.ID.make(current.model.providerID),
+            modelID: ModelV2.ID.make(current.model.id),
+            ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
+          }
+        : undefined
+      if (stored) {
+        const usable = yield* inCatalog(stored)
+        if (usable) return usable
       }
+
       const match = yield* sessions
         .findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
         .pipe(Effect.orDie)
-      if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
+      const last = Option.isSome(match) && match.value.info.role === "user" ? match.value.info.model : undefined
+      if (last) {
+        const usable = yield* inCatalog(last)
+        if (usable) return usable
+      }
+
+      const dead = stored ?? last
+      if (dead)
+        yield* Effect.logWarning(
+          `Session ${sessionID} model ${dead.providerID}/${dead.modelID} is missing from the model catalog, falling back to the default model`,
+        )
       return yield* provider.defaultModel().pipe(Effect.orDie)
+      // kilocode_change end
     })
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
