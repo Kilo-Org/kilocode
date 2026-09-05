@@ -29,6 +29,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
+import { SlackMcp } from "@/kilocode/mcp/slack"
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -490,7 +491,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
             Effect.gen(function* () {
               yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              return yield* Effect.promise(() => execute(args, opts))
+              const next = SlackMcp.message({ server: entry.clientName, tool: entry.def.name, args })
+              return yield* Effect.promise(() => execute(next, opts))
             }),
           ).pipe(
             // kilocode_change end
