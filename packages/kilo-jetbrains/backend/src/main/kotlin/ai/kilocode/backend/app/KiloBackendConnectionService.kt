@@ -3,15 +3,21 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.await
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,6 +32,7 @@ import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
+import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -82,6 +89,7 @@ class KiloConnectionService(
     companion object {
         private const val HEARTBEAT_TIMEOUT_MS = 15_000L
         private const val HEALTH_POLL_INTERVAL_MS = 10_000L
+        private const val HEALTH_TIMEOUT_MS = 3_000L
         private const val RECONNECT_DELAY_MS = 250L
         private const val SSE_CONNECT_TIMEOUT_MS = 5_000L
     }
@@ -157,6 +165,41 @@ class KiloConnectionService(
         log.info("reinstall: spawning new CLI process (binary will be re-downloaded)")
         open()
         log.info("reinstall: open() returned — CLI process started with fresh binary")
+    }
+
+    /**
+     * Run a blocking generated app-load call with a total deadline, aborting the in-flight socket
+     * on timeout or coroutine cancellation.
+     *
+     * The app-load client has no socket read/write timeout (those would start the Okio watchdog),
+     * so the deadline lives here. [block] runs on [Dispatchers.IO]; on timeout or plugin-unload
+     * cancellation the app-load dispatcher is cancelled so the blocked `execute()` unblocks and its
+     * IO thread is released promptly. Throws [java.net.SocketTimeoutException] on timeout (so
+     * callers map it to a "Timeout" load error) and rethrows [CancellationException] so structured
+     * cancellation propagates. [IllegalStateException] means the connection is not open.
+     */
+    suspend fun <T> appLoadCall(block: (DefaultApi) -> T): T {
+        val client = appLoadApi ?: throw IllegalStateException("Not connected")
+        val http = appLoadClient ?: throw IllegalStateException("Not connected")
+        return coroutineScope {
+            val task = async(Dispatchers.IO) { block(client) }
+            try {
+                withTimeout(appLoadTimeoutMs) { task.await() }
+            } catch (e: TimeoutCancellationException) {
+                // The generated API hides the per-request Call, so this cancels every in-flight
+                // app-load call — a concurrent sibling fetch is aborted too and records a
+                // "Canceled" failure. Acceptable: any required app-load failure fails the whole load.
+                http.dispatcher.cancelAll()
+                task.cancel()
+                // Surface as a socket timeout so callers map it to a "Timeout" load error, matching
+                // the semantics of the socket read timeout this coroutine bound replaced.
+                throw SocketTimeoutException("App-load request timed out after ${appLoadTimeoutMs}ms")
+            } catch (e: CancellationException) {
+                http.dispatcher.cancelAll()
+                task.cancel()
+                throw e
+            }
+        }
     }
 
     /**
@@ -237,6 +280,7 @@ class KiloConnectionService(
             http.newBuilder()
                 .callTimeout(0, TimeUnit.MILLISECONDS)
                 .readTimeout(0, TimeUnit.MILLISECONDS)
+                .writeTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
         )
         // Reset heartbeat timestamp before connecting so the watcher
@@ -364,13 +408,20 @@ class KiloConnectionService(
         }
     }
 
-    private fun checkHealth(): Boolean {
+    private suspend fun checkHealth(): Boolean {
         val http = healthClient ?: return false
+        val req = Request.Builder()
+            .url("http://127.0.0.1:$port/global/health")
+            .build()
         return try {
-            val req = Request.Builder()
-                .url("http://127.0.0.1:$port/global/health")
-                .build()
-            http.newCall(req).execute().use { it.isSuccessful }
+            withTimeout(HEALTH_TIMEOUT_MS) {
+                http.newCall(req).await().use { it.isSuccessful }
+            }
+        } catch (e: TimeoutCancellationException) {
+            log.warn("kind=health-check port=$port timed out after ${HEALTH_TIMEOUT_MS}ms")
+            false
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("kind=health-check port=$port failed message=${e.message}", e)
             false

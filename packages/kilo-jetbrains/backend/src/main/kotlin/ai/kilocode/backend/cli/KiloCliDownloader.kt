@@ -4,19 +4,25 @@ import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.EnvironmentUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -26,80 +32,179 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
 
 class KiloCliDownloader(
-    private val http: OkHttpClient = KiloBackendHttpClients.cliDownload(),
+    private val http: OkHttpClient = HTTP,
     private val log: KiloLog = KiloLog.create(KiloCliDownloader::class.java),
     private val root: File = File(PathManager.getSystemPath(), "kilo/cli"),
     private val baseUrl: String = "https://github.com/Kilo-Org/kilocode/releases/download",
     private val api: String = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags",
     private val digests: Map<String, String> = KiloCliChecksums.load(),
     private val lockTimeoutMs: Long = LOCK_TIMEOUT_MS,
+    private val stallTimeoutMs: Long = STALL_TIMEOUT_MS,
 ) {
+    private val stallTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(stallTimeoutMs)
+    private val stallPollMs = (stallTimeoutMs / 4).coerceIn(50L, STALL_POLL_MS)
+
     companion object {
+        /**
+         * Shared download client for the lifetime of this classloader, shut down by
+         * [KiloBackendHttpClients.shutdownAll] on plugin unload. A fresh [KiloCliDownloader] is
+         * built per resolve — including cache hits that never issue a request — so creating a
+         * client per instance would accumulate tracked [OkHttpClient]s (each with its own SSL
+         * socket factory, proxy selector and connection pool) that are only released on unload.
+         */
+        private val HTTP by lazy { KiloBackendHttpClients.cliDownload() }
+
         private const val LOCK_TIMEOUT_MS = 30_000L
         private const val LOCK_POLL_MS = 100L
+
+        /** Abort a download if no bytes arrive for this long. Replaces the removed socket read/write
+         *  timeout (which would start the Okio watchdog and pin the plugin classloader). */
+        private const val STALL_TIMEOUT_MS = 120_000L
+        private const val STALL_POLL_MS = 1_000L
+
+        /** [DownloadGuard.abort] reason used when the surrounding coroutine was cancelled. */
+        private const val CANCELLED = "Kilo CLI download cancelled"
+
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private val LOCKS = ConcurrentHashMap<String, Any>()
     }
 
+    /**
+     * Per-download cancellation + stall state. The download client has no socket read/write timeout
+     * (those start the Okio watchdog), so [resolve] instead (a) aborts the in-flight [active] call
+     * when the surrounding coroutine is cancelled — e.g. on plugin unload — and (b) runs a watchdog
+     * that cancels it after [STALL_TIMEOUT_MS] of no progress. [exec] tracks the active call around a
+     * blocking `execute()`; [tick] records download progress.
+     *
+     * Cancelling an OkHttp call makes the blocked read fail with an opaque `IOException: Canceled`
+     * or `SocketException: Socket closed`, so [abort] records *why* it aborted and [exec] replaces
+     * that error with the real reason — a [CancellationException] for coroutine cancellation (so
+     * structured-cancellation-aware callers still recognise it) or a descriptive
+     * [IllegalStateException] for a stall.
+     */
+    private class DownloadGuard {
+        val active = AtomicReference<Call?>()
+        val progress = AtomicLong(System.nanoTime())
+        private val reason = AtomicReference<String?>()
+
+        fun <T> exec(http: OkHttpClient, request: Request, block: (Response) -> T): T {
+            val call = http.newCall(request)
+            active.set(call)
+            return try {
+                call.execute().use(block)
+            } catch (e: IOException) {
+                val why = reason.get() ?: throw e
+                if (why == CANCELLED) throw CancellationException(why)
+                throw IllegalStateException(why, e)
+            } finally {
+                active.compareAndSet(call, null)
+            }
+        }
+
+        fun tick() = progress.set(System.nanoTime())
+
+        /**
+         * Record [why] before cancelling so the blocked read reports the cause, not a socket error.
+         * First abort wins, so a stall reason is never overwritten by the cleanup path's cancel.
+         */
+        fun abort(why: String) {
+            if (!reason.compareAndSet(null, why)) return
+            active.getAndSet(null)?.cancel()
+        }
+    }
+
     suspend fun resolve(version: String, force: Boolean = false, onProgress: (CliDownload) -> Unit = {}): File =
         withContext(Dispatchers.IO) {
-            logPaths(version, force)
-            locked {
-                val platform = KiloCliPlatform.current()
-                val dir = File(File(root, version), platform)
-                val exe = File(dir, "bin/${KiloCliPlatform.exe()}")
-                val done = File(dir, ".complete")
-                val ext = KiloCliPlatform.archive(platform)
-
-                log.info(
-                    "Kilo CLI cache target: version=$version platform=$platform exe=${exe.absolutePath} " +
-                        "complete=${done.absolutePath} force=$force"
-                )
-
-                if (!force) {
-                    cached(version, platform, exe, done)?.let { return@locked it }
+            coroutineScope {
+                val guard = DownloadGuard()
+                // The blocking read inside locked{} cannot suspend, so a child coroutine does two
+                // things for it: abort the in-flight call after STALL_TIMEOUT_MS of no progress, and
+                // abort it from its `finally` when the surrounding scope is cancelled (plugin unload,
+                // restart). The cancellation half must live here rather than in a Job completion
+                // handler: this scope's Job only completes after the blocking body returns, so a
+                // completion handler would never run while the read is stuck.
+                val watchdog = launch {
+                    try {
+                        while (true) {
+                            delay(stallPollMs)
+                            if (System.nanoTime() - guard.progress.get() > stallTimeoutNanos) {
+                                val why = "Kilo CLI download stalled for >${stallTimeoutMs}ms with no bytes received"
+                                log.warn("$why — aborting")
+                                guard.abort(why)
+                                return@launch
+                            }
+                        }
+                    } finally {
+                        // Reached on scope cancellation and on the normal watchdog.cancel() below.
+                        // In the latter case the download is already done, so abort is a no-op; a
+                        // stall reason set above also wins over this one.
+                        guard.abort(CANCELLED)
+                    }
                 }
-
-                val digest = digest(version, platform, ext)
-                val stage = stage(version, platform)
                 try {
-                    val archive = File(stage, "kilo-$platform.$ext")
-                    val staged = File(stage, "bin/${KiloCliPlatform.exe()}")
-                    val complete = File(stage, ".complete")
+                    logPaths(version, force)
+                    locked {
+                        val platform = KiloCliPlatform.current()
+                        val dir = File(File(root, version), platform)
+                        val exe = File(dir, "bin/${KiloCliPlatform.exe()}")
+                        val done = File(dir, ".complete")
+                        val ext = KiloCliPlatform.archive(platform)
 
-                    log.info(
-                        "Kilo CLI $version for $platform is not cached; downloading new release into ${stage.absolutePath}"
-                    )
-                    onProgress(CliDownload(0, version, platform))
-                    download(version, platform, ext, archive, onProgress)
-                    log.info("Verifying Kilo CLI archive ${archive.absolutePath}")
-                    verify(archive, digest)
-                    log.info(
-                        "Downloaded Kilo CLI $version for $platform to ${archive.absolutePath} (size=${archive.length()} bytes)"
-                    )
-                    extract(archive, stage)
-                    if (!staged.isFile) {
-                        throw IllegalStateException("Downloaded CLI archive did not contain bin/${KiloCliPlatform.exe()}")
+                        log.info(
+                            "Kilo CLI cache target: version=$version platform=$platform exe=${exe.absolutePath} " +
+                                "complete=${done.absolutePath} force=$force"
+                        )
+
+                        if (!force) {
+                            cached(version, platform, exe, done)?.let { return@locked it }
+                        }
+
+                        val digest = digest(guard, version, platform, ext)
+                        val stage = stage(version, platform)
+                        try {
+                            val archive = File(stage, "kilo-$platform.$ext")
+                            val staged = File(stage, "bin/${KiloCliPlatform.exe()}")
+                            val complete = File(stage, ".complete")
+
+                            log.info(
+                                "Kilo CLI $version for $platform is not cached; downloading new release into ${stage.absolutePath}"
+                            )
+                            onProgress(CliDownload(0, version, platform))
+                            download(guard, version, platform, ext, archive, onProgress)
+                            log.info("Verifying Kilo CLI archive ${archive.absolutePath}")
+                            verify(archive, digest)
+                            log.info(
+                                "Downloaded Kilo CLI $version for $platform to ${archive.absolutePath} (size=${archive.length()} bytes)"
+                            )
+                            extract(archive, stage)
+                            if (!staged.isFile) {
+                                throw IllegalStateException("Downloaded CLI archive did not contain bin/${KiloCliPlatform.exe()}")
+                            }
+                            if (!SystemInfo.isWindows) staged.setExecutable(true)
+                            if (archive.exists() && !archive.delete()) {
+                                log.warn("Failed to delete extracted Kilo CLI archive ${archive.absolutePath}")
+                            }
+                            log.info("Writing Kilo CLI cache completion marker ${complete.absolutePath}")
+                            complete.writeText("$digest\n")
+                            replace(dir, stage)
+                            onProgress(CliDownload(100, version, platform))
+                            prune(version)
+                            exe
+                        } finally {
+                            if (stage.exists() && !stage.deleteRecursively()) {
+                                log.warn("Failed to delete staged Kilo CLI download ${stage.absolutePath}")
+                            }
+                        }
                     }
-                    if (!SystemInfo.isWindows) staged.setExecutable(true)
-                    if (archive.exists() && !archive.delete()) {
-                        log.warn("Failed to delete extracted Kilo CLI archive ${archive.absolutePath}")
-                    }
-                    log.info("Writing Kilo CLI cache completion marker ${complete.absolutePath}")
-                    complete.writeText("$digest\n")
-                    replace(dir, stage)
-                    onProgress(CliDownload(100, version, platform))
-                    prune(version)
-                    exe
                 } finally {
-                    if (stage.exists() && !stage.deleteRecursively()) {
-                        log.warn("Failed to delete staged Kilo CLI download ${stage.absolutePath}")
-                    }
+                    watchdog.cancel()
                 }
             }
         }
@@ -199,18 +304,18 @@ class KiloCliDownloader(
         throw IllegalStateException(message)
     }
 
-    private fun digest(version: String, platform: String, ext: String): String {
+    private fun digest(guard: DownloadGuard, version: String, platform: String, ext: String): String {
         val digest = digests[platform]
-        if (digest == null) return asset(version, platform, ext)
+        if (digest == null) return asset(guard, version, platform, ext)
         if (digest.matches(DIGEST)) {
             log.info("Using bundled Kilo CLI checksum for $version $platform")
             return digest
         }
         log.warn("Ignoring malformed bundled Kilo CLI checksum for $platform: $digest")
-        return asset(version, platform, ext)
+        return asset(guard, version, platform, ext)
     }
 
-    private fun asset(version: String, platform: String, ext: String): String {
+    private fun asset(guard: DownloadGuard, version: String, platform: String, ext: String): String {
         val name = "kilo-$platform.$ext"
         val url = "${api.trimEnd('/')}/v$version"
         log.info("Fetching Kilo CLI release metadata for $version from $url")
@@ -218,7 +323,7 @@ class KiloCliDownloader(
             .url(url)
             .header("Accept", "application/vnd.github+json")
             .build()
-        http.newCall(request).execute().use { response ->
+        return guard.exec(http, request) { response ->
             if (!response.isSuccessful) {
                 val info = rate(response)
                 val body = runCatching { response.body?.string() }.getOrNull()?.take(500)
@@ -250,7 +355,7 @@ class KiloCliDownloader(
             if (!digest.matches(DIGEST)) {
                 fail("Kilo CLI release $version asset $name has a malformed digest '$digest'; expected sha256:<64 hex chars>")
             }
-            return digest
+            digest
         }
     }
 
@@ -265,11 +370,11 @@ class KiloCliDownloader(
     private fun limited(response: Response) =
         response.code == 429 || (response.code == 403 && response.header("X-RateLimit-Remaining") == "0")
 
-    private fun download(version: String, platform: String, ext: String, file: File, onProgress: (CliDownload) -> Unit) {
+    private fun download(guard: DownloadGuard, version: String, platform: String, ext: String, file: File, onProgress: (CliDownload) -> Unit) {
         val url = url(version, platform, ext)
         log.info("Downloading Kilo CLI $version for $platform from $url")
         val request = Request.Builder().url(url).build()
-        http.newCall(request).execute().use { response ->
+        guard.exec(http, request) { response ->
             if (!response.isSuccessful) {
                 throw IllegalStateException("Failed to download Kilo CLI $version for $platform: HTTP ${response.code}")
             }
@@ -283,6 +388,7 @@ class KiloCliDownloader(
                     while (true) {
                         val n = input.read(buffer)
                         if (n < 0) break
+                        guard.tick()
                         output.write(buffer, 0, n)
                         read += n
                         if (total > 0) {
