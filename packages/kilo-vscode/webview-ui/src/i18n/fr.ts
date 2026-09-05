@@ -764,6 +764,12 @@ export const dict = {
   "session.outcome.interrupted": "Tour interrompu",
   "session.outcome.error": "Échec du tour",
   "session.outcome.finish": "Motif de fin : {{reason}}",
+  "session.goal.label": "Objectif",
+  "session.goal.active": "Actif",
+  "session.goal.paused": "En pause",
+  "session.goal.pause": "Mettre en pause",
+  "session.goal.resume": "Reprendre",
+  "session.goal.clear": "Effacer l'objectif",
   "session.costAlert.header": "Alerte de coût de session",
   "session.costAlert.continue": "Continuer",
   "session.costAlert.question":

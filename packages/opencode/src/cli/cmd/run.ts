@@ -453,6 +453,11 @@ export const RunCommand = effectCmd({
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
+      if (args.command === "goal") {
+        await loadInput()
+        const error = KiloRun.validateGoal(message)
+        if (error) die(error)
+      }
       // kilocode_change end
 
       if (args.fork && !args.continue && !args.session) {
@@ -1026,6 +1031,13 @@ export const RunCommand = effectCmd({
         if (deferred) {
           KiloRun.validateBuiltin({ command: builtin, continue: args.continue, session: args.session })
           if (!builtin) await loadInput()
+        }
+        // kilocode_change end
+
+        // kilocode_change start
+        if (args.command === "goal") {
+          await KiloRun.goal(client, sessionID, message, emit)
+          return
         }
         // kilocode_change end
 

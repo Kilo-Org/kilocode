@@ -833,6 +833,42 @@ try {
   assert.equal(value.currentSessionID(), "ses_command-promoted")
   value.setDraftSessionID(undefined)
 
+  {
+    value.clearCurrentSession()
+    value.selectAgent("ask")
+    assert.equal(value.selectedAgent(), "ask")
+    choice(value.selected(), recommended)
+    const usage = JSON.stringify(value.modelUsageHistory())
+    const recent = JSON.stringify(value.recentModels())
+    const start = sent.length
+    assert.equal(value.sendCommand("goal", ""), true)
+    const command = sent.at(-1)
+    assert(command?.type === "sendCommand")
+    assert(command.draftID)
+    assert.equal(command.sessionID, undefined)
+    assert.equal(command.providerID, undefined)
+    assert.equal(command.modelID, undefined)
+    assert.equal(command.agent, undefined)
+    assert.equal(command.variant, undefined)
+    assert.deepEqual(
+      sent.slice(start).map((message) => message.type),
+      ["sendCommand"],
+    )
+    await emit({ type: "sessionCreated", session: info("ses_goal-draft"), draftID: command.draftID })
+    assert.equal(value.currentSessionID(), "ses_goal-draft")
+    assert.equal(value.selectedAgent(), "ask")
+    choice(value.selected(), recommended)
+    await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
+    assert.equal(value.submitting(), false)
+    assert.equal(JSON.stringify(value.modelUsageHistory()), usage)
+    assert.equal(JSON.stringify(value.recentModels()), recent)
+    assert.equal(
+      sent.slice(start).some((message) => message.type === "recordModelUsage"),
+      false,
+    )
+    value.setDraftSessionID(undefined)
+  }
+
   const key = "acceptance:session:composer"
   const image = { id: "image", filename: "image.png", mime: "image/png", dataUrl: "data:image/png;base64,cGl4ZWw=" }
   const input = () => {
@@ -927,6 +963,131 @@ try {
   await emit({ type: "webviewActiveChanged", active: true })
   await check("root", "idle")
   await check("background", "idle")
+
+  const goal = { text: "Fix the failing tests", active: true }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal } })
+  assert.equal(value.currentSession()?.goal?.text, goal.text)
+  assert.equal(value.currentSession()?.goal?.active, true)
+  value.setCurrentSessionID("background")
+  assert.equal(value.currentSession()?.goal, undefined)
+  value.setCurrentSessionID("root")
+  value.abort()
+  assert.deepEqual(sent.at(-1), { type: "abort", sessionID: "root", scope: "session" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  for (const active of [true, false]) {
+    await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active } } })
+    assert.equal(value.sendMessage("Delayed human prompt"), true)
+    const start = sent.length
+    const stopped = () => sent.slice(start).filter((message) => message.type === "abort")
+    value.abort()
+    assert.equal(stopped().length, active ? 1 : 0)
+    if (active) {
+      await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+      await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active: false } } })
+      await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+      assert.equal(stopped().length, 1)
+    }
+    value.setCurrentSessionID("background")
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    assert.deepEqual(stopped().at(-1), { type: "abort", sessionID: "root", scope: "session" })
+    assert.equal(stopped().length, active ? 2 : 1)
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    assert.equal(stopped().length, active ? 2 : 1)
+    await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    value.setCurrentSessionID("root")
+  }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal } })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await emit({ type: "questionRequest", question: { id: "goal-question", sessionID: "root", questions: [] } })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "goal-suggestion", sessionID: "root", text: "Continue?", actions: [] },
+  })
+  const count = value.messages().length
+  for (const phase of ["ready", "loading", "empty"]) {
+    if (phase === "loading") await emit({ type: "providersLoading" })
+    if (phase === "empty")
+      await emit({
+        type: "providersLoaded",
+        ready: true,
+        providers: {},
+        connected: [],
+        defaults: {},
+        authMethods: {},
+        authStates: {},
+      })
+    for (const [args, control] of [
+      ["pause", true],
+      ["", true],
+      ["resume", false],
+      ["clear", true],
+      ["A new goal", false],
+    ] as const) {
+      const before = snapshot("root")
+      const start = sent.length
+      const accepted = value.sendCommand(
+        "goal",
+        args,
+        "kilo",
+        "unavailable",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        control ? { agent: "ask", model: "kilo/unavailable", variant: "high" } : undefined,
+      )
+      const posted = sent.slice(start)
+      if (!control && phase !== "ready") {
+        assert.equal(accepted, false)
+        assert.deepEqual(posted, [])
+        assert.equal(snapshot("root"), before)
+        continue
+      }
+      assert.equal(accepted, true)
+      const command = sent.at(-1)
+      assert(command?.type === "sendCommand")
+      assert.equal(posted.filter((message) => message.type === "sendCommand").length, 1)
+      assert.equal(
+        posted.some((message) =>
+          ["questionReply", "questionReject", "suggestionDismiss", "permissionResponse"].includes(message.type),
+        ),
+        false,
+      )
+      assert.equal(command.sessionID, "root")
+      assert.equal(command.arguments, args)
+      if (control) {
+        assert.deepEqual(
+          posted.map((message) => message.type),
+          ["sendCommand"],
+        )
+        assert.equal(command.providerID, undefined)
+        assert.equal(command.modelID, undefined)
+        assert.equal(command.agent, undefined)
+        assert.equal(command.variant, undefined)
+      }
+      assert.equal(value.messages().length, count)
+      assert.equal(value.submitting(), true)
+      await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
+      assert.equal(value.submitting(), false)
+      if (control) assert.equal(snapshot("root"), before)
+      assert.equal(value.status(), "busy")
+      assert.equal(value.questions().length, 1)
+      assert.equal(value.suggestions().length, 1)
+    }
+  }
+  await catalog("org-a", [recommended.modelID], recommended.modelID)
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active: false } } })
+  assert.equal(value.currentSession()?.goal?.active, false)
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: null } })
+  assert.equal(value.currentSession()?.goal, null)
+  await emit({ type: "questionResolved", requestID: "goal-question" })
+  await emit({ type: "suggestionResolved", requestID: "goal-suggestion" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  const start = sent.length
+  value.abort()
+  assert.equal(sent.length, start)
   for (const update of [setOperation, setRun]) {
     update(true)
     await settle()

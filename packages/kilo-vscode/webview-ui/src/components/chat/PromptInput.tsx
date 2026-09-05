@@ -633,7 +633,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (canSendContinue()) return language.t("prompt.action.continue")
     return language.t("prompt.action.send")
   }
-  const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
+  const showStop = () =>
+    (isBusy() || session.currentSession()?.goal?.active) && !hasInput() && speech.state() !== "recording"
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {

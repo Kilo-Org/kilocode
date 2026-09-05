@@ -83,6 +83,39 @@ describe("session dock layout", () => {
     expect(read("webview-ui/src/components/shared/WorkingIndicator.tsx")).not.toContain("working-indicator-slot")
   })
 
+  it("keeps the Goal button separate from the spinner and model picker", () => {
+    const dock = read("webview-ui/src/components/chat/SessionDock.tsx")
+    const indicator = read("webview-ui/src/components/shared/WorkingIndicator.tsx")
+    expect(indicator).not.toMatch(/goal|DropdownMenu|Tooltip/)
+    expect(dock).toContain("<WorkingIndicator />")
+    expect(dock).toContain('class="session-goal-action"')
+    expect(dock).toContain('variant="secondary"')
+    expect(dock).toContain("disabled={props.readonly}")
+    expect(dock).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
+    expect(dock).toContain('session.sendCommand("goal", "clear")')
+    expect(read("webview-ui/src/components/chat/PromptInput.tsx")).not.toContain('"session.goal.label"')
+    const working = dock.match(/const working = \(\) =>([^\n]*)/)?.[1]
+    expect(working).not.toContain("goal()")
+    expect(dock).toContain("!!goal() || working() || actions()")
+  })
+
+  it("uses a normal button target without modifying the loading indicator", () => {
+    const css = read("webview-ui/src/styles/chat-layout.css")
+    const button = css.match(/\.session-goal-action\[data-component="button"\] \{([\s\S]*?)\}/)?.[1]
+    const indicator = css.match(/\.working-indicator \{([\s\S]*?)\}/)?.[1]
+    expect(button).toContain("min-width: 64px")
+    expect(button).toContain("min-height: 28px")
+    expect(button).toContain("position: absolute")
+    expect(button).toContain("inset-inline-end: 0")
+    const dock = css.match(/\.session-dock\[data-goal\] \{([\s\S]*?)\}/)?.[1]
+    expect(dock).toContain("position: relative")
+    expect(dock).not.toMatch(/grid-template|column-gap|padding/)
+    expect(indicator).toContain("gap: 8px")
+    expect(indicator).toContain("padding: 8px 16px")
+    expect(css).not.toContain("working-goal")
+    expect(css).not.toContain(".working-indicator[data-goal]")
+  })
+
   it("keeps the composer column as the only owner of the row", () => {
     // A second copy inside the scrollable transcript would resize the scroll
     // content on every turn boundary again.

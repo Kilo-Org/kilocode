@@ -708,6 +708,12 @@ export const dict = {
   "session.outcome.interrupted": "Tura przerwana",
   "session.outcome.error": "Tura nie powiodła się",
   "session.outcome.finish": "Powód zakończenia: {{reason}}",
+  "session.goal.label": "Cel",
+  "session.goal.active": "Aktywny",
+  "session.goal.paused": "Wstrzymany",
+  "session.goal.pause": "Wstrzymaj",
+  "session.goal.resume": "Wznów",
+  "session.goal.clear": "Wyczyść cel",
   "session.costAlert.header": "Alert kosztu sesji",
   "session.costAlert.continue": "Kontynuuj",
   "session.costAlert.question":

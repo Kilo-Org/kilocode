@@ -738,6 +738,12 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.goal.label": "Hedef",
+  "session.goal.active": "Etkin",
+  "session.goal.paused": "Duraklatıldı",
+  "session.goal.pause": "Duraklat",
+  "session.goal.resume": "Sürdür",
+  "session.goal.clear": "Hedefi temizle",
   "session.costAlert.header": "Oturum Maliyeti Uyarısı",
   "session.costAlert.continue": "Devam et",
   "session.costAlert.question":
