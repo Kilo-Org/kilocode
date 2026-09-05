@@ -43,7 +43,13 @@ function git(
       let stderr = ""
       child.stdout.on("data", (d: Buffer) => (stdout += d.toString()))
       child.stderr.on("data", (d: Buffer) => (stderr += d.toString()))
+      // Without an "error" listener a failed spawn (ENOENT/EAGAIN/EMFILE) throws
+      // an uncaught exception in the extension host and leaves this promise pending.
+      child.on("error", (err) => resolve({ code: 1, stdout, stderr: err.message }))
       child.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }))
+      // Ignore EPIPE on stdin when the process failed to spawn or exited early;
+      // the failure is already reported through the "error"/"close" handlers.
+      child.stdin.on("error", () => {})
       child.stdin.end(stdin)
     } else {
       cp.execFile(
