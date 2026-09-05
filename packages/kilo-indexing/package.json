@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/indexing",
+  "version": "0.0.0-internal",
+  "private": true,
+  "type": "module",
+  "description": "Kilo codebase indexing engine, ported from Kilo main at ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./embedding-models": "./src/kilo-embedding-models.ts",
+    "./engine": "./src/indexing/index.ts",
+    "./file-extensions": "./src/file-extensions.ts",
+    "./status": "./src/status.ts"
+  },
+  "scripts": {
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1005.0",
+    "@aws-sdk/credential-provider-ini": "3.972.31",
+    "@lancedb/lancedb": "0.26.2",
+    "@parcel/watcher": "2.5.1",
+    "@qdrant/js-client-rest": "1.17.0",
+    "async-mutex": "0.5.0",
+    "effect": "catalog:",
+    "glob": "13.0.6",
+    "ignore": "7.0.5",
+    "minimatch": "10.2.6",
+    "openai": "6.27.0",
+    "p-limit": "7.3.0",
+    "tree-sitter-wasms": "0.1.13",
+    "uuid": "14.0.0",
+    "web-tree-sitter": "0.25.10",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  }
+}

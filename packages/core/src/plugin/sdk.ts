@@ -19,8 +19,11 @@ export const Updated = Bus.ephemeral({ type: "sdk.plugin.updated", schema: {} })
  * every Location in one host sees the same registrations.
  */
 export interface Interface {
-  readonly register: (plugin: Plugin) => Effect.Effect<void>
+  // kilocode_change - Let an embedding host enforce policy after user config without making that policy a builtin.
+  readonly register: (plugin: Plugin, options?: { readonly phase?: "pre" | "post" }) => Effect.Effect<void>
   readonly all: () => readonly Generation[]
+  /** Optional so older test and embedder replacements naturally expose no post policy. */
+  readonly allPost?: () => readonly Generation[]
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SdkPlugins") {}
@@ -30,13 +33,19 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const bus = yield* Bus.Service
     const plugins = new Map<string, Generation>()
+    // kilocode_change - Post registrations are an explicit host-only policy seam and never alter the default order.
+    const post = new Map<string, Generation>()
     let revision = 0
     return Service.of({
-      register: (plugin) =>
+      register: (plugin, options) =>
         Effect.sync(() => {
-          plugins.set(plugin.id, { ...plugin, revision: String(++revision), source: { type: "sdk" } })
+          plugins.delete(plugin.id)
+          post.delete(plugin.id)
+          const target = options?.phase === "post" ? post : plugins
+          target.set(plugin.id, { ...plugin, revision: String(++revision), source: { type: "sdk" } })
         }).pipe(Effect.andThen(bus.publish(Updated, {})), Effect.asVoid),
       all: () => [...plugins.values()],
+      allPost: () => [...post.values()],
     })
   }),
 )

@@ -28,6 +28,8 @@ export type ResolvedThemeTokens = {
   readonly text: {
     readonly default: RGBA
     readonly subdued: RGBA
+    // kilocode_change - text.logo semantic color role
+    readonly logo: RGBA
     readonly action: Readonly<Record<ActionVariant, StatefulColor>>
     readonly formfield: FormfieldColor
     readonly status: {

@@ -109,6 +109,8 @@ export const DEFAULT_THEME = {
     text: {
       default: "$hue.neutral.800",
       subdued: "$hue.neutral.600",
+      // kilocode_change - text.logo light default
+      logo: "#6f6500",
       action: {
         primary: { default: "$hue.neutral.200", $disabled: "$hue.neutral.500" },
         secondary: { default: "$text.subdued", $hovered: "$text.default" },
@@ -330,6 +332,8 @@ export const DEFAULT_THEME = {
     text: {
       default: "$hue.neutral.200",
       subdued: "$hue.neutral.400",
+      // kilocode_change - text.logo dark default
+      logo: "#f9f76f",
       action: {
         primary: { default: "$hue.neutral.200", $disabled: "$hue.neutral.500" },
         secondary: { default: "$text.subdued", $hovered: "$text.default" },

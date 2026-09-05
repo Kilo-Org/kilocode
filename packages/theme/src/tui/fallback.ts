@@ -8,6 +8,7 @@ export function fallback(mode: Mode): ThemeTokensDefinition {
   return {
     text: {
       default: red,
+      logo: DEFAULT_THEME[mode].text.logo, // kilocode_change - retain branding in themes without a logo override
       action: Object.fromEntries(ActionVariant.literals.map((variant) => [variant, { default: red }])),
       formfield: { default: red },
       status: DEFAULT_THEME[mode].text.status,

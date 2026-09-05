@@ -189,6 +189,7 @@ export type TuiInput = {
     apply: (version: string) => Promise<void>
   }
   packages: PackageSource
+  pluginDirectories?: string[] // kilocode_change - allow isolated hosts to supply their discovery roots
   environment?: Readonly<Record<string, string>>
   terminalHandoff?: () => Promise<
     | {
@@ -214,7 +215,8 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     Effect.catch(() => Effect.tryPromise(() => api.location.get())),
   )
   const directory = location.directory
-  const pluginDirectories = yield* Effect.promise(() => localPluginDirectories(process.cwd(), global.config))
+  const pluginDirectories =
+    input.pluginDirectories ?? (yield* Effect.promise(() => localPluginDirectories(process.cwd(), global.config))) // kilocode_change - preserve upstream discovery unless the host overrides it
   const handoff = input.terminalHandoff ? yield* Effect.promise(input.terminalHandoff) : undefined
   const managed = input.server.service
   const service = managed

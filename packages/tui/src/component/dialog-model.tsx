@@ -1,4 +1,4 @@
-import { createMemo, createSignal } from "solid-js"
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js" // kilocode_change - scoped display metadata lifecycle
 import { useLocal } from "../context/local"
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
@@ -9,12 +9,14 @@ import { useConnected } from "./use-connected"
 import { useData } from "../context/data"
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
+import { useTuiApp, type TuiModelGroup } from "../context/runtime" // kilocode_change - host-owned picker presentation
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
   const data = useData()
   const dialog = useDialog()
   const location = useLocation()
+  const presentation = useTuiApp().modelPicker // kilocode_change - do not fork native picker/preferences
   const [query, setQuery] = createSignal("")
   const favoritePriority = new Set(local.model.favorite().map(modelPreferenceKey))
 
@@ -23,6 +25,24 @@ export function DialogModel(props: { providerID?: string }) {
     () => new Map((data.location.provider.list(location.ref) ?? []).map((item) => [item.id, item])),
   )
   const models = createMemo(() => data.location.model.list(location.ref) ?? [])
+
+  // kilocode_change - refresh scoped display metadata; never retain a previous account's groups
+  const [groups, setGroups] = createSignal<ReadonlyArray<TuiModelGroup>>([])
+  createEffect(() => {
+    const input = {
+      location: location.ref,
+      models: models().map((model) => ({ providerID: model.providerID, modelID: model.id })),
+    }
+    const controller = new AbortController()
+    setGroups([])
+    onCleanup(() => controller.abort())
+    void presentation
+      ?.groups?.(input, controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) setGroups(value)
+      })
+      .catch(() => undefined)
+  })
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
@@ -71,6 +91,8 @@ export function DialogModel(props: { providerID?: string }) {
           const provider = providers().get(model.providerID)
           const key = modelPreferenceKey({ providerID: model.providerID, modelID: model.id })
           const favorite = favorites.some((item) => modelPreferenceKey(item) === key)
+          // kilocode_change - display-only grouping supplied by the host
+          const group = groups().find((item) => item.providerID === model.providerID && item.modelID === model.id)
           return {
             value: { providerID: model.providerID, modelID: model.id },
             providerID: model.providerID,
@@ -78,7 +100,8 @@ export function DialogModel(props: { providerID?: string }) {
             title: model.name,
             releaseDate: model.time.released,
             description: favorite ? "(Favorite)" : undefined,
-            category: connected() ? (provider?.name ?? model.providerID) : undefined,
+            category: connected() ? (group?.category ?? provider?.name ?? model.providerID) : undefined, // kilocode_change
+            groupOrder: group?.order, // kilocode_change - metadata ordering, never model identity
             footer: free(model) ? "Free" : undefined,
             onSelect() {
               onSelect(model.providerID, model.id)
@@ -99,6 +122,7 @@ export function DialogModel(props: { providerID?: string }) {
             return false
           return true
         }),
+      presentation?.preferredProviderID, // kilocode_change
     )
 
     if (needle) {
@@ -179,10 +203,20 @@ export function prioritizeFavorites<T extends { value: { providerID: string; mod
 }
 
 export function sortModelOptions<
-  T extends { providerID?: string; providerName?: string; releaseDate: string | number; title: string },
->(options: T[]) {
+  T extends {
+    providerID?: string
+    providerName?: string
+    releaseDate: string | number
+    title: string
+    groupOrder?: number
+  },
+>(options: T[], preferredProviderID = "opencode") {
+  // kilocode_change - optional host priority; preserve the upstream default
   return options.toSorted((a, b) => {
-    const provider = Number(a.providerID !== "opencode") - Number(b.providerID !== "opencode")
+    const group = (a.groupOrder ?? Infinity) - (b.groupOrder ?? Infinity) // kilocode_change
+    if (group && !Number.isNaN(group)) return group // kilocode_change
+    // kilocode_change - preserve explicit model selection independently of presentation
+    const provider = Number(a.providerID !== preferredProviderID) - Number(b.providerID !== preferredProviderID)
     if (provider !== 0) return provider
 
     const name = (a.providerName ?? "").localeCompare(b.providerName ?? "")

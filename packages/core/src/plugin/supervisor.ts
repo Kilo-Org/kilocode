@@ -24,6 +24,8 @@ const resolve = Effect.fn("PluginSupervisor.resolve")(function* (
   const matches = (selector: string, target: string) =>
     selector === "*" || (selector.endsWith(".*") ? target.startsWith(selector.slice(0, -1)) : selector === target)
   const definitions = [...pre, ...post]
+  // kilocode_change - Post SDK plugins are host-enforced policy: config cannot disable or shadow them.
+  const enforced = new Set(post.filter((plugin) => plugin.source?.type === "sdk").map((plugin) => plugin.id))
   const enabled = new Set(definitions.map((plugin) => plugin.id))
   const packages = new Map<string, Plugin.Generation>()
   const pending = new Set<string>()
@@ -86,15 +88,19 @@ const resolve = Effect.fn("PluginSupervisor.resolve")(function* (
     enabled.add(plugin.id)
   }
 
+  enforced.forEach((id) => enabled.add(id))
+
   const ordered = [
     ...pre.filter((plugin) => enabled.has(plugin.id)),
     ...[...packages.values()].filter((plugin) => enabled.has(plugin.id)),
     ...post.filter((plugin) => enabled.has(plugin.id)),
   ]
   // Registry activation dies on a duplicate ID, which would drop the whole generation including builtins.
-  // Keep the first occurrence in boot order and report later ones like any other plugin setup failure.
+  // Host-enforced post definitions win their ID; otherwise the first occurrence in boot order wins.
   const duplicate = (plugin: Plugin.Generation, index: number) =>
-    ordered.findIndex((other) => other.id === plugin.id) !== index
+    (enforced.has(plugin.id)
+      ? ordered.findLastIndex((other) => other.id === plugin.id)
+      : ordered.findIndex((other) => other.id === plugin.id)) !== index
   return {
     plugins: ordered.filter((plugin, index) => !duplicate(plugin, index)),
     packages: new Map([...packages].filter(([, plugin]) => enabled.has(plugin.id))),
@@ -135,18 +141,21 @@ export const layer = Layer.effectDiscard(
     const activate = Effect.fn("PluginSupervisor.activate")(function* () {
       const current = ++generation
       // Combine internal plugins with host-contributed plugins in boot order.
-      // Instance-bound plugins come last: later activation can override earlier
-      // container writes, so the instance's explicit choices win over globals.
+      // Instance-bound plugins override ordinary host contributions; enforced host policy remains last.
       const pre = [
         ...internal.pre.map((plugin) => ({ ...plugin, revision: "internal", source: { type: "builtin" as const } })),
         ...sdk.all(),
         ...instance.all(),
       ]
-      const post = internal.post.map((plugin) => ({
-        ...plugin,
-        revision: "internal",
-        source: { type: "builtin" as const },
-      }))
+      const post = [
+        ...internal.post.map((plugin) => ({
+          ...plugin,
+          revision: "internal",
+          source: { type: "builtin" as const },
+        })),
+        // kilocode_change - Host policy plugins registered for the post phase must win over config overlays.
+        ...(sdk.allPost?.() ?? []),
+      ]
       const operations = yield* sources.operations()
       // Activate everything available locally before waiting on missing package installs.
       const immediate = yield* resolve(pre, post, operations, false, running)

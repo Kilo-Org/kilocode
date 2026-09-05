@@ -6,7 +6,7 @@ import { useRoute, useRouteData } from "../../../context/route"
 import { useData } from "../../../context/data"
 import { useClient } from "../../../context/client"
 import { useTheme } from "../../../context/theme"
-import { Locale } from "../../../util/locale"
+import { useLocal } from "../../../context/local" // kilocode_change - names, not canonical IDs, label agents
 import { Keymap } from "../../../context/keymap"
 import { useComposerTab } from "./index"
 import { withTimestampedFallback } from "@opencode-ai/util/session-title-fallback"
@@ -22,6 +22,7 @@ interface SubagentEntry {
 }
 
 export function SubagentsTab(props: { sessionID: string }) {
+  const local = useLocal() // kilocode_change
   const route = useRouteData("session")
   const data = useData()
   const client = useClient()
@@ -44,9 +45,9 @@ export function SubagentsTab(props: { sessionID: string }) {
         return {
           sessionID: session.id,
           agent: session.agent
-            ? Locale.titlecase(session.agent)
+            ? local.agent.name(session.agent, session.location) // kilocode_change
             : agentMatch
-              ? Locale.titlecase(agentMatch[1])
+              ? local.agent.name(agentMatch[1], session.location) // kilocode_change
               : "Subagent",
           title: agentMatch ? title.replace(agentMatch[0], "").trim() || title : title,
           status: data.session.status(session.id),

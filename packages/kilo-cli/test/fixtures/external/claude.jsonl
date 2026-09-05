@@ -1,0 +1,6 @@
+{"type":"attachment","version":"2.42.0","isSidechain":true,"message":{"id":"attachment_001","role":"user","content":[{"type":"text","text":"ignored attachment metadata"}]}}
+{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":"Read src/index.ts and report back."}}
+{"type":"assistant","version":"2.42.0","isSidechain":false,"message":{"id":"msg_002","role":"assistant","model":"claude-sonnet-fixture","content":[{"type":"thinking","thinking":"I will inspect the requested file.","signature":"sig_claude_fixture"},{"type":"text","text":"I will read that file."},{"type":"tool_use","id":"toolu_read","name":"read","input":{"file_path":"src/index.ts"}}]}}
+{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_003","role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_read","content":[{"type":"text","text":"export const answer = 42;"}]}]}}
+{"type":"assistant","version":"2.42.0","isSidechain":false,"message":{"id":"msg_004","role":"assistant","model":"claude-sonnet-fixture","content":[{"type":"text","text":"The file exports answer = 42."}]}}
+{"type":"user","version":"2.42.0","isSidechain":true,"message":{"id":"side_001","role":"user","content":[{"type":"text","text":"sidechain text must not be imported"}]}}

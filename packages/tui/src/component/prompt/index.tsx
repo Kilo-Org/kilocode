@@ -1556,7 +1556,7 @@ export function Prompt(props: PromptProps) {
       const agent = local.agent.current()
       const model = local.model.parsed()
       return {
-        agentLabel: agent ? Locale.titlecase(agent.id) : undefined,
+        agentLabel: agent ? (agent.name ?? Locale.titlecase(agent.id)) : undefined, // kilocode_change - honor host/config presentation without changing agent identity
         agentColor: agent ? local.agent.color(agent.id) : undefined,
         modelLabel: model.model,
         providerLabel: model.provider,

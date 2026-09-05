@@ -1,0 +1,45 @@
+{
+  "name": "@kilocode/cli",
+  "version": "0.0.0-internal",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "scripts": {
+    "dev": "bun run --no-env-file src/index.ts",
+    "tui": "bun --no-env-file --preload @opentui/solid/preload src/tui-preview.ts",
+    "build": "bun run script/build.ts",
+    "build:tui": "bun run script/build-tui.ts",
+    "build:acp": "bun run script/build-acp.ts",
+    "test": "bun run script/test.ts",
+    "test:coexistence": "bun run script/coexistence.ts",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@kilocode/gateway": "workspace:*",
+    "@kilocode/client": "workspace:*",
+    "@kilocode/indexing": "workspace:*",
+    "@opencode-ai/client": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
+    "@opencode-ai/plugin": "workspace:*",
+    "@opencode-ai/protocol": "workspace:*",
+    "@opencode-ai/schema": "workspace:*",
+    "@opencode-ai/server": "workspace:*",
+    "@opencode-ai/tui": "workspace:*",
+    "@opencode-ai/util": "workspace:*",
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "effect": "catalog:",
+    "jsonc-parser": "3.3.1",
+    "solid-js": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@opencode-ai/pty": "0.1.13",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}

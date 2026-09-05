@@ -23,6 +23,7 @@ import { useRoute } from "./route"
 import { useData } from "./data"
 import { usePermission } from "./permission"
 import { useLocation } from "./location"
+import { Locale } from "../util/locale" // kilocode_change - display names are independent of durable agent IDs
 
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")
@@ -92,6 +93,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         )
       })
       return {
+        // kilocode_change - honor configured names in transcript and subagent presentation too.
+        name(id: string, ref = location.ref) {
+          return data.location.agent.list(ref)?.find((agent) => agent.id === id)?.name ?? Locale.titlecase(id)
+        },
         list() {
           return agents()
         },

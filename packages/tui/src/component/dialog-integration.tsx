@@ -27,6 +27,7 @@ import { useToast } from "../ui/toast"
 import { formLabel, formToggleMultiselect, formValidateValue, type FormAnswerField } from "../util/form"
 
 const INTEGRATION_PRIORITY: Record<string, number> = {
+  kilo: -1, // kilocode_change - recommend Kilo Gateway in Connect
   opencode: 0,
   "opencode-go": 1,
   openai: 2,
@@ -47,6 +48,7 @@ const SUBMIT = Symbol("submit")
 export function integrationOptions(list: IntegrationInfo[]) {
   return list.toSorted(
     (a, b) =>
+      Number(b.id === "kilo") - Number(a.id === "kilo") || // kilocode_change - Kilo stays first across categories
       Number(b.metadata?.source === "mcp") - Number(a.metadata?.source === "mcp") ||
       (INTEGRATION_PRIORITY[a.id] ?? 99) - (INTEGRATION_PRIORITY[b.id] ?? 99) ||
       a.name.localeCompare(b.name) ||
@@ -112,7 +114,7 @@ export function DialogIntegration(
       return {
         title: integration.name,
         value: integration.id,
-        description: methods.length === 0 ? "Environment only" : undefined,
+        description: methods.length === 0 ? "Environment only" : integration.id === "kilo" ? "Recommended" : undefined, // kilocode_change - identify the recommended provider
         footer: connectionSummary(integration) || undefined,
         category,
         disabled: methods.length === 0 && credentials.length === 0,
@@ -312,7 +314,13 @@ async function beginKey(
     : undefined
   if (answer === null) return
   dialog.replace(() => (
-    <KeyMethod integration={integration} method={method} location={location} answer={answer} onConnected={onConnected} />
+    <KeyMethod
+      integration={integration}
+      method={method}
+      location={location}
+      answer={answer}
+      onConnected={onConnected}
+    />
   ))
 }
 

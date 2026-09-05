@@ -1,0 +1,10 @@
+{"type":"session_meta","payload":{"cli_version":"0.8.0","cwd":"/fixture/project","model_provider":"openai","session_id":"codex_fixture_session"}}
+{"type":"turn_context","payload":{"model":"gpt-5-fixture"}}
+{"type":"event_msg","payload":{}}
+{"type":"response_item","payload":{"id":"item_001","type":"message","role":"user","content":[{"type":"input_text","text":"Read src/index.ts."}]}}
+{"type":"response_item","payload":{"id":"item_002","type":"function_call","call_id":"call_read","name":"read","arguments":"{\"file_path\":\"src/index.ts\"}","status":"completed"}}
+{"type":"response_item","payload":{"id":"item_003","type":"function_call_output","call_id":"call_read","output":"export const answer = 42;","status":"completed"}}
+{"type":"response_item","payload":{"id":"item_004","type":"message","role":"assistant","content":[{"type":"output_text","text":"The file exports answer = 42."}]}}
+{"type":"response_item","payload":{"id":"item_005","type":"custom_tool_call","call_id":"call_check","name":"check","input":{"command":"bun run typecheck"}}}
+{"type":"response_item","payload":{"id":"item_006","type":"custom_tool_call_output","call_id":"call_check","output":[{"type":"text","text":"typecheck failed"}],"status":"failed"}}
+{"type":"response_item","payload":{"id":"item_007","type":"message","role":"assistant","content":[{"type":"output_text","text":"The check reported a failure."}]}}

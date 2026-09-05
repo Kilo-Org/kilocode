@@ -176,6 +176,7 @@ type PromptFooterInput = {
 export interface SlotMap {
   readonly app: Readonly<Record<string, never>>
   readonly "home.footer": Readonly<Record<string, never>>
+  readonly "home.logo": Readonly<Record<string, never>> // kilocode_change - host-owned Home branding
   readonly "prompt.footer": PromptFooterInput
   readonly "prompt.footer.status": PromptFooterInput
   readonly "prompt.footer.file": PromptFooterInput

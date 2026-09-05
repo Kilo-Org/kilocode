@@ -1,9 +1,27 @@
 import { createComponent, createContext, type JSX, useContext } from "solid-js"
+import type { LocationRef } from "@opencode-ai/client" // kilocode_change - public host model-presentation boundary
+
+// kilocode_change - additive host presentation; native preferences and selection remain TUI-owned
+export type TuiModelGroup = Readonly<{
+  providerID: string
+  modelID: string
+  category: string
+  order: number
+}>
+export type TuiModelPicker = Readonly<{
+  preferredProviderID?: string
+  groups?: (
+    input: { location?: LocationRef; models: ReadonlyArray<{ providerID: string; modelID: string }> },
+    signal: AbortSignal,
+  ) => Promise<ReadonlyArray<TuiModelGroup>>
+}>
 
 export type TuiApp = Readonly<{
   name: string
   version: string
   channel: string
+  sessionEpilogue?: (input: { title: string; sessionID?: string }) => string // kilocode_change - let isolated hosts own their exit branding
+  modelPicker?: TuiModelPicker // kilocode_change - optional, upstream defaults remain unchanged
 }>
 
 export type TuiPaths = Readonly<{

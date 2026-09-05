@@ -22,7 +22,7 @@ import { useRoute, useRouteData } from "../../context/route"
 import { createStore } from "solid-js/store"
 import { useData } from "../../context/data"
 import { SplitBorder } from "../../ui/border"
-import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
+import { useTuiApp, useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner, SPINNER_FRAMES } from "../../component/spinner"
 import { PatchDiff } from "../../component/patch-diff"
 import { createSyntaxStyleMemo, ThemeContextProvider, useTheme, useThemes } from "../../context/theme"
@@ -164,6 +164,7 @@ export function Session(props: {
   width?: number
 }) {
   const setEpilogue = useEpilogue()
+  const app = useTuiApp()
   const clipboard = useClipboard()
   const writeExport = async (file: string, content: string) => {
     await mkdir(path.dirname(file), { recursive: true })
@@ -202,7 +203,7 @@ export function Session(props: {
 
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
-    setEpilogue(sessionEpilogue({ title, sessionID: session()?.id }))
+    setEpilogue((app.sessionEpilogue ?? sessionEpilogue)({ title, sessionID: session()?.id })) // kilocode_change - preserve upstream presentation unless the host overrides it
   })
   onCleanup(() => setEpilogue())
   const descendantSessionIDs = createMemo(() => {
@@ -2052,7 +2053,7 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
       <box paddingLeft={3} marginTop={props.message.retry || (props.message.error && !interrupted()) ? 1 : 0}>
         <text>
           <span style={{ fg: props.message.error ? theme.text.subdued : local.agent.color(props.message.agent) }}>
-            {Locale.titlecase(props.message.agent)}
+            {local.agent.name(props.message.agent) /* kilocode_change - show the name, not its compatibility ID */}
           </span>
           <Show when={ctx.terminal.width >= 28}>
             <span style={{ fg: theme.text.subdued }}> · {model()}</span>
@@ -2074,6 +2075,7 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
 
 function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
   const ctx = use()
+  const local = useLocal() // kilocode_change - resolve display names for both sides of a switch
   const theme = useTheme()
   if (props.message.type === "location-switched")
     return (
@@ -2086,9 +2088,9 @@ function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
     )
   const text = () => {
     if (props.message.type === "agent-switched") {
-      const agent = Locale.titlecase(props.message.agent)
+      const agent = local.agent.name(props.message.agent) // kilocode_change
       if (props.message.previous && props.message.previous !== props.message.agent)
-        return `Switched agent from ${Locale.titlecase(props.message.previous)} to ${agent}`
+        return `Switched agent from ${local.agent.name(props.message.previous)} to ${agent}` // kilocode_change
       return `Switched agent to ${agent}`
     }
     if (props.message.type === "model-switched")
@@ -2104,6 +2106,7 @@ function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
 
 function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
   const ctx = use()
+  const local = useLocal() // kilocode_change - use registered names for subagent notices
   const theme = useTheme()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
@@ -2116,7 +2119,7 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
   })
   const completion = () => source() === "subagent" || source() === "shell"
   const state = () => stringValue(metadata()?.state)
-  const actor = () => (source() === "shell" ? "Shell" : Locale.titlecase(stringValue(metadata()?.agent) ?? "Subagent"))
+  const actor = () => (source() === "shell" ? "Shell" : local.agent.name(stringValue(metadata()?.agent) ?? "Subagent")) // kilocode_change
   const text = () => {
     if (props.message.type === "system") return props.message.description ?? "Instructions updated"
     if (props.message.type === "synthetic") return props.message.description ?? ""
@@ -3457,6 +3460,7 @@ function WebSearch(props: ToolProps) {
 
 function Subagent(props: ToolProps) {
   const { navigate } = useRoute()
+  const local = useLocal() // kilocode_change - preserve agent identity while displaying its configured name
   const data = useData()
   const sessionID = createMemo(() => stringValue(props.metadata.sessionID) ?? stringValue(props.metadata.sessionId))
   const description = createMemo(() => stringValue(props.input.description))
@@ -3483,9 +3487,11 @@ function Subagent(props: ToolProps) {
         ) : undefined
       }
     >
-      {continuation()
-        ? `Continue subagent — ${description() ?? "Subagent"}`
-        : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent — ${description() ?? "Subagent"}`}
+      {
+        continuation()
+          ? `Continue subagent — ${description() ?? "Subagent"}`
+          : `${local.agent.name(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent — ${description() ?? "Subagent"}` /* kilocode_change */
+      }
     </InlineTool>
   )
 }

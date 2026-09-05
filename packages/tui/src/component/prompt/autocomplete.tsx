@@ -519,9 +519,13 @@ export function Autocomplete(props: {
         onSelect: slash.arguments ? () => insertSlash(slash.name) : command.run,
       }
     })
-    const commandNames = new Set<string>()
+    // kilocode_change - mirror dispatch precedence: local names/aliases shadow server commands and skills.
+    const commandNames = new Set(
+      results.flatMap((option) => [option.display, ...(option.aliases ?? [])]).map((name) => name.slice(1)),
+    )
 
     for (const serverCommand of data.location.command.list(location.current) ?? []) {
+      if (commandNames.has(serverCommand.name)) continue // kilocode_change - show one executable command
       commandNames.add(serverCommand.name)
       results.push({
         display: "/" + serverCommand.name,

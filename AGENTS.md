@@ -1,3 +1,8 @@
+<!-- kilocode_change - this checkout is the Kilo fork of upstream v2; the branch, baseline, and Kilo-ownership rules below override upstream's -->
+
+- Read `kilocode/v2-fork-conventions.md` before branching, merging upstream, or adding Kilo code. It overrides the branch-name rule below and defines Kilo-owned paths, shared-hook limits, and `kilocode_change` markers.
+- Pristine upstream v2 is already red at the pinned baseline SHA. Check `kilocode/baseline/pinned-v2-baseline.md` before attributing a failing check to your change.
+
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - Current implementation changes belong in `packages/core`, `packages/cli`, `packages/server`, `packages/protocol`, `packages/schema`, and related generated client surfaces when required.
