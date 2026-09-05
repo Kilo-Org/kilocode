@@ -12,7 +12,7 @@
  *     nothing except to rephrase.
  */
 
-import { level0 } from "./level0"
+import { constraints, hardDeny, level0 } from "./level0"
 import { createLevel1Client, DEFAULT_LEVEL1_CONFIG, type Level1Client, type Level1Config } from "./level1"
 import { createLevel2Client, type Level2Client, type Level2Config } from "./level2"
 import type { CascadeResult, Level1Result, Level2Result, PolicyInput } from "./types"
@@ -148,6 +148,22 @@ export async function evaluate(
     }
   }
 
+  if (l1.verdict === "ALLOW" && constraints(input).length) {
+    return {
+      decision: "ask",
+      decided_by: "level1",
+      rule: "CONTRACT:missing_facts",
+      reason: "The model cannot waive mandatory execution constraints",
+      reason_code: "missing_facts",
+      missing_facts: constraints(input),
+      failure: null,
+      safe_alternatives: [],
+      level0: l0,
+      level1: l1,
+      level2: null,
+      latency_ms: Date.now() - started,
+    }
+  }
   if (l1.verdict === "ALLOW") {
     return {
       decision: "allow",
@@ -166,7 +182,10 @@ export async function evaluate(
   if (!config.useLevel2) {
     return {
       decision: "ask",
-      decided_by: "fail_closed",
+      decided_by: "level1",
+      missing_facts: l1.missing_facts ?? ["policy_uncertain"],
+      reason_code: l1.reason_code ?? "policy_uncertain",
+      failure: null,
       rule: "L1:review",
       reason: "Level 1 was not confident; Level 2 is not enabled",
       safe_alternatives: [],
@@ -193,17 +212,48 @@ export async function evaluate(
     }
   }
 
-  const decision: CascadeResult["decision"] = l2.verdict === "ALLOW" ? "allow" : l2.verdict === "DENY" ? "deny" : "ask"
+  const decision: CascadeResult["decision"] =
+    l2.verdict === "ALLOW" ? (constraints(input).length ? "ask" : "allow") : l2.verdict === "DENY" ? "deny" : "ask"
   return {
     decision,
     decided_by: "level2",
     rule: `L2:${l2.verdict.toLowerCase()}:${l2.failed_check}`,
     reason: `Level 2 ${l2.verdict.toLowerCase()} (${l2.reason_code}, failed check: ${l2.failed_check}, risk: ${l2.risk})`,
     // Level 2 writes its own alternatives; fall back to the rule table if it did not.
-    safe_alternatives: decision === "deny" ? (l2.safe_alternatives.length ? l2.safe_alternatives : alternativesFor(null)) : [],
+    safe_alternatives:
+      decision === "deny" ? (l2.safe_alternatives.length ? l2.safe_alternatives : alternativesFor(null)) : [],
     level0: l0,
     level1: l1,
     level2: l2,
     latency_ms: Date.now() - started,
   }
+}
+
+/** Whole-call aggregation shared by the runtime and offline bridge. */
+export async function evaluateCall(
+  inputs: PolicyInput[],
+  config: CascadeConfig = DEFAULT_CASCADE_CONFIG,
+  client?: Level1Client,
+) {
+  const started = Date.now()
+  if (!inputs.length) throw new Error("empty_action_ir")
+  const denied = inputs.map((input) => hardDeny(input)).findIndex((result) => result.verdict === "DENY")
+  if (denied >= 0) {
+    const result = await evaluate(inputs[denied], config, client)
+    return {
+      result: { ...result, latency_ms: Date.now() - started },
+      results: inputs.map((_, index) => (index === denied ? result : null)),
+      index: denied,
+    }
+  }
+  const results: CascadeResult[] = []
+  for (const input of inputs) results.push(await evaluate(input, config, client))
+  const index =
+    results.findIndex((x) => x.decision === "deny") >= 0
+      ? results.findIndex((x) => x.decision === "deny")
+      : Math.max(
+          0,
+          results.findIndex((x) => x.decision === "ask"),
+        )
+  return { result: { ...results[index], latency_ms: Date.now() - started }, results, index }
 }

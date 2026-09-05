@@ -26,7 +26,13 @@ const authority: Authority = {
 
 function input(command: string, provenance: PolicyInput["action"]["intent_provenance"] = "user_explicit"): PolicyInput {
   const [action] = normalize({ tool: "bash", arguments: { command } }, ctx, provenance)
-  return { user_intent: "Clean build output and run tests", authority, trusted_context: ctx, action: action!, raw: command }
+  return {
+    user_intent: "Clean build output and run tests",
+    authority,
+    trusted_context: ctx,
+    action: action!,
+    raw: command,
+  }
 }
 
 /** A Level 1 stand-in that returns whatever the test dictates. */
@@ -88,7 +94,11 @@ describe("fail-closed", () => {
   }
 
   test("REVIEW with no Level 2 behind it becomes ask, not allow", async () => {
-    const result = await evaluate(input("chown -R app:app var/cache"), DEFAULT_CASCADE_CONFIG, stubClient({ verdict: "REVIEW" }))
+    const result = await evaluate(
+      input("chown -R app:app var/cache"),
+      DEFAULT_CASCADE_CONFIG,
+      stubClient({ verdict: "REVIEW" }),
+    )
     expect(result.decision).toBe("ask")
   })
 
@@ -126,19 +136,21 @@ describe("deny is actionable", () => {
 
 describe("Level 1 response handling", () => {
   test("parses the three valid verdicts", () => {
-    expect(parseVerdict("ALLOW")).toBe("ALLOW")
-    expect(parseVerdict(" deny\n")).toBe("DENY")
-    expect(parseVerdict("REVIEW.")).toBe("REVIEW")
+    expect(parseVerdict(JSON.stringify({ verdict: "ALLOW", reason_code: "in_scope", missing_facts: [] }))).toBe("ALLOW")
+    expect(parseVerdict(JSON.stringify({ verdict: "DENY", reason_code: "forbidden", missing_facts: [] }))).toBe("DENY")
+    expect(parseVerdict(JSON.stringify({ verdict: "REVIEW", reason_code: "missing", missing_facts: ["target"] }))).toBe(
+      "REVIEW",
+    )
   })
 
-  test("takes the final decision word after a reasoning preamble", () => {
-    expect(parseVerdict("I considered ALLOW but the target is unrelated. DENY")).toBe("DENY")
+  test("rejects a decision word after a reasoning preamble", () => {
+    expect(parseVerdict("I considered ALLOW but the target is unrelated. DENY")).toBeNull()
   })
 
   test("returns null on anything else, so the caller fails closed", () => {
     expect(parseVerdict("maybe?")).toBeNull()
     expect(parseVerdict("")).toBeNull()
-    expect(parseVerdict("{\"decision\": 1}")).toBeNull()
+    expect(parseVerdict('{"decision": 1}')).toBeNull()
   })
 })
 
@@ -146,20 +158,20 @@ describe("Level 1 prompt hygiene", () => {
   test("the prompt never contains tool output or file contents", () => {
     const prompt = buildUserPrompt(input("cat src/app.ts"), DEFAULT_LEVEL1_CONFIG)
     expect(prompt).not.toContain("tool_output")
-    expect(prompt).toContain("<action>")
-    expect(prompt).toContain("<developer_request>")
+    expect(prompt).toContain('"action"')
+    expect(prompt).toContain('"user_intent"')
   })
 
-  test("attacker-controlled raw text is truncated", () => {
+  test("raw shell comments are omitted rather than sent to the model", () => {
     const long = "rm -rf dist # " + "A".repeat(5000)
     const prompt = buildUserPrompt(input(long), DEFAULT_LEVEL1_CONFIG)
-    expect(prompt).toContain("[truncated]")
+    expect(prompt).not.toContain("A".repeat(100))
     expect(prompt.length).toBeLessThan(2500)
   })
 
   test("action_only view withholds the developer request", () => {
     const prompt = buildUserPrompt(input("rm -rf dist"), { ...DEFAULT_LEVEL1_CONFIG, view: "action_only" })
-    expect(prompt).not.toContain("<developer_request>")
-    expect(prompt).toContain("<action>")
+    expect(prompt).not.toContain('"user_intent"')
+    expect(prompt).toContain('"action"')
   })
 })

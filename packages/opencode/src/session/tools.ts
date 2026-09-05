@@ -1,3 +1,4 @@
+import * as AutoGuardRuntime from "@/kilocode/autoguard/runtime" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
@@ -190,7 +191,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            const result = yield* SandboxPolicy.executeTool(
+              ctx.sessionID,
+              item,
+              AutoGuardRuntime.execute(ctx, item, args, item.execute(args, ctx)),
+            )
             // kilocode_change end
             const output = {
               ...result,
@@ -266,7 +271,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               always: permissionPatterns,
             })
 
-            const resources = Object.values(yield* mcp.resources(parsed.server))
+            // kilocode_change start - gate final MCP resource arguments
+            const resources = Object.values(
+              yield* AutoGuardRuntime.execute(
+                ctx,
+                { id: MCP_RESOURCE_TOOLS.list },
+                toRecord(args),
+                Effect.suspend(() => mcp.resources(parseListMcpResourcesArgs(args).server)),
+              ),
+            ) // kilocode_change - final arguments pass through AutoGuard
+            // kilocode_change end
             const filtered = resources
               .filter((resource) => !parsed.server || resource.client === parsed.server)
               .toSorted((a, b) =>
@@ -346,7 +360,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               always: permissionPatterns,
             })
 
-            const templates = Object.values(yield* mcp.resourceTemplates(parsed.server))
+            // kilocode_change start - gate final MCP resource arguments
+            const templates = Object.values(
+              yield* AutoGuardRuntime.execute(
+                ctx,
+                { id: MCP_RESOURCE_TOOLS.listTemplates },
+                toRecord(args),
+                Effect.suspend(() => mcp.resourceTemplates(parseListMcpResourcesArgs(args).server)),
+              ),
+            ) // kilocode_change - final arguments pass through AutoGuard
+            // kilocode_change end
             const filtered = templates
               .filter((template) => !parsed.server || template.client === parsed.server)
               .toSorted((a, b) =>
@@ -423,7 +446,17 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               always: [`mcp:${parsed.server}:*`],
             })
 
-            const content = yield* mcp.readResource(parsed.server, parsed.uri)
+            // kilocode_change start - gate final MCP resource arguments
+            const content = yield* AutoGuardRuntime.execute(
+              ctx,
+              { id: MCP_RESOURCE_TOOLS.read },
+              toRecord(args),
+              Effect.suspend(() => {
+                const final = parseReadMcpResourceArgs(args)
+                return mcp.readResource(final.server, final.uri)
+              }),
+            ) // kilocode_change - final arguments pass through AutoGuard
+            // kilocode_change end
             if (!content) throw new Error(`Failed to read MCP resource: ${parsed.server}/${parsed.uri}`)
 
             const formatted = formatMcpResourceContent(parsed.server, parsed.uri, content)
@@ -488,10 +521,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
-            Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              return yield* Effect.promise(() => execute(args, opts))
-            }),
+            AutoGuardRuntime.execute(
+              ctx,
+              { id: key },
+              args as Record<string, unknown>,
+              Effect.gen(function* () {
+                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                return yield* Effect.promise(() => execute(args, opts))
+              }),
+            ),
           ).pipe(
             // kilocode_change end
             Effect.withSpan("Tool.execute", {

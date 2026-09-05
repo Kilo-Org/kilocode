@@ -45,6 +45,8 @@ export interface NormalizedAction {
   intent_provenance: IntentProvenance
   /** Flags that change the effect: `recursive`, `force`, `remote_host`, ... */
   options: Record<string, unknown>
+  resources?: Resource[]
+  uncertainty?: string[]
 }
 
 /** Facts about the environment that the agent cannot forge. */
@@ -60,6 +62,9 @@ export interface TrustedContext {
   allowed_external_hosts: string[]
   /** Branches that must never be force-pushed. Defaults to main/master. */
   protected_branches?: string[]
+  catalog?: ResourceCatalog
+  test_profile?: Partial<ExecutionProfile>
+  audit_paths?: string[]
 }
 
 /**
@@ -77,6 +82,7 @@ export interface Authority {
   implicit: string[]
   /** Descriptors that are in scope but carry outsized consequences. */
   sensitive: string[]
+  forbidden?: string[]
 }
 
 /** Everything the cascade is allowed to look at for one decision. */
@@ -89,6 +95,10 @@ export interface PolicyInput {
   raw?: string
   /** Bounded, normalized history. Never a transcript. */
   recent_actions?: NormalizedAction[]
+  contract?: TaskContract
+  ir?: ActionIR
+  profile?: ExecutionProfile
+  history?: ActionOutcome[]
 }
 
 /** The cascade's decision vocabulary, matching Kilo's `Rule.action`. */
@@ -121,7 +131,9 @@ export interface Level0Result {
 export interface Level1Result {
   verdict: Level1Verdict
   /** Set when the model failed; the cascade then fails closed to `ask`. */
-  failure: "timeout" | "transport" | "malformed" | null
+  failure: "timeout" | "transport" | "malformed" | "invalid_response" | null
+  reason_code?: string
+  missing_facts?: string[]
   raw_response: string | null
   latency_ms: number
 }
@@ -151,4 +163,118 @@ export interface CascadeResult {
   level1: Level1Result | null
   level2: Level2Result | null
   latency_ms: number
+  reason_code?: string
+  missing_facts?: string[]
+  failure?: "timeout" | "transport" | "invalid_response" | null
+}
+
+export interface Resource {
+  raw: string
+  key: string
+  kind: "file" | "directory" | "url" | "reference"
+  identity?: string
+  exists?: boolean
+  symlink?: boolean
+}
+
+export interface ResourceCatalog {
+  source: string[]
+  verification: string[]
+  generated_output: string[]
+}
+
+export interface ExecutionProfile {
+  id: string
+  trusted_code: boolean
+  runner: string[]
+  cwd: string
+  argv: string[]
+  write_roots: string[]
+  denied_paths: string[]
+  network: "deny" | "proxy"
+  allowed_hosts: string[]
+  environment: Record<string, string>
+  config_hash: string
+}
+
+export interface ActionIR {
+  version: 1
+  tool: string
+  call_id: string
+  cwd: string
+  argv: string[][]
+  actions: NormalizedAction[]
+  fingerprint: string
+  uncertainty: string[]
+}
+
+export interface ContractMessage {
+  id: string
+  text: string
+}
+
+export interface Grant {
+  operation: string
+  resource: Resource
+  source: string
+  evidence: string
+  confirmed: "grammar" | "user"
+}
+
+export interface PendingApproval {
+  id: string
+  version: number
+  fingerprint: string
+  question: string
+  candidates: Grant[]
+  missing_facts: string[]
+}
+
+export interface TaskContract {
+  schema_version: 1
+  session_id: string
+  workspace: string
+  version: number
+  expires: "session"
+  active: boolean
+  initial: ContractMessage
+  clarifications: ContractMessage[]
+  grants: Grant[]
+  prohibitions: Grant[]
+  catalog: ResourceCatalog
+  pending: PendingApproval[]
+  parent_id?: string
+  parent_version?: number
+  proposals: Grant[]
+  extractor_failure: string | null
+  configuration_hash?: string
+  uncertainties?: ContractMessage[]
+}
+
+export interface ActionOutcome {
+  call_id: string
+  actions: NormalizedAction[]
+  decision: Decision | null
+  executed: boolean | null
+  exit_code: number | null
+  error: string | null
+}
+
+export interface AuditEvent {
+  schema_version: "0.2"
+  event:
+    | "startup"
+    | "proposed"
+    | "policy_decided"
+    | "waiting_user"
+    | "approval_replied"
+    | "execution_started"
+    | "execution_finished"
+    | "tool_finished"
+  timestamp: string
+  session_id: string
+  call_id: string
+  operation_index?: number
+  policy_decision?: Decision | null
+  [key: string]: unknown
 }

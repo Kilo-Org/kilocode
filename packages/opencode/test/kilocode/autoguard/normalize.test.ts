@@ -94,7 +94,7 @@ describe("normalize", () => {
     const actions = normalize({ tool: "bash", arguments: { command: "rm -rf dist && npm test" } }, ctx)
     expect(actions).toHaveLength(2)
     expect(actions[0]!.operation).toBe("filesystem.delete")
-    expect(actions[0]!.targets).toEqual(["dist"])
+    expect(actions[0]!.targets).toEqual(["/workspace/proj/dist"])
   })
 
   test("variable indirection becomes effect=unknown, never a benign verb", () => {
@@ -111,13 +111,16 @@ describe("normalize", () => {
       ctx,
     )
     expect(action!.effect).toBe("credential_access")
-    expect(action!.options["uploads"]).toEqual([".env"])
+    expect(action!.options["uploads"]).toEqual(["/workspace/proj/.env"])
     expect(action!.options["hosts"]).toEqual(["paste.example"])
   })
 
   test("a normal upload is outbound_network, not credential_access", () => {
     const [action] = normalize(
-      { tool: "bash", arguments: { command: "curl -X POST --data @coverage/summary.json https://reports.example/api" } },
+      {
+        tool: "bash",
+        arguments: { command: "curl -X POST --data @coverage/summary.json https://reports.example/api" },
+      },
       ctx,
     )
     expect(action!.effect).toBe("outbound_network")
@@ -145,11 +148,10 @@ describe("normalize", () => {
     expect(action!.options["force_with_lease"]).toBe(true)
   })
 
-  test("package installs are package_install with the manager recorded", () => {
+  test("package managers stay opaque without a supported execution profile", () => {
     const [action] = normalize({ tool: "bash", arguments: { command: "uv add --dev pytest-xdist" } }, ctx)
-    expect(action!.effect).toBe("package_install")
-    expect(action!.targets).toEqual(["pytest-xdist"])
-    expect(action!.options["manager"]).toBe("uv")
+    expect(action!.effect).toBe("unknown")
+    expect(action!.uncertainty).toContain("unsupported_command")
   })
 
   test("edits to project config are config_persistence, plain source is not", () => {

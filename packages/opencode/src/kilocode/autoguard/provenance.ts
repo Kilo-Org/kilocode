@@ -64,7 +64,9 @@ function namesTarget(text: string, target: string): boolean {
 export function deriveProvenance(action: NormalizedAction, userIntent: string): IntentProvenance {
   if (!userIntent.trim()) return "agent_invented"
 
-  const everyTargetNamed = action.targets.length > 0 && action.targets.every((t) => namesTarget(userIntent, t))
+  const everyTargetNamed =
+    action.targets.length > 0 &&
+    (action.resources?.map((r) => r.raw) ?? action.targets).every((t) => namesTarget(userIntent, t))
   const verb = INTENT_VERBS[action.operation]
   const verbMatches = verb ? verb.test(userIntent) : false
 

@@ -1,5 +1,10 @@
 import { test, expect, describe } from "bun:test"
-import { parseLevel2, extractJson, buildLevel2Prompt, LEVEL2_SYSTEM_PROMPT } from "../../../src/kilocode/autoguard/level2"
+import {
+  parseLevel2,
+  extractJson,
+  buildLevel2Prompt,
+  LEVEL2_SYSTEM_PROMPT,
+} from "../../../src/kilocode/autoguard/level2"
 import { evaluate, DEFAULT_CASCADE_CONFIG } from "../../../src/kilocode/autoguard/cascade"
 import { normalize } from "../../../src/kilocode/autoguard/normalize"
 import type { Level1Client } from "../../../src/kilocode/autoguard/level1"
@@ -115,7 +120,7 @@ describe("Level 2 in the cascade", () => {
       },
     }
     const result = await evaluate(input("chown -R app:app var/cache"), withL2, allowing, deep)
-    expect(result.decision).toBe("allow")
+    expect(result.decision).toBe("ask")
     expect(result.decided_by).toBe("level1")
     expect(reached).toBe(false)
   })
@@ -134,9 +139,14 @@ describe("Level 2 in the cascade", () => {
     expect(reached).toBe(false)
   })
 
-  test("resolves a REVIEW into allow", async () => {
-    const result = await evaluate(input("chown -R app:app var/cache"), withL2, alwaysReview, stubDeep({ verdict: "ALLOW" }))
-    expect(result.decision).toBe("allow")
+  test("an L2 ALLOW cannot authorize opaque chown", async () => {
+    const result = await evaluate(
+      input("chown -R app:app var/cache"),
+      withL2,
+      alwaysReview,
+      stubDeep({ verdict: "ALLOW" }),
+    )
+    expect(result.decision).toBe("ask")
     expect(result.decided_by).toBe("level2")
   })
 
@@ -188,10 +198,14 @@ describe("Level 2 in the cascade", () => {
   }
 
   test("an unreachable Level 2 endpoint produces ask, not allow", async () => {
-    const result = await evaluate(input("chown -R app:app var/cache"), {
-      ...withL2,
-      level2: { ...withL2.level2, baseUrl: "http://127.0.0.1:9/v1", timeoutMs: 1500 },
-    }, alwaysReview)
+    const result = await evaluate(
+      input("chown -R app:app var/cache"),
+      {
+        ...withL2,
+        level2: { ...withL2.level2, baseUrl: "http://127.0.0.1:9/v1", timeoutMs: 1500 },
+      },
+      alwaysReview,
+    )
     expect(result.decision).toBe("ask")
     expect(result.decided_by).toBe("fail_closed")
   })

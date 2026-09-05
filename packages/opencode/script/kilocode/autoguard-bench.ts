@@ -17,10 +17,9 @@
  */
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs"
-import { evaluate, DEFAULT_CASCADE_CONFIG } from "../../src/kilocode/autoguard/cascade"
+import { evaluateCall, DEFAULT_CASCADE_CONFIG } from "../../src/kilocode/autoguard/cascade"
 import { normalize } from "../../src/kilocode/autoguard/normalize"
 import { DEFAULT_LEVEL1_CONFIG, type Level1View } from "../../src/kilocode/autoguard/level1"
-import type { Level2Config } from "../../src/kilocode/autoguard/level2"
 import type { Decision, NormalizedAction, PolicyInput } from "../../src/kilocode/autoguard/types"
 
 type Mode = "rules_only" | "cascade" | "full_cascade"
@@ -53,7 +52,10 @@ const DECISION_MAP: Record<Decision, "ALLOW" | "ASK" | "DENY"> = { allow: "ALLOW
 function reasonCode(rule: string | null, decidedBy: string): string {
   if (!rule) return `${decidedBy}_no_rule`
   const tail = rule.includes(":") ? rule.split(":").pop()! : rule
-  const code = tail.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+  const code = tail
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
   return code || `${decidedBy}_unnamed`
 }
 
@@ -61,26 +63,18 @@ async function main() {
   const casesPath = arg("cases")
   const outputPath = arg("output")
   const mode = arg("mode", "cascade") as Mode
+  if (mode === "full_cascade")
+    throw new Error("L2 is disabled in the AutoGuard v2 evaluation; use cascade or rules_only")
   const view = arg("view", "full_context") as Level1View
   const model = arg("model", mode === "rules_only" ? "none" : DEFAULT_LEVEL1_CONFIG.model)
   const baseUrl = arg("base-url", DEFAULT_LEVEL1_CONFIG.baseUrl)
-  const includeRaw = arg("include-raw", "true") === "true"
+  const includeRaw = arg("include-raw", "false") === "true"
   const repeats = Number(arg("repeats", "1"))
   // By default the suite's curated `normalized` action is used, isolating the
   // policy decision from normalization. With --normalize, the action is
   // re-derived from `raw_tool_call` instead, which measures the whole path
   // production actually takes: parse, classify axes, then decide.
   const renormalize = process.argv.includes("--normalize")
-  // Level 2 knobs. It defaults to the same endpoint as Level 1 but with
-  // reasoning left on, which is the whole question this mode exists to answer.
-  const l2Model = arg("l2-model", model)
-  const l2BaseUrl = arg("l2-base-url", baseUrl)
-  const l2ApiKey = process.env[arg("l2-api-key-env", "AUTOGUARD_L2_API_KEY")]
-  const l2Thinking = arg("l2-thinking", "true") === "true"
-  const l2TimeoutMs = Number(arg("l2-timeout-ms", "180000"))
-  // "none" omits temperature entirely, for providers that reject the parameter.
-  const l2TemperatureArg = arg("l2-temperature", "0")
-  const l2Temperature = l2TemperatureArg === "none" ? null : Number(l2TemperatureArg)
   const limit = Number(arg("limit", "0"))
 
   const cases: BenchCase[] = readFileSync(casesPath, "utf8")
@@ -90,25 +84,11 @@ async function main() {
     .filter((c) => c.case_id && c.input)
   const selected = limit > 0 ? cases.slice(0, limit) : cases
 
-  const level2: Level2Config = {
-    ...DEFAULT_LEVEL1_CONFIG,
-    model: l2Model,
-    baseUrl: l2BaseUrl,
-    apiKey: l2ApiKey,
-    timeoutMs: l2TimeoutMs,
-    temperature: l2Temperature,
-    view: "full_context",
-    includeRaw,
-    // Reasoning on is the default for this layer; turning it off makes the
-    // same-model ablation possible without swapping models.
-    extraBody: l2Thinking ? {} : { chat_template_kwargs: { enable_thinking: false } },
-  }
   const config = {
     ...DEFAULT_CASCADE_CONFIG,
     useLevel1: mode !== "rules_only",
-    useLevel2: mode === "full_cascade",
+    useLevel2: false,
     level1: { ...DEFAULT_LEVEL1_CONFIG, model, baseUrl, view, includeRaw },
-    level2,
   }
 
   writeFileSync(outputPath, "")
@@ -119,22 +99,18 @@ async function main() {
       // policy decision from normalization. Our own normalizer is exercised by
       // its unit tests and by the end-to-end trajectory suite instead.
       const curated = item.input.proposed_action.normalized
-      const derived = renormalize
-        ? normalize(item.input.proposed_action.raw_tool_call, item.input.trusted_context, curated.intent_provenance)[0]
-        : undefined
-      const policyInput: PolicyInput = {
+      const actions = renormalize
+        ? normalize(item.input.proposed_action.raw_tool_call, item.input.trusted_context, curated.intent_provenance)
+        : [curated]
+      const inputs: PolicyInput[] = actions.map((action) => ({
         user_intent: item.input.user_intent,
         authority: item.input.authority,
         trusted_context: item.input.trusted_context,
-        // Provenance stays curated even under --normalize: deriving it needs the
-        // full conversation, not the one-line intent this suite carries, and
-        // mixing that error in would make the normalizer look worse than it is.
-        action: derived ? { ...derived, intent_provenance: curated.intent_provenance } : curated,
-        raw: JSON.stringify(item.input.proposed_action.raw_tool_call.arguments),
+        action,
         recent_actions: item.input.recent_actions,
-      }
-
-      const result = await evaluate(policyInput, config)
+      }))
+      const evaluated = await evaluateCall(inputs, config)
+      const result = evaluated.result
       const failed = result.level2?.failure ?? result.level1?.failure ?? null
       const status = failed === "timeout" ? "timeout" : failed === "transport" ? "api_error" : "ok"
 
@@ -142,10 +118,10 @@ async function main() {
         outputPath,
         JSON.stringify({
           case_id: item.case_id,
-          view: (mode === "rules_only" ? "rules_only" : mode === "full_cascade" ? `l2_${l2Thinking ? "think" : "nothink"}` : view) + (renormalize ? "_normalized" : ""),
+          view: (mode === "rules_only" ? "rules_only" : view) + (renormalize ? "_normalized" : ""),
           repeat_index: repeat,
-          requested_model: mode === "full_cascade" ? `${model}+L2:${l2Model}${l2Thinking ? "+think" : ""}` : model,
-          prompt_version: "autoguard-level1-v1",
+          requested_model: model,
+          prompt_version: "autoguard-level1-v2-json",
           seed: null,
           status,
           prediction: {
@@ -163,6 +139,8 @@ async function main() {
           timestamp_utc: new Date().toISOString(),
           // Diagnostics beyond the scorer's contract; it ignores extra keys.
           autoguard: {
+            input_mode: renormalize ? "raw_with_curated_authority" : "curated",
+            operation_count: actions.length,
             decided_by: result.decided_by,
             rule: result.rule,
             level1_verdict: result.level1?.verdict ?? null,

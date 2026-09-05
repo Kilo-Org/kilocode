@@ -11,6 +11,7 @@ const ctx: TrustedContext = {
   environment_kind: "local_dev",
   protected_paths: ["src", "tests", ".git"],
   generated_paths: ["dist"],
+  catalog: { source: ["src"], verification: ["tests"], generated_output: ["dist"] },
   allowed_external_hosts: [],
 }
 
@@ -33,7 +34,8 @@ const productionCtx: TrustedContext = {
   cwd: "/ws",
   environment_kind: "local_dev",
   protected_paths: [".git", ".env", "secrets"],
-  generated_paths: ["dist", "build", ".cache", "node_modules"],
+  generated_paths: ["dist"],
+  catalog: { source: ["src"], verification: ["tests"], generated_output: ["dist"] },
   allowed_external_hosts: [],
 }
 
@@ -42,18 +44,26 @@ describe("against the context production actually uses", () => {
 
   test("a trailing slash is how a developer writes a directory", () => {
     const a = deriveAuthority(intent, productionCtx)
-    expect(a.scope).toContain("src")
-    expect(a.scope).toContain("tests")
-    expect(a.implicit).toContain("code.modify:src")
+    expect(a.scope).toContain("/ws/src")
+    expect(a.scope).toContain("/ws/tests")
+    expect(a.required).toContain("code.modify:/ws/src")
   })
 
-  test("the edit is fast-allowed under the production context too", () => {
+  test("an offline edit without a real repository or backup cannot fast allow", () => {
     const authority = deriveAuthority(intent, productionCtx)
-    const [action] = normalize({ tool: "edit", arguments: { filePath: "src/parser.py", oldString: "a", newString: "b" } }, productionCtx)
+    const [action] = normalize(
+      { tool: "edit", arguments: { filePath: "src/parser.py", oldString: "a", newString: "b" } },
+      productionCtx,
+    )
     const withProvenance = { ...action!, intent_provenance: deriveProvenance(action!, intent) }
-    const r = level0({ user_intent: intent, authority, trusted_context: productionCtx, action: withProvenance, raw: "" })
-    expect(r.verdict).toBe("ALLOW")
-    expect(r.rule).toBe("L0-A2:tracked_edit_in_scope")
+    const r = level0({
+      user_intent: intent,
+      authority,
+      trusted_context: productionCtx,
+      action: withProvenance,
+      raw: "",
+    })
+    expect(r.verdict).not.toBe("ALLOW")
   })
 
   test("a bare noun still grants nothing without a slash or an extension", () => {
@@ -64,22 +74,24 @@ describe("against the context production actually uses", () => {
 describe("what the extractor grants", () => {
   test("a named directory and a matching verb produce a bounded grant", () => {
     const a = deriveAuthority("Fix the code in src/ so the tests pass.", ctx)
-    expect(a.scope).toContain("src")
+    expect(a.scope).toContain("/ws/src")
     expect(a.capabilities).toContain("code.modify")
-    expect(a.implicit).toContain("code.modify:src")
+    expect(a.required).toContain("code.modify:/ws/src")
     // Never a wildcard, in either position.
     expect(a.implicit.some((d) => d.includes("*"))).toBe(false)
     expect(a.scope).not.toContain("*")
   })
 
-  test("the edit that the whole change exists to unblock is now fast-allowed", () => {
+  test("host protection still prevents an explicitly requested source edit", () => {
     const intent = "The tests in tests/ are failing. Fix the code in src/ so they pass."
     const authority = deriveAuthority(intent, ctx)
-    const [action] = normalize({ tool: "edit", arguments: { filePath: "src/parser.py", oldString: "a", newString: "b" } }, ctx)
+    const [action] = normalize(
+      { tool: "edit", arguments: { filePath: "src/parser.py", oldString: "a", newString: "b" } },
+      ctx,
+    )
     const withProvenance = { ...action!, intent_provenance: deriveProvenance(action!, intent) }
     const r = level0({ user_intent: intent, authority, trusted_context: ctx, action: withProvenance, raw: "" })
-    expect(r.verdict).toBe("ALLOW")
-    expect(r.rule).toBe("L0-A2:tracked_edit_in_scope")
+    expect(r.verdict).not.toBe("ALLOW")
   })
 })
 
@@ -104,18 +116,23 @@ describe("what the extractor refuses to grant", () => {
 
     // `dist` is declared generated, so cleanup of it is grantable.
     const b = deriveAuthority("Clean the generated output in dist and rerun the tests.", ctx)
-    expect(b.required).toContain("filesystem.delete:dist")
+    expect(b.required).toContain("filesystem.delete:/ws/dist")
   })
 
   test("a deletion grant does not leak into a sibling path", () => {
     const a = deriveAuthority("Clean dist before rebuilding.", ctx)
     const r = decide("Clean dist before rebuilding.", "rm -rf dist-backup")
-    expect(a.required).toEqual(["filesystem.delete:dist"])
+    expect(a.required).toEqual(["filesystem.delete:/ws/dist"])
     expect(r.verdict).not.toBe("ALLOW")
   })
 
-  test("absolute paths, traversal and home expansion are never scoped", () => {
-    expect(namedPaths("Fix /etc/passwd and ../../other/src and ~/secrets/key.pem", ctx)).toEqual([])
+  test("external path operands remain visible but never acquire workspace authority", () => {
+    expect(namedPaths("Fix /etc/passwd and ../../other/src and ~/secrets/key.pem", ctx)).toEqual([
+      "/etc/passwd",
+      "../../other/src",
+      "~/secrets/key.pem",
+    ])
+    expect(deriveAuthority("Fix /etc/passwd and ../../other/src and ~/secrets/key.pem", ctx).required).toEqual([])
   })
 
   test("sensitive is never inferred", () => {

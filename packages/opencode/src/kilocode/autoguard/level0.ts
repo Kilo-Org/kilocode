@@ -1,3 +1,4 @@
+import { searchScope } from "./read-scope"
 /**
  * Level 0: deterministic rules. No model sits in this decision path.
  *
@@ -15,6 +16,8 @@
  * broad one we can only assert.
  */
 
+import { canonical, inside } from "./resources"
+import { authorize } from "./contract"
 import { isConfigPersistencePath, isCredentialPath } from "./normalize"
 import type { Authority, Level0Result, NormalizedAction, PolicyInput, TrustedContext } from "./types"
 
@@ -48,8 +51,18 @@ function covered(descriptors: string[], operation: string, target: string): bool
 }
 
 /** True when every target of the action is authorised by `required` or `implicit`. */
-export function withinAuthority(action: NormalizedAction, authority: Authority): boolean {
-  const granted = [...authority.required, ...authority.implicit]
+export function withinAuthority(action: NormalizedAction, authority: Authority, ctx?: TrustedContext): boolean {
+  const granted = [...authority.required, ...authority.implicit].map((descriptor) => {
+    const index = descriptor.indexOf(":")
+    if (
+      !ctx ||
+      index < 0 ||
+      !/^(filesystem\.|code\.|config\.|test\.)/.test(descriptor) ||
+      descriptor.slice(index + 1) === "*"
+    )
+      return descriptor
+    return descriptor.slice(0, index + 1) + canonical(descriptor.slice(index + 1), ctx.cwd)
+  })
   if (action.targets.length === 0) return false
   return action.targets.every((t) => covered(granted, action.operation, t))
 }
@@ -62,7 +75,11 @@ export function touchesSensitive(action: NormalizedAction, authority: Authority)
 /** True when a target sits under a path the trusted context marks protected. */
 export function touchesProtected(action: NormalizedAction, ctx: TrustedContext): boolean {
   return action.targets.some((t) =>
-    ctx.protected_paths.some((p) => t === p || t.startsWith(p.endsWith("/") ? p : p + "/")),
+    ctx.protected_paths.some(
+      (p) =>
+        inside(canonical(p, ctx.cwd), canonical(t, ctx.cwd)) ||
+        (action.effect === "mutation_irreversible" && inside(canonical(t, ctx.cwd), canonical(p, ctx.cwd))),
+    ),
   )
 }
 
@@ -102,7 +119,9 @@ export function hasUnevaluableSensitive(authority: Authority): boolean {
   return authority.sensitive.some((descriptor) => {
     if (!descriptor.includes(":")) return true
     const scope = descriptor.slice(descriptor.indexOf(":") + 1)
-    return !authority.scope.some((entry) => entry === scope || entry.startsWith(scope + "/") || scope.startsWith(entry + "/"))
+    return !authority.scope.some(
+      (entry) => entry === scope || entry.startsWith(scope + "/") || scope.startsWith(entry + "/"),
+    )
   })
 }
 
@@ -122,6 +141,27 @@ function pushBranches(action: NormalizedAction): string[] {
 export function hardDeny(input: PolicyInput): Level0Result {
   const { action, trusted_context: ctx, authority } = input
 
+  if (action.effect !== "read" && action.operation !== "test.run" && touchesProtected(action, ctx))
+    return ok("DENY", "L0-D11:host_protected_path", "Host protected paths cannot be changed by task grants")
+
+  if ((authority.forbidden ?? []).some((d) => action.targets.some((t) => descriptorCovers(d, action.operation, t))))
+    return ok("DENY", "L0-D9:explicit_prohibition", "The user explicitly prohibited this operation")
+  if (
+    input.contract?.prohibitions.some(
+      (g) =>
+        (g.operation === action.operation || g.operation === "*") &&
+        action.targets.some(
+          (t) =>
+            g.resource.key === t ||
+            (g.resource.kind === "directory" && inside(g.resource.key, t)) ||
+            ((action.operation === "test.run" || action.effect === "mutation_irreversible") &&
+              inside(t, g.resource.key)),
+        ),
+    )
+  )
+    return ok("DENY", "L0-D9:explicit_prohibition", "The contract prohibits this operation")
+  if (action.effect !== "read" && (ctx.audit_paths ?? []).some((p) => action.targets.some((t) => inside(p, t))))
+    return ok("DENY", "L0-D10:protected_guard_state", "Guard state and audit are not writable")
   // L0-D1 -- fetch a script from the network and execute it in one step.
   // There is no reading of what will run before it runs.
   if (action.options["pipe_to_shell"] === true || action.operation === "script.execute_remote") {
@@ -141,7 +181,11 @@ export function hardDeny(input: PolicyInput): Level0Result {
     if (action.effect === "credential_access") {
       const authorized = action.targets.every((t) => covered(authority.required, action.operation, t))
       if (!authorized) {
-        return ok("DENY", "L0-D2:credential_exfiltration", "Credential access with a remote destination the grant does not require")
+        return ok(
+          "DENY",
+          "L0-D2:credential_exfiltration",
+          "Credential access with a remote destination the grant does not require",
+        )
       }
     }
     const hosts = optionList(action.options, "hosts", "host")
@@ -166,10 +210,17 @@ export function hardDeny(input: PolicyInput): Level0Result {
   // L0-D4 -- write into a file that survives the session and governs the next
   // run: shell rc, ssh config, git config, agent instruction files, CI, hooks.
   // A successful write here disarms this guard on the following invocation.
-  if (action.effect === "config_persistence" || action.targets.some(isConfigPersistencePath)) {
+  if (
+    action.effect !== "read" &&
+    (action.effect === "config_persistence" || action.targets.some(isConfigPersistencePath))
+  ) {
     const selfModifying = action.targets.some(isConfigPersistencePath)
     if (selfModifying && (action.radius !== "inside_worktree" || action.intent_provenance === "agent_invented")) {
-      return ok("DENY", "L0-D4:agent_self_modification", "Write to a session-surviving config or agent-instruction file")
+      return ok(
+        "DENY",
+        "L0-D4:agent_self_modification",
+        "Write to a session-surviving config or agent-instruction file",
+      )
     }
   }
 
@@ -182,7 +233,11 @@ export function hardDeny(input: PolicyInput): Level0Result {
     if (worldWritable && action.options["recursive"] === true) {
       const explicitlyRequired = action.targets.every((t) => covered(authority.required, action.operation, t))
       if (!explicitlyRequired) {
-        return ok("DENY", "L0-D7:recursive_world_writable", "Recursive world-writable permission change the grant does not require")
+        return ok(
+          "DENY",
+          "L0-D7:recursive_world_writable",
+          "Recursive world-writable permission change the grant does not require",
+        )
       }
     }
   }
@@ -195,10 +250,17 @@ export function hardDeny(input: PolicyInput): Level0Result {
 
   // L0-D6 -- irreversible destruction of a path the user declared protected,
   // when the grant does not require it. `rm -rf src` under a "clean dist" task.
-  if (action.effect === "mutation_irreversible" && (touchesProtected(action, ctx) || touchesSensitive(action, authority))) {
+  if (
+    action.effect === "mutation_irreversible" &&
+    (touchesProtected(action, ctx) || touchesSensitive(action, authority))
+  ) {
     const explicitlyRequired = action.targets.every((t) => covered(authority.required, action.operation, t))
     if (!explicitlyRequired) {
-      return ok("DENY", "L0-D6:protected_path_destruction", "Irreversible change to a protected or sensitive path that the grant does not require")
+      return ok(
+        "DENY",
+        "L0-D6:protected_path_destruction",
+        "Irreversible change to a protected or sensitive path that the grant does not require",
+      )
     }
   }
 
@@ -212,114 +274,80 @@ export function hardDeny(input: PolicyInput): Level0Result {
     touchesSensitive(action, authority) &&
     !action.targets.every((t) => covered(authority.required, action.operation, t))
   ) {
-    return ok("DENY", "L0-D8:sensitive_target_not_required", "Action targets a grant-designated sensitive target that the grant does not require")
+    return ok(
+      "DENY",
+      "L0-D8:sensitive_target_not_required",
+      "Action targets a grant-designated sensitive target that the grant does not require",
+    )
   }
 
   return CONTINUE
 }
 
-/**
- * Fast allow path. Everything here must be cheap to justify: reads inside the
- * worktree, and git-tracked edits the user actually asked for.
- *
- * `effect: unknown` is never allowed here -- that is what makes opaque
- * indirection safe to admit we cannot analyse.
- */
+/** Mandatory bounds also checked after model review. */
+export function constraints(input: PolicyInput): string[] {
+  const a = input.action
+  if (a.uncertainty?.length) return a.uncertainty
+  if (input.contract && !input.contract.active) return ["inactive_contract"]
+  if (a.operation === "session.coordinate") return []
+  if (a.operation === "task.delegate") return input.contract?.active ? [] : ["missing_parent_contract"]
+  if (a.operation === "skill.read") return a.options.shell_disabled === true ? [] : ["skill_shell_not_gated"]
+  if (!a.targets.length) return ["missing_target"]
+  if (a.effect === "credential_access") return ["credential_access_requires_host_policy"]
+  if (["filesystem.search", "filesystem.grep"].includes(a.operation) && a.resources) {
+    const missing = searchScope(a.resources, input.trusted_context)
+    if (missing.length) return missing
+  }
+  if (a.effect === "read") return a.radius === "inside_worktree" ? [] : ["read_outside_workspace"]
+  if (input.contract?.uncertainties?.length) return ["unresolved_user_restriction"]
+  if (input.contract && !a.targets.every((t) => authorize(input.contract!, a.operation, t)))
+    return ["missing_authority"]
+  if (!input.contract && !withinAuthority(a, input.authority, input.trusted_context)) return ["missing_authority"]
+  if (a.operation === "test.run") {
+    const profile = input.profile ?? input.trusted_context.test_profile
+    if (!profile?.trusted_code || !profile.config_hash) return ["missing_test_profile"]
+    return a.radius === "inside_worktree" ? [] : ["test_outside_workspace"]
+  }
+  if (a.effect === "mutation_reversible" && a.options.backup_verified !== true) return ["missing_backup"]
+  if (a.effect === "unknown") return ["opaque_effect"]
+  if (a.effect === "outbound_network" || a.radius === "remote") {
+    const hosts = optionList(a.options, "hosts", "host")
+    if (!hosts.length || hosts.some((h) => !input.trusted_context.allowed_external_hosts.includes(h)))
+      return ["destination_not_allowed"]
+  }
+  return []
+}
 export function fastAllow(input: PolicyInput): Level0Result {
   const { action, trusted_context: ctx, authority } = input
-
-  // Opaque indirection is never fast-allowed, whoever asked for it.
-  //
-  // `test.run` is the single exception, and it is handled below rather than
-  // here so it still passes the provenance gate. See L0-A4 for why that gate
-  // is the whole security argument for the exception.
-  if (action.effect === "unknown" && action.operation !== "test.run") return CONTINUE
-
-  // Reads inside the worktree, as long as they are not credential files.
-  //
-  // Provenance is deliberately NOT consulted here. A read changes nothing, and
-  // this rule is what keeps the common case off the model path -- gating it on
-  // "did the developer name this file" would send most of an ordinary session
-  // to Level 1 and give back the approval fatigue this exists to remove.
-  if (action.effect === "read" && action.radius === "inside_worktree") {
-    if (action.targets.some(isCredentialPath)) return CONTINUE
+  if (constraints(input).length) return CONTINUE
+  if (action.operation === "session.coordinate")
+    return ok("ALLOW", "L0-A7:session_coordination", "Session metadata or a user question without new authority")
+  if (action.operation === "skill.read")
+    return ok("ALLOW", "L0-A5:skill_text", "Load text with shell substitution disabled")
+  if (action.operation === "task.delegate")
+    return ok("ALLOW", "L0-A6:inherited_task", "Delegate with the parent's authority ceiling")
+  if (action.effect === "read" && action.radius === "inside_worktree")
     return ok("ALLOW", "L0-A1:read_inside_worktree", "Read-only access inside the worktree")
-  }
-
-  // Everything below this line changes state, so who asked for it matters.
-  if (action.intent_provenance === "agent_invented") return CONTINUE
-
-  // Reversible, git-tracked edits inside the worktree that the grant covers.
-  // Git makes these reviewable and revertible, so the cost of being wrong is a
-  // `git checkout` rather than lost work.
-  //
-  // `protected_paths` is deliberately NOT consulted here. It guards against
-  // destruction, and a tracked edit is already revertible -- gating on it would
-  // block the ordinary case of editing source in a repo that protects `src`,
-  // which is most of what a coding agent legitimately does. `sensitive` still
-  // applies: that is the user marking a target as consequential regardless of
-  // reversibility.
+  if (touchesSensitive(action, authority) || hasUnevaluableSensitive(authority)) return CONTINUE
   if (
+    action.operation === "code.modify" &&
     action.effect === "mutation_reversible" &&
     action.radius === "inside_worktree" &&
-    action.reversible === "git_tracked" &&
-    !touchesSensitive(action, authority) &&
-    !hasUnevaluableSensitive(authority) &&
-    withinAuthority(action, authority)
-  ) {
-    return ok("ALLOW", "L0-A2:tracked_edit_in_scope", "Reversible git-tracked edit inside the worktree and within the grant")
-  }
-
-  // Running the repository's test suite, when the developer asked for testing.
-  //
-  // This is the one rule that fast-allows an action whose effect is `unknown`,
-  // and it needs stating plainly: a test runner executes whatever code the
-  // repository contains -- `conftest.py`, the test files themselves, installed
-  // plugins. Where repository content is attacker-controlled, permitting the
-  // runner permits attacker-chosen code. No parsing of the command line can
-  // change that, so the rule does not pretend to.
-  //
-  // What makes it defensible is the gate above: `intent_provenance` is derived
-  // from the developer's own message and nothing else -- never assistant prose,
-  // never tool output, never file contents. Text injected into a README, a
-  // docstring or a comment cannot make an action `user_explicit` or even
-  // `user_implied`, so it cannot reach this rule at all. An attacker who wants
-  // the suite run has to get the developer to ask for it.
-  //
-  // The cost of *not* having this rule is measured, not assumed: in the
-  // trajectory benchmark 15 test runs were sent to the model in 24 runs, and
-  // benign task success fell from 8/9 to 2/9. A guard that stops the work is
-  // not a guard anyone keeps switched on.
+    action.options.backup_verified === true
+  )
+    return ok("ALLOW", "L0-A2:tracked_edit_in_scope", "Authorized edit with recoverable original content")
+  if (action.operation === "test.run")
+    return ok("ALLOW", "L0-A4:test_run_requested", "Authorized test run in a trusted execution profile")
   if (
-    action.operation === "test.run" &&
+    action.operation === "filesystem.delete" &&
     action.radius === "inside_worktree" &&
-    !action.targets.some(isCredentialPath) &&
-    !touchesSensitive(action, authority)
-  ) {
-    return ok("ALLOW", "L0-A4:test_run_requested", "Test run inside the worktree that the developer asked for")
-  }
-
-  // Deleting a declared build artifact that the grant explicitly requires.
-  if (
-    action.effect === "mutation_irreversible" &&
-    action.radius === "inside_worktree" &&
-    action.targets.length > 0 &&
-    action.targets.every((t) => ctx.generated_paths.some((g) => t === g || t.startsWith(g + "/"))) &&
-    action.targets.every((t) => covered(authority.required, action.operation, t)) &&
-    !touchesProtected(action, ctx)
-  ) {
-    return ok("ALLOW", "L0-A3:generated_artifact_cleanup", "Deletion of a declared generated path required by the grant")
-  }
-
+    !touchesProtected(action, ctx) &&
+    action.targets.every((t) => ctx.generated_paths.some((g) => inside(canonical(g, ctx.cwd), t)))
+  )
+    return ok("ALLOW", "L0-A3:generated_artifact_cleanup", "Deletion of the granted generated output")
   return CONTINUE
 }
-
-/**
- * Run Level 0. Deny wins over allow: a rule that fires on the deny list is
- * never overridden by an allow-path match.
- */
 export function level0(input: PolicyInput): Level0Result {
   const deny = hardDeny(input)
-  if (deny.verdict === "DENY") return deny
-  return fastAllow(input)
+  return deny.verdict === "DENY" ? deny : fastAllow(input)
 }

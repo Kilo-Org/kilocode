@@ -23,9 +23,18 @@ const authority: Authority = {
 }
 
 /** Build a PolicyInput from a raw command, the way production would. */
-function fromCommand(command: string, provenance: PolicyInput["action"]["intent_provenance"] = "user_explicit"): PolicyInput {
+function fromCommand(
+  command: string,
+  provenance: PolicyInput["action"]["intent_provenance"] = "user_explicit",
+): PolicyInput {
   const [action] = normalize({ tool: "bash", arguments: { command } }, ctx, provenance)
-  return { user_intent: "Clean up build output and run the tests", authority, trusted_context: ctx, action: action!, raw: command }
+  return {
+    user_intent: "Clean up build output and run the tests",
+    authority,
+    trusted_context: ctx,
+    action: action!,
+    raw: command,
+  }
 }
 
 describe("descriptorCovers", () => {
@@ -61,7 +70,8 @@ describe("hard deny rules", () => {
   })
 
   test("L0-D4 blocks writes to session-surviving config", () => {
-    const input = fromCommand("cp payload ~/.ssh/authorized_keys", "agent_invented")
+    const [action] = normalize({ tool: "write", arguments: { filePath: "~/.ssh/authorized_keys" } }, ctx)
+    const input = { ...fromCommand("cat src/app.ts"), action: action! }
     expect(hardDeny(input).rule).toBe("L0-D4:agent_self_modification")
   })
 
@@ -80,7 +90,7 @@ describe("hard deny rules", () => {
   test("L0-D6 blocks deletion of a protected path the grant does not require", () => {
     const result = hardDeny(fromCommand("rm -rf src"))
     expect(result.verdict).toBe("DENY")
-    expect(result.rule).toBe("L0-D6:protected_path_destruction")
+    expect(result.rule).toBe("L0-D11:host_protected_path")
   })
 
   test("deletion of the explicitly required generated path is not denied", () => {
@@ -140,11 +150,10 @@ describe("fast allow path", () => {
     expect(fastAllow(fromCommand("cat .env")).verdict).toBe("CONTINUE")
   })
 
-  test("allows a tracked edit the grant covers", () => {
+  test("cannot infer Git tracking or a backup from a virtual path", () => {
     const [action] = normalize({ tool: "edit", arguments: { path: "src/app.ts" } }, ctx, "user_explicit")
     const result = fastAllow({ user_intent: "fix the loader", authority, trusted_context: ctx, action: action! })
-    expect(result.verdict).toBe("ALLOW")
-    expect(result.rule).toBe("L0-A2:tracked_edit_in_scope")
+    expect(result.verdict).toBe("CONTINUE")
   })
 
   test("does not allow the same edit when the agent invented it", () => {
@@ -178,11 +187,11 @@ describe("level0 composition", () => {
 })
 
 describe("L0-A4: running the test suite", () => {
-  test("a test run the developer asked for is fast-allowed", () => {
-    expect(fastAllow(fromCommand("pytest -q")).rule).toBe("L0-A4:test_run_requested")
-    expect(fastAllow(fromCommand("pytest tests/test_parse.py")).rule).toBe("L0-A4:test_run_requested")
-    expect(fastAllow(fromCommand("python -m unittest discover -s tests")).rule).toBe("L0-A4:test_run_requested")
-    expect(fastAllow(fromCommand("python3 -m pytest tests")).rule).toBe("L0-A4:test_run_requested")
+  test("naming a test run without an execution profile is insufficient", () => {
+    expect(fastAllow(fromCommand("pytest -q")).verdict).toBe("CONTINUE")
+    expect(fastAllow(fromCommand("pytest tests/test_parse.py")).verdict).toBe("CONTINUE")
+    expect(fastAllow(fromCommand("python -m unittest discover -s tests")).verdict).toBe("CONTINUE")
+    expect(fastAllow(fromCommand("python3 -m pytest tests")).verdict).toBe("CONTINUE")
   })
 
   // The whole security argument for permitting an `unknown` effect is that

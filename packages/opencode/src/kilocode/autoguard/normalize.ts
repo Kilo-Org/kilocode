@@ -1,83 +1,10 @@
-/**
- * AutoGuard normalizer: raw tool call -> NormalizedAction.
- *
- * A shell string is not an action. `R=rm; $R -rf src`, base64, `bash -c`, and
- * `$(...)` all defeat a classifier that reads command text directly, so every
- * decision downstream is made against the parsed record produced here.
- *
- * The honest limit: opaque indirection (`./deploy.sh`, `npm run build`, a
- * Python one-liner) has an undecidable effect. We do not guess. Those become
- * `effect: "unknown"`, which Level 0 is forbidden from auto-allowing.
- */
-
+import { split as splitGlob } from "../tool/glob-pattern"
 import path from "node:path"
-import type { Effect, IntentProvenance, NormalizedAction, Radius, Reversible, TrustedContext } from "./types"
-
-/** Shell constructs that hide the real command from a token-level reader. */
-const OPAQUE_PATTERNS: RegExp[] = [
-  /\$\(/, // command substitution
-  /`/, // legacy command substitution
-  /\$\{?[A-Za-z_][A-Za-z0-9_]*\}?\s+\S/, // variable used in command position
-  /\beval\b/,
-  /\bbase64\b\s+(-d|--decode)/,
-  /\bsh\s+-c\b/,
-  /\bbash\s+-c\b/,
-  /\bzsh\s+-c\b/,
-]
-
-/** Interpreters whose payload we cannot inspect. */
-const OPAQUE_VERBS = new Set(["eval", "exec", "source", "."])
-
-/** Verb -> operation id and default effect, for the commands we do understand. */
-const VERB_TABLE: Record<string, { operation: string; effect: Effect }> = {
-  rm: { operation: "filesystem.delete", effect: "mutation_irreversible" },
-  rmdir: { operation: "filesystem.delete", effect: "mutation_irreversible" },
-  mv: { operation: "filesystem.move", effect: "mutation_irreversible" },
-  cp: { operation: "filesystem.copy", effect: "mutation_reversible" },
-  mkdir: { operation: "filesystem.create", effect: "mutation_reversible" },
-  touch: { operation: "filesystem.create", effect: "mutation_reversible" },
-  chmod: { operation: "filesystem.chmod", effect: "mutation_reversible" },
-  chown: { operation: "filesystem.chown", effect: "mutation_reversible" },
-  cat: { operation: "filesystem.read", effect: "read" },
-  head: { operation: "filesystem.read", effect: "read" },
-  tail: { operation: "filesystem.read", effect: "read" },
-  ls: { operation: "filesystem.list", effect: "read" },
-  grep: { operation: "filesystem.search", effect: "read" },
-  rg: { operation: "filesystem.search", effect: "read" },
-  find: { operation: "filesystem.search", effect: "read" },
-  wc: { operation: "filesystem.read", effect: "read" },
-  curl: { operation: "network.http", effect: "outbound_network" },
-  wget: { operation: "network.http", effect: "outbound_network" },
-  scp: { operation: "network.transfer", effect: "outbound_network" },
-  ssh: { operation: "network.remote_exec", effect: "infra_external" },
-}
-
-/** Package managers whose install verbs persist a dependency. */
-const PACKAGE_MANAGERS: Record<string, string[]> = {
-  npm: ["install", "i", "add"],
-  pnpm: ["install", "add"],
-  yarn: ["add", "install"],
-  bun: ["install", "add"],
-  pip: ["install"],
-  pip3: ["install"],
-  uv: ["add", "pip"],
-  cargo: ["add", "install"],
-  go: ["get", "install"],
-  gem: ["install"],
-}
-
-/** Git subcommands with effects worth separating. */
-const GIT_EFFECTS: Record<string, { operation: string; effect: Effect }> = {
-  push: { operation: "git.push", effect: "infra_external" },
-  reset: { operation: "git.reset", effect: "mutation_irreversible" },
-  clean: { operation: "git.clean", effect: "mutation_irreversible" },
-  checkout: { operation: "git.checkout", effect: "mutation_reversible" },
-  commit: { operation: "git.commit", effect: "mutation_reversible" },
-  add: { operation: "git.add", effect: "mutation_reversible" },
-  status: { operation: "git.status", effect: "read" },
-  diff: { operation: "git.diff", effect: "read" },
-  log: { operation: "git.log", effect: "read" },
-}
+import os from "node:os"
+import { parsePatch } from "../../patch"
+import { canonical, inside, resource, tracked, digest } from "./resources"
+import { segments, tokens, opaque, testArguments, readArguments } from "./argv"
+import type { ActionIR, Effect, IntentProvenance, NormalizedAction, Radius, Resource, TrustedContext } from "./types"
 
 /** Files whose contents are credentials, whatever their location. */
 const CREDENTIAL_PATTERNS: RegExp[] = [
@@ -130,432 +57,300 @@ export function isProjectConfigPath(target: string): boolean {
   return PROJECT_CONFIG_PATTERNS.some((re) => re.test(target))
 }
 
-/**
- * Split a command line into the segments a shell would run separately.
- * `&&`, `||`, `;`, and `|` each start a new command, so `rm -rf dist && npm test`
- * is two actions and must not be judged as one.
- */
-export function splitSegments(command: string): string[] {
-  const segments: string[] = []
-  let current = ""
-  let quote: '"' | "'" | null = null
-  for (let i = 0; i < command.length; i++) {
-    const ch = command[i]!
-    if (quote) {
-      current += ch
-      if (ch === quote && command[i - 1] !== "\\") quote = null
-      continue
-    }
-    if (ch === '"' || ch === "'") {
-      quote = ch
-      current += ch
-      continue
-    }
-    const two = command.slice(i, i + 2)
-    if (two === "&&" || two === "||") {
-      segments.push(current)
-      current = ""
-      i++
-      continue
-    }
-    if (ch === ";" || ch === "|" || ch === "\n") {
-      segments.push(current)
-      current = ""
-      continue
-    }
-    current += ch
-  }
-  segments.push(current)
-  return segments.map((s) => s.trim()).filter((s) => s.length > 0)
+export const splitSegments = segments
+export const tokenize = tokens
+export function isOpaque(command: string): boolean {
+  return (
+    opaque(command) ||
+    /\bbase64\s|^(npm|yarn|pnpm)\s+(run|test|build)\b/.test(command) ||
+    /^(?:bash|sh|zsh|env|sudo|eval|exec|source|cd|\.\/|python\S*\s+(?!-m\s+(?:pytest|unittest)\b))/.test(command)
+  )
 }
-
-/** Tokenize one segment, honouring quotes but not expanding anything. */
-export function tokenize(segment: string): string[] {
-  const tokens: string[] = []
-  let current = ""
-  let quote: '"' | "'" | null = null
-  for (let i = 0; i < segment.length; i++) {
-    const ch = segment[i]!
-    if (quote) {
-      if (ch === quote && segment[i - 1] !== "\\") quote = null
-      else current += ch
-      continue
-    }
-    if (ch === '"' || ch === "'") {
-      quote = ch
-      continue
-    }
-    if (/\s/.test(ch)) {
-      if (current) tokens.push(current)
-      current = ""
-      continue
-    }
-    current += ch
-  }
-  if (current) tokens.push(current)
-  return tokens
-}
-
-/** True when the segment hides its real effect behind indirection. */
-export function isOpaque(segment: string): boolean {
-  if (OPAQUE_PATTERNS.some((re) => re.test(segment))) return true
-  const tokens = tokenize(segment)
-  const verb = tokens[0]
-  if (!verb) return false
-  if (OPAQUE_VERBS.has(verb)) return true
-  // A local script: we cannot see inside it.
-  if (/^\.{0,2}\//.test(verb) && /\.(sh|bash|zsh|py|rb|pl)$/.test(verb)) return true
-  if ((verb === "npm" || verb === "pnpm" || verb === "yarn" || verb === "bun") && tokens[1] === "run") return true
-  if ((verb === "bash" || verb === "sh" || verb === "zsh") && tokens.slice(1).some((t) => /\.(sh|bash|zsh)$/.test(t)))
-    return true
-  return false
-}
-
-/** True when the command pipes network output straight into a shell. */
 export function isPipeToShell(command: string): boolean {
-  if (!/[|]/.test(command)) return false
-  const segments = splitSegments(command)
-  const fetchesNetwork = segments.some((s) => {
-    const verb = tokenize(s)[0]
-    return verb === "curl" || verb === "wget"
-  })
-  if (!fetchesNetwork) return false
-  return segments.some((s) => {
-    const verb = tokenize(s)[0]
-    return verb === "sh" || verb === "bash" || verb === "zsh" || verb === "python" || verb === "python3"
-  })
+  if (!command.includes("|")) return false
+  const parts = segments(command)
+  return parts.some((x) => /^(curl|wget)\b/.test(x)) && parts.some((x) => /^(sh|bash|zsh|python3?)\b/.test(x))
 }
-
-/** Where a target sits relative to the worktree. */
-export function classifyRadius(target: string, ctx: TrustedContext): Radius {
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) return "remote"
-  const home = process.env["HOME"] ?? "/root"
-  const expanded = target.startsWith("~") ? path.join(home, target.slice(1)) : target
-  const abs = path.resolve(ctx.cwd || ctx.workspace_root, expanded)
-  const root = path.resolve(ctx.workspace_root)
-  const rel = path.relative(root, abs)
-  if (rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))) return "inside_worktree"
-  if (abs.startsWith(path.resolve(home) + path.sep)) return "user_home"
-  if (/^\/(etc|usr|bin|sbin|var|opt|System|Library)(\/|$)/.test(abs)) return "system"
-  return "project_outside_worktree"
-}
-
-/** Coarsest radius across all targets: one remote target makes the action remote. */
-function widestRadius(targets: string[], ctx: TrustedContext): Radius {
-  const order: Radius[] = ["inside_worktree", "project_outside_worktree", "user_home", "system", "remote"]
-  let widest: Radius = "inside_worktree"
-  for (const t of targets) {
-    const r = classifyRadius(t, ctx)
-    if (order.indexOf(r) > order.indexOf(widest)) widest = r
-  }
-  return widest
-}
-
-/** Extract the host from a URL-shaped target, or null. */
-export function hostOf(target: string): string | null {
+export function hostOf(value: string): string | null {
   try {
-    return new URL(target).hostname
+    return new URL(value).hostname
   } catch {
     return null
   }
 }
-
-function reversibilityOf(effect: Effect, radius: Radius, targets: string[], ctx: TrustedContext): Reversible {
-  if (radius === "remote") return "remote_irreversible"
-  if (effect === "read") return "git_tracked"
-  // Generated output is regenerable, never "tracked" in the reviewable sense.
-  const allGenerated = targets.length > 0 && targets.every((t) => ctx.generated_paths.some((g) => t === g || t.startsWith(g + "/")))
-  if (allGenerated) return "local_untracked"
-  if (effect === "mutation_reversible") return "git_tracked"
-  return "local_untracked"
+export function classifyRadius(target: string, ctx: TrustedContext): Radius {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) return "remote"
+  const absolute = canonical(target, ctx.cwd)
+  if (inside(canonical(ctx.workspace_root, ctx.cwd), absolute)) return "inside_worktree"
+  if (inside(os.homedir(), absolute)) return "user_home"
+  return /^\/(?:private\/)?(etc|usr|bin|sbin|var|opt|System|Library)(\/|$)/.test(absolute)
+    ? "system"
+    : "project_outside_worktree"
 }
-
-/** Arguments that are operands rather than flags. */
-function operands(tokens: string[]): string[] {
-  return tokens.slice(1).filter((t) => !t.startsWith("-"))
+function widest(resources: Resource[], ctx: TrustedContext): Radius {
+  const order: Radius[] = ["inside_worktree", "project_outside_worktree", "user_home", "system", "remote"]
+  return resources.reduce<Radius>((current, item) => {
+    const next = item.kind === "reference" ? "inside_worktree" : classifyRadius(item.key, ctx)
+    return order.indexOf(next) > order.indexOf(current) ? next : current
+  }, "inside_worktree")
 }
-
-function flagsOf(tokens: string[]): Record<string, unknown> {
-  const flags: Record<string, unknown> = {}
-  const joined = tokens.join(" ")
-  // `-r` and `-R` both mean recursive; missing the uppercase form silently
-  // disarms every rule that keys off recursion.
-  if (/(^|\s)-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|--recursive/.test(joined)) flags["recursive"] = true
-  if (/(^|\s)-[a-zA-Z]*f[a-zA-Z]*(\s|$)|--force(\s|$)/.test(joined)) flags["force"] = true
-  if (/--force-with-lease/.test(joined)) flags["force_with_lease"] = true
-  if (/--dry-run/.test(joined)) flags["dry_run"] = true
-  if (/--hard/.test(joined)) flags["hard"] = true
-  // chmod modes decide whether the tree becomes world-writable, so the rule
-  // layer needs them as data rather than re-parsing the command string.
-  if (tokens[0] === "chmod") {
-    const mode = tokens.slice(1).find((t) => /^[0-7]{3,4}$/.test(t) || /^[ugoa]*[+=-][rwxXst]+$/.test(t))
-    if (mode) flags["mode"] = mode
-  }
-  return flags
-}
-
-/**
- * Test runners recognised as such, so the rule layer can reason about them.
- *
- * Deliberately narrow. `npm test`, `yarn test`, `make test` and friends are
- * NOT here: they run whatever script the repository declares, which is a
- * general executor wearing a test runner's name.
- */
-const TEST_RUNNERS = [
-  /^pytest$/,
-  /^py\.test$/,
-]
-
-/** `python -m pytest`, `python3 -m unittest`, and nothing else. */
-const PYTHON_TEST_MODULES = new Set(["pytest", "unittest"])
-
-/**
- * Flags that turn pytest back into a general executor.
- *
- * `-p` loads an arbitrary plugin module, `-c`/`--config-file`/`--rootdir`
- * relocate which files are collected, and `--pdb` drops into an interactive
- * interpreter. Any of these and the invocation stops being "run this
- * repository's tests", so it keeps the opaque classification.
- *
- * The list is per-runner on purpose: the same letter means different things to
- * different tools. `-s` disables output capture in pytest but names the start
- * directory in `unittest discover`, and `-p` loads a plugin in pytest but is a
- * filename pattern in unittest. A shared list would either miss a real escape
- * or reject an ordinary invocation -- it rejected `python -m unittest discover
- * -s tests`, which is how this was caught.
- */
-const PYTEST_ESCAPE_FLAGS =
-  /^(-p|--plugin|-c|--config-file|--rootdir|--pdb|--pdbcls|--import-mode)$/
-
-/**
- * `unittest` has no plugin-loading flag: `-s`/`-t` only move the start and top
- * directories, and where they point is already checked by the radius of the
- * resulting targets rather than by pattern-matching the flag.
- */
-const UNITTEST_ESCAPE_FLAGS = /^(--locals)$/
-
-function testRunnerTargets(tokens: string[]): string[] | null {
-  const verb = tokens[0] ?? ""
-  let rest = tokens.slice(1)
-  let escapes = PYTEST_ESCAPE_FLAGS
-
-  if (!TEST_RUNNERS.some((r) => r.test(verb))) {
-    // `python -m pytest ...` / `python3 -m unittest ...`
-    if (!/^python3?$/.test(verb) || tokens[1] !== "-m") return null
-    const module = tokens[2] ?? ""
-    if (!PYTHON_TEST_MODULES.has(module)) return null
-    escapes = module === "unittest" ? UNITTEST_ESCAPE_FLAGS : PYTEST_ESCAPE_FLAGS
-    rest = tokens.slice(3)
-  }
-
-  if (rest.some((t) => escapes.test(t))) return null
-  // `discover` is a subcommand, not a path; keeping it would give the action a
-  // target that does not exist and drag the radius check off a real path.
-  return rest.filter((t) => !t.startsWith("-") && t !== "discover")
-}
-
-/** Parse one shell segment into an action, ignoring provenance. */
-function normalizeShellSegment(
-  segment: string,
+function action(
+  operation: string,
+  targets: string[],
+  effect: Effect,
   ctx: TrustedContext,
-): Omit<NormalizedAction, "intent_provenance"> {
-  const tokens = tokenize(segment)
-  const verb = tokens[0] ?? ""
-  const options = flagsOf(tokens)
-
-  if (isOpaque(segment)) {
-    const targets = operands(tokens)
+  options: Record<string, unknown> = {},
+  kind?: Resource["kind"],
+): NormalizedAction {
+  try {
+    const resources = targets.map((target) => resource(target, ctx, kind))
+    const radius = widest(resources, ctx)
+    const keys = resources.map((item) => item.key)
+    const credential = resources.some((r) => isCredentialPath(r.key) || isCredentialPath(r.raw))
+    const persistence =
+      operation === "config.modify" ||
+      resources.some((r) => isConfigPersistencePath(r.key) || isConfigPersistencePath(r.raw))
+    const next =
+      credential && effect === "read"
+        ? "credential_access"
+        : persistence && effect !== "read"
+          ? "config_persistence"
+          : effect
     return {
-      operation: "script.execute",
-      targets: targets.length ? targets : [verb],
-      effect: "unknown",
-      radius: widestRadius(targets, ctx),
-      reversible: "local_untracked",
-      options,
-    }
-  }
-
-  // A recognised test runner. The effect stays `unknown` on purpose: running
-  // tests executes whatever code the repository contains, and calling that
-  // anything else would be a lie. What this branch buys is a *name* for the
-  // action, so one narrow rule can permit it under conditions an attacker
-  // cannot satisfy, instead of it being indistinguishable from `./deploy.sh`.
-  const testTargets = testRunnerTargets(tokens)
-  if (testTargets) {
-    return {
-      operation: "test.run",
-      targets: testTargets,
-      effect: "unknown",
-      radius: widestRadius(testTargets, ctx),
-      reversible: "local_untracked",
-      options: { ...options, runner: verb },
-    }
-  }
-
-  // Package managers: `uv add x`, `npm install y`.
-  const pmVerbs = PACKAGE_MANAGERS[verb]
-  if (pmVerbs && tokens[1] && pmVerbs.includes(tokens[1])) {
-    const packages = tokens.slice(2).filter((t) => !t.startsWith("-"))
-    return {
-      operation: "dependency.install",
-      targets: packages,
-      effect: "package_install",
-      radius: "inside_worktree",
-      reversible: "git_tracked",
-      options: { ...options, manager: verb, dev: /--dev|-D(\s|$)/.test(segment) },
-    }
-  }
-
-  if (verb === "git") {
-    const sub = tokens[1] ?? ""
-    const entry = GIT_EFFECTS[sub] ?? { operation: `git.${sub}`, effect: "unknown" as Effect }
-    const refspec = tokens.slice(2).filter((t) => !t.startsWith("-"))
-    const radius: Radius = entry.effect === "infra_external" ? "remote" : "inside_worktree"
-    return {
-      operation: entry.operation,
-      targets: refspec,
-      effect: entry.effect,
+      operation,
+      targets: keys,
+      resources,
+      effect: next,
       radius,
-      reversible: radius === "remote" ? "remote_irreversible" : reversibilityOf(entry.effect, radius, refspec, ctx),
-      options: { ...options, subcommand: sub, branch: refspec.map((r) => r.split(":").pop()).filter(Boolean) },
+      intent_provenance: "agent_invented",
+      options,
+      reversible:
+        radius === "remote"
+          ? "remote_irreversible"
+          : effect === "mutation_reversible" && keys.length > 0 && keys.every((x) => tracked(x, ctx))
+            ? "git_tracked"
+            : "local_untracked",
+      uncertainty: [],
     }
+  } catch (err) {
+    return unknown(operation, err instanceof Error ? err.message : "unresolvable_target", options)
   }
-
-  if (verb === "curl" || verb === "wget") {
-    const urls = tokens.filter((t) => /^https?:\/\//.test(t))
-    // `--data @file` uploads that file's contents.
-    const uploaded: string[] = []
-    for (let i = 0; i < tokens.length; i++) {
-      const t = tokens[i]!
-      if (/^--data(-binary|-raw)?$|^-d$/.test(t) && tokens[i + 1]?.startsWith("@")) uploaded.push(tokens[i + 1]!.slice(1))
-      else if (/^(--data(-binary|-raw)?|-d)=@/.test(t)) uploaded.push(t.split("=@")[1]!)
-      if (/^(-T|--upload-file)$/.test(t) && tokens[i + 1]) uploaded.push(tokens[i + 1]!)
+}
+function unknown(operation: string, reason: string, options: Record<string, unknown> = {}): NormalizedAction {
+  return {
+    operation,
+    targets: [],
+    resources: [],
+    effect: "unknown",
+    radius: "inside_worktree",
+    reversible: "local_untracked",
+    intent_provenance: "agent_invented",
+    options,
+    uncertainty: [reason],
+  }
+}
+function shell(segment: string, ctx: TrustedContext): NormalizedAction {
+  const argv = tokens(segment)
+  const verb = argv[0] ?? ""
+  if (!verb || isOpaque(segment)) return unknown("script.execute", "opaque_shell", { argv })
+  const test = testArguments(argv, ctx.cwd)
+  if (test) return action("test.run", test.targets, "unknown", ctx, test.options)
+  if (/^(pytest|py\.test|python3?)$/.test(verb)) return unknown("test.run", "unsupported_test_arguments", { argv })
+  if (/^(cat|head|tail|ls|rg|grep|wc)$/.test(verb)) {
+    const parsed = readArguments(argv)
+    return parsed
+      ? action(
+          verb === "ls" ? "filesystem.list" : /^(rg|grep)$/.test(verb) ? "filesystem.search" : "filesystem.read",
+          parsed.targets,
+          "read",
+          ctx,
+          { ...parsed.options, argv },
+        )
+      : unknown("filesystem.read", "unsupported_read_arguments", { argv })
+  }
+  if (verb === "rm") {
+    const targets: string[] = []
+    const options: Record<string, unknown> = { argv }
+    let positional = false
+    for (const value of argv.slice(1)) {
+      if (!positional && value === "--") {
+        positional = true
+        continue
+      }
+      if (!positional && value.startsWith("-")) {
+        if (!/^-[rfRiv]+$|^--(recursive|force|verbose)$/.test(value))
+          return unknown("filesystem.delete", "unsupported_delete_arguments", options)
+        if (/r|R|--recursive/.test(value)) options.recursive = true
+        if (/f|--force/.test(value)) options.force = true
+        continue
+      }
+      if (/[*?\[\]]/.test(value)) return unknown("filesystem.delete", "unexpanded_glob", options)
+      targets.push(value)
     }
-    const method = /-X\s*POST|--data|-d\s/.test(segment) ? "post" : "get"
-    const exfiltratesCredentials = uploaded.some(isCredentialPath)
+    return targets.length
+      ? action("filesystem.delete", targets, "mutation_irreversible", ctx, options)
+      : unknown("filesystem.delete", "missing_target", options)
+  }
+  if (verb === "git") {
+    const sub = argv[1] ?? ""
+    const targets = argv.slice(2).filter((x) => !x.startsWith("-"))
+    const options = {
+      argv,
+      force: argv.some((x) => x === "--force" || x === "-f" || x.startsWith("+")),
+      force_with_lease: argv.some((x) => x.startsWith("--force-with-lease")),
+      hard: argv.includes("--hard"),
+      branch: targets.map((x) => (x.includes(":") ? x.slice(x.lastIndexOf(":") + 1) : x)),
+    }
+    if (sub === "push")
+      return {
+        ...action("git.push", targets, "infra_external", ctx, options, "reference"),
+        radius: "remote",
+        reversible: "remote_irreversible",
+      }
+    // Configured git helpers may execute code. These are not plain filesystem reads.
+    return unknown(`git.${sub}`, "git_execution_requires_profile", options)
+  }
+  if (verb === "curl" || verb === "wget") {
+    const uploads: string[] = []
+    for (let i = 1; i < argv.length; i++) {
+      const value = argv[i]
+      if (/^(-d|--data|--data-binary|--data-raw|-T|--upload-file)$/.test(value) && argv[i + 1])
+        uploads.push(argv[++i].replace(/^@/, ""))
+      const match = value.match(/^(?:--data(?:-binary|-raw)?=|-d)(@.+)$|^(?:--upload-file=|-T)(.+)$/)
+      if (match) uploads.push((match[1] ?? match[2]).replace(/^@/, ""))
+    }
+    const urls = argv.filter((x) => /^https?:\/\//.test(x))
+    const result = action(
+      uploads.length ? "network.http_post" : "network.http_get",
+      [...urls, ...uploads],
+      uploads.some(isCredentialPath) ? "credential_access" : "outbound_network",
+      ctx,
+      { argv, uploads: uploads.map((x) => canonical(x, ctx.cwd)), hosts: urls.map(hostOf).filter(Boolean) },
+    )
     return {
-      operation: `network.http_${method}`,
-      targets: [...urls, ...uploaded],
-      effect: exfiltratesCredentials ? "credential_access" : "outbound_network",
+      ...result,
       radius: "remote",
       reversible: "remote_irreversible",
-      options: { ...options, uploads: uploaded, hosts: urls.map(hostOf).filter(Boolean) },
+      uncertainty: ["network_effects_not_fully_resolved"],
     }
   }
-
-  const known = VERB_TABLE[verb]
-  const targets = operands(tokens)
-  const radius = widestRadius(targets, ctx)
-  if (!known) {
-    return {
-      operation: `shell.${verb || "empty"}`,
-      targets,
-      effect: "unknown",
-      radius,
-      reversible: "local_untracked",
-      options,
-    }
+  if (verb === "chmod") {
+    const mode = argv.find((x) => /^[0-7]{3,4}$|^[ugoa]+[+=-][rwxXst]+$/.test(x))
+    return action(
+      "filesystem.chmod",
+      argv.slice(1).filter((x) => !x.startsWith("-") && x !== mode),
+      "mutation_irreversible",
+      ctx,
+      { argv, mode, recursive: argv.includes("-R") || argv.includes("--recursive") },
+    )
   }
-
-  let effect = known.effect
-  // A write into a session-surviving config file is self-modification,
-  // whatever verb got it there.
-  if (effect !== "read" && targets.some(isConfigPersistencePath)) effect = "config_persistence"
-  if (effect === "read" && targets.some(isCredentialPath)) effect = "credential_access"
-
-  return {
-    operation: known.operation,
-    targets,
-    effect,
-    radius,
-    reversible: reversibilityOf(effect, radius, targets, ctx),
-    options,
-  }
+  return unknown(`shell.${verb}`, "unsupported_command", { argv })
 }
-
 export interface RawToolCall {
   tool: string
   arguments: Record<string, unknown>
+  callID?: string
 }
 
-/**
- * Normalize a Kilo tool call. Returns one action per shell segment; callers
- * evaluate each independently so `rm -rf dist && curl ... | sh` cannot smuggle
- * the second half past a verdict earned by the first.
- */
 export function normalize(
   call: RawToolCall,
   ctx: TrustedContext,
   provenance: IntentProvenance = "agent_invented",
 ): NormalizedAction[] {
-  if (call.tool === "bash" || call.tool === "shell") {
-    const command = String(call.arguments["command"] ?? "")
-    if (isPipeToShell(command)) {
-      const urls = command.match(/https?:\/\/\S+/g) ?? []
-      return [
-        {
-          operation: "script.execute_remote",
-          targets: urls,
-          effect: "unknown",
-          radius: "remote",
-          reversible: "remote_irreversible",
-          intent_provenance: provenance,
-          options: { pipe_to_shell: true, hosts: urls.map(hostOf).filter(Boolean) },
-        },
-      ]
+  const args = call.arguments
+  const finish = (values: NormalizedAction[]) => values.map((value) => ({ ...value, intent_provenance: provenance }))
+  try {
+    if (call.tool === "bash" || call.tool === "shell") {
+      const command = typeof args.command === "string" ? args.command : ""
+      const cwd = typeof args.workdir === "string" ? canonical(args.workdir, ctx.cwd) : ctx.cwd
+      const context = { ...ctx, cwd }
+      if (isPipeToShell(command))
+        return finish([
+          { ...unknown("script.execute_remote", "pipe_to_shell", { pipe_to_shell: true }), radius: "remote" },
+        ])
+      if (opaque(command)) return finish([unknown("script.execute", "unsupported_shell_syntax")])
+      const parts = segments(command)
+      if (!parts.length) return finish([unknown("script.execute", "empty_command")])
+      return finish(parts.map((part) => shell(part, context)))
     }
-    return splitSegments(command).map((segment) => ({
-      ...normalizeShellSegment(segment, ctx),
-      intent_provenance: provenance,
-    }))
+    if (call.tool === "apply_patch") {
+      if (typeof args.patchText !== "string") return finish([unknown("code.modify", "missing_patch")])
+      const parsed = parsePatch(args.patchText)
+      const values = parsed.hunks.flatMap((hunk) => {
+        if (hunk.type === "delete") return [action("filesystem.delete", [hunk.path], "mutation_irreversible", ctx)]
+        if (hunk.type === "update" && hunk.move_path)
+          return [
+            action("filesystem.delete", [hunk.path], "mutation_irreversible", ctx, { move: true }),
+            action("code.modify", [hunk.move_path], "mutation_reversible", ctx, { create: true, move: true }),
+          ]
+        return [action("code.modify", [hunk.path], "mutation_reversible", ctx, { create: hunk.type === "add" })]
+      })
+      return finish(values.length ? values : [unknown("code.modify", "empty_patch")])
+    }
+    if (/^(edit|write|read)$/.test(call.tool)) {
+      const target = args.filePath ?? args.path
+      if (typeof target !== "string" || !target.trim())
+        return finish([unknown(`filesystem.${call.tool}`, "missing_target")])
+      return finish([
+        action(
+          call.tool === "read" ? "filesystem.read" : isProjectConfigPath(target) ? "config.modify" : "code.modify",
+          [target],
+          call.tool === "read" ? "read" : "mutation_reversible",
+          ctx,
+        ),
+      ])
+    }
+    if (/^(grep|glob|list)$/.test(call.tool)) {
+      if (args.path != null && typeof args.path !== "string")
+        return finish([unknown("filesystem.search", "invalid_target")])
+      if (call.tool !== "list" && typeof args.pattern !== "string")
+        return finish([unknown("filesystem.search", "missing_pattern")])
+      const absolute = call.tool === "glob" ? splitGlob(String(args.pattern)) : undefined
+      const target = absolute?.dir ?? path.resolve(ctx.cwd, typeof args.path === "string" ? args.path : ".")
+      return finish([
+        action(
+          `filesystem.${call.tool}`,
+          [target],
+          "read",
+          ctx,
+          { pattern: absolute?.pattern ?? args.pattern },
+          call.tool === "grep" ? undefined : "directory",
+        ),
+      ])
+    }
+    if (call.tool === "skill")
+      return finish([
+        action("skill.read", [String(args.name ?? "")], "read", ctx, { shell_disabled: true }, "reference"),
+      ])
+    if (["todowrite", "todoread", "question"].includes(call.tool))
+      return finish([action("session.coordinate", [], "read", ctx, { grants_authority: false })])
+    if (call.tool === "task") return finish([action("task.delegate", [], "unknown", ctx, { inherits_contract: true })])
+    return finish([unknown(`tool.${call.tool}`, "unsupported_tool")])
+  } catch (err) {
+    return finish([unknown(`tool.${call.tool}`, err instanceof Error ? err.message : "invalid_call")])
   }
+}
 
-  if (call.tool === "edit" || call.tool === "write" || call.tool === "patch") {
-    const target = String(call.arguments["path"] ?? call.arguments["filePath"] ?? "")
-    const radius = classifyRadius(target, ctx)
-    const effect: Effect = isConfigPersistencePath(target)
-      ? "config_persistence"
-      : isProjectConfigPath(target)
-        ? "config_persistence"
-        : "mutation_reversible"
-    return [
-      {
-        operation: effect === "config_persistence" ? "config.modify" : "code.modify",
-        targets: [target],
-        effect,
-        radius,
-        reversible: radius === "inside_worktree" ? "git_tracked" : "local_untracked",
-        intent_provenance: provenance,
-        options: {},
-      },
-    ]
+export function normalizeCall(call: RawToolCall, ctx: TrustedContext): ActionIR {
+  const actions = normalize(call, ctx)
+  const cwd =
+    typeof call.arguments.workdir === "string"
+      ? canonical(call.arguments.workdir, ctx.cwd)
+      : canonical(ctx.cwd, ctx.workspace_root)
+  const argv = actions.map((item) => (Array.isArray(item.options.argv) ? (item.options.argv as string[]) : []))
+  return {
+    version: 1,
+    tool: call.tool,
+    call_id: call.callID ?? "offline",
+    cwd,
+    argv,
+    actions,
+    fingerprint: digest({
+      tool: call.tool,
+      cwd,
+      actions: actions.map(({ resources: _resources, ...item }) => item),
+      payload: /^(edit|write|apply_patch)$/.test(call.tool) ? digest(call.arguments) : undefined,
+    }),
+    uncertainty: actions.flatMap((item) => item.uncertainty ?? []),
   }
-
-  if (call.tool === "read" || call.tool === "grep" || call.tool === "glob" || call.tool === "list") {
-    const target = String(call.arguments["path"] ?? call.arguments["pattern"] ?? ".")
-    return [
-      {
-        operation: `filesystem.${call.tool}`,
-        targets: [target],
-        effect: isCredentialPath(target) ? "credential_access" : "read",
-        radius: classifyRadius(target, ctx),
-        reversible: "git_tracked",
-        intent_provenance: provenance,
-        options: {},
-      },
-    ]
-  }
-
-  // Unrecognized tool: undecidable effect, so it must never auto-allow.
-  return [
-    {
-      operation: `tool.${call.tool}`,
-      targets: Object.values(call.arguments).filter((v) => typeof v === "string").map(String),
-      effect: "unknown",
-      radius: "inside_worktree",
-      reversible: "local_untracked",
-      intent_provenance: provenance,
-      options: {},
-    },
-  ]
 }

@@ -1,3 +1,4 @@
+import * as AutoGuardRuntime from "@/kilocode/autoguard/runtime" // kilocode_change
 import path from "path"
 import { Effect, Schema } from "effect"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
@@ -47,7 +48,7 @@ export const SkillTool = Tool.define(
           const content = yield* SkillInject.render({
             content: info.content,
             trusted: info.trusted === true,
-            disabled: flags.disableSkillShell,
+            disabled: flags.disableSkillShell || (yield* AutoGuardRuntime.enabled()), // kilocode_change
             cwd: yield* InstanceState.directory,
             skill: info.name,
             shell: Shell.acceptable(cfg.shell),

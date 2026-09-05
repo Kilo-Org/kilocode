@@ -1,141 +1,172 @@
-/**
- * Deriving a task grant from the developer's request.
- *
- * Until this existed, `plugin.ts` handed every decision an empty grant. That is
- * safe and useless: `withinAuthority` returns false for an empty grant, so
- * `L0-A2` never fires, every ordinary source edit falls through to Level 1, and
- * Level 1 answers `REVIEW` because nothing authorises anything. Measured on the
- * trajectory benchmark: 34 of 40 remaining blocks were edits to the one file
- * the developer had named, and benign task success sat at 2/9 against 8/9
- * unguarded.
- *
- * The trust boundary is the same one `provenance.ts` uses, and for the same
- * reason: **only the developer's own message is read**. Never assistant prose,
- * never tool output, never file contents. An agent that can write into this
- * input can write itself a grant, and text injected into a README or a
- * docstring must not be able to widen what is permitted.
- *
- * Three rules keep the extractor from over-granting:
- *
- * 1. A path must look like a path (`src/`, `tests/test_x.py`) or be a directory
- *    the *trusted context* already knows about. "Fix the code" must not grant
- *    scope over a directory called `code` that the developer never mentioned.
- * 2. Capabilities come from verbs, and a verb alone grants nothing -- every
- *    descriptor pairs an operation with a concrete path. No `*` is ever
- *    emitted, in either position.
- * 3. Destructive capability is bounded by the trusted context rather than by
- *    the message: a deletion descriptor is emitted only for a path the context
- *    itself declares generated. The developer saying "delete src" cannot
- *    produce `filesystem.delete:src`, because `src` is not a build artifact --
- *    that decision belongs to the environment, not to a sentence.
- *
- * What this deliberately does not do: infer `sensitive`. Marking a target as
- * consequential is a judgement about consequences, not a phrase to pattern
- * match, and a wrong guess there silently unblocks rather than blocks. It stays
- * empty, which is the direction that costs a review rather than a mistake.
- */
+import { canonical, covers, inside, resource } from "./resources"
+import type { Authority, ContractMessage, Grant, ResourceCatalog, TaskContract, TrustedContext } from "./types"
 
-import type { Authority, TrustedContext } from "./types"
-
-/** Verbs that ask for each operation, in the developer's own words. */
-const CAPABILITY_VERBS: Record<string, RegExp> = {
-  "code.modify": /\b(fix|fixes|fixing|edit|change|update|refactor|implement|rewrite|correct|repair)\b/i,
-  "test.run": /\b(test|tests|testing|pytest|unittest|suite|spec|specs)\b/i,
-  "filesystem.delete": /\b(delete|remove|clean|cleanup|clear|purge|wipe|prune)\b/i,
+export function catalog(ctx: TrustedContext): ResourceCatalog {
+  return ctx.catalog ?? { source: [], verification: [], generated_output: ctx.generated_paths }
 }
 
-/** Operations whose grant is bounded by the trusted context, not the message. */
-const DESTRUCTIVE = new Set(["filesystem.delete"])
-
-/** Words that look like paths but are ordinary English. */
-const STOPWORDS = new Set([
-  "a", "an", "the", "code", "file", "files", "it", "them", "this", "that",
-  "so", "and", "or", "in", "to", "for", "of", "is", "are", "on", "at",
-])
-
-/**
- * Pull path-shaped tokens out of the request.
- *
- * A bare word only counts when the trusted context already names it as a
- * directory. That anchor is what stops an ordinary noun from becoming scope.
- */
 export function namedPaths(text: string, ctx: TrustedContext): string[] {
-  const known = new Set([...ctx.protected_paths, ...ctx.generated_paths])
-  const found = new Set<string>()
-
-  for (const raw of text.split(/[\s,;:()"'`]+/)) {
-    const trimmed = raw.replace(/[.]+$/, "")
-    const token = trimmed.replace(/\/+$/, "")
-    if (!token || STOPWORDS.has(token.toLowerCase())) continue
-    // Absolute paths, parent traversal and home expansion are never granted:
-    // a task grant describes work inside this worktree.
-    if (token.startsWith("/") || token.startsWith("~") || token.split("/").includes("..")) continue
-    // The slash is tested on the *untrimmed* token. `src/` is how a developer
-    // writes a directory, and stripping the trailing slash first turns it into
-    // the bare word `src`, which only counts when the trusted context happens
-    // to list it. Production lists `.git,.env,secrets` -- not `src` -- so the
-    // trimmed form matched nothing, every grant came back empty, and `L0-A2`
-    // never fired in a live run despite passing its unit test against a
-    // conveniently-chosen context.
-    const looksLikePath = trimmed.includes("/") || /\.[a-z0-9]{1,5}$/i.test(token)
-    if (looksLikePath || known.has(token)) found.add(token)
-  }
-  return [...found]
+  const known = Object.values(catalog(ctx)).flat()
+  return [
+    ...new Set(
+      text
+        .split(/[\s,;`"'()]+/)
+        .map((value) => value.replace(/[.!?]+$/, ""))
+        .filter((value) => value && (value.includes("/") || /\.[a-z0-9]{1,8}$/i.test(value) || known.includes(value))),
+    ),
+  ]
 }
 
-/**
- * Build the grant for one request.
- *
- * `userIntent` must be the developer's message and nothing else.
- */
-export function deriveAuthority(userIntent: string, ctx: TrustedContext): Authority {
-  const empty: Authority = {
-    issuer: "user",
-    scope: [],
-    capabilities: [],
-    expires: "task",
-    required: [],
-    implicit: [],
-    sensitive: [],
-  }
-  if (!userIntent.trim()) return empty
+const verbs =
+  /^(?:(?:please|пожалуйста)\s+)?(?:(do\s+not|don['’]t|never|не|нельзя)\s+)?(fix|edit|modify|change|update|refactor|implement|repair|delete|remove|clean|cleanup|clear|purge|run|execute|test|исправь(?:те)?|измени(?:те)?|редактируй(?:те)?|удали(?:те)?|удаляй(?:те)?|очисти(?:те)?|очищай(?:те)?|запусти(?:те)?|запускай(?:те)?|меняй(?:те)?|модифицируй(?:те)?)\b/iu
+// JS word boundaries do not recognize Cyrillic letters.
+const russian =
+  /^(?:пожалуйста\s+)?(?:(не|нельзя)\s+)?(исправь(?:те)?|измени(?:те)?|редактируй(?:те)?|удали(?:те)?|удаляй(?:те)?|очисти(?:те)?|очищай(?:те)?|запусти(?:те)?|запускай(?:те)?|меняй(?:те)?|модифицируй(?:те)?)(?=\s|$)/iu
 
-  const paths = namedPaths(userIntent, ctx)
-  if (paths.length === 0) return empty
-
-  const capabilities: string[] = []
-  const implicit: string[] = []
-  const required: string[] = []
-
-  for (const [operation, verb] of Object.entries(CAPABILITY_VERBS)) {
-    if (!verb.test(userIntent)) continue
-
-    if (DESTRUCTIVE.has(operation)) {
-      // Bounded by the environment: only paths the context itself declares
-      // generated. `required` is what unlocks L0-A3, so it stays this narrow.
-      const generated = paths.filter((p) =>
-        ctx.generated_paths.some((g) => p === g || p.startsWith(g + "/")),
-      )
-      if (generated.length === 0) continue
-      capabilities.push(operation)
-      required.push(...generated.map((p) => `${operation}:${p}`))
+export function grammar(
+  message: ContractMessage,
+  ctx: TrustedContext,
+): { grants: Grant[]; prohibitions: Grant[]; ambiguous: boolean } {
+  const grants: Grant[] = []
+  const prohibitions: Grant[] = []
+  const roles = catalog(ctx)
+  const clauses = message.text.split(
+    /(?:[.!?](?=\s|$)|[;\n])|\b(?:and|but)\s+(?=(?:do not|don't|never|fix|edit|delete|remove|run|clean)\b)|\s+(?:и|но)\s+(?=(?:не|исправь|удали|запусти|очисти)\s)/iu,
+  )
+  let ambiguous = false
+  for (const source of clauses) {
+    const clause = source.trim()
+    if (!clause) continue
+    const preserve =
+      clause.match(/^(?:keep|leave)\s+(.+?)\s+(?:unchanged|intact|untouched)$/iu) ??
+      clause.match(/^(?:оставь|сохрани)\s+(.+?)\s+без изменений$/iu)
+    if (preserve) {
+      const paths = namedPaths(preserve[1], ctx)
+      if (!paths.length) ambiguous = true
+      for (const target of paths)
+        for (const operation of ["code.modify", "filesystem.delete"])
+          prohibitions.push({
+            operation,
+            resource: resource(target, ctx),
+            source: message.id,
+            evidence: clause,
+            confirmed: "grammar",
+          })
       continue
     }
-
-    capabilities.push(operation)
-    implicit.push(...paths.map((p) => `${operation}:${p}`))
+    const match = clause.match(verbs) ?? clause.match(russian)
+    if (!match) {
+      if (/\b(not|never|avoid|without|except|unless)\b|(?:^|\s)(не|нельзя|кроме|без)(?:\s|$)/iu.test(clause))
+        ambiguous = true
+      continue
+    }
+    const negative = !!match[1]
+    const verb = match[2].toLowerCase()
+    const operation = /^(delete|remove|clean|cleanup|clear|purge|удал|очист|очищ)/u.test(verb)
+      ? "filesystem.delete"
+      : /^(run|execute|test|запуст|запуска)/u.test(verb)
+        ? "test.run"
+        : "code.modify"
+    const object = clause
+      .slice(match[0].length)
+      .split(
+        /\b(?:so that|so|because|using|based on|according to|after|before|from|for|with|without|but|except|unless|and)\b|(?:чтобы|используя|после|согласно|кроме|но|для)\s/iu,
+      )[0]
+    if (/\b(except|unless|only if|not)\b|(?:^|\s)(кроме|не|только если)(?:\s|$)/iu.test(object)) {
+      ambiguous = true
+      continue
+    }
+    const paths = namedPaths(object, ctx)
+    if (
+      operation === "filesystem.delete" &&
+      /generated output|build artifacts|сгенерированн|артефакт.{0,12}сборк/iu.test(object)
+    ) {
+      if (roles.generated_output.length !== 1) {
+        ambiguous = true
+        continue
+      }
+      paths.push(roles.generated_output[0])
+    }
+    if (operation === "test.run") {
+      if (!/tests?|pytest|unittest|тест/iu.test(object + " " + verb)) {
+        ambiguous = true
+        continue
+      }
+      if (!paths.length) paths.push(...(roles.verification.length ? roles.verification : [ctx.workspace_root]))
+    }
+    if (negative && !paths.length) ambiguous = true
+    for (const target of [...new Set(paths)]) {
+      try {
+        const item = resource(target, ctx, target.endsWith("/") ? "directory" : undefined)
+        if (!inside(canonical(ctx.workspace_root, ctx.cwd), item.key)) {
+          ambiguous = true
+          continue
+        }
+        const grant: Grant = { operation, resource: item, source: message.id, evidence: clause, confirmed: "grammar" }
+        if (negative) {
+          prohibitions.push(grant)
+          continue
+        }
+        if (
+          operation === "filesystem.delete" &&
+          !roles.generated_output.some((x) => inside(canonical(x, ctx.cwd), item.key))
+        ) {
+          ambiguous = true
+          continue
+        }
+        grants.push(grant)
+      } catch {
+        ambiguous = true
+      }
+    }
   }
+  // The verification role is implied by this supported task form, never write access to tests.
+  if (
+    grants.some((g) => g.operation === "code.modify" || g.operation === "filesystem.delete") &&
+    /tests?.{0,80}fail|тест.{0,80}пада|so.{0,30}(?:they|tests?) pass|чтобы.{0,30}тест/isu.test(message.text)
+  ) {
+    const paths = roles.verification.length ? roles.verification : [ctx.workspace_root]
+    for (const target of paths)
+      grants.push({
+        operation: "test.run",
+        resource: resource(target, ctx, "directory"),
+        source: message.id,
+        evidence: message.text,
+        confirmed: "grammar",
+      })
+  }
+  return {
+    grants: ambiguous
+      ? []
+      : grants.filter(
+          (g) => !prohibitions.some((p) => p.operation === g.operation && covers(p.resource, g.resource.key)),
+        ),
+    prohibitions,
+    ambiguous,
+  }
+}
 
-  if (capabilities.length === 0) return empty
-
+export function authority(contract: Pick<TaskContract, "grants" | "prohibitions" | "active">): Authority {
+  const grants = contract.active
+    ? contract.grants.filter(
+        (g) =>
+          !contract.prohibitions.some(
+            (p) => (p.operation === g.operation || p.operation === "*") && covers(p.resource, g.resource.key),
+          ),
+      )
+    : []
   return {
     issuer: "user",
-    scope: paths,
-    capabilities,
+    scope: grants.map((g) => g.resource.key),
+    capabilities: [...new Set(grants.map((g) => g.operation))],
     expires: "task",
-    required,
-    implicit,
-    // Never inferred. See the header: a wrong guess here unblocks.
+    required: grants.map((g) => `${g.operation}:${g.resource.key}`),
+    implicit: [],
     sensitive: [],
+    forbidden: contract.prohibitions.map((g) => `${g.operation}:${g.resource.key}`),
   }
+}
+export function deriveAuthority(text: string, ctx: TrustedContext): Authority {
+  const parsed = grammar({ id: "offline", text }, ctx)
+  return authority({ ...parsed, active: true })
 }
