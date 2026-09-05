@@ -91,6 +91,8 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
+import { KiloBtw } from "@/kilocode/session/btw" // kilocode_change
+import { isBtwCommand } from "@/kilocode/command/btw" // kilocode_change
 import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
@@ -2308,6 +2310,21 @@ export const layer = Layer.effect(
       const fmt = isResumeCommand(input.command)
       if (fmt) {
         return yield* handleResume({ cmdInput: input, format: fmt })
+      }
+      // kilocode_change end
+      // kilocode_change start - /btw side-question command; handler lives in kilocode/session/btw.ts
+      if (isBtwCommand(input.command)) {
+        return yield* KiloBtw.command({
+          cmdInput: input,
+          ops: {
+            sessions,
+            agents,
+            events,
+            status,
+            currentModel: (sessionID) => currentModel(sessionID),
+            runFork: (forkInput) => Effect.exit(prompt(forkInput)),
+          },
+        })
       }
       // kilocode_change end
       // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn

@@ -523,7 +523,14 @@ export interface Interface {
     sandboxInheritanceToken?: string
   }) => Effect.Effect<Info>
   // kilocode_change end
-  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
+  // kilocode_change start - allow ephemeral forks to register as child sessions and skip task-child cloning
+  readonly fork: (input: {
+    sessionID: SessionID
+    messageID?: MessageID
+    parentID?: SessionID
+    children?: boolean
+  }) => Effect.Effect<Info, NotFound>
+  // kilocode_change end
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
   readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
   readonly setTitle: (input: { sessionID: SessionID; title: string }) => Effect.Effect<void>
@@ -836,7 +843,13 @@ export const layer: Layer.Layer<
       return session
     })
 
-    const fork = Effect.fn("Session.fork")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
+    // kilocode_change start - allow ephemeral forks to register as child sessions and skip task-child cloning
+    const fork = Effect.fn("Session.fork")(function* (input: {
+      sessionID: SessionID
+      messageID?: MessageID
+      parentID?: SessionID
+      children?: boolean
+    }) {
       const ctx = yield* InstanceState.context
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
@@ -867,6 +880,7 @@ export const layer: Layer.Layer<
         title,
         metadata: structuredClone(original.metadata),
         model, // kilocode_change - preserve the model + variant active at the fork point
+        parentID: input.parentID, // kilocode_change - register child sessions
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
         platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
@@ -911,12 +925,14 @@ export const layer: Layer.Layer<
       // kilocode_change - preserve imported/cumulative diffs when forking (self-contained Storage runtime keeps this shared file off the legacy Storage layer)
       yield* carryForkDiff(input.sessionID, session.id)
       // kilocode_change start - fork terminal task children under the new parent and remap their references
-      yield* KiloSession.remapChildren({
-        sessionID: session.id,
-        remapped: new Map([[input.sessionID, session.id]]),
-        ops: writer,
-      })
-      yield* writer.flush
+      if (input.children !== false) {
+        yield* KiloSession.remapChildren({
+          sessionID: session.id,
+          remapped: new Map([[input.sessionID, session.id]]),
+          ops: writer,
+        })
+        yield* writer.flush
+      }
       // kilocode_change end
       return session
     })
