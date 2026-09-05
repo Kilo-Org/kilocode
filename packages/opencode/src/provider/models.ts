@@ -71,8 +71,35 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        // kilocode_change start - register MindsHub, an OpenAI/Anthropic-compatible
+        // inference gateway (https://mindshub.ai), the same way Apertis is registered above.
+        const mh = cfg.provider?.mindshub?.options
+        // kilocode_change - fold MINDSHUB_BASE_URL into the default so the `provider.api`
+        // host used for inference matches the host authOptions() in model-cache.ts already
+        // uses for GET /models; otherwise an env-only proxy override lists models from the
+        // proxy but sends completions to the production host.
+        const mhURL = mh?.baseURL ?? process.env.MINDSHUB_BASE_URL ?? "https://api.mindshub.ai/v1"
+        const mhOpts = mh?.baseURL ? { baseURL: mh.baseURL } : {}
+
+        const addMindsHub = Effect.fnUntraced(function* () {
+          if (providers.mindshub) return
+          const models = yield* cache.fetch("mindshub", mhOpts).pipe(Effect.catch(() => Effect.succeed({})))
+          providers.mindshub = {
+            id: "mindshub",
+            name: "MindsHub",
+            env: ["MINDSHUB_API_KEY"],
+            api: mhURL,
+            npm: "@ai-sdk/openai-compatible",
+            models,
+          }
+          if (Object.keys(models).length === 0)
+            yield* cache.refresh("mindshub", mhOpts).pipe(Effect.ignore, Effect.forkDetach)
+        })
+        // kilocode_change end
+
         if (!allowed) {
           yield* addApertis()
+          yield* addMindsHub() // kilocode_change
           return providers
         }
 
@@ -98,6 +125,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         if (valid && !org && Object.keys(fetched).length === 0)
           yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
+        yield* addMindsHub() // kilocode_change
         return providers
       })
 
