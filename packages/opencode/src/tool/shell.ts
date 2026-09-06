@@ -24,7 +24,12 @@ import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import * as ActionGate from "@/kilocode/gate/action-gate" // kilocode_change
 import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - reasoning-blind classifier (stage 2)
-import { ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval" // kilocode_change - degraded escalation metadata
+import {
+  ACTION_GATE_DEGRADED_KEY,
+  ACTION_GATE_REASON_KEY,
+  ACTION_GATE_AUTHORIZED_KEY,
+  authorizerAllows,
+} from "@/kilocode/permission/interactive-approval" // kilocode_change - degraded escalation + one-shot pre-approval metadata
 import { Provider } from "@/provider/provider" // kilocode_change - ActionJudge model access (via serviceOption)
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -294,6 +299,7 @@ export const ask = Effect.fn("ShellTool.ask")(function* (
   metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
   degraded?: ActionJudge.AskCode, // kilocode_change - classifier-failure escalation: tag this real bash ask
+  authorized?: boolean, // kilocode_change - classifier `allow` one-shot pre-approval: tag ONLY this bash ask
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
@@ -325,12 +331,15 @@ export const ask = Effect.fn("ShellTool.ask")(function* (
   yield* ctx.ask({
     permission: ShellID.ToolID,
     patterns: shellPatterns,
-    always: degraded ? [] : Array.from(scan.always),
+    // kilocode_change - both a degraded escalation and a one-shot pre-approval persist NO rule.
+    always: degraded || authorized ? [] : Array.from(scan.always),
     metadata: {
       command: normalizeUrls(command),
       ...(description ? { description } : {}),
       ...metadata,
       ...(degraded ? { [ACTION_GATE_DEGRADED_KEY]: true, [ACTION_GATE_REASON_KEY]: degraded } : {}),
+      // kilocode_change - one-shot pre-approval marker (never alongside degraded; degraded is a forced prompt).
+      ...(authorized && !degraded ? { [ACTION_GATE_AUTHORIZED_KEY]: true } : {}),
     },
   })
 })
@@ -471,6 +480,9 @@ export const ShellPermission = Effect.gen(function* () {
         // A classifier block surfaces as a tool error (deny-and-continue); a classifier infra FAILURE (ask)
         // tags the bash ask below as degraded so it force-prompts a human (fail-safe escalation).
         let degradedReason: ActionJudge.AskCode | undefined = undefined
+        // kilocode_change - classifier `allow` one-shot pre-approval (opt-in): only on a proven `allow`, only
+        // when the authorizer is ON, and only in a ROOT session (child intent provenance is not proven).
+        let authorized = false
         if (ActionJudge.enabled) {
           const root = tree.rootNode
           const cmdList: ActionJudge.ShellCommand[] = commands(root).map((node) => {
@@ -510,10 +522,13 @@ export const ShellPermission = Effect.gen(function* () {
             // block -> tool error; ask (classifier infra failure) -> escalate via the real bash ask below.
             if (verdict.decision === "block") throw new Error(`Blocked by action classifier (${verdict.reasonCode}).`)
             if (verdict.decision === "ask") degradedReason = verdict.reasonCode
+            // kilocode_change - a proven allow may pre-approve ONLY this bash ask; authorizerAllows requires the
+            // flag AND a ROOT session (a genuine child session is never pre-approved).
+            if (verdict.decision === "allow" && authorizerAllows(ctx.parentSessionID)) authorized = true
           }
         }
         // kilocode_change end
-        yield* ask(ctx, scan, input.command, metadata, input.description, degradedReason) // kilocode_change
+        yield* ask(ctx, scan, input.command, metadata, input.description, degradedReason, authorized) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
           yield* ctx.ask({

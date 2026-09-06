@@ -13,6 +13,7 @@ import { EffectBridge } from "@/effect/bridge" // kilocode_change
 import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - Code Mode child MCP gate
 import * as McpCodeMode from "@/kilocode/gate/mcp-codemode" // kilocode_change - Code Mode child-MCP gate wiring (testable adapter)
 import * as DegradedGate from "@/kilocode/gate/degraded" // kilocode_change - fail-safe escalation approver
+import { authorizerAllows } from "@/kilocode/permission/interactive-approval" // kilocode_change - classifier one-shot pre-approval (flag + root session)
 import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change
 import { Provider } from "@/provider/provider" // kilocode_change
 
@@ -230,6 +231,10 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
           appliesTo: (p) => p === input.entry.key,
           blockMessage: (rc) => `Blocked by MCP gate (${rc}).`,
           run: runChild,
+          // kilocode_change - classifier one-shot pre-approval follows the SESSION, like everywhere else: a
+          // ROOT session (parentSessionID == null) may pre-approve; only a genuine child/subagent session
+          // (parentSessionID set) is refused. authorizerAllows enforces flag AND root-session together.
+          canAuthorize: authorizerAllows(input.ctx.parentSessionID),
         })
       })
     : runChild(input.ctx))

@@ -11,9 +11,32 @@
 import { Effect } from "effect"
 import type { Context } from "@/tool/tool"
 import type { AskCode, Verdict } from "./action-judge"
-import { ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval"
+import {
+  ACTION_GATE_DEGRADED_KEY,
+  ACTION_GATE_REASON_KEY,
+  ACTION_GATE_AUTHORIZED_KEY,
+} from "@/kilocode/permission/interactive-approval"
 
 type AskRequest = Parameters<Context["ask"]>[0]
+
+// kilocode_change start - classifier one-shot pre-approval (opt-in). The env predicate lives in
+// interactive-approval.ts (authorizerEnabled / authorizerAllows) so the permission layer can require the flag
+// without a dependency cycle; the caller passes the resulting boolean as guardSurface's `canAuthorize`.
+/**
+ * Wrap a Tool.Context so ONLY the action-level ask (the one whose permission satisfies `appliesTo`) carries
+ * the classifier pre-approval marker and `always: []` (persists no rule). Every OTHER ask the tool makes
+ * (external_directory, sandbox_escalation, …) passes through UNCHANGED, so pre-approval never covers an
+ * auxiliary prompt. The marker is set HERE — by the gate, only after a real `allow` — and never taken from
+ * tool args. Does not mutate the original ctx.
+ */
+export function withAuthorizer(ctx: Context, appliesTo: (permission: string) => boolean): Context {
+  const ask = (req: AskRequest) =>
+    appliesTo(req.permission)
+      ? ctx.ask({ ...req, always: [], metadata: { ...req.metadata, [ACTION_GATE_AUTHORIZED_KEY]: true } })
+      : ctx.ask(req)
+  return { ...ctx, ask }
+}
+// kilocode_change end
 
 /**
  * Wrap a Tool.Context so ONLY the action-level permission ask (the one whose permission satisfies
@@ -46,12 +69,21 @@ export function guardSurface<A, E, R>(params: {
   readonly appliesTo: (permission: string) => boolean
   readonly blockMessage: (reasonCode: string) => string
   readonly run: (ctx: Context) => Effect.Effect<A, E, R>
+  // kilocode_change - caller passes authorizerAllows(parentSessionID) (flag AND root session); the env/child
+  // logic stays at the call site so guardSurface stays pure and testable. Omitted/false -> prior behavior on allow.
+  readonly canAuthorize?: boolean
 }): Effect.Effect<A, E, R> {
   return Effect.gen(function* () {
     const verdict = yield* params.decide
     if (verdict.decision === "block") throw new Error(params.blockMessage(verdict.reasonCode))
+    // kilocode_change - allow + authorizer ON (root session) -> selective classifier pre-approval; ask ->
+    // selective withDegraded (unchanged); otherwise the context is untouched.
     const ctx =
-      verdict.decision === "ask" ? withDegraded(params.ctx, verdict.reasonCode, params.appliesTo) : params.ctx
+      verdict.decision === "ask"
+        ? withDegraded(params.ctx, verdict.reasonCode, params.appliesTo)
+        : verdict.decision === "allow" && params.canAuthorize
+          ? withAuthorizer(params.ctx, params.appliesTo)
+          : params.ctx
     return yield* params.run(ctx)
   })
 }

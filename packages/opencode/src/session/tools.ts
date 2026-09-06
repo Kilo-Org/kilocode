@@ -36,6 +36,7 @@ import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change -
 import * as WriteGate from "@/kilocode/gate/write-gate" // kilocode_change - edit/write/apply_patch surface
 import * as McpGate from "@/kilocode/gate/mcp-gate" // kilocode_change - generic MCP surface
 import * as DegradedGate from "@/kilocode/gate/degraded" // kilocode_change - fail-safe escalation approver
+import { authorizerAllows } from "@/kilocode/permission/interactive-approval" // kilocode_change - classifier one-shot pre-approval (flag + root session)
 import { InstanceState } from "@/effect/instance-state" // kilocode_change - workspace cwd for write targets
 import { existsSync } from "node:fs" // kilocode_change - create-vs-overwrite op normalization for write-gate
 
@@ -224,6 +225,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                     appliesTo: (p) => p === "edit",
                     blockMessage: (rc) => `Blocked by write gate (${rc}).`,
                     run: doExecute,
+                    // kilocode_change - classifier `allow` one-shot pre-approval, root session only (opt-in)
+                    canAuthorize: authorizerAllows(input.session.parentID),
                   })
                 })
               : doExecute(ctx))
@@ -569,6 +572,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                   appliesTo: (p) => p === key,
                   blockMessage: (rc) => `Blocked by MCP gate (${rc}).`,
                   run: runMcp,
+                  // kilocode_change - classifier `allow` one-shot pre-approval, root session only (opt-in)
+                  canAuthorize: authorizerAllows(input.session.parentID),
                 })
               })
             : runMcp(ctx))

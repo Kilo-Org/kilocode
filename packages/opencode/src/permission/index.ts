@@ -2,7 +2,7 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
-import { requiresInteractiveApproval } from "@/kilocode/permission/interactive-approval" // kilocode_change
+import { requiresInteractiveApproval, isActionGateAuthorized } from "@/kilocode/permission/interactive-approval" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
@@ -214,6 +214,13 @@ const layer = Layer.effect(
       // kilocode_change end
 
       const forceAsk = requiresInteractiveApproval(request.metadata) // kilocode_change - skillShell/sandboxEscalation/actionGateDegraded force an interactive prompt
+      // kilocode_change start - classifier one-shot pre-approval marker (gate-only; see interactive-approval).
+      // Provenance must not depend on pattern order: if ANY pattern is authorized by the gate, the outcome is
+      // sourced action_gate via a dedicated ephemeral rule, even if another pattern auto-approved by a rule.
+      const authorized = isActionGateAuthorized(request.metadata)
+      let authorizedByGate = false
+      let gateRule: Rule | undefined
+      // kilocode_change end
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -238,6 +245,17 @@ const layer = Layer.effect(
           continue
         }
         // kilocode_change end
+        // kilocode_change start - classifier one-shot pre-approval: turn a would-be ASK into a one-shot allow
+        // ONLY for the gate-verified action. Reached only AFTER hard deny (veto), explicit deny and forceAsk,
+        // and never for a protected config path (!isProtected), so those all still win. Persists no rule.
+        if (authorized && !isProtected) {
+          authorizedByGate = true
+          const gr: Rule = { permission: request.permission, pattern, action: "allow" }
+          ;(gr as { source?: string }).source = "action_gate"
+          gateRule = gr
+          continue
+        }
+        // kilocode_change end
         needsAsk = true
       }
 
@@ -246,7 +264,8 @@ const layer = Layer.effect(
       // loop above would not have run). Production always attaches degraded to a real request with patterns;
       // this is a backstop so an empty request can never fail open.
       if (forceAsk) needsAsk = true
-      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
+      // kilocode_change - a gate pre-approval reports source action_gate (order-independent), else the winning rule.
+      if (!needsAsk) return { manual: false, rule: authorizedByGate ? gateRule : approvedRule }
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
