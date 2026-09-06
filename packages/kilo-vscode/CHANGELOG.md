@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.5.15
+
 ## 7.5.14
 
 ### Patch Changes

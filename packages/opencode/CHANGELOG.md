@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 7.5.15
+
+### Patch Changes
+
+- [#13805](https://github.com/Kilo-Org/kilocode/pull/13805) [`b8e497a`](https://github.com/Kilo-Org/kilocode/commit/b8e497a356d3ec55f9457456e9d08c9adf14e6ad) - Stop glob searches after two minutes and terminate cancelled search processes.
+
+- [#13816](https://github.com/Kilo-Org/kilocode/pull/13816) [`f65206c`](https://github.com/Kilo-Org/kilocode/commit/f65206c7e86af4c3bc7210fc046f235f262fb2e9) - Show GPT-6 Astra when OpenAI is connected with ChatGPT OAuth.
+
 ## 7.5.14
 
 ## 7.5.13
