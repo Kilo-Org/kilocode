@@ -1232,10 +1232,10 @@ export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model
   const toggle = options.some((option) => option.type === "toggle")
   const budget = options.find((option) => option.type === "budget_tokens")
   if (effort) {
-    return nonEmptyVariants({
+    return {
       ...(toggle ? reasoningToggle(target) : {}),
       ...effortVariants(target, effort.values),
-    })
+    }
   }
   if (!budget) return toggle ? nonEmptyVariants(reasoningToggle(target)) : undefined
 
