@@ -22,6 +22,7 @@ import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import * as ActionGate from "@/kilocode/gate/action-gate" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -432,6 +433,28 @@ export const ShellPermission = Effect.gen(function* () {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
+        // kilocode_change start - ActionGate tripwire #1: block destructive `rm -rf` of a critical path,
+        // regardless of intent. Targets are extracted from the parse tree and resolved against the
+        // effective cwd (never a regex over the raw command). Blocking fails the permission check,
+        // which surfaces to the agent as a tool error (deny-and-continue), not a session halt.
+        if (ActionGate.enabled) {
+          for (const node of commands(tree.rootNode)) {
+            const tokens = parts(node).map((item) => item.text)
+            const rm = ActionGate.analyzeRm(tokens)
+            if (!rm.destructive) continue
+            // Resolve each target against the effective cwd. argpath returns undefined for dynamic or
+            // unresolvable targets ($HOME, $PWD, globs); we keep those as `resolved: undefined` so the
+            // gate can fail closed instead of silently allowing them.
+            const targets: ActionGate.RmTarget[] = []
+            for (const arg of rm.paths) {
+              const resolved = yield* argpath(arg, input.cwd, ps, input.shell)
+              targets.push({ raw: arg, resolved })
+            }
+            const verdict = ActionGate.checkDestructiveRm(targets, input.cwd, instance.directory)
+            if (verdict.block) throw new Error(verdict.reason)
+          }
+        }
+        // kilocode_change end
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {

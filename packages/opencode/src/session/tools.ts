@@ -189,9 +189,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
               { args },
             )
-            // kilocode_change start
             const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
-            // kilocode_change end
             const output = {
               ...result,
               attachments: result.attachments?.map((attachment) => ({
@@ -484,7 +482,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
             { args },
           )
-          // kilocode_change start
           const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
