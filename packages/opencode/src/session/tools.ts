@@ -105,6 +105,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       sessionID: input.session.id,
       abort: options.abortSignal!,
       messageID: input.processor.message.id,
+      userMessageID: input.processor.message.parentID, // kilocode_change - exact turn-initiating user message for ActionJudge
       callID: options.toolCallId,
       extra,
       agent: input.agent.name,

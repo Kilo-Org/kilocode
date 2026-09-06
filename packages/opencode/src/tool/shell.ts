@@ -1,4 +1,4 @@
-import { Effect, Fiber, Stream } from "effect" // kilocode_change - Fiber
+import { Effect, Fiber, Stream, Option } from "effect" // kilocode_change - Fiber, Option (ActionJudge)
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -23,6 +23,8 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import * as ActionGate from "@/kilocode/gate/action-gate" // kilocode_change
+import * as ActionJudge from "@/kilocode/gate/action-judge" // kilocode_change - reasoning-blind classifier (stage 2)
+import { Provider } from "@/provider/provider" // kilocode_change - ActionJudge model access (via serviceOption)
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -452,6 +454,49 @@ export const ShellPermission = Effect.gen(function* () {
             }
             const verdict = ActionGate.checkDestructiveRm(targets, input.cwd, instance.directory)
             if (verdict.block) throw new Error(verdict.reason)
+          }
+        }
+        // kilocode_change end
+        // kilocode_change start - ActionGate stage 2: reasoning-blind classifier (KILO_ACTION_CLASSIFIER=1).
+        // Order: deterministic tripwire (above) -> proven read-only fast path -> classifier -> ask() below.
+        // A classifier block surfaces as a tool error (deny-and-continue), identical to the tripwire.
+        if (ActionJudge.enabled) {
+          const root = tree.rootNode
+          const cmdList: ActionJudge.ShellCommand[] = commands(root).map((node) => {
+            const toks = parts(node).map((item) => item.text)
+            return { executable: ActionJudge.basename(toks[0] ?? ""), args: toks }
+          })
+          const flags = {
+            hasRedirect:
+              root.descendantsOfType("file_redirect").length > 0 || root.descendantsOfType("heredoc_redirect").length > 0,
+            hasSubstitution:
+              root.descendantsOfType("command_substitution").length > 0 ||
+              root.descendantsOfType("process_substitution").length > 0,
+            hasError: root.descendantsOfType("ERROR").length > 0,
+          }
+          const readOnly = ActionJudge.provenReadOnly(cmdList, flags)
+          // Structural view; ctx.messages (SessionV1.WithParts[]) matches ActionJudge.MessageView by shape.
+          const { intent, model } = ActionJudge.selectIntent(
+            ctx.messages as unknown as ActionJudge.MessageView[],
+            ctx.userMessageID,
+          )
+          const decision = ActionJudge.route({ tripwireBlocked: false, readOnly, hasIntent: Boolean(intent) })
+          if (decision === "intent-missing-block") {
+            throw new Error(
+              "Blocked by action classifier: cannot verify this command against the user's request (no user intent available).",
+            )
+          }
+          if (decision === "classify") {
+            const providerOpt = yield* Effect.serviceOption(Provider.Service)
+            const verdict = yield* ActionJudge.classify(
+              providerOpt,
+              model,
+              { userIntent: intent!, cwd: input.cwd, command: input.command, commands: cmdList },
+              ctx.abort,
+              ctx.sessionID,
+              ctx.callID ?? "",
+            )
+            if (verdict.decision === "block") throw new Error(`Blocked by action classifier (${verdict.reasonCode}).`)
           }
         }
         // kilocode_change end

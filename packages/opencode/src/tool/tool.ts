@@ -37,6 +37,9 @@ export class InvalidArgumentsError extends Schema.TaggedErrorClass<InvalidArgume
 export type Context<M extends Metadata = Metadata> = {
   sessionID: SessionID
   messageID: MessageID
+  // kilocode_change - id of the user message that initiated THIS turn (the assistant message's parentID).
+  // Used by ActionJudge to read the trusted user intent from the exact turn, not by array position.
+  userMessageID?: MessageID
   agent: string
   abort: AbortSignal
   callID?: string
