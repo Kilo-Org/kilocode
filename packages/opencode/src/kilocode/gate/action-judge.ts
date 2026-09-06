@@ -89,7 +89,7 @@ export interface ShellJudgeInput {
   /** ALL command nodes of the parse tree, so `safe && dangerous` is never judged by the first alone. */
   readonly commands: readonly ShellCommand[]
 }
-/** write-arm: judged by targets (path+op) only — no file content (see EDIT-WRITE-MCP-DESIGN §3). */
+/** write-arm: judged by targets (path+op) only — no file content (keeps secrets out of the classifier prompt). */
 export interface WriteJudgeInput {
   readonly surface: "write"
   readonly userIntent: string

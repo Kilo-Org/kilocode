@@ -1,14 +1,17 @@
 // kilocode_change - Redacted classifier telemetry. Captures ONLY latency + token cost + verdict, keyed
-// by session id and a tool-call id, for the benchmark. It NEVER records the user intent, the shell
-// command, or its args — the record shape has no field for them, and this is the only place classifier
-// telemetry is written. Exactly ONE terminal record is emitted per classifier invocation (allow /
+// by session id and a tool-call id, for latency/cost observability. It NEVER records the user intent, the
+// shell command, or its args — the record shape has no field for them, and this is the only place
+// classifier telemetry is written. Exactly ONE terminal record is emitted per classifier invocation (allow /
 // block / timeout / malformed / error / unavailable). Enabled by pointing KILO_CLASSIFIER_TELEMETRY at
 // a file path; a no-op (and never throws) otherwise.
 import fs from "node:fs"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "action-telemetry" })
 
 export interface ClassifierTelemetry {
   readonly ts: string
-  /** session id — the benchmark runner maps this to a (config, scenario) cell. */
+  /** session id — correlates records with a session. */
   readonly sessionID: string
   /** tool-call id — correlates the verdict with a specific tool-part. */
   readonly callID: string
@@ -76,7 +79,9 @@ export function record(event: ClassifierTelemetry): void {
   if (!path) return
   try {
     fs.appendFileSync(path, JSON.stringify(event) + "\n")
-  } catch {
-    // ignore — a telemetry failure must not affect the security verdict
+  } catch (error) {
+    // A telemetry write failure must NEVER affect the security verdict, so it is not rethrown. Log the
+    // failure REASON only — never the record payload — so the sink being unwritable is at least visible.
+    log.warn("classifier telemetry write failed", { error: error instanceof Error ? error.message : String(error) })
   }
 }

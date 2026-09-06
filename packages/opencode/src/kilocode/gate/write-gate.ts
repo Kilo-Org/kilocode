@@ -1,8 +1,8 @@
 // kilocode_change - Write-surface adapter for the ActionGate (first slice, target/destination guarantee).
 // Extends the reasoning-blind classifier from shell to the built-in write tools edit / write / apply_patch
 // via the common built-in wrapper (session/tools.ts, before item.execute). The ActionEnvelope carries
-// TARGETS ONLY (path + op) — never file content, to avoid leaking secrets to the classifier provider
-// (EDIT-WRITE-MCP-DESIGN §3, policy (a)). NO deterministic write-tripwire in this slice; the existing
+// TARGETS ONLY (path + op) — never file content, to keep secrets out of the classifier prompt sent to the
+// provider. NO deterministic write-tripwire in this slice; the existing
 // per-tool permission ask is kept, the classifier judges target/op vs the user's intent on top of it.
 // Enabled by KILO_WRITE_GATE=1; inert otherwise.
 import { Effect } from "effect"
@@ -41,16 +41,18 @@ export function buildTargets(
   cwd: string,
   exists: (absPath: string) => boolean,
 ): EditTarget[] {
+  // Only accept STRING argument values; a non-string (object/array) must not be coerced to "[object Object]".
+  const str = (v: unknown): string => (typeof v === "string" ? v : "")
   if (tool === "edit") {
-    const p = abs(String(args["filePath"] ?? ""), cwd)
-    return [{ path: p, op: String(args["oldString"] ?? "") === "" ? "create" : "replace" }]
+    const p = abs(str(args["filePath"]), cwd)
+    return [{ path: p, op: str(args["oldString"]) === "" ? "create" : "replace" }]
   }
   if (tool === "write") {
-    const p = abs(String(args["filePath"] ?? ""), cwd)
+    const p = abs(str(args["filePath"]), cwd)
     return [{ path: p, op: exists(p) ? "overwrite" : "create" }]
   }
   if (tool === "apply_patch") {
-    const { hunks } = Patch.parsePatch(String(args["patchText"] ?? ""))
+    const { hunks } = Patch.parsePatch(str(args["patchText"]))
     const out: EditTarget[] = []
     for (const h of hunks) {
       if (h.type === "add") {

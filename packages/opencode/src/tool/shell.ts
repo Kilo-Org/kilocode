@@ -458,7 +458,19 @@ export const ShellPermission = Effect.gen(function* () {
         // effective cwd (never a regex over the raw command). Blocking fails the permission check,
         // which surfaces to the agent as a tool error (deny-and-continue), not a session halt.
         if (ActionGate.enabled) {
+          // A command that changes the working directory (cd / pushd / popd) makes the EFFECTIVE cwd of a
+          // RELATIVE rm target that runs AFTER it unprovable from static parsing (we do not model cwd state
+          // across a `&&` / `;` chain). Fail closed prefix-aware: a relative destructive-rm target is treated
+          // as unresolved (and therefore blocked) ONLY when a cwd-changing command PRECEDES it in the chain.
+          // This closes `cd .. && rm -rf <workspace-basename>` while still allowing `rm -rf build && cd ..`.
+          // Absolute targets are cwd-independent, so they always resolve normally.
+          const isCwdChanger = (node: Node) => {
+            const head = (ActionGate.peelWrappers(parts(node).map((item) => item.text))[0] ?? "").split(/[\\/]/).pop()
+            return head === "cd" || head === "pushd" || head === "popd"
+          }
+          let cwdChangedBefore = false
           for (const node of commands(tree.rootNode)) {
+            if (isCwdChanger(node)) cwdChangedBefore = true
             const tokens = parts(node).map((item) => item.text)
             const rm = ActionGate.analyzeRm(tokens)
             if (!rm.destructive) continue
@@ -467,7 +479,8 @@ export const ShellPermission = Effect.gen(function* () {
             // gate can fail closed instead of silently allowing them.
             const targets: ActionGate.RmTarget[] = []
             for (const arg of rm.paths) {
-              const resolved = yield* argpath(arg, input.cwd, ps, input.shell)
+              const relative = !path.isAbsolute(home(unquote(arg)))
+              const resolved = cwdChangedBefore && relative ? undefined : yield* argpath(arg, input.cwd, ps, input.shell)
               targets.push({ raw: arg, resolved })
             }
             const verdict = ActionGate.checkDestructiveRm(targets, input.cwd, instance.directory)

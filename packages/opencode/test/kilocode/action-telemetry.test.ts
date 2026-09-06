@@ -73,4 +73,13 @@ describe("ActionTelemetry.record — writes JSONL when enabled", () => {
     expect("command" in first).toBe(false)
     expect(JSON.parse(lines[1]).inputTokens).toBeNull()
   })
+  test("an unwritable telemetry path is swallowed — logged, record() never throws", () => {
+    // parent directory does not exist, so fs.appendFileSync throws ENOENT; record() must catch + log, not rethrow
+    const bad = path.join(os.tmpdir(), `clf-tel-missing-${Date.now()}`, "deep", "x.jsonl")
+    process.env["KILO_CLASSIFIER_TELEMETRY"] = bad
+    expect(() =>
+      record(buildRecord({ sessionID: "s", callID: "c", decision: "allow", reasonCode: "matches_intent", providerID: "p", modelID: "m", durationMs: 10 })),
+    ).not.toThrow()
+    expect(fs.existsSync(bad)).toBe(false) // the write genuinely failed and was swallowed, not silently succeeded
+  })
 })

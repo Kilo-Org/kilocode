@@ -10,6 +10,9 @@ export const DeploySecureNav: NavSection[] = [
   },
   {
     title: "Security",
-    links: [{ href: "/deploy-secure/security-reviews", children: "Security Agent" }],
+    links: [
+      { href: "/deploy-secure/security-reviews", children: "Security Agent" },
+      { href: "/deploy-secure/action-gate", children: "ActionGate" },
+    ],
   },
 ]

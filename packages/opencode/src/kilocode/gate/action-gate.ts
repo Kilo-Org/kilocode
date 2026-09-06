@@ -30,29 +30,30 @@ export function isRmInvocation(commandName: string): boolean {
  * and the raw path arguments. Handles combined short flags (`-rf`, `-fr`), `-R`, long flags
  * (`--recursive`, `--force`), and the `--` end-of-flags separator (everything after `--` is a path).
  */
-// Peel a few SIMPLE command wrappers so `sudo rm -rf /`, `command rm -rf /`, `env rm -rf /` and
+// Peel SIMPLE command wrappers so `sudo rm -rf /`, `command rm -rf /`, `env rm -rf /` and
 // `env FOO=bar rm -rf /` are recognised as rm. Deliberately narrow: any wrapper carrying its own
 // options (`sudo -u x`, `env -i`, `command -v`) is left as-is and NOT peeled -- those complex forms
 // are a documented limitation, not silently mis-handled. `env echo ...` peels to `echo`, so a
-// non-rm payload behind env is correctly left alone.
+// non-rm payload behind env is correctly left alone. There is NO fixed peel limit: nested wrappers
+// (e.g. `env A=1 env A=2 ... rm -rf /`) are fully unwrapped. Each pass strictly shrinks the token
+// list, so the loop terminates on the first pass that makes no progress -- an artificial cap would
+// have let `env`x5 hide an rm from analyzeRm and bypass the tripwire.
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
 export function peelWrappers(tokens: readonly string[]): string[] {
   let toks = tokens.slice()
-  for (let guard = 0; guard < 4 && toks.length > 1; guard++) {
+  while (toks.length > 1) {
+    const before = toks.length
     const head = toks[0]
     if (head === "sudo" || head === "command") {
       if (toks[1]!.startsWith("-")) break // options present -> complex form, leave as-is
       toks = toks.slice(1)
-      continue
-    }
-    if (head === "env") {
+    } else if (head === "env") {
       let i = 1
       while (i < toks.length && ASSIGNMENT.test(toks[i]!)) i++
       if (i >= toks.length || toks[i]!.startsWith("-")) break // env option or nothing left -> leave
       toks = toks.slice(i)
-      continue
-    }
-    break
+    } else break
+    if (toks.length >= before) break // no progress -> stop (defensive: every peel above shrinks toks)
   }
   return toks
 }

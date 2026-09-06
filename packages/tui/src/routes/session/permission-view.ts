@@ -1,4 +1,5 @@
-// kilocode_change - Pure helpers for the permission prompt view, extracted so they are unit-testable
+// kilocode_change - new file
+// Pure helpers for the permission prompt view, extracted so they are unit-testable
 // (the JSX in permission.tsx is not). `permissionOptions` decides which buttons to offer; `mcpEnvelope`
 // extracts the SAFE MCP display envelope (server + tool + argument KEY names only, never values).
 import { requiresInteractiveApproval } from "@/kilocode/permission/interactive-approval"

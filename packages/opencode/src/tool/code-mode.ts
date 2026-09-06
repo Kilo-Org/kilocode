@@ -152,7 +152,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID },
     { args: input.args },
   )
-  // kilocode_change - MCP gate (KILO_MCP_GATE=1): classify server+tool+argKeys vs intent BEFORE the
+  // kilocode_change start - MCP gate (KILO_MCP_GATE=1): classify server+tool+argKeys vs intent BEFORE the
   // external child MCP call. DegradedGate.guardSurface runs runChild once on allow, throws on block, and on
   // ask escalates via selective withDegraded (tags only the entry.key ask) so no call happens without a human.
   const runChild = (c: Tool.Context) =>

@@ -91,7 +91,7 @@ export function permissionOptions(stage: PermissionStage, temporary?: boolean): 
   return []
 }
 
-function baseInfo(request: PermissionRequest): PermissionInfo {
+function baseInfo(request: PermissionRequest): PermissionInfo { // kilocode_change - was permissionInfo; the exported permissionInfo below wraps this with degraded awareness
   const pats = patterns(request)
   const input = data(request)
   const info = toolPermissionInfo(request.permission, input, dict(request.metadata), pats)
@@ -129,7 +129,7 @@ function baseInfo(request: PermissionRequest): PermissionInfo {
     }
   }
 
-  // kilocode_change - MCP tool call: show the safe envelope (server + tool + argument KEYS only, never values).
+  // kilocode_change start - MCP tool call: show the safe envelope (server + tool + argument KEYS only, never values).
   const envMeta = dict(request.metadata)
   const server = text(envMeta.server)
   const toolName = text(envMeta.tool)
@@ -141,6 +141,7 @@ function baseInfo(request: PermissionRequest): PermissionInfo {
       lines: argKeys.length ? [`args: ${argKeys.join(", ")}`] : ["(no arguments)"],
     }
   }
+  // kilocode_change end
 
   return {
     icon: "⚙",
@@ -149,7 +150,7 @@ function baseInfo(request: PermissionRequest): PermissionInfo {
   }
 }
 
-// kilocode_change - ActionGate degraded escalation: build the NORMAL action view, then AUGMENT it with a
+// kilocode_change start - ActionGate degraded escalation: build the NORMAL action view, then AUGMENT it with a
 // classifier-unavailable warning on top (path / diff / command preserved). Not a replacement.
 export function permissionInfo(request: PermissionRequest): PermissionInfo {
   const base = baseInfo(request)
@@ -166,6 +167,7 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     ],
   }
 }
+// kilocode_change end
 
 export function temporaryPermission(request: PermissionRequest) {
   return requiresInteractiveApproval(request.metadata) // kilocode_change - +actionGateDegraded

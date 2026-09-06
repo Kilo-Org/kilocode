@@ -59,6 +59,11 @@ describe("WriteGate.buildTargets — op normalization (create/replace/overwrite/
   test("unparseable patch throws so the caller fails closed", () => {
     expect(() => buildTargets("apply_patch", { patchText: "garbage without markers" }, CWD, noExist)).toThrow()
   })
+  test("a non-string filePath is NOT coerced to an [object Object] string (regression: str() drops non-strings)", () => {
+    const [t] = buildTargets("edit", { filePath: { evil: true }, oldString: "x", newString: "y" }, CWD, noExist)
+    expect(t!.path).toBe(CWD) // empty string resolves to cwd, never .../[object Object]
+    expect(t!.path.includes("[object Object]")).toBe(false)
+  })
 })
 
 describe("WriteGate.decide — verdict routing (fake judge; surface applies allow/block/ask)", () => {

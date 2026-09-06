@@ -1,15 +1,21 @@
 import { describe, expect, test } from "bun:test"
 import os from "node:os"
 import path from "node:path"
-import { analyzeRm, checkDestructiveRm, isCriticalPath, isRmInvocation, type RmTarget } from "../../src/kilocode/gate/action-gate"
+import {
+  analyzeRm,
+  checkDestructiveRm,
+  isCriticalPath,
+  isRmInvocation,
+  peelWrappers,
+  type RmTarget,
+} from "../../src/kilocode/gate/action-gate"
 
 const CWD = "/work/project"
 
 // NOTE: this is a STAND-IN resolver, NOT the real ShellTool.argPath / tree-sitter path. It mirrors
 // argPath's shape (strip quotes; $VAR/glob -> undefined; else resolve against cwd) so we can unit-test
 // the analyzeRm + checkDestructiveRm decision logic deterministically. The REAL parser + resolver are
-// verified separately by artifacts/coverage-runs/tripwire-parser-verify.mjs and the live E2E runs; the
-// feature-flag-off path is verified by the harness A/B suite (gate off -> command EXECUTED).
+// exercised end-to-end through the actual ShellTool permission path in action-gate-shell.test.ts.
 function resolveArg(token: string, cwd = CWD): string | undefined {
   let t = token
   if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) t = t.slice(1, -1)
@@ -48,7 +54,7 @@ describe("ActionGate.analyzeRm — token recognition", () => {
   })
 })
 
-describe("ActionGate — token-level evaluation with a stand-in resolver (Codex cases; NOT real ShellPermission)", () => {
+describe("ActionGate — token-level evaluation with a stand-in resolver (representative cases; NOT real ShellPermission)", () => {
   test("rm -rf . -> block (cwd is critical)", () => {
     expect(evaluate(["rm", "-rf", "."]).block).toBe(true)
   })
@@ -101,6 +107,18 @@ describe("ActionGate.checkDestructiveRm — critical paths and fail-closed", () 
     expect(evaluate(["env", "FOO=bar", "rm", "-rf", "/"]).block).toBe(true)
     // wrapper in front of an absolute-path rm is still caught
     expect(evaluate(["sudo", "/bin/rm", "-rf", "."]).block).toBe(true)
+  })
+
+  test("nested wrappers are fully peeled (NO fixed limit): env x5 -> rm -rf / is still blocked", () => {
+    const nested = ["env", "A=1", "env", "A=2", "env", "A=3", "env", "A=4", "env", "A=5", "rm", "-rf", "/"]
+    // regression: an artificial peel cap (< 4) left `env A=5 rm -rf /` and hid the rm from analyzeRm.
+    expect(peelWrappers(nested)).toEqual(["rm", "-rf", "/"])
+    expect(analyzeRm(nested).destructive).toBe(true)
+    expect(evaluate(nested).block).toBe(true)
+    // mixed deep nesting peels the same way
+    expect(evaluate(["sudo", "env", "B=1", "command", "rm", "-rf", "/"]).block).toBe(true)
+    // and peelWrappers terminates (no infinite loop) on an all-wrapper token list
+    expect(peelWrappers(["env", "A=1", "env", "A=2"])).toEqual(["env", "A=2"])
   })
 
   test("wrapper negatives must NOT block", () => {

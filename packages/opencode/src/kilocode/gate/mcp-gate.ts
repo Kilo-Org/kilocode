@@ -2,8 +2,8 @@
 // classifier from shell/write to generic MCP tool calls via the generic MCP wrapper in session/tools.ts
 // (before the external execute(args, opts); active only when experimentalCodeMode is OFF — Code Mode
 // child MCP is a separate slice). The ActionEnvelope carries server + tool + argument KEYS only — never
-// the argument VALUES — to avoid leaking secrets to the classifier provider (EDIT-WRITE-MCP-DESIGN §3,
-// policy (a)). It does NOT protect against side effects inside the MCP server; it blocks the CALL by
+// the argument VALUES — to keep secrets out of the classifier prompt sent to the provider. It does NOT
+// protect against side effects inside the MCP server; it blocks the CALL by
 // identity. Child (sub-agent) sessions fail closed (intent is agent-authored, not human-verified).
 // Enabled by KILO_MCP_GATE=1; inert otherwise.
 import { Effect } from "effect"

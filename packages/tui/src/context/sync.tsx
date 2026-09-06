@@ -257,11 +257,12 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          // kilocode_change - never silently auto-answer a request that requires an interactive human
+          // kilocode_change start - never silently auto-answer a request that requires an interactive human
           // (skillShell / sandboxEscalation / actionGateDegraded). The server refuses a non-interactive
           // approval, so auto-replying here would leave an INVISIBLE pending prompt; fall through so it is
           // added to the visible store and shown to the user even in Auto Mode.
           if (shouldAutoReply(permission.mode, request.metadata)) {
+            // kilocode_change end
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",
