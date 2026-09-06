@@ -1229,10 +1229,14 @@ export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model
   if (options.length === 0) return {}
 
   const effort = options.find((option) => option.type === "effort")
-  if (effort) return effortVariants(target, effort.values)
-
   const toggle = options.some((option) => option.type === "toggle")
   const budget = options.find((option) => option.type === "budget_tokens")
+  if (effort) {
+    return nonEmptyVariants({
+      ...(toggle ? reasoningToggle(target) : {}),
+      ...effortVariants(target, effort.values),
+    })
+  }
   if (!budget) return toggle ? nonEmptyVariants(reasoningToggle(target)) : undefined
 
   return nonEmptyVariants({
@@ -1275,16 +1279,23 @@ function nonEmptyVariants(variants: NonNullable<Provider.Model["variants"]>): Pr
 }
 
 function reasoningToggle(model: Provider.Model): NonNullable<Provider.Model["variants"]> {
+  if (model.api.npm === "@openrouter/ai-sdk-provider")
+    return {
+      none: { reasoning: { enabled: false } },
+    }
+
   if (model.api.npm === "@ai-sdk/alibaba")
     return {
       none: { enableThinking: false },
       high: { enableThinking: true },
     }
+
   if (model.api.npm === "@ai-sdk/cohere")
     return {
       none: { thinking: { type: "disabled" } },
       high: { thinking: { type: "enabled" } },
     }
+
   return {}
 }
 
