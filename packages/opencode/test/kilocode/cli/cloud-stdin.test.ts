@@ -7,7 +7,7 @@ import { readCloudPromptStdin, resolveCloudPrompt, withCloudPrompt } from "../..
 const encoder = new TextEncoder()
 
 function stream(parts: string[]) {
-  return new ReadableStream<Uint8Array>({
+  return new ReadableStream<Uint8Array<ArrayBufferLike>>({
     start(controller) {
       for (const part of parts) controller.enqueue(encoder.encode(part))
       controller.close()
@@ -15,32 +15,50 @@ function stream(parts: string[]) {
   })
 }
 
-async function parse(command: typeof CloudStartCommand | typeof CloudSendCommand, argv: string[]) {
-  return await command.builder!(yargs([]).exitProcess(false)).parseAsync(argv)
+function startBuilder() {
+  if (!CloudStartCommand.builder) throw new Error("Cloud start command requires a builder")
+  if (typeof CloudStartCommand.builder !== "function") throw new Error("Cloud start command requires a function builder")
+  return CloudStartCommand.builder
+}
+
+function sendBuilder() {
+  if (!CloudSendCommand.builder) throw new Error("Cloud send command requires a builder")
+  if (typeof CloudSendCommand.builder !== "function") throw new Error("Cloud send command requires a function builder")
+  return CloudSendCommand.builder
+}
+
+async function parseStart(argv: string[]) {
+  const parser = await startBuilder()(yargs([]).exitProcess(false))
+  return await parser.parseAsync(argv)
+}
+
+async function parseSend(argv: string[]) {
+  const parser = await sendBuilder()(yargs([]).exitProcess(false))
+  return await parser.parseAsync(argv)
 }
 
 describe("Cloud prompt stdin", () => {
   test("preserves argv prompts for start and send", async () => {
-    const start = await parse(CloudStartCommand, ["--prompt", "start from argv"])
-    const send = await parse(CloudSendCommand, ["--session-id", "ses_123", "--prompt", "send from argv"])
+    const start = await parseStart(["--prompt", "start from argv"])
+    const send = await parseSend(["--session-id", "ses_123", "--prompt", "send from argv"])
 
     expect(await Effect.runPromise(resolveCloudPrompt(start))).toBe("start from argv")
     expect(await Effect.runPromise(resolveCloudPrompt(send))).toBe("send from argv")
   })
 
   test("accepts stdin prompts for start and send", async () => {
-    const start = await parse(CloudStartCommand, ["--prompt-stdin"])
-    const send = await parse(CloudSendCommand, ["--session-id", "ses_123", "--prompt-stdin"])
+    const start = await parseStart(["--prompt-stdin"])
+    const send = await parseSend(["--session-id", "ses_123", "--prompt-stdin"])
 
     expect(await Effect.runPromise(resolveCloudPrompt(start, stream(["start from stdin"])))).toBe("start from stdin")
     expect(await Effect.runPromise(resolveCloudPrompt(send, stream(["send from stdin"])))).toBe("send from stdin")
   })
 
   test("rejects conflicting and missing prompt selectors", async () => {
-    await expect(parse(CloudStartCommand, ["--prompt", "argv", "--prompt-stdin"])).rejects.toThrow(
+    await expect(parseStart(["--prompt", "argv", "--prompt-stdin"])).rejects.toThrow(
       "Provide exactly one of --prompt or --prompt-stdin",
     )
-    await expect(parse(CloudStartCommand, [])).rejects.toThrow("Provide exactly one of --prompt or --prompt-stdin")
+    await expect(parseStart([])).rejects.toThrow("Provide exactly one of --prompt or --prompt-stdin")
   })
 
   test("rejects empty and oversized stdin before admission", async () => {
@@ -67,7 +85,7 @@ describe("Cloud prompt stdin", () => {
   test("preserves Unicode split across byte chunks", async () => {
     const value = "before \uD83D\uDE80 after"
     const bytes = encoder.encode(value)
-    const input = new ReadableStream<Uint8Array>({
+    const input = new ReadableStream<Uint8Array<ArrayBufferLike>>({
       start(controller) {
         controller.enqueue(bytes.slice(0, 8))
         controller.enqueue(bytes.slice(8, 10))

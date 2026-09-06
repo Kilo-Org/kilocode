@@ -7,6 +7,7 @@ const maximumCharacters = 100_000
 const maximumBytes = maximumCharacters * 3
 const invalidPrompt = "Cloud Agent prompt is invalid"
 const promptSelection = "Provide exactly one of --prompt or --prompt-stdin"
+type PromptStream = ReadableStream<Uint8Array<ArrayBufferLike>>
 
 export interface CloudPromptArgs {
   prompt?: string
@@ -34,7 +35,7 @@ export function cloudPromptOptions(yargs: Argv) {
 
 export const resolveCloudPrompt = Effect.fn("Cli.cloud.prompt")(function* (
   args: CloudPromptArgs,
-  stream?: ReadableStream<Uint8Array>,
+  stream?: PromptStream,
 ) {
   const argv = typeof args.prompt === "string"
   const stdin = args.promptStdin === true
@@ -47,19 +48,19 @@ export const resolveCloudPrompt = Effect.fn("Cli.cloud.prompt")(function* (
       })
     : args.prompt
 
-  if (!PromptSchema.safeParse(prompt).success) return yield* fail(invalidPrompt)
+  if (typeof prompt !== "string" || !PromptSchema.safeParse(prompt).success) return yield* fail(invalidPrompt)
   return prompt
 })
 
 export function withCloudPrompt<A, E, R>(
   args: CloudPromptArgs,
   admit: (prompt: string) => Effect.Effect<A, E, R>,
-  stream?: ReadableStream<Uint8Array>,
+  stream?: PromptStream,
 ) {
   return Effect.flatMap(resolveCloudPrompt(args, stream), admit)
 }
 
-export async function readCloudPromptStdin(stream = Bun.stdin.stream()): Promise<string> {
+export async function readCloudPromptStdin(stream: PromptStream = Bun.stdin.stream()): Promise<string> {
   const reader = stream.getReader()
   const decoder = new TextDecoder("utf-8", { fatal: true })
   const parts: string[] = []
