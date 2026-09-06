@@ -10,7 +10,7 @@ import type { Permission } from "@/permission"
  */
 export namespace PermissionProvenance {
   /** Where the deciding rule came from. */
-  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
+  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default" | "plugin"
 
   /** A rule optionally carrying its origin. `source` is runtime-only, never persisted. */
   export type SourcedRule = Permission.Rule & { source?: Source }
@@ -152,7 +152,12 @@ export namespace PermissionProvenance {
     patterns: readonly string[]
     agent: string
     origins: Origins
+    /** Set when a `permission.ask` plugin hook denied the call rather than a rule. */
+    pluginReason?: string
   }): Approval {
+    // A plugin's veto matches no rule the user wrote; naming one would send them
+    // looking through their config for something that is not there.
+    if (input.pluginReason) return { source: "plugin" }
     const candidate = input.ruleset as Partial<Permission.Rule> | undefined
     const rule =
       candidate?.action === "deny" && typeof candidate.pattern === "string"

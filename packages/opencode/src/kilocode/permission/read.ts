@@ -1,5 +1,5 @@
 import { Wildcard } from "@/util/wildcard"
-import { PermissionRule, type Rule } from "@/kilocode/permission/rule"
+import { PermissionRule, type HardenedRule, type Rule } from "@/kilocode/permission/rule"
 
 function guard(pattern: string) {
   if (Wildcard.match(pattern, "*.env.example")) return
@@ -8,12 +8,14 @@ function guard(pattern: string) {
 }
 
 export namespace ReadPermission {
-  export function harden(permission: string, pattern: string, rule: Rule): Rule {
+  export function harden(permission: string, pattern: string, rule: Rule): HardenedRule {
     if (permission !== "read") return rule
-    if (rule.action !== "allow") return rule
     const match = guard(pattern)
     if (!match) return rule
+    // An ask on a secret file is one this service insists on, however it arose.
+    if (rule.action === "ask") return { ...rule, hardened: true }
+    if (rule.action !== "allow") return rule
     if (!PermissionRule.broad(rule)) return rule
-    return { permission, pattern: match, action: "ask" }
+    return { permission, pattern: match, action: "ask", hardened: true }
   }
 }
