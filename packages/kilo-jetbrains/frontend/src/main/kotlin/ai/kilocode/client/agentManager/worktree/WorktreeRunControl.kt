@@ -10,7 +10,6 @@ import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunConfigListDto
 import ai.kilocode.rpc.dto.RunStateDto
-import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
@@ -80,7 +79,7 @@ internal class WorktreeRunControl(
     private fun sync(next: List<RunStateDto>) {
         if (states == next) return
         states = next
-        button.icon = if (next.isEmpty()) AllIcons.Actions.Execute else ExecutionUtil.getLiveIndicator(AllIcons.Actions.Execute)
+        button.icon = if (next.isEmpty()) AllIcons.Actions.Execute else WorktreeIcons.runIndicator
     }
 
     @RequiresEdt
@@ -120,8 +119,23 @@ internal class WorktreeRunControl(
     }
 
     private fun start(repo: String, cfg: RunConfigDto) {
-        Telemetry.send("Worktree Run Config Started", mapOf("type" to cfg.type, "surface" to "worktree_toolbar"))
+        // "via" distinguishes a direct transplant from a run delegated to a build system.
+        Telemetry.send(
+            "Worktree Run Config Started",
+            mapOf("type" to cfg.type, "via" to (cfg.via ?: "direct"), "surface" to "worktree_toolbar"),
+        )
         service<KiloRunService>().runInBackground(repo, cfg.id, worktree) { result ->
+            result.warning?.let { dropped ->
+                // The run started, but the framework's own build integration declined it, so it runs
+                // as a plain JVM application and these settings do not apply.
+                alive {
+                    KiloNotifications.warning(
+                        project,
+                        KiloBundle.message("worktree.run.reduced", cfg.name),
+                        KiloBundle.message("worktree.run.reduced.detail", dropped),
+                    )
+                }
+            }
             val error = result.error ?: return@runInBackground
             alive { KiloNotifications.error(project, KiloBundle.message("worktree.run.failed", cfg.name, error)) }
         }

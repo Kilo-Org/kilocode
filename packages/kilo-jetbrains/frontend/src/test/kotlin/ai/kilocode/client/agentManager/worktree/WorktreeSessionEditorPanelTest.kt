@@ -24,6 +24,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.rowTitle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
@@ -39,6 +40,8 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -67,7 +70,6 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -437,6 +439,43 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals("2", edt { (badge(view) as FilledBadgeIcon).text })
     }
 
+    fun `test hidden toggle ignores activity for a session outside this worktree`() {
+        val view = view(stored = false)
+        // "ses_other" is not in rpc.listed, e.g. a session in a foreign directory or an
+        // auto-approved `task` subagent -- neither has a row here, so it must not badge the toggle.
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING, "ses_other" to SessionActivityKind.QUESTION)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        val icon = edt { badge(view) as FilledBadgeIcon }
+        assertEquals("2", icon.text)
+    }
+
+    fun `test the toggle badge follows activity without the open session changing state`() {
+        project.replaceService(KiloSessionService::class.java, sessions, testRootDisposable)
+        val view = view(stored = false, target = project)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertEquals("2", edt { (badge(view) as FilledBadgeIcon).text })
+
+        // onListChanged only fires for the open session's own state changes, so a background
+        // session's activity would otherwise never reach this panel without its own subscription.
+        manager.kinds = mapOf("ses_2" to SessionActivityKind.QUESTION)
+        rpc.activity.value = mapOf("ses_2" to SessionActivityDto(DIR, SessionActivityKindDto.RUNNING))
+
+        assertTrue(coroutines.pumpUntil { edt { badge(view) } === SessionActivityKind.QUESTION.icon() })
+
+        manager.kinds = emptyMap()
+        rpc.activity.value = emptyMap()
+
+        assertTrue(coroutines.pumpUntil { edt { (badge(view) as? FilledBadgeIcon)?.text } == "2" })
+    }
+
     fun `test editor kind delegates preferred focus to panel`() {
         edt {
             assertSame(UIUtil.findComponentOfType(panel, JBList::class.java), panel.preferredFocus())
@@ -501,7 +540,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             val list = UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<ActiveListItem>
             val row = list.model.getElementAt(0) as ActiveListItem
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, true, true)
-            val title = components(comp).filterIsInstance<SimpleColoredComponent>().single()
+            val title = rowTitle(comp)
             val iter = title.iterator()
             assertTrue(iter.hasNext())
             iter.next()
@@ -644,6 +683,96 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         edt { panel.moveRow(session) }
 
         assertTrue(moves.isEmpty())
+    }
+
+    fun `test fork stays offered from a linked worktree and through an in-flight turn`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        // Unlike Move to Worktree, forking is a plain session copy: no base checkout required, and the
+        // CLI detaches in-flight tool calls while it copies, so a running turn is no reason to hide it.
+        assertFalse(edt { manager.base() })
+        for (kind in SessionActivityKind.entries) {
+            manager.kinds = mapOf("ses_1" to kind)
+            assertTrue("$kind must keep Fork Session", edt { panel.canFork(session) })
+        }
+    }
+
+    fun `test fork hides for the new row and a deleting session`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(edt { panel.canFork(null) })
+
+        manager.deletingIds += session.id
+        assertFalse(edt { panel.canFork(session) })
+    }
+
+    fun `test fork row calls the manager with the list surface`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        edt { panel.forkRow(session) }
+        flush()
+
+        assertEquals(listOf(Triple(session.id, null, "worktree_session_list")), manager.forks)
+    }
+
+    fun `test fork row is a no-op when not offered`() {
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+        manager.deletingIds += session.id
+
+        edt { panel.forkRow(session) }
+        flush()
+
+        assertTrue(manager.forks.isEmpty())
+    }
+
+    fun `test forking a lone session promotes the list through the shared rule`() {
+        val view = view()
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        // One session, no stored choice: still hidden, exactly like the New session path.
+        edt { assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent) }
+        assertTrue(saves.isEmpty())
+
+        edt { view.forkRow(session) }
+        flush()
+
+        // The fork adds a row to the same list model every other creation path writes to, so the
+        // panel's own second-session promotion is what opens the list -- no fork-specific rule.
+        edt {
+            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertEquals(listOf(true), saves)
+        }
+    }
+
+    fun `test a stored hidden list survives a fork`() {
+        val view = view(stored = false)
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        edt { view.forkRow(session) }
+        flush()
+
+        edt {
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
+        }
     }
 
     fun `test pending new session groups under today`() {
@@ -1098,6 +1227,9 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
         val renamed = mutableListOf<Pair<String, String>>()
+        // Records the call and then runs the real fork, so the list model and the panel's promotion
+        // rule are exercised end to end rather than stubbed out.
+        val forks = mutableListOf<Triple<String, String?, String>>()
         // Real editors resolve this once in start() from git; panel tests set it directly so
         // canMove()/moveRow() can be exercised without touching KiloWorktreeService.
         var baseValue = false
@@ -1127,6 +1259,11 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         override fun renameSession(id: String, title: String) {
             renamed += id to title
+        }
+
+        override fun forkSession(id: String, messageId: String?, surface: String) {
+            forks += Triple(id, messageId, surface)
+            super.forkSession(id, messageId, surface)
         }
     }
 
