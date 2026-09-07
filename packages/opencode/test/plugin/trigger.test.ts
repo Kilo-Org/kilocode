@@ -118,6 +118,7 @@ describe("plugin.trigger", () => {
     ),
   )
 
+  // kilocode_change start
   it.instance("tolerates plugins that resolve to undefined", () =>
     withProject(
       // A no-op boot stub (like the kilo-indexing plugin entry) returns no
@@ -132,4 +133,5 @@ describe("plugin.trigger", () => {
       }),
     ),
   )
+  // kilocode_change end
 })

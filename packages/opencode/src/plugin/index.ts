@@ -123,6 +123,7 @@ async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks:
   const plugin = readV1Plugin(load.mod, load.spec, "server", "detect")
   if (plugin) {
     await resolvePluginId(load.source, load.spec, load.target, readPluginId(plugin.id, load.spec), load.pkg)
+    // kilocode_change start
     const hook = await (plugin as PluginModule).server(input, load.options)
     // A plugin may resolve to undefined (e.g. a no-op `async () => {}` boot
     // stub). Pushing undefined into `hooks` later crashes the "notify
@@ -136,6 +137,7 @@ async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks:
     const hook = await server(input, load.options)
     if (hook) hooks.push(hook)
   }
+  // kilocode_change end
 }
 
 const layer = Layer.effect(
@@ -181,6 +183,7 @@ const layer = Layer.effect(
           $: typeof Bun === "undefined" ? undefined : Bun.$,
         }
 
+        // kilocode_change start
         for (const plugin of flags.disableDefaultPlugins ? [] : internalPlugins(flags)) {
           const init = yield* Effect.tryPromise({
             try: () => plugin(input),
@@ -312,6 +315,7 @@ const layer = Layer.effect(
       }
       return output
     })
+    // kilocode_change end
 
     const list = Effect.fn("Plugin.list")(function* () {
       const s = yield* InstanceState.get(state)
