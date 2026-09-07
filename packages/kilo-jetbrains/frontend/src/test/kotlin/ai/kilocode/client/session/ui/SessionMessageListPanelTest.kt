@@ -11,6 +11,7 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
@@ -27,8 +28,10 @@ import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.session.views.ToolGroupView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
@@ -108,9 +111,108 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(parent)
+            KiloPluginSettings.unsetCompactMode()
         } finally {
             super.tearDown()
         }
+    }
+
+    // ------ compact mode ------
+
+    fun `test compact mode groups a turn's tool run without disposing the turn`() {
+        KiloPluginSettings.setCompactMode(true)
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "go"))),
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                listOf(
+                    part("a1p", "a1", "text", "reading"),
+                    toolPart("t1", "a1", "read", "c1", state = "completed"),
+                    toolPart("t2", "a1", "read", "c2", state = "completed"),
+                    toolPart("t3", "a1", "read", "c3", state = "completed"),
+                ),
+            ),
+        ))
+        val turn = panel.findTurn("u1")!!
+        val message = panel.findMessage("a1")!!
+
+        assertEquals(1, components(message).filterIsInstance<ToolGroupView>().size)
+        assertTrue("no tool card is realised while grouped", components(message).filterIsInstance<ReadToolView>().isEmpty())
+
+        KiloPluginSettings.setCompactMode(false)
+        panel.syncCompact()
+
+        assertSame("a settings flip must not rebuild the transcript", turn, panel.findTurn("u1"))
+        assertSame(message, panel.findMessage("a1"))
+        assertTrue(components(message).filterIsInstance<ToolGroupView>().isEmpty())
+        assertEquals(3, components(message).filterIsInstance<ReadToolView>().size)
+    }
+
+    // A settled TurnView is its own validate root, so isValid is not an honest cache signal for it:
+    // without forget(turn) the transcript keeps stacking the turn at its pre-grouping height.
+    fun `test grouping drops the turn's cached height`() {
+        KiloPluginSettings.setCompactMode(false)
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "go"))),
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                (1..6).map { toolPart("t$it", "a1", "read", "c$it", state = "completed") },
+            ),
+        ))
+        panel.setSize(600, 4000)
+        layout(panel)
+        UIUtil.dispatchAllInvocationEvents()
+        val turn = panel.findTurn("u1")!!
+        val tall = turn.height
+        assertTrue("six tool cards need real height", tall > 0)
+
+        KiloPluginSettings.setCompactMode(true)
+        panel.syncCompact()
+        layout(panel)
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue("grouped turn must remeasure shorter, was $tall now ${turn.height}", turn.height < tall)
+    }
+
+    fun `test compact sync is a no-op when the settings did not move`() {
+        KiloPluginSettings.setCompactMode(true)
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "go"))),
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                listOf(
+                    toolPart("t1", "a1", "read", "c1", state = "completed"),
+                    toolPart("t2", "a1", "read", "c2", state = "completed"),
+                ),
+            ),
+        ))
+        UIUtil.dispatchAllInvocationEvents()
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+
+        panel.syncCompact()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals("nothing moved, so nothing to remeasure", 0, reflows)
+    }
+
+    fun `test transcript dump names the group and its deferred children`() {
+        KiloPluginSettings.setCompactMode(true)
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "go"))),
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                listOf(
+                    toolPart("t1", "a1", "read", "c1", state = "completed"),
+                    toolPart("t2", "a1", "read", "c2", state = "completed"),
+                ),
+            ),
+        ))
+
+        val dump = panel.dumpDetailed()
+
+        assertTrue("expected a group entry, got: $dump", dump.contains("ToolGroupView#group:a1:t1"))
+        assertTrue("expected the deferred child listed, got: $dump", dump.contains("deferred#t2"))
     }
 
     // ------ initial state ------

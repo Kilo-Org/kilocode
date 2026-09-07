@@ -1,14 +1,30 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.settings.CompactModeListener
+import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.OnOffButton
 import java.awt.Container
 import javax.swing.JComponent
+
+private val COMPACT_KEYS = listOf(
+    "settings.advanced.compact.enabled.title",
+    "settings.advanced.compact.reads.title",
+    "settings.advanced.compact.writes.title",
+    "settings.advanced.compact.web.title",
+    "settings.advanced.compact.other.title",
+    "settings.advanced.compact.subagents.title",
+)
 
 class AdvancedConfigurableTest : BasePlatformTestCase() {
     private lateinit var settings: KiloLogSettingsService
@@ -17,14 +33,25 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         super.setUp()
         settings = KiloLogSettingsService()
         LogConfig.apply(null, null, null)
+        resetCompact()
     }
 
     override fun tearDown() {
         try {
             LogConfig.apply(null, null, null)
+            resetCompact()
         } finally {
             super.tearDown()
         }
+    }
+
+    private fun resetCompact() {
+        KiloPluginSettings.unsetCompactMode()
+        KiloPluginSettings.unsetCompactGroupReads()
+        KiloPluginSettings.unsetCompactGroupWrites()
+        KiloPluginSettings.unsetCompactGroupWeb()
+        KiloPluginSettings.unsetCompactGroupOther()
+        KiloPluginSettings.unsetCompactGroupSubagents()
     }
 
     fun `test createComponent renders log setting editors`() {
@@ -92,6 +119,77 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    // ---- compact transcript mode ----
+
+    fun `test compact rows render one toggle each`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent() as Container
+            for (key in COMPACT_KEYS) assertNotNull(key, toggle(root, key))
+        }
+    }
+
+    fun `test compact toggles apply immediately without touching apply or reset`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent() as Container
+            toggle(root, "settings.advanced.compact.enabled.title").doClick()
+
+            assertTrue(KiloPluginSettings.getCompactMode())
+            assertFalse("compact mode is not part of the log draft", cfg.isModified)
+
+            cfg.reset()
+            assertTrue("reset only restores the log form", KiloPluginSettings.getCompactMode())
+        }
+    }
+
+    fun `test each category toggle writes its own setting`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent() as Container
+            // The category rows are disabled until the master switch is on, so a click would be a no-op.
+            toggle(root, "settings.advanced.compact.enabled.title").doClick()
+
+            toggle(root, "settings.advanced.compact.reads.title").doClick()
+            assertFalse(KiloPluginSettings.getCompactGroupReads())
+            assertTrue(KiloPluginSettings.getCompactGroupWrites())
+
+            toggle(root, "settings.advanced.compact.subagents.title").doClick()
+            assertFalse(KiloPluginSettings.getCompactGroupSubagents())
+            assertTrue(KiloPluginSettings.getCompactGroupWeb())
+
+            toggle(root, "settings.advanced.compact.other.title").doClick()
+            assertFalse(KiloPluginSettings.getCompactGroupOther())
+        }
+    }
+
+    // The category toggles do nothing while the master switch is off, so the page must show that.
+    fun `test category toggles follow the master switch`() {
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent() as Container
+            val categories = COMPACT_KEYS.drop(1).map { toggle(root, it) }
+            assertTrue("disabled while compact mode is off", categories.none { it.isEnabled })
+
+            toggle(root, "settings.advanced.compact.enabled.title").doClick()
+            assertTrue("enabled once compact mode is on", categories.all { it.isEnabled })
+        }
+    }
+
+    fun `test flipping a compact toggle notifies open sessions`() {
+        val cfg = configurable()
+        val seen = intArrayOf(0)
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(CompactModeListener.TOPIC, CompactModeListener { seen[0]++ })
+        edt {
+            val root = cfg.createComponent() as Container
+            toggle(root, "settings.advanced.compact.enabled.title").doClick()
+            toggle(root, "settings.advanced.compact.web.title").doClick()
+        }
+
+        assertEquals("every flip has to reach open transcripts", 2, seen[0])
+    }
+
     fun `test createComponent shows a reveal logs action`() {
         // Tests run in monolith mode, so a single OS-appropriate reveal link is shown.
         val cfg = configurable()
@@ -103,6 +201,22 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
     }
 
     private fun configurable() = AdvancedConfigurable(settings) { it.applyLocal() }
+
+    /** The [OnOffButton] in the settings row whose bold title comes from [titleKey]. */
+    private fun toggle(root: Container, titleKey: String): OnOffButton {
+        val title = KiloBundle.message(titleKey)
+        val row = rows(root).firstOrNull { row -> labels(row).any { it.text == title } }
+            ?: error("no settings row titled '$title'")
+        return buildList<OnOffButton> { collect(row) { if (it is OnOffButton) add(it) } }.single()
+    }
+
+    private fun rows(root: Container): List<SettingsRow> = buildList {
+        collect(root) { if (it is SettingsRow) add(it) }
+    }
+
+    private fun labels(root: Container): List<JBLabel> = buildList {
+        collect(root) { if (it is JBLabel) add(it) }
+    }
 
     private fun links(root: Container): List<ActionLink> = buildList {
         collect(root) { if (it is ActionLink) add(it) }
