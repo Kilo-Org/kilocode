@@ -182,6 +182,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   }
 
   /**
+   * Declared here rather than at its first use below, because the resource tools close over it and
+   * code mode returns before that point. `{}` is the honest value there: it means "no live entry to
+   * read", which is the case the configuration fallback in `resourceProvenance` already covers. A
+   * `const` at its assignment left those closures reading a binding in its temporal dead zone, so
+   * calling a resource tool under code mode threw instead of returning a listing.
+   */
+  let mcpTools: Record<string, MCP.McpTool> = {}
+
+  /**
    * Provenance of the *content* a resource tool fetched. The tool is Kilo's; the words are the
    * server's, so the label follows the server — the same vocabulary the delegated MCP path uses, and
    * only where that path would have one (absent when the mode or the tool layer is off).
@@ -661,7 +670,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
 
   if (flags.experimentalCodeMode) return tools
 
-  const mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change
+  mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change - assigned, declared above
   for (const [key, entry] of Object.entries(mcpTools)) {
     const item = McpCatalog.convertTool(entry.def, entry.client, entry.timeout)
     const execute = item.execute
