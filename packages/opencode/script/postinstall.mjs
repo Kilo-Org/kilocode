@@ -5,7 +5,7 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 import { createRequire } from "module"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -244,8 +244,8 @@ function main() {
 }
 
 // kilocode_change start - only run main if executed directly (allows importing in tests)
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
-if (isMain || process.argv[1] == null) {
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isMain) {
   try {
     main()
   } catch (error) {
