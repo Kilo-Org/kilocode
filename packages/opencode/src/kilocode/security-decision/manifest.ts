@@ -43,12 +43,16 @@ export namespace SecurityManifest {
    *
    * Folded, because macOS and Windows resolve `Package.json` and `package.json` to one file: matching
    * the written case would hold the manifest under one spelling and let the same edit through under
-   * another. Folding can only widen what counts as a manifest, which is the safe direction — on a
-   * case-sensitive filesystem it costs an approval prompt for a file that merely looks like one.
+   * another. Both sides fold — several canonical names are mixed case themselves, so folding only the
+   * input would leave exactly those unmatched. Folding can only widen what counts as a manifest,
+   * which is the safe direction: on a case-sensitive filesystem it costs an approval prompt for a
+   * file that merely looks like one.
    */
+  /** The same names on folded ground: several of them are canonically mixed case themselves. */
+  const FOLDED = new Set([...NAMES].map((name) => name.toLowerCase()))
+
   export function is(base: string) {
-    const folded = base.toLowerCase()
-    return NAMES.has(base) || NAMES.has(folded) || REQUIREMENTS.test(base) || REQUIREMENTS.test(folded)
+    return FOLDED.has(base.toLowerCase()) || REQUIREMENTS.test(base.toLowerCase())
   }
 
   export type Region = "scripts" | "dependencies" | "other"
