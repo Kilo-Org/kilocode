@@ -162,6 +162,21 @@ const FIXTURES: PackageMetadata.FixtureEntry[] = [
     versions: [{ version: "1.0.0", daysAgo: 900 }],
     unavailable: true,
   },
+  // The registry answered, the downloads API did not. Old enough, has a repository, name resembles
+  // nothing: every deterministic and heuristic signal is quiet and only the uncertainty is left.
+  {
+    name: "adoption-unknown-pkg",
+    createdDaysAgo: 900,
+    versions: [{ version: "1.0.0", daysAgo: 400 }],
+    repository: "https://github.com/example/adoption-unknown-pkg",
+  },
+  // The same, but its install script would run now.
+  {
+    name: "adoption-unknown-scripts-pkg",
+    createdDaysAgo: 900,
+    versions: [{ version: "1.0.0", daysAgo: 400, scripts: ["postinstall"] }],
+    repository: "https://github.com/example/adoption-unknown-scripts-pkg",
+  },
 ]
 
 const provider = PackageMetadata.fixture(FIXTURES, { now })
@@ -659,5 +674,41 @@ describe("SecurityGate with the package layer", () => {
     } finally {
       restore()
     }
+  })
+})
+
+// What could not be established is not the same as what was checked and found fine. The uncertainty
+// path used to raise the decision only for `npx`; an install fell through to "assessed", which reads
+// as a check that happened.
+describe("uncertainty is reported as uncertainty", () => {
+  test("an install whose code runs now is hard-asked when a signal is missing", async () => {
+    const outcome = await decide("npm install adoption-unknown-scripts-pkg")
+    expect(signals(outcome, "adoption-unknown-scripts-pkg")).toContain("adoption-unknown")
+    expect(outcome.decision.action).toBe("ask")
+    expect(outcome.decision.hard).toBe(true)
+    expect(outcome.decision.reasonCode).toBe("PACKAGE_UNVERIFIED")
+    expect(rules(outcome.decision)).toContain("hard.pkg.unverified")
+  })
+
+  test("an install that runs no code keeps the base ask, and does not claim to be assessed", async () => {
+    const outcome = await decide("npm install --ignore-scripts adoption-unknown-pkg")
+    expect(signals(outcome, "adoption-unknown-pkg")).toContain("adoption-unknown")
+    expect(rules(outcome.decision)).toContain("default.pkg.unverified")
+    expect(rules(outcome.decision)).not.toContain("default.pkg.assessed")
+    expect(outcome.decision.action).toBe("ask")
+    expect(outcome.decision.hard).toBe(false)
+  })
+
+  test("an exec is hard-asked as before", async () => {
+    const exec = (await decide("npx adoption-unknown-pkg")).decision
+    expect(exec.action).toBe("ask")
+    expect(exec.hard).toBe(true)
+    expect(exec.reasonCode).toBe("PACKAGE_UNVERIFIED")
+  })
+
+  test("a package with every signal present is still assessed", async () => {
+    const outcome = await decide("npm install lodash")
+    expect(signals(outcome, "lodash")).not.toContain("adoption-unknown")
+    expect(rules(outcome.decision)).toContain("default.pkg.assessed")
   })
 })

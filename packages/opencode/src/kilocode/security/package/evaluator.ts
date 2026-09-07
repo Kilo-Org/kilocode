@@ -357,13 +357,38 @@ export namespace PackageRiskEvaluator {
             message: `${describe}.`,
           }
         }
-        if (uncertain && input.via === "exec") {
+        /**
+         * Something could not be established, and this package's code runs now. `via === "exec"` is
+         * one way to be in that position; an install whose lifecycle scripts are enabled and declared
+         * is the other, and it used to fall through to the allow below. Age or adoption being unknown
+         * is exactly the input the tier is computed from, so treating the result as assessed asserts
+         * more than the registry actually answered.
+         */
+        if (uncertain && executes) {
           return {
             action: "ask",
             hard: true,
             reasonCode: "PACKAGE_UNVERIFIED",
             rule: "hard.pkg.unverified",
-            message: `${input.name} could not be fully verified before execution.`,
+            message: `${input.name} could not be fully verified before its code runs.`,
+          }
+        }
+        /**
+         * Nothing suspicious and nothing that executes yet, so the base soft ask stands. It is
+         * reported as unverified rather than assessed when a signal is missing: the layer never
+         * lowers a decision, and the sentence a person reads should not claim a check that did not
+         * happen.
+         */
+        if (uncertain) {
+          return {
+            action: "ask",
+            hard: false,
+            reasonCode: "PACKAGE_UNVERIFIED",
+            rule: "default.pkg.unverified",
+            message: `${input.name} could not be fully verified: ${signals
+              .filter((signal) => signal.kind === "uncertainty")
+              .map((signal) => signal.detail)
+              .join("; ")}.`,
           }
         }
         return {

@@ -166,8 +166,13 @@ export namespace PackageMetadata {
     const timeoutMs = opts.timeoutMs ?? 5_000
     const maxBytes = opts.maxBytes ?? 8 * 1024 * 1024
     const ttl = opts.cacheTtlMs ?? 60 * 60_000
+    // A record missing its adoption figure is cached only briefly. One flaky call to the downloads
+    // API otherwise leaves every assessment of that package for the next hour with adoption unknown,
+    // which is a signal the evaluator has to act on -- so a transient failure would turn into an
+    // hour of prompts, or of packages judged on less than the registry actually offers.
+    const partialTtl = Math.min(ttl, 60_000)
     const doFetch = opts.fetch ?? fetch
-    const cache = new Map<string, { at: number; value: Metadata }>()
+    const cache = new Map<string, { at: number; value: Metadata; partial?: boolean }>()
 
     async function getJson(url: string): Promise<{ status: number; body: unknown }> {
       const response = await doFetch(url, {
@@ -183,7 +188,7 @@ export namespace PackageMetadata {
 
     async function lookup(name: string): Promise<Metadata> {
       const cached = cache.get(name)
-      if (cached && Date.now() - cached.at < ttl) return cached.value
+      if (cached && Date.now() - cached.at < (cached.partial ? partialTtl : ttl)) return cached.value
       const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)
       const doc = await getJson(`${registry}/${encoded}`)
       if (doc.status === 404) {
@@ -221,7 +226,7 @@ export namespace PackageMetadata {
         repository: repositoryOf(body.repository),
         provider: "npm",
       }
-      cache.set(name, { at: Date.now(), value })
+      cache.set(name, { at: Date.now(), value, partial: weeklyDownloads === undefined })
       return value
     }
 
