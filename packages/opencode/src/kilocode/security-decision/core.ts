@@ -73,16 +73,46 @@ export namespace SecurityDecision {
   }
 
   /**
-   * Inert executables whose own flags can set what they otherwise only report. The set below is an
-   * allowlist over the executable alone, which is only honest for programs that are inert for every
-   * argument; these two are not, so they carry the argument test that makes the claim true.
+   * Inert executables whose own arguments can set what they otherwise only report.
+   *
+   * The set below is an allowlist over the executable alone, which is only honest for programs that
+   * are inert whatever they are passed. These two are not, so they carry an argument test — and that
+   * test is itself an allowlist. Listing the mutating forms instead would repeat the mistake one
+   * level down, because the next one is always a flag nobody listed: `-s` is not the only way to set
+   * a clock (`-s12:00` attaches its value) and a flag is not the only way to rename a host
+   * (`--file=` reads the new name from disk). So a guard clears a command only when it can account
+   * for every operand positively; anything else is unclassified, which is an ask, not a refusal.
    */
   const INERT_GUARDS: Record<string, (operands: readonly string[]) => boolean> = {
-    // `date -s`/`--set` sets the system clock; every other form reports it.
-    date: (operands) => !operands.some((token) => token === "-s" || token === "--set" || token.startsWith("--set=")),
-    // `hostname <name>` renames the host; flags only ever print.
-    hostname: (operands) => operands.every((token) => token.startsWith("-")),
+    // Reporting forms only: a format string, and the flags that pick a representation.
+    date: (operands) =>
+      operands.every((token) => token.startsWith("+") || DATE_REPORTING.has(token)),
+    // Reporting forms only: `hostname <name>` renames the host and `-F`/`--file` reads the new name.
+    hostname: (operands) => operands.every((token) => HOSTNAME_REPORTING.has(token)),
   }
+
+  const DATE_REPORTING = new Set(["-R", "-u", "--rfc-email", "--universal", "--utc"])
+
+  const HOSTNAME_REPORTING = new Set([
+    "-A",
+    "-I",
+    "-a",
+    "-d",
+    "-f",
+    "-i",
+    "-s",
+    "-y",
+    "--alias",
+    "--all-fqdns",
+    "--all-ip-addresses",
+    "--domain",
+    "--fqdn",
+    "--ip-address",
+    "--long",
+    "--nis",
+    "--short",
+    "--yp",
+  ])
 
   const INERT = new Set([
     "basename",

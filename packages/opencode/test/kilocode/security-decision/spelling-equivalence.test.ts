@@ -105,6 +105,17 @@ describe("a path names the same file however it is written", () => {
 
   // A plain file, dangerous for one reason only: it is not in the workspace. A credential name here
   // would pass on its own regex and prove nothing about how the path itself was placed.
+  // The canonical spelling of some manifests is itself mixed case, so folding only the input leaves
+  // exactly those names unmatched — the fold has to meet on ground neither side chose.
+  test.each([
+    ["a lowercased Cargo.toml", "cargo.toml"],
+    ["an uppercased Cargo.toml", "CARGO.TOML"],
+    ["a lowercased Gemfile", "gemfile"],
+    ["a lowercased Pipfile", "pipfile"],
+  ])("%s is still a manifest", (_name, file) => {
+    expect(edit(file).decision).toBe(held.decision)
+  })
+
   test.each([
     ["a drive letter", "C:\\Users\\me\\notes.txt"],
     ["a drive letter with forward slashes", "C:/Users/me/notes.txt"],
@@ -127,5 +138,37 @@ describe("an allowlist constrains every dimension it claims to", () => {
 
   test("a value the layer cannot read is not a value it may trust", () => {
     expect(shell(["git", "log", "$FLAG"]).decision).not.toBe("pass")
+  })
+})
+
+describe("a guard on an allowlist is itself an allowlist", () => {
+  // An entry that is inert only in some forms carries a guard, and a guard written as "not these
+  // known-bad flags" is the same wrong-dimension mistake one level down: the next mutating flag is
+  // simply one nobody listed. A guard has to account for every operand positively.
+  test.each([
+    ["date sets the clock with an attached value", ["date", "-s12:00"]],
+    ["date sets the clock with a separate value", ["date", "-s", "12:00"]],
+    ["hostname sets the name from a file", ["hostname", "--file=/tmp/name"]],
+    ["hostname sets the name from a file, short form", ["hostname", "-F", "/tmp/name"]],
+    ["hostname renames the host", ["hostname", "evil"]],
+  ])("%s", (_name, argv) => {
+    expect(shell(argv).decision).not.toBe("pass")
+  })
+
+  test.each([
+    ["date", ["date", "--frobnicate"]],
+    ["hostname", ["hostname", "--frobnicate"]],
+  ])("an operand %s's guard cannot account for is not cleared", (_name, argv) => {
+    expect(shell(argv).decision).not.toBe("pass")
+  })
+
+  test.each([
+    ["date alone", ["date"]],
+    ["date in a format", ["date", "+%Y-%m-%d"]],
+    ["date in UTC", ["date", "-u"]],
+    ["hostname alone", ["hostname"]],
+    ["hostname reporting the fqdn", ["hostname", "-f"]],
+  ])("%s stays inert", (_name, argv) => {
+    expect(shell(argv).decision).toBe("pass")
   })
 })
