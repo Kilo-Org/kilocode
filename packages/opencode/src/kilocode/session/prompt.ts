@@ -371,7 +371,8 @@ export namespace KiloSessionPrompt {
     })
     const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
 
-    if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
+    // kilocode_change - distinguish a human's answer from auto mode's own
+    if (outcome.manual) return PermissionProvenance.fromManual(outcome)
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
   })
 
