@@ -457,6 +457,17 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
 
           const current = info()
 
+          // kilocode_change start - Security Auto Mode attaches a decision summary under "security".
+          // Read defensively: it is an untyped metadata bag, the field is optional, and a prompt that
+          // throws is worse than a prompt with one line missing.
+          const securityExplanation = () => {
+            const meta = props.request.metadata?.["security"]
+            if (typeof meta !== "object" || meta === null) return undefined
+            const explanation = (meta as { explanation?: unknown }).explanation
+            return typeof explanation === "string" && explanation.trim().length > 0 ? explanation : undefined
+          }
+          // kilocode_change end
+
           const header = () => (
             <box flexDirection="column" gap={0}>
               <box flexDirection="row" gap={1} flexShrink={0}>
@@ -478,6 +489,17 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                       : "Kilo configuration access always requires approval"}
                   </text>
                 </box>
+              </Show>
+              {/* kilocode_change end */}
+              {/* kilocode_change start - Security Auto Mode: say why this is being asked, in words.
+                  Until now the decision reached the client and nothing rendered it, so the prompt
+                  looked identical whether the engine had a specific objection or none at all. */}
+              <Show when={securityExplanation()}>
+                {(explanation) => (
+                  <box paddingLeft={4} flexShrink={0}>
+                    <text fg={theme.textMuted}>{explanation()}</text>
+                  </box>
+                )}
               </Show>
               {/* kilocode_change end */}
             </box>

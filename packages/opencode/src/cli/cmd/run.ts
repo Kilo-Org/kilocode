@@ -131,6 +131,18 @@ async function toolError(part: ToolPart) {
   }
 }
 
+// kilocode_change start - Security Auto Mode attaches a decision summary under "security". Read it
+// defensively: it is an untyped metadata bag and a run that throws here would be worse than a run
+// that prints one line less.
+function securityExplanation(metadata: unknown): string | undefined {
+  if (typeof metadata !== "object" || metadata === null) return undefined
+  const summary = (metadata as { security?: unknown }).security
+  if (typeof summary !== "object" || summary === null) return undefined
+  const explanation = (summary as { explanation?: unknown }).explanation
+  return typeof explanation === "string" && explanation.trim().length > 0 ? explanation.trim() : undefined
+}
+// kilocode_change end
+
 export const RunCommand = effectCmd({
   command: "run [message..]",
   describe: "run kilo with a message", // kilocode_change
@@ -976,6 +988,10 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                // kilocode_change start - the same sentence for a subagent's request
+                const subagentReason = securityExplanation(permission.metadata)
+                if (subagentReason) UI.println(UI.Style.TEXT_NORMAL + "  " + subagentReason)
+                // kilocode_change end
                 autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
@@ -998,6 +1014,12 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                // kilocode_change start - say why, not just that. Security Auto Mode attaches a plain
+                // sentence to the request; without printing it an unattended run records that
+                // something was stopped and never records what the objection was.
+                const reason = securityExplanation(permission.metadata)
+                if (reason) UI.println(UI.Style.TEXT_NORMAL + "  " + reason)
+                // kilocode_change end
                 autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,

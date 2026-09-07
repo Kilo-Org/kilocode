@@ -173,14 +173,15 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
             permission: "external_directory",
             patterns: [pattern],
             always: [pattern],
-            metadata: { command, access: "unknown" },
+            // cwd lets the security engine evaluate the command where it will actually run
+            metadata: { command, access: "unknown", cwd },
           })
         }
         yield* ctx.ask({
           permission: "bash",
           patterns: [command],
           always: [command.split(/\s+/, 1)[0] + " *"],
-          metadata: { command, description: params.description, action: "start", backgroundProcess: true },
+          metadata: { command, description: params.description, action: "start", backgroundProcess: true, cwd },
         })
 
         const info = yield* Effect.promise(() =>
