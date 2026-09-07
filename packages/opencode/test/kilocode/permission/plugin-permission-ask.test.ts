@@ -41,12 +41,15 @@ const it = testEffect(
  */
 const MARKER = "permission-ask-hook-ran"
 
-/** A plugin whose only hook is `permission.ask`, with `body` as its statements. */
-function hookPlugin(...body: string[]) {
+/**
+ * A plugin whose only hook is `permission.ask`, with `body` as its statements. `marker` is the
+ * file it writes on entry, so tests registering more than one plugin can tell them apart.
+ */
+function markedHookPlugin(marker: string, ...body: string[]) {
   return [
     "export default async ({ directory }) => ({",
     '  "permission.ask": async (input, output) => {',
-    `    await Bun.write(directory + "/${MARKER}", input.permission)`,
+    `    await Bun.write(directory + "/${marker}", input.permission)`,
     ...body,
     "  },",
     "})",
@@ -54,29 +57,37 @@ function hookPlugin(...body: string[]) {
   ].join("\n")
 }
 
-const hookRan = Effect.gen(function* () {
-  const test = yield* TestInstance
-  return yield* Effect.promise(() =>
-    Bun.file(path.join(test.directory, MARKER))
-      .text()
-      .catch(() => undefined),
-  )
-})
+function hookPlugin(...body: string[]) {
+  return markedHookPlugin(MARKER, ...body)
+}
 
-function withProject<A, E, R>(source: string, self: Effect.Effect<A, E, R>) {
+const markerRan = (marker: string) =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    return yield* Effect.promise(() =>
+      Bun.file(path.join(test.directory, marker))
+        .text()
+        .catch(() => undefined),
+    )
+  })
+
+const hookRan = markerRan(MARKER)
+
+/** Register `sources` as plugins, in order: `Plugin.trigger` runs the hooks in the order listed. */
+function withPlugins<A, E, R>(sources: readonly string[], self: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
     const test = yield* TestInstance
-    const file = path.join(test.directory, "plugin.ts")
+    const files = sources.map((_, index) => path.join(test.directory, `plugin-${index}.ts`))
     yield* Effect.all(
       [
-        Effect.promise(() => Bun.write(file, source)),
+        ...files.map((file, index) => Effect.promise(() => Bun.write(file, sources[index]!))),
         Effect.promise(() =>
           Bun.write(
             path.join(test.directory, "opencode.json"),
             JSON.stringify(
               {
                 $schema: "https://app.kilo.ai/config.json",
-                plugin: [pathToFileURL(file).href],
+                plugin: files.map((file) => pathToFileURL(file).href),
               },
               null,
               2,
@@ -84,10 +95,14 @@ function withProject<A, E, R>(source: string, self: Effect.Effect<A, E, R>) {
           ),
         ),
       ],
-      { discard: true, concurrency: 2 },
+      { discard: true, concurrency: "unbounded" },
     )
     return yield* self
   })
+}
+
+function withProject<A, E, R>(source: string, self: Effect.Effect<A, E, R>) {
+  return withPlugins([source], self)
 }
 
 const ask = (input: Parameters<Permission.Interface["ask"]>[0]) =>
@@ -377,6 +392,52 @@ describe("permission.ask plugin hook", () => {
 
         yield* reply({ requestID: pending[0]!.id, reply: "once" })
         expect(yield* Fiber.join(asking)).toEqual({ manual: true })
+      }),
+    ),
+  )
+
+  // Every hook shares one mutable `output`, so the discard above has to be selective: a
+  // throw arriving after a well-behaved earlier hook denied must not restore the pre-hook
+  // status and hand the call back to the allow rule.
+  it.instance("a hook that throws does not resurrect a denial an earlier hook made", () =>
+    withPlugins(
+      [
+        markedHookPlugin(
+          "denier-ran",
+          '    output.status = "deny"',
+          '    output.message = "blocked by the org policy plugin"',
+        ),
+        markedHookPlugin("thrower-ran", '    throw new Error("hook exploded")'),
+      ],
+      Effect.gen(function* () {
+        const error = yield* fail(ask(request(allowBash)))
+        expect(error).toBeInstanceOf(Permission.DeniedError)
+        expect((error as Permission.DeniedError).reason).toBe("blocked by the org policy plugin")
+        expect(yield* markerRan("denier-ran")).toBe("bash")
+        expect(yield* markerRan("thrower-ran")).toBe("bash")
+        expect(yield* list()).toEqual([])
+      }),
+    ),
+  )
+
+  // The mirror: what an earlier hook left is only worth keeping when it is at least as strict
+  // as the rules were, so an allow written before a later hook throws is still thrown away.
+  it.instance("a hook that throws discards an allow an earlier hook made", () =>
+    withPlugins(
+      [
+        markedHookPlugin("allower-ran", '    output.status = "allow"'),
+        markedHookPlugin("thrower-ran", '    throw new Error("hook exploded")'),
+      ],
+      Effect.gen(function* () {
+        const asking = yield* ask(request([])).pipe(Effect.forkScoped)
+
+        const pending = yield* waitForPending(1)
+        expect(yield* markerRan("allower-ran")).toBe("bash")
+        expect(yield* markerRan("thrower-ran")).toBe("bash")
+
+        yield* reply({ requestID: pending[0]!.id, reply: "once" })
+        expect(yield* Fiber.join(asking)).toEqual({ manual: true })
+        expect(yield* list()).toEqual([])
       }),
     ),
   )

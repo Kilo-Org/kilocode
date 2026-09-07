@@ -155,9 +155,14 @@ export namespace PermissionProvenance {
     /** Set when a `permission.ask` plugin hook denied the call rather than a rule. */
     pluginReason?: string
   }): Approval {
-    // A plugin's veto matches no rule the user wrote; naming one would send them
-    // looking through their config for something that is not there.
-    if (input.pluginReason) return { source: "plugin" }
+    // A plugin's veto matches no rule the user wrote, and `source` says so. The
+    // synthesized rule is still needed: callers read the decision off `rule.action`,
+    // and omitting it renders a refusal as an auto-approval.
+    if (input.pluginReason)
+      return {
+        source: "plugin",
+        rule: { permission: input.permission, pattern: input.patterns[0] ?? "*", action: "deny" },
+      }
     const candidate = input.ruleset as Partial<Permission.Rule> | undefined
     const rule =
       candidate?.action === "deny" && typeof candidate.pattern === "string"

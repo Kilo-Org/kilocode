@@ -85,6 +85,8 @@ export type PermissionReviewer = (
   // an unrecognised value must not be able to read as a decision.
   output: { status: string; message?: string },
 ) => Effect.Effect<void>
+/** deny beats ask beats allow; anything else is not a decision at all. */
+const strictness = (status: string) => (status === "deny" ? 2 : status === "ask" ? 1 : status === "allow" ? 0 : -1) // kilocode_change
 // kilocode_change end
 
 export interface Interface {
@@ -301,9 +303,14 @@ const layer = Layer.effect(
             Cause.hasInterrupts(cause)
               ? Effect.failCause(cause)
               : Effect.gen(function* () {
-                  review.status = before
-                  review.message = undefined
-                  yield* Effect.logWarning("permission.ask hook failed; keeping the rule decision", {
+                  // Every hook shares one `review`, so a failure can follow a decision an
+                  // earlier hook already made. Discard what the failing hook left behind
+                  // only when keeping it would be more permissive than the rules were.
+                  if (strictness(review.status) <= strictness(before)) {
+                    review.status = before
+                    review.message = undefined
+                  }
+                  yield* Effect.logWarning("permission.ask hook failed; keeping the safer decision", {
                     cause: Cause.pretty(cause),
                     permission: request.permission,
                   })
