@@ -173,7 +173,7 @@ class PromptPanel(
     }
     private val attachments = mutableListOf<PromptAttachment>()
     private val highlighters = mutableListOf<RangeHighlighter>()
-    private val pastes = mutableListOf<RangeMarker>()
+    private val pastes = mutableListOf<Paste>()
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
@@ -594,8 +594,9 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
-        pastes.forEach { it.dispose() }
+        pastes.forEach { it.marker.dispose() }
         pastes.clear()
+        editor.getEditor(false)?.let(::syncFoldGutter)
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
@@ -936,20 +937,18 @@ class PromptPanel(
     }
 
     /**
-     * Handles a paste large enough to collapse ([collapsible]). Pasting text identical to a still
-     * collapsed block expands that block instead of inserting a second copy, mirroring the CLI's
-     * second-identical-paste gesture. Only collapsed pastes stay tracked (see [installPasteFolds]),
-     * so pasting the same text again after expanding collapses a fresh copy just like the CLI
-     * dropping its placeholder part.
+     * Handles a paste large enough to collapse ([collapsible]). Pasting text identical to a block
+     * that is still collapsed expands that block instead of inserting a second copy, mirroring the
+     * CLI's second-identical-paste gesture; once expanded, the same text collapses a fresh copy.
      */
     @RequiresEdt
     private fun handlePastedText(ed: EditorEx, raw: String) {
         val text = normalizePaste(raw)
-        val existing = pastes.firstOrNull { it.isValid && ed.document.getText(TextRange(it.startOffset, it.endOffset)) == text }
+        val existing = pastes.firstOrNull { it.collapsed && it.marker.isValid && body(ed, it) == text }
         if (existing != null) {
-            // The folding listener untracks the marker and resizes once the batch ends.
+            // The folding listener records the new state and resizes once the batch ends.
             ed.foldingModel.runBatchFoldingOperation {
-                ed.foldingModel.getFoldRegion(existing.startOffset, existing.endOffset)?.setExpanded(true)
+                ed.foldingModel.getFoldRegion(existing.marker.startOffset, existing.marker.endOffset)?.setExpanded(true)
             }
             return
         }
@@ -960,7 +959,7 @@ class PromptPanel(
             ed.document.replaceString(start, end, text)
             ed.caretModel.moveToOffset(start + text.length)
         }
-        pastes += ed.document.createRangeMarker(start, start + text.length)
+        pastes += Paste(ed.document.createRangeMarker(start, start + text.length))
         syncPasteFolds(ed)
         syncEditorHeight()
     }
@@ -968,11 +967,11 @@ class PromptPanel(
     private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
 
     /**
-     * Restores collapsed pastes on [ed] and keeps them in sync with its folding model.
+     * Restores tracked pastes on [ed] and keeps them in sync with its folding model.
      *
-     * Expanding a paste — by clicking the placeholder, by keyboard, or by pasting the same text
-     * again — untracks it so a later identical paste collapses a fresh copy, and resizes the field
-     * so the revealed text is not clipped by the pinned prompt height.
+     * Folding and unfolding a paste — from the gutter handle, the collapsed placeholder, the
+     * Collapse/Expand Region shortcuts, or a second identical paste — records the new state and
+     * resizes the field, so revealed text is not clipped by the pinned prompt height.
      */
     @RequiresEdt
     private fun installPasteFolds(ed: EditorEx) {
@@ -995,7 +994,12 @@ class PromptPanel(
                 // re-enter initEditor) and before releasing one (whose regions disappear without
                 // the pastes themselves going away).
                 if (editor.getEditor(false) !== ed) return
-                pastes.filterNot { collapsed(ed, it) }.forEach(::drop)
+                pastes.filterNot { it.marker.isValid }.forEach(::drop)
+                pastes.forEach { item ->
+                    val region = ed.foldingModel.getFoldRegion(item.marker.startOffset, item.marker.endOffset)
+                    if (region != null) item.collapsed = !region.isExpanded
+                }
+                syncFoldGutter(ed)
                 syncEditorHeight()
             }
         }, parent)
@@ -1003,37 +1007,60 @@ class PromptPanel(
     }
 
     /**
-     * Rebuilds fold regions for every tracked paste marker that does not already have one on [ed].
+     * Rebuilds fold regions for every tracked paste that does not already have one on [ed].
      * Range markers are document-scoped and survive [EditorTextField] recreating its [EditorEx] on
-     * detach/reattach, so this runs on every settings-provider pass to restore collapsed pastes.
+     * detach/reattach, so this runs on every settings-provider pass to restore pasted blocks in
+     * whichever state the user last left them.
      */
     @RequiresEdt
     private fun syncPasteFolds(ed: EditorEx) {
-        pastes.filterNot { it.isValid }.forEach(::drop)
+        pastes.filterNot { it.marker.isValid }.forEach(::drop)
+        syncFoldGutter(ed)
         if (pastes.isEmpty()) return
         ed.foldingModel.runBatchFoldingOperation {
-            pastes.toList().forEach { marker ->
-                if (ed.foldingModel.getFoldRegion(marker.startOffset, marker.endOffset) != null) return@forEach
-                val text = ed.document.getText(TextRange(marker.startOffset, marker.endOffset))
-                val region = ed.foldingModel.addFoldRegion(marker.startOffset, marker.endOffset, placeholder(text))
+            pastes.toList().forEach { item ->
+                val from = item.marker.startOffset
+                val to = item.marker.endOffset
+                if (ed.foldingModel.getFoldRegion(from, to) != null) return@forEach
+                val region = ed.foldingModel.addFoldRegion(from, to, placeholder(body(ed, item)))
                 if (region == null) {
-                    drop(marker)
+                    drop(item)
                     return@forEach
                 }
-                region.setExpanded(false)
+                // A paste that fits on one line (a single long line) gets no gutter handle by
+                // default, which would leave no way to fold it back once expanded.
+                region.isGutterMarkEnabledForSingleLine = true
+                region.setExpanded(!item.collapsed)
             }
         }
     }
 
+    /**
+     * Shows the gutter fold handles only while a paste is tracked.
+     *
+     * The prompt turns every other gutter area off, so the folding outline is the only thing that
+     * would claim gutter width — leaving it always on reserves an empty inset next to the input for
+     * a control with nothing to fold.
+     */
     @RequiresEdt
-    private fun collapsed(ed: EditorEx, marker: RangeMarker): Boolean = marker.isValid &&
-        ed.foldingModel.getFoldRegion(marker.startOffset, marker.endOffset)?.isExpanded == false
+    private fun syncFoldGutter(ed: EditorEx) {
+        val show = pastes.isNotEmpty()
+        if (ed.settings.isFoldingOutlineShown == show) return
+        ed.settings.isFoldingOutlineShown = show
+        ed.gutterComponentEx.revalidateMarkup()
+        ed.gutterComponentEx.revalidate()
+        ed.gutterComponentEx.repaint()
+    }
 
-    /** Stops tracking [marker] and releases it from the document's marker tree. */
     @RequiresEdt
-    private fun drop(marker: RangeMarker) {
-        pastes.remove(marker)
-        marker.dispose()
+    private fun body(ed: EditorEx, item: Paste): String =
+        ed.document.getText(TextRange(item.marker.startOffset, item.marker.endOffset))
+
+    /** Stops tracking [item] and releases its marker from the document's marker tree. */
+    @RequiresEdt
+    private fun drop(item: Paste) {
+        pastes.remove(item)
+        item.marker.dispose()
     }
 
     private fun processAttachments(
@@ -1325,6 +1352,15 @@ class PromptPanel(
             sink.set(PromptDataKeys.SEND, this@PromptPanel)
         }
     }
+
+    /**
+     * A pasted block rendered as a fold region.
+     *
+     * [marker] is document-scoped so the range survives [EditorTextField] releasing its editor,
+     * while [collapsed] carries the fold state across the same gap — that lives only on the
+     * per-editor `FoldRegion`, so without it a block the user unfolded would come back folded.
+     */
+    private class Paste(val marker: RangeMarker, var collapsed: Boolean = true)
 
     private inner class AutoApproveButton : PromptButton()
 

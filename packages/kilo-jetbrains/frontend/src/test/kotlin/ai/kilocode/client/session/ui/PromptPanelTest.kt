@@ -47,11 +47,13 @@ import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.actions.PasteAction
@@ -1307,6 +1309,108 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(field.preferredSize.height > folded)
     }
 
+    fun `test fold gutter appears only while a paste is tracked`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+
+        assertFalse(ed.settings.isFoldingOutlineShown)
+        assertEquals(0, ed.gutterComponentEx.preferredSize.width)
+
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+
+        assertTrue(ed.settings.isFoldingOutlineShown)
+        assertTrue(ed.gutterComponentEx.preferredSize.width > 0)
+
+        panel.clear()
+
+        assertFalse(ed.settings.isFoldingOutlineShown)
+        assertEquals(0, ed.gutterComponentEx.preferredSize.width)
+    }
+
+    fun `test gutter exposes a fold handle for the pasted block`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+
+        val handle = foldHandle(ed)
+
+        assertNotNull(handle)
+        assertSame(ed.foldingModel.allFoldRegions.single(), handle)
+    }
+
+    fun `test a single line paste also gets a fold handle`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection("x".repeat(900))))
+
+        assertEquals(1, ed.foldingModel.allFoldRegions.size)
+        assertTrue(ed.foldingModel.allFoldRegions.single().isGutterMarkEnabledForSingleLine)
+        assertNotNull(foldHandle(ed))
+    }
+
+    fun `test collapse region shortcut folds an expanded paste back`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+        ed.foldingModel.runBatchFoldingOperation { ed.foldingModel.allFoldRegions.single().setExpanded(true) }
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(ed.foldingModel.allFoldRegions.single().isExpanded)
+
+        ed.caretModel.moveToOffset(0)
+        val action = ActionManager.getInstance().getAction("CollapseRegion")
+        val ctx = SimpleDataContext.builder()
+            .add(CommonDataKeys.EDITOR, ed)
+            .add(CommonDataKeys.PROJECT, project)
+            .build()
+        val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+        ActionUtil.updateAction(action, event)
+        ActionUtil.performAction(action, event)
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertFalse(ed.foldingModel.allFoldRegions.single().isExpanded)
+    }
+
+    fun `test folding a paste back survives detach and reattach`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val root = realize(panel, 260, 400)
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val text = (1..20).joinToString("\n") { "line $it" }
+        PromptTextPasteProvider().performPaste(pasteContext(field.getEditor(true)!!, StringSelection(text)))
+        val before = field.getEditor(true)!!
+        before.foldingModel.runBatchFoldingOperation { before.foldingModel.allFoldRegions.single().setExpanded(true) }
+        before.foldingModel.runBatchFoldingOperation { before.foldingModel.allFoldRegions.single().setExpanded(false) }
+        UIUtil.dispatchAllInvocationEvents()
+
+        root.removeNotify()
+        root.addNotify()
+        UIUtil.dispatchAllInvocationEvents()
+
+        val ed = field.getEditor(true)!!
+        assertEquals(text, ed.document.text)
+        assertFalse(ed.foldingModel.allFoldRegions.single().isExpanded)
+    }
+
+    fun `test an unfolded paste stays unfolded across detach and reattach`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val root = realize(panel, 260, 400)
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val text = (1..20).joinToString("\n") { "line $it" }
+        PromptTextPasteProvider().performPaste(pasteContext(field.getEditor(true)!!, StringSelection(text)))
+        val before = field.getEditor(true)!!
+        before.foldingModel.runBatchFoldingOperation { before.foldingModel.allFoldRegions.single().setExpanded(true) }
+        UIUtil.dispatchAllInvocationEvents()
+
+        root.removeNotify()
+        root.addNotify()
+        UIUtil.dispatchAllInvocationEvents()
+
+        // The region is restored expanded, so the gutter handle can still fold it back.
+        val ed = field.getEditor(true)!!
+        assertTrue(ed.foldingModel.allFoldRegions.single().isExpanded)
+        assertNotNull(foldHandle(ed))
+    }
+
     fun `test detaching and reattaching the panel keeps the paste collapsed`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val root = realize(panel, 260, 400)
@@ -1659,6 +1763,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         realize(panel, 260, 400)
         val field = panel.defaultFocusedComponent as EditorTextField
         return field.getEditor(true)!!
+    }
+
+    /** The fold region a click in the gutter's folding area would toggle, if any. */
+    private fun foldHandle(ed: EditorEx): FoldRegion? {
+        val y = ed.visualLineToY(0) + ed.lineHeight / 2
+        val gutter = ed.gutterComponentEx
+        return (0..gutter.preferredSize.width).firstNotNullOfOrNull { gutter.findFoldingAnchorAt(it, y) }
     }
 
     private fun toolbarControl(): EditorTextField {
