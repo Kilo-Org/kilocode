@@ -1,6 +1,7 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { SecurityAsk } from "@/kilocode/security-decision/ask"
 
 interface PendingEntry {
   info: Permission.Request
@@ -36,6 +37,9 @@ export function drainCovered(
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue
+      // Never auto-resolve an ask the security layer raised: the rule that would cover it is the
+      // very rule the layer overrode, so draining it would auto-approve a security decision.
+      if (SecurityAsk.is(entry.info.metadata)) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)
