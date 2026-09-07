@@ -147,7 +147,7 @@ export namespace CodeTrust {
   }
 
   const LOCAL_IMPORT =
-    /(?:^|[^\w$])(?:import|export)\s+(?:[^"';]*?\sfrom\s*)?["'](\.[^"']*)["']|import\(\s*["'](\.[^"']*)["']\s*\)/g
+    /(?:^|[^\w$])(?:import|export)\s+(?:[^"';]*?\sfrom\s*)?["'](\.[^"']*)["']|import\(\s*["'](\.[^"']*)["']\s*\)|(?:^|[^\w$.])require\(\s*["'](\.[^"']*)["']\s*\)/g
   const EXTENSIONS = ["", ".ts", ".js", ".mjs", ".cjs", ".tsx", "/index.ts", "/index.js"]
   const MAX_CLOSURE = 64
 
@@ -161,10 +161,28 @@ export namespace CodeTrust {
    * runtime instead, where the imported code executes inside the host rather than in Kilo's process.
    */
   export function closure(file: string): string[] {
+    return walk(file).files
+  }
+
+  /**
+   * The closure, plus whether the walk ran out of budget before finishing.
+   *
+   * The distinction matters: a truncated walk produces a *shorter* file list, and a digest over a
+   * shorter list is still a perfectly usable approval key — one that silently stops covering the
+   * files past the cap. That would turn "editing an imported sibling revokes the approval" into
+   * "unless the extension has more than 64 of them", which is the wrong direction for a boundary to
+   * fail in.
+   */
+  function walk(file: string): { files: string[]; truncated: boolean } {
     const start = canonical(fileFromUrl(file))
     const seen = new Set<string>([start])
     const queue = [start]
-    while (queue.length > 0 && seen.size <= MAX_CLOSURE) {
+    let truncated = false
+    while (queue.length > 0) {
+      if (seen.size > MAX_CLOSURE) {
+        truncated = true
+        break
+      }
       const current = queue.shift()!
       let text: string
       try {
@@ -175,7 +193,7 @@ export namespace CodeTrust {
         continue
       }
       for (const match of text.matchAll(LOCAL_IMPORT)) {
-        const specifier = match[1] ?? match[2]
+        const specifier = match[1] ?? match[2] ?? match[3]
         if (!specifier) continue
         const base = path.resolve(path.dirname(current), specifier)
         for (const suffix of EXTENSIONS) {
@@ -193,7 +211,7 @@ export namespace CodeTrust {
         }
       }
     }
-    return [...seen].sort()
+    return { files: [...seen].sort(), truncated: truncated || seen.size > MAX_CLOSURE }
   }
 
   /**
@@ -203,7 +221,10 @@ export namespace CodeTrust {
    * too.
    */
   export function closureDigest(file: string): string | undefined {
-    const files = closure(file)
+    const { files, truncated } = walk(file)
+    // Past the cap the key would cover only part of what runs. Refusing is the same answer this file
+    // already gives for a candidate it cannot read or that is too large.
+    if (truncated) return undefined
     if (files.length <= 1) return digest(file)
     const hash = createHash("sha256")
     for (const item of files) {

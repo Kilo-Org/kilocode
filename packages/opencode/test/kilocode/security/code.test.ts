@@ -213,3 +213,35 @@ describe("adversarial variants", () => {
     expect(CodeTrust.guard({ file, kind: "custom-tool", policy: policy(true) }).allow).toBe(false)
   })
 })
+
+// What the approval key covers, and what happens when it cannot cover everything.
+describe("the closure the digest is taken over", () => {
+  test("a CommonJS require of a local file is part of the closure", async () => {
+    const dir = path.join(project, "cjs")
+    await fs.mkdir(dir, { recursive: true })
+    const helper = await seed(dir, "helper.ts", `module.exports = { value: 1 }\n`)
+    const entry = await seed(dir, "entry.ts", `const helper = require("./helper")\nexport default helper\n`)
+    expect(CodeTrust.closure(entry)).toContain(helper)
+    const digest = CodeTrust.closureDigest(entry)!
+    expect(CodeTrust.guard({ file: entry, kind: "custom-tool", policy: policy(true, [digest]) }).allow).toBe(true)
+    // Editing the required sibling revokes the entrypoint, which is the whole point of the closure.
+    await fs.writeFile(helper, `module.exports = { value: 2 }\n`)
+    expect(CodeTrust.guard({ file: entry, kind: "custom-tool", policy: policy(true, [digest]) }).allow).toBe(false)
+  })
+
+  test("a closure too large to walk is refused, not silently keyed on the part that fits", async () => {
+    const dir = path.join(project, "wide")
+    await fs.mkdir(dir, { recursive: true })
+    // A chain longer than the walk budget: the entrypoint imports m0, m0 imports m1, and so on.
+    const count = 80
+    for (let index = 0; index < count; index++) {
+      const next = index + 1 < count ? `import "./m${index + 1}"\n` : ""
+      await fs.writeFile(path.join(dir, `m${index}.ts`), `${next}export const n = ${index}\n`)
+    }
+    const entry = await seed(dir, "entry.ts", `import "./m0"\nexport default {}\n`)
+    expect(CodeTrust.closureDigest(entry)).toBeUndefined()
+    const decision = CodeTrust.guard({ file: entry, kind: "custom-tool", policy: policy(true) })
+    expect(decision.allow).toBe(false)
+    expect(decision.reason).toBe("unreadable")
+  })
+})
