@@ -23,6 +23,8 @@ import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { Wakeup } from "@/kilocode/wakeup"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { KilocodeWatcher } from "@/kilocode/watcher"
+import { SecurityReviewer } from "@/kilocode/security-decision/reviewer" // kilocode_change
+import { SecurityReviewerBinding } from "@/kilocode/security-decision/reviewer-binding" // kilocode_change
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 const log = Log.create({ service: "kilocode-bootstrap" })
@@ -95,6 +97,25 @@ export namespace KilocodeBootstrap {
             Effect.sync(() => log.warn("session export bootstrap failed", { err: Cause.squash(cause) })),
           ),
         )
+        // kilocode_change start - bind the deterministic layer's reviewer to a trusted model.
+        // Resolution reads only the environment and the user's own global config, never the merged
+        // one, and any refusal leaves the reviewer unbound, which keeps every ask standing.
+        yield* SecurityReviewerBinding.install(config, provider).pipe(
+          Effect.tap((outcome) =>
+            Effect.sync(() =>
+              outcome.bound
+                ? log.info("security reviewer bound", { model: `${outcome.providerID}/${outcome.modelID}` })
+                : log.info("security reviewer unbound", { reason: outcome.reason }),
+            ),
+          ),
+          Effect.catchCause((cause) =>
+            Effect.sync(() => {
+              SecurityReviewer.reset()
+              log.warn("security reviewer bootstrap failed", { err: Cause.squash(cause) })
+            }),
+          ),
+        )
+        // kilocode_change end
         if (process.env["KILO_PLATFORM"] !== "vscode") {
           yield* EffectBridge.fromPromise(() =>
             import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
