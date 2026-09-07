@@ -184,7 +184,8 @@ it.effect("preserves running tool start time across metadata updates", () =>
           updates.push(state.state.time.start)
         }),
       completeToolCall: () => Effect.void,
-    } satisfies Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall">
+      securityBlocked: () => false, // kilocode_change
+    } satisfies Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall" | "securityBlocked"> // kilocode_change
 
     const tools = yield* SessionTools.resolve({
       agent,

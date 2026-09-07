@@ -55,6 +55,13 @@ export namespace PermissionProvenance {
     return { ...approval, outsideWorkspace: true, ...(path ? { outsideWorkspacePath: path } : {}) }
   }
 
+  /**
+   * Metadata key holding the deterministic security layer's audit record. Written once before the
+   * call is auto-approved or published as an ask, and carried across metadata replacements the same
+   * way `approval` is, so the record survives to the persisted tool part.
+   */
+  export const SECURITY_KEY = "securityDecision" as const
+
   export type Scope = "global" | "local"
 
   /**
@@ -105,6 +112,10 @@ export namespace PermissionProvenance {
    */
   export function carryApproval(prev: Record<string, unknown> | undefined, next: Record<string, unknown> | undefined) {
     if (!next) return next
+    // kilocode_change - carry the security audit forward alongside the approval marker
+    if (prev && SECURITY_KEY in prev && !(SECURITY_KEY in next)) {
+      next = { ...next, [SECURITY_KEY]: prev[SECURITY_KEY] }
+    }
     const prior = prev?.approval as Approval | undefined
     if (!("approval" in next)) return prior ? { ...next, approval: prior } : next
     const current = next.approval as Approval | undefined

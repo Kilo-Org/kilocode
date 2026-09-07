@@ -129,6 +129,30 @@ describe("sandbox session cleanup", () => {
     }),
   )
 
+  /**
+   * The security layer decides on containment facts and the sandbox then executes the call, so both
+   * have to read the same live per-session snapshot. Facts captured when the tool set was built go
+   * stale the moment the session is toggled.
+   */
+  it.live("containment facts follow the live session snapshot", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true, config: { sandbox: { enabled: true, network: "deny" } } })
+      const session = yield* provideInstance(dir)(sessions.create({ title: "sandbox-containment" }))
+      const status = yield* provideInstance(dir)(SandboxPolicy.status(session.id))
+      if (!status.available) return
+
+      const before = yield* provideInstance(dir)(SandboxPolicy.containment(session.id))
+      // `widened` mirrors the snapshot's writable paths. It stays false here because `writable_paths`
+      // is a user-global setting that a project config cannot set — which is the point of it.
+      expect(before).toEqual({ enabled: true, mode: "deny", destinations: [], widened: false })
+
+      yield* provideInstance(dir)(SandboxPolicy.toggle(session.id))
+      const after = yield* provideInstance(dir)(SandboxPolicy.containment(session.id))
+      expect(after.enabled).toBe(false)
+    }),
+  )
+
   it.live("created sessions inherit the source snapshot across directories", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
