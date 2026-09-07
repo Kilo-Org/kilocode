@@ -58,7 +58,9 @@ describe("Cloud prompt stdin", () => {
     await expect(parseStart(["--prompt", "argv", "--prompt-stdin"])).rejects.toThrow(
       "Provide exactly one of --prompt or --prompt-stdin",
     )
-    await expect(parseStart([])).rejects.toThrow("Provide exactly one of --prompt or --prompt-stdin")
+    await expect(Effect.runPromise(resolveCloudPrompt({}))).rejects.toMatchObject({
+      message: "Provide exactly one of --prompt or --prompt-stdin",
+    })
   })
 
   test("rejects empty and oversized stdin before admission", async () => {

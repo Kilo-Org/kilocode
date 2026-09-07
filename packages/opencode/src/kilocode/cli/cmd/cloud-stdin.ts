@@ -28,7 +28,7 @@ export function cloudPromptOptions(yargs: Argv) {
     .check((args) => {
       const argv = typeof args.prompt === "string"
       const stdin = args.promptStdin === true
-      if (argv === stdin) throw new Error(promptSelection)
+      if (argv && stdin) throw new Error(promptSelection)
       return true
     })
 }
