@@ -242,11 +242,15 @@ runs, so an unvetted package's install-time scripts never execute first.
   or project `.npmrc`); heuristic — adoption (weekly downloads), name similarity to a well-known
   package (edit distance / separator / affix / homoglyph / scope, each naming the look-alike);
   uncertainty — registry metadata unavailable, package not found, ambiguous spec, unresolved range.
-- **Decision**: uncertainty never resolves to ALLOW (`metadata lookup failure ≠ trusted`); an unvetted
-  package whose code would run now (install scripts enabled, or `npx`) is a DENY; other suspicious
-  provenance is a hard ASK; an established, adopted package keeps the base soft ASK. Manifest installs
-  assess the direct dependencies. Registry metadata comes through a mockable provider (deterministic
-  fixtures for tests / the benchmark; an optional live npm adapter with a timeout, size cap and cache).
+- **Decision**: an unvetted package whose code would run now (install scripts enabled, or `npx`) is a
+  DENY; other suspicious provenance is a hard ASK; an established, adopted package keeps the base soft
+  ASK. Uncertainty is never reported as a check that passed: a failed lookup or an unpublished name is
+  a hard ASK on its own, and a package the registry answered for but left a signal missing on — age or
+  adoption unknown — is a hard ASK when its code would run now, and otherwise keeps the base soft ask
+  described as unverified rather than assessed. Manifest installs assess the direct dependencies.
+  Registry metadata comes through a mockable provider (deterministic fixtures for tests / the
+  benchmark; an optional live npm adapter with a timeout, size cap and cache; a record whose adoption
+  figure is missing is cached only briefly, so one flaky call does not decide the next hour).
 - Honest guarantee: *suspicious provenance is evaluated before local execution*. It does not detect
   arbitrary zero-days, and does not make later execution of imported malicious code safe. Ecosystems
   other than npm/pnpm/yarn/bun keep the base soft ask.
@@ -491,11 +495,25 @@ approved **workspace** extension is evaluated in a child process:
   request from that extension is refused for exactly the reason a shell command would be. There is no
   second taint layer.
 - **Extensions have no prompt of their own**: an action that would need a human is refused rather than
-  silently escalated.
+  silently escalated. A soft ask is performed, and that is a deliberate reading: the capability the
+  user granted for this approved digest *is* their answer to the base ask for this extension. What it
+  does not consult is the user's own permission ruleset — `SecurityGate.evaluate` is the engine, not
+  the rules — so an explicit `deny` on, say, `webfetch` does not bind a mediated request. That is
+  listed under limitations rather than implied here.
+- **A mediated `process.spawn` is bounded but not confined**: the command goes through the engine on
+  its concrete arguments, runs with the host's scrubbed environment, is killed after 30 s and has its
+  output capped — but it runs in the main process, not inside the extension's OS profile. It needs the
+  `process` capability, which is never granted by default.
+- **One call at a time per host.** The session a capability request belongs to is held in a binding
+  rather than carried on the wire, so invocations are serialised; otherwise a second invocation's
+  session would decide how the first one's reads and sends were adjudicated.
 - **Nested imports** are covered by the *closure* digest: approval is keyed by the entrypoint plus the
-  local modules it statically imports, so editing an imported sibling revokes the approval. A specifier
-  computed at runtime is invisible to that analysis — and is covered by the runtime boundary instead,
-  because whatever it loads executes inside the host.
+  local modules it statically imports (`import`, `export … from`, `import()` and `require()`), so
+  editing an imported sibling revokes the approval. The walk is bounded at 64 files, and past that
+  bound the candidate is *refused* rather than keyed on the part that fits — a shorter file list still
+  makes a perfectly usable approval key, one that quietly stops covering the rest. A specifier computed
+  at runtime is invisible to the analysis — and is covered by the runtime boundary instead, because
+  whatever it loads executes inside the host.
 - **Lifecycle hooks** of a hosted plugin run in the host and reach the machine only through the same
   capability path. They observe hook events; they cannot mutate the main process's objects, which is a
   deliberate reduction of what a project plugin used to be able to do.
@@ -753,6 +771,17 @@ Real gaps that do not invalidate the architecture. They are measured where a sce
   model as `[redacted]`. It says nothing about a session with no model configured, and nothing about
   whether a given provider's confidence labels are calibrated — which is why the sensitivity is a
   setting with a safe default rather than a constant.
+- (extension runtime) A mediated capability request is judged by the **engine**, not by the user's
+  permission ruleset, so an explicit `deny` or `ask` rule of the user's does not bind it; what binds it
+  is the capability grant, the engine's hard rules and the session's secret state. A mediated
+  `process.spawn` runs in the main process under a deadline rather than inside the extension's OS
+  profile. And a started host is owned by whatever started it: the plugin layer stops its hosts with
+  the instance, the tool registry does not yet, so an approved workspace custom tool leaves one child
+  process per instance until Kilo exits.
+- (session state) The goal a semantic decision is compared against is recorded only from a session that
+  is its own root, because a subagent's "user" message is written by the model. A child session
+  prompted in a process that never created it resolves to itself and would therefore record its own
+  prompt as a goal — the same durable-ancestry gap listed below, seen from the other side.
 - User agent-level config `ask` rules are tagged `agent` by Kilo and therefore liftable like built-in defaults.
 - `kilo run --auto` and TUI auto mode cannot answer a security hard ASK (it needs an interactive reply);
   the request stays pending, matching Kilo's existing skill-shell behaviour.
