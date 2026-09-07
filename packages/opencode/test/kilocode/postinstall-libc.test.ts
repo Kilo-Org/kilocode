@@ -1,14 +1,5 @@
 import { describe, it, expect } from "bun:test"
-
-// Pure re-implementation of the isLibcCompatible guard from postinstall.mjs.
-// This tests the filtering logic itself without spawning the installer or
-// injecting test-only environment variables into production code.
-function isLibcCompatible(name: string, musl: boolean) {
-  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
-  if (nameIsMusl && !musl) return false
-  if (!nameIsMusl && musl && name.startsWith("@kilocode/cli-linux-")) return false
-  return true
-}
+import { isLibcCompatible } from "../../script/postinstall.mjs"
 
 describe("postinstall libc guard (#13282)", () => {
   describe("glibc system (musl=false)", () => {

@@ -9,9 +9,7 @@ import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
 
-// kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
   darwin: "darwin",
   linux: "linux",
@@ -188,8 +186,7 @@ function verifyBinary() {
 // kilocode_change end
 
 // kilocode_change start - check if a package name is compatible with the current libc
-function isLibcCompatible(name) {
-  const musl = isMusl()
+export function isLibcCompatible(name, musl = isMusl()) {
   const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
   // prevent installing a musl package on a glibc system and vice versa
   if (nameIsMusl && !musl) return false
@@ -217,6 +214,12 @@ function main() {
     } catch {
       const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
       try {
+        let packageJson
+        try {
+          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
+        } catch {
+          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"))
+        }
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
         const result = childProcess.spawnSync(
@@ -240,9 +243,14 @@ function main() {
   )
 }
 
-try {
-  main()
-} catch (error) {
-  console.error("Failed to setup kilo binary:", error.message)
-  process.exit(1)
+// kilocode_change start - only run main if executed directly (allows importing in tests)
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
+if (isMain || process.argv[1] == null) {
+  try {
+    main()
+  } catch (error) {
+    console.error("Failed to setup kilo binary:", error.message)
+    process.exit(1)
+  }
 }
+// kilocode_change end
