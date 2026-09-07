@@ -1327,6 +1327,51 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(0, ed.gutterComponentEx.preferredSize.width)
     }
 
+    fun `test deleting a folded paste hides the fold gutter`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+        assertTrue(ed.settings.isFoldingOutlineShown)
+
+        WriteCommandAction.runWriteCommandAction(project) { ed.document.setText("") }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(0, ed.foldingModel.allFoldRegions.size)
+        assertFalse(ed.settings.isFoldingOutlineShown)
+        assertEquals(0, ed.gutterComponentEx.preferredSize.width)
+    }
+
+    fun `test deleting one of two pasted blocks keeps the fold gutter`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        val provider = PromptTextPasteProvider()
+        provider.performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "first $it" })))
+        ed.caretModel.moveToOffset(ed.document.textLength)
+        provider.performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "second $it" })))
+        assertEquals(2, ed.foldingModel.allFoldRegions.size)
+
+        val first = ed.foldingModel.allFoldRegions.minBy { it.startOffset }
+        WriteCommandAction.runWriteCommandAction(project) {
+            ed.document.deleteString(first.startOffset, first.endOffset)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(1, ed.foldingModel.allFoldRegions.size)
+        assertTrue(ed.settings.isFoldingOutlineShown)
+    }
+
+    fun `test emptying the draft through setText hides the fold gutter`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+
+        panel.setText("")
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertFalse(ed.settings.isFoldingOutlineShown)
+        assertEquals(0, ed.gutterComponentEx.preferredSize.width)
+    }
+
     fun `test gutter exposes a fold handle for the pasted block`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)

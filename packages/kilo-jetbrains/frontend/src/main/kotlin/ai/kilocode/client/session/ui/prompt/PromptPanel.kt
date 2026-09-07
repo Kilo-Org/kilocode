@@ -332,6 +332,7 @@ class PromptPanel(
                     onChange()
                     return
                 }
+                syncPastes()
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
@@ -994,7 +995,7 @@ class PromptPanel(
                 // re-enter initEditor) and before releasing one (whose regions disappear without
                 // the pastes themselves going away).
                 if (editor.getEditor(false) !== ed) return
-                pastes.filterNot { it.marker.isValid }.forEach(::drop)
+                pastes.filter(::stale).forEach(::drop)
                 pastes.forEach { item ->
                     val region = ed.foldingModel.getFoldRegion(item.marker.startOffset, item.marker.endOffset)
                     if (region != null) item.collapsed = !region.isExpanded
@@ -1014,26 +1015,44 @@ class PromptPanel(
      */
     @RequiresEdt
     private fun syncPasteFolds(ed: EditorEx) {
-        pastes.filterNot { it.marker.isValid }.forEach(::drop)
-        syncFoldGutter(ed)
-        if (pastes.isEmpty()) return
-        ed.foldingModel.runBatchFoldingOperation {
-            pastes.toList().forEach { item ->
-                val from = item.marker.startOffset
-                val to = item.marker.endOffset
-                if (ed.foldingModel.getFoldRegion(from, to) != null) return@forEach
-                val region = ed.foldingModel.addFoldRegion(from, to, placeholder(body(ed, item)))
-                if (region == null) {
-                    drop(item)
-                    return@forEach
+        pastes.filter(::stale).forEach(::drop)
+        if (pastes.isNotEmpty()) {
+            ed.foldingModel.runBatchFoldingOperation {
+                pastes.toList().forEach { item ->
+                    val from = item.marker.startOffset
+                    val to = item.marker.endOffset
+                    if (ed.foldingModel.getFoldRegion(from, to) != null) return@forEach
+                    val region = ed.foldingModel.addFoldRegion(from, to, placeholder(body(ed, item)))
+                    if (region == null) {
+                        drop(item)
+                        return@forEach
+                    }
+                    // A paste that fits on one line (a single long line) gets no gutter handle by
+                    // default, which would leave no way to fold it back once expanded.
+                    region.isGutterMarkEnabledForSingleLine = true
+                    region.setExpanded(!item.collapsed)
                 }
-                // A paste that fits on one line (a single long line) gets no gutter handle by
-                // default, which would leave no way to fold it back once expanded.
-                region.isGutterMarkEnabledForSingleLine = true
-                region.setExpanded(!item.collapsed)
             }
         }
+        syncFoldGutter(ed)
     }
+
+    /**
+     * Drops pastes whose text is gone and takes the fold gutter down with them.
+     *
+     * Deleting a pasted block changes no fold state, so the folding listener never hears about it;
+     * this runs from the document listener instead.
+     */
+    @RequiresEdt
+    private fun syncPastes() {
+        if (pastes.isEmpty()) return
+        pastes.filter(::stale).forEach(::drop)
+        editor.getEditor(false)?.let(::syncFoldGutter)
+    }
+
+    /** Whether [item] no longer covers any text, so there is nothing left to fold. */
+    private fun stale(item: Paste): Boolean =
+        !item.marker.isValid || item.marker.startOffset >= item.marker.endOffset
 
     /**
      * Shows the gutter fold handles only while a paste is tracked.
@@ -1261,6 +1280,7 @@ class PromptPanel(
         ApplicationManager.getApplication().invokeLater {
             deferred = false
             if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            syncPastes()
             syncEditorHeight()
             syncHighlights()
             syncButton()
