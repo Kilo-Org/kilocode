@@ -1,6 +1,7 @@
 import type { RGBA } from "@opentui/core"
 import { Show } from "solid-js"
 import type { PermissionProvenance } from "@/kilocode/permission/provenance"
+import { SecurityStatus } from "@opencode-ai/core/security-status"
 import type { ToolState } from "@kilocode/sdk/v2"
 
 /** `state.metadata` off any tool state, including the pending variant that lacks the field. */
@@ -45,13 +46,45 @@ export function describeApproval(metadata: Record<string, unknown> | undefined):
   if (!approval) return undefined
   const manual = approval.source === "manual"
   const decision = manual ? "approved by you" : approval.rule?.action === "deny" ? "denied" : "auto-approved"
+  // kilocode_change - auto mode answered the prompt, not the user; it has no rule to name either
+  if (approval.source === "auto") return "auto-approved by auto mode"
   if (manual) return decision
   const source = sourceLabel(approval)
   const rule = approval.rule
   // The catch-all "*"/"*" rule carries no useful detail; let the source alone explain it.
   const ruleText =
-    rule && !(rule.permission === "*" && rule.pattern === "*") ? ` (matched ${rule.permission} \`${rule.pattern}\`)` : ""
+    rule && !(rule.permission === "*" && rule.pattern === "*")
+      ? ` (matched ${rule.permission} \`${rule.pattern}\`)`
+      : ""
   return source ? `${decision} ${source}${ruleText}` : decision
+}
+
+/**
+ * The security layer's state for this call, as one short note.
+ *
+ * The web badge puts `rule_id`, the reviewer's reason code and its latency in a tooltip; a terminal
+ * has no tooltip and a header line has no room, so here the state stands alone. Most calls return
+ * nothing, which is the point: a note on every row would say nothing and cost a column.
+ */
+export function describeSecurity(metadata: Record<string, unknown> | undefined): string | undefined {
+  const status = SecurityStatus.from(metadata)
+  switch (status?.kind) {
+    case "reviewing":
+      return "reviewing"
+    case "auto-approved":
+      return "auto-approved"
+    case "needs-approval":
+      return "needs approval"
+    case "blocked":
+      return "blocked"
+    default:
+      return undefined
+  }
+}
+
+/** The state itself, for callers that colour the note by how much attention it deserves. */
+export function securityKind(metadata: Record<string, unknown> | undefined) {
+  return SecurityStatus.from(metadata)?.kind
 }
 
 /**
