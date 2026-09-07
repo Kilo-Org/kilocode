@@ -21,6 +21,36 @@ const withRepo = (fn: (repo: string) => Promise<void>) => async () => {
 }
 
 describe.skipIf(process.platform === "win32")("SecurityRealpath.of", () => {
+  // A hook that has not been written yet is the ordinary case for these chains: the target does not
+  // exist, so `realpath` cannot resolve it and the layer follows the links by hand.
+  const dangling = async (repo: string, hops: number) => {
+    let target = path.join(repo, ".git", "hooks", "pre-commit")
+    for (let i = 0; i < hops; i++) {
+      const hop = path.join(repo, `hop${i}`)
+      await fs.symlink(target, hop)
+      target = hop
+    }
+    return `hop${hops - 1}`
+  }
+
+  test(
+    "a dangling symlink chain longer than the hop limit is undetermined, not partly resolved",
+    withRepo(async (repo) => {
+      // Giving up at the last hop reached hands back a path the write never lands on, and the layer
+      // would then judge that innocent intermediate instead of the git hook at the end.
+      const entry = await dangling(repo, 20)
+      expect(await SecurityRealpath.of(entry, repo)).toBeUndefined()
+    }),
+  )
+
+  test(
+    "a dangling symlink chain within the hop limit resolves to its target",
+    withRepo(async (repo) => {
+      const entry = await dangling(repo, 3)
+      expect(await SecurityRealpath.of(entry, repo)).toBe(path.join(repo, ".git", "hooks", "pre-commit"))
+    }),
+  )
+
   test(
     "an existing file resolves to itself",
     withRepo(async (repo) => {

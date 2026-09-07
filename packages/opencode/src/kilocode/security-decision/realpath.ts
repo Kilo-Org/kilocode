@@ -32,7 +32,15 @@ export namespace SecurityRealpath {
     return /[*?[\]]/.test(pattern)
   }
 
-  async function link(target: string) {
+  /**
+   * Follows a symlink chain by hand, or `undefined` when it cannot be followed to its end.
+   *
+   * Stopping at the last hop reached would be worse than not resolving at all: the caller would get
+   * a path the write never lands on and judge that innocent intermediate instead of the real target,
+   * so a chain past the hop limit, and a link that cannot be read, are both undetermined. A path
+   * that simply is not there yet is not a failure — that is a new file, and it resolves to itself.
+   */
+  async function link(target: string): Promise<string | undefined> {
     let current = target
     for (let i = 0; i < MAX_LINKS; i++) {
       let stat
@@ -45,10 +53,10 @@ export namespace SecurityRealpath {
       try {
         current = path.resolve(path.dirname(current), await fs.readlink(current))
       } catch {
-        return current
+        return undefined
       }
     }
-    return current
+    return undefined
   }
 
   /**
@@ -69,9 +77,12 @@ export namespace SecurityRealpath {
     for (let depth = 0; depth < MAX_DEPTH; depth++) {
       try {
         const real = await fs.realpath(current)
-        let out = real
+        let out: string | undefined = real
         for (const segment of missing) {
           out = await link(path.join(out, segment))
+          // An undetermined hop makes the whole target undetermined; the adapter turns that into an
+          // unknown target, which is an ask.
+          if (out === undefined) return undefined
         }
         return out
       } catch (err) {

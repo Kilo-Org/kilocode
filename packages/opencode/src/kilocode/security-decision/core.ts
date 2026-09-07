@@ -19,6 +19,71 @@ export namespace SecurityDecision {
    * Deliberately tiny: this is an allowlist of proven-inert commands, not a catalog of safe tools.
    * Anything not here is unclassified, which is an ask, not a refusal.
    */
+  /**
+   * A token as the program will receive it.
+   *
+   * Every table below matches on a token, and the shell rewrites tokens before any program sees
+   * them: `-p`, `"-p"`, `'-p'` and `\-p` are one argument to git and four distinct strings to a
+   * `Set`. Matching the written form instead of the delivered one is the whole bypass class this
+   * layer exists to close, so the canonical form is taken once, here, and every table matches on it.
+   */
+  function bare(token: string) {
+    let out = ""
+    for (let i = 0; i < token.length; i++) {
+      const ch = token[i]!
+      if (ch === "\\" && i + 1 < token.length) {
+        out += token[i + 1]
+        i++
+        continue
+      }
+      if (ch === '"' || ch === "'") continue
+      out += ch
+    }
+    return out
+  }
+
+  /**
+   * Whether the token still carries something only the shell can resolve. Its delivered value is
+   * unknowable here, so no allowlist may claim to have checked it. The fact producer flags these
+   * as `ambient` too; this is the same rule applied where the tables are, so a fact built by any
+   * other route cannot walk past them.
+   */
+  function unreadable(token: string) {
+    return /[$`]/.test(token)
+  }
+
+  /**
+   * The command line in delivered form, or `undefined` when any of it cannot be read. Callers treat
+   * `undefined` as "not proven inert" rather than as "nothing to check".
+   */
+  function delivered(argv: readonly string[] | undefined) {
+    if (argv === undefined) return undefined
+    const out = argv.map(bare)
+    return out.some(unreadable) ? undefined : out
+  }
+
+  /**
+   * The identity a refusal is held against. Command lookup is case-insensitive on macOS and Windows,
+   * so `Git` and `git` run the same program; folding here can only widen what the layer has an
+   * opinion about, never narrow it. Allowlists deliberately do *not* fold: admitting `LS` because
+   * `ls` is inert would be the unsafe direction of the same rule.
+   */
+  function held(name: string | undefined) {
+    return name?.toLowerCase()
+  }
+
+  /**
+   * Inert executables whose own flags can set what they otherwise only report. The set below is an
+   * allowlist over the executable alone, which is only honest for programs that are inert for every
+   * argument; these two are not, so they carry the argument test that makes the claim true.
+   */
+  const INERT_GUARDS: Record<string, (operands: readonly string[]) => boolean> = {
+    // `date -s`/`--set` sets the system clock; every other form reports it.
+    date: (operands) => !operands.some((token) => token === "-s" || token === "--set" || token.startsWith("--set=")),
+    // `hostname <name>` renames the host; flags only ever print.
+    hostname: (operands) => operands.every((token) => token.startsWith("-")),
+  }
+
   const INERT = new Set([
     "basename",
     "date",
@@ -113,6 +178,13 @@ export namespace SecurityDecision {
     require?: ReadonlySet<string>
     /** Whether `-<count>` shorthand is part of the verb's own syntax. */
     numeric?: boolean
+    /**
+     * Set when a bare operand changes what the verb does rather than selecting what it reports.
+     * `git branch --list` lists; `git branch topic` creates one. An allowlist written only over
+     * flags silently admits the second, which is the same dimension mistake as an executable
+     * allowlist that ignores its arguments.
+     */
+    operands?: "none"
   }>
 
   /** Flags that report names and counts instead of the patch itself. */
@@ -207,8 +279,9 @@ export namespace SecurityDecision {
       short: new Set([]),
       require: NAME_ONLY,
     },
-    /** Branch names. The flags that create, rename or delete a branch are not listed. */
+    /** Branch names. Neither the flags that create, rename or delete a branch nor a bare name. */
     branch: {
+      operands: "none",
       flags: new Set([
         "--",
         "--all",
@@ -345,6 +418,7 @@ export namespace SecurityDecision {
     const rest = argv.slice(index + (compound ? 2 : 1))
     const required = verb.require
     if (required && !rest.some((token) => required.has(token.split("=")[0]))) return false
+    if (verb.operands === "none" && rest.some((token) => !token.startsWith("-"))) return false
     return rest.every((token) => acceptable(token, verb))
   }
 
@@ -357,10 +431,16 @@ export namespace SecurityDecision {
     // file the command line picked instead, and an assignment moves the resolution itself, so in
     // both cases the name is a spelling rather than an identity and proves nothing.
     if (unit.pathed || unit.assigns) return false
-    if (INERT.has(name)) return true
+    // Written form is not delivered form, and a line that cannot be read cannot be cleared.
+    const argv = delivered(unit.argv)
+    if (INERT.has(name)) {
+      const guard = INERT_GUARDS[name]
+      if (!guard) return true
+      if (argv === undefined) return false
+      return guard(argv.slice(1))
+    }
     if (versionOnly(unit)) return true
     // Without the parsed command line there is nothing to prove anything against.
-    const argv = unit.argv
     if (argv === undefined || argv.length === 0) return false
     if (name === "git") return inertGit(argv)
     if (name === "docker") return inertDocker(argv)
@@ -373,7 +453,7 @@ export namespace SecurityDecision {
    * route. Anything outside this set is genuinely unclassified, which is what containment can settle.
    */
   function opinionated(unit: SecurityDecisionTypes.ExecCommandFact) {
-    const name = unit.executable
+    const name = held(unit.executable)
     return name !== undefined && (INERT.has(name) || name === "git")
   }
 
@@ -600,8 +680,8 @@ export namespace SecurityDecision {
    * argument allowlist tells them apart.
    */
   function gitAction(unit: SecurityDecisionTypes.ExecCommandFact) {
-    if (unit.executable !== "git" || inert(unit)) return undefined
-    const argv = unit.argv
+    if (held(unit.executable) !== "git" || inert(unit)) return undefined
+    const argv = delivered(unit.argv)
     if (!argv || argv.length === 0) return undefined
     const verb = gitVerb(argv)
     if (verb === undefined) return undefined
