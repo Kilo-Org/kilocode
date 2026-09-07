@@ -34,6 +34,15 @@ const DIAG = [
 // didn't include `approval`, silently dropping the auto-approval reason (and the
 // outside-workspace note) before it ever reached the webview.
 const APPROVAL = { source: "agent", agent: "code", outsideWorkspace: true, outsideWorkspacePath: "/tmp/a.ts" }
+// The security layer's audit record travels the same allowlist as `approval` and for the same
+// reason: it is the only thing the webview can render the security badge from, and it is tiny.
+const SECURITY = {
+  schema: "kilo.security-decision/v1",
+  rule_id: "SEC.V1.UNCLASSIFIED_EXEC",
+  decision: "ask",
+  reviewer: { state: "allow", reason_code: "ORDINARY_DEV_COMMAND", latency_ms: 42 },
+  final_enforcement: "allow",
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -101,6 +110,7 @@ describe("slimPart", () => {
         filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 3, deletions: 1 },
         diagnostics: { "/a.ts": DIAG },
         approval: APPROVAL,
+        securityDecision: SECURITY,
       },
     })
 
@@ -117,6 +127,7 @@ describe("slimPart", () => {
       expect(meta.filediff.deletions).toBe(1)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.approval).toEqual(APPROVAL)
+      expect(meta.securityDecision).toEqual(SECURITY)
     })
 
     it("keeps output and input intact", () => {
@@ -183,6 +194,7 @@ describe("slimPart", () => {
         ],
         diagnostics: { "/a.ts": DIAG },
         approval: APPROVAL,
+        securityDecision: SECURITY,
       },
     })
 
@@ -201,6 +213,7 @@ describe("slimPart", () => {
       expect(meta.files[1].type).toBe("add")
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.approval).toEqual(APPROVAL)
+      expect(meta.securityDecision).toEqual(SECURITY)
     })
 
     it("drops unknown heavy metadata fields", () => {
@@ -275,6 +288,7 @@ describe("slimPart", () => {
           { filediff: { file: "/b.ts", before: BIG, after: BIG, additions: 2, deletions: 0 }, diagnostics: {} },
         ],
         approval: APPROVAL,
+        securityDecision: SECURITY,
       },
     })
 
@@ -292,6 +306,7 @@ describe("slimPart", () => {
       expect(meta.results[1].filediff.file).toBe("/b.ts")
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.approval).toEqual(APPROVAL)
+      expect(meta.securityDecision).toEqual(SECURITY)
     })
 
     it("drops unknown heavy metadata fields", () => {
@@ -329,6 +344,7 @@ describe("slimPart", () => {
         filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 100, deletions: 0 },
         diagnostics: { "/a.ts": DIAG },
         approval: APPROVAL,
+        securityDecision: SECURITY,
       },
     })
 
@@ -347,6 +363,7 @@ describe("slimPart", () => {
       expect(meta.filediff.deletions).toBe(0)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.approval).toEqual(APPROVAL)
+      expect(meta.securityDecision).toEqual(SECURITY)
     })
 
     it("drops unknown heavy metadata fields", () => {

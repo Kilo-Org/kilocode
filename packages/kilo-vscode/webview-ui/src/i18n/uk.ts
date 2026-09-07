@@ -309,6 +309,10 @@ export const dict = {
   "ui.approval.source.default": "за замовчуванням",
   "ui.approval.source.auto": "режимом auto",
   "ui.approval.outsideWorkspace": "(за межами вашого робочого простору: {{file}})",
+  "ui.security.reviewing": "Перевірка",
+  "ui.security.autoApproved": "Схвалено автоматично",
+  "ui.security.needsApproval": "Потрібне підтвердження",
+  "ui.security.blocked": "Заблоковано",
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",

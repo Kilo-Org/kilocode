@@ -304,6 +304,10 @@ export const dict = {
   "ui.approval.source.default": "به‌طور پیش‌فرض",
   "ui.approval.source.auto": "توسط حالت خودکار",
   "ui.approval.outsideWorkspace": "(خارج از فضای کاری شما: {{file}})",
+  "ui.security.reviewing": "در حال بررسی",
+  "ui.security.autoApproved": "به‌طور خودکار تأیید شد",
+  "ui.security.needsApproval": "نیازمند تأیید",
+  "ui.security.blocked": "مسدود شد",
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",

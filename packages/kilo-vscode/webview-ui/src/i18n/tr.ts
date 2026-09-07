@@ -306,6 +306,10 @@ export const dict = {
   "ui.approval.source.default": "varsayılan olarak",
   "ui.approval.source.auto": "otomatik mod tarafından",
   "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
+  "ui.security.reviewing": "İnceleniyor",
+  "ui.security.autoApproved": "Otomatik onaylandı",
+  "ui.security.needsApproval": "Onay gerekiyor",
+  "ui.security.blocked": "Engellendi",
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",

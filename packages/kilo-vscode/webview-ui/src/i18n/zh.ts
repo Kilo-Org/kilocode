@@ -293,6 +293,10 @@ export const dict = {
   "ui.approval.source.default": "默认",
   "ui.approval.source.auto": "由自动模式",
   "ui.approval.outsideWorkspace": "（工作区之外：{{file}}）",
+  "ui.security.reviewing": "审查中",
+  "ui.security.autoApproved": "已自动批准",
+  "ui.security.needsApproval": "需要批准",
+  "ui.security.blocked": "已阻止",
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",

@@ -309,6 +309,10 @@ export const dict = {
   "ui.approval.source.default": "de forma predeterminada",
   "ui.approval.source.auto": "por el modo automático",
   "ui.approval.outsideWorkspace": "(fuera de tu espacio de trabajo: {{file}})",
+  "ui.security.reviewing": "Revisando",
+  "ui.security.autoApproved": "Aprobado automáticamente",
+  "ui.security.needsApproval": "Requiere aprobación",
+  "ui.security.blocked": "Bloqueado",
 
   "session.tab.review": "Revisión",
   "session.review.filesChanged": "{{count}} Archivos Cambiados",
