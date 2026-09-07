@@ -242,6 +242,8 @@ object SessionUiStyle {
             const val SHELL_HORIZONTAL_PADDING = 8
             // Horizontal editor inset intentionally matches vertical shell padding to balance text and chrome.
             const val EDITOR_HORIZONTAL_INSET = SHELL_VERTICAL_PADDING
+            // Caps a pasted block rendered in the transcript prompt bubble; matches Tool.BODY_LINES.
+            const val PASTE_BLOCK_LINES = 15
 
             fun separator(): Color = JBColor.namedColor(
                 "EditorTabs.underTabsBorderColor",

@@ -11,8 +11,13 @@ import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.util.Disposer
+import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.BorderLayout
 import java.awt.Component
@@ -20,6 +25,7 @@ import java.awt.Container
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.RepaintManager
 
 /**
@@ -436,6 +442,66 @@ class TextViewTest : BasePlatformTestCase() {
 
         assertEquals(color ?: before, view.md.linkColor)
     }
+
+    // ---- pasted block height cap (Step 2) ------
+
+    fun `test prompt view caps a large pasted block to the same height as a small one`() {
+        val big = PromptView(Text("p1").also { it.content.append(fence(200)) })
+        val small = PromptView(Text("p2").also { it.content.append(fence(20)) })
+
+        try {
+            assertEquals(codePane(small).preferredSize.height, codePane(big).preferredSize.height)
+        } finally {
+            Disposer.dispose(big)
+            Disposer.dispose(small)
+        }
+    }
+
+    fun `test prompt view pasted block has no extra left inset`() {
+        val view = PromptView(Text("p1").also { it.content.append(fence(20)) })
+
+        try {
+            assertEquals(0, codePane(view).viewportBorder.getBorderInsets(codePane(view)).left)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test prompt view code block reuses editor and releases it after clear`() {
+        val view = PromptView(Text("p1"))
+        val base = EditorFactory.getInstance().allEditors.size
+
+        try {
+            view.md.set(fence(20))
+            val pane = codePane(view)
+            val editor = codeEditor(pane)
+            editor.getEditor(true)
+
+            repeat(50) { i -> view.md.set(fence(20, i)) }
+
+            assertSame(pane, codePane(view))
+            assertSame(editor, codeEditor(codePane(view)))
+            assertFalse(editor.getEditor(true)!!.isDisposed)
+
+            view.md.clear()
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertEquals(base, EditorFactory.getInstance().allEditors.size)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    private fun fence(lines: Int, seed: Int = 0): String = buildString {
+        append("```text\n")
+        repeat(lines) { i -> append("line ${i + seed}\n") }
+        append("```")
+    }
+
+    private fun codePane(view: TextView): JBScrollPane =
+        (view.md.component as JPanel).components.filterIsInstance<JBScrollPane>().single()
+
+    private fun codeEditor(pane: JBScrollPane): EditorTextField = pane.viewport.view as EditorTextField
 
     private fun file(id: String, mime: String, token: String, path: String, start: Int, end: Int) = FileAttachment(id).also {
         it.mime = mime

@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteHandler
 import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.test.CopyProviderSink
@@ -1220,6 +1221,75 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test large text paste collapses into a single fold region`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        val text = (1..20).joinToString("\n") { "line $it" }
+
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection(text)))
+
+        assertEquals(text, ed.document.text)
+        val regions = ed.foldingModel.allFoldRegions
+        assertEquals(1, regions.size)
+        assertFalse(regions.single().isExpanded)
+        assertEquals(KiloBundle.message("prompt.paste.collapsed", 20), regions.single().placeholderText)
+        assertEquals(text, panel.text())
+    }
+
+    fun `test large text paste replaces the current selection`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        ed.document.setText("keep [replace me] keep")
+        ed.selectionModel.setSelection(5, 17)
+        val text = (1..20).joinToString("\n") { "line $it" }
+
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection(text)))
+
+        assertEquals("keep $text keep", ed.document.text)
+        assertEquals(1, ed.foldingModel.allFoldRegions.size)
+    }
+
+    fun `test short text paste is not claimed and creates no fold`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+
+        assertFalse(PromptTextPasteProvider().isPasteEnabled(pasteContext(ed, StringSelection("hi\nthere"))))
+        assertEquals(0, ed.foldingModel.allFoldRegions.size)
+    }
+
+    fun `test pasting the same large text again expands the existing fold`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        val text = (1..20).joinToString("\n") { "line $it" }
+        val provider = PromptTextPasteProvider()
+        provider.performPaste(pasteContext(ed, StringSelection(text)))
+
+        provider.performPaste(pasteContext(ed, StringSelection(text)))
+
+        assertEquals(text, ed.document.text)
+        val regions = ed.foldingModel.allFoldRegions
+        assertEquals(1, regions.size)
+        assertTrue(regions.single().isExpanded)
+    }
+
+    fun `test detaching and reattaching the panel keeps the paste collapsed`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val root = realize(panel, 260, 400)
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val text = (1..20).joinToString("\n") { "line $it" }
+        PromptTextPasteProvider().performPaste(pasteContext(field.getEditor(true)!!, StringSelection(text)))
+
+        root.removeNotify()
+        root.addNotify()
+        UIUtil.dispatchAllInvocationEvents()
+
+        val ed = field.getEditor(true)!!
+        assertEquals(text, ed.document.text)
+        val regions = ed.foldingModel.allFoldRegions
+        assertEquals(1, regions.size)
+        assertFalse(regions.single().isExpanded)
+    }
+
     fun `test disabled media model blocks pasted image`() {
         val panel = PromptPanel(project, { _, _ -> }, {}, { _, _ -> })
         panel.setAttachmentEnabled(false)
@@ -1548,6 +1618,12 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         roots.add(root)
         return root
+    }
+
+    private fun realizedEditor(panel: PromptPanel): EditorEx {
+        realize(panel, 260, 400)
+        val field = panel.defaultFocusedComponent as EditorTextField
+        return field.getEditor(true)!!
     }
 
     private fun toolbarControl(): EditorTextField {

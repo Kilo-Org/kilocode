@@ -9,9 +9,12 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.ui.md.MdCodeBlockFactory
+import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdView
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.util.ui.JBUI
+import javax.swing.ScrollPaneConstants
 
 class PromptView(
     text: Text,
@@ -20,7 +23,20 @@ class PromptView(
     openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
     mentions: List<PromptMention> = emptyList(),
-) : TextView(text, transparent = true, openFile = openFile, openUrl = openUrl, selection = selection) {
+) : TextView(
+    text,
+    transparent = true,
+    openFile = openFile,
+    openUrl = openUrl,
+    selection = selection,
+    code = MdCodeBlockFactory(
+        MdCodeBlockOptions(
+            maxLines = SessionUiStyle.View.Prompt.PASTE_BLOCK_LINES,
+            verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            horizontalPadding = 0,
+        )
+    ),
+) {
 
     private var mentions = mentions
     private val buffer = StringBuilder(text.content)

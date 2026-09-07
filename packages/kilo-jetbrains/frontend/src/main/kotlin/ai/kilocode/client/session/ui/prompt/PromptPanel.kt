@@ -50,8 +50,10 @@ import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.RangeMarker
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -69,6 +71,7 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.TextRange
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
@@ -166,6 +169,7 @@ class PromptPanel(
     }
     private val attachments = mutableListOf<PromptAttachment>()
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val pastes = mutableListOf<RangeMarker>()
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
@@ -197,6 +201,7 @@ class PromptPanel(
             ed.settings.setBlockCursor(false)
             SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.putUserData(PROMPT_TEXT_PASTE_HANDLER_KEY, PromptTextPasteHandler { handlePastedText(ed, it) })
             ed.setHorizontalScrollbarVisible(false)
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -205,6 +210,7 @@ class PromptPanel(
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             syncHighlights()
+            syncPasteFolds(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
                     val provider = completion ?: return
@@ -584,6 +590,8 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
+        pastes.forEach { it.dispose() }
+        pastes.clear()
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
@@ -921,6 +929,58 @@ class PromptPanel(
 
     private fun processPaste(transferable: Transferable): Future<*> {
         return processAttachments("prompt-paste", "editor", null, transferable, 0)
+    }
+
+    /**
+     * Handles a paste large enough to collapse ([collapsible]). Pasting the same text again while
+     * it is still tracked re-expands the existing fold instead of inserting a second copy — this
+     * mirrors the CLI's second-identical-paste gesture.
+     */
+    @RequiresEdt
+    private fun handlePastedText(ed: EditorEx, raw: String) {
+        val text = normalizePaste(raw)
+        val existing = pastes.firstOrNull { it.isValid && ed.document.getText(TextRange(it.startOffset, it.endOffset)) == text }
+        if (existing != null) {
+            ed.foldingModel.runBatchFoldingOperation {
+                ed.foldingModel.getFoldRegion(existing.startOffset, existing.endOffset)?.setExpanded(true)
+            }
+            return
+        }
+        val sel = ed.selectionModel
+        val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
+        val end = if (sel.hasSelection()) sel.selectionEnd else start
+        WriteCommandAction.runWriteCommandAction(project) {
+            ed.document.replaceString(start, end, text)
+            ed.caretModel.moveToOffset(start + text.length)
+        }
+        pastes += ed.document.createRangeMarker(start, start + text.length)
+        syncPasteFolds(ed)
+        syncEditorHeight()
+    }
+
+    private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
+
+    /**
+     * Rebuilds fold regions for every tracked paste marker that does not already have one on [ed].
+     * Range markers are document-scoped and survive [EditorTextField] recreating its [EditorEx] on
+     * detach/reattach, so this runs on every settings-provider pass to restore collapsed pastes.
+     */
+    @RequiresEdt
+    private fun syncPasteFolds(ed: EditorEx) {
+        pastes.removeAll { !it.isValid }
+        if (pastes.isEmpty()) return
+        ed.foldingModel.runBatchFoldingOperation {
+            pastes.toList().forEach { marker ->
+                if (ed.foldingModel.getFoldRegion(marker.startOffset, marker.endOffset) != null) return@forEach
+                val text = ed.document.getText(TextRange(marker.startOffset, marker.endOffset))
+                val region = ed.foldingModel.addFoldRegion(marker.startOffset, marker.endOffset, placeholder(text))
+                if (region == null) {
+                    pastes.remove(marker)
+                    return@forEach
+                }
+                region.setExpanded(false)
+            }
+        }
     }
 
     private fun processAttachments(

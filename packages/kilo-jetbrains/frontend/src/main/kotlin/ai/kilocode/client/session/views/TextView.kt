@@ -11,6 +11,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.util.Disposer
@@ -30,11 +31,12 @@ open class TextView(
     private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
+    code: MdCodeBlockFactory = MdCodeBlockFactory(),
 ) : PartView(), SessionCopyTarget {
 
     override val contentId: String = text.id
 
-    val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection)
+    val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection, code)
     private var mode: CopyMode? = null
     private val toolbar = MessageToolbar(
         text = { copyText() },
