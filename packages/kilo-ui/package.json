@@ -52,6 +52,7 @@
     "./message-part": "./src/components/message-part.tsx",
     "./session-review": "./src/components/session-review.tsx",
     "./session-diff": "./src/components/session-diff.ts",
+    "./text-direction": "./src/util/text-direction.ts",
     "./session-turn": "./src/components/session-turn.tsx",
     "./basic-tool": "./src/components/basic-tool.tsx",
     "./error-details": "./src/components/error-details.tsx",

@@ -7,6 +7,7 @@
 
 import { Component, Show, createMemo, createSignal, onMount, type Accessor, type JSX } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -220,7 +221,7 @@ const SessionList: Component<SessionListProps> = (props) => {
       >
         {(s) => (
           <>
-            <span data-slot="list-item-title" dir="auto">
+            <span data-slot="list-item-title" dir={textDirection(name(s))}>
               {name(s)}
             </span>
             <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>

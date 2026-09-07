@@ -10,20 +10,22 @@ const dialogPath = join(__dirname, "..", "..", "webview-ui", "agent-manager", "N
 const dialog = readFileSync(dialogPath, "utf8")
 
 describe("PromptInput bidirectional text support", () => {
-  it("lets the textarea and visible overlay resolve text direction automatically", () => {
+  it("lets the textarea and visible overlay resolve text direction from the whole text", () => {
     const overlay = src.match(/<div class="prompt-input-highlight-overlay"[\s\S]*?>/)?.[0]
     const overlayCss = css.match(/\.prompt-input-highlight-overlay\s*{[^}]*}/)?.[0]
     const input = src.match(/<textarea[\s\S]*?\n\s*\/>/)?.[0]
 
-    expect(overlay).toContain('dir="auto"')
-    expect(overlayCss).toContain("unicode-bidi: plaintext")
+    expect(overlay).toContain("dir={textDirection(text())}")
+    // Not plaintext: that would ignore dir and drift the visible overlay out of
+    // alignment with the textarea caret.
+    expect(overlayCss).toContain("unicode-bidi: isolate")
     expect(input).toContain('class="prompt-input"')
-    expect(input).toContain('dir="auto"')
+    expect(input).toContain("dir={textDirection(text())}")
   })
 
-  it("lets the Agent Manager worktree prompt resolve bidirectional text automatically", () => {
+  it("lets the Agent Manager worktree prompt resolve direction from the whole text", () => {
     const input = dialog.match(/<textarea[\s\S]*?class="prompt-input am-prompt-input"[\s\S]*?\n\s*\/>/)?.[0]
 
-    expect(input).toContain('dir="auto"')
+    expect(input).toContain("dir={textDirection(prompt())}")
   })
 })

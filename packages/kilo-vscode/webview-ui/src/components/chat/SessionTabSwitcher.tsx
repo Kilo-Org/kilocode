@@ -1,3 +1,4 @@
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { List } from "@kilocode/kilo-ui/list"
 import type { ListRef } from "@kilocode/kilo-ui/list"
@@ -148,7 +149,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
                   <ActivityIcon state={item.state} spinner="search-menu-spinner" />
                 </span>
                 <span class="search-menu-copy">
-                  <span class="search-menu-title" dir="auto">
+                  <span class="search-menu-title" dir={textDirection(item.title)}>
                     {item.title}
                   </span>
                   <Show when={item.state !== "idle" || item.pending}>

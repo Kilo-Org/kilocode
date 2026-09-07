@@ -1,5 +1,6 @@
 import { type Component, type JSX, For, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
@@ -42,7 +43,7 @@ export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
           <For each={recent()}>
             {(item) => (
               <button class="recent-session-item" onClick={() => props.onSelectSession?.(item.id)}>
-                <span class="recent-session-title" dir="auto">
+                <span class="recent-session-title" dir={textDirection(item.title || language.t("session.untitled"))}>
                   {item.title || language.t("session.untitled")}
                 </span>
                 <span class="recent-session-date">{formatRelativeDate(item.updatedAt)}</span>

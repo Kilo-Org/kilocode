@@ -44,6 +44,7 @@ import { ToolErrorCard } from "./tool-error-card"
 import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
+import { textDirection } from "../kilocode/text-direction" // kilocode_change
 import { ImagePreview } from "./image-preview"
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
 import { checksum } from "@opencode-ai/core/util/encode"
@@ -1178,7 +1179,8 @@ export function UserMessageDisplay(props: {
       <Show when={text()}>
         <>
           <div data-slot="user-message-body">
-            <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>{/* kilocode_change */}
+            <div data-slot="user-message-text" dir={textDirection(text())} data-queued={props.queued ? "" : undefined}>
+              {/* kilocode_change */}
               <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
             </div>
             {/* kilocode_change start */}

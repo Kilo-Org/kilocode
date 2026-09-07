@@ -7,6 +7,7 @@
 
 import { Component, Show, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -169,7 +170,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
       >
         {(s) => (
           <>
-            <span data-slot="list-item-title" dir="auto">
+            <span data-slot="list-item-title" dir={textDirection(s.title)}>
               {s.title}
             </span>
             <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>

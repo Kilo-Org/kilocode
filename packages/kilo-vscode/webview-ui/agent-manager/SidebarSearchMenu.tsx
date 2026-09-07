@@ -9,6 +9,7 @@ import type { ListRef } from "@kilocode/kilo-ui/list"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { ActivityIcon } from "../src/components/shared/ActivityIcon"
 import type { Activity } from "../src/utils/session-activity"
 import { formatRelativeDate } from "../src/utils/date"
@@ -149,7 +150,9 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                     </Show>
                   </span>
                   <span class="search-menu-copy">
-                    <span class="search-menu-title">{item.title}</span>
+                    <span class="search-menu-title" dir={textDirection(item.title)}>
+                      {item.title}
+                    </span>
                     <span class="search-menu-meta am-sidebar-search-meta">
                       <Show when={item.section}>
                         {(section) => (
