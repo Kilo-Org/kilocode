@@ -1,16 +1,22 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverArea
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.conflictTooltip
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -71,10 +77,12 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt {
             val badge = badge(view)
+            val comments = glyph(view, PrIcons.comments)
             val review = glyph(view, PrIcons.reviewApproved)
             val checks = glyph(view, PrIcons.checksFailed)
-            // State, review, run, then the title: the same reading order the worktree rows use.
-            assertTrue(right(view, badge) <= left(view, review))
+            // State, conversations, review, run, then the title: the same reading order the rows use.
+            assertTrue(right(view, badge) <= left(view, comments))
+            assertTrue(right(view, comments) <= left(view, review))
             assertTrue(right(view, review) <= left(view, checks))
             assertTrue(right(view, checks) <= left(view, title(view)))
             assertEquals("<html>Review approved</html>", review.toolTipText)
@@ -83,8 +91,16 @@ class PrHeaderViewTest : BasePlatformTestCase() {
                 "<html>2 of 5 checks failed<br>Click to open the checks in your browser.</html>",
                 checks.toolTipText,
             )
+            // The conversation glyph is the one that carries its own number.
+            assertEquals("3", comments.text)
+            assertEquals(
+                "<html>3 of 8 review conversations unresolved<br>" +
+                    "Click to open the pull request conversation in your browser.</html>",
+                comments.toolTipText,
+            )
             assertEquals(Cursor.HAND_CURSOR, review.cursor.type)
             assertEquals(Cursor.HAND_CURSOR, checks.cursor.type)
+            assertEquals(Cursor.HAND_CURSOR, comments.cursor.type)
         }
     }
 
@@ -93,12 +109,18 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
 
+        edt { click(glyph(view, PrIcons.comments)) }
         edt { click(glyph(view, PrIcons.reviewApproved)) }
         edt { click(glyph(view, PrIcons.checksFailed)) }
 
-        // Someone clicking a red build wants the log, not the conversation.
+        // Someone clicking a red build wants the log, not the conversation. The threads themselves are
+        // listed on the conversation tab, so the comment glyph goes back there.
         assertEquals(
-            listOf("https://github.com/kilo/test/pull/123", "https://github.com/kilo/test/pull/123/checks"),
+            listOf(
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123",
+                "https://github.com/kilo/test/pull/123/checks",
+            ),
             browser.urls,
         )
     }
@@ -108,15 +130,91 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
 
-        // No CI on the head and a review nobody has given yet: both would leave a gap after the pill.
+        // No CI on the head, a review nobody has given yet, and no unresolved conversation: each would
+        // leave a gap after the pill.
         assertTrue(edt { glyphs(view).isEmpty() })
 
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
-        assertEquals(2, edt { glyphs(view).size })
+        assertEquals(3, edt { glyphs(view).size })
 
         // A PR that goes away takes its verdicts with it.
         edt { view.update(files = 0, additions = 0, deletions = 0, pull = null, name = "feature-x") }
         assertTrue(edt { glyphs(view).isEmpty() })
+    }
+
+    fun `test every element of the header is a hoverable click target`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+
+        // The state pill, the title, and all three verdicts. Anything short of this leaves part of a
+        // header that is entirely clickable looking like static text.
+        val areas = edt { hovers(view) }
+        assertEquals(5, areas.size)
+        assertTrue("every area must carry an action, got $areas", edt { areas.all { it.cursor.type == Cursor.HAND_CURSOR } })
+        assertTrue(edt { areas.all { it.isFocusable } })
+
+        edt { areas.forEach { click(it) } }
+
+        // Every area opens something, and exactly one of them is the checks tab — someone clicking a red
+        // build wants the log. Which area that is, is asserted by glyph rather than by tree order.
+        assertEquals(5, browser.urls.size)
+        assertEquals(1, browser.urls.count { it == "https://github.com/kilo/test/pull/123/checks" })
+        assertEquals(4, browser.urls.count { it == "https://github.com/kilo/test/pull/123" })
+    }
+
+    fun `test the title opens the pull request`() {
+        val browser = installBrowser()
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+
+        edt { click(title(view)) }
+
+        assertEquals(listOf("https://github.com/kilo/test/pull/123"), browser.urls)
+    }
+
+    fun `test the title hover pill hugs the title instead of the whole header`() {
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+        val snug = edt {
+            layoutAt(view, view.preferredSize.width)
+            hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }.width
+        }
+
+        edt { layoutAt(view, view.preferredSize.width * 3) }
+
+        edt {
+            // The centre slot is everything left over between the verdicts and the toolbar, so a stretched
+            // header hands the title far more room than its text needs. A pill that took it would highlight
+            // most of the header for a title a few words long.
+            val area = hovers(view).single { SwingUtilities.isDescendingFrom(title(view), it) }
+            assertEquals("extra header width must not grow the pill", snug, area.width)
+            assertTrue("the pill spans the header: ${area.width} of ${view.width}", area.width < view.width / 2)
+            assertTrue("the pill is narrower than its title: ${area.width} vs ${title(view).width}", area.width >= title(view).width)
+        }
+    }
+
+    fun `test a header with no pull request has nothing to hover`() {
+        val view = edt { PrHeaderView {} }
+
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = null, name = "feature-x") }
+
+        assertTrue(edt { hovers(view).isEmpty() })
+    }
+
+    fun `test a settled conversation drops the comment glyph and its count`() {
+        val view = edt { PrHeaderView {} }
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = verdicts(), name = "feature-x") }
+        val comments = edt { glyph(view, PrIcons.comments) }
+
+        val settled = verdicts().copy(comments = GhCommentsDto(total = 8, unresolved = 0))
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = settled, name = "feature-x") }
+
+        // Retained rendering: the same label stays attached, hidden and blank, rather than being rebuilt.
+        assertTrue(edt { components(view).contains(comments) })
+        assertFalse(edt { comments.isVisible })
+        assertEquals("", edt { comments.text })
+        assertEquals(2, edt { glyphs(view).size })
     }
 
     fun `test changes default to compact aggregate presentation`() {
@@ -191,6 +289,41 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(count, edt { components(view).size })
     }
 
+    /**
+     * A header takes the pull request itself, so nothing above it has to know that a conflict marks the
+     * changes summary — and the summary and its row cannot disagree about a merge, because both read the
+     * same field of the same DTO.
+     */
+    fun `test a pull request that no longer merges marks the changes summary`() {
+        val view = edt { PrHeaderView(mode = ChangesPanel.Mode.FULL, openDiff = {}) }
+
+        edt { view.update(2, 5, 1, pull(GhState.OPEN).copy(merge = GhMerge.CONFLICTING), "feature-x", base = "origin/main") }
+
+        assertTrue(edt { stat(view).conflict })
+        // Mirrored onto the whole group, so the counts, the badge, and the marker all answer the same tip.
+        assertEquals(
+            conflictTooltip(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"), "origin/main"),
+            edt { stat(view).toolTipText },
+        )
+
+        edt { view.update(2, 5, 1, pull(GhState.OPEN).copy(merge = GhMerge.CLEAN), "feature-x", base = "origin/main") }
+
+        assertFalse(edt { stat(view).conflict })
+        assertEquals(
+            KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"),
+            edt { stat(view).toolTipText },
+        )
+    }
+
+    fun `test a conflict on a closed pull request is not marked`() {
+        val view = edt { PrHeaderView(mode = ChangesPanel.Mode.FULL, openDiff = {}) }
+
+        // GitHub keeps answering mergeable after a close, where nobody can act on the answer.
+        edt { view.update(2, 5, 1, pull(GhState.CLOSED).copy(merge = GhMerge.CONFLICTING), "feature-x", base = "origin/main") }
+
+        assertFalse(edt { stat(view).conflict })
+    }
+
     fun `test applyStyle refreshes title without rebuilding`() {
         val view = edt { PrHeaderView {} }
         edt { view.update(files = 1, additions = 1, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
@@ -213,16 +346,26 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     private fun verdicts() = pull(GhState.OPEN).copy(
         review = GhReview.APPROVED,
         checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+        comments = GhCommentsDto(total = 8, unresolved = 3),
     )
 
     @RequiresEdt
     private fun badge(view: PrHeaderView): JBLabel =
         components(view).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
 
+    /** The badge carrying the committed counts, which is the last of the summary's two groups. */
+    @RequiresEdt
+    private fun stat(view: PrHeaderView): DiffStatBadge = components(view).filterIsInstance<DiffStatBadge>().last()
+
     /** The visible verdict labels, which are the only glyph-icon labels the header owns. */
     @RequiresEdt
     private fun glyphs(view: PrHeaderView): List<JBLabel> =
         components(view).filterIsInstance<JBLabel>().filter { it.isVisible && it.icon != null && it.icon !is FilledBadgeIcon }
+
+    /** The visible hover areas, in header order. */
+    @RequiresEdt
+    private fun hovers(view: PrHeaderView): List<HoverArea> =
+        components(view).filterIsInstance<HoverArea>().filter { it.isVisible }
 
     @RequiresEdt
     private fun glyph(view: PrHeaderView, icon: Icon): JBLabel = glyphs(view).single { it.icon === icon }
@@ -277,6 +420,13 @@ class PrHeaderViewTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun layout(view: PrHeaderView) {
         view.setSize(view.preferredSize)
+        components(view).forEach { if (it is Container) it.doLayout() }
+    }
+
+    /** Laid out at a chosen width, for the cases that ask what a header does with room to spare. */
+    @RequiresEdt
+    private fun layoutAt(view: PrHeaderView, width: Int) {
+        view.setSize(width, view.preferredSize.height)
         components(view).forEach { if (it is Container) it.doLayout() }
     }
 

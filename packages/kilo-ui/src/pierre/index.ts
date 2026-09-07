@@ -10,6 +10,10 @@ import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/u
 
 export { styleVariables }
 
+export interface DiffHandle {
+  scrollToLine: (line: number, side: "additions" | "deletions") => boolean
+}
+
 // Character matching fragments inserted identifiers when they share letters with
 // existing symbols. Word-alt keeps those logical additions visually intact.
 export const LINE_DIFF_TYPE = "word-alt" as const
@@ -54,6 +58,8 @@ type DiffShared<T> = FileDiffOptions<T> & {
   onLineNumberSelectionEnd?: (selection: SelectedLineRange | null) => void
   onRendered?: () => void
   visible?: boolean
+  handle?: (handle: DiffHandle | undefined) => void
+  scrollTo?: (offset: number) => void
   // When false, render the supplied diff once instead of row-virtualizing it.
   // Callers should supply hunk-bounded `fileDiff`/`patch` data for large source
   // files so eager rendering does not expand full before/after content.

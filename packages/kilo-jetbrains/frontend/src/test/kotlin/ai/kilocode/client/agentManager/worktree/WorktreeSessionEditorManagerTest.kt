@@ -8,6 +8,7 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
 import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.client.onboarding.FakeOnboardingController
+import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
@@ -249,6 +250,98 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(edt { manager.deleting().isEmpty() })
         assertTrue(rpc.listed.any { it.id == session.id })
         assertEquals(listOf("Failed to delete session \"Session ses_1\"" to "delete unavailable"), notified)
+    }
+
+    fun `test fork opens the forked session and lists it alongside the source`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        val controller = WorktreeSessionListController(sessions, DIR, coroutines.scope, telemetry = { _, _ -> })
+        val manager = manager(controller = controller)
+        edt { manager.start() }
+        flush()
+
+        edt { manager.forkSession(session.id) }
+        flush()
+
+        assertEquals(FakeSessionRpcApi.ForkCall(session.id, DIR, null), rpc.forks.single())
+        assertEquals(listOf(DIR to session.id, DIR to "ses_1_fork"), created)
+        assertEquals("ses_1_fork", edt { manager.currentKey() })
+        assertEquals(listOf("ses_1_fork", session.id), edt { controller.sessions().map { it.id } })
+        assertTrue(notified.isEmpty())
+    }
+
+    fun `test fork forwards the message id for a per-message fork`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        edt { manager.forkSession(session.id, "msg_3") }
+        flush()
+
+        assertEquals(FakeSessionRpcApi.ForkCall(session.id, DIR, "msg_3"), rpc.forks.single())
+    }
+
+    fun `test a second fork of the same session is ignored while the first is in flight`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        val gate = CompletableDeferred<Unit>()
+        rpc.forkGate = gate
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        // A hover icon or menu item is easy to hit twice before the RPC answers.
+        edt { manager.forkSession(session.id) }
+        pump()
+        edt { manager.forkSession(session.id) }
+        pump()
+
+        assertEquals(1, rpc.forks.size)
+
+        gate.complete(Unit)
+        waitUntil { rpc.forks.size == 1 && created.any { it.second == "ses_1_fork" } }
+
+        // Once the first settles the latch is released, so a later fork is allowed again.
+        edt { manager.forkSession(session.id) }
+        flush()
+        assertEquals(2, rpc.forks.size)
+    }
+
+    fun `test fork failure notifies and keeps the current session shown`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        rpc.forkThrows = IllegalStateException("fork unavailable")
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        edt { manager.forkSession(session.id) }
+        flush()
+
+        assertEquals(session.id, edt { manager.currentKey() })
+        assertEquals(listOf("Failed to fork session \"Session ses_1\"" to "fork unavailable"), notified)
+    }
+
+    fun `test fork ignores the pending new row and a session being deleted`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        edt { manager.forkSession(SessionHost.NEW) }
+        edt { manager.deleteSessions(listOf(session.id)) }
+        pump()
+        edt { manager.forkSession(session.id) }
+        flush()
+
+        assertTrue(rpc.forks.isEmpty())
+        gate.complete(Unit)
+        waitUntil { manager.deleting().isEmpty() }
     }
 
     fun `test rename updates session title optimistically and keeps success`() {

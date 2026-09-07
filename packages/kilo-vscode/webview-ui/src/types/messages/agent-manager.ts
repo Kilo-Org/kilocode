@@ -78,6 +78,8 @@ export type {
 
 export interface PRStatus {
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body?: string
   url: string
@@ -158,6 +160,7 @@ export interface WorktreeFileDiff {
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
+  failed?: boolean
   stamp?: string
   kind?: "image"
   image?: DiffImage

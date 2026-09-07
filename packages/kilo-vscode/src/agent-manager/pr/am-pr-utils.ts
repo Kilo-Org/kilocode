@@ -12,6 +12,7 @@ import type {
 import type {
   PRResult,
   GhAuthor,
+  GhComment,
   GhThread,
   GhReviewRequest,
   GhReview,
@@ -34,6 +35,8 @@ export function parsePRResult(json: string): PRResult | null {
           : null
   const result: PRResult = {
     number: data.number,
+    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
+    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
     title: data.title ?? "",
     body: data.body ?? "",
     url: data.url ?? "",
@@ -127,29 +130,59 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
   COMMENTED: "commented",
 }
 
+function location(
+  thread: GhThread,
+  first: GhComment,
+): Pick<PRComment, "file" | "side" | "line" | "originalLine" | "startLine"> {
+  const originalLine = thread.originalLine ?? first.originalLine ?? undefined
+  const line = thread.line ?? first.line ?? originalLine
+  const side = thread.diffSide === "LEFT" ? "deletions" : thread.diffSide === "RIGHT" ? "additions" : undefined
+  const startLine = side && thread.startDiffSide === thread.diffSide ? (thread.startLine ?? undefined) : undefined
+  return {
+    file: thread.path ?? first.path,
+    ...(side ? { side } : {}),
+    ...(line === undefined ? {} : { line }),
+    ...(originalLine === undefined ? {} : { originalLine }),
+    ...(startLine === undefined ? {} : { startLine }),
+  }
+}
+
+function parseReplies(nodes: GhComment[]): PRComment["replies"] {
+  const list = nodes.slice(1).map((node) => ({
+    author: node.author?.login ?? "unknown",
+    body: node.body ?? "",
+    ...(node.author?.avatarUrl ? { avatar: node.author.avatarUrl } : {}),
+  }))
+  return list.length > 0 ? list : undefined
+}
+
+function parseThread(thread: GhThread): PRComment | undefined {
+  const nodes = thread.comments?.nodes ?? []
+  const first = nodes.at(0)
+  if (!first) return undefined
+  const current = thread.line === undefined ? first.line : thread.line
+  return {
+    id: first.id,
+    threadId: thread.id ?? first.id,
+    author: first.author?.login ?? "unknown",
+    avatar: first.author?.avatarUrl,
+    body: first.body ?? "",
+    ...location(thread, first),
+    url: first.url,
+    resolved: thread.isResolved ?? false,
+    outdated: thread.isOutdated ?? false,
+    createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
+    diffHunk: first.diffHunk,
+    ...(typeof current === "number" ? {} : { unmapped: true, previewUnavailable: true }),
+    replies: parseReplies(nodes),
+  }
+}
+
 export function parseComments(threads: GhThread[]): PRComment[] {
   const items: PRComment[] = []
   for (const thread of threads) {
-    const nodes = thread.comments?.nodes ?? []
-    const first = nodes[0]
-    if (!first) continue
-    const replies = nodes.slice(1).map((node) => ({ author: node.author?.login ?? "unknown", body: node.body ?? "" }))
-    items.push({
-      id: first.id,
-      threadId: thread.id ?? first.id,
-      author: first.author?.login ?? "unknown",
-      avatar: first.author?.avatarUrl,
-      body: first.body ?? "",
-      file: first.path,
-      // An outdated thread has no current line, so fall back to the line it was written against.
-      line: first.line ?? first.originalLine,
-      url: first.url,
-      resolved: thread.isResolved ?? false,
-      outdated: thread.isOutdated ?? false,
-      createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-      diffHunk: first.diffHunk,
-      replies: replies.length > 0 ? replies : undefined,
-    })
+    const item = parseThread(thread)
+    if (item) items.push(item)
   }
   return items
 }
@@ -241,10 +274,11 @@ export function ghErrorReason(message: string): string {
  */
 export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
   if (!prev || prev.number !== next.number || prev.url !== next.url) return next
+  const current = prev.baseRefOid === next.baseRefOid && prev.headRefOid === next.headRefOid ? prev : undefined
   return {
     ...next,
-    comments: next.comments ?? prev.comments,
-    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? prev.unresolvedThreads,
+    comments: next.comments ?? current?.comments,
+    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? current?.unresolvedThreads,
     conversation: next.conversation ?? prev.conversation,
   }
 }
@@ -253,15 +287,31 @@ export function signature(pr: PRStatus): string {
   return serialize([
     pr.url,
     pr.number,
+    pr.baseRefOid ?? null,
+    pr.headRefOid ?? null,
     pr.title,
     pr.state,
     pr.review,
     [pr.checks.status, pr.checks.passed, pr.checks.total],
     pr.reviewers.map((r) => [r.login, r.state]),
     pr.body ?? "",
-    [pr.comments?.total ?? null, pr.unresolvedThreads ?? null, commentsSig(pr.comments?.comments)],
+    [
+      pr.comments?.total ?? null,
+      pr.comments?.unresolved ?? null,
+      pr.unresolvedThreads ?? null,
+      commentsSig(pr.comments?.comments),
+    ],
     pr.conversation?.map((c) => [c.id, c.author, c.body, c.state ?? "", c.isBot ? 1 : 0]) ?? [],
   ])
+}
+
+export function retainPRStatus(
+  prev: PRStatus | undefined,
+  prevBranch: string | undefined,
+  branch: string | undefined,
+  next: PRStatus | null,
+): boolean {
+  return !next && prev !== undefined && branch !== undefined && branch === prevBranch
 }
 
 /**

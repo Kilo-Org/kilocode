@@ -12,6 +12,7 @@ import { PRDescription } from "./PRDescription"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
 import { PRConversation } from "./PRConversation"
+import type { PRComment } from "./pr-types"
 import { commentScroll, patchCommentState, setCommentScroll } from "./pr-comment-state"
 import { PRSummary } from "./PRSummary"
 import { CopyButton } from "./CopyButton"
@@ -29,6 +30,7 @@ interface PRPanelProps {
   onRefresh: () => void
   onOpenExternal: () => void
   onOpenFile?: (file: string, line?: number) => void
+  onOpenDiff?: (comment: PRComment) => void
   onOpenUrl?: (url: string) => void
 }
 
@@ -239,6 +241,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
                   worktreeId={props.worktreeId}
                   activeTerminalId={props.activeTerminalId}
                   onOpenFile={props.onOpenFile}
+                  onOpenDiff={props.onOpenDiff}
                   onOpenUrl={props.onOpenUrl}
                 />
               </div>

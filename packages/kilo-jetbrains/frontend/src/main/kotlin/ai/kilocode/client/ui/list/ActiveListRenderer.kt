@@ -2,6 +2,7 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
@@ -10,21 +11,23 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.RelativeFont
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -47,6 +50,15 @@ import javax.swing.SwingConstants
  * is handed).
  */
 private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
+/**
+ * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
+ *
+ * On by default. Off leaves the cut exposed, which is legible but reads as the end of the text rather than
+ * the middle of it — the escape hatch for a surface where the fade is wrong, such as a theme that paints a
+ * row background the renderer cannot name.
+ */
+private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
 
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
@@ -90,7 +102,7 @@ internal class ActiveListRenderer(
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
-    private val title = SimpleColoredComponent()
+    private val title = FadeText()
     private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val secondary = Stack.horizontal(UiStyle.Gap.md())
@@ -106,7 +118,14 @@ internal class ActiveListRenderer(
     // the group stretched across the row instead, which lands its badges on the same trailing edge as
     // the metrics and secondary badges below them.
     private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
-    private val desc = JBLabel()
+    // Carries the description as a [FadeText] rather than the JBLabel it used to be, so both lines of a
+    // row clip the same way: cut and faded, not ellipsed through the label UI. The internal padding and
+    // border a colored component ships with are cleared to keep the label's own geometry, which would
+    // otherwise indent the line by a few pixels and grow every row.
+    private val desc = FadeText().apply {
+        ipad = JBUI.emptyInsets()
+        myBorder = null
+    }
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
     private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
@@ -267,6 +286,13 @@ internal class ActiveListRenderer(
         gap = false
         layers.isVisible = true
 
+        // Text that runs out of room is cut and faded rather than ellipsed, so the row spends every pixel
+        // it has on the text itself. The fade blends into whatever the row painted behind the line, read
+        // back off [wrap] so it cannot drift from the selection color the row actually filled.
+        val backdrop = if (activeListFade()) wrap.selectionColor ?: wrap.background else null
+        title.backdrop = backdrop
+        desc.backdrop = backdrop
+
         title.clear()
         // Bold carries most rows by default: the description under it and the icon beside it both
         // render in the muted secondary color, so cfg.title separates the two lines when enabled.
@@ -275,21 +301,24 @@ internal class ActiveListRenderer(
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
-        syncBadges(value)
+        // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
+        // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
+        // aware, so a highlighted row does not leave the count dark on dark blue.
+        syncBadges(value, fg)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
         icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
-        desc.text = note
+        desc.clear()
+        if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
         desc.isVisible = note.isNotBlank()
         desc.border = if (cfg.descriptionIndent && desc.isVisible) {
             JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
         } else {
             JBUI.Borders.empty()
         }
-        desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
         metrics.isEnabled = list.isEnabled && !value.disabled
         metrics.update(data)
@@ -413,22 +442,22 @@ internal class ActiveListRenderer(
         return image to Point(wrap.x, wrap.y)
     }
 
-    private fun syncBadges(item: ActiveListItem) {
+    private fun syncBadges(item: ActiveListItem, color: Color) {
         val hidden = item.progress != null
         val gap = activeListIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
-        syncBadges(leading, if (hidden) emptyList() else item.leading)
-        syncBadges(badges, if (hidden) emptyList() else item.badges)
-        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color)
     }
 
-    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>) {
+    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>, color: Color) {
         while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
         while (stack.componentCount < items.size) stack.add(ActiveListBadgeCell())
         stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i])
+            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i], color)
         }
     }
 
@@ -471,6 +500,7 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
             localAdditions = data?.localAdditions ?: 0,
             localDeletions = data?.localDeletions ?: 0,
             base = data?.base.orEmpty(),
+            conflict = data?.conflict == true,
         )
         panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
@@ -526,13 +556,32 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override var cellId: String = ""
         private set
 
-    fun update(badge: ActiveListBadge) {
+    /**
+     * [color] is the row's text foreground, applied only to a labelled glyph. A pill paints its own text
+     * inside [FilledBadgeIcon], and a bare glyph has no text to color; a labelled glyph does, and a
+     * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
+     * in, so a count would otherwise be unreadable on a selected row.
+     */
+    fun update(badge: ActiveListBadge, color: Color? = null) {
         this.badge = badge
         cellId = badge.id.orEmpty()
         val next = badge.icon ?: pill(badge)
         // Both branches answer with the instance already installed when nothing changed, so a repaint
         // of an unchanged row does not churn the label's icon.
         if (icon !== next) icon = next
+        val label = if (badge.icon != null) badge.text else ""
+        if (text != label) text = label
+        if (label.isNotBlank()) {
+            // Font and gap match the ahead/behind counters in ChangesPanel: a glyph with a figure beside it
+            // reads as one token, and a default label gap pulls the two apart into an icon with a caption.
+            // Re-read rather than assigned once, because updateUI puts the LaF defaults back on an IDE
+            // zoom; the comparisons make that the only time this writes.
+            val small = JBFont.small()
+            if (font != small) font = small
+            val gap = UiStyle.Gap.xs()
+            if (iconTextGap != gap) iconTextGap = gap
+            if (color != null && foreground != color) foreground = color
+        }
         toolTipText = cellTooltip()
     }
 

@@ -93,6 +93,35 @@ class WorkspacePathScopingTest {
     }
 
     @Test
+    fun `deepest prefers the nested worktree project over the main checkout`() {
+        val worktree = at(".kilo", "worktrees", "foo")
+        val file = worktree.resolve("backend/src/Main.java")
+
+        assertEquals(1, deepest(listOf(base, worktree), file))
+    }
+
+    @Test
+    fun `deepest returns null when no base matches`() {
+        assertNull(deepest(listOf(base, base.resolveSibling("other")), base.resolveSibling("other-2").resolve("A.kt")))
+    }
+
+    @Test
+    fun `deepest ignores null bases`() {
+        val worktree = at(".kilo", "worktrees", "foo")
+        val file = worktree.resolve("backend/src/Main.java")
+
+        assertEquals(1, deepest(listOf(null, worktree), file))
+    }
+
+    @Test
+    fun `deepest is deterministic for equal-depth matches`() {
+        val a = at("a")
+        val b = at("a")
+
+        assertEquals(0, deepest(listOf(a, b), a.resolve("A.kt")))
+    }
+
+    @Test
     fun `normalizes encoded file URLs`() {
         val path = base.resolve("dir with spaces").resolve("A.kt")
         val url = path.toUri().toString() + "?query#fragment"

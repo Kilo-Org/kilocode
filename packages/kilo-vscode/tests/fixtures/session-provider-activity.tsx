@@ -45,10 +45,11 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { For, Show, createEffect, createSignal } = await import("solid-js")
+const { For, Show, createEffect, createRoot, createSignal } = await import("solid-js")
 const { unwrap } = await import("solid-js/store")
 const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
 const { SubagentPanel } = await import("../../webview-ui/agent-manager/SubagentPanel")
+const { createSubagentController } = await import("../../webview-ui/agent-manager/subagent-tabs")
 const { DragDropProvider, SortableProvider } = await import("@thisbeyond/solid-dnd")
 const { renderTab } = await import("../../webview-ui/agent-manager/tab-rendering")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
@@ -1078,6 +1079,103 @@ try {
   await check("root", "busy")
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
+
+  setInspector(false)
+  setInspected(["inspector-child", "inspector-sibling"])
+  setActive("inspector-child")
+  const start = sent.length
+  const loads = () => sent.slice(start).filter((message) => message.type === "loadMessages")
+  setInspector(true)
+  await settle()
+  assert.deepEqual(loads(), [
+    { type: "loadMessages", sessionID: "inspector-child", mode: "replace", focus: false, limit: 80 },
+  ])
+  for (const id of inspected()) {
+    await emit({ type: "messagesLoaded", sessionID: id, messages: [], mode: "replace" })
+    assert.equal(loads().length, 1, `${id} snapshot reloaded the selected inspector`)
+    for (const status of ["busy", "idle"] as const) {
+      await emit({ type: "sessionStatus", sessionID: id, status })
+      assert.equal(loads().length, 1, `${id} ${status} reloaded the selected inspector`)
+      assert.equal(active(), "inspector-child")
+      assert.equal(value.currentSessionID(), "root")
+    }
+  }
+  for (const id of ["inspector-sibling", "inspector-child"]) {
+    const tab = host.querySelector<HTMLElement>(`[data-tab-id="${id}"] [role="tab"]`)
+    assert(tab)
+    tab.click()
+    await settle()
+    assert.equal(active(), id)
+    assert.deepEqual(loads().at(-1), {
+      type: "loadMessages",
+      sessionID: id,
+      mode: "reconcile",
+      focus: false,
+      limit: 80,
+    })
+    assert.equal(value.currentSessionID(), "root")
+  }
+  assert.equal(loads().length, 3)
+  setInspector(false)
+  await settle()
+
+  const family = createRoot((dispose) => {
+    const state = { reads: 0 }
+    createEffect(() => {
+      value.scopedPermissions("root")
+      state.reads++
+    })
+    return { state, dispose }
+  })
+  try {
+    await settle()
+    assert.equal(family.state.reads, 1)
+    for (const id of inspected()) {
+      await emit({ type: "sessionStatus", sessionID: id, status: "busy" })
+      await emit({ type: "sessionStatus", sessionID: id, status: "busy" })
+    }
+    assert.equal(family.state.reads, 1, "Busy updates rebuilt unchanged session ancestry")
+  } finally {
+    family.dispose()
+  }
+
+  const opened = createRoot((dispose) => {
+    const [visible, setVisible] = createSignal(false)
+    const selected: (string | undefined)[] = []
+    const controller = createSubagentController({
+      project: () => undefined,
+      current: () => "root",
+      selection: () => null,
+      parts: () =>
+        inspected().map((id) => ({
+          id,
+          type: "tool",
+          tool: "task",
+          state: { status: "running", input: {} },
+          metadata: { sessionId: id },
+        })),
+      visible,
+      show: () => setVisible(true),
+      hide: () => setVisible(false),
+      sync: () => {},
+      unsync: () => {},
+    })
+    createEffect(() => selected.push(controller.tabs.active()))
+    return { ...controller, selected, dispose }
+  })
+  try {
+    await settle()
+    assert.deepEqual(opened.selected, [undefined])
+    opened.toolbar.toggle()
+    await settle()
+    assert.deepEqual(
+      opened.tabs.tabs().map((tab) => tab.id),
+      inspected(),
+    )
+    assert.deepEqual(opened.selected, [undefined, "inspector-sibling"])
+  } finally {
+    opened.dispose()
+  }
 
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({

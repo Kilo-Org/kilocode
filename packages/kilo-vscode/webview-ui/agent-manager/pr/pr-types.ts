@@ -16,6 +16,7 @@ export interface PRCheck {
 export interface PRCommentReply {
   author: string
   body: string
+  avatar?: string
 }
 
 export interface PRComment {
@@ -25,13 +26,26 @@ export interface PRComment {
   avatar?: string
   body: string
   file?: string
+  side?: "additions" | "deletions"
   line?: number
+  originalLine?: number
+  startLine?: number
+  unmapped?: boolean
   url?: string
   resolved: boolean
   outdated: boolean
   createdAt?: number
   diffHunk?: string
-  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  preview?: {
+    patch: string
+    line: number
+    side: "additions" | "deletions"
+    base: string
+    head: string
+    top: boolean
+    bottom: boolean
+  }
+  previewUnavailable?: boolean
   after?: string[]
   replies?: PRCommentReply[]
 }
