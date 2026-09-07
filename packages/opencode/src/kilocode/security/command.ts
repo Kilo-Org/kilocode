@@ -54,6 +54,8 @@ export namespace CommandSemantics {
     dynamic?: boolean
     /** The operands are not on the command line at all (`find -files0-from`), so nothing named them. */
     stdinTargets?: boolean
+    /** Same situation, seen as a path: one unknown operand stands in for the set nobody named. */
+    unnamedTargets?: boolean
   }
 
   const PRIVILEGE = new Set(["sudo", "doas", "su", "pkexec", "runas", "gsudo", "sudo-rs", "run0", "dzdo", "pfexec"])
@@ -1927,6 +1929,12 @@ export namespace CommandSemantics {
      * command becomes an exec indirection and the escape rules answer it.
      */
     const opaque = clauses.some((clause) => clause.command.length > 0 && legible(clause.command) === undefined)
+    /**
+     * What happens to the starting points, which is a different question from whether an arbitrary
+     * program runs. Folding the two into one value let `-delete` win over an opaque clause, so
+     * `find . -delete -exec env -S 'rm -rf /' \;` read as a plain workspace delete and the clause was
+     * never looked at. The indirection below is keyed on `opaque` for that reason, not on the effect.
+     */
     const effect: FileEffect = remove ? "delete" : opaque ? "exec" : "read"
 
     const carried: Array<{ value: string; effect: FileEffect }> = []
@@ -1954,14 +1962,16 @@ export namespace CommandSemantics {
         ...carried,
       ],
       // The starting points are in a file this analysis never opens, so the targets are as unknown as
-      // a pipeline's; the same rule answers both.
+      // a pipeline's; the same rule answers both, and `unnamedTargets` below adds the unknown operand
+      // so a *read* over that set is treated the way every other undeterminable read is.
       stdinTargets: rootsElsewhere,
+      unnamedTargets: rootsElsewhere,
       encoded: false,
       network: false,
       reads: effect === "read",
       metadata: effect === "read" && clauses.length === 0,
-      indirection: effect === "exec" ? "interpreter" : undefined,
-      escape: effect === "exec" ? "find" : undefined,
+      indirection: opaque ? "interpreter" : undefined,
+      escape: opaque ? "find" : undefined,
     }
   }
 

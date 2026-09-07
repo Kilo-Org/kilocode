@@ -854,3 +854,27 @@ describe("find is read as a whole, or not guessed at", () => {
     expectDecision(await decide("find -maxdepth 2 -name '*.ts'"), "allow")
   })
 })
+
+// Third round, same function: two concepts that had been folded into one value.
+describe("what happens to the starting points is not whether a program runs", () => {
+  test("-delete does not hide an opaque -exec clause", async () => {
+    // `-delete` decided the effect, so the clause was never looked at and this read as a plain
+    // workspace delete.
+    expectDecision(await decide("find . -delete -exec env -S 'rm -rf /' +"), "ask", "SHELL_INDIRECTION", true)
+    expectDecision(await decide("find . -exec env -S 'rm -rf /' + -delete"), "ask", "SHELL_INDIRECTION", true)
+    // A legible clause is still classified, and its operand still decides.
+    expectDecision(await decide(`find . -delete -exec cat ${home}/.ssh/id_rsa +`), "deny", "SENSITIVE_READ", true)
+    // Ordinary find work is untouched.
+    expectDecision(await decide("find . -name '*.pyc' -delete"), "allow")
+    expectDecision(await decide("find . -name '*.log' -exec rm -rf {} +"), "allow")
+  })
+
+  test("targets named in a file are an unknown operand, not the absence of one", async () => {
+    // Emitting no operand meant nothing was classified at all. One unknown operand puts the command
+    // on the engine's ordinary policy for a target it cannot determine: hard for a mutation, the
+    // standard soft dynamic-read otherwise — the same answer `cat $(cat list)` gets.
+    expectDecision(await decide("find -files0-from list.txt -delete"), "ask", "DYNAMIC_TARGET", true)
+    expectDecision(await decide("find -files0-from list.txt -exec cat {} +"), "ask", "DYNAMIC_TARGET", false)
+    expectDecision(await decide("find -files0-from list.txt -name '*.ts'"), "ask", "DYNAMIC_TARGET", false)
+  })
+})

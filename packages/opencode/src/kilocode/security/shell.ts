@@ -608,6 +608,11 @@ export namespace ShellNormalizer {
         const bound =
           ps && piped && spec.operands.length === 0 && (spec.effect !== undefined || spec.family === "process-control")
         if (bound && spec.effect === "read") operands.push({ path: PathRisk.unknown("<pipeline>"), effect: "read" })
+        // The command names a *file* of targets rather than the targets (`find -files0-from`). One
+        // unknown operand stands in for that set, so a read over it is judged the way every other
+        // statically undeterminable read is instead of producing no operand at all.
+        if (spec.unnamedTargets)
+          operands.push({ path: PathRisk.unknown("<unnamed-targets>"), effect: spec.effect ?? "read" })
         const dynamic = operands.some((item) => item.path.relation === "unknown")
         const assignments = { ...prefixed, ...unwrapped.assignments }
         const payload =
