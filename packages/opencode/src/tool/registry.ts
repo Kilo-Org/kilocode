@@ -68,6 +68,12 @@ import { Git } from "@/git" // kilocode_change
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as ToolNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { ToolOrigin } from "@/kilocode/security/tool/origin" // kilocode_change
+import { CodeTrust } from "@/kilocode/security/code/trust" // kilocode_change
+import { ExtensionHost } from "@/kilocode/security/extension/host" // kilocode_change
+import { SecurityGate } from "@/kilocode/security/gate" // kilocode_change
+import { SecurityFlag } from "@/kilocode/security/flag" // kilocode_change
+import { Global } from "@opencode-ai/core/global" // kilocode_change
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -229,21 +235,87 @@ const layer = Layer.effect(
           Glob.scanSync("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
         )
         if (matches.length) yield* config.waitForDependencies()
+        // kilocode_change start - tools loaded from the user's own global config directory are a
+        // different trust level from tools a checked-out repository ships; record which is which
+        const globalDir = path.resolve(Global.Path.config)
+        // A discovered file's module scope runs the instant it is imported, so the
+        // trust decision has to happen here, between discovery and `import()`.
+        const globalConfig = yield* SecurityFlag.globalConfig(config)
+        const codePolicy = CodeTrust.policy(globalConfig, yield* SecurityFlag.codeEnabled(config))
+        const runtimeOn = yield* SecurityFlag.runtimeEnabled(config)
+        const securityOptions = yield* SecurityGate.options({
+          config,
+          sandboxed: false,
+          workspace: { directory: ctx.directory, worktree: ctx.worktree },
+        })
+        // kilocode_change end
         for (const match of matches) {
           const namespace = path.basename(match, path.extname(match))
+          const origin = path.resolve(match).startsWith(globalDir + path.sep) ? "trusted-config" : "workspace" // kilocode_change
+          // kilocode_change start - discovery != execution: an untrusted file is never imported
+          const trust = CodeTrust.guard({ file: match, kind: "custom-tool", policy: codePolicy })
+          if (!trust.allow) continue
+          // An approved *project* extension is evaluated in a permissioned host
+          // process, not here. Approval says it may run; it does not hand it this process's authority.
+          if (runtimeOn && trust.origin === "workspace" && trust.digest) {
+            const digest = trust.digest
+            const hosted = yield* Effect.promise(() =>
+              ExtensionHost.start({
+                identity: {
+                  type: "custom-tool",
+                  origin: trust.origin,
+                  source: match,
+                  digest,
+                  workspace: ctx.directory,
+                  granted: ExtensionHost.grantsFor(globalConfig, digest),
+                },
+                file: match,
+                scratch: path.join(Global.Path.state, "extension-host", digest.slice(0, 16)),
+                options: securityOptions,
+                allowUnconfinedReads: ExtensionHost.unconfinedReadsAllowed(globalConfig),
+              }).catch(() => undefined),
+            )
+            for (const item of hosted?.tools ?? []) {
+              custom.push(
+                ToolOrigin.mark(
+                  {
+                    id: item.id,
+                    description: item.description,
+                    parameters: Schema.Unknown,
+                    execute: (args: unknown, toolCtx: Tool.Context) =>
+                      Effect.promise(async () => {
+                        const result = await hosted!.invoke(item.id, args, toolCtx.sessionID)
+                        return {
+                          title: item.id,
+                          metadata: { extension: { digest, confined: hosted!.confined } },
+                          output: result.ok ? (result.output ?? "") : `extension refused: ${result.error ?? "error"}`,
+                        }
+                      }),
+                  } as unknown as Tool.Def,
+                  origin,
+                ),
+              )
+            }
+            // A host that could not start is a refusal, not a reason to import the file here: the
+            // whole point of routing this extension to a host is that it never runs in this process.
+            continue
+          }
+          // kilocode_change end
           // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
           // Import it as `file://` so Node on Windows accepts the dynamic import.
           const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries(mod)) {
             if (!isPluginTool(def)) continue
-            custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+            // kilocode_change start - record the tool's structural origin for the security layer
+            custom.push(ToolOrigin.mark(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def), origin))
+            // kilocode_change end
           }
         }
 
         const plugins = yield* plugin.list()
         for (const p of plugins) {
           for (const [id, def] of Object.entries(p.tool ?? {})) {
-            custom.push(fromPlugin(id, def))
+            custom.push(ToolOrigin.mark(fromPlugin(id, def), "plugin")) // kilocode_change
           }
         }
 
@@ -407,7 +479,11 @@ const layer = Layer.effect(
             execute: tool.execute,
             formatValidationError: tool.formatValidationError,
           }
-          return ToolNetwork.isBuiltin(tool) ? ToolNetwork.builtin(result) : result
+          // kilocode_change - the rebuilt definition must keep the markers the security layer reads:
+          // the built-in marker, or the recorded origin of a custom / plugin tool
+          if (ToolNetwork.isBuiltin(tool)) return ToolNetwork.builtin(result)
+          const origin = ToolOrigin.of(tool)
+          return origin ? ToolOrigin.mark(result, origin) : result
           // kilocode_change end
         }),
         { concurrency: "unbounded" },
