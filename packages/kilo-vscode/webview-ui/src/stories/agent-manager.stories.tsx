@@ -33,6 +33,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
+import type { PRComment } from "../../agent-manager/pr/pr-types"
 import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -1980,6 +1981,12 @@ export const MultiProjectSidebar: Story = {
   },
 }
 
+export const MultiProjectSidebar200: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List - minimum sidebar width",
+  parameters: { layout: "fullscreen" },
+}
+
 // ---------------------------------------------------------------------------
 // PR panel — review comments
 // ---------------------------------------------------------------------------
@@ -1998,9 +2005,20 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       url: "https://github.com/org/repo/pull/8594#discussion_r1",
       resolved: false,
       outdated: false,
+      createdAt: Date.now() - 5 * 60 * 1000,
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
-      after: ["  return result", "}", ""],
+      side: "additions",
+      preview: {
+        patch:
+          '@@ -40,6 +40,6 @@\n   const options = { timeout: 5000 }\n   const result = await\n-    execWithShellEnv("gh", args, options)\n+    execWithShellEnv("gh", args, { ...options, env: env(options) })\n   return result\n }\n ',
+        line: 42,
+        side: "additions",
+        base: "b".repeat(40),
+        head: "a".repeat(40),
+        top: true,
+        bottom: true,
+      },
       replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
     },
     {
@@ -2044,7 +2062,13 @@ export const PRPanelComments: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ background: "var(--vscode-editor-background)" }}>
-        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+        <PRComments
+          comments={prComments}
+          worktreeId="wt-a1"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
       </div>
     </StoryProviders>
   ),
@@ -2055,8 +2079,97 @@ export const PRPanelComments200: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ background: "var(--vscode-editor-background)" }}>
-        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+        <PRComments
+          comments={prComments}
+          worktreeId="wt-a1"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
       </div>
     </StoryProviders>
   ),
+}
+
+const remoteThreads: PRComment[] = [
+  {
+    id: "remote-addition",
+    threadId: "thread-addition",
+    author: "kilo-code-bot",
+    body: "Keep this value stable while the request is in progress.\n\nThe caller uses `target` to restore the previous selection.",
+    file: tail.file,
+    line: 1,
+    side: "additions",
+    resolved: false,
+    outdated: false,
+    diffHunk: "@@ -1 +1 @@\n-const target = 'before'\n+const target = 'after'",
+    replies: [{ author: "hubot", body: "Agreed. The loading state should not clear the selection." }],
+  },
+  {
+    id: "remote-deletion",
+    threadId: "thread-deletion",
+    author: "hubot",
+    body: "Does the fallback still use the previous value?",
+    file: tail.file,
+    line: 1,
+    side: "deletions",
+    resolved: true,
+    outdated: false,
+    diffHunk: "@@ -1 +1 @@\n-const target = 'before'",
+  },
+  {
+    id: "remote-outdated",
+    threadId: "thread-outdated",
+    author: "octocat",
+    body: "This file has since been removed. Keep the original context available for the discussion.",
+    file: "src/removed.ts",
+    line: 2,
+    side: "additions",
+    resolved: false,
+    outdated: true,
+    diffHunk: "@@ -1,2 +1,2 @@\n export const state = {\n+  ready: true",
+  },
+]
+
+function RemoteReviewStory(props: { full?: boolean }) {
+  const Panel = props.full ? FullScreenDiffView : DiffPanel
+  const [style, setStyle] = createSignal<"unified" | "split">("unified")
+  const [comments, setComments] = createSignal<ReviewComment[]>([
+    {
+      id: "local-review",
+      file: tail.file,
+      side: "additions",
+      line: 1,
+      comment: "Keep this local note separate from the PR discussion.",
+      selectedText: "const target = 'after'",
+    },
+  ])
+  return (
+    <StoryProviders noPadding>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Panel
+          diffs={[tail]}
+          loading={false}
+          sessionKey={props.full ? "remote-review-full" : "remote-review-inline"}
+          diffStyle={style()}
+          onDiffStyleChange={setStyle}
+          remoteComments={remoteThreads}
+          comments={comments()}
+          onCommentsChange={setComments}
+          onClose={() => {}}
+          onOpenFile={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const DiffPanelWithPRThreads: Story = {
+  name: "DiffPanel - remote PR threads",
+  render: () => <RemoteReviewStory />,
+}
+
+export const FullScreenDiffWithPRThreads: Story = {
+  name: "FullScreenDiffView - remote PR threads",
+  render: () => <RemoteReviewStory full />,
 }

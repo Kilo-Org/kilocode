@@ -94,7 +94,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `session manager throws when not started`() = runBlocking {
+    fun `session manager throws when not started`() = runBlocking<Unit> {
         val app = setup()
         // Don't connect — manager is not started
 
@@ -104,7 +104,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `session manager stops on app disconnect`() = runBlocking {
+    fun `session manager stops on app disconnect`() = runBlocking<Unit> {
         val app = setup()
         ready(app)
 
@@ -274,7 +274,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `recent throws when not started`() = runBlocking {
+    fun `recent throws when not started`() = runBlocking<Unit> {
         val app = setup()
 
         assertFailsWith<IllegalStateException> {
@@ -318,7 +318,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `cloudSessions throws when not started`() = runBlocking {
+    fun `cloudSessions throws when not started`() = runBlocking<Unit> {
         val app = setup()
 
         assertFailsWith<IllegalStateException> {
@@ -430,6 +430,48 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
+    fun `fork sends the message id as a json body for a per-message fork`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.fork("ses_source", "/worktree/path", "msg_7")
+
+        assertEquals("""{"messageID":"msg_7"}""", mock.lastForkBody)
+    }
+
+    @Test
+    fun `fork handoff records a hidden synthetic note for the forked session`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        ForkHandoff.record(app.chat, "ses_forked", "/worktree/path")
+
+        val path = mock.lastPromptPath ?: error("missing prompt request")
+        assertTrue(path.startsWith("/session/ses_forked/prompt_async?"), "Expected prompt path, got $path")
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/worktree/path"), path)
+        val body = mock.lastPromptBody ?: error("missing prompt body")
+        // noReply keeps the note from starting a turn; synthetic keeps it out of the transcript.
+        assertTrue(body.contains(""""noReply":true"""), body)
+        assertTrue(body.contains(""""synthetic":true"""), body)
+        assertTrue(body.contains("<system-reminder>"), body)
+        assertTrue(body.contains("This session was forked from an existing session"), body)
+        // The fork may live in another directory than the context it copied, so the note names it.
+        assertTrue(body.contains("Use this as the current working directory: /worktree/path"), body)
+    }
+
+    @Test
+    fun `fork handoff failure does not propagate`() = runBlocking<Unit> {
+        mock.promptStatus = 500
+        val app = setup()
+        ready(app)
+
+        // The forked session is already usable without the note, so a failed handoff must not surface.
+        ForkHandoff.record(app.chat, "ses_forked", "/worktree/path")
+
+        assertNotNull(mock.lastPromptBody)
+    }
+
+    @Test
     fun `fork surfaces server failure`() = runBlocking {
         mock.sessionForkStatus = 500
         mock.sessionFork = """{"error":"boom"}"""
@@ -445,7 +487,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `fork throws before start`() = runBlocking {
+    fun `fork throws before start`() = runBlocking<Unit> {
         val app = setup()
 
         assertFailsWith<IllegalStateException> {
@@ -500,7 +542,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `share throws before start`() = runBlocking {
+    fun `share throws before start`() = runBlocking<Unit> {
         val app = setup()
 
         assertFailsWith<IllegalStateException> {
@@ -711,7 +753,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `start after stop re-activates`() = runBlocking {
+    fun `start after stop re-activates`() = runBlocking<Unit> {
         val app = setup()
         ready(app)
 
@@ -849,7 +891,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `rename throws before start`() = runBlocking {
+    fun `rename throws before start`() = runBlocking<Unit> {
         val app = setup()
         // Don't connect — manager is not started
 

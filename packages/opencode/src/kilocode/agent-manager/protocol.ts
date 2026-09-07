@@ -96,6 +96,7 @@ export const PromptRequest = Schema.Struct({
   ...Base,
   operation: Schema.Literal("prompt"),
   targetSessionID: SessionID,
+  sourceSessionID: Schema.optional(SessionID),
   prompt: Prompt,
 }).annotate({ identifier: "AgentManagerPromptRequest" })
 

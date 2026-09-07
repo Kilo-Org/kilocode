@@ -5,6 +5,9 @@ export interface BaseUpdateRequest {
   projectId?: string
   worktreeId: string
   sessionId?: string
+  model?: { providerID: string; modelID: string }
+  variant?: string
+  agent?: string
 }
 
 export interface TerminalFont {
@@ -78,6 +81,8 @@ export type {
 
 export interface PRStatus {
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body?: string
   url: string
@@ -114,6 +119,17 @@ export interface RunStatus {
   startedAt?: string
   finishedAt?: string
   error?: string
+}
+
+export interface CaffeinationState {
+  enabled: boolean
+  active: boolean
+  available: boolean
+  error?: string
+}
+
+export interface AgentManagerCaffeinationMessage extends CaffeinationState {
+  type: "agentManager.caffeination"
 }
 
 export interface ManagedSessionState {
@@ -158,6 +174,7 @@ export interface WorktreeFileDiff {
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
+  failed?: boolean
   stamp?: string
   kind?: "image"
   image?: DiffImage

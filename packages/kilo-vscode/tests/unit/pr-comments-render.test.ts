@@ -9,7 +9,7 @@ const WEBVIEW = path.join(ROOT, "webview-ui")
 const FIXTURE = path.join(ROOT, "tests/fixtures/pr-comments-render.tsx")
 
 describe("PR comments", () => {
-  it("renders hunks, collapses resolved threads, and sends a thread to the agent", async () => {
+  it("renders hunks, collapses resolved threads, and fixes a thread with Kilo", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),

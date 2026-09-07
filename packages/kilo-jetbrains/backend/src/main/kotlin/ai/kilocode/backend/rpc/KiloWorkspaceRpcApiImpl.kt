@@ -410,10 +410,8 @@ class KiloWorkspaceRpcApiImpl internal constructor(
     private fun project(path: Path): Project? {
         if (ApplicationManager.getApplication() == null) return null
         val projects = ProjectManager.getInstance().openProjects.filter { !it.isDefault }
-        return projects.firstOrNull { item ->
-            val base = item.basePath?.let(::file) ?: return@firstOrNull false
-            path.startsWith(base)
-        } ?: projects.firstOrNull()
+        val index = deepest(projects.map { it.basePath?.let(::file) }, path)
+        return index?.let { projects[it] } ?: projects.firstOrNull()
     }
 
     private fun gitAvailable(base: Path): Boolean {
@@ -552,4 +550,25 @@ internal fun relativeWithinWorkspace(base: Path, target: Path): String? {
     val rel = relativeWithinBase(base, target) ?: return null
     if (isManagedWorktreeStorage(rel)) return null
     return rel
+}
+
+/**
+ * Returns the index of the [bases] entry that is an ancestor of [path] with the most path
+ * segments, or null if none matches. A managed worktree's path is a prefix match for both the
+ * main checkout's base path and, when open, the worktree's own project base path; preferring the
+ * deepest match routes the file to the worktree's own frame instead of always defaulting to
+ * whichever project happened to open first.
+ */
+internal fun deepest(bases: List<Path?>, path: Path): Int? {
+    var best: Int? = null
+    var depth = -1
+    for ((index, base) in bases.withIndex()) {
+        if (base == null || !path.startsWith(base)) continue
+        val count = base.nameCount
+        if (count > depth) {
+            depth = count
+            best = index
+        }
+    }
+    return best
 }

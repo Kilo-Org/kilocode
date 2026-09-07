@@ -18,6 +18,7 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
+import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
 
@@ -36,6 +37,7 @@ export class VscodeHost implements Host {
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
     private readonly remoteService: RemoteStatusService,
+    private readonly caffeination?: Pick<CaffeinationService, "getState" | "onChange" | "setEnabled">,
   ) {}
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
@@ -137,8 +139,23 @@ export class VscodeHost implements Host {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
     provider.setRemoteService(this.remoteService)
+    const snapshot = () => {
+      if (this.caffeination) {
+        void panel.webview.postMessage({ type: "agentManager.caffeination", ...this.caffeination.getState() })
+      }
+    }
+    const unsubscribe = this.caffeination?.onChange(snapshot)
+    panel.onDidDispose(() => unsubscribe?.())
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: async (msg) => {
+        if (msg.type === "agentManager.setCaffeination") {
+          if (typeof msg.enabled === "boolean") await this.caffeination?.setEnabled(msg.enabled)
+          return null
+        }
+        if (msg.type === "agentManager.requestCaffeination") {
+          snapshot()
+          return null
+        }
         if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
         if (typeof msg.dismissed === "boolean") await this.context.globalState.update(INTRO_KEY, msg.dismissed)
         return null

@@ -191,6 +191,22 @@ describe("AgentManagerOrchestrationBridge", () => {
     test.bridge.dispose()
   })
 
+  it("adds source-session attribution to prompts sent by another agent", async () => {
+    const test = harness()
+    test.request({ ...request, id: "amr_attributed", sourceSessionID: "ses_caller" } as AgentManagerRequest & {
+      sourceSessionID: string
+    })
+    await waitFor(() => test.promptAsync.mock.calls.length === 1)
+
+    expect(test.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parts: [{ type: "text", text: "Continue\n\n<!-- kilo-agent-manager source=ses_caller -->" }],
+      }),
+      { throwOnError: true },
+    )
+    test.bridge.dispose()
+  })
+
   it("stops a managed session through the same close operation as the UI", async () => {
     const test = harness()
     test.status.failReply = true

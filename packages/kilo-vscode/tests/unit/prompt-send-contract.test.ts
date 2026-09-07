@@ -304,28 +304,30 @@ describe("sendMessage / sendCommand draft id contract", () => {
     expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
   })
 
-  it("sendMessage seeds the pending agent before resolving the draft-scoped agent", () => {
+  it("sendMessage seeds the pending agent before resolving draft-scoped settings", () => {
     // Fresh draft IDs are created after ModeSwitcher stored the selected mode in
     // pendingAgentSelection(). The draft scope must inherit that pending agent
-    // before promptAgent(scope) runs, otherwise the first send pairs the selected
+    // before submission(scope) runs, otherwise the first send pairs the selected
     // model with the default agent's system prompt.
     const body = extractFunctionBody(source, "sendMessage")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const settings = submission\(scope, selection\)/,
     )
   })
 
-  it("sendCommand seeds the pending agent before resolving the draft-scoped agent", () => {
+  it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const settings = submission\(scope, effectiveSelection\)/,
     )
   })
 
-  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
-    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
-    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
-    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  it("sendMessage and sendCommand post the settings returned by submission", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const settings = submission(scope, selection)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain(
+      "const settings = submission(scope, effectiveSelection)",
+    )
+    expect(extractFunctionBody(source, "submission")).toContain("agent: resolvePromptAgent({")
   })
 
   it("createSession and clearCurrentSession do not pin the provisional default agent", () => {

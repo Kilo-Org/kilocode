@@ -779,6 +779,14 @@ export const RunCommand = effectCmd({
         const drain = KiloRunDrain.create(sessionID)
         if (!args.attach && !args.auto && !skipPermissions) KiloHeadless.mark(sessionID) // kilocode_change - --yolo skips too
         // kilocode_change end
+        // kilocode_change start - remember whether the model produced any assistant output,
+        // so a run that ends without one does not exit 0
+        let assistantOutput = false
+        // the raced request (prompt, command, or summarize) itself failed; the
+        // result.error handler below already reported the real cause, so the
+        // empty-output diagnostic must not claim a silent model on top of it
+        let promptFailed = false
+        // kilocode_change end
 
         function emit(type: string, data: Record<string, unknown>) {
           if (args.format === "json") {
@@ -830,6 +838,14 @@ export const RunCommand = effectCmd({
               KiloRunAuto.track(tracked, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
+
+              // kilocode_change start - text, reasoning, and tool parts are the
+              // model's response; step markers are not
+              if (part.type === "tool") assistantOutput = true
+              else if ((part.type === "text" || part.type === "reasoning") && part.time?.end && part.text.trim()) {
+                assistantOutput = true
+              }
+              // kilocode_change end
 
               if (part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")) {
                 if (emit("tool_use", { part })) continue
@@ -1075,11 +1091,21 @@ export const RunCommand = effectCmd({
                     }),
             )
             if (result.error) {
+              promptFailed = true
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
               process.exitCode = 1
             }
             await drain.wait(client, cwd)
+            // kilocode_change start - an empty model response must not exit 0: a caller
+            // cannot tell an empty run from a successful one otherwise
             if (await completed) process.exitCode = 1
+            else if (!assistantOutput && !promptFailed) {
+              const message = "run ended without an assistant message; the model returned no output"
+              UI.error(message)
+              emit("error", { error: message })
+              process.exitCode = 1
+            }
+            // kilocode_change end
           } catch (error) {
             const text = error instanceof Error ? error.message : String(error)
             if (!emit("error", { error: text })) UI.error(text)

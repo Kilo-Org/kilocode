@@ -48,6 +48,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Create a new session in the given directory. */
     suspend fun create(directory: String): SessionDto
 
+    /**
+     * Fork session [id] into [directory]. With [messageId] the fork truncates at that message;
+     * without it the whole transcript is copied.
+     */
+    suspend fun fork(id: String, directory: String, messageId: String?): SessionDto
+
     /** Get a single session by ID. */
     suspend fun get(id: String, directory: String): SessionDto
 

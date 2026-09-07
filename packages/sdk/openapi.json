@@ -27973,6 +27973,10 @@
             "type": "string",
             "pattern": "^ses"
           },
+          "sourceSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
           "prompt": {
             "type": "string",
             "minLength": 1,
@@ -42541,6 +42545,9 @@
               "mode": {
                 "type": "string",
                 "enum": ["worktree", "local"]
+              },
+              "worktreeID": {
+                "type": "string"
               },
               "versions": {
                 "type": "boolean"

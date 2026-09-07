@@ -43,6 +43,7 @@ import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
+import { createWorktreeCompletion } from "./worktree-completion"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -113,7 +114,12 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sections = () => store.sections()
   const worktrees = () => store.worktrees()
   const order = () => store.worktreeOrder()
-  const sorted = createMemo(() => sortWorktrees(worktrees(), order()))
+  const completion = createWorktreeCompletion(
+    () => sortWorktrees(worktrees(), order()),
+    () => props.project.id,
+    (wt) => wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
+  )
+  const sorted = completion.rows
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
@@ -261,6 +267,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     return (
       <div use:sortable class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}>
         <WorktreeItem
+          completed={completion.completed(worktree.id)}
+          onCompletionEnd={() => completion.release(worktree.id)}
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
           label={worktree.label || label()}
@@ -291,10 +299,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
           }
           onMoveToNewSection={() => createSection([worktree.id])}
-          onClick={() => {
-            if (pending() === worktree.id) return confirmDelete(worktree.id)
-            props.onSelectWorktree(props.project.id, worktree.id)
-          }}
+          onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
+          onCancelDelete={() => setPending(undefined)}
           onDelete={(event) => {
             event.stopPropagation()
             confirmDelete(worktree.id)
