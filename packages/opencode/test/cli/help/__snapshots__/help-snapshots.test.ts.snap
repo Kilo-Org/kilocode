@@ -117,19 +117,21 @@ exports[`Kilo CLI help-text snapshots every documented command emits stable help
 debugging and troubleshooting tools
 
 Commands:
-  kilo debug config        show resolved configuration
-  kilo debug lsp           LSP debugging utilities
-  kilo debug rg            ripgrep debugging utilities
-  kilo debug file          file system debugging utilities
-  kilo debug scrap         list all known projects
-  kilo debug skill         list all available skills
-  kilo debug snapshot      snapshot debugging utilities
-  kilo debug startup       print startup timing
-  kilo debug agent <name>  show agent configuration details
-  kilo debug v2            debug v2 catalog and built-in plugins
-  kilo debug info          show debug information
-  kilo debug paths         show global paths (data, config, cache, state)
-  kilo debug wait          wait indefinitely (for debugging)
+  kilo debug config                   show resolved configuration
+  kilo debug lsp                      LSP debugging utilities
+  kilo debug rg                       ripgrep debugging utilities
+  kilo debug file                     file system debugging utilities
+  kilo debug scrap                    list all known projects
+  kilo debug skill                    list all available skills
+  kilo debug snapshot                 snapshot debugging utilities
+  kilo debug startup                  print startup timing
+  kilo debug agent <name>             show agent configuration details
+  kilo debug v2                       debug v2 catalog and built-in plugins
+  kilo debug security-bench <corpus>  measure the security reviewer against a corpus of shell
+                                      commands
+  kilo debug info                     show debug information
+  kilo debug paths                    show global paths (data, config, cache, state)
+  kilo debug wait                     wait indefinitely (for debugging)
 
 Options:
   -h, --help        show help                                                              [boolean]
