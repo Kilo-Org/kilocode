@@ -22,6 +22,17 @@ import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import {
+  securityFacts,
+  canonicalCommand,
+  commandEffects,
+  commandOperation,
+  dynamicArguments,
+  opaqueRedirects,
+  redirectNodes,
+  redirectTarget,
+  type ShellEffect,
+} from "@/kilocode/tool/shell-security-facts" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -43,6 +54,19 @@ const FILES = new Set([
   "chmod",
   "chown",
   "cat",
+  // kilocode_change start - read-only file readers. They belong here for the same reason `cat` does:
+  // the scanner has to see their target to classify it, and the security layer must reach the same
+  // rule whichever reader named the file. Deliberately excludes readers that can write their own
+  // output (`sort -o`, `uniq out`) and `find`, whose `-exec` runs an arbitrary command.
+  "head",
+  "tail",
+  "wc",
+  "nl",
+  "stat",
+  "file",
+  "ls",
+  "diff",
+  // kilocode_change end
   // Leave PowerShell aliases out for now. Common ones like cat/cp/mv/rm/mkdir
   // already hit the entries above, and alias normalization should happen in one
   // place later so we do not risk double-prompting.
@@ -56,7 +80,7 @@ const FILES = new Set([
   "rename-item",
 ])
 // kilocode_change start
-const READ = new Set(["cat", "get-content"])
+const READ = new Set(["cat", "get-content", "head", "tail", "wc", "nl", "stat", "file", "ls", "diff"])
 // kilocode_change end
 const CMD_FILES = new Set([
   "copy",
@@ -89,6 +113,7 @@ type Scan = {
   patterns: Set<string>
   always: Set<string>
   access: Access // kilocode_change
+  effects: ShellEffect[] // kilocode_change - structured file effects for the security decision layer
 }
 
 type Chunk = {
@@ -210,15 +235,21 @@ function prefix(text: string) {
 
 function pathArgs(list: Part[], ps: boolean, cmd = false) {
   if (!ps) {
-    return list
-      .slice(1)
-      .filter(
-        (item) =>
-          !item.text.startsWith("-") &&
-          !(cmd && item.text.startsWith("/")) &&
-          !(list[0]?.text === "chmod" && item.text.startsWith("+")),
-      )
-      .map((item) => item.text)
+    // kilocode_change - `--target-directory=.git/hooks` is one token, so dropping every token that
+    // starts with `-` drops the path with it. Option *values* stay, option names still go.
+    const head = list[0] ? canonicalCommand(list[0].text).name : undefined
+    return list.slice(1).flatMap((item) => {
+      const text = item.text
+      if (text.startsWith("-")) {
+        const eq = text.indexOf("=")
+        if (eq <= 0) return []
+        const value = text.slice(eq + 1)
+        return value ? [value] : []
+      }
+      if (cmd && text.startsWith("/")) return []
+      if (head === "chmod" && text.startsWith("+")) return []
+      return [text]
+    })
   }
 
   const out: string[] = []
@@ -287,7 +318,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
-  metadata: ReturnType<typeof heredocs>, // kilocode_change
+  metadata: ReturnType<typeof heredocs> & { securityFacts?: ReturnType<typeof securityFacts> }, // kilocode_change
   description?: string, // kilocode_change
 ) {
   // kilocode_change
@@ -360,6 +391,7 @@ export const ShellPermission = Effect.gen(function* () {
     const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
     const file = text && prefix(text)
     if (!file || dynamic(file, ps)) return
+    if (/^~[^/\\]+[/\\]/.test(file)) return // kilocode_change - unresolved named home is never workspace-relative
     const next = ps ? provider(file) : file
     if (!next) return
     return yield* resolve(next, cwd, shell)
@@ -377,37 +409,115 @@ export const ShellPermission = Effect.gen(function* () {
       patterns: new Set<string>(),
       always: new Set<string>(),
       access: "read",
+      effects: [], // kilocode_change
     }
     const kind = ShellID.toKind(Shell.name(shell))
+    // kilocode_change - quoting and escaping change the spelling of a command, never which program
+    // runs, so every lookup below is keyed on the canonical name rather than the raw token.
+    const posix = !ps && kind !== "cmd"
+    const named = (node: Node) => {
+      const token = parts(node)[0]?.text
+      if (token === undefined) return undefined
+      const canonical = canonicalCommand(token, posix)
+      return { ...canonical, name: posix ? canonical.name : canonical.name.toLowerCase() }
+    }
 
     const nodes = commands(root)
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
-    if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+    // kilocode_change - read-only *access* is a claim about the program, so it needs the name the
+    // shell would look up. A canonical basename is enough to decide that a path-spelled `rm` still
+    // deletes — over-reporting an effect only tightens — but `/tmp/evil/cat` is not `cat`, and
+    // treating it as one would narrow an external-directory prompt on a program nobody identified.
+    const lookedUp = (node: Node) => {
+      const canonical = named(node)
+      return canonical && !canonical.pathed ? canonical.name : undefined
+    }
+    if (nodes.some((node) => !READ.has(lookedUp(node) ?? ""))) {
       scan.access = "unknown"
     }
 
-    for (const node of nodes) {
+    // kilocode_change start - resolve every file effect against the working directory that is
+    // actually in force where it appears. `cd /tmp && echo x > out` writes `/tmp/out`; resolving it
+    // against the original cwd would report an in-workspace write for an out-of-workspace one. The
+    // walk is ordered by source position because that is the order the shell applies them in, and a
+    // `cd` whose target cannot be determined makes every later target unknown rather than wrong.
+    type Step = { at: number; node: Node; redirect: boolean }
+    const steps: Step[] = [
+      ...nodes.map((node) => ({ at: node.startIndex, node, redirect: false })),
+      ...redirectNodes(root).map((node) => ({ at: node.startIndex, node, redirect: true })),
+    ].sort((left, right) => left.at - right.at)
+    let base: string | undefined = cwd
+
+    for (const step of steps) {
+      if (step.redirect) {
+        const target = redirectTarget(step.node)
+        if (!target) continue
+        const resolved =
+          target.text !== undefined && base !== undefined ? yield* argpath(target.text, base, ps, shell) : undefined
+        scan.effects.push(resolved ? { operation: target.operation, path: resolved } : { operation: target.operation })
+        continue
+      }
+
+      const node = step.node
       const command = parts(node)
       const tokens = command.map((item) => item.text)
-      const cmd = ps || kind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
+      const cmd = named(node)?.name
 
       if (cmd && (FILES.has(cmd) || (kind === "cmd" && CMD_FILES.has(cmd)))) {
         const accessKind = access(cmd, node)
-        for (const arg of pathArgs(command, ps, kind === "cmd")) {
-          const resolved = yield* argpath(arg, cwd, ps, shell)
+        const operation = commandOperation(cmd) // kilocode_change
+        const args = pathArgs(command, ps, kind === "cmd")
+        // kilocode_change - operands of one command do not share a role: `cp` reads its sources and
+        // writes its destination, and `--target-directory` moves the destination off the last operand
+        const roles = commandEffects(cmd, tokens, args) // kilocode_change
+        // kilocode_change - an expanded argument never reaches the token list; record it as unknown
+        if (operation && dynamicArguments(node)) scan.effects.push({ operation })
+        for (const [index, arg] of args.entries()) {
+          const role = roles[index] // kilocode_change
+          // kilocode_change - two readings of the same argument, on purpose. External-directory
+          // scope keeps its existing anchor so a `cd` the scanner could not follow never *removes*
+          // a prompt; the security layer's effect instead loses its path, which the core reads as an
+          // unknown target and holds at ask.
+          const anchored = yield* argpath(arg, base ?? cwd, ps, shell)
+          const resolved = base === undefined ? undefined : anchored
           yield* Effect.logInfo("resolved path", { arg, resolved })
-          if (!resolved || containsPath(resolved, instance)) continue
-          const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
+          // kilocode_change - an argument the scanner could not resolve is reported without a path,
+          // so the security core sees an unknown target instead of nothing at all
+          if (role) scan.effects.push(resolved ? { operation: role, path: resolved } : { operation: role })
+          if (!anchored || containsPath(anchored, instance)) continue
+          const dir = (yield* fs.isDir(anchored)) ? anchored : path.dirname(anchored)
           scan.dirs.add(dir)
           if (accessKind !== "read") scan.access = "unknown"
         }
       }
+
+      // kilocode_change start - track the working directory this sequence leaves behind
+      if (cmd && CWD.has(cmd)) {
+        const arg = pathArgs(command, ps, kind === "cmd")[0]
+        // A `cd` with no argument goes home, `cd -` goes back and `popd` unwinds a stack this scan
+        // does not model. None of those are determinable here, and a wrong anchor is worse than none.
+        base =
+          cmd === "popd" || arg === undefined || base === undefined
+            ? undefined
+            : ((yield* argpath(arg, base, ps, shell)) ?? undefined)
+      }
+      // kilocode_change end
 
       if (tokens.length && (!cmd || !CWD.has(cmd))) {
         scan.patterns.add(source(node))
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
       }
     }
+
+    // kilocode_change - a grammar whose redirections cannot be read structurally still redirects
+    if (opaqueRedirects(root)) scan.effects.push({ operation: "update" })
+
+    // A directory change contributes no pattern, so a run made only of them used to raise no ask at
+    // all — and a redirect attached to one (`cd . > .git/hooks/pre-commit` truncates that hook) then
+    // never reached the permission gate. The scan saw the write; give it a pattern so the decision
+    // layer is handed the facts. No `always` entry: there is no prefix here worth persisting.
+    if (scan.patterns.size === 0 && scan.effects.length > 0) scan.patterns.add(root.text.trim())
+    // kilocode_change end
 
     // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
     const lost = unparsed(root, nodes.length)
@@ -427,16 +537,33 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
-        const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
+        // kilocode_change start - reuse this scan's AST facts for the security decision layer
+        const nodes = commands(tree.rootNode)
+        const metadata = {
+          ...heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))),
+          securityFacts: {
+            ...securityFacts(
+              tree.rootNode,
+              unparsed(tree.rootNode, nodes.length).length,
+              nodes,
+              !ps && ShellID.toKind(Shell.name(input.shell)) !== "cmd",
+            ),
+            effects: scan.effects,
+          },
+        }
+        // kilocode_change end
         if (!containsPath(input.cwd, instance)) {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
-        const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
+        // kilocode_change start - an approved escalation removes the confinement, so it has to be
+        // settled before the command itself is decided: the security layer reads the escalation flag
+        // as a containment fact, and reading it after this ask would judge the call under a sandbox
+        // that no longer applies to it.
+        const gitMutation = nodes.some((node) => mutatesGit(node.text)) // reuse the scan above
         if (input.escalate && gitMutation) {
           yield* ctx.ask({
-            permission: "sandbox_escalation", // kilocode_change
+            permission: "sandbox_escalation",
             patterns: [input.command],
             always: [],
             metadata: {
@@ -446,6 +573,8 @@ export const ShellPermission = Effect.gen(function* () {
             },
           })
         }
+        // kilocode_change end
+        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
       }),
     )
   })

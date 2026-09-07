@@ -152,7 +152,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
         input.ctx.sessionID,
         input.entry.tool,
         Effect.gen(function* () {
-          yield* input.ctx.ask({ permission: input.entry.key, metadata: {}, patterns: ["*"], always: ["*"] })
+          yield* input.ctx.ask({ source: "mcp", permission: input.entry.key, metadata: {}, patterns: ["*"], always: ["*"] }) // kilocode_change
           // Deliberately mirrors McpCatalog.convertTool's transport call so the MCP service stays free of tool-loop concerns.
           return yield* Effect.promise(async () => {
             const raw = await input.entry.tool.client.callTool(

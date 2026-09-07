@@ -87,8 +87,10 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
   test("asks separately before mutating Git when the session sandbox is enabled", async () => {
     await using tmp = await tmpdir({ git: true })
     const requests = await scan(tmp.path, "git add . && git commit -m test", "bash", true)
-    expect(requests.map((request) => request.permission)).toEqual(["bash", "sandbox_escalation"])
-    expect(requests[1]?.metadata?.sandboxEscalation).toBe(true)
+    // kilocode_change - the escalation is settled first: it removes the confinement the bash
+    // decision would otherwise be taken under.
+    expect(requests.map((request) => request.permission)).toEqual(["sandbox_escalation", "bash"])
+    expect(requests[0]?.metadata?.sandboxEscalation).toBe(true)
   })
 
   test("pwsh: bare '--' git commands now produce a denied pattern", async () => {

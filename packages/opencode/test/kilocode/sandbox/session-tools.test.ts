@@ -169,6 +169,7 @@ function resolve(ctx: InstanceContext, metadataCalls: { toolCallID: string; valu
       // capture metadata writes so tests can assert on recorded approval provenance
       metadata: (toolCallID, value) => Effect.sync(() => void metadataCalls.push({ toolCallID, value })),
       completeToolCall: () => Effect.void,
+      securityBlocked: () => false,
     },
     bypassAgentCheck: false,
     messages: [],
@@ -384,3 +385,43 @@ it.live("records why a denied tool call was refused on the tool part's metadata"
     })
   }),
 )
+
+for (const name of ["read", "bash", "write", "alias_tool"]) {
+  it.live(`MCP catalog preserves source for builtin collision ${name}`, () => Effect.gen(function* () {
+    const tmp = yield* fixture()
+    approvals.length = 0
+    const entry: MCP.McpTool = {
+      def: { name, inputSchema: { type: "object", properties: {} } },
+      clientName: "project-config-server",
+      client: { callTool: async () => ({ content: [] }) } as unknown as MCP.McpTool["client"],
+    }
+    const tools = yield* resolve(tmp.ctx).pipe(Effect.provide(Layer.mergeAll(
+      TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
+      Layer.mock(MCP.Service)({
+        tools: () => Effect.succeed({ [name]: entry }),
+        clients: () => Effect.succeed({}),
+      }),
+    )))
+    const tool = tools[name]
+    expect(tool).toBeDefined()
+    if (!tool) throw new Error("missing catalog tool")
+    yield* call(tool, {}, `mcp-${name}`)
+    expect(approvals.at(-1)).toMatchObject({ source: "mcp", permission: name })
+  }))
+}
+
+it.live("an unmarked registry entry cannot inherit builtin trust from its name", () => Effect.gen(function* () {
+  const tmp = yield* fixture()
+  const registry = yield* ToolRegistry.Service
+  const entry = (yield* registry.all()).find((item) => item.id === "write")
+  if (!entry) throw new Error("missing write fixture")
+  approvals.length = 0
+  const tools = yield* resolve(tmp.ctx).pipe(Effect.provide(Layer.mergeAll(
+    TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
+    Layer.mock(ToolRegistry.Service)({ tools: () => Effect.succeed([{ ...entry }]) }),
+  )))
+  const tool = tools.write
+  if (!tool) throw new Error("missing registry tool")
+  yield* call(tool, { filePath: path.join(tmp.a, "ordinary.txt"), content: "hello" }, "custom-write")
+  expect(approvals.at(-1)?.source).toBe("unknown")
+}))

@@ -285,6 +285,7 @@ export const RunCommand = effectCmd({
       () => import("@/kilocode/cloud-session"),
     )
     const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
+    const { SecurityAsk } = yield* Effect.promise(() => import("@/kilocode/security-decision/ask"))
     const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
@@ -944,6 +945,14 @@ export const RunCommand = effectCmd({
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
               if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
+                await client.permission.reply({ requestID: permission.id, reply: "reject" })
+                continue
+              }
+              // kilocode_change end
+              // kilocode_change start - a security-raised ask is never auto-approved. Rejecting it blocks
+              // that one call with the fixed security result; the turn continues and can replan.
+              // `loop` only runs for non-interactive modes, so an interactive run still prompts a human.
+              if (SecurityAsk.autoDecision({ interactive: false, metadata: permission.metadata }) === "block") {
                 await client.permission.reply({ requestID: permission.id, reply: "reject" })
                 continue
               }

@@ -143,6 +143,34 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
               metadata: { processID: found.id, status: found.status },
             }
           }
+          // kilocode_change start - a restart respawns the process, so ask before the side effect,
+          // the same way `start` does. Previously restart mutated first and never asked at all.
+          if (params.action === "restart") {
+            if (!containsPath(found.cwd, yield* InstanceState.context)) {
+              const pattern =
+                process.platform === "win32"
+                  ? FSUtil.normalizePathPattern(path.join(found.cwd, "*"))
+                  : path.join(found.cwd, "*")
+              yield* ctx.ask({
+                permission: "external_directory",
+                patterns: [pattern],
+                always: [pattern],
+                metadata: { command: found.command, access: "unknown" },
+              })
+            }
+            yield* ctx.ask({
+              permission: "bash",
+              patterns: [found.command],
+              always: [found.command.split(/\s+/, 1)[0] + " *"],
+              metadata: {
+                command: found.command,
+                ...(found.description ? { description: found.description } : {}),
+                action: "restart",
+                backgroundProcess: true,
+              },
+            })
+          }
+          // kilocode_change end
           const info =
             params.action === "stop"
               ? yield* Effect.promise(() => BackgroundProcess.stop(id))
