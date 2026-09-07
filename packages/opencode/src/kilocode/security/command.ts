@@ -1060,17 +1060,77 @@ export namespace CommandSemantics {
     clc: "clear-content",
   }
 
+  const ANSI_SIMPLE: Record<string, string> = {
+    a: "\x07",
+    b: "\b",
+    e: "\x1b",
+    E: "\x1b",
+    f: "\f",
+    n: "\n",
+    r: "\r",
+    t: "\t",
+    v: "\v",
+    "\\": "\\",
+    "'": "'",
+    '"': '"',
+    "?": "?",
+  }
+
+  /**
+   * One ANSI-C escape inside `$'…'`, as bash decodes it before the word ever reaches the program.
+   *
+   * Returns the decoded text and the index just past the escape, or `undefined` for a sequence bash
+   * leaves alone (backslash plus an unrecognised character stays literal). `\0` and `\x00` terminate
+   * the word in bash, which is reported as `end` so the caller can stop rather than keep a NUL in a
+   * path it is about to classify.
+   */
+  function ansiEscape(text: string, at: number): { value: string; next: number; end?: boolean } | undefined {
+    const ch = text[at]
+    if (ch === undefined) return undefined
+    const simple = ANSI_SIMPLE[ch]
+    if (simple !== undefined) return { value: simple, next: at + 1 }
+    if (ch >= "0" && ch <= "7") {
+      const digits = /^[0-7]{1,3}/.exec(text.slice(at))![0]
+      const code = parseInt(digits, 8)
+      return { value: code === 0 ? "" : String.fromCharCode(code), next: at + digits.length, end: code === 0 }
+    }
+    if (ch === "x" || ch === "u" || ch === "U") {
+      const width = ch === "x" ? 2 : ch === "u" ? 4 : 8
+      const digits = new RegExp(`^[0-9a-fA-F]{1,${width}}`).exec(text.slice(at + 1))?.[0]
+      if (digits === undefined) return undefined
+      const code = parseInt(digits, 16)
+      return {
+        value: code === 0 ? "" : String.fromCodePoint(code),
+        next: at + 1 + digits.length,
+        end: code === 0,
+      }
+    }
+    if (ch === "c") {
+      const target = text[at + 1]
+      if (target === undefined) return undefined
+      const code = target.toUpperCase().charCodeAt(0) ^ 0x40
+      return { value: code === 0 ? "" : String.fromCharCode(code), next: at + 2, end: code === 0 }
+    }
+    return undefined
+  }
+
   /**
    * Remove every layer of shell quoting while keeping the quoted content, so `r''m`, `'r'm`, `"rm"`
    * and `~/".ssh"` normalise to what the shell actually executes. Double-quote escapes are honoured.
+   *
+   * `$'…'` is decoded rather than merely stripped, because bash decodes it: `rm -rf $'\x2f'` deletes
+   * `/`. Reading the operand as the literal text `\x2f` classified it as an ordinary relative path,
+   * which is the difference between a denial and an allow.
    */
   export function dequote(text: string) {
     let out = ""
     let quote: "'" | '"' | undefined
+    let ansi = false
     for (let i = 0; i < text.length; i++) {
       const ch = text[i]!
       if (quote === undefined && ch === "$" && text[i + 1] === "'") {
         quote = "'"
+        ansi = true
         i++
         continue
       }
@@ -1080,6 +1140,18 @@ export namespace CommandSemantics {
       }
       if (quote !== undefined && ch === quote) {
         quote = undefined
+        ansi = false
+        continue
+      }
+      if (ansi && ch === "\\") {
+        const escape = ansiEscape(text, i + 1)
+        if (escape === undefined) {
+          out += ch
+          continue
+        }
+        if (escape.end) return out
+        out += escape.value
+        i = escape.next - 1
         continue
       }
       if (quote === '"' && ch === "\\" && i + 1 < text.length && /[$`"\\\n]/.test(text[i + 1]!)) {
@@ -1167,20 +1239,45 @@ export namespace CommandSemantics {
             out.chdir = list.shift()
             continue
           }
-          // `env -S 'cmd args'` re-splits its argument and executes it: analyse it like `sh -c`.
-          if (
-            name === "env" &&
-            (flag === "-S" || flag === "--split-string" || flag.startsWith("-S") || flag.startsWith("--split-string="))
-          ) {
-            const inline =
-              flag === "-S" || flag === "--split-string"
-                ? list.shift()
-                : flag.startsWith("-S")
-                  ? flag.slice(2)
-                  : flag.slice("--split-string=".length)
+          if (name === "env" && flag.startsWith("--split-string=")) {
             out.executable = "sh"
-            out.argv = ["-c", [inline ?? "", ...list].join(" ")]
+            out.argv = ["-c", [flag.slice("--split-string=".length), ...list].join(" ")]
             return out
+          }
+          if (name === "env" && flag === "--split-string") {
+            out.executable = "sh"
+            out.argv = ["-c", [list.shift() ?? "", ...list].join(" ")]
+            return out
+          }
+          // Short options cluster, so `-iS` is `-i -S` and `env -iS 'rm -rf /'` re-splits and executes
+          // its argument exactly as `env -S` does. Matching only a token that *starts* with `-S` read
+          // `-iS` as an unknown flag and left the quoted command to be taken for a program name.
+          if (name === "env" && /^-[^-]/.test(flag)) {
+            const letters = flag.slice(1)
+            let consumed = false
+            for (let i = 0; i < letters.length; i++) {
+              const letter = letters[i]!
+              // `-S` and `-u`/`-C` take a value: the rest of this token, or the next argument.
+              if (letter === "S") {
+                const inline = letters.slice(i + 1)
+                const script = inline.length > 0 ? inline : (list.shift() ?? "")
+                out.executable = "sh"
+                out.argv = ["-c", [script, ...list].join(" ")]
+                return out
+              }
+              if (letter === "u" || letter === "C") {
+                const inline = letters.slice(i + 1)
+                if (inline.length > 0) {
+                  if (letter === "C") out.chdir = inline
+                } else {
+                  const value = list.shift()
+                  if (letter === "C") out.chdir = value
+                }
+                consumed = true
+                break
+              }
+            }
+            if (consumed) continue
           }
           if (values.has(flag)) list.shift()
           if (flag.startsWith("-I") && name === "xargs" && flag.length > 2) continue
@@ -1712,9 +1809,24 @@ export namespace CommandSemantics {
         ...named.map((value) => ({ value, effect: "write" as const })),
       ]
     }
+    /**
+     * A link names its target as well as the name being created, and the target is read authority:
+     * a hard link to `~/.ssh/id_rsa` hands the same inode a workspace path, and a symlink makes the
+     * credential reachable under one. Classifying only the destination made `ln ~/.ssh/id_rsa ./key`
+     * an ordinary workspace write, and the following `cat ./key` an ordinary workspace read. `cp`
+     * has always classified its source; `ln` was the outlier.
+     */
     if (executable === "ln") {
-      if (ops.length === 1) return [{ value: path.basename(ops[0]!), effect: "write" }]
-      return ops.slice(-1).map((value) => ({ value, effect: "write" }))
+      if (ops.length === 1)
+        return [
+          { value: ops[0]!, effect: "read" },
+          { value: path.basename(ops[0]!), effect: "write" },
+        ]
+      const destination = ops.at(-1)!
+      return [
+        ...ops.slice(0, -1).map((value) => ({ value, effect: "read" as const })),
+        { value: destination, effect: "write" as const },
+      ]
     }
     if (executable === "rsync" || executable === "scp") {
       const local = ops.filter((value) => !/^[^/]+:/.test(value) && !value.startsWith("rsync://"))
@@ -1735,10 +1847,37 @@ export namespace CommandSemantics {
     return ops.map((value) => ({ value, effect: value === dest ? "write" : moves ? "delete" : "read" }))
   }
 
+  /**
+   * `find` takes its global options *before* the starting points: `find -L ~/.ssh -delete` walks the
+   * symlinked key store and deletes it. Treating the first `-` token as the start of the expression
+   * dropped the real root and left the operand list to fall back to `.`, which classifies as the
+   * workspace — an allow for a command that empties a credential store.
+   */
+  const FIND_GLOBAL = new Set(["-H", "-L", "-P", "-d"])
+
   function findSpec(argv: string[]): Spec {
-    const start = argv.findIndex((arg) => arg.startsWith("-") || arg === "(" || arg === "!")
-    const paths = (start === -1 ? argv : argv.slice(0, start)).filter((arg) => !arg.startsWith("-"))
-    const rest = start === -1 ? [] : argv.slice(start)
+    let head = 0
+    while (head < argv.length) {
+      const arg = argv[head]!
+      if (FIND_GLOBAL.has(arg)) {
+        head += 1
+        continue
+      }
+      // `-D debugopts` takes a value; `-Olevel` carries its own.
+      if (arg === "-D") {
+        head += 2
+        continue
+      }
+      if (/^-O\d*$/.test(arg)) {
+        head += 1
+        continue
+      }
+      break
+    }
+    const tail = argv.slice(head)
+    const start = tail.findIndex((arg) => arg.startsWith("-") || arg === "(" || arg === "!")
+    const paths = (start === -1 ? tail : tail.slice(0, start)).filter((arg) => !arg.startsWith("-"))
+    const rest = start === -1 ? [] : tail.slice(start)
     const exec = rest.findIndex((arg) => /^-(exec|execdir|ok|okdir)$/.test(arg))
     const command = exec >= 0 ? base(rest[exec + 1] ?? "") : undefined
     const remove = rest.includes("-delete") || (command !== undefined && DELETE.has(command))
@@ -1747,11 +1886,29 @@ export namespace CommandSemantics {
       : command && !READERS.has(command) && !METADATA.has(command)
         ? "exec"
         : "read"
+    /**
+     * The arguments of `-exec` are operands of their own. `find . -exec cat ~/.ssh/id_rsa \;` reads a
+     * private key; classifying only the starting point `.` made it an ordinary workspace read. `{}`
+     * is the match placeholder and `;` / `+` terminate the clause, so neither is a path.
+     */
+    const carried: Array<{ value: string; effect: FileEffect }> = []
+    if (exec >= 0) {
+      const commandEffect: FileEffect = remove
+        ? "delete"
+        : command && !READERS.has(command) && !METADATA.has(command)
+          ? "exec"
+          : "read"
+      for (const arg of rest.slice(exec + 2)) {
+        if (arg === ";" || arg === "\\;" || arg === "+") break
+        if (arg === "{}" || arg.startsWith("-")) continue
+        carried.push({ value: arg, effect: commandEffect })
+      }
+    }
     return {
       effect,
       recursive: true,
       force: true,
-      operands: (paths.length > 0 ? paths : ["."]).map((value) => ({ value, effect, within: true })),
+      operands: [...(paths.length > 0 ? paths : ["."]).map((value) => ({ value, effect, within: true })), ...carried],
       encoded: false,
       network: false,
       reads: effect === "read",

@@ -275,21 +275,45 @@ export namespace PathRisk {
     return input
   }
 
-  /** Realpath of the nearest existing ancestor joined with the remaining segments. */
+  /**
+   * The path the operating system would reach, not the one the string spells.
+   *
+   * Walked one segment at a time, resolving each existing prefix through `realpath` *before* the next
+   * segment is applied, because that is the order the kernel uses. `path.resolve` collapses `..`
+   * lexically first, and the two disagree exactly where it matters: with `link -> ~/.ssh` inside the
+   * workspace, `link/../.ssh/id_rsa` is `~/.ssh/id_rsa` on disk and an ordinary workspace path
+   * lexically. Once the walk leaves the part that exists, the remaining segments are joined — there
+   * is no symlink left to follow, so lexical is correct there.
+   */
   export function physical(target: string): { canonical: string; exists: boolean } {
-    const parts: string[] = []
-    let current = path.resolve(target)
-    const exists = existsSync(current)
+    const absolute = path.resolve(target)
+    // `existsSync` asks the kernel, so it answers for the written path rather than the collapsed one.
+    const exists = existsSync(path.isAbsolute(target) ? target : absolute)
     try {
-      while (!existsSync(current)) {
-        const parent = path.dirname(current)
-        if (parent === current) return { canonical: path.resolve(target), exists }
-        parts.unshift(path.basename(current))
-        current = parent
+      const written = path.isAbsolute(target) ? target : absolute
+      const root = path.parse(written).root || path.sep
+      const pending: string[] = []
+      let current = root
+      for (const segment of written.slice(root.length).split(/[\\/]+/)) {
+        if (segment === "" || segment === ".") continue
+        if (pending.length > 0) {
+          pending.push(segment)
+          continue
+        }
+        if (segment === "..") {
+          current = path.dirname(current)
+          continue
+        }
+        const next = path.join(current, segment)
+        if (!existsSync(next)) {
+          pending.push(segment)
+          continue
+        }
+        current = realpathSync.native(next)
       }
-      return { canonical: path.join(realpathSync.native(current), ...parts), exists }
+      return { canonical: pending.length > 0 ? path.join(current, ...pending) : current, exists }
     } catch {
-      return { canonical: path.resolve(target), exists }
+      return { canonical: absolute, exists }
     }
   }
 
@@ -468,11 +492,20 @@ export namespace PathRisk {
         ? path.resolve(cwd, expanded)
         : undefined
     if (!absolute) return unknown(input)
+    /**
+     * The path as written, with `..` still in it. `path.resolve` and `path.normalize` collapse `..`
+     * lexically, which is the one thing the kernel does not do — it follows a symlink first and then
+     * applies `..` to the link's real parent. Handing `physical()` the collapsed form meant
+     * `link/../.ssh/id_rsa`, with `link -> ~/.ssh`, was canonicalised inside the workspace instead of
+     * into the key store. The collapsed `absolute` is still what the *lexical* half is judged on, and
+     * the stricter of the two wins as before.
+     */
+    const written = path.isAbsolute(expanded) ? expanded : `${cwd}${path.sep}${expanded}`
     // Removing a symlink entry never touches its target; classify the link where it lives.
     const physicalPath =
       opts?.follow === false && !expanded.endsWith("/") && link(absolute)
-        ? { canonical: path.join(physical(path.dirname(absolute)).canonical, path.basename(absolute)), exists: true }
-        : physical(absolute)
+        ? { canonical: path.join(physical(path.dirname(written)).canonical, path.basename(absolute)), exists: true }
+        : physical(written)
     const lexical = relate(absolute, env)
     const canonical = relate(physicalPath.canonical, env)
     const stricter = rank[canonical.relation] >= rank[lexical.relation] ? canonical : lexical

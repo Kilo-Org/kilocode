@@ -769,3 +769,51 @@ describe("parser completeness", () => {
     expect(nested.depth).toBe(1)
   })
 })
+
+// Every case below auto-allowed before it was fixed: the same effect reached the same place by a
+// spelling the normaliser did not decode, did not unwrap, or did not classify at all.
+describe("spellings that used to reach the effect unclassified", () => {
+  test("ANSI-C quoting is decoded, because bash decodes it before the program sees the word", async () => {
+    // `rm -rf $'\x2f'` deletes `/`. Read literally the operand is the relative path `\x2f`.
+    expectDecision(await decide("rm -rf $'\\x2f'"), "deny", "DESTRUCTIVE_FILESYSTEM", true)
+    expectDecision(await decide("rm -rf $'\\057'"), "deny", "DESTRUCTIVE_FILESYSTEM", true)
+    expectDecision(await decide(`cat $'${home}'/.ssh/id_rsa`), "deny", "SENSITIVE_READ", true)
+    // Ordinary text inside `$'…'` keeps its meaning rather than acquiring one.
+    expectDecision(await decide("rm -rf $'build'"), "allow")
+  })
+
+  test("short options cluster, so `-iS` is `-i -S` and still re-splits", async () => {
+    for (const command of ["env -S 'rm -rf /'", "env -i -S 'rm -rf /'", "env -iS 'rm -rf /'"])
+      expectDecision(await decide(command), "deny", "DESTRUCTIVE_FILESYSTEM", true)
+  })
+
+  test("find takes its global options before the starting points", async () => {
+    expectDecision(await decide(`find ${home}/.ssh -delete`), "deny", "SENSITIVE_WRITE", true)
+    for (const flag of ["-L", "-H", "-P"])
+      expectDecision(await decide(`find ${flag} ${home}/.ssh -delete`), "deny", "SENSITIVE_WRITE", true)
+    // The starting point is still what is walked when the options are absent.
+    expectDecision(await decide("find -L . -name '*.ts'"), "allow")
+  })
+
+  test("the arguments of -exec are operands of their own", async () => {
+    expectDecision(await decide(`find . -exec cat ${home}/.ssh/id_rsa ;`), "deny", "SENSITIVE_READ", true)
+    expectDecision(await decide(`find -L . -exec cat ${home}/.ssh/id_rsa ;`), "deny", "SENSITIVE_READ", true)
+    // `{}` is the match placeholder, not a path, and an ordinary -exec stays ordinary.
+    expectDecision(await decide("find . -name '*.log' -exec cat {} ;"), "allow")
+  })
+
+  test("a link names its target, and the target is read authority", async () => {
+    expectDecision(await decide(`ln ${home}/.ssh/id_rsa ./key`), "deny", "SENSITIVE_READ", true)
+    expectDecision(await decide(`ln -s ${home}/.ssh/id_rsa ./key`), "deny", "SENSITIVE_READ", true)
+    expectDecision(await decide("ln -s src/index.ts ./entry"), "allow")
+  })
+
+  test("`..` is applied after the symlink is followed, the way the kernel does it", async () => {
+    // `link` is a workspace symlink to the home credential store, so `link/..` is the home directory
+    // on disk and the workspace lexically.
+    expectDecision(await decide("cat link/id_rsa"), "deny", "SENSITIVE_READ", true)
+    expectDecision(await decide("cat link/../.ssh/id_rsa"), "deny", "SENSITIVE_READ", true)
+    // A `..` with no symlink in front of it still means what it says.
+    expectDecision(await decide("cat src/../src/index.ts"), "allow")
+  })
+})
