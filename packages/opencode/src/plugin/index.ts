@@ -225,6 +225,9 @@ const layer = Layer.effect(
           workspace: { directory: instance.directory, worktree: instance.worktree },
         })
         const hostedSpecs = new Set<string>()
+        // Every host started here is a child process; the finalizer below is what ends it. Without
+        // one they outlive the instance that approved them.
+        const hostedHandles: Awaited<ReturnType<typeof ExtensionHost.start>>[] = []
         const hostPlugin = (file: string, digest: string) =>
           ExtensionHost.start({
             identity: {
@@ -261,6 +264,7 @@ const layer = Layer.effect(
               const digest = decision.digest
               void hostPlugin(file, digest)
                 .then((handle) => {
+                  hostedHandles.push(handle)
                   // Hosted hooks observe events; they cannot mutate the main process's objects, which
                   // is a deliberate reduction of what a project plugin used to be able to do.
                   const forwarding: Record<string, (hookInput: unknown, output: unknown) => Promise<void>> = {}
@@ -352,6 +356,19 @@ const layer = Layer.effect(
           })
         })
         yield* Effect.addFinalizer(() => unsubscribe)
+
+        // kilocode_change - stop the extension hosts with the instance that started them
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            for (const handle of hostedHandles.splice(0)) {
+              try {
+                handle.stop()
+              } catch {
+                // the child may already be gone
+              }
+            }
+          }),
+        )
 
         yield* Effect.addFinalizer(() =>
           Effect.forEach(

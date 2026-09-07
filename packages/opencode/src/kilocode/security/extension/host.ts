@@ -53,6 +53,9 @@ export namespace ExtensionHost {
     })
   }
   const MAX_FILE = 4 * 1024 * 1024
+  /** How long a mediated `process.spawn` may run before it is killed. */
+  const SPAWN_TIMEOUT = 30_000
+  const MAX_SPAWN_OUTPUT = 64 * 1024
   const START_TIMEOUT = 15_000
   const CALL_TIMEOUT = 30_000
 
@@ -386,10 +389,35 @@ export namespace ExtensionHost {
         return `status ${response.status}`
       }
       case "process.spawn": {
-        const proc = Bun.spawn(["/bin/sh", "-c", request.command], { cwd: workspace, stdout: "pipe", stderr: "pipe" })
-        const out = await new Response(proc.stdout).text()
-        await proc.exited
-        return out.slice(0, 64 * 1024)
+        /**
+         * A mediated spawn is bounded, because the thing it starts is not.
+         *
+         * The command has already been through the engine on its concrete arguments, but the process
+         * it launches is an arbitrary program: without a deadline, `await proc.exited` on something
+         * that never exits holds the capability channel open for the rest of the session, and the
+         * extension only has to ask once. The environment is the host's scrubbed one rather than
+         * Kilo's, so a granted `process` does not become a way to read the credentials the host
+         * profile was built to keep out.
+         *
+         * Residual, and named rather than implied: this runs in the main process, not inside the
+         * extension's OS profile. The engine decides whether it may run at all; the profile does not
+         * contain what it then does.
+         */
+        const proc = Bun.spawn(["/bin/sh", "-c", request.command], {
+          cwd: workspace,
+          env: environmentFor(workspace),
+          stdout: "pipe",
+          stderr: "pipe",
+        })
+        const timer = setTimeout(() => proc.kill("SIGKILL"), SPAWN_TIMEOUT)
+        try {
+          const out = await new Response(proc.stdout).text()
+          await proc.exited
+          return out.slice(0, MAX_SPAWN_OUTPUT)
+        } finally {
+          clearTimeout(timer)
+          if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL")
+        }
       }
     }
   }
@@ -448,6 +476,24 @@ export namespace ExtensionHost {
     const readyPromise = new Promise<void>((resolve) => (readyResolve = resolve))
     let sequence = 1
     let session = input.sessionID ?? `ext:${input.identity.digest.slice(0, 16)}`
+
+    /**
+     * One call at a time per host, because the session a capability request belongs to is held in a
+     * binding rather than carried on the wire. The child's capability events arrive asynchronously
+     * and name only their own id, so with two invocations in flight the second one's `sessionID`
+     * would decide how the first one's reads and sends were adjudicated — and the secret context of
+     * the wrong session is the one thing this layer composes with. Serialising costs nothing here:
+     * the host is a single extension behind a single stdio pipe.
+     */
+    let queue: Promise<unknown> = Promise.resolve()
+    function serialised<T>(fn: () => Promise<T>): Promise<T> {
+      const next = queue.then(fn, fn)
+      queue = next.then(
+        () => undefined,
+        () => undefined,
+      )
+      return next
+    }
 
     const write = (command: ExtensionProtocol.Command) => {
       void proc.stdin.write(ExtensionProtocol.encode(command))
@@ -552,24 +598,32 @@ export namespace ExtensionHost {
       tools: loaded.tools,
       hooks: loaded.hooks,
       refusals,
-      async invoke(tool, args, sessionID) {
-        if (sessionID) session = sessionID
-        const result = await call<Extract<ExtensionProtocol.Event, { kind: "invoked" }>>({ kind: "invoke", tool, args })
-        return {
-          ok: result.ok,
-          ...(result.output ? { output: result.output } : {}),
-          ...(result.error ? { error: result.error } : {}),
-        }
+      invoke(tool, args, sessionID) {
+        return serialised(async () => {
+          if (sessionID) session = sessionID
+          const result = await call<Extract<ExtensionProtocol.Event, { kind: "invoked" }>>({
+            kind: "invoke",
+            tool,
+            args,
+          })
+          return {
+            ok: result.ok,
+            ...(result.output ? { output: result.output } : {}),
+            ...(result.error ? { error: result.error } : {}),
+          }
+        })
       },
-      async trigger(name, hookInput, output, sessionID) {
-        if (sessionID) session = sessionID
-        if (!loaded.hooks.includes(name)) return
-        await call<Extract<ExtensionProtocol.Event, { kind: "hooked" }>>({
-          kind: "hook",
-          name,
-          input: hookInput,
-          output,
-        }).catch(() => undefined)
+      trigger(name, hookInput, output, sessionID) {
+        return serialised(async () => {
+          if (sessionID) session = sessionID
+          if (!loaded.hooks.includes(name)) return
+          await call<Extract<ExtensionProtocol.Event, { kind: "hooked" }>>({
+            kind: "hook",
+            name,
+            input: hookInput,
+            output,
+          }).catch(() => undefined)
+        })
       },
       stop() {
         try {
