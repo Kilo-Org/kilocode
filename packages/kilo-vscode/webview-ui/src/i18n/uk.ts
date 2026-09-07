@@ -887,6 +887,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.minimalMode.title": "Режим Minimal",
+  "settings.experimental.minimalMode.description":
+    "Додає мінімальний режим для локальних або невеликих моделей зі стислими промптами й основними інструментами. Виберіть Minimal у списку режимів. Правила проєкту та дозволи залишаються активними.",
   "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
   "settings.experimental.taskModelSelection.description":
     "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",

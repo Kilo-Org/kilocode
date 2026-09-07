@@ -890,6 +890,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.minimalMode.title": "Minimal モード",
+  "settings.experimental.minimalMode.description":
+    "ローカルモデルや小規模モデル向けに、簡潔なプロンプトと基本ツールを使う最小限のモードを追加します。モード選択で Minimal を選んでください。プロジェクトのルールと権限は引き続き有効です。",
   "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
   "settings.experimental.taskModelSelection.description":
     "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",

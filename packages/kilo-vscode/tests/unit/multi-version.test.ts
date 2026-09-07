@@ -36,6 +36,12 @@ describe("resolveVersionModels", () => {
 })
 
 describe("buildInitialMessages", () => {
+  test.each([undefined, ""])("preserves the selected mode without an initial prompt (%s)", (prompt) => {
+    const msgs = buildInitialMessages(created(2), [], {}, prompt, "minimal")
+    expect(msgs.map((msg) => msg.agent)).toEqual(["minimal", "minimal"])
+    expect(msgs.every((msg) => msg.text === undefined)).toBe(true)
+  })
+
   test("per-allocation variant wins over the dialog-level variant", () => {
     const models = resolveVersionModels(
       [

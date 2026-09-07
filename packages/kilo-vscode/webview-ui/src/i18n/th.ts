@@ -882,6 +882,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
+  "settings.experimental.minimalMode.title": "โหมด Minimal",
+  "settings.experimental.minimalMode.description":
+    "เพิ่มโหมดแบบเรียบง่ายสำหรับโมเดลในเครื่องหรือโมเดลขนาดเล็ก โดยใช้พรอมต์สั้นและเครื่องมือหลัก เลือก Minimal ในตัวเลือกโหมด กฎของโปรเจกต์และสิทธิ์ยังคงมีผลอยู่",
   "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
   "settings.experimental.taskModelSelection.description":
     "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",

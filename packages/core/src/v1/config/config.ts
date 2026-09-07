@@ -304,6 +304,9 @@ export const Info = Schema.Struct({
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
+      minimal_mode: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable the Minimal mode with compact prompts and core coding tools",
+      }),
       task_model_selection: Schema.optional(Schema.Boolean).annotate({
         description: "Allow task subagents to select a model, provider, and reasoning effort",
       }),

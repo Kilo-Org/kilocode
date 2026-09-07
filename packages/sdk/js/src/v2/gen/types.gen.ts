@@ -2707,6 +2707,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    minimal_mode?: boolean
     task_model_selection?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean

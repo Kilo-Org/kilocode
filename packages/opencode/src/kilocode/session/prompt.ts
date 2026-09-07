@@ -28,6 +28,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
+import { KiloMinimal } from "./minimal"
 import ASK_CODE_SWITCH from "./ask-code-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
@@ -95,6 +96,11 @@ export namespace KiloSessionPrompt {
   /** Clear auto-title mark after a failed setTitle (pair with prepareAutoTitle). */
   export function clearAutoTitleMark(sessionID: string, title: string) {
     consumeAutoTitle(sessionID, title)
+  }
+
+  export function titleFailure(sessionID: string, title: string, cause: Cause.Cause<unknown>) {
+    clearAutoTitleMark(sessionID, title)
+    return Effect.logError("failed to generate title", { error: Cause.squash(cause) })
   }
 
   function mode(name: string) {
@@ -459,6 +465,7 @@ export namespace KiloSessionPrompt {
     session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache
+    minimal?: boolean
   }) {
     const route = {
       directory: input.session.directory,
@@ -479,16 +486,18 @@ export namespace KiloSessionPrompt {
         )
       )
         continue
-      const block =
-        input.cache.blocks.get(msg.info.id) ??
-        environmentDetails(
-          {
-            ...route,
-            ...msg.info.editorContext,
-          },
-          new Date(msg.info.time.created),
-        )
-      input.cache.blocks.set(msg.info.id, block)
+      const block = input.minimal
+        ? KiloMinimal.context(msg.info.editorContext)
+        : (input.cache.blocks.get(msg.info.id) ??
+          environmentDetails(
+            {
+              ...route,
+              ...msg.info.editorContext,
+            },
+            new Date(msg.info.time.created),
+          ))
+      if (!block) continue
+      if (!input.minimal) input.cache.blocks.set(msg.info.id, block)
       msg.parts.push({
         id: PartID.make(Identifier.ascending("part")),
         sessionID: input.sessionID,

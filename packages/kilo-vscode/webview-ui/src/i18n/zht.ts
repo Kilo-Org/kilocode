@@ -821,6 +821,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
+  "settings.experimental.minimalMode.title": "Minimal 模式",
+  "settings.experimental.minimalMode.description":
+    "為本機或較小的模型新增使用精簡提示詞和核心工具的最小模式。請在模式選擇器中選擇 Minimal。專案規則與權限仍然有效。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
   "settings.experimental.taskModelSelection.description": "允許為 Task 子代理選擇指定的模型、提供者和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",

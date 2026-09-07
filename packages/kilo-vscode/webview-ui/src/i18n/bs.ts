@@ -897,6 +897,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.minimalMode.title": "Minimal režim",
+  "settings.experimental.minimalMode.description":
+    "Dodaje minimalni režim za lokalne ili manje modele s kratkim promptovima i osnovnim alatima. Odaberite Minimal u biraču režima. Pravila projekta i dozvole ostaju aktivni.",
   "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
   "settings.experimental.taskModelSelection.description":
     "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",

@@ -918,6 +918,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
+  "settings.experimental.minimalMode.title": "Mode Minimal",
+  "settings.experimental.minimalMode.description":
+    "Ajoute un mode minimal pour les modèles locaux ou plus petits avec des prompts compacts et des outils essentiels. Sélectionnez Minimal dans le sélecteur de modes. Les règles et les autorisations du projet restent actives.",
   "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
   "settings.experimental.taskModelSelection.description":
     "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
