@@ -300,10 +300,12 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
 
     private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }
 
-    private fun toggle(root: Container): SettingsToggle = toggles(root).single()
-
-    private fun toggles(root: Container): List<SettingsToggle> = buildList {
-        collect(root) { if (it is SettingsToggle) add(it) }
+    /** The index-worktrees [SettingsToggle] specifically — compact mode adds five more of these. */
+    private fun toggle(root: Container): SettingsToggle {
+        val title = KiloBundle.message("settings.advanced.indexWorktrees.title")
+        val row = rows(root).firstOrNull { row -> labels(row).any { it.text == title } }
+            ?: error("no settings row titled '$title'")
+        return buildList<SettingsToggle> { collect(row) { if (it is SettingsToggle) add(it) } }.single()
     }
 
     /** The [OnOffButton] in the settings row whose bold title comes from [titleKey]. */
