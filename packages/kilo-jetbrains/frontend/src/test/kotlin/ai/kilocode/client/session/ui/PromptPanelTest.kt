@@ -1274,6 +1274,39 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(regions.single().isExpanded)
     }
 
+    fun `test pasting the same large text a third time collapses a fresh copy`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        val text = (1..20).joinToString("\n") { "line $it" }
+        val provider = PromptTextPasteProvider()
+        provider.performPaste(pasteContext(ed, StringSelection(text)))
+        provider.performPaste(pasteContext(ed, StringSelection(text)))
+
+        ed.caretModel.moveToOffset(ed.document.textLength)
+        provider.performPaste(pasteContext(ed, StringSelection(text)))
+
+        assertEquals(text + text, ed.document.text)
+        val collapsed = ed.foldingModel.allFoldRegions.filterNot { it.isExpanded }
+        assertEquals(1, collapsed.size)
+        assertEquals(text.length, collapsed.single().startOffset)
+    }
+
+    fun `test expanding a collapsed paste grows the editor`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val field = panel.defaultFocusedComponent as EditorTextField
+        realize(panel, 260, 4000)
+        val ed = field.getEditor(true)!!
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
+        val folded = field.preferredSize.height
+
+        ed.foldingModel.runBatchFoldingOperation {
+            ed.foldingModel.allFoldRegions.single().setExpanded(true)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(field.preferredSize.height > folded)
+    }
+
     fun `test detaching and reattaching the panel keeps the paste collapsed`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val root = realize(panel, 260, 400)
