@@ -110,6 +110,18 @@ export namespace SecurityDecisionAdapter {
     return value.replaceAll("\\", "/")
   }
 
+  /**
+   * Whether the path starts at a filesystem root rather than at the workspace.
+   *
+   * Paths are compared in posix form, and `path.posix.isAbsolute` says no to `C:/Users/me` — so a
+   * Windows absolute path would be measured as workspace-relative and land inside the workspace by
+   * arithmetic, whatever it actually names. A drive letter is a root on the platform that writes it,
+   * so it is one here. UNC paths already begin with a separator and need no case of their own.
+   */
+  function rooted(value: string) {
+    return path.posix.isAbsolute(value) || /^[A-Za-z]:\//.test(value)
+  }
+
   /** Canonicalize a permission pattern into a path fact. No IO: the workspace is compared textually. */
   function classify(pattern: string, workspace: string, region: SecurityManifest.Region = "other"): T.PathFact {
     if (!pattern || pattern === "*") return { path: pattern, inWorkspace: true, class: "unknown" }
@@ -122,7 +134,7 @@ export namespace SecurityDecisionAdapter {
       return { path: raw, inWorkspace: false, class: raw === "~" ? "ordinary" : pathClass(tail) }
     }
     const normalized = path.posix.normalize(raw)
-    const absolute = path.posix.isAbsolute(normalized)
+    const absolute = rooted(normalized)
     const relative = absolute ? path.posix.relative(posix(workspace), normalized) : normalized
     const inWorkspace = !relative.startsWith("../") && relative !== ".." && !(absolute && relative === normalized)
 

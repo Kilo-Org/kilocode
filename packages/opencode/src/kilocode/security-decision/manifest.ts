@@ -38,8 +38,17 @@ export namespace SecurityManifest {
   /** `requirements.txt`, `requirements-dev.txt`, `dev-requirements.txt`. */
   const REQUIREMENTS = /^(.*-)?requirements(-.+)?\.txt$/
 
+  /**
+   * Whether the file name is a dependency manifest.
+   *
+   * Folded, because macOS and Windows resolve `Package.json` and `package.json` to one file: matching
+   * the written case would hold the manifest under one spelling and let the same edit through under
+   * another. Folding can only widen what counts as a manifest, which is the safe direction — on a
+   * case-sensitive filesystem it costs an approval prompt for a file that merely looks like one.
+   */
   export function is(base: string) {
-    return NAMES.has(base) || REQUIREMENTS.test(base)
+    const folded = base.toLowerCase()
+    return NAMES.has(base) || NAMES.has(folded) || REQUIREMENTS.test(base) || REQUIREMENTS.test(folded)
   }
 
   export type Region = "scripts" | "dependencies" | "other"
