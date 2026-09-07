@@ -6,9 +6,9 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
-import { formatRelativeDate } from "../../src/utils/date"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { CopyButton } from "./CopyButton"
+import { PRCommentTime } from "./PRCommentTime"
 import { SectionHeading } from "./SectionHeading"
 import { commentState, patchCommentState } from "./pr-comment-state"
 import { githubUrl, prConversationMarkdown, prConversationPayload, preview, SEND_LIMIT } from "./pr-comment-payload"
@@ -92,9 +92,7 @@ function PRConversationCard(props: CardProps) {
           <Show when={props.sent}>
             <span class="am-pr-comment-tag am-pr-comment-tag-sent">{t("agentManager.pr.comment.sent")}</span>
           </Show>
-          <Show when={props.comment.createdAt}>
-            {(time) => <span class="am-pr-comment-time">{formatRelativeDate(new Date(time()).toISOString())}</span>}
-          </Show>
+          <PRCommentTime time={props.comment.createdAt} />
         </div>
       </button>
 
@@ -106,7 +104,7 @@ function PRConversationCard(props: CardProps) {
           <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
             {props.sent
               ? t("agentManager.pr.comment.sent")
-              : t(props.activeTerminalId ? "agentManager.pr.comment.sendToTerminal" : "agentManager.pr.comment.send")}
+              : t(props.activeTerminalId ? "agentManager.pr.comment.sendToTerminal" : "agentManager.pr.fixWithKilo")}
           </Button>
           <Button variant="secondary" size="small" class="am-pr-comment-btn" onClick={props.onDismiss}>
             {props.dismissed ? t("agentManager.pr.conversation.restore") : t("agentManager.pr.conversation.dismiss")}

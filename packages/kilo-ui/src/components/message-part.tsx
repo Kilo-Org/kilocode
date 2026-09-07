@@ -1287,7 +1287,7 @@ function McpTool(props: ToolProps) {
   })
 
   const formattedOutput = createMemo(() => {
-    if (!props.output) return undefined
+    if (messages() || !props.output) return undefined
     try {
       const parsed = JSON.parse(props.output)
       return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```"
@@ -1303,6 +1303,7 @@ function McpTool(props: ToolProps) {
     >
       <BasicTool
         icon={board() ? "task" : "mcp"}
+        defer={board()}
         status={props.status}
         tool={props.tool}
         partID={props.partID}

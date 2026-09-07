@@ -57,6 +57,101 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
 }
 
 describe("agent manager tool start", () => {
+  it("parses explicit targets without changing null or omitted behavior", () => {
+    const input = { mode: "local", tasks: [{ prompt: "Fix" }] }
+    expect(parseToolRequest(input)?.worktreeID).toBeUndefined()
+    expect(parseToolRequest({ ...input, worktreeID: null })?.worktreeID).toBeUndefined()
+    expect(parseToolRequest({ ...input, worktreeID: "wt-target" })?.worktreeID).toBe("wt-target")
+    for (const fields of [
+      { worktreeID: "" },
+      { worktreeID: " " },
+      { worktreeID: 42 },
+      { worktreeID: "wt-target", mode: "worktree" },
+      { worktreeID: "wt-target", versions: true },
+      { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+    ])
+      expect(parseToolRequest({ ...input, ...fields })).toBeUndefined()
+  })
+
+  it("targets a non-caller worktree without creating or cleaning it", async () => {
+    const wt = { id: "wt-target", path: "/repo/target" }
+    const ready = { value: false }
+    const state = {
+      findWorktreeByPath: (dir: string) => (dir === "/repo/caller" ? { id: "wt-caller", path: dir } : undefined),
+      getWorktree: mock((id: string) => {
+        expect(ready.value).toBe(true)
+        return id === wt.id ? wt : undefined
+      }),
+      addSession: mock(() => {}),
+    }
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-target") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getState: () => state as never,
+      waitReady: mock(async () => {
+        ready.value = true
+      }),
+    })
+    await startFromTool(c, {
+      requestID: "am-target",
+      mode: "local",
+      directory: "/repo/caller",
+      worktreeID: wt.id,
+      sandboxInheritanceToken: "si-token",
+      tasks: [{ prompt: "Fix", model: { providerID: "test", modelID: "model" }, variant: "high" }],
+    })
+    expect(c.sessionMetadata).toHaveBeenCalledWith(client, wt.path)
+    expect(client.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ directory: wt.path, sandboxInheritanceToken: "si-token" }),
+      { throwOnError: true },
+    )
+    expect(state.addSession).toHaveBeenCalledWith("s-target", wt.id)
+    expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-target", wt.path)
+    expect(c.post).toHaveBeenCalledWith({
+      type: "agentManager.sessionAdded",
+      sessionId: "s-target",
+      worktreeId: wt.id,
+    })
+    expect(client.session.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        directory: wt.path,
+        model: { providerID: "test", modelID: "model" },
+        variant: "high",
+      }),
+      { throwOnError: true },
+    )
+    expect(c.createWorktree).not.toHaveBeenCalled()
+    expect(c.setup).not.toHaveBeenCalled()
+    expect(c.cleanupWorktree).not.toHaveBeenCalled()
+    expect(c.error).not.toHaveBeenCalled()
+  })
+
+  it("rejects unknown or foreign IDs without falling back to the caller", async () => {
+    const create = mock(async () => ({ data: session("s-local") }))
+    const c = deps({
+      getClient: () => ({ session: { create } }) as never,
+      getState: () => ({ getWorktree: () => undefined }) as never,
+    })
+    await startFromTool(c, {
+      requestID: "am-unknown",
+      mode: "local",
+      directory: "/repo",
+      worktreeID: "wt-foreign",
+      tasks: [{ name: "Prepared" }],
+    })
+    expect(create).not.toHaveBeenCalled()
+    expect(c.createWorktree).not.toHaveBeenCalled()
+    expect(c.cleanupWorktree).not.toHaveBeenCalled()
+    expect(c.post).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "error", message: expect.stringContaining("wt-foreign") }),
+    )
+  })
+
   it("parses tool start events defensively", () => {
     const parsed = parseToolRequest({
       mode: "local",
@@ -220,7 +315,7 @@ describe("agent manager tool start", () => {
       tasks: [
         {
           prompt: "Fix",
-          branchName: "fix/one",
+          branchName: "fix/One_two.3",
           model: { providerID: "test", modelID: "reasoning/model" },
           variant: "low",
         },
@@ -228,7 +323,7 @@ describe("agent manager tool start", () => {
     })
 
     expect(c.createWorktree).toHaveBeenCalledWith(
-      expect.objectContaining({ branchName: "fix-one", name: "fix-one", label: "one" }),
+      expect.objectContaining({ branchName: "fix/One_two.3", name: "fix/One_two.3", label: "one two 3" }),
     )
     expect(c.setup).toHaveBeenCalled()
     expect(c.createSessionInWorktree).toHaveBeenCalledWith("/repo/.kilo/worktrees/wt-1", "kilo/test", "wt-1", {
@@ -350,7 +445,7 @@ describe("agent manager tool start", () => {
     })
     expect(normal.createWorktree).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ branchName: "fix-two", label: "two" }),
+      expect.objectContaining({ branchName: "fix/two", label: "two" }),
     )
 
     const grouped = deps()
@@ -365,11 +460,11 @@ describe("agent manager tool start", () => {
     })
     expect(grouped.createWorktree).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ branchName: "try-work_v2", label: "try work v2" }),
+      expect.objectContaining({ branchName: "try/work_v2", label: "try work v2" }),
     )
   })
 
-  it("sanitizes branch names and keeps card labels short", async () => {
+  it("passes invalid explicit names to worktree validation and keeps card labels short", async () => {
     const c = deps()
     await startFromTool(c, {
       requestID: "am-name",
@@ -385,10 +480,20 @@ describe("agent manager tool start", () => {
 
     expect(c.createWorktree).toHaveBeenCalledWith(
       expect.objectContaining({
-        branchName: "fix-command-permissions-persistence",
+        branchName: "fix command permissions @#$ persistence",
         label: "command permissions",
       }),
     )
+  })
+
+  it("still sanitizes display names used as automatic branch seeds", async () => {
+    const c = deps()
+    await startFromTool(c, {
+      requestID: "am-seed",
+      mode: "worktree",
+      tasks: [{ name: "My Feature" }],
+    })
+    expect(c.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ branchName: "my-feature" }))
   })
 
   it("rejects local sessions for unknown worktree directories", async () => {

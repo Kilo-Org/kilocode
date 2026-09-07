@@ -128,6 +128,32 @@ describe("Agent Manager worktree deletion lifecycle", () => {
 
   const deleteWorktree = async () => deleteLifecycleWorktree(ctx, host, state.getWorktrees()[0]!.id)
 
+  it("acknowledges completion only after disk deletion, before pushing the removed state", async () => {
+    const disk = Promise.withResolvers<void>()
+    const entered = Promise.withResolvers<void>()
+    const id = state.getWorktrees().at(0)!.id
+    const post = mock(host.post)
+    host.post = post
+    ctx.worktreeManager().removeWorktree = async () => {
+      entered.resolve()
+      await disk.promise
+    }
+    const pending = deleteWorktree()
+    await entered.promise
+    expect(post).not.toHaveBeenCalled()
+    expect(state.getWorktree(id)).toBeDefined()
+    disk.resolve()
+    await pending
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith({
+      type: "agentManager.worktreeDeleted",
+      projectId: ctx.id,
+      worktreeId: id,
+    })
+    expect(calls.indexOf("post:agentManager.worktreeDeleted")).toBeLessThan(calls.indexOf("push"))
+    expect(state.getWorktree(id)).toBeUndefined()
+  })
+
   it.each([
     ["busy", { type: "busy" }],
     ["retry", { type: "retry", attempt: 1, message: "retry", next: 100 }],
@@ -212,6 +238,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     })
     expect(calls).toContain("stats:unskip")
     expect(calls.at(-1)).toBe("pty:release")
+    expect(calls).not.toContain("post:agentManager.worktreeDeleted")
     expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
     expect(state.getWorktrees()).toHaveLength(1)
   })
@@ -289,6 +316,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       "name",
       `directory:${first.id}:${ctx.root}`,
       `directory:${second.id}:${ctx.root}`,
+      "post:agentManager.worktreeDeleted",
       "push",
       "pty:release",
     ])

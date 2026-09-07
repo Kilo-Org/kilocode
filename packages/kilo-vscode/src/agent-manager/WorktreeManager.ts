@@ -8,7 +8,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { randomUUID } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
@@ -31,6 +31,20 @@ import {
 
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
+
+function directory(branch: string): string {
+  // Keep ordinary directory names, but isolate refs that need filesystem escaping.
+  if (
+    /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,99}$/.test(branch) &&
+    !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\.|$)/i.test(branch)
+  ) {
+    return branch
+  }
+  // Hash the original ref to distinguish names that produce the same shortened slug.
+  const slug = sanitizeBranchName(branch) || "branch"
+  const hash = createHash("sha256").update(branch).digest("hex").slice(0, 16)
+  return `${slug}-${hash}`
+}
 
 export interface WorktreeInfo {
   branch: string
@@ -227,6 +241,13 @@ export class WorktreeManager {
         "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
       )
 
+    const requested = params.existingBranch ?? params.branchName
+    if (requested !== undefined) {
+      // Validate the literal ref first so --branch cannot expand checkout shorthand.
+      await this.git.raw(["check-ref-format", `refs/heads/${requested}`])
+      await this.git.raw(["check-ref-format", "--branch", requested])
+    }
+
     // Git LFS Pre-flight Check
     if (await this.repoUsesLfs()) {
       if (!(await this.checkLfsAvailable())) {
@@ -273,10 +294,10 @@ export class WorktreeManager {
     }
 
     let branch = await this.resolveBranch(params)
-    const dirName = branch.replace(/\//g, "-")
+    const dirName = directory(branch)
     let worktreePath = path.join(this.dir, dirName)
 
-    await this.prepareWorktreePath(worktreePath, !!params.existingBranch)
+    worktreePath = await this.prepareWorktreePath(worktreePath, params.existingBranch)
 
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
@@ -301,7 +322,7 @@ export class WorktreeManager {
       }
       // Another process may create the branch after resolveBranch checks it.
       branch = await this.resolveBranch(params)
-      const retryDir = branch.replace(/\//g, "-")
+      const retryDir = directory(branch)
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
@@ -354,11 +375,26 @@ export class WorktreeManager {
     return branch
   }
 
-  private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
-    if (!fs.existsSync(worktreePath)) return
-    if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+  private async prepareWorktreePath(worktreePath: string, branch?: string): Promise<string> {
+    if (!fs.existsSync(worktreePath)) return worktreePath
+    if (!branch) throw new Error(`Worktree path already exists: ${worktreePath}`)
+    const entries = parseWorktreeList(await this.git.raw(["worktree", "list", "--porcelain"]))
+    const canonical = normalizePath(await fs.promises.realpath(worktreePath))
+    const entry = entries.find((entry) => normalizePath(entry.path) === canonical)
+    if (entry && (entry.branch !== branch || entry.detached || entry.bare)) {
+      // A literal branch can match another ref's hashed directory name.
+      const parent = await fs.promises.realpath(path.dirname(worktreePath))
+      for (let suffix = 2; ; suffix++) {
+        const candidate = `${worktreePath}-${suffix}`
+        const canonical = normalizePath(path.join(parent, path.basename(candidate)))
+        if (!fs.existsSync(candidate) && !entries.some((entry) => normalizePath(entry.path) === canonical)) {
+          return candidate
+        }
+      }
+    }
     this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
     await this.removeWorktreeImpl(worktreePath)
+    return worktreePath
   }
 
   private async resolveBranch(params: {
@@ -376,15 +412,14 @@ export class WorktreeManager {
       .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
       .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
-    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
+    const branch = params.branchName ?? generateBranchName(params.prompt || "agent-task", existing)
     return this.availableBranch(branch, existing)
   }
 
   private availableBranch(base: string, existing: string[]): string {
     const branches = new Set(existing)
     const available = (branch: string) => {
-      const dir = path.join(this.dir, branch.replace(/\//g, "-"))
+      const dir = path.join(this.dir, directory(branch))
       return !branches.has(branch) && !fs.existsSync(dir)
     }
     if (available(base)) return base

@@ -396,6 +396,9 @@ export async function prompt(input: {
   signal?: AbortSignal
   managed?: ManagedSession
   questions?: "dismiss"
+  model?: { providerID: string; modelID: string }
+  variant?: string
+  agent?: string
 }): Promise<void> {
   if (input.signal?.aborted) return
   const target = await locate(input)
@@ -408,6 +411,9 @@ export async function prompt(input: {
       directory: target.dir,
       messageID: `msg_agent_manager_${input.messageID}`,
       parts: [{ type: "text", text: input.text }],
+      model: input.model,
+      variant: input.variant,
+      agent: input.agent,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },

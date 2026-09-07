@@ -559,13 +559,16 @@ html[data-theme="kilo-vscode"]
   opacity: 0;
   visibility: hidden;
 }
-.am-worktree-item:hover .am-wt-hover-actions {
+.am-worktree-item:hover .am-wt-hover-actions,
+.am-worktree-item:focus-within .am-wt-hover-actions {
   opacity: 1;
   visibility: visible;
 }
 /* Stats fade out on hover (replaced by hover actions in same grid cell) */
 .am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats,
-.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton {
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats-skeleton {
   opacity: 0;
   visibility: hidden;
 }
@@ -720,8 +723,78 @@ html[data-theme="kilo-vscode"]
   visibility: hidden;
 }
 
-/* Inline delete confirmation */
+/* Finish stays separate from the agent activity indicator. */
+.am-worktree-exit {
+  display: grid;
+  grid-template-rows: 1fr;
+}
 
+.am-worktree-exit-content {
+  min-height: 0;
+  min-width: 0;
+}
+
+.am-worktree-completed {
+  --am-finish-color: var(--icon-success-base, var(--vscode-testing-iconPassed, #73c991));
+  pointer-events: none;
+  animation: am-worktree-collapse 1000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.am-worktree-completed .am-worktree-exit-content {
+  overflow: hidden;
+}
+
+.am-worktree-completed .am-worktree-branch {
+  text-decoration: line-through;
+  text-decoration-color: var(--am-finish-color);
+}
+
+.am-worktree-completed .am-wt-hover-actions {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+}
+
+.am-worktree-finish-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--am-finish-color);
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--am-finish-color);
+  border-radius: 3px;
+  color: var(--surface-base, var(--vscode-editor-background));
+}
+
+.am-worktree-completion-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@keyframes am-worktree-collapse {
+  0%,
+  60% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-worktree-completed {
+    animation-duration: 1ms;
+    animation-delay: 600ms;
+  }
+}
+
+/* Inline delete confirmation */
 .am-worktree-item.am-worktree-pending-delete,
 .am-worktree-item.am-worktree-pending-delete.am-worktree-item-active {
   background: color-mix(in srgb, var(--surface-critical-strong) 18%, transparent);
@@ -752,21 +825,19 @@ html[data-theme="kilo-vscode"]
   visibility: hidden !important;
 }
 
-.am-worktree-delete-hint {
+.am-worktree-delete-hint[data-component="button"] {
   position: absolute;
   right: 0;
+  height: auto;
+  min-height: 0;
   font-size: var(--font-size-small);
-  color: var(--text-on-brand-base);
-  background: var(--surface-critical-strong);
+  color: var(--text-on-brand-base) !important;
+  background: var(--surface-critical-strong) !important;
   white-space: nowrap;
   padding: 1px 8px;
   border-radius: 4px;
   cursor: pointer;
   animation: am-hint-slide-in 200ms ease;
-}
-
-.am-worktree-delete-hint:hover {
-  opacity: 0.9;
 }
 
 @keyframes am-hint-slide-in {

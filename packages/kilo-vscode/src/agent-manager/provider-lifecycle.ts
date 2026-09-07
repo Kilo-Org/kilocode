@@ -208,6 +208,7 @@ export async function deleteLifecycleWorktree(
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
     for (const sessionID of retained) routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)
+    host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } catch (error) {

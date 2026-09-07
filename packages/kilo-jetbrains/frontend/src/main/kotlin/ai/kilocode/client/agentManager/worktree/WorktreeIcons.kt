@@ -2,11 +2,10 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SpinnerIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.AnimatedIcon
-import com.intellij.ui.BadgeDotProvider
-import com.intellij.ui.BadgeIcon
 import com.intellij.util.ui.JBUI
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.Icon
@@ -29,19 +28,12 @@ internal object WorktreeIcons {
     private val live = ConcurrentHashMap<Icon, Icon>()
 
     /**
-     * [base] wearing the New UI live-run badge: the platform success dot in the top-right corner,
-     * punched through the glyph so it reads over it. This is what `ExecutionUtil.withLiveIndicator`
-     * resolves to on New UI, and the same pairing the Run tool window stripe shows for a live process.
-     *
-     * The dot geometry is spelled out instead of taking [BadgeDotProvider]'s defaults. Those are
-     * fractions of a 20px stripe icon (dot 3.5/20, hole ring 1.5/20) that put the ring past the canvas
-     * edge, and `HoledIcon` sizes itself to the union of glyph and badge — so a 16px base reports ~18px
-     * and the row's icon column would widen for running rows alone. Keeping the platform's dot and ring
-     * size while pulling the center in by the ring width (x/y = 0.75/0.25 against a 0.25 hole radius)
-     * lands the ring flush with the top-right corner and the union back at the base's own 16px.
+     * [base] wearing the New UI live-run badge: a success dot in the top-right corner, punched
+     * through the glyph so it reads over it. See [LiveBadgeIcon] for why it is a Kilo-owned icon
+     * rather than the platform's own `BadgeIcon`/`BadgeDotProvider`.
      */
     fun live(base: Icon): Icon = live.computeIfAbsent(base) {
-        BadgeIcon(it, JBUI.CurrentTheme.IconBadge.SUCCESS, BadgeDotProvider(x = 0.75, y = 0.25, radius = 0.175, border = 0.075))
+        LiveBadgeIcon(it, JBUI.CurrentTheme.IconBadge.SUCCESS)
     }
 
     /** The row glyph for a worktree running a process with nothing else to say about it. */

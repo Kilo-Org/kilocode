@@ -181,6 +181,7 @@ describe("agent_manager tool", () => {
       "mode",
       "versions",
       "tasks",
+      "worktreeID",
       "action",
       "filter",
       "sessionID",
@@ -202,6 +203,7 @@ describe("agent_manager tool", () => {
       "mode",
       "versions",
       "tasks",
+      "worktreeID",
       "action",
       "filter",
       "sessionID",
@@ -272,6 +274,51 @@ describe("agent_manager tool", () => {
     )
     expect(permissions).toEqual([])
     expect(events).toEqual([])
+  })
+
+  test("validates worktree targeting before permission and forwards valid targets", async () => {
+    const tool: Tool.Def = await init()
+    const permissions: unknown[] = []
+    const events: AgentManagerStart[] = []
+    await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const queue = yield* Queue.unbounded<AgentManagerStart>()
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) => {
+            events.push(item.properties)
+            Queue.offerUnsafe(queue, item.properties)
+          })
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          const context = { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) }
+          for (const input of [
+            { worktreeID: "" },
+            { worktreeID: "  " },
+            { worktreeID: 42 },
+            { worktreeID: "wt-target", mode: "worktree" },
+            { worktreeID: "wt-target", versions: true },
+            { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+            { worktreeID: "wt-target", tasks: JSON.stringify([{ prompt: "Fix", branchName: "branch" }]) },
+          ]) {
+            const result = yield* tool
+              .execute({ mode: "local", tasks: [{ prompt: "Fix" }], ...input }, context)
+              .pipe(Effect.exit)
+            expect(Exit.isFailure(result)).toBe(true)
+          }
+          expect(permissions).toEqual([])
+          expect(events).toEqual([])
+          for (const worktreeID of [undefined, null, "wt-target"]) {
+            const result = yield* tool.execute({ mode: "local", worktreeID, tasks: [{ name: "Prepared" }] }, context)
+            const event = yield* Queue.take(queue).pipe(Effect.timeout("2 seconds"))
+            expect(event.worktreeID).toBe(worktreeID ?? undefined)
+            if (worktreeID) {
+              expect(result.output).toContain("Existing managed worktree: wt-target")
+              expect(permissions.at(-1)).toMatchObject({ metadata: { worktreeID } })
+            }
+          }
+        }),
+      ).pipe(Effect.scoped),
+    )
   })
 
   test("keeps session ID validation local", () => {

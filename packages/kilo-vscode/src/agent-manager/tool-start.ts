@@ -24,6 +24,7 @@ export interface ToolRequest {
   directory?: string
   sandboxInheritanceToken?: string
   mode: "worktree" | "local"
+  worktreeID?: string
   versions?: boolean
   tasks: ToolTask[]
 }
@@ -122,14 +123,30 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
   )
 }
 
-async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directory?: string, source?: ToolSource) {
+function locate(state: WorktreeStateManager, root: string, dir: string, wid: string) {
+  if (!sameDirectory(dir, root) && !state.findWorktreeByPath(dir)) {
+    throw new Error(`Unknown caller directory for managed worktree target: ${dir}`)
+  }
+  const wt = state.getWorktree(wid)
+  if (!wt) throw new Error(`Unknown managed worktree in the caller's project: ${wid}`)
+  return wt
+}
+
+async function local(
+  deps: ToolDeps,
+  client: KiloClient,
+  task: ToolTask,
+  directory?: string,
+  source?: ToolSource,
+  wid?: string,
+) {
   const root = deps.getRoot()
   const state = deps.getState()
   if (!root || !state) return false
 
   const dir = clean(directory) ?? root
   const match = sameDirectory(dir, root)
-  const wt = match ? undefined : state.findWorktreeByPath(dir)
+  const wt = wid ? locate(state, root, dir, wid) : match ? undefined : state.findWorktreeByPath(dir)
   if (!match && !wt) {
     deps.log("Agent Manager tool local request ignored unknown directory", dir)
     deps.post({
@@ -176,7 +193,7 @@ async function worktree(
   versions?: boolean,
   source?: ToolSource,
 ) {
-  const baseBranch = branch(task.branchName) ?? branch(task.name)
+  const baseBranch = task.branchName ?? branch(task.name)
   const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
   const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
   const created = await deps.createWorktree({
@@ -220,6 +237,10 @@ async function worktree(
 }
 
 export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<void> {
+  if (req.worktreeID != null && !parseToolRequest(req)) {
+    deps.error("Invalid Agent Manager worktree target. Use mode local without versions true or branchName.")
+    return
+  }
   if (deps.claimRequest && !deps.claimRequest(req.requestID)) {
     deps.log(`Agent Manager tool skipped duplicate request ${req.requestID}`)
     return
@@ -248,7 +269,7 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     try {
       const done =
         req.mode === "local"
-          ? await local(deps, client, task, req.directory, source)
+          ? await local(deps, client, task, req.directory, source, req.worktreeID)
           : await worktree(deps, client, task, i, total, groupId, versions, source)
       if (done) state.ok++
     } catch (err) {
@@ -317,6 +338,11 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
   if (mode !== "worktree" && mode !== "local") return undefined
   if (!Array.isArray(tasks) || tasks.length === 0) return undefined
   const limited = tasks.slice(0, 20)
+  if (value.worktreeID != null) {
+    if (typeof value.worktreeID !== "string" || !value.worktreeID.trim()) return undefined
+    if (mode !== "local" || value.versions === true) return undefined
+    if (tasks.some((item) => record(item) && item.branchName != null)) return undefined
+  }
   const parsed = limited.map(task).filter((item): item is ToolTask => !!item)
   if (parsed.length !== limited.length) return undefined
   return {
@@ -327,6 +353,7 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
     sandboxInheritanceToken:
       typeof value.sandboxInheritanceToken === "string" ? value.sandboxInheritanceToken : undefined,
     mode,
+    ...(value.worktreeID != null ? { worktreeID: value.worktreeID as string } : {}),
     versions: typeof value.versions === "boolean" ? value.versions : undefined,
     tasks: parsed,
   }

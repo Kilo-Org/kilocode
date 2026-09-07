@@ -60,6 +60,14 @@ const StartParams = Schema.Struct({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
+  worktreeID: Schema.optional(
+    Schema.NullOr(
+      Schema.String.check(Schema.makeFilter((value) => (value.trim() ? undefined : "worktreeID must not be blank"))),
+    ),
+  ).annotate({
+    description:
+      "Start sessions only. Existing managed worktree ID returned by action=list in the caller's project. Requires mode local; omit or null to use the caller's directory. Never use a path or branch name.",
+  }),
   tasks: Schema.Array(Task)
     .check(Schema.isMinLength(1), Schema.isMaxLength(20))
     .annotate({ description: "Agent Manager sessions to start" }),
@@ -132,7 +140,15 @@ export const Params = Schema.Union([
   Schema.Struct({
     ...StartParams.fields,
     tasks: Schema.Union([StartParams.fields.tasks, Schema.fromJsonString(StartParams.fields.tasks)]),
-  }),
+  }).check(
+    Schema.makeFilter((params) => {
+      if (params.worktreeID == null) return undefined
+      if (params.mode !== "local") return "worktreeID requires mode local"
+      if (params.versions === true) return "worktreeID cannot be combined with versions true"
+      if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
+      return undefined
+    }),
+  ),
   ListParams,
   PromptParams,
   StopParams,
@@ -159,6 +175,7 @@ const WireParams = Schema.Struct({
   tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
     description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
   }),
+  worktreeID: StartParams.fields.worktreeID,
   action: Schema.optional(
     Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
       description:
@@ -419,7 +436,11 @@ export const AgentManagerTool = Tool.define<
             permission: "agent_manager",
             patterns: [params.mode],
             always: [params.mode],
-            metadata: { mode: params.mode, count: tasks.length },
+            metadata: {
+              mode: params.mode,
+              count: tasks.length,
+              ...(params.worktreeID != null ? { worktreeID: params.worktreeID } : {}),
+            },
           })
 
           const requestID = `am-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -434,6 +455,7 @@ export const AgentManagerTool = Tool.define<
             sessionID: ctx.sessionID,
             sandboxInheritanceToken,
             mode: params.mode,
+            ...(params.worktreeID != null ? { worktreeID: params.worktreeID } : {}),
             ...(params.versions != null ? { versions: params.versions } : {}),
             tasks,
           })
@@ -453,6 +475,7 @@ export const AgentManagerTool = Tool.define<
             output: [
               `Requested ${tasks.length} Agent Manager ${params.mode === "worktree" ? "worktree" : "local"} session${tasks.length === 1 ? "" : "s"}.`,
               `request_id: ${requestID}`,
+              ...(params.worktreeID != null ? [`Existing managed worktree: ${params.worktreeID}`] : []),
               ...(resolved.length ? ["Resolved models:", ...resolved] : []),
               "The VS Code extension will create the sessions asynchronously and show progress in Agent Manager.",
             ].join("\n"),

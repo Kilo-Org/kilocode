@@ -29,8 +29,14 @@ export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return diffs.filter(isDiffExpandable).map((diff) => diff.file)
 }
 
+function defaultOpenFiles(diffs: WorktreeFileDiff[]): string[] {
+  return diffs
+    .filter((diff) => diff.kind !== "image" && diff.generatedLike !== true && isDiffExpandable(diff))
+    .map((diff) => diff.file)
+}
+
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return diffs.filter((diff) => diff.kind !== "image" && isDiffExpandable(diff)).map((diff) => diff.file)
+  return defaultOpenFiles(diffs)
 }
 
 export function reconcileOpenFiles(
@@ -41,7 +47,8 @@ export function reconcileOpenFiles(
   const files = expandableOpenFiles(diffs)
   if (!manual) return { open: undefined, known: files }
   const previous = new Set(known)
-  const added = files.filter((file) => !previous.has(file))
+  const defaults = new Set(defaultOpenFiles(diffs))
+  const added = files.filter((file) => !previous.has(file) && defaults.has(file))
   return { open: sanitizeOpenFiles(diffs, [...manual, ...added]), known: files }
 }
 
