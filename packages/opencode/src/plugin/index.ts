@@ -357,7 +357,7 @@ const layer = Layer.effect(
         })
         yield* Effect.addFinalizer(() => unsubscribe)
 
-        // kilocode_change - stop the extension hosts with the instance that started them
+        // kilocode_change start - stop the extension hosts with the instance that started them
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
             for (const handle of hostedHandles.splice(0)) {
@@ -369,6 +369,7 @@ const layer = Layer.effect(
             }
           }),
         )
+        // kilocode_change end
 
         yield* Effect.addFinalizer(() =>
           Effect.forEach(
