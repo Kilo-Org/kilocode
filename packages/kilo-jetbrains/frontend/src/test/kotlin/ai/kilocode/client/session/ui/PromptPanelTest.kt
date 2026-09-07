@@ -1239,7 +1239,9 @@ class PromptPanelTest : BasePlatformTestCase() {
     fun `test large text paste replaces the current selection`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
-        ed.document.setText("keep [replace me] keep")
+        WriteCommandAction.runWriteCommandAction(project) {
+            ed.document.setText("keep [replace me] keep")
+        }
         ed.selectionModel.setSelection(5, 17)
         val text = (1..20).joinToString("\n") { "line $it" }
 
