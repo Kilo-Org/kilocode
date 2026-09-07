@@ -2,6 +2,7 @@ import { For, createEffect, createMemo, createSignal, type Accessor, type Compon
 import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { ReviewComposer } from "../diff-viewer/review-annotations"
+import type { PRComment } from "./pr/pr-types"
 import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
 
@@ -26,6 +27,8 @@ interface Props {
   loadingFiles: (key: string) => Set<string>
   notice: (key: string) => string | undefined
   comments: (ctx: string) => ReviewComment[]
+  remoteComments?: (ctx: string) => PRComment[]
+  focusedComment?: (key: string) => { id: string; file: string } | undefined
   setComments: (ctx: string, comments: ReviewComment[]) => void
   composer: (key: string) => ReviewComposer
   lead: () => JSX.Element
@@ -100,7 +103,9 @@ export const DiffPanelCache: Component<Props> = (props) => {
               loading={props.loading(entry.key)}
               active={active()}
               loadingFiles={props.loadingFiles(entry.key)}
-              sessionKey={entry.key}
+              sessionKey={entry.cacheKey}
+              projectId={props.project()}
+              worktreeId={entry.ctx}
               notice={props.notice(entry.key)}
               lead={active() ? props.lead() : undefined}
               canRevert={props.canRevert}
@@ -109,6 +114,8 @@ export const DiffPanelCache: Component<Props> = (props) => {
               markdownRender={props.markdownRender}
               onMarkdownRenderChange={props.onMarkdownRenderChange}
               comments={props.comments(entry.key)}
+              remoteComments={props.remoteComments?.(entry.ctx)}
+              focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
               onCommentsChange={(comments) => props.setComments(entry.key, comments)}
               composer={props.composer(entry.cacheKey)}
               onSendClick={props.onSendClick}

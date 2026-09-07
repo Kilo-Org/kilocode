@@ -27851,6 +27851,10 @@
             "type": "string",
             "pattern": "^ses"
           },
+          "sourceSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
           "prompt": {
             "type": "string",
             "minLength": 1,
@@ -30152,6 +30156,10 @@
           },
           "multiple": {
             "type": "boolean"
+          },
+          "default": {
+            "type": "string",
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown."
           },
           "questionKey": {
             "type": "string"
@@ -42415,6 +42423,9 @@
               "mode": {
                 "type": "string",
                 "enum": ["worktree", "local"]
+              },
+              "worktreeID": {
+                "type": "string"
               },
               "versions": {
                 "type": "boolean"

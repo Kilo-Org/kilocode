@@ -17,6 +17,8 @@ import {
   type OverviewFilter,
 } from "./orchestration-domain"
 
+import { attribute } from "./prompt-attribution"
+
 const RETAINED = 1_000
 
 interface RequestBase {
@@ -26,7 +28,7 @@ interface RequestBase {
 
 type Request =
   | (RequestBase & { operation: "overview"; filter?: OverviewFilter })
-  | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
+  | (RequestBase & { operation: "prompt"; targetSessionID: string; sourceSessionID?: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
   | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
   | (RequestBase & { operation: "answer"; targetSessionID: string; questionID?: string; answers: string[][] })
@@ -285,7 +287,7 @@ export class AgentManagerOrchestrationBridge {
           root,
           state,
           sessionID: request.targetSessionID,
-          text: request.prompt,
+          text: attribute(request.prompt, request.sourceSessionID),
           messageID: request.id,
           signal: active.controller.signal,
           managed: this.options.resolve?.(request.targetSessionID, origin.directory),

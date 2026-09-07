@@ -83,7 +83,8 @@ import {
 import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
-  onSelectSession?: (id: string) => void
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   onEditMessage?: (sessionID: string, messageID: string) => void
@@ -97,6 +98,7 @@ interface MessageListProps {
   editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
+  introduction?: boolean
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
   sessionID?: Accessor<string | undefined>
@@ -164,6 +166,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     ),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
+  const introduction = createMemo(() => isEmpty() && !props.readonly && props.introduction)
 
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(
@@ -1193,7 +1196,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const setScrollRef = (el: HTMLElement | undefined) => {
     resize?.disconnect()
     setScrollEl(el)
-    autoScroll.scrollRef(el)
     if (!el) return
     refreshLayout()
     resize = new ResizeObserver(refreshLayout)
@@ -1205,6 +1207,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
     resize?.disconnect()
     window.removeEventListener("resize", refreshLayout)
     document.fonts?.removeEventListener("loadingdone", refreshLayout)
+  })
+
+  createEffect(() => {
+    const el = scrollEl()
+    autoScroll.scrollRef(introduction() ? undefined : el)
+    if (introduction() && el) el.scrollTop = 0
   })
 
   const [pendingRestore, setPendingRestore] = createSignal<string>()
@@ -1242,27 +1250,34 @@ export const MessageList: Component<MessageListProps> = (props) => {
   onCleanup(() => save(session.currentSessionID()))
 
   return (
-    <div class="message-list-container">
+    <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
       <Show when={props.announce === false}>
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {announcement()}
         </div>
       </Show>
       <Show when={isEmpty()}>
-        <div class="welcome-header">
+        <div class="welcome-header" data-slot="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications sessionID={props.sessionID} />
+          <Show when={!props.introduction || props.readonly}>
+            <KiloNotifications sessionID={props.sessionID} />
+          </Show>
         </div>
       </Show>
       <div
         ref={setScrollRef}
         onScroll={handleScroll}
         class="message-list"
+        data-slot="message-list"
         role={props.announce === false ? undefined : "log"}
         aria-live={props.announce === false ? undefined : "polite"}
         aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}
       >
-        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
+        <div
+          ref={autoScroll.contentRef}
+          data-slot="message-list-content"
+          class={isEmpty() ? "message-list-content-empty" : "message-list-content"}
+        >
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
@@ -1315,6 +1330,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       <TranscriptRowView
                         row={row}
                         index={index()}
+                        onSelectSession={props.onSelectSession}
+                        isSessionOpen={props.isSessionOpen}
                         onForkMessage={props.onForkMessage}
                         onEditMessage={props.onEditMessage}
                         queuedDisabled={props.queuedDisabled}
@@ -1332,6 +1349,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   {(key) => (
                     <TranscriptRowView
                       row={lookup().get(key)!}
+                      onSelectSession={props.onSelectSession}
+                      isSessionOpen={props.isSessionOpen}
                       onForkMessage={props.onForkMessage}
                       onEditMessage={props.onEditMessage}
                       queuedDisabled={props.queuedDisabled}
@@ -1353,6 +1372,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onSelectSession={props.onSelectSession}
+                  isSessionOpen={props.isSessionOpen}
                   onEditMessage={props.onEditMessage}
                   queuedDisabled={props.queuedDisabled}
                   editDisabled={props.editDisabled}
@@ -1396,7 +1417,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
         seeking={() => Boolean(seek())}
       />
 
-      <Show when={autoScroll.userScrolled()}>
+      <Show when={!introduction() && autoScroll.userScrolled()}>
         <button
           class="scroll-to-bottom-button"
           onClick={() => autoScroll.resume()}

@@ -39,6 +39,8 @@ import type {
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Switch } from "@kilocode/kilo-ui/switch"
+import { TextField } from "@kilocode/kilo-ui/text-field"
 import SettingsRow from "./SettingsRow"
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
 
@@ -52,6 +54,7 @@ export interface SettingsProps {
 
 const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
   const language = useLanguage()
+  const { settings, updateSetting } = useConfig()
   const vscode = useVSCode()
   const dialog = useDialog()
   const [projects, setProjects] = createSignal<AgentManagerSettingsProject[]>([])
@@ -152,6 +155,30 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
     <Show when={!loading()} fallback={<Spinner />}>
       <div class="settings-agent-manager">
         <Card>
+          <SettingsRow
+            title={language.t("agentManager.settings.autoBranchNaming.title")}
+            description={language.t("agentManager.settings.autoBranchNaming.description")}
+          >
+            <Switch
+              checked={(settings()["agentManager.autoBranchNaming"] as boolean | undefined) ?? true}
+              onChange={(value) => updateSetting("agentManager.autoBranchNaming", value)}
+              hideLabel
+            >
+              {language.t("agentManager.settings.autoBranchNaming.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("agentManager.settings.branchPrefix.title")}
+            description={language.t("agentManager.settings.branchPrefix.description")}
+          >
+            <TextField
+              label={language.t("agentManager.settings.branchPrefix.title")}
+              hideLabel
+              value={(settings()["agentManager.branchPrefix"] as string | undefined) ?? ""}
+              placeholder="feature/"
+              onChange={(value) => updateSetting("agentManager.branchPrefix", value)}
+            />
+          </SettingsRow>
           <SettingsRow
             title={language.t("agentManager.settings.project.title")}
             description={language.t("agentManager.settings.project.description")}

@@ -368,6 +368,7 @@ export type AgentManagerPromptRequest = {
   sessionID: string
   operation: "prompt"
   targetSessionID: string
+  sourceSessionID?: string
   prompt: string
 }
 
@@ -1140,6 +1141,10 @@ export type QuestionInfo = {
    */
   options: Array<QuestionOption>
   multiple?: boolean
+  /**
+   * Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown.
+   */
+  default?: string
   questionKey?: string
   headerKey?: string
   custom?: boolean
@@ -5088,6 +5093,7 @@ export type EventKilocodeAgentManagerStart = {
     sessionID: string
     sandboxInheritanceToken?: string
     mode: "worktree" | "local"
+    worktreeID?: string
     versions?: boolean
     tasks: Array<{
       prompt?: string

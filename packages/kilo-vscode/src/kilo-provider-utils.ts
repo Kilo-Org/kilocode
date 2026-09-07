@@ -414,6 +414,7 @@ export type WebviewMessage =
   | {
       type: "sessionTurnClosed"
       sessionID: string
+      eventID: string
       reason: "completed" | "error" | "interrupted" | "superseded"
       parentID?: string
     }
@@ -560,6 +561,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
       return {
         type: "sessionTurnClosed",
         sessionID: event.properties.sessionID,
+        eventID: event.id,
         reason: event.properties.reason,
         ...(event.properties.parentID ? { parentID: event.properties.parentID } : {}),
       }

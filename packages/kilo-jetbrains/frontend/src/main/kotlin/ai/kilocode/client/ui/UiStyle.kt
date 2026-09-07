@@ -58,6 +58,19 @@ object UiStyle {
         fun component() = com.intellij.util.ui.JBValue.UIInteger("Component.arc", 8).get()
     }
 
+    /** Geometry of the trailing band over which clipped single-line text dissolves into its backdrop. */
+    object Fade {
+        /**
+         * Unscaled width of the band, wider than the 10 the platform defaults
+         * `ide.editor.tabs.fadeout.width` to. A tab fades its own trailing padding, where a few pixels
+         * are enough; this band has to cover the glyph the cut runs through, or the cut stays visible at
+         * the point the fade is still opaque.
+         */
+        private const val WIDTH = 16
+
+        fun width() = JBUI.scale(WIDTH)
+    }
+
     /** Platform balloon styling used by lightweight contextual overlays. */
     object Balloon {
         /** Mirrors the platform default for `ide.balloon.shadow.size`, used only if the key is gone. */

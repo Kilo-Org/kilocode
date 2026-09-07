@@ -231,6 +231,10 @@ class KiloConnectionService(
         val request = Request.Builder()
             .url("http://127.0.0.1:$port/global/event")
             .header("Accept", "text/event-stream")
+            // Forking replays the whole copied transcript as durable "sync" events on top of the
+            // ordinary ones. Nothing here consumes "sync" payloads, so this only spares the reader a
+            // duplicate event per copied message and part.
+            .header("x-kilo-sse-skip-fork-sync", "1")
             .build()
 
         val factory = EventSources.createFactory(

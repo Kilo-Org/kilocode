@@ -32,6 +32,7 @@ import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   onForkSession?: (sessionId: string) => void
@@ -39,6 +40,7 @@ interface ChatViewProps {
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   promptBoxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -47,6 +49,7 @@ interface ChatViewProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
+  introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
@@ -359,6 +362,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <div class="chat-messages">
             <MessageList
               onSelectSession={props.onSelectSession}
+              isSessionOpen={props.isSessionOpen}
               onShowHistory={props.onShowHistory}
               onForkMessage={props.onForkMessage}
               onEditMessage={edit}
@@ -368,6 +372,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               suggestions={standaloneSuggestions}
               readonly={props.readonly}
               emptyState={props.emptyState}
+              introduction={props.introduction}
               announce={isSidebar()}
               sessionID={pendingSessionID}
             />
@@ -402,6 +407,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 suggesting={suggesting}
                 questioning={questioning}
                 worktree={props.worktree}
+                onUpdateBase={props.onUpdateBase}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
                 worktrees={props.worktrees}

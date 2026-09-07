@@ -10,6 +10,7 @@ import { batch } from "solid-js"
 import { LOCAL } from "./navigate"
 
 interface TermState {
+  forSelection: (sel: string) => { id: string }[]
   hasRemembered: (sel: string, remembered: string | undefined) => boolean
   setActiveId: (id: string | undefined) => void
 }
@@ -119,6 +120,18 @@ export function createSessionRestore<T extends SessionLike>(deps: {
   }
 }
 
+function terminal(
+  deps: SelectionActionDeps<SessionLike>,
+  selection: string,
+  remembered: string | undefined,
+  empty: boolean,
+): string | undefined {
+  const key = deps.nsKey(selection)
+  const known = deps.terms.hasRemembered(key, remembered)
+  if (!known && (!empty || deps.isReviewTab(remembered, selection))) return
+  return known ? remembered : deps.terms.forSelection(key).at(0)?.id
+}
+
 /** Select the Local context: restore its remembered tab or fall back to the first session/draft. */
 export function selectLocalAction<T extends SessionLike>(
   deps: SelectionActionDeps<T>,
@@ -131,8 +144,9 @@ export function selectLocalAction<T extends SessionLike>(
   batch(() => {
     deps.setReviewActive(false)
     deps.setSelection(LOCAL)
-    if (deps.terms.hasRemembered(deps.nsKey(LOCAL), remembered)) {
-      deps.activateTerminal(remembered!)
+    const id = terminal(deps, LOCAL, remembered, locals.length === 0 && ids.length === 0)
+    if (id) {
+      deps.activateTerminal(id)
       return
     }
     deps.terms.setActiveId(undefined)
@@ -169,8 +183,9 @@ export function selectWorktreeAction<T extends SessionLike>(
   const remembered = deps.tabMemory()[worktreeId]
   batch(() => {
     deps.setSelection(worktreeId)
-    if (deps.terms.hasRemembered(deps.nsKey(worktreeId), remembered)) {
-      deps.activateTerminal(remembered!)
+    const id = terminal(deps, worktreeId, remembered, sessions.length === 0 && ids.length === 0)
+    if (id) {
+      deps.activateTerminal(id)
       return
     }
     deps.terms.setActiveId(undefined)

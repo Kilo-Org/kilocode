@@ -11,7 +11,9 @@ import { PRReviewers } from "./PRReviewers"
 import { PRDescription } from "./PRDescription"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
-import { commentScroll, setCommentScroll } from "./pr-comment-state"
+import { PRConversation } from "./PRConversation"
+import type { PRComment } from "./pr-types"
+import { commentScroll, patchCommentState, setCommentScroll } from "./pr-comment-state"
 import { PRSummary } from "./PRSummary"
 import { CopyButton } from "./CopyButton"
 import "./pr-panel.css"
@@ -22,9 +24,13 @@ interface PRPanelProps {
   projectId?: string
   worktreeId: string
   activeTerminalId?: string
+  jump?: number
+  onJump?: (id: number) => void
   onClose: () => void
+  onRefresh: () => void
   onOpenExternal: () => void
   onOpenFile?: (file: string, line?: number) => void
+  onOpenDiff?: (comment: PRComment) => void
   onOpenUrl?: (url: string) => void
 }
 
@@ -34,6 +40,9 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   let bodyRef: HTMLDivElement | undefined
   let capture: number | undefined
   let restore: number | undefined
+  let jumped: number | undefined
+  let requested = false
+  const jumping = () => requested || (props.jump !== undefined && props.jump !== jumped)
 
   // A poll replaces the whole status, so the panel re-renders, and sometimes
   // remounts, while the user reads. Anchoring on the topmost visible thread
@@ -76,12 +85,29 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
     restore = requestAnimationFrame(() => {
       restore = requestAnimationFrame(() => {
         restore = undefined
+        if (jumping()) {
+          if (!comments() || !commentsRef?.isConnected) return
+          commentsRef.scrollIntoView({ behavior: "instant", block: "start" })
+          requested = false
+          jumped = props.jump
+          remember()
+          if (jumped !== undefined) props.onJump?.(jumped)
+          return
+        }
         reposition()
       })
     })
   }
 
-  createEffect(on(() => props.worktreeId, later))
+  createEffect(
+    on([() => props.projectId, () => props.worktreeId], () => {
+      requested = false
+      jumped = undefined
+      if (capture !== undefined) cancelAnimationFrame(capture)
+      capture = undefined
+      later()
+    }),
+  )
   createEffect(on(() => props.pr, later, { defer: true }))
 
   onCleanup(() => {
@@ -90,7 +116,9 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   })
 
   function jumpToComments() {
-    commentsRef?.scrollIntoView({ behavior: "smooth", block: "start" })
+    requested = true
+    patchCommentState(props.worktreeId, () => ({ open: true }))
+    later()
   }
 
   function onScroll() {
@@ -104,11 +132,58 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   // Only the selected worktree fetches threads, and that fetch can fail, so a
   // refresh can arrive without comments. Dropping the section would discard the
   // expanded card and the scroll position, so the last list for this PR stays.
-  const comments = createMemo<{ number: number; value: NonNullable<PRStatus["comments"]> } | undefined>((prev) => {
+  const comments = createMemo<
+    | { project?: string; worktree: string; number: number; url: string; value: NonNullable<PRStatus["comments"]> }
+    | undefined
+  >((prev) => {
     const next = props.pr.comments
-    if (next) return { number: props.pr.number, value: next }
-    if (prev && prev.number === props.pr.number) return prev
+    if (next)
+      return {
+        project: props.projectId,
+        worktree: props.worktreeId,
+        number: props.pr.number,
+        url: props.pr.url,
+        value: next,
+      }
+    if (
+      prev &&
+      prev.project === props.projectId &&
+      prev.worktree === props.worktreeId &&
+      prev.number === props.pr.number &&
+      prev.url === props.pr.url
+    )
+      return prev
     return undefined
+  })
+
+  const conversation = createMemo<
+    | { project?: string; worktree: string; number: number; url: string; value: NonNullable<PRStatus["conversation"]> }
+    | undefined
+  >((prev) => {
+    const next = props.pr.conversation
+    if (next)
+      return {
+        project: props.projectId,
+        worktree: props.worktreeId,
+        number: props.pr.number,
+        url: props.pr.url,
+        value: next,
+      }
+    if (
+      prev &&
+      prev.project === props.projectId &&
+      prev.worktree === props.worktreeId &&
+      prev.number === props.pr.number &&
+      prev.url === props.pr.url
+    )
+      return prev
+    return undefined
+  })
+
+  createEffect(() => {
+    if (!jumping() || !comments()) return
+    patchCommentState(props.worktreeId, () => ({ open: true }))
+    later()
   })
 
   return (
@@ -120,6 +195,15 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          <Tooltip value={t("common.refresh")} placement="bottom">
+            <IconButton
+              icon="refresh"
+              size="small"
+              variant="ghost"
+              aria-label={t("common.refresh")}
+              onClick={props.onRefresh}
+            />
+          </Tooltip>
           <Tooltip value={t("agentManager.pr.copyLink")} placement="bottom">
             <CopyButton text={props.pr.url} label={t("agentManager.pr.copyLink")} />
           </Tooltip>
@@ -145,8 +229,8 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
             <PRReviewers reviewers={props.pr.reviewers ?? []} />
           </Show>
           <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
-          <Show when={props.pr.checks.total > 0}>
-            <PRChecks checks={props.pr.checks} />
+          <Show when={props.pr.checks.checks.length > 0}>
+            <PRChecks pr={props.pr} worktreeId={props.worktreeId} activeTerminalId={props.activeTerminalId} />
           </Show>
           <Show when={comments()}>
             {(item) => (
@@ -157,9 +241,23 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
                   worktreeId={props.worktreeId}
                   activeTerminalId={props.activeTerminalId}
                   onOpenFile={props.onOpenFile}
+                  onOpenDiff={props.onOpenDiff}
                   onOpenUrl={props.onOpenUrl}
                 />
               </div>
+            )}
+          </Show>
+          <Show when={conversation()}>
+            {(item) => (
+              <Show when={item().value.length > 0}>
+                <PRConversation
+                  comments={item().value}
+                  projectId={props.projectId}
+                  worktreeId={props.worktreeId}
+                  activeTerminalId={props.activeTerminalId}
+                  onOpenUrl={props.onOpenUrl}
+                />
+              </Show>
             )}
           </Show>
         </div>

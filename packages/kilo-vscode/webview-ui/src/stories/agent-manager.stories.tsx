@@ -12,10 +12,11 @@ import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
 import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
-import { SessionContext } from "../context/session"
+import { SessionContext, useSession } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
@@ -32,6 +33,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
+import type { PRComment } from "../../agent-manager/pr/pr-types"
 import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -143,6 +145,56 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+function IntroductionPreview(props: { skipped?: boolean }) {
+  const intro = createIntro({
+    base: () => "main",
+    git: () => true,
+    onCreateWorktree: () => {},
+    onSelectSession: () => {},
+    onShowHistory: () => {},
+    reveal: () => {},
+    focus: () => {},
+  })
+  if (props.skipped) intro.dismiss()
+  const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  const session = {
+    ...useSession(),
+    sessions: () => [
+      {
+        id: "intro-search",
+        title: "Add settings search",
+        createdAt: ago(10),
+        updatedAt: ago(5),
+      },
+      {
+        id: "intro-login",
+        title: "Fix login validation",
+        createdAt: ago(30),
+        updatedAt: ago(15),
+      },
+    ],
+  }
+  return <SessionContext.Provider value={session}>{intro.render()}</SessionContext.Provider>
+}
+
+export const Introduction: Story = {
+  name: "Introduction",
+  render: () => (
+    <StoryProviders>
+      <IntroductionPreview />
+    </StoryProviders>
+  ),
+}
+
+export const IntroductionSkipped: Story = {
+  name: "Introduction skipped",
+  render: () => (
+    <StoryProviders>
+      <IntroductionPreview skipped />
+    </StoryProviders>
+  ),
+}
 
 // ---------------------------------------------------------------------------
 // Wide chat layout
@@ -1072,6 +1124,51 @@ export const PRBadgeNoReview: Story = {
   ),
 }
 
+export const PRBadgeUnresolved: Story = {
+  name: "PR Badge - unresolved review threads",
+  render: () => (
+    <StoryProviders noPadding>
+      <WorktreeItem
+        {...defaultProps}
+        label="Cache change badge file reads"
+        subtitle="fix/change-badge-reads"
+        stats={baseStats}
+        active
+        pr={{ ...basePR, unresolvedThreads: 3 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="Update authentication"
+        subtitle="feat/authentication"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8595, review: "approved", unresolvedThreads: 12 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="Improve settings"
+        subtitle="feat/settings"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8596, state: "draft", unresolvedThreads: 1 }}
+        onOpenComments={noop}
+      />
+      <WorktreeItem
+        {...defaultProps}
+        label="All feedback resolved"
+        subtitle="fix/resolved-feedback"
+        stats={baseStats}
+        pr={{ ...basePR, number: 8597, unresolvedThreads: 0 }}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeUnresolved200: Story = {
+  ...PRBadgeUnresolved,
+  name: "PR Badge - unresolved review threads, narrow",
+}
+
 export const PRBadgeApprovedChecksFailing: Story = {
   name: "PR Badge — approved but checks failing",
   render: () => (
@@ -1286,15 +1383,26 @@ export const TabBarSingleTab: Story = {
 
 const MockFullContextActions = () => (
   <div class="am-tab-actions">
-    <span class="am-split-button am-run-group">
+    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
+      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Apply selected worktree changes to local branch" keybind="" placement="bottom">
+      <IconButton
+        icon="check"
+        size="small"
+        variant="ghost"
+        aria-label="Apply selected worktree changes to local branch"
+      />
+    </TooltipKeybind>
+    <span class="am-split-button">
       <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
-        <Button size="small" variant="ghost" icon="play">
-          Run
-        </Button>
+        <IconButton size="small" variant="ghost" icon="play" aria-label="Run" />
       </TooltipKeybind>
-      <button class="am-split-arrow" aria-label="Run options">
-        <Icon name="chevron-down" size="small" />
-      </button>
+      <TooltipKeybind title="Run options" keybind="" placement="bottom">
+        <button class="am-split-arrow" aria-label="Run options">
+          <Icon name="chevron-down" size="small" />
+        </button>
+      </TooltipKeybind>
     </span>
     <TooltipKeybind title="Pull request" keybind="" placement="bottom">
       <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
@@ -1873,6 +1981,12 @@ export const MultiProjectSidebar: Story = {
   },
 }
 
+export const MultiProjectSidebar200: Story = {
+  ...MultiProjectSidebar,
+  name: "Project List - minimum sidebar width",
+  parameters: { layout: "fullscreen" },
+}
+
 // ---------------------------------------------------------------------------
 // PR panel — review comments
 // ---------------------------------------------------------------------------
@@ -1891,9 +2005,20 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       url: "https://github.com/org/repo/pull/8594#discussion_r1",
       resolved: false,
       outdated: false,
+      createdAt: Date.now() - 5 * 60 * 1000,
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
-      after: ["  return result", "}", ""],
+      side: "additions",
+      preview: {
+        patch:
+          '@@ -40,6 +40,6 @@\n   const options = { timeout: 5000 }\n   const result = await\n-    execWithShellEnv("gh", args, options)\n+    execWithShellEnv("gh", args, { ...options, env: env(options) })\n   return result\n }\n ',
+        line: 42,
+        side: "additions",
+        base: "b".repeat(40),
+        head: "a".repeat(40),
+        top: true,
+        bottom: true,
+      },
       replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
     },
     {
@@ -1937,7 +2062,13 @@ export const PRPanelComments: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ background: "var(--vscode-editor-background)" }}>
-        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+        <PRComments
+          comments={prComments}
+          worktreeId="wt-a1"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
       </div>
     </StoryProviders>
   ),
@@ -1948,8 +2079,97 @@ export const PRPanelComments200: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ background: "var(--vscode-editor-background)" }}>
-        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+        <PRComments
+          comments={prComments}
+          worktreeId="wt-a1"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
       </div>
     </StoryProviders>
   ),
+}
+
+const remoteThreads: PRComment[] = [
+  {
+    id: "remote-addition",
+    threadId: "thread-addition",
+    author: "kilo-code-bot",
+    body: "Keep this value stable while the request is in progress.\n\nThe caller uses `target` to restore the previous selection.",
+    file: tail.file,
+    line: 1,
+    side: "additions",
+    resolved: false,
+    outdated: false,
+    diffHunk: "@@ -1 +1 @@\n-const target = 'before'\n+const target = 'after'",
+    replies: [{ author: "hubot", body: "Agreed. The loading state should not clear the selection." }],
+  },
+  {
+    id: "remote-deletion",
+    threadId: "thread-deletion",
+    author: "hubot",
+    body: "Does the fallback still use the previous value?",
+    file: tail.file,
+    line: 1,
+    side: "deletions",
+    resolved: true,
+    outdated: false,
+    diffHunk: "@@ -1 +1 @@\n-const target = 'before'",
+  },
+  {
+    id: "remote-outdated",
+    threadId: "thread-outdated",
+    author: "octocat",
+    body: "This file has since been removed. Keep the original context available for the discussion.",
+    file: "src/removed.ts",
+    line: 2,
+    side: "additions",
+    resolved: false,
+    outdated: true,
+    diffHunk: "@@ -1,2 +1,2 @@\n export const state = {\n+  ready: true",
+  },
+]
+
+function RemoteReviewStory(props: { full?: boolean }) {
+  const Panel = props.full ? FullScreenDiffView : DiffPanel
+  const [style, setStyle] = createSignal<"unified" | "split">("unified")
+  const [comments, setComments] = createSignal<ReviewComment[]>([
+    {
+      id: "local-review",
+      file: tail.file,
+      side: "additions",
+      line: 1,
+      comment: "Keep this local note separate from the PR discussion.",
+      selectedText: "const target = 'after'",
+    },
+  ])
+  return (
+    <StoryProviders noPadding>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Panel
+          diffs={[tail]}
+          loading={false}
+          sessionKey={props.full ? "remote-review-full" : "remote-review-inline"}
+          diffStyle={style()}
+          onDiffStyleChange={setStyle}
+          remoteComments={remoteThreads}
+          comments={comments()}
+          onCommentsChange={setComments}
+          onClose={() => {}}
+          onOpenFile={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const DiffPanelWithPRThreads: Story = {
+  name: "DiffPanel - remote PR threads",
+  render: () => <RemoteReviewStory />,
+}
+
+export const FullScreenDiffWithPRThreads: Story = {
+  name: "FullScreenDiffView - remote PR threads",
+  render: () => <RemoteReviewStory full />,
 }

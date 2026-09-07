@@ -25,6 +25,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         val level: LogConfig.LogLevel,
         val mode: LogConfig.ContentMode,
         val preview: Int,
+        val indexWorktrees: Boolean,
     )
 
     private val level = ComboBox(DefaultComboBoxModel(LogConfig.LogLevel.all.toTypedArray()))
@@ -44,6 +45,10 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     private val web = compactToggle(KiloPluginSettings::getCompactGroupWeb, KiloPluginSettings::setCompactGroupWeb)
     private val subagents = compactToggle(KiloPluginSettings::getCompactGroupSubagents, KiloPluginSettings::setCompactGroupSubagents)
     private val other = compactToggle(KiloPluginSettings::getCompactGroupOther, KiloPluginSettings::setCompactGroupOther)
+
+    /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
+    private var touched = false
+    private val indexWorktrees = SettingsToggle { touched = true }
 
     private var saved = current()
 
@@ -101,6 +106,12 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
                 preview,
             ))
             logRows().forEach(::row)
+            row(TitledSeparator(KiloBundle.message("settings.advanced.indexing.title")))
+            row(SettingsRow(
+                KiloBundle.message("settings.advanced.indexWorktrees.title"),
+                KiloBundle.message("settings.advanced.indexWorktrees.description"),
+                indexWorktrees,
+            ))
         }
         add(rows, BorderLayout.CENTER)
     }
@@ -108,6 +119,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     fun modified(): Boolean {
         if (level.selectedItem != saved.level) return true
         if (mode.selectedItem != saved.mode) return true
+        if (indexWorktrees.isSelected != saved.indexWorktrees) return true
         return preview.text.trim() != saved.preview.toString()
     }
 
@@ -123,6 +135,8 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         level.selectedItem = saved.level
         mode.selectedItem = saved.mode
         preview.text = saved.preview.toString()
+        indexWorktrees.isSelected = saved.indexWorktrees
+        touched = false
     }
 
     fun sync() {
@@ -134,9 +148,25 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         level = level.selectedItem as LogConfig.LogLevel,
         mode = mode.selectedItem as LogConfig.ContentMode,
         preview = count() ?: saved.preview,
+        indexWorktrees = indexWorktrees.isSelected,
     )
 
-    private fun current(): Values = Values(LogConfig.level(), LogConfig.contentMode(), LogConfig.previewMax())
+    /** The index-worktrees value as of the last [sync] (or the initial fetch via [refreshIndexWorktrees]). */
+    fun savedIndexWorktrees(): Boolean = saved.indexWorktrees
+
+    /**
+     * Populates the toggle with the value fetched asynchronously from the backend. The fetch is a
+     * no-op once the user has flipped the toggle: in split mode the RPC can land after they acted,
+     * and overwriting then would silently discard their choice and clear [modified].
+     */
+    @RequiresEdt
+    fun refreshIndexWorktrees(value: Boolean) {
+        if (touched) return
+        saved = saved.copy(indexWorktrees = value)
+        indexWorktrees.isSelected = value
+    }
+
+    private fun current(): Values = Values(LogConfig.level(), LogConfig.contentMode(), LogConfig.previewMax(), indexWorktrees = false)
 
     private fun count(): Int? = preview.text.trim().toIntOrNull()
 

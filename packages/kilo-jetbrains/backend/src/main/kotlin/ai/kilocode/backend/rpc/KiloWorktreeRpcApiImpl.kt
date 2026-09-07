@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
@@ -12,6 +13,8 @@ import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
@@ -165,10 +168,16 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
     }
 
+    /**
+     * Uncommitted counts for every working tree of [directory]'s repo, the main checkout included: its
+     * own session editor tab shows them in its header, and they are what a move to a worktree carries.
+     * Unlike [stats], which compares a worktree against the base branch and so has nothing to say about
+     * the checkout that branch lives on, this comparison is local to each working tree.
+     */
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
-        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
+        WorktreeDirtyListDto(parallel(items) { item -> dirty(item) })
     }
 
     /**
@@ -308,7 +317,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             // A session-less move transfers changes only: nothing to fork, so no FORKING stage.
             val forked = sessionId?.let { id ->
                 emit(MoveProgressDto(MoveStage.FORKING))
-                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(id, worktree.path) }
+                withContext(Dispatchers.IO) {
+                    val app = service<KiloBackendAppService>()
+                    app.sessions.fork(id, worktree.path).also {
+                        // Same handoff every fork path records: the session moved directory, and the
+                        // copied context still names the old one.
+                        ForkHandoff.record(app.chat, it.id, worktree.path)
+                    }
+                }
             }
             leftover = null
             LOG.info("worktree move done: worktree=${worktree.path} session=${forked?.id}")
@@ -794,7 +810,18 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         "CLOSED" -> GhState.CLOSED
         else -> GhState.OPEN
     }
-    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj))
+    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj), merge = parseMerge(obj))
+}
+
+/**
+ * Reads GitHub's `mergeable`. Absent, unrequested, and `UNKNOWN` all mean the same thing: nobody has said
+ * the branches conflict. They must not collapse into [GhMerge.CLEAN] — GitHub recomputes mergeability after
+ * every push and answers `UNKNOWN` until it finishes, so a missing verdict is a verdict not yet given.
+ */
+internal fun parseMerge(obj: JsonObject): GhMerge = when (obj["mergeable"]?.jsonPrimitive?.contentOrNull?.uppercase()) {
+    "CONFLICTING" -> GhMerge.CONFLICTING
+    "MERGEABLE" -> GhMerge.CLEAN
+    else -> GhMerge.UNKNOWN
 }
 
 /**
@@ -844,6 +871,34 @@ internal fun parseChecks(obj: JsonObject): GhChecksDto {
         else -> GhChecks.PASSED
     }
     return GhChecksDto(state, total, passed, failed, pending)
+}
+
+/**
+ * Reads the pull request's GraphQL node id out of a `gh pr view --json` payload, or an empty string when
+ * this `gh` did not answer one. The id is what addresses the review-thread query, which has no
+ * `--json` field of its own.
+ */
+internal fun parsePrNodeId(raw: String): String {
+    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return ""
+    return obj["id"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+}
+
+/**
+ * Counts the review conversations in a `reviewThreads` GraphQL response.
+ *
+ * A thread with no `isResolved` at all counts as unresolved: the flag is only absent when GitHub omitted
+ * it, and an omission is not evidence that someone resolved the thread. [GhCommentsDto.total] prefers
+ * `totalCount` over the node count so it stays honest past the query's 100-thread page, even though the
+ * unresolved figure cannot.
+ */
+internal fun parseThreads(raw: String): GhCommentsDto {
+    val root = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return GhCommentsDto()
+    val data = root["data"] as? JsonObject ?: return GhCommentsDto()
+    val threads = (data["node"] as? JsonObject)?.get("reviewThreads") as? JsonObject ?: return GhCommentsDto()
+    val items = threads["nodes"] as? JsonArray ?: JsonArray(emptyList())
+    val unresolved = items.count { (it as? JsonObject)?.get("isResolved")?.jsonPrimitive?.booleanOrNull != true }
+    val total = threads["totalCount"]?.jsonPrimitive?.intOrNull ?: items.size
+    return GhCommentsDto(total = total, unresolved = unresolved)
 }
 
 /** One rollup entry's verdict. [SKIPPED] is tracked only so it can be left out of the totals. */

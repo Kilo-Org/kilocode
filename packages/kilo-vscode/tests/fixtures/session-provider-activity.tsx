@@ -4,9 +4,16 @@ import type { ModelSelection, WebviewMessage } from "../../webview-ui/src/types/
 
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
+const focused = { value: true }
+Object.defineProperty(window.document, "hasFocus", { value: () => focused.value })
 const sent: WebviewMessage[] = []
 const api = {
-  postMessage: (message: WebviewMessage) => sent.push(message),
+  postMessage: (message: WebviewMessage) => {
+    sent.push(message)
+    if (message.type === "acknowledgeSession") {
+      queueMicrotask(() => post({ ...message, type: "sessionAcknowledged" }))
+    }
+  },
   getState: () => undefined,
   setState: () => {},
 }
@@ -38,9 +45,11 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { For, Show, createEffect, createSignal } = await import("solid-js")
+const { For, Show, createEffect, createRoot, createSignal } = await import("solid-js")
+const { unwrap } = await import("solid-js/store")
 const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
 const { SubagentPanel } = await import("../../webview-ui/agent-manager/SubagentPanel")
+const { createSubagentController } = await import("../../webview-ui/agent-manager/subagent-tabs")
 const { DragDropProvider, SortableProvider } = await import("@thisbeyond/solid-dnd")
 const { renderTab } = await import("../../webview-ui/agent-manager/tab-rendering")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
@@ -49,7 +58,9 @@ const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
-const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
+const { SessionProvider, useSession, useSessionVisibility } = await import("../../webview-ui/src/context/session")
+const { initialMessage } = await import("../../webview-ui/agent-manager/initial-message")
+const { useBaseUpdate } = await import("../../webview-ui/agent-manager/update-from-base")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
@@ -90,15 +101,28 @@ const language = {
 }
 
 const ref = { value: undefined as ReturnType<typeof useSession> | undefined }
+const update = { value: undefined as ReturnType<typeof useBaseUpdate> | undefined }
+const menu = { value: undefined as ReturnType<typeof useBaseUpdate> | undefined }
 const observed: (ModelSelection | null)[] = []
 const [operation, setOperation] = createSignal(false)
 const [run, setRun] = createSignal(false)
+const [inspected, setInspected] = createSignal(["task-child", "task-grand"])
 const [inspector, setInspector] = createSignal(false)
 const [composer, setComposer] = createSignal(false)
 const [active, setActive] = createSignal("task-child")
+const [review, setReview] = createSignal(false)
+const [sharing, setSharing] = createSignal(false)
+const peer = { value: undefined as ReturnType<typeof useSession> | undefined }
+const Peer = () => {
+  peer.value = useSession()
+  return null
+}
 const Probe = () => {
   const session = useSession()
+  useSessionVisibility(() => (review() ? undefined : session.currentSessionID()))
   ref.value = session
+  update.value = useBaseUpdate(session)
+  menu.value = useBaseUpdate()
   createEffect(() => observed.push(session.selected()))
   const ids = ["root", "background"]
   const deps = {
@@ -118,6 +142,11 @@ const Probe = () => {
   } as Parameters<typeof renderTab>[1]
   return (
     <DragDropProvider>
+      <Show when={sharing()}>
+        <SessionProvider>
+          <Peer />
+        </SessionProvider>
+      </Show>
       <SortableProvider ids={ids}>
         <For each={ids}>{(id) => renderTab(id, deps)}</For>
       </SortableProvider>
@@ -157,9 +186,9 @@ const Probe = () => {
       />
       <Show when={inspector()}>
         <SubagentPanel
-          tabs={() => ["task-child", "task-grand"].map((id) => ({ id, title: id }))}
+          tabs={() => inspected().map((id) => ({ id, title: id }))}
           active={active}
-          visible={() => true}
+          visible={() => inspector() && inspected().length > 0}
           nextKeybind=""
           closeKeybind=""
           onSelect={setActive}
@@ -211,8 +240,20 @@ const settle = async () => {
   await Promise.resolve()
   await window.happyDOM.waitUntilComplete()
 }
-const emit = async (data: unknown) => {
-  post(structuredClone(data))
+const focus = async (value: boolean) => {
+  focused.value = value
+  window.dispatchEvent(new window.Event(value ? "focus" : "blur"))
+  await settle()
+  assert.deepEqual(
+    sent.findLast((message) => message.type === "webviewFocusChanged"),
+    {
+      type: "webviewFocusChanged",
+      focused: value,
+    },
+  )
+}
+const emit = async (data: { type: string; [key: string]: unknown }) => {
+  post(structuredClone(data.type === "sessionTurnClosed" ? { eventID: crypto.randomUUID(), ...data } : data))
   await settle()
 }
 const state = (id: string) => {
@@ -325,6 +366,89 @@ try {
   assert.equal(value.selected(), null)
   value.sendMessage("initial pending")
   assert.equal(requests().length, 0)
+
+  for (const variant of ["high", "", undefined]) {
+    const id = `initial-${variant ?? "default"}`
+    const request = initialMessage({
+      type: "agentManager.sendInitialMessage",
+      projectId: "background-project",
+      sessionId: id,
+      text: "Initial worktree prompt",
+      providerID: "unloaded",
+      modelID: "unloaded",
+      agent: variant === undefined ? undefined : "ask",
+      variant,
+      files: [{ mime: "image/png", url: "data:image/png;base64,cHJvbXB0", filename: "prompt.png" }],
+      browserFeedback: { version: 1, references: [{ id: "element", sessionId: id, selector: "button" }] },
+    })
+    assert(request)
+    value.setCurrentSessionID("root")
+    value.submit(request)
+    const sent = requests().at(-1)
+    assert(sent?.type === "sendMessage" && sent.messageID)
+    assert.deepEqual(sent, { ...request, messageID: sent.messageID })
+    assert.equal(value.currentSessionID(), "root")
+    assert.equal(value.isSubmitting(id), true)
+    const optimistic = unwrap(value.allMessages()[id]?.at(0))
+    assert.equal(optimistic?.id, sent.messageID)
+    const parts = structuredClone(unwrap(value.getParts(sent.messageID)))
+    assert.equal(parts.length, 2)
+    assert.equal(parts.find((part) => part.type === "text")?.text, request.text)
+    assert.equal(parts.at(1)?.type, "file")
+
+    await emit({ type: "messagesLoaded", sessionID: id, messages: [], mode: "replace" })
+    assert.equal(value.allMessages()[id]?.at(0)?.id, sent.messageID)
+    assert.deepEqual(structuredClone(unwrap(value.getParts(sent.messageID))), parts)
+    if (variant === undefined) {
+      await emit({ ...sent, type: "sendMessageFailed", error: "Test send failed" })
+      assert.equal(value.allMessages()[id]?.length, 0)
+      assert.equal(value.getParts(sent.messageID).length, 0)
+      assert.equal(value.isSubmitting(id), false)
+    } else {
+      await emit({ type: "messageCreated", message: optimistic })
+      assert.equal(value.allMessages()[id]?.length, 1)
+      assert.deepEqual(structuredClone(unwrap(value.getParts(sent.messageID))), parts)
+      for (const [index, part] of parts.entries()) {
+        await emit({
+          type: "partUpdated",
+          sessionID: id,
+          messageID: sent.messageID,
+          part: { ...part, id: `${id}-part-${index}` },
+        })
+      }
+      assert.deepEqual(
+        value.getParts(sent.messageID).map((part) => part.id),
+        [`${id}-part-0`, `${id}-part-1`],
+      )
+      const response = {
+        id: `${id}-response`,
+        sessionID: id,
+        role: "assistant",
+        parentID: sent.messageID,
+        createdAt: info(id).createdAt,
+        time: { created: 1, completed: 2 },
+        finish: "tool-calls",
+      }
+      await emit({ type: "messagesLoaded", sessionID: id, messages: [optimistic, response] })
+      assert.equal(value.isSubmitting(id), true)
+      const completed =
+        variant === "high"
+          ? { ...response, finish: "stop" }
+          : { ...response, finish: undefined, time: undefined, error: { name: "UnknownError" } }
+      const history = { type: "messagesLoaded", sessionID: id, messages: [optimistic, completed], mode: "reconcile" }
+      await emit(history)
+      assert.equal(value.isSubmitting(id), false)
+      value.submit({ ...request, text: "Queued follow-up" })
+      const queued = requests().at(-1)
+      assert(queued?.type === "sendMessage")
+      await emit(history)
+      assert.equal(value.isSubmitting(id), true)
+      await emit({ ...queued, type: "sendMessageFailed", error: "Test send failed" })
+      assert.equal(value.isSubmitting(id), false)
+    }
+    value.releaseSession(id)
+  }
+  value.setCurrentSessionID(undefined)
   await emit({ type: "agentsLoaded", agents: [{ name: "code" }, { name: "ask" }], defaultAgent: "code" })
   await emit({ type: "recentsLoaded", recents: [auto, first, external] })
   await catalog("org-a", [first.modelID, recommended.modelID, auto.modelID], recommended.modelID)
@@ -422,11 +546,54 @@ try {
   })
   assert.equal(requests().length, before)
   assert.deepEqual(writes(), remembered)
+  value.selectVariant(undefined, "selection")
+  const captured = value.submission("selection")
+  assert.deepEqual(captured.model, recommended)
+  assert.equal(captured.variant, "")
+  assert(update.value)
+  update.value("worktree", "project", "selection")
+  const updated = sent.at(-1)
+  assert.deepEqual(updated, {
+    type: "agentManager.updateFromBase",
+    worktreeId: "worktree",
+    projectId: "project",
+    sessionId: "selection",
+    ...captured,
+  })
   assert.equal(value.sendMessage("effective model"), true)
   const message = requests().at(-1)
   assert(message?.type === "sendMessage")
   assert.equal(message.providerID, recommended.providerID)
   assert.equal(message.modelID, recommended.modelID)
+  assert.equal(message.agent, captured.agent)
+  assert.equal(message.variant, captured.variant)
+  value.selectVariant("high", "selection")
+  assert.equal(captured.variant, "")
+  assert(updated?.type === "agentManager.updateFromBase")
+  assert.equal(updated.variant, "")
+  assert.equal(message.variant, "")
+  update.value("worktree", "project", "selection")
+  assert.deepEqual(sent.at(-1), { ...updated, variant: "high" })
+
+  assert(menu.value)
+  for (const send of [update.value, menu.value]) {
+    for (const id of [undefined, "background"]) {
+      send("other-worktree", "other-project", id)
+      assert.deepEqual(sent.at(-1), {
+        type: "agentManager.updateFromBase",
+        worktreeId: "other-worktree",
+        projectId: "other-project",
+        sessionId: id,
+      })
+    }
+  }
+  menu.value("worktree", "project", "selection")
+  assert.deepEqual(sent.at(-1), {
+    type: "agentManager.updateFromBase",
+    worktreeId: "worktree",
+    projectId: "project",
+    sessionId: "selection",
+  })
   await emit({
     type: "messageCreated",
     message: {
@@ -439,6 +606,10 @@ try {
   })
   await catalog(null, [auto.modelID, personal.modelID])
   choice(value.selected(), personal)
+  update.value("worktree", "project", "selection")
+  const live = sent.at(-1)
+  assert(live?.type === "agentManager.updateFromBase" && live.model)
+  choice(live.model, personal)
   await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
   await emit({ type: "sessionStatus", sessionID: "selection", status: "idle" })
   assert.equal(value.sendCommand("effective", ""), true)
@@ -446,6 +617,8 @@ try {
   assert(command?.type === "sendCommand")
   assert.equal(command.providerID, recommended.providerID)
   assert.equal(command.modelID, recommended.modelID)
+  assert.equal(command.agent, value.submission("selection").agent)
+  assert.equal(command.variant, value.submission("selection").variant)
   value.setCurrentSessionID("cloud:preview")
   assert.equal(value.sendMessage("cloud effective model"), true)
   const cloud = requests().at(-1)
@@ -800,7 +973,13 @@ try {
   await settle()
   await catalog("org-a", [recommended.modelID], recommended.modelID)
 
+  setSharing(true)
+  await settle()
+  await emit({ type: "sessionsLoaded", sessions: unwrap(value.sessions()) })
   value.setCurrentSessionID("root")
+  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed", eventID: "seeded" })
+  await check("root", "done")
+  await emit({ type: "webviewActiveChanged", active: true })
   await check("root", "idle")
   await check("background", "idle")
   for (const update of [setOperation, setRun]) {
@@ -916,19 +1095,36 @@ try {
     suggestion: { id: "suggestion", sessionID: "task-grand", text: "Try this", actions: [] },
   })
   await check("root", "idle")
-  await check("task-grand", "idle")
+  await check("task-grand", "done")
   assert.equal(value.scopedSuggestions("root").length, 1)
   await emit({ type: "suggestionResolved", requestID: "suggestion" })
   await check("root", "idle")
+  await check("task-grand", "idle")
   assert.equal(value.suggestions().length, 0)
 
+  await emit({ type: "webviewActiveChanged", active: true })
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "completed", parentID: "root" })
   await check("task-child", "done")
   await check("root", "idle")
+  setInspected(["task-grand", "task-child"])
+  await check("task-child", "done")
+  setInspected(["task-child"])
+  await check("task-child", "done")
+  setInspected(["task-child", "task-grand"])
+  await check("task-child", "done")
+  setActive("task-grand")
+  await settle()
+  const tab = host.querySelector<HTMLElement>('[data-tab-id="task-child"] [role="tab"]')
+  assert(tab)
+  tab.click()
+  await check("task-child", "idle")
+  assert.equal(peer.value?.activityFor("task-child"), "idle")
+  await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "completed", parentID: "root" })
+  await check("task-child", "done")
   setInspector(false)
   await settle()
   setInspector(true)
-  await check("task-child", "done")
+  await check("task-child", "idle")
   assert.equal(value.currentSessionID(), "root")
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "error", parentID: "root" })
   await check("task-child", "error")
@@ -938,18 +1134,122 @@ try {
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
 
-  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
+  setInspector(false)
+  setInspected(["inspector-child", "inspector-sibling"])
+  setActive("inspector-child")
+  const start = sent.length
+  const loads = () => sent.slice(start).filter((message) => message.type === "loadMessages")
+  setInspector(true)
+  await settle()
+  assert.deepEqual(loads(), [
+    { type: "loadMessages", sessionID: "inspector-child", mode: "replace", focus: false, limit: 80 },
+  ])
+  for (const id of inspected()) {
+    await emit({ type: "messagesLoaded", sessionID: id, messages: [], mode: "replace" })
+    assert.equal(loads().length, 1, `${id} snapshot reloaded the selected inspector`)
+    for (const status of ["busy", "idle"] as const) {
+      await emit({ type: "sessionStatus", sessionID: id, status })
+      assert.equal(loads().length, 1, `${id} ${status} reloaded the selected inspector`)
+      assert.equal(active(), "inspector-child")
+      assert.equal(value.currentSessionID(), "root")
+    }
+  }
+  for (const id of ["inspector-sibling", "inspector-child"]) {
+    const tab = host.querySelector<HTMLElement>(`[data-tab-id="${id}"] [role="tab"]`)
+    assert(tab)
+    tab.click()
+    await settle()
+    assert.equal(active(), id)
+    assert.deepEqual(loads().at(-1), {
+      type: "loadMessages",
+      sessionID: id,
+      mode: "reconcile",
+      focus: false,
+      limit: 80,
+    })
+    assert.equal(value.currentSessionID(), "root")
+  }
+  assert.equal(loads().length, 3)
+  setInspector(false)
+  await settle()
+
+  const family = createRoot((dispose) => {
+    const state = { reads: 0 }
+    createEffect(() => {
+      value.scopedPermissions("root")
+      state.reads++
+    })
+    return { state, dispose }
+  })
+  try {
+    await settle()
+    assert.equal(family.state.reads, 1)
+    for (const id of inspected()) {
+      await emit({ type: "sessionStatus", sessionID: id, status: "busy" })
+      await emit({ type: "sessionStatus", sessionID: id, status: "busy" })
+    }
+    assert.equal(family.state.reads, 1, "Busy updates rebuilt unchanged session ancestry")
+  } finally {
+    family.dispose()
+  }
+
+  const opened = createRoot((dispose) => {
+    const [visible, setVisible] = createSignal(false)
+    const selected: (string | undefined)[] = []
+    const controller = createSubagentController({
+      project: () => undefined,
+      current: () => "root",
+      selection: () => null,
+      parts: () =>
+        inspected().map((id) => ({
+          id,
+          type: "tool",
+          tool: "task",
+          state: { status: "running", input: {} },
+          metadata: { sessionId: id },
+        })),
+      visible,
+      show: () => setVisible(true),
+      hide: () => setVisible(false),
+      sync: () => {},
+      unsync: () => {},
+    })
+    createEffect(() => selected.push(controller.tabs.active()))
+    return { ...controller, selected, dispose }
+  })
+  try {
+    await settle()
+    assert.deepEqual(opened.selected, [undefined])
+    opened.toolbar.toggle()
+    await settle()
+    assert.deepEqual(
+      opened.tabs.tabs().map((tab) => tab.id),
+      inspected(),
+    )
+    assert.deepEqual(opened.selected, [undefined, "inspector-sibling"])
+  } finally {
+    opened.dispose()
+  }
+
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({
     type: "suggestionRequest",
     suggestion: { id: "review", sessionID: "root", text: "Review the changes", actions: [] },
   })
-  await check("root", "done")
-  assert.equal(value.suggestions().length, 1)
-  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await check("root", "busy")
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  await check("root", "done")
+  assert.equal(value.closeReason(), undefined)
+  assert.equal(value.suggestions().length, 1)
+  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed", eventID: "review-finished" })
+  await check("root", "done")
+  value.acknowledge("root")
   await check("root", "idle")
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await check("root", "busy")
   await emit({ type: "suggestionResolved", requestID: "review" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  await check("root", "idle")
 
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "done")
@@ -1135,6 +1435,81 @@ try {
     )
   }
 
+  // "done" clears when the user switches TO that tab (the focus transition);
+  // an unresolved attention state ("waiting") never clears on focus.
+  await emit({ type: "sessionStatus", sessionID: "background", status: "idle" })
+  await emit({ type: "sessionTurnClosed", sessionID: "background", reason: "completed" })
+  await check("background", "done")
+  assert.equal(value.currentSessionID(), "root")
+  value.selectSession("background")
+  await check("background", "idle")
+  assert.equal(value.closeReason(), "completed")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+
+  setReview(true)
+  await settle()
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "review-completed",
+    reason: "completed",
+  })
+  await check("background", "done")
+  setReview(false)
+  await check("background", "idle")
+  assert.equal(value.currentSessionID(), "background")
+  assert.equal(value.closeReason(), "completed")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "review-completed",
+    reason: "completed",
+  })
+  await check("background", "idle")
+
+  await emit({ type: "sessionTurnClosed", sessionID: "background", reason: "completed" })
+  await check("background", "done")
+  await focus(false)
+  await check("background", "done")
+  await focus(true)
+  await check("background", "done")
+
+  await emit({ type: "webviewActiveChanged", active: false })
+  await emit({
+    type: "sessionTurnClosed",
+    sessionID: "background",
+    eventID: "next-completed",
+    reason: "completed",
+  })
+  await emit({ type: "sessionAcknowledged", sessionID: "background", eventID: "review-completed" })
+  await check("background", "done")
+  value.selectSession("root")
+  value.selectSession("background")
+  await focus(false)
+  await focus(true)
+  await check("background", "done")
+  await emit({ type: "webviewActiveChanged", active: true })
+  await check("background", "idle")
+  assert.equal(peer.value?.activityFor("background"), "idle")
+
+  await emit({
+    type: "questionRequest",
+    question: {
+      id: "attention",
+      sessionID: "background",
+      questions: [{ question: "Continue?", header: "Confirm", options: [] }],
+    },
+  })
+  await check("background", "waiting")
+  value.setCurrentSessionID("root")
+  await settle()
+  value.setCurrentSessionID("background")
+  await check("background", "waiting")
+  await emit({ type: "questionResolved", requestID: "attention" })
+  value.setCurrentSessionID("root")
+  await settle()
+
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await emit({
@@ -1160,6 +1535,74 @@ try {
   assert.equal(
     sent.some((item) => (item as { type?: string }).type === "sendMessage"),
     true,
+  )
+  // A trimmed cold page must not reduce older-history page size or lose messages.
+  await emit({ type: "sessionsLoaded", sessions: [...unwrap(value.sessions()), info("pagination")] })
+  value.selectSession("pagination")
+  assert.equal(value.loading(), true)
+  assert.deepEqual(
+    sent.findLast((item) => item.type === "loadMessages"),
+    {
+      type: "loadMessages",
+      sessionID: "pagination",
+      mode: "replace",
+      limit: 80,
+    },
+  )
+  const history = Array.from({ length: 100 }, (_, index) => {
+    const id = `history-${String(index).padStart(3, "0")}`
+    return {
+      id,
+      sessionID: "pagination",
+      role: "user",
+      createdAt: new Date(index).toISOString(),
+      parts: [{ id: `${id}-text`, messageID: id, sessionID: "pagination", type: "text", text: id }],
+    }
+  })
+  await emit({
+    type: "messagesLoaded",
+    sessionID: "pagination",
+    mode: "replace",
+    messages: history.slice(80),
+    cursor: "older",
+    hasMore: true,
+  })
+  assert.equal(value.loading(), false)
+  assert.equal(value.messages().length, 20)
+  assert.equal(value.loadOlderMessages(), true)
+  assert.equal(value.loadOlderMessages(), false)
+  assert.deepEqual(
+    sent.findLast((item) => item.type === "loadMessages"),
+    {
+      type: "loadMessages",
+      sessionID: "pagination",
+      mode: "prepend",
+      before: "older",
+      limit: 80,
+    },
+  )
+  await emit({
+    type: "messagesLoaded",
+    sessionID: "pagination",
+    mode: "prepend",
+    messages: history.slice(0, 80),
+    hasMore: false,
+  })
+  assert.deepEqual(
+    value.messages().map((item) => item.id),
+    history.map((item) => item.id),
+  )
+  for (const item of history) assert.equal(value.getParts(item.id).at(0)?.id, `${item.id}-text`)
+  assert.equal(value.loadOlderMessages(), false)
+  value.selectSession("pagination")
+  assert.equal(value.loading(), false)
+  assert.deepEqual(
+    sent.findLast((item) => item.type === "loadMessages"),
+    {
+      type: "loadMessages",
+      sessionID: "pagination",
+      mode: "focus",
+    },
   )
   assert.deepEqual(failures, [])
 } finally {

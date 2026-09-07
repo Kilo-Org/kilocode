@@ -7,12 +7,12 @@
 
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { createEffect, createMemo, type Accessor, type Component } from "solid-js"
+import { createEffect, createMemo, on, type Accessor, type Component } from "solid-js"
 import { DataBridge } from "../src/App"
 import { ChatView } from "../src/components/chat"
 import { ActivityIcon } from "../src/components/shared/ActivityIcon"
 import { useLanguage } from "../src/context/language"
-import { SessionProvider, useSession } from "../src/context/session"
+import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
 import { description, label, type Activity } from "../src/utils/session-activity"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
@@ -34,11 +34,12 @@ interface Props {
 const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props) => {
   const session = useSession()
 
-  createEffect(() => {
-    const id = props.active()
-    if (!id) return
-    session.selectSession(id, { focus: false })
-  })
+  createEffect(
+    on(props.active, (id) => {
+      if (!id) return
+      session.selectSession(id, { focus: false })
+    }),
+  )
 
   return (
     <DataBridge>
@@ -136,6 +137,7 @@ const SubagentContent: Component<Props & { activity: (id: string) => Activity }>
 
 export const SubagentPanel: Component<Props> = (props) => {
   const session = useSession()
+  useSessionVisibility(() => (props.visible() ? props.active() : undefined))
   return (
     <SessionProvider>
       <SubagentContent {...props} activity={session.activityFor} />

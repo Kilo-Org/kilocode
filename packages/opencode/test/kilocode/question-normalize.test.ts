@@ -72,6 +72,7 @@ it.instance(
         question: "How\rshould we merge?\r\nKeep the history?",
         questionKey: "merge.question",
         headerKey: "merge.header",
+        default: " Squash \r merge\n(Recommended) ",
         multiple: true,
         custom: false,
         options: [
@@ -94,6 +95,7 @@ it.instance(
       expect(request.questions).toEqual([
         {
           ...input,
+          default: "Squash merge (Recommended)",
           header: "Merge method",
           question: "How should we merge?\nKeep the history?",
           options: [

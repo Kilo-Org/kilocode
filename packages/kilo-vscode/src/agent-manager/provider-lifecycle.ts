@@ -1,4 +1,5 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import { lstat } from "node:fs/promises"
 import { getErrorMessage } from "../kilo-provider-utils"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
@@ -208,6 +209,7 @@ export async function deleteLifecycleWorktree(
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
     for (const sessionID of retained) routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)
+    host.post({ type: "agentManager.worktreeDeleted", projectId: ctx.id, worktreeId })
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } catch (error) {
@@ -250,7 +252,16 @@ export async function removeStaleLifecycleWorktree(
     releasePtyCleanup()
   } catch (error) {
     host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    return null
+    // A deleted directory may no longer be reachable through the backend.
+    // Only bypass cleanup when the path is missing, not when access is denied.
+    const missing = await lstat(worktree.path).then(
+      () => false,
+      (err: NodeJS.ErrnoException) => err.code === "ENOENT",
+    )
+    if (!missing) {
+      host.post({ type: "error", message: "Failed to stop terminals before removing the stale worktree" })
+      return null
+    }
   }
   host.forgetName(worktreeId)
   const orphaned = state.removeWorktree(worktreeId)

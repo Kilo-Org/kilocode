@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.AgentManagerHost
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -19,6 +20,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
@@ -72,13 +74,44 @@ open class WorktreeSessionEditorManager(
             project.service<KiloVfsManager>().updatePresentation(WorktreeSessionEditorKind.ID, worktreeSessionParams(updated))
         }
     },
+    // Whether this tab's directory is the repo's main working tree rather than a linked worktree.
+    // `git worktree list` answers this from any of the repo's worktrees, so no separate "repo root"
+    // is needed -- just the tab's own directory.
+    private val resolveBase: suspend (String) -> Boolean = { dir ->
+        service<KiloWorktreeService>().list(dir).worktrees
+            .firstOrNull { normalizeWorktreePath(it.path) == normalizeWorktreePath(dir) }
+            ?.main == true
+    },
+    private val moveHost: (String?, String, String) -> Unit = { id, dir, surface ->
+        project.service<AgentManagerHost>().move(id, dir, surface)
+    },
+    private val newWorktreeHost: () -> Unit = {
+        project.service<AgentManagerHost>().newWorktree()
+    },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
-    override val showsBranchDock: Boolean get() = false
+    // Both the branch dock and the New Worktree / Move to Worktree flows only make sense from the
+    // base checkout -- a linked worktree's own editor tab keeps today's plain session view. Resolved
+    // once in start(), before the first session opens; see resolveBase().
+    private var resolvedBase = false
+    private var baseResolved = false
+    // The answer lands on the EDT after the lookup coroutine has already finished, so a second start()
+    // in between would launch a second lookup and open the first session twice. This spans the whole
+    // gap; the job's own lifetime does not.
+    private var resolving = false
+    override val showsBranchDock: Boolean get() = base()
+    override val supportsNewWorktree: Boolean get() = base()
+    override val supportsMoveToWorktree: Boolean get() = base()
+    // Unlike the worktree flows above, forking is a plain session copy: it works from a linked
+    // worktree's own tab as well as the base checkout's.
+    override val supportsFork: Boolean get() = true
     override val hostedInEditorTab: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
+    // Fork requests in flight, keyed by source session. A hover icon or menu item is easy to hit twice
+    // before the RPC answers, and each answer opens its session over the last one.
+    private val forking = linkedSetOf<String>()
     private var adopted = false
     private var adopting = false
     private var startedOnce = false
@@ -94,9 +127,44 @@ open class WorktreeSessionEditorManager(
         bindMigration()
     }
 
+    /** Whether this tab's directory is the repo's main working tree; see [resolveBase]. */
+    @RequiresEdt
+    open fun base(): Boolean = resolvedBase
+
+    @RequiresEdt
+    override fun newWorktree() {
+        if (base()) newWorktreeHost()
+    }
+
+    @RequiresEdt
+    override fun moveToWorktree(sessionId: String?, directory: String) {
+        if (base()) moveHost(sessionId, directory, "worktree_editor")
+    }
+
     @RequiresEdt
     fun start() {
         startedOnce = true
+        if (baseResolved) {
+            startSessions()
+            return
+        }
+        // A start() that arrives mid-lookup needs nothing: the lookup in flight opens the first session
+        // when it lands, and that is what this call would have done itself.
+        if (resolving) return
+        resolving = true
+        cs.launch {
+            val resolved = runCatching { resolveBase(worktree.directory) }.getOrDefault(false)
+            edt({ !Disposer.isDisposed(this@WorktreeSessionEditorManager) }) {
+                resolving = false
+                resolvedBase = resolved
+                baseResolved = true
+                startSessions()
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun startSessions() {
         list.reload {
             val target = session
             if (target != null) {
@@ -175,6 +243,38 @@ open class WorktreeSessionEditorManager(
                 if (currentUi() == null) showBlank()
                 onListChanged?.invoke()
             }
+        }
+    }
+
+    /**
+     * Copies [id]'s history into a new session in this worktree and opens it.
+     *
+     * Nothing here touches the session list's visibility: the forked row goes into the same list
+     * model every other creation path writes to, and [WorktreeSessionEditorPanel] applies its own
+     * promotion rule from there.
+     */
+    @RequiresEdt
+    override fun forkSession(id: String, messageId: String?, surface: String) {
+        if (id.isBlank() || id == NEW || id in deleting || !forking.add(id)) return
+        val name = title(id)
+        list.fork(id, messageId) { forked, err ->
+            forking.remove(id)
+            onListChanged?.invoke()
+            // One event per attempt, sent once the outcome is known: the surface and whether a message
+            // was targeted only exist here, and a failed fork must not read as a completed one.
+            Telemetry.send(
+                "Session Forked",
+                mapOf(
+                    "surface" to surface,
+                    "message" to (messageId != null).toString(),
+                    "success" to (forked != null).toString(),
+                ),
+            )
+            if (forked == null) {
+                notify(KiloBundle.message("worktree.session.fork.failed.title", name), err)
+                return@fork
+            }
+            openSession(SessionRef.Local(forked))
         }
     }
 

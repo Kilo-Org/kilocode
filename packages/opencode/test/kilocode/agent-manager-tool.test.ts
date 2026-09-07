@@ -181,6 +181,7 @@ describe("agent_manager tool", () => {
       "mode",
       "versions",
       "tasks",
+      "worktreeID",
       "action",
       "filter",
       "sessionID",
@@ -202,6 +203,7 @@ describe("agent_manager tool", () => {
       "mode",
       "versions",
       "tasks",
+      "worktreeID",
       "action",
       "filter",
       "sessionID",
@@ -272,6 +274,51 @@ describe("agent_manager tool", () => {
     )
     expect(permissions).toEqual([])
     expect(events).toEqual([])
+  })
+
+  test("validates worktree targeting before permission and forwards valid targets", async () => {
+    const tool: Tool.Def = await init()
+    const permissions: unknown[] = []
+    const events: AgentManagerStart[] = []
+    await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const queue = yield* Queue.unbounded<AgentManagerStart>()
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) => {
+            events.push(item.properties)
+            Queue.offerUnsafe(queue, item.properties)
+          })
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          const context = { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) }
+          for (const input of [
+            { worktreeID: "" },
+            { worktreeID: "  " },
+            { worktreeID: 42 },
+            { worktreeID: "wt-target", mode: "worktree" },
+            { worktreeID: "wt-target", versions: true },
+            { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+            { worktreeID: "wt-target", tasks: JSON.stringify([{ prompt: "Fix", branchName: "branch" }]) },
+          ]) {
+            const result = yield* tool
+              .execute({ mode: "local", tasks: [{ prompt: "Fix" }], ...input }, context)
+              .pipe(Effect.exit)
+            expect(Exit.isFailure(result)).toBe(true)
+          }
+          expect(permissions).toEqual([])
+          expect(events).toEqual([])
+          for (const worktreeID of [undefined, null, "wt-target"]) {
+            const result = yield* tool.execute({ mode: "local", worktreeID, tasks: [{ name: "Prepared" }] }, context)
+            const event = yield* Queue.take(queue).pipe(Effect.timeout("2 seconds"))
+            expect(event.worktreeID).toBe(worktreeID ?? undefined)
+            if (worktreeID) {
+              expect(result.output).toContain("Existing managed worktree: wt-target")
+              expect(permissions.at(-1)).toMatchObject({ metadata: { worktreeID } })
+            }
+          }
+        }),
+      ).pipe(Effect.scoped),
+    )
   })
 
   test("keeps session ID validation local", () => {
@@ -501,7 +548,12 @@ describe("agent_manager tool", () => {
     await rt.dispose()
   })
 
-  test("prompts one existing session with a separate mutation permission pattern", async () => {
+  test.each([
+    { name: "single-line", prompt: "Continue the fix" },
+    { name: "multiline", prompt: 'Review <script>alert("test")</script>.\n\n  Keep `code` and **markup** literal.' },
+    { name: "long", prompt: "Review the next file.\n".repeat(500) + "Report the final result." },
+  ])("previews the full $name prompt before sending it to one session", async (item) => {
+    const prompt = item.prompt
     const requests: unknown[] = []
     const rt = makeRuntime("test", {
       request: (input) =>
@@ -519,8 +571,15 @@ describe("agent_manager tool", () => {
     const result = await rt.runPromise(
       provideTmpdirInstance(() =>
         tool.execute(
-          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: "  Continue the fix  " },
-          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: `  ${prompt}\n ` },
+          {
+            ...ctx,
+            ask: (input: unknown) =>
+              Effect.sync(() => {
+                expect(requests).toEqual([])
+                permissions.push(input)
+              }),
+          },
         ),
       ).pipe(Effect.scoped),
     )
@@ -530,15 +589,20 @@ describe("agent_manager tool", () => {
         permission: "agent_manager",
         patterns: ["prompt"],
         always: ["prompt"],
-        metadata: { action: "prompt", sessionID: "ses_target" },
+        metadata: {
+          action: "prompt",
+          sessionID: "ses_target",
+          description: `Send a prompt to Agent Manager session ses_target:\n\n${prompt}`,
+        },
       },
     ])
     expect(requests).toEqual([
       {
         operation: "prompt",
         sessionID: ctx.sessionID,
+        sourceSessionID: ctx.sessionID,
         targetSessionID: "ses_target",
-        prompt: "Continue the fix",
+        prompt,
       },
     ])
     expect(result.title).toBe("Prompt accepted")

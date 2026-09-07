@@ -64,17 +64,22 @@ export async function resolveProjectRoot(
     Promise.resolve()
       .then(() => git(dir, args))
       .catch(() => undefined)
-  const revparse = (args: string[]) => run(["rev-parse", ...args])
-  const top = await revparse(["--path-format=absolute", "--show-toplevel"])
-  if (!top) return undefined
-  const root = canonicalizePath(top.trim())
-  const [gitdir, common] = await Promise.all([
-    revparse(["--path-format=absolute", "--git-dir"]),
-    revparse(["--path-format=absolute", "--git-common-dir"]),
-  ])
-  if (!gitdir || !common) return root
-  if (samePath(canonicalizePath(gitdir.trim()), canonicalizePath(common.trim()))) return root
+  const revparse = async (arg: string) => (await run(["rev-parse", arg]))?.trimEnd()
+  // Older Git echoes unsupported rev-parse flags into stdout with exit code zero.
+  // --show-toplevel is already absolute; never resolve an option line as a path.
+  const top = await revparse("--show-toplevel")
+  if (!top || !path.isAbsolute(top)) return undefined
+  const root = canonicalizePath(top)
+  const [gitdir, common] = await Promise.all([revparse("--git-dir"), revparse("--git-common-dir")])
+  if (!gitdir || !common || gitdir.startsWith("--") || common.startsWith("--")) return root
+  // Git metadata paths can be relative to the command's cwd, not the extension host's cwd.
+  if (samePath(canonicalizePath(path.resolve(dir, gitdir)), canonicalizePath(path.resolve(dir, common)))) {
+    return root
+  }
   const listing = await run(["worktree", "list", "--porcelain", "-z"])
-  const first = listing?.split("\0").find((field) => field.startsWith("worktree "))
-  return first ? canonicalizePath(first.slice("worktree ".length)) : root
+  const plain = listing ?? (await run(["worktree", "list", "--porcelain"]))
+  const fields = plain?.includes("\0") ? plain.split("\0") : plain?.split(/\r?\n/)
+  const first = fields?.find((field) => field.startsWith("worktree "))
+  const primary = first?.slice("worktree ".length)
+  return primary && path.isAbsolute(primary) ? canonicalizePath(primary) : root
 }

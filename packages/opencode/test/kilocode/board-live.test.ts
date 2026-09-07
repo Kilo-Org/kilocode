@@ -16,6 +16,7 @@ import { SessionSummary } from "../../src/session/summary"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { BoardNotice } from "../../src/kilocode/board/notice"
+import { BoardContext } from "../../src/kilocode/board/context"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -199,6 +200,40 @@ function waitFor(llm: TestLLMServer["Service"], match: (input: Probe) => boolean
     }
   })
   return awaitWithTimeout(wait, label, "15 seconds")
+}
+
+for (const enabled of [false, true]) {
+  it.live(`exposes board guidance and tools only when enabled (${enabled})`, () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Board guidance flag" })
+        yield* llm.push(reply().text("Done").stop())
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "code",
+          parts: [{ type: "text", text: "Reply briefly without tools." }],
+        })
+        const request = (yield* llm.inputs).at(0)
+        if (!request) throw new Error("Missing model request")
+        expect(
+          messages({ body: request }).some(
+            (message) => typeof message.content === "string" && message.content.includes(BoardContext.instructions),
+          ),
+        ).toBe(enabled)
+        const tools = Array.isArray(request.tools) ? request.tools.filter(record) : []
+        const names = tools.flatMap((tool) => (record(tool.function) ? [tool.function.name] : []))
+        expect(names.includes("board_read")).toBe(enabled)
+        expect(names.includes("board_post")).toBe(enabled)
+        expect(JSON.stringify(tools).includes("Cursor from your last board_read, not an ID from board_post")).toBe(
+          enabled,
+        )
+        expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
+      }),
+      { config: (url) => ({ ...config(url), experimental: { shared_agent_board: enabled } }) },
+    ),
+  )
 }
 
 it.live(
@@ -419,6 +454,59 @@ it.live(
     ),
   60_000,
 )
+
+for (const failed of [false, true]) {
+  it.live(
+    `${failed ? "failed" : "successful"} explicit reads preserve the correct next-tool notice`,
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ dir, llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          yield* Effect.promise(() => Bun.write(path.join(dir, "boundary.txt"), "normal tool boundary"))
+          const chat = yield* sessions.create({
+            title: "Read before activity notice",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+          const child = yield* sessions.create({ parentID: chat.id, title: "Peer" })
+          yield* BoardStore.post({
+            sessionID: child.id,
+            messageID: "msg_read_notice",
+            callID: "peer-post",
+            to: "main",
+            type: "INFO",
+            body: "Explicit read regression body",
+          })
+          yield* llm.push(reply().tool("board_read", { since: failed ? "board_missing" : null, limit: null }))
+          yield* llm.push(reply().tool("read", { filePath: "boundary.txt" }))
+          yield* llm.push(reply().text("Done").stop())
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            parts: [{ type: "text", text: "Read the board, then read boundary.txt." }],
+          })
+          const inputs = yield* llm.inputs
+          expect(inputs).toHaveLength(3)
+          const read = inputs.at(1)
+          const next = inputs.at(2)
+          if (!read || !next) throw new Error("Missing requests after tool results")
+          const first = JSON.stringify(messages({ body: read }).at(-1))
+          const last = JSON.stringify(messages({ body: next }).at(-1))
+          expect(first).not.toContain(BoardNotice.text)
+          expect(first.includes("Explicit read regression body")).toBe(!failed)
+          expect(last).toContain("normal tool boundary")
+          expect(last.includes(BoardNotice.text)).toBe(failed)
+          expect(last).not.toContain("Explicit read regression body")
+          const tools = (yield* sessions.messages({ sessionID: chat.id }))
+            .flatMap((message) => message.parts)
+            .filter((part) => part.type === "tool")
+          expect(tools.map((part) => part.state.status)).toEqual([failed ? "error" : "completed", "completed"])
+        }),
+        { git: true, config },
+      ),
+    30_000,
+  )
+}
 
 it.live(
   "preserves a completed tool result when cancelled during a notification check",

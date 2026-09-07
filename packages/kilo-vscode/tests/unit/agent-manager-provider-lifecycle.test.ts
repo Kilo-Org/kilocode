@@ -4,7 +4,11 @@ import * as os from "node:os"
 import * as path from "node:path"
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 import { ProjectContext } from "../../src/agent-manager/project/context"
-import { deleteLifecycleWorktree, type LifecycleHost } from "../../src/agent-manager/provider-lifecycle"
+import {
+  deleteLifecycleWorktree,
+  removeStaleLifecycleWorktree,
+  type LifecycleHost,
+} from "../../src/agent-manager/provider-lifecycle"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 describe("Agent Manager worktree deletion lifecycle", () => {
@@ -128,6 +132,95 @@ describe("Agent Manager worktree deletion lifecycle", () => {
 
   const deleteWorktree = async () => deleteLifecycleWorktree(ctx, host, state.getWorktrees()[0]!.id)
 
+  it("removes and persists a missing stale entry even when backend terminal cleanup fails", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    state.addSession("first", id)
+    state.addSession("second", id)
+    ctx.stale.add(id)
+    fs.rmdirSync(worktree)
+    host.acquirePtyCleanup = async () => {
+      calls.push("pty")
+      throw new Error("directory not found")
+    }
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+    await state.flush()
+
+    expect(state.getWorktrees()).toEqual([])
+    expect(state.getSessions()).toEqual([])
+    expect(ctx.stale.has(id)).toBe(false)
+    expect(calls).toEqual(["run:remove", "run:clear", "pty", "name", "diff", "clear:first", "clear:second", "push"])
+    const saved = new WorktreeStateManager(root, () => undefined)
+    await saved.load()
+    expect(saved.getWorktrees()).toEqual([])
+    expect(saved.getSessions()).toEqual([])
+    expect(client.session.delete).not.toHaveBeenCalled()
+  })
+
+  it("preserves a stale entry and reports terminal cleanup failure when its directory still exists", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    ctx.stale.add(id)
+    host.acquirePtyCleanup = async () => {
+      throw new Error("backend unavailable")
+    }
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+
+    expect(state.getWorktree(id)).toBeDefined()
+    expect(ctx.stale.has(id)).toBe(true)
+    expect(calls).toEqual(["run:remove", "run:clear", "post:error"])
+    expect(fs.existsSync(worktree)).toBe(true)
+  })
+
+  it("removes an unregistered stale entry without deleting its remaining directory", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    ctx.stale.add(id)
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+
+    expect(state.getWorktrees()).toEqual([])
+    expect(ctx.stale.has(id)).toBe(false)
+    expect(calls).toContain("pty:release")
+    expect(calls).toContain("push")
+    expect(calls).not.toContain("disk")
+    expect(fs.existsSync(worktree)).toBe(true)
+  })
+
+  it("ignores stale removal for a worktree that is not marked stale", async () => {
+    const id = state.getWorktrees().at(0)!.id
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+
+    expect(state.getWorktree(id)).toBeDefined()
+    expect(calls).toEqual([])
+  })
+
+  it("acknowledges completion only after disk deletion, before pushing the removed state", async () => {
+    const disk = Promise.withResolvers<void>()
+    const entered = Promise.withResolvers<void>()
+    const id = state.getWorktrees().at(0)!.id
+    const post = mock(host.post)
+    host.post = post
+    ctx.worktreeManager().removeWorktree = async () => {
+      entered.resolve()
+      await disk.promise
+    }
+    const pending = deleteWorktree()
+    await entered.promise
+    expect(post).not.toHaveBeenCalled()
+    expect(state.getWorktree(id)).toBeDefined()
+    disk.resolve()
+    await pending
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith({
+      type: "agentManager.worktreeDeleted",
+      projectId: ctx.id,
+      worktreeId: id,
+    })
+    expect(calls.indexOf("post:agentManager.worktreeDeleted")).toBeLessThan(calls.indexOf("push"))
+    expect(state.getWorktree(id)).toBeUndefined()
+  })
+
   it.each([
     ["busy", { type: "busy" }],
     ["retry", { type: "retry", attempt: 1, message: "retry", next: 100 }],
@@ -212,6 +305,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     })
     expect(calls).toContain("stats:unskip")
     expect(calls.at(-1)).toBe("pty:release")
+    expect(calls).not.toContain("post:agentManager.worktreeDeleted")
     expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
     expect(state.getWorktrees()).toHaveLength(1)
   })
@@ -289,6 +383,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       "name",
       `directory:${first.id}:${ctx.root}`,
       `directory:${second.id}:${ctx.root}`,
+      "post:agentManager.worktreeDeleted",
       "push",
       "pty:release",
     ])

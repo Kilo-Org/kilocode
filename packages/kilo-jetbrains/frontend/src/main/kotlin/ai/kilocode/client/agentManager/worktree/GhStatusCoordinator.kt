@@ -110,7 +110,12 @@ class GhStatusCoordinator(
      */
     @RequiresEdt
     private fun focus() {
-        val gone = away.back() ?: return
+        val gone = away.back() ?: run {
+            // Logged so the absence of a frame-focus probe reads as "nothing to answer" rather than as
+            // a listener that never fired, which is otherwise indistinguishable in the log.
+            LOG.info("gh focus ignored, no absence to answer")
+            return
+        }
         syncEdt("frame-focus", Away.ceiling(gone))
     }
 

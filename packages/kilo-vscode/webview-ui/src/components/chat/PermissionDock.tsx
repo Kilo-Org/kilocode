@@ -299,7 +299,13 @@ export const PermissionDock: Component<{
               when={skillShellCommands().length > 0}
               fallback={
                 <>
-                  <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
+                  <Show when={cmdDescription()}>
+                    {(desc) => (
+                      <div data-slot="permission-hint" data-wrap>
+                        {desc()}
+                      </div>
+                    )}
+                  </Show>
                   <Show when={command()}>
                     {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
                   </Show>

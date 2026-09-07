@@ -5,6 +5,30 @@ import type { ProjectContext } from "../../src/agent-manager/project/context"
 import type { CreateWorktreeOnDiskResult } from "../../src/agent-manager/worktree-create"
 
 describe("multi-version provisioning", () => {
+  it.each([
+    { name: "Fix login", branches: ["fix-login", "fix-login-v2"] },
+    { name: "!!!", branches: [undefined, "v2"] },
+    { name: "a".repeat(60), branches: ["a".repeat(50), "a".repeat(50)] },
+    { name: undefined, branches: [undefined, undefined] },
+    { name: "Fix login", branchName: "Feature/My_fix.v2", branches: ["Feature/My_fix.v2", "Feature/My_fix.v2_v2"] },
+    { name: "Fix login", branchName: " invalid ", branches: [" invalid ", " invalid _v2"] },
+  ])("keeps automatic display-name slugging separate from explicit refs: %j", async (input) => {
+    const create = mock(async (_opts: { branchName?: string }) => null)
+    const host = {
+      createOnDisk: create,
+      log: () => {},
+      post: () => {},
+      error: () => {},
+    } as unknown as MultiVersionHost
+    await createMultiVersion({ id: "project-1" } as ProjectContext, host, {
+      type: "agentManager.createMultiVersion",
+      versions: 2,
+      name: input.name,
+      branchName: "branchName" in input ? input.branchName : undefined,
+    })
+    expect(create.mock.calls.map(([opts]) => opts.branchName)).toEqual(input.branches)
+  })
+
   it("finishes git creation before provisioning at bounded concurrency", async () => {
     const flow: string[] = []
     const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]

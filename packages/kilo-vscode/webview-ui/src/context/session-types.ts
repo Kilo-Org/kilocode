@@ -18,6 +18,7 @@ import type {
   SessionStatus,
   SessionStatusInfo,
   SkillInfo,
+  SendMessageRequest,
   SuggestionRequest,
   TodoItem,
   ToolPart,
@@ -68,6 +69,7 @@ export interface SessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
 
   activityFor: (sessionID: string | undefined) => Activity
+  acknowledge: (sessionID: string) => void
   inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
@@ -133,6 +135,7 @@ export interface SessionContextValue {
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
   selectedAgent: (sessionID?: string) => string
+  submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
@@ -163,6 +166,7 @@ export interface SessionContextValue {
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
   deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
+  submit: (input: SendMessageRequest) => void
   sendMessage: (
     text: string,
     providerID?: string,

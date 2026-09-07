@@ -1,0 +1,8 @@
+.am-caffeination-active {
+  background: var(--surface-interactive-base) !important;
+  color: var(--text-on-interactive-base) !important;
+}
+
+.am-caffeination-active [data-slot="icon-svg"] {
+  color: var(--text-on-interactive-base) !important;
+}

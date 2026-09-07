@@ -1,9 +1,13 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.settings.CompactModeListener
 import ai.kilocode.client.settings.base.SettingsRow
+import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
 import com.intellij.openapi.application.ApplicationManager
@@ -16,6 +20,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.OnOffButton
 import java.awt.Container
 import javax.swing.JComponent
+import kotlinx.coroutines.CompletableDeferred
 
 private val COMPACT_KEYS = listOf(
     "settings.advanced.compact.enabled.title",
@@ -29,15 +34,29 @@ private val COMPACT_KEYS = listOf(
 class AdvancedConfigurableTest : BasePlatformTestCase() {
     private lateinit var settings: KiloLogSettingsService
 
+    /** App-lifetime scope, the one fire-and-forget saves must survive on. */
+    private lateinit var coroutines: TestCoroutines
+
+    /** The configurable's own scope, cancelled by `disposeUIResources()` just as the platform does. */
+    private lateinit var ui: TestCoroutines
+    private lateinit var appRpc: FakeAppRpcApi
+    private lateinit var app: KiloAppService
+
     override fun setUp() {
         super.setUp()
         settings = KiloLogSettingsService()
         LogConfig.apply(null, null, null)
         resetCompact()
+        coroutines = TestCoroutines()
+        ui = TestCoroutines()
+        appRpc = FakeAppRpcApi()
+        app = KiloAppService(coroutines.scope, appRpc)
     }
 
     override fun tearDown() {
         try {
+            ui.close()
+            coroutines.close()
             LogConfig.apply(null, null, null)
             resetCompact()
         } finally {
@@ -200,7 +219,92 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    private fun configurable() = AdvancedConfigurable(settings) { it.applyLocal() }
+    fun `test createComponent fetches and renders the index worktrees toggle`() {
+        appRpc.indexWorktrees = true
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        ui.drain()
+
+        assertTrue(edt { toggle(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test isModified tracks index worktrees toggle`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+        ui.drain()
+
+        edt { toggle(root).doClick() }
+
+        assertTrue(edt { cfg.isModified })
+    }
+
+    fun `test apply persists index worktrees only when changed`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+        ui.drain()
+
+        edt { cfg.apply() }
+        coroutines.drain()
+
+        assertEquals(emptyList<Boolean>(), appRpc.indexWorktreesSaves)
+
+        edt {
+            toggle(root).doClick()
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { appRpc.indexWorktreesSaves.isNotEmpty() })
+        assertEquals(listOf(true), appRpc.indexWorktreesSaves)
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test index worktrees save survives dialog dispose on ok`() {
+        // Hold the save inside the RPC so the dispose below provably happens while it is in flight,
+        // instead of racing the coroutine's first dispatch.
+        val gate = CompletableDeferred<Unit>()
+        appRpc.indexWorktreesSaveGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+        ui.drain()
+
+        edt {
+            toggle(root).doClick()
+            cfg.apply()
+        }
+        assertTrue(coroutines.pumpUntil { appRpc.indexWorktreesSaveAttempts == 1 })
+
+        // Emulate the platform disposing the configurable immediately after apply() on OK.
+        edt { cfg.disposeUIResources() }
+        gate.complete(Unit)
+
+        assertTrue(coroutines.pumpUntil { appRpc.indexWorktreesSaves.isNotEmpty() })
+        assertEquals(listOf(true), appRpc.indexWorktreesSaves)
+    }
+
+    fun `test a late index worktrees fetch keeps a user toggle`() {
+        val gate = CompletableDeferred<Unit>()
+        appRpc.indexWorktreesGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        // The user flips the switch on before the slow split-mode fetch (which reports off) lands.
+        edt { toggle(root).doClick() }
+        gate.complete(Unit)
+        ui.drain()
+
+        assertTrue("late fetch cleared the user's toggle", edt { toggle(root).isSelected })
+        assertTrue("late fetch cleared the dirty state", edt { cfg.isModified })
+    }
+
+    private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }
+
+    private fun toggle(root: Container): SettingsToggle = toggles(root).single()
+
+    private fun toggles(root: Container): List<SettingsToggle> = buildList {
+        collect(root) { if (it is SettingsToggle) add(it) }
+    }
 
     /** The [OnOffButton] in the settings row whose bold title comes from [titleKey]. */
     private fun toggle(root: Container, titleKey: String): OnOffButton {

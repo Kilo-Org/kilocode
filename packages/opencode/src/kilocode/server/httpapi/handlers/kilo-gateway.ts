@@ -74,7 +74,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: () =>
           Promise.all([
             fetchProfile(info.access),
-            fetchBalance(info.access, currentOrgId ?? undefined),
+            fetchBalance(info.access, currentOrgId ?? undefined, log),
             fetchKiloPassState(info.access),
           ]),
         catch: () => new HttpApiError.BadRequest({}),

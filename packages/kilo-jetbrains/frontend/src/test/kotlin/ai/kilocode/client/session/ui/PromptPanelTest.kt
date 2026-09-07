@@ -1065,6 +1065,33 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("High ▾", panel.reasoning.text)
     }
 
+    fun `test reasoning picker cycle advances and wraps`() {
+        val picker = ReasoningPicker()
+        var selected: ReasoningPicker.Item? = null
+        picker.onSelect = { selected = it }
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low"), ReasoningPicker.Item("high", "High")), "low")
+
+        picker.cycle()
+        assertEquals("high", picker.selectedForTest()?.id)
+        assertEquals("high", selected?.id)
+
+        picker.cycle()
+        assertEquals("low", picker.selectedForTest()?.id)
+    }
+
+    fun `test reasoning picker canCycle is false when hidden or single variant`() {
+        val picker = ReasoningPicker()
+
+        picker.setItems(emptyList())
+        assertFalse(picker.canCycle())
+
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low")), "low")
+        assertFalse(picker.canCycle())
+
+        picker.setItems(listOf(ReasoningPicker.Item("low", "Low"), ReasoningPicker.Item("high", "High")), "low")
+        assertTrue(picker.canCycle())
+    }
+
     fun `test reasoning picker aligns unchecked rows`() {
         val picker = ReasoningPicker()
         val low = ReasoningPicker.Item("low", "Low")
@@ -1226,6 +1253,26 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("Stop", panel.buttonForTest().toolTipText)
         assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
         assertTrue(panel.isStopEnabled)
+    }
+
+    fun `test selector tooltips include their cycle shortcut`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        assertEquals(KeymapUtil.createTooltipText("Select mode", "Kilo.Session.CycleMode"), panel.mode.toolTipText)
+        assertEquals(KeymapUtil.createTooltipText("Select model", "Kilo.Session.CycleModel"), panel.model.toolTipText)
+        assertEquals(
+            KeymapUtil.createTooltipText("Select reasoning effort", "Kilo.Session.CycleReasoning"),
+            panel.reasoning.toolTipText,
+        )
+    }
+
+    fun `test reset control tooltip includes its shortcut`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setResetVisible(true)
+
+        val reset = buttons(panel).first { it.accessibleContext.accessibleName == KiloBundle.message("model.picker.reset") }
+
+        assertEquals(KeymapUtil.createTooltipText(KiloBundle.message("model.picker.reset"), "Kilo.Session.ResetModel"), reset.toolTipText)
     }
 
     fun `test send icon matches scroll button theme colors`() {

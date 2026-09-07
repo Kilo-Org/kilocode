@@ -16,6 +16,7 @@ const tools = {
   chart: stub("chart"),
   image: stub("image"),
   notify: stub("notify"),
+  openPlan: stub("open_plan"),
   send: stub("send_file"),
 }
 
@@ -46,4 +47,10 @@ test("browser tool is included only for vscode clients", () => {
   expect(ids("vscode")).toContain("browser_open")
   expect(ids("cli")).not.toContain("browser_open")
   expect(ids("jetbrains")).not.toContain("browser_open")
+})
+
+test("open plan tool is included only for vscode clients", () => {
+  expect(ids("vscode")).toContain("open_plan")
+  expect(ids("cli")).not.toContain("open_plan")
+  expect(ids("jetbrains")).not.toContain("open_plan")
 })

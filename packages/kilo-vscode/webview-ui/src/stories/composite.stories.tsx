@@ -1331,6 +1331,82 @@ export const ToolErrors200: Story = {
   },
 }
 
+function board(): ToolPart[] {
+  const fromLabel =
+    "Inspect parser edge cases (legacy compatibility) and preserve legitimate parenthesized task descriptions"
+  const toLabel =
+    "Check serializer compatibility with nested collections, Unicode identifiers, and long unbroken values"
+  const rows = [
+    {
+      id: "board_direct",
+      from: "main",
+      to: "ses_serializer",
+      fromLabel: "main",
+      toLabel,
+      type: "INFO",
+      body: "The parser accepts empty input. Check whether the serializer preserves it.",
+    },
+    {
+      id: "board_broadcast",
+      from: "ses_parser",
+      to: "ALL",
+      fromLabel,
+      type: "RESULT",
+      body: "Parser checks are complete. The compatibility notes are available to all agents.",
+    },
+  ]
+  const parts: ToolPart[] = rows.map((row, index) => ({
+    id: `part_board_${index}`,
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: `call_board_${index}`,
+    tool: "board_post",
+    state: {
+      status: "completed",
+      input: { to: row.to, type: row.type, body: row.body },
+      output: JSON.stringify(row),
+      title: "Post agent message",
+      metadata: { from: row.from, to: row.to, fromLabel: row.fromLabel, toLabel: row.toLabel },
+      time: { start: now - 2000, end: now - 1000 },
+    },
+  }))
+  parts.push({
+    id: "part_board_read",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call_board_read",
+    tool: "board_read",
+    state: {
+      status: "completed",
+      input: {},
+      output: JSON.stringify({ messages: rows, hasMore: false }),
+      title: "Read agent messages",
+      metadata: {},
+      time: { start: now - 1000, end: now },
+    },
+  })
+  return parts
+}
+
+export const AgentMessages: Story = {
+  name: "Agent messages",
+  render: () => {
+    const parts = board()
+    return (
+      <StoryProviders data={dataWith(parts)} sessionID={SESSION_ID}>
+        <For each={parts}>{(part) => <Part part={part} message={baseAssistantMessage} defaultOpen />}</For>
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentMessages200: Story = {
+  ...AgentMessages,
+  name: "Agent messages with long titles (200px)",
+}
+
 export const McpToolCards: Story = {
   name: "MCP Tool Cards — collapsed",
   render: () => {

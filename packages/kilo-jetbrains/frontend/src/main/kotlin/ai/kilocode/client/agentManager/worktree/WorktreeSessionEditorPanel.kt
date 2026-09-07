@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.session.SessionActivityKind
@@ -11,6 +12,7 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -65,6 +67,12 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.BorderLayout
 import java.awt.Color
@@ -123,7 +131,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         onCell = { _, _ -> },
         onOpen = { row, focus -> open(row, focus) },
         menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
-            (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
+            (row as? SessionRow)?.session?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
         }),
     )
     private val run = if (project != null && worktree.directory.isNotBlank()) {
@@ -140,6 +148,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         run = run?.button,
     )
     private val splitter = OnePixelSplitter(false, 0.25f)
+    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var dirty: WorktreeDirtyDto? = null
@@ -220,6 +229,42 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     internal fun renameRow(item: SessionDto) = beginRename(item.id)
+
+    /**
+     * Only offered from the base checkout's tab (not a linked worktree's own tab, see
+     * [WorktreeSessionEditorManager.base]), for a real session that is not already being deleted, and
+     * hidden rather than disabled while the session's turn is in flight -- the same states the chat
+     * branch dock hides its own Move to Worktree action in, see [SessionActivityKind.busy].
+     */
+    @RequiresEdt
+    internal fun canMove(item: SessionDto?): Boolean =
+        manager.base() && canDelete(item) && manager.activity()[item?.id]?.busy() != true
+
+    @RequiresEdt
+    internal fun moveRow(item: SessionDto) {
+        if (!canMove(item)) return
+        manager.moveToWorktree(item.id, worktree.directory)
+    }
+
+    /**
+     * Offered for any real session, including one mid-turn -- matching the Agent Manager surfaces this
+     * mirrors, which gate fork only on the tab already existing (VS Code's idle check lives in its
+     * sidebar path alone, see packages/kilo-vscode/src/kilo-provider/fork-session.ts).
+     *
+     * A mid-turn fork is a snapshot, not a handover: the CLI detaches only in-flight subagent (`task`)
+     * calls, so any other tool part that was pending or running is copied with that status and stays
+     * unresolved in the fork, and whatever the source streams after the copy is absent. The model
+     * never sees a dangling call -- history rewrites unfinished tool calls as interrupted -- so this
+     * costs transcript fidelity, not correctness.
+     */
+    @RequiresEdt
+    internal fun canFork(item: SessionDto?): Boolean = canDelete(item)
+
+    @RequiresEdt
+    internal fun forkRow(item: SessionDto) {
+        if (!canFork(item)) return
+        manager.forkSession(item.id, surface = "worktree_session_list")
+    }
 
     @RequiresEdt
     private fun confirmDelete(ids: List<String>, cell: String? = null) {
@@ -360,12 +405,20 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         return controller.sessions().count { it.id !in deleting }
     }
 
+    /**
+     * [SessionHost.activity] carries every session the CLI knows, in every directory, including `task`
+     * subagents that have no row here. Only this worktree's listed sessions can be reached by
+     * expanding the list, so only they may badge the toggle.
+     */
     @RequiresEdt
-    private fun syncToggle() = toggle.update(
-        expanded(),
-        count(),
-        attention(manager.activity(), manager.currentKey(), manager.deleting()),
-    )
+    private fun syncToggle() {
+        val ids = controller.sessions().mapTo(mutableSetOf()) { it.id }
+        toggle.update(
+            expanded(),
+            count(),
+            attention(manager.activity().filterKeys { it in ids }, manager.currentKey(), manager.deleting()),
+        )
+    }
 
     @RequiresEdt
     private fun expanded(): Boolean = splitter.firstComponent != null
@@ -565,6 +618,13 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
             onPr = { value -> pr = value[key]; syncHeader() },
             onDirty = { value -> dirty = value[key]; syncHeader() },
         )
+        // Nothing else re-reads activity: onListChanged only fires for the open session's own state
+        // changes, so a badge for a background session would otherwise never clear.
+        cs.launch {
+            target.service<KiloSessionService>().activity.collectLatest {
+                edt({ !Disposer.isDisposed(this@WorktreeSessionEditorPanel) }) { sync() }
+            }
+        }
     }
 
     @RequiresEdt
@@ -591,6 +651,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     override fun dispose() {
         manager.onPresent = null
         manager.onListChanged = null
+        cs.cancel()
     }
 
     private inner class NewAction : DumbAwareAction(

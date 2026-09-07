@@ -1,55 +1,186 @@
 /** @jsxImportSource solid-js */
-import { For, Show, createSignal } from "solid-js"
+import { For, Show, createMemo, createSignal } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRCheck, CheckStatus } from "./pr-types"
+import type { CheckBucket } from "./pr-check-groups"
+import { counts, expands, groups } from "./pr-check-groups"
 import { SectionHeading } from "./SectionHeading"
 import { useVSCode } from "../../src/context/vscode"
+import { useLanguage } from "../../src/context/language"
+import { sendReviewComments } from "../../diff-viewer/review-annotations"
+import { checkFeedback } from "./pr-check-feedback"
+import { commentState, patchCommentState } from "./pr-comment-state"
 
-const CHECK: Record<CheckStatus, { icon: string; label: string }> = {
-  success: { icon: "circle-check", label: "Passed" },
-  failure: { icon: "circle-x-outline", label: "Failed" },
-  cancelled: { icon: "circle-x-outline", label: "Cancelled" },
-  skipped: { icon: "circle-x-outline", label: "Skipped" },
-  pending: { icon: "play", label: "Running" },
+const CHECK: Record<CheckStatus, { icon: string; key: string }> = {
+  success: { icon: "circle-check", key: "success" },
+  failure: { icon: "circle-x-outline", key: "failure" },
+  cancelled: { icon: "stop", key: "cancelled" },
+  skipped: { icon: "circle-ban-sign", key: "skipped" },
+  pending: { icon: "play", key: "pending" },
 }
 
-export function PRChecks(props: { checks: PRStatus["checks"] }) {
+const GROUP_KEYS: Record<CheckBucket, { one: string; other: string }> = {
+  failure: {
+    one: "agentManager.pr.checks.group.failure.one",
+    other: "agentManager.pr.checks.group.failure.other",
+  },
+  pending: {
+    one: "agentManager.pr.checks.group.pending.one",
+    other: "agentManager.pr.checks.group.pending.other",
+  },
+  cancelled: {
+    one: "agentManager.pr.checks.group.cancelled.one",
+    other: "agentManager.pr.checks.group.cancelled.other",
+  },
+  skipped: {
+    one: "agentManager.pr.checks.group.skipped.one",
+    other: "agentManager.pr.checks.group.skipped.other",
+  },
+  success: {
+    one: "agentManager.pr.checks.group.success.one",
+    other: "agentManager.pr.checks.group.success.other",
+  },
+}
+
+const TALLY_KEYS: Record<CheckBucket, { one: string; other: string }> = {
+  failure: {
+    one: "agentManager.pr.checks.tally.failure.one",
+    other: "agentManager.pr.checks.tally.failure.other",
+  },
+  pending: {
+    one: "agentManager.pr.checks.tally.pending.one",
+    other: "agentManager.pr.checks.tally.pending.other",
+  },
+  cancelled: {
+    one: "agentManager.pr.checks.tally.cancelled.one",
+    other: "agentManager.pr.checks.tally.cancelled.other",
+  },
+  skipped: {
+    one: "agentManager.pr.checks.tally.skipped.one",
+    other: "agentManager.pr.checks.tally.skipped.other",
+  },
+  success: {
+    one: "agentManager.pr.checks.tally.success.one",
+    other: "agentManager.pr.checks.tally.success.other",
+  },
+}
+
+export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTerminalId?: string }) {
   const vscode = useVSCode()
-  const [open, setOpen] = createSignal(true)
+  const { t } = useLanguage()
+  const [localOpen, setLocalOpen] = createSignal(true)
+  const [localGroups, setLocalGroups] = createSignal<Partial<Record<CheckBucket, boolean>>>({})
+  const state = () => (props.worktreeId ? commentState(props.worktreeId) : undefined)
+  const open = () => state()?.checksOpen ?? localOpen()
+  const grouped = createMemo(() => groups(props.pr.checks.checks))
+  function groupLabel(bucket: CheckBucket, count: number) {
+    return t(GROUP_KEYS[bucket][count === 1 ? "one" : "other"], { count })
+  }
+  function tallyLabel(bucket: CheckBucket, count: number) {
+    return t(TALLY_KEYS[bucket][count === 1 ? "one" : "other"], { count })
+  }
+  const count = createMemo(() => {
+    const all = counts(props.pr.checks.checks)
+    const signal = all.filter((item) => item.bucket !== "success")
+    return (signal.length > 0 ? signal : all)
+      .map((item) => tallyLabel(item.bucket, item.count))
+      .join(` ${t("agentManager.pr.checks.separator")} `)
+  })
+  const feedback = createMemo(() => checkFeedback(props.pr, t("agentManager.pr.checks.feedback")))
+  const groupOpen = (bucket: CheckBucket) => state()?.checkGroups[bucket] ?? localGroups()[bucket] ?? expands(bucket)
+  const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${CHECK[status].key}`)
+  const send = () => {
+    const item = feedback()
+    if (!item) return
+    sendReviewComments([item], props.activeTerminalId)
+  }
+  const toggleOpen = () => {
+    const next = !open()
+    if (props.worktreeId) patchCommentState(props.worktreeId, () => ({ checksOpen: next }))
+    else setLocalOpen(next)
+  }
+  const toggleGroup = (bucket: CheckBucket) => {
+    const next = !groupOpen(bucket)
+    if (props.worktreeId) {
+      patchCommentState(props.worktreeId, (prev) => ({ checkGroups: { ...prev.checkGroups, [bucket]: next } }))
+      return
+    }
+    setLocalGroups((prev) => ({ ...prev, [bucket]: next }))
+  }
   return (
     <>
       <div class="am-pr-panel-divider" />
       <div class="am-pr-panel-section">
         <SectionHeading
-          title="Checks"
+          title={t("agentManager.pr.checks.title")}
           open={open()}
-          onToggle={() => setOpen((v) => !v)}
-          count={`${props.checks.passed}/${props.checks.total} passed`}
-          countClass={`am-pr-checks-count-${props.checks.status}`}
+          onToggle={toggleOpen}
+          count={count()}
+          countClass={`am-pr-checks-count-${props.pr.checks.status}`}
         />
         <Show when={open()}>
-          <div class="am-pr-panel-checks am-pr-col">
-            <For each={props.checks.checks}>
-              {(check: PRCheck) => (
-                <div class="am-pr-panel-check-item am-pr-row" data-status={check.status}>
-                  <Icon name={CHECK[check.status].icon} size="small" class="am-pr-check-icon" />
-                  <span class="am-pr-check-name">{check.name}</span>
-                  <span class="am-pr-check-status">{CHECK[check.status].label}</span>
-                  <Show when={check.duration}>
-                    <span class="am-pr-check-duration">{check.duration}</span>
-                  </Show>
-                  <Show when={check.url}>
-                    <Tooltip value="Open in browser" placement="bottom">
-                      <button
-                        class="am-pr-check-link"
-                        aria-label="Open check in browser"
-                        onClick={() => vscode.postMessage({ type: "openExternal", url: check.url! })}
-                      >
-                        <Icon name="link" size="small" />
-                      </button>
-                    </Tooltip>
+          <Show when={feedback()}>
+            <Button variant="primary" size="small" class="am-pr-checks-fix" onClick={send}>
+              {t(props.activeTerminalId ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix")}
+            </Button>
+          </Show>
+          <div
+            class="am-pr-panel-checks am-pr-col"
+            data-scrollable={props.pr.checks.checks.length > 12 ? "true" : undefined}
+          >
+            <For each={grouped()}>
+              {(group) => (
+                <div class="am-pr-check-group" data-bucket={group.bucket}>
+                  <button
+                    type="button"
+                    class="am-pr-check-group-heading am-pr-panel-section-toggle am-pr-row"
+                    aria-expanded={groupOpen(group.bucket)}
+                    onClick={() => toggleGroup(group.bucket)}
+                  >
+                    <Icon
+                      name={groupOpen(group.bucket) ? "chevron-down" : "chevron-right"}
+                      size="small"
+                      class="am-pr-section-chevron"
+                    />
+                    <span>{groupLabel(group.bucket, group.checks.length)}</span>
+                  </button>
+                  <Show when={groupOpen(group.bucket)}>
+                    <div class="am-pr-check-group-items am-pr-col">
+                      <For each={group.checks}>
+                        {(check: PRCheck) => (
+                          <div
+                            class="am-pr-panel-check-item am-pr-row"
+                            data-status={check.status}
+                            aria-label={statusLabel(check.status)}
+                          >
+                            <Icon
+                              name={CHECK[check.status].icon}
+                              size="small"
+                              class="am-pr-check-icon"
+                              aria-hidden="true"
+                            />
+                            <span class="am-pr-check-name">{check.name}</span>
+                            <Show when={check.duration}>
+                              <span class="am-pr-check-duration">{check.duration}</span>
+                            </Show>
+                            <Show when={check.url}>
+                              <Tooltip value={t("agentManager.pr.checks.openInBrowser")} placement="bottom">
+                                <button
+                                  class="am-pr-check-link"
+                                  aria-label={t("agentManager.pr.checks.openInBrowser")}
+                                  onClick={() => vscode.postMessage({ type: "openExternal", url: check.url! })}
+                                >
+                                  <Icon name="link" size="small" />
+                                </button>
+                              </Tooltip>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </div>
                   </Show>
                 </div>
               )}

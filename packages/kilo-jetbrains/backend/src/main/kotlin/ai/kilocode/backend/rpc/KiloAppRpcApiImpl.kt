@@ -12,6 +12,7 @@ import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.backend.cli.KiloCliPlatform
 import ai.kilocode.backend.cli.KiloProps
 import ai.kilocode.backend.cli.KiloRepoCli
+import ai.kilocode.backend.workspace.KiloWorktreeIndexSettings
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.log.KiloLog
 import ai.kilocode.log.LogConfig
@@ -36,7 +37,12 @@ import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.RootsChangeRescanningInfo
+import com.intellij.openapi.roots.ex.ProjectRootManagerEx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -105,6 +111,21 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun applyLogConfig(config: LogConfigDto) {
         LogConfig.apply(config.level, config.contentMode, config.previewMax)
+    }
+
+    override suspend fun indexWorktrees(): Boolean = KiloWorktreeIndexSettings.get()
+
+    override suspend fun setIndexWorktrees(value: Boolean) {
+        if (KiloWorktreeIndexSettings.get() == value) return
+        KiloWorktreeIndexSettings.set(value)
+        if (ApplicationManager.getApplication() == null) return
+        for (project in ProjectManager.getInstance().openProjects) {
+            if (project.isDisposed) continue
+            writeAction {
+                ProjectRootManagerEx.getInstanceEx(project)
+                    .makeRootsChange({}, RootsChangeRescanningInfo.RESCAN_DEPENDENCIES_IF_NEEDED)
+            }
+        }
     }
 
     override suspend fun backendLogFile(): LogFileDto? = withContext(Dispatchers.IO) {

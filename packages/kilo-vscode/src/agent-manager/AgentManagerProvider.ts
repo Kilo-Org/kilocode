@@ -22,6 +22,7 @@ import {
   type LifecycleHost,
 } from "./provider-lifecycle"
 import { normalizeBaseBranch } from "./base-branch"
+import { handleBaseUpdate } from "./base-update"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
 import { PRStatusBridge } from "./pr-status-bridge"
 import { createPollers, type ProjectPollers } from "./project/pollers"
@@ -392,12 +393,12 @@ export class AgentManagerProvider implements Disposable {
     this.panel = ctx
     this.browserLifecycle.replay()
 
-    this.statsPoller.setVisible(ctx.visible)
-    this.projectPollers.setVisible(ctx.visible)
+    for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(ctx.visible)
+    this.diffs.setVisible(ctx.visible).catch((err) => this.log("Failed to update diff visibility:", err))
     this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
-      this.statsPoller.setVisible(visible)
-      this.projectPollers.setVisible(visible)
+      for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(visible)
+      this.diffs.setVisible(visible).catch((err) => this.log("Failed to update diff visibility:", err))
       this.visiblePresence.flush()
     })
 
@@ -517,6 +518,7 @@ export class AgentManagerProvider implements Disposable {
       }
     }
     this.onBranchPrompt(m)
+    if (m.type === "agentManager.updateFromBase") return handleBaseUpdate(m, ctx, this.lifecycleHost)
 
     const worktree = await this.onWorktreeMessage(m)
     if (worktree !== undefined) return worktree
@@ -1632,9 +1634,7 @@ export class AgentManagerProvider implements Disposable {
 
   /** Open a worktree directory directly in VS Code. */
   private openWorktreeDirectory(worktreeId: string): void {
-    const state = this.getStateManager()
-    if (!state) return
-    const worktree = state.getWorktree(worktreeId)
+    const worktree = this.getStateManager()?.getWorktree(worktreeId)
     if (!worktree) return
     const target = path.normalize(worktree.path)
     if (!fs.existsSync(target)) {

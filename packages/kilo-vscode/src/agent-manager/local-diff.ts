@@ -1,8 +1,9 @@
 import * as fs from "fs/promises"
-import { binaryFile } from "../diff/shared/binary"
+import { classifyGenerated, generatedLike, gitGeneratedFiles } from "../diff/shared/git-attributes"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
 import type { GitOps } from "./GitOps"
+import { measure } from "./git-stats-snapshot"
 import { check, collect, fileSize, MAX_DETAIL_BYTES, readAfter, summarize, type Meta } from "./local-diff-batch"
 import { createDiffCache } from "./local-diff-cache"
 import type { WorktreeDiffEntry } from "./types"
@@ -10,10 +11,6 @@ import type { WorktreeDiffEntry } from "./types"
 type Status = Meta["status"]
 
 type Log = (...args: unknown[]) => void
-
-/** Cap untracked file reads so line-counting a multi-megabyte log file does
- *  not stall the poll. Matches `GitOps.workingTreeStats()`. */
-const MAX_UNTRACKED_BYTES = 1_000_000
 
 /** Cap per-side reads in the detail view. Opening very large tracked files
  *  used to spike `kilo serve`; now that the detail path runs in the
@@ -36,54 +33,7 @@ const MAX_SUMMARY_FILES = 32
 
 /** Ported from `packages/opencode/src/file/ignore.ts` — identical patterns,
  *  no runtime dependency on minimatch/picomatch. */
-const FOLDERS = new Set([
-  "node_modules",
-  "bower_components",
-  ".pnpm-store",
-  "vendor",
-  ".npm",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  "target",
-  "bin",
-  "obj",
-  ".git",
-  ".svn",
-  ".hg",
-  ".vscode",
-  ".idea",
-  ".turbo",
-  ".output",
-  "desktop",
-  ".sst",
-  ".cache",
-  ".webkit-cache",
-  "__pycache__",
-  ".pytest_cache",
-  "mypy_cache",
-  ".history",
-  ".gradle",
-])
-
-const SUFFIXES = [".swp", ".swo", ".pyc", ".log"]
-const BASENAMES = new Set([".DS_Store", "Thumbs.db"])
-const CONTAINS_SEGMENTS = ["logs", "tmp", "temp", "coverage", ".nyc_output"]
-
-export function generatedLike(file: string): boolean {
-  const parts = file.split(/[/\\]/)
-  for (const part of parts) {
-    if (FOLDERS.has(part)) return true
-    if (CONTAINS_SEGMENTS.includes(part)) return true
-  }
-  for (const suffix of SUFFIXES) {
-    if (file.endsWith(suffix)) return true
-  }
-  const base = parts[parts.length - 1] ?? ""
-  if (BASENAMES.has(base)) return true
-  return false
-}
+export { generatedLike } from "../diff/shared/git-attributes"
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
@@ -170,18 +120,6 @@ async function sizes(git: GitOps, dir: string, anc: string, meta: Meta, signal?:
   ])
 }
 
-async function lineCount(file: string): Promise<number> {
-  const stat = await fs.lstat(file).catch(() => undefined)
-  if (!stat || stat.size === 0) return 0
-  if (stat.size > MAX_UNTRACKED_BYTES) return 0
-  const content = stat.isSymbolicLink()
-    ? await fs.readlink(file).catch(() => "")
-    : await fs.readFile(file, "utf-8").catch(() => "")
-  if (!content) return 0
-  if (content.endsWith("\n")) return content.split("\n").length - 1
-  return content.split("\n").length
-}
-
 function statusFromCode(code: string): Status {
   if (code === "A") return "added"
   if (code === "D") return "deleted"
@@ -189,6 +127,18 @@ function statusFromCode(code: string): Status {
 }
 
 async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
+  const markGenerated = async (entries: Meta[]) => {
+    const configured = await gitGeneratedFiles(
+      git,
+      dir,
+      entries.map((entry) => entry.file),
+    )
+    return entries.map((entry) => ({
+      ...entry,
+      generatedLike: classifyGenerated(entry.file, configured),
+    }))
+  }
+
   const [tracked, untracked] = await Promise.all([
     git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--numstat", "--no-renames", anc], dir, {
       priority: true,
@@ -240,11 +190,11 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
 
   if (untracked.code !== 0) {
     log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
-    return result
+    return markGenerated(result)
   }
 
   const files = untracked.stdout.trim()
-  if (!files) return result
+  if (!files) return markGenerated(result)
   const paths = files.split("\n").filter((file) => file && !seen.has(file))
 
   for (let index = 0; index < paths.length; index += MAX_SUMMARY_FILES) {
@@ -252,18 +202,17 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
       paths.slice(index, index + MAX_SUMMARY_FILES).map(async (file): Promise<Meta | undefined> => {
         const full = resolveInside(dir, file)
         if (!full) return undefined
-        const exists = await fs.lstat(full).catch(() => undefined)
-        if (!exists) return undefined
-        const binary = await binaryFile(full)
+        const value = await measure(full)
+        if (!value) return undefined
         return {
           file,
-          additions: binary ? 0 : await lineCount(full),
+          additions: value.count,
           deletions: 0,
           status: "added",
           tracked: false,
           generatedLike: generatedLike(file),
-          binary,
-          stamp: await statStamp(dir, file),
+          binary: value.binary,
+          stamp: value.stamp,
         }
       }),
     )
@@ -272,7 +221,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     }
   }
 
-  return result
+  return markGenerated(result)
 }
 
 /**
@@ -312,6 +261,7 @@ async function detailMeta(
 ): Promise<Meta | undefined> {
   const full = resolveInside(dir, file)
   if (!full) return undefined
+  const configured = await gitGeneratedFiles(git, dir, [file], { signal })
   const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir, { signal, priority: true })
   check(signal)
   if (tracked.code !== 0) {
@@ -321,18 +271,17 @@ async function detailMeta(
     })
     check(signal)
     if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
-    const exists = await fs.lstat(full).catch(() => undefined)
-    if (!exists) return undefined
-    const binary = await binaryFile(full)
+    const value = await measure(full)
+    if (!value) return undefined
     return {
       file,
-      additions: binary ? 0 : await lineCount(full),
+      additions: value.count,
       deletions: 0,
       status: "added",
       tracked: false,
-      generatedLike: generatedLike(file),
-      binary,
-      stamp: await statStamp(dir, file),
+      generatedLike: classifyGenerated(file, configured),
+      binary: value.binary,
+      stamp: value.stamp,
     }
   }
 
@@ -359,7 +308,7 @@ async function detailMeta(
     deletions: stat.deletions,
     status,
     tracked: true,
-    generatedLike: generatedLike(pathPart),
+    generatedLike: classifyGenerated(pathPart, configured),
     binary: stat.binary,
     stamp:
       status === "deleted"

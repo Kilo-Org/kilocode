@@ -65,6 +65,7 @@ class SessionMessageListPanel(
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val fork: ((String) -> Unit)? = null,
     private val cancelRevert: (() -> Unit)? = null,
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
@@ -308,7 +309,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         turnViews[turn.id] = tv
@@ -380,7 +381,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
                 it.setDiffOpener(openDiff, sessionId)
             }
             turnViews[turn.id] = tv
