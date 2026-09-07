@@ -119,6 +119,27 @@ export function prepareCommand(
   })
 }
 
+/**
+ * Apply a profile to an explicit launch, without consulting the ambient session profile. Used by the
+ * permissioned extension host, which confines a child process under a profile of its own rather than
+ * inheriting whatever the current session is running under.
+ */
+export function prepareLaunch(profile: Profile, launch: Launch) {
+  return confine(profile, launch)
+}
+
 export function backendSupport(network?: Profile["network"]) {
+  return backend.support(network)
+}
+
+/**
+ * Whether this platform can actually confine a process's ambient reads (`Profile.filesystem.allowRead`).
+ * Seatbelt and Bubblewrap both can; every other platform cannot, and callers that depend on it are
+ * expected to fail safe rather than run unconfined.
+ */
+export function readConfinementSupport(network?: Profile["network"]): Support {
+  if (process.platform !== "darwin" && process.platform !== "linux") {
+    return { available: false, reason: `Read confinement is not implemented on ${process.platform}` }
+  }
   return backend.support(network)
 }
