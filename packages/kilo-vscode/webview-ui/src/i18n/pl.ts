@@ -335,6 +335,7 @@ export const dict = {
   "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
+  "ui.approval.source.auto": "przez tryb auto",
   "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
 
   "session.tab.review": "Przegląd",

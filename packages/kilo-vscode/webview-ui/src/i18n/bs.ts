@@ -334,6 +334,7 @@ export const dict = {
   "ui.approval.source.yolo": "režimom automatskog odobravanja",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
+  "ui.approval.source.auto": "automatskim načinom",
   "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
 
   "session.tab.review": "Pregled",
