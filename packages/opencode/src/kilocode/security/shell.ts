@@ -655,7 +655,7 @@ export namespace ShellNormalizer {
           recursive: spec.recursive,
           force: spec.force,
           dynamic: dynamic || opaque || spec.dynamic === true,
-          stdinTargets: unwrapped.stdinTargets || (bound && spec.effect !== "read"),
+          stdinTargets: unwrapped.stdinTargets || spec.stdinTargets === true || (bound && spec.effect !== "read"),
           privileged: unwrapped.privileged,
           indirection: spec.indirection,
           nested,

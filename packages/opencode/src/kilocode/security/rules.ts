@@ -605,7 +605,7 @@ export namespace SecurityRules {
           "hard.path.stdin-targets",
           "ask",
           "DYNAMIC_TARGET",
-          "The targets of a destructive command come from a pipeline.",
+          "The targets of a destructive command are not on the command line.",
           attrs,
         ),
       )

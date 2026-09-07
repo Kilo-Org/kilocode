@@ -817,3 +817,40 @@ describe("spellings that used to reach the effect unclassified", () => {
     expectDecision(await decide("cat src/../src/index.ts"), "allow")
   })
 })
+
+// A second round of review found these in the first round's fix. `find` is a small language, and
+// reading only part of it is how an operand goes unclassified.
+describe("find is read as a whole, or not guessed at", () => {
+  test("every -exec clause is read, not only the first", async () => {
+    for (const terminator of [";", "+"])
+      expectDecision(
+        await decide(`find . -type f -exec echo {} ${terminator} -exec cat ${home}/.ssh/id_rsa ${terminator}`),
+        "deny",
+        "SENSITIVE_READ",
+        true,
+      )
+    expectDecision(
+      await decide(`find . -exec echo {} ; -execdir cat ${home}/.ssh/id_rsa ;`),
+      "deny",
+      "SENSITIVE_READ",
+      true,
+    )
+  })
+
+  test("a clause running a wrapper or a shell is an indirection, not a list of paths", async () => {
+    // `env` is metadata on its own and a shell when it carries `-S`. Reading its words as paths made
+    // `rm -rf /` a relative workspace file; nothing is guessed now.
+    expectDecision(await decide("find . -exec env -S 'rm -rf /' ;"), "ask", "SHELL_INDIRECTION", true)
+    expectDecision(await decide("find . -exec sh -c 'cat x' ;"), "ask", "SHELL_INDIRECTION", true)
+    expectDecision(await decide("find . -exec xargs rm ;"), "ask", "SHELL_INDIRECTION", true)
+    // A legible command still has its operands classified.
+    expectDecision(await decide(`find . -exec cat -n ${home}/.ssh/id_rsa ;`), "deny", "SENSITIVE_READ", true)
+  })
+
+  test("starting points read from a file are unknown, not the working directory", async () => {
+    expectDecision(await decide("find -files0-from list.txt -delete"), "ask", "DYNAMIC_TARGET", true)
+    expectDecision(await decide("find -files0-from=list.txt -delete"), "ask", "DYNAMIC_TARGET", true)
+    // Without a starting point and without that option, `.` is what find walks.
+    expectDecision(await decide("find -maxdepth 2 -name '*.ts'"), "allow")
+  })
+})

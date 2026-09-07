@@ -52,6 +52,8 @@ export namespace CommandSemantics {
     metadata: boolean
     /** The command carries arguments the analyser could not attribute (Start-Process -ArgumentList). */
     dynamic?: boolean
+    /** The operands are not on the command line at all (`find -files0-from`), so nothing named them. */
+    stdinTargets?: boolean
   }
 
   const PRIVILEGE = new Set(["sudo", "doas", "su", "pkexec", "runas", "gsudo", "sudo-rs", "run0", "dzdo", "pfexec"])
@@ -1878,41 +1880,86 @@ export namespace CommandSemantics {
     const start = tail.findIndex((arg) => arg.startsWith("-") || arg === "(" || arg === "!")
     const paths = (start === -1 ? tail : tail.slice(0, start)).filter((arg) => !arg.startsWith("-"))
     const rest = start === -1 ? [] : tail.slice(start)
-    const exec = rest.findIndex((arg) => /^-(exec|execdir|ok|okdir)$/.test(arg))
-    const command = exec >= 0 ? base(rest[exec + 1] ?? "") : undefined
-    const remove = rest.includes("-delete") || (command !== undefined && DELETE.has(command))
-    const effect: FileEffect = remove
-      ? "delete"
-      : command && !READERS.has(command) && !METADATA.has(command)
-        ? "exec"
-        : "read"
+
     /**
-     * The arguments of `-exec` are operands of their own. `find . -exec cat ~/.ssh/id_rsa \;` reads a
-     * private key; classifying only the starting point `.` made it an ordinary workspace read. `{}`
-     * is the match placeholder and `;` / `+` terminate the clause, so neither is a path.
+     * Every `-exec` clause, not only the first: `find . -exec echo {} + -exec cat ~/.ssh/id_rsa +` is
+     * two clauses, and reading one of them classified the other as nothing at all.
      */
-    const carried: Array<{ value: string; effect: FileEffect }> = []
-    if (exec >= 0) {
-      const commandEffect: FileEffect = remove
-        ? "delete"
-        : command && !READERS.has(command) && !METADATA.has(command)
-          ? "exec"
-          : "read"
-      for (const arg of rest.slice(exec + 2)) {
+    const clauses: { command: string; args: string[] }[] = []
+    for (let index = 0; index < rest.length; index++) {
+      if (!/^-(exec|execdir|ok|okdir)$/.test(rest[index]!)) continue
+      const command = base(rest[index + 1] ?? "")
+      const args: string[] = []
+      let end = index + 2
+      for (; end < rest.length; end++) {
+        const arg = rest[end]!
         if (arg === ";" || arg === "\\;" || arg === "+") break
-        if (arg === "{}" || arg.startsWith("-")) continue
-        carried.push({ value: arg, effect: commandEffect })
+        args.push(arg)
       }
+      clauses.push({ command, args })
+      index = end
     }
+
+    /**
+     * A command whose operands this file knows how to read as paths.
+     *
+     * A wrapper, a shell or a privilege tool is never legible even when it appears in one of those
+     * sets: bare `env` prints the environment and is metadata, but `-exec env -S 'rm -rf /'` runs a
+     * shell, and reading its words as paths classified `rm -rf /` as a relative workspace file.
+     */
+    const legible = (command: string): FileEffect | undefined => {
+      if (WRAPPERS.has(command) || SHELLS.has(command) || POWERSHELLS.has(command) || CMD.has(command)) return undefined
+      if (PRIVILEGE.has(command)) return undefined
+      if (DELETE.has(command)) return "delete"
+      if (READERS.has(command)) return "read"
+      if (METADATA.has(command)) return "read"
+      return undefined
+    }
+
+    // `-files0-from` reads the starting points from a file, so they are not on the command line at
+    // all. Defaulting to `.` there says "the workspace" about a set nobody has seen.
+    const rootsElsewhere = rest.some((arg) => /^--?files0-from(=|$)/.test(arg))
+    const remove = rest.includes("-delete") || clauses.some((clause) => DELETE.has(clause.command))
+    /**
+     * A clause whose command this file cannot read is an arbitrary program with the found paths as
+     * arguments — `env -S`, an interpreter, anything. Guessing which of its words are paths produced
+     * nonsense (`rm -rf /` classified as a relative workspace path), so nothing is guessed: the whole
+     * command becomes an exec indirection and the escape rules answer it.
+     */
+    const opaque = clauses.some((clause) => clause.command.length > 0 && legible(clause.command) === undefined)
+    const effect: FileEffect = remove ? "delete" : opaque ? "exec" : "read"
+
+    const carried: Array<{ value: string; effect: FileEffect }> = []
+    if (!opaque)
+      for (const clause of clauses) {
+        const clauseEffect = legible(clause.command)
+        if (clauseEffect === undefined) continue
+        for (const arg of clause.args) {
+          // `{}` is the match placeholder and a flag is not a path.
+          if (arg === "{}" || arg.startsWith("-")) continue
+          carried.push({ value: arg, effect: clauseEffect })
+        }
+      }
+
     return {
       effect,
       recursive: true,
       force: true,
-      operands: [...(paths.length > 0 ? paths : ["."]).map((value) => ({ value, effect, within: true })), ...carried],
+      operands: [
+        ...(rootsElsewhere ? [] : paths.length > 0 ? paths : ["."]).map((value) => ({
+          value,
+          effect,
+          within: true,
+        })),
+        ...carried,
+      ],
+      // The starting points are in a file this analysis never opens, so the targets are as unknown as
+      // a pipeline's; the same rule answers both.
+      stdinTargets: rootsElsewhere,
       encoded: false,
       network: false,
       reads: effect === "read",
-      metadata: effect === "read" && command === undefined,
+      metadata: effect === "read" && clauses.length === 0,
       indirection: effect === "exec" ? "interpreter" : undefined,
       escape: effect === "exec" ? "find" : undefined,
     }
