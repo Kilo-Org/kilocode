@@ -403,17 +403,31 @@ export namespace ExtensionHost {
          * extension's OS profile. The engine decides whether it may run at all; the profile does not
          * contain what it then does.
          */
+        // stderr is piped nowhere and never read, so it is not piped at all: a pipe nobody drains
+        // fills, and a child blocked writing to it would sit there until the deadline killed it.
         const proc = Bun.spawn(["/bin/sh", "-c", request.command], {
           cwd: workspace,
           env: environmentFor(workspace),
           stdout: "pipe",
-          stderr: "pipe",
+          stderr: "ignore",
         })
         const timer = setTimeout(() => proc.kill("SIGKILL"), SPAWN_TIMEOUT)
         try {
-          const out = await new Response(proc.stdout).text()
+          // Read to the cap and stop, rather than buffering everything and slicing afterwards: the
+          // cap is there so a granted `process` cannot spend the host's memory, and a slice applied
+          // after the fact has already spent it.
+          const decoder = new TextDecoder()
+          let out = ""
+          for await (const chunk of proc.stdout as unknown as AsyncIterable<Uint8Array>) {
+            out += decoder.decode(chunk, { stream: true })
+            if (out.length >= MAX_SPAWN_OUTPUT) {
+              out = out.slice(0, MAX_SPAWN_OUTPUT)
+              proc.kill("SIGKILL")
+              break
+            }
+          }
           await proc.exited
-          return out.slice(0, MAX_SPAWN_OUTPUT)
+          return out
         } finally {
           clearTimeout(timer)
           if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL")
