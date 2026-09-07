@@ -89,6 +89,11 @@ export function remote<A extends object>(value: A): A {
   return value
 }
 
+/** True when an MCP tool entry belongs to a server that runs outside this machine. */
+export function isRemoteMcp(value: object) {
+  return Remote in value
+}
+
 export function tool<A, E, R>(value: { id: string }, effect: Effect.Effect<A, E, R>) {
   if (!(Builtin in value)) {
     return assertNetwork(`custom tool:${value.id}`, "executeTool").pipe(Effect.andThen(effect))
