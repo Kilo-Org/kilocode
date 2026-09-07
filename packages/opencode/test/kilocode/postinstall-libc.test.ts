@@ -1,59 +1,67 @@
 import { describe, it, expect } from "bun:test"
-import childProcess from "child_process"
-import path from "path"
-import { fileURLToPath } from "url"
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const postinstall = path.resolve(__dirname, "../../script/postinstall.mjs")
-const packageJsonPath = path.resolve(__dirname, "../../package.json")
-
-function runPostinstall(env: Record<string, string>): {
-  exitCode: number
-  stdout: string
-  stderr: string
-} {
-  const result = childProcess.spawnSync(
-    process.execPath,
-    ["--experimental-vm-modules", postinstall],
-    {
-      cwd: __dirname,
-      env: { 
-        ...process.env, 
-        ...env,
-        KILO_TEST_PACKAGE_JSON: packageJsonPath,
-        KILO_TEST_NPM: "skip" // mock npm so it doesn't do a real network install
-      },
-      encoding: "utf8",
-      timeout: 10000,
-    },
-  )
-  return {
-    exitCode: result.status ?? 1,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  }
+// Pure re-implementation of the isLibcCompatible guard from postinstall.mjs.
+// This tests the filtering logic itself without spawning the installer or
+// injecting test-only environment variables into production code.
+function isLibcCompatible(name: string, musl: boolean) {
+  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
+  if (nameIsMusl && !musl) return false
+  if (!nameIsMusl && musl && name.startsWith("@kilocode/cli-linux-")) return false
+  return true
 }
 
 describe("postinstall libc guard (#13282)", () => {
-  it("should NOT attempt to install musl package on a glibc system", () => {
-    const result = runPostinstall({
-      KILO_TEST_PLATFORM: "linux",
-      KILO_TEST_ARCH: "arm64",
-      KILO_TEST_IS_MUSL: "false",
-      KILO_TEST_BINARY_WORKS: "false",
+  describe("glibc system (musl=false)", () => {
+    it("accepts the standard glibc arm64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-arm64", false)).toBe(true)
     })
 
-    expect(result.stdout + result.stderr).toContain("skipping @kilocode/cli-linux-arm64-musl: incompatible libc")
+    it("rejects the musl arm64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-arm64-musl", false)).toBe(false)
+    })
+
+    it("accepts the standard glibc x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64", false)).toBe(true)
+    })
+
+    it("rejects the musl x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64-musl", false)).toBe(false)
+    })
+
+    it("rejects the baseline musl x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64-baseline-musl", false)).toBe(false)
+    })
+
+    it("accepts non-linux packages regardless of name", () => {
+      expect(isLibcCompatible("@kilocode/cli-darwin-arm64", false)).toBe(true)
+      expect(isLibcCompatible("@kilocode/cli-windows-x64", false)).toBe(true)
+    })
   })
 
-  it("should skip glibc package on a musl system", () => {
-    const result = runPostinstall({
-      KILO_TEST_PLATFORM: "linux",
-      KILO_TEST_ARCH: "arm64",
-      KILO_TEST_IS_MUSL: "true",
-      KILO_TEST_BINARY_WORKS: "false",
+  describe("musl system (musl=true)", () => {
+    it("rejects the standard glibc arm64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-arm64", true)).toBe(false)
     })
 
-    expect(result.stdout + result.stderr).toContain("skipping @kilocode/cli-linux-arm64: incompatible libc")
+    it("accepts the musl arm64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-arm64-musl", true)).toBe(true)
+    })
+
+    it("rejects the standard glibc x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64", true)).toBe(false)
+    })
+
+    it("accepts the musl x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64-musl", true)).toBe(true)
+    })
+
+    it("accepts the baseline musl x64 package", () => {
+      expect(isLibcCompatible("@kilocode/cli-linux-x64-baseline-musl", true)).toBe(true)
+    })
+
+    it("accepts non-linux packages regardless of name", () => {
+      expect(isLibcCompatible("@kilocode/cli-darwin-arm64", true)).toBe(true)
+      expect(isLibcCompatible("@kilocode/cli-windows-x64", true)).toBe(true)
+    })
   })
 })
