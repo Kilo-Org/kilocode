@@ -41,6 +41,11 @@ process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures",
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 process.env["KILO_EXPERIMENTAL_WORKSPACES"] = "true"
 process.env["KILO_EXPERIMENTAL_DISABLE_FILEWATCHER"] ??= "true" // kilocode_change - see test.yml: per-instance watchers are too heavy/racy for unit tests; watcher tests opt back in
+// kilocode_change start - the security classifier's deadline is sized for a real gateway (2.5 s).
+// No test has a model to reach, so every deadline it pays is dead wall-clock against bun's 5 s
+// per-test budget. Tests that assert something about the deadline set their own.
+process.env["KILO_SECURITY_AUTO_CLASSIFIER_TIMEOUT_MS"] ??= "200"
+// kilocode_change end
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
