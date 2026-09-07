@@ -1581,12 +1581,11 @@ export const layer = Layer.effect(
         // never authority — a request that names a dangerous action does not permit it, it only
         // makes the mismatch signal quieter. Bounded and stored in memory by the session state.
         //
-        // `synthetic` parts are excluded, and that exclusion is the whole point. A subagent's "user"
-        // message is the task tool's prompt, written by the model, and a background task injects
-        // rendered subagent output the same way — both under a session whose state resolves to the
-        // same root. Without this filter, model-authored text (steerable by whatever the model just
-        // read) would overwrite the human's goal in shared state, and the one input this layer treats
-        // as coming from the person would be the one an attacker can reach.
+        // `synthetic` parts are excluded because a background task injects rendered subagent output
+        // as one. That filter is not enough on its own: a subagent's first text part is the task
+        // tool's prompt, written by the model, and it carries no `synthetic` flag. `recordGoal`
+        // therefore refuses any session that is not its own root, which is the case that actually
+        // separates the person from the model.
         const ownWords = lastUserParts
           .filter((part) => part.type === "text")
           .filter((part) => part.synthetic !== true)

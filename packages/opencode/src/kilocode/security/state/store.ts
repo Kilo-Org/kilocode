@@ -275,7 +275,19 @@ export namespace SecuritySessionState {
    * request that matches a dangerous action does not make the action allowed, it only makes the
    * mismatch signal quieter.
    */
+  /**
+   * The person's own request, and only the person's.
+   *
+   * State is keyed on the root session, so a subagent shares it with its parent — and a subagent's
+   * "user" message is the task tool's `prompt` argument, written by the model. Recording that would
+   * let a model which has just read a poisoned document write the goal its own next action is then
+   * judged against, which is the one input this layer treats as coming from a human. So a session
+   * that is not its own root records nothing: the guard lives here rather than at the call site,
+   * because a call site can be added without it. (A `synthetic` filter does not cover this; the
+   * subagent's first text part is not marked synthetic.)
+   */
   export function recordGoal(sessionID: string, text: string) {
+    if (rootOf(sessionID) !== sessionID) return
     const goal = text.trim().slice(0, GOAL_LIMIT)
     if (goal.length === 0) return
     const now = Date.now()
