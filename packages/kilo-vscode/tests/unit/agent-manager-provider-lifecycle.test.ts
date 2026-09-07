@@ -4,7 +4,11 @@ import * as os from "node:os"
 import * as path from "node:path"
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 import { ProjectContext } from "../../src/agent-manager/project/context"
-import { deleteLifecycleWorktree, type LifecycleHost } from "../../src/agent-manager/provider-lifecycle"
+import {
+  deleteLifecycleWorktree,
+  removeStaleLifecycleWorktree,
+  type LifecycleHost,
+} from "../../src/agent-manager/provider-lifecycle"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 describe("Agent Manager worktree deletion lifecycle", () => {
@@ -191,6 +195,22 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       expect(state.getWorktrees()).toHaveLength(1)
     },
   )
+
+  it("removes stale state when PTY cleanup fails", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    const session = state.addSession("session", id)
+    ctx.stale.add(id)
+    host.acquirePtyCleanup = mock(async () => {
+      throw new Error("backend offline")
+    })
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+
+    expect(state.getWorktrees()).toHaveLength(0)
+    expect(state.getSessions()).toHaveLength(0)
+    expect(ctx.stale.has(id)).toBeFalse()
+    expect(calls).toEqual(["run:remove", "run:clear", "name", "diff", `clear:${session.id}`, "push"])
+  })
 
   it("preserves state and releases deletion progress when the directory remains locked", async () => {
     const id = state.getWorktrees().at(0)!.id

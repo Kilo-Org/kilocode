@@ -250,7 +250,6 @@ export async function removeStaleLifecycleWorktree(
     releasePtyCleanup()
   } catch (error) {
     host.log(`Failed to remove stale worktree PTYs: ${error}`)
-    return null
   }
   host.forgetName(worktreeId)
   const orphaned = state.removeWorktree(worktreeId)
