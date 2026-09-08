@@ -244,6 +244,9 @@ object SessionUiStyle {
             const val EDITOR_HORIZONTAL_INSET = SHELL_VERTICAL_PADDING
             // Caps a pasted block rendered in the transcript prompt bubble; matches Tool.BODY_LINES.
             const val PASTE_BLOCK_LINES = 15
+            // Height a collapsed transcript prompt bubble clips to, in transcript text lines. A
+            // pasted log is folded to this much until the reader expands it.
+            const val COLLAPSED_LINES = 15
 
             fun separator(): Color = JBColor.namedColor(
                 "EditorTabs.underTabsBorderColor",

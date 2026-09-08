@@ -13,8 +13,10 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ide.CopyPasteManager
+import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -443,6 +445,95 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals(color ?: before, view.md.linkColor)
     }
 
+    // ---- collapsed transcript prompt bubble ------
+
+    fun `test long prompt bubble is clipped and offers to expand`() {
+        val view = realizedPrompt(lines(120))
+
+        try {
+            assertTrue(view.toggleControl().isVisible)
+            assertFalse(view.isExpanded())
+            assertEquals(KiloBundle.message("prompt.transcript.expand"), (view.toggleControl() as JBLabel).text)
+            assertTrue(view.preferredSize.height < view.md.component.preferredSize.height)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test short prompt bubble has no expand toggle`() {
+        val view = realizedPrompt("just a line")
+
+        try {
+            assertFalse(view.toggleControl().isVisible)
+            assertEquals(view.md.component.preferredSize.height, clipOf(view).preferredSize.height)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test expanding a prompt bubble reveals the full height`() {
+        val view = realizedPrompt(lines(120))
+        val clipped = clipOf(view).preferredSize.height
+
+        view.toggle()
+
+        try {
+            assertTrue(view.isExpanded())
+            assertEquals(KiloBundle.message("prompt.transcript.collapse"), (view.toggleControl() as JBLabel).text)
+            assertTrue(clipOf(view).preferredSize.height > clipped)
+            assertEquals(view.md.component.preferredSize.height, clipOf(view).preferredSize.height)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test collapsing a prompt bubble clips it again`() {
+        val view = realizedPrompt(lines(120))
+        val clipped = clipOf(view).preferredSize.height
+        view.toggle()
+
+        view.toggle()
+
+        try {
+            assertFalse(view.isExpanded())
+            assertEquals(clipped, clipOf(view).preferredSize.height)
+            assertEquals(KiloBundle.message("prompt.transcript.expand"), (view.toggleControl() as JBLabel).text)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test clicking the toggle expands the prompt bubble`() {
+        val view = realizedPrompt(lines(120))
+        val control = view.toggleControl()
+
+        control.mouseListeners.forEach {
+            it.mouseClicked(MouseEvent(control, MouseEvent.MOUSE_CLICKED, 0L, 0, 1, 1, 1, false))
+        }
+
+        try {
+            assertTrue(view.isExpanded())
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
+    fun `test a prompt bubble shrinking below the cap drops the toggle and expanded state`() {
+        val view = realizedPrompt(lines(120))
+        view.toggle()
+        assertTrue(view.isExpanded())
+
+        view.update(Text("p1").also { it.content.append("now short") })
+        layout(view)
+
+        try {
+            assertFalse(view.toggleControl().isVisible)
+            assertFalse(view.isExpanded())
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
     // ---- pasted block height cap (Step 2) ------
 
     fun `test prompt view caps a large pasted block to the same height as a small one`() {
@@ -491,6 +582,24 @@ class TextViewTest : BasePlatformTestCase() {
             Disposer.dispose(view)
         }
     }
+
+    private fun lines(count: Int): String = (1..count).joinToString("\n\n") { "paragraph $it" }
+
+    private fun realizedPrompt(markdown: String): PromptView {
+        val view = PromptView(Text("p1").also { it.content.append(markdown) })
+        layout(view)
+        return view
+    }
+
+    private fun layout(view: PromptView) {
+        val host = JPanel(BorderLayout())
+        host.add(view, BorderLayout.CENTER)
+        host.setSize(600, 4000)
+        host.doLayout()
+        view.doLayout()
+    }
+
+    private fun clipOf(view: PromptView): JComponent = view.md.component.parent as JComponent
 
     private fun fence(lines: Int, seed: Int = 0): String = buildString {
         append("```text\n")
