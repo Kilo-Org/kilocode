@@ -644,7 +644,13 @@ class KiloBackendAppServiceTest {
             } as KiloAppState.Error
 
             assertEquals("Failed to load required data", err.message)
-            assertTrue(err.errors.any { it.detail?.contains("timeout", ignoreCase = true) == true })
+            // Whether the per-request app-load bound or the overall load bound wins the race, some
+            // error must reference the 300ms timeout. (No socket read timeout is used any more — it
+            // would start the Okio watchdog — so this is enforced at the coroutine layer.)
+            assertTrue(
+                err.errors.any { it.detail?.contains("300ms") == true },
+                "expected a load error mentioning the 300ms timeout, got: ${err.errors.map { it.detail }}",
+            )
         } finally {
             gate.countDown()
         }

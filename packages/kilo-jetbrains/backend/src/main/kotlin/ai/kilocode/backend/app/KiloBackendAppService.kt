@@ -602,12 +602,13 @@ class KiloBackendAppService private constructor(
      * auth), and 5xx (gateway/network errors) are all non-fatal.
      */
     private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
-        val client = connection.appLoadApi
-            ?: return FetchResult.ok(null)
+        if (connection.appLoadApi == null) return FetchResult.ok(null)
         return try {
-            val response = client.kiloProfile()
+            val response = connection.appLoadCall { it.kiloProfile() }
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: ClientException) {
             if (e.statusCode == 400 || e.statusCode == 401) {
                 log.info("Profile: unavailable (${e.statusCode})")
@@ -668,10 +669,11 @@ class KiloBackendAppService private constructor(
     }
 
     private suspend fun fetchNotifications(): FetchResult<List<KiloNotifications200ResponseInner>> {
-        val client = connection.appLoadApi
-            ?: return FetchResult.fail("notifications", detail = "Not connected")
+        if (connection.appLoadApi == null) return FetchResult.fail("notifications", detail = "Not connected")
         return try {
-            FetchResult.ok(client.kiloNotifications())
+            FetchResult.ok(connection.appLoadCall { it.kiloNotifications() })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Notifications fetch failed: ${e.message}", e)
             logResponseBody("notifications", e)
@@ -680,9 +682,11 @@ class KiloBackendAppService private constructor(
     }
 
     private suspend fun fetchWarnings(): List<ConfigWarning> {
-        val client = connection.appLoadApi ?: return emptyList()
+        if (connection.appLoadApi == null) return emptyList()
         return try {
-            client.configWarnings().map(::warning)
+            connection.appLoadCall { it.configWarnings() }.map(::warning)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Config warnings fetch failed: ${e.message}", e)
             emptyList()

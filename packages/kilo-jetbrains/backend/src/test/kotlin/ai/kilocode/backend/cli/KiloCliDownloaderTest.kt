@@ -1,9 +1,15 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.testing.TestLog
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import okio.Buffer
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -372,6 +378,67 @@ class KiloCliDownloaderTest {
                 assertContains(ex.message.orEmpty(), file.canonicalPath)
                 assertTrue(log.messages.any { it.contains("Waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
                 assertTrue(log.messages.any { it.contains("Timed out waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
+            }
+        }
+    }
+
+    @Test
+    fun `stalled download fails with the stall reason not an opaque socket error`() = runBlocking {
+        MockWebServer().use { server ->
+            val bytes = archive()
+            // The download client has no read timeout, so the read blocks until the stall watchdog
+            // aborts the call. Aborting surfaces as IOException("Canceled"); the downloader must
+            // replace that with the real reason.
+            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+            val log = TestLog()
+
+            val ex = assertFailsWith<IllegalStateException> {
+                KiloCliDownloader(
+                    log = log,
+                    root = dir,
+                    baseUrl = server.url("/release").toString(),
+                    api = server.url("/api").toString(),
+                    digests = digests(bytes),
+                    stallTimeoutMs = 200,
+                ).resolve("1.2.3")
+            }
+
+            assertContains(ex.message.orEmpty(), "stalled for >200ms with no bytes received")
+            assertTrue(log.messages.any { it.contains("stalled for >200ms with no bytes received") })
+        }
+    }
+
+    @Test
+    fun `cancelling a download aborts the blocked read and reports cancellation`() = runBlocking {
+        MockWebServer().use { server ->
+            val bytes = archive()
+            // Server accepts the request and never answers, so the download blocks in a read with no
+            // socket timeout. Cancelling must abort the in-flight call — otherwise resolve() stays
+            // stuck until the stall watchdog fires two minutes later and plugin unload hangs with it.
+            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+            val failure = CompletableDeferred<Throwable>()
+
+            val job = launch(Dispatchers.IO) {
+                try {
+                    KiloCliDownloader(
+                        log = TestLog(),
+                        root = dir,
+                        baseUrl = server.url("/release").toString(),
+                        api = server.url("/api").toString(),
+                        digests = digests(bytes),
+                    ).resolve("1.2.3")
+                } catch (e: Throwable) {
+                    failure.complete(e)
+                }
+            }
+
+            server.takeRequest()
+            job.cancel()
+
+            withTimeout(10_000) {
+                val ex = failure.await()
+                assertTrue(ex is CancellationException, "expected CancellationException, got $ex")
+                job.join()
             }
         }
     }
