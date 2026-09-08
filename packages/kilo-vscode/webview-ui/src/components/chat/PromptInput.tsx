@@ -1118,7 +1118,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       ghost.dismiss()
       return
     }
-    if (e.key === "Escape" && isBusy()) {
+    if (e.key === "Escape" && settings()["chat.abortOnEscape"] !== false && isBusy()) {
       e.preventDefault()
       e.stopPropagation()
       session.abort()

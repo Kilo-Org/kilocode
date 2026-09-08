@@ -74,7 +74,10 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return { "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled }
   }
   if (message.type === "chatSettingsLoaded") {
-    return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
+    return {
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      "chat.abortOnEscape": message.settings.abortOnEscape,
+    }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
@@ -252,6 +255,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type !== "chatSettingsLoaded") return
     mergeSettings({
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      "chat.abortOnEscape": message.settings.abortOnEscape,
     })
   })
 

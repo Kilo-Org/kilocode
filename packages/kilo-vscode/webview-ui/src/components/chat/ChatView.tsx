@@ -25,6 +25,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
+import { useConfig } from "../../context/config"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
@@ -59,6 +60,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
   const server = useServer()
+  const { settings } = useConfig()
   const tabs = useLocalTabs()
   // Show "Show Changes" only in the standalone sidebar, not inside Agent Manager
   const isSidebar = () => worktreeMode === undefined
@@ -111,7 +113,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
+      if (
+        e.key !== "Escape" ||
+        settings()["chat.abortOnEscape"] === false ||
+        (!session.submitting() && session.status() === "idle") ||
+        e.defaultPrevented
+      )
+        return
       e.preventDefault()
       session.abort()
     }

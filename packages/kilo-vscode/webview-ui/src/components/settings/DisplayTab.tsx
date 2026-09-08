@@ -97,6 +97,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.abortOnEscape.title")}
+          description={language.t("settings.display.abortOnEscape.description")}
+        >
+          <Switch
+            checked={Boolean(settings()["chat.abortOnEscape"] ?? true)}
+            onChange={(checked: boolean) => updateSetting("chat.abortOnEscape", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.abortOnEscape.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.tokenThroughput.title")}
           description={language.t("settings.display.tokenThroughput.description")}
         >
