@@ -57,8 +57,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.blocked": "Blokkert",
+  "session.goal.restart": "Start mål på nytt (bruker modellkreditter)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Oppdater",
+  "task.swarm.reset": "Nullstill tavle",
+  "task.swarm.resetTitle": "Nullstille denne tavlen?",
+  "task.swarm.resetDescription":
+    "Tømme synlige meldinger? Samtaler og kjørende oppgaver endres ikke. Agenter kan sende nye meldinger.",
+  "task.swarm.loading": "Laster tavle...",
+  "task.swarm.failed": "Kunne ikke laste eller nullstille tavlen. Prøv å oppdatere den.",
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -712,6 +723,14 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angi mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Satt på pause",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Fortsett",
+  "session.goal.clear": "Fjern mål",
   "session.costAlert.header": "Varsel om øktkostnad",
   "session.costAlert.continue": "Fortsett",
   "session.costAlert.question":

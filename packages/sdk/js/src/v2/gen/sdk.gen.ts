@@ -151,18 +151,6 @@ import type {
   InstanceDisposeResponses,
   InstanceReloadErrors,
   InstanceReloadResponses,
-  InteractiveTerminalCloseErrors,
-  InteractiveTerminalCloseResponses,
-  InteractiveTerminalGetErrors,
-  InteractiveTerminalGetResponses,
-  InteractiveTerminalListErrors,
-  InteractiveTerminalListResponses,
-  InteractiveTerminalResizeErrors,
-  InteractiveTerminalResizeInput,
-  InteractiveTerminalResizeResponses,
-  InteractiveTerminalWriteErrors,
-  InteractiveTerminalWriteInput,
-  InteractiveTerminalWriteResponses,
   KiloAudioTranscriptionsErrors,
   KiloAudioTranscriptionsResponses,
   KiloAuthStatusErrors,
@@ -217,8 +205,12 @@ import type {
   KilocodeRemoveSkillResponses,
   KilocodeRemoveSnapshotErrors,
   KilocodeRemoveSnapshotResponses,
+  KilocodeResetSessionBoardErrors,
+  KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeSessionBoardErrors,
+  KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -6729,200 +6721,6 @@ export class Indexing extends HeyApiClient {
   }
 }
 
-export class InteractiveTerminal extends HeyApiClient {
-  /**
-   * List interactive terminals
-   *
-   * List active human-driven terminal sessions for the current instance.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalListResponses,
-      InteractiveTerminalListErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get interactive terminal
-   *
-   * Get metadata and retained output for an active interactive terminal.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalGetResponses,
-      InteractiveTerminalGetErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Write interactive terminal input
-   *
-   * Send raw keyboard input to an active interactive terminal.
-   */
-  public write<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalWriteInput?: InteractiveTerminalWriteInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalWriteInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalWriteResponses,
-      InteractiveTerminalWriteErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/input",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Resize interactive terminal
-   *
-   * Resize an active interactive terminal's PTY.
-   */
-  public resize<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalResizeInput?: InteractiveTerminalResizeInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalResizeInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalResizeResponses,
-      InteractiveTerminalResizeErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/resize",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Close interactive terminal
-   *
-   * Terminate an active interactive terminal and unblock its tool call.
-   */
-  public close<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalCloseResponses,
-      InteractiveTerminalCloseErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/close",
-      ...options,
-      ...params,
-    })
-  }
-}
-
 export class Audio extends HeyApiClient {
   /**
    * Speech to text transcription
@@ -8506,6 +8304,89 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session/{sessionID}/drain",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Observe a session's shared board
+   *
+   * Read stored board messages without changing the board.
+   */
+  public sessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      before?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "before" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeSessionBoardResponses,
+      KilocodeSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Clear a session's shared board
+   *
+   * Clear visible messages without changing conversations or running tasks.
+   */
+  public resetSessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      revision: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "revision" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeResetSessionBoardResponses,
+      KilocodeResetSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board/reset",
       ...options,
       ...params,
       headers: {
@@ -11988,11 +11869,6 @@ export class KiloClient extends HeyApiClient {
   private _indexing?: Indexing
   get indexing(): Indexing {
     return (this._indexing ??= new Indexing({ client: this.client }))
-  }
-
-  private _interactiveTerminal?: InteractiveTerminal
-  get interactiveTerminal(): InteractiveTerminal {
-    return (this._interactiveTerminal ??= new InteractiveTerminal({ client: this.client }))
   }
 
   private _kilo?: Kilo

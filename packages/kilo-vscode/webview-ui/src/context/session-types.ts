@@ -187,7 +187,7 @@ export interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
-    overrides?: { agent?: string; model?: string; variant?: string },
+    overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
   ) => boolean
   abort: () => void
   compact: () => void

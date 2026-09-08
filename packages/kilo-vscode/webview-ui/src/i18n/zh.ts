@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型报告）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新开始目标（消耗模型额度）",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "刷新",
+  "task.swarm.reset": "重置看板",
+  "task.swarm.resetTitle": "重置此看板？",
+  "task.swarm.resetDescription": "清除可见消息？对话和正在运行的任务不会改变。智能体可以发布新消息。",
+  "task.swarm.loading": "正在加载看板...",
+  "task.swarm.failed": "无法加载或重置看板。请尝试刷新。",
 
   "command.provider.connect": "连接提供商",
 
@@ -725,6 +735,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",
+  "session.goal.label": "目标",
+  "prompt.goal.set": "设置目标",
+  "prompt.goal.start": "开始目标",
+  "session.goal.active": "运行中",
+  "session.goal.paused": "已暂停",
+  "session.goal.pause": "暂停",
+  "session.goal.resume": "继续",
+  "session.goal.clear": "清除目标",
   "session.costAlert.header": "会话费用提醒",
   "session.costAlert.continue": "继续",
   "session.costAlert.question": "此会话刚刚超过每会话提醒阈值 {{limit}}，当前费用为 {{cost}}。是否继续？",

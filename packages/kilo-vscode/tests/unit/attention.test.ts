@@ -62,6 +62,33 @@ describe("AttentionService", () => {
     test.service.dispose()
   })
 
+  it.each([{ "kilo.goal": { text: "Goal", active: false } }, {}])(
+    "suppresses active goal completions but retains attention and restores normal completion after %j",
+    (metadata) => {
+      const test = setup()
+      test.event(
+        event({
+          type: "sync",
+          name: "session.updated.1",
+          data: { sessionID: "s1", info: { metadata: { "kilo.goal": { text: "Goal", active: true } } } },
+        }),
+      )
+      test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+      test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
+      expect(test.sounds).toEqual([])
+      test.event(event({ type: "question.asked", properties: { id: "q1", sessionID: "s1" } }))
+      test.event(event({ type: "permission.asked", properties: { id: "p1", sessionID: "s1" } }))
+      test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+      test.event(event({ type: "session.error", properties: { sessionID: "s1", error: { name: "ApiError" } } }))
+      expect(test.sounds).toEqual(["question", "permission", "error"])
+      test.event(event({ type: "sync", name: "session.updated.1", data: { sessionID: "s1", info: { metadata } } }))
+      test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+      test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
+      expect(test.sounds).toEqual(["question", "permission", "error", "done"])
+      test.service.dispose()
+    },
+  )
+
   it("deduplicates question and permission requests", () => {
     const test = setup()
     test.event(event({ type: "question.asked", properties: { id: "q1", sessionID: "s1" } }))

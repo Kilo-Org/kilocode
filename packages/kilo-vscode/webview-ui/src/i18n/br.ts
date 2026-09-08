@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Concluído (informado pelo modelo)",
+  "session.goal.blocked": "Bloqueado",
+  "session.goal.restart": "Reiniciar objetivo (consome créditos)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Quadro",
+  "task.swarm.refresh": "Atualizar",
+  "task.swarm.reset": "Redefinir quadro",
+  "task.swarm.resetTitle": "Redefinir este quadro?",
+  "task.swarm.resetDescription":
+    "Limpar as mensagens visíveis? As conversas e as tarefas em execução não serão alteradas. Agentes podem publicar novas mensagens.",
+  "task.swarm.loading": "Carregando quadro...",
+  "task.swarm.failed": "Não foi possível carregar ou redefinir o quadro. Tente atualizá-lo.",
 
   "command.provider.connect": "Conectar provedor",
 
@@ -752,6 +763,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrompido",
   "session.outcome.error": "Turno falhou",
   "session.outcome.finish": "Motivo da conclusão: {{reason}}",
+  "session.goal.label": "Objetivo",
+  "prompt.goal.set": "Definir objetivo",
+  "prompt.goal.start": "Iniciar objetivo",
+  "session.goal.active": "Ativo",
+  "session.goal.paused": "Pausado",
+  "session.goal.pause": "Pausar",
+  "session.goal.resume": "Retomar",
+  "session.goal.clear": "Limpar objetivo",
   "session.costAlert.header": "Alerta de custo da sessão",
   "session.costAlert.continue": "Continuar",
   "session.costAlert.question":

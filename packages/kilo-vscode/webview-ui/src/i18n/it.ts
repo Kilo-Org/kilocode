@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Completato (segnalato dal modello)",
+  "session.goal.blocked": "Bloccato",
+  "session.goal.restart": "Riavvia obiettivo (consuma crediti)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Bacheca",
+  "task.swarm.refresh": "Aggiorna",
+  "task.swarm.reset": "Reimposta bacheca",
+  "task.swarm.resetTitle": "Reimpostare questa bacheca?",
+  "task.swarm.resetDescription":
+    "Cancellare i messaggi visibili? Le conversazioni e le attività in corso restano invariate. Gli agenti possono pubblicare nuovi messaggi.",
+  "task.swarm.loading": "Caricamento della bacheca...",
+  "task.swarm.failed": "Impossibile caricare o reimpostare la bacheca. Prova ad aggiornarla.",
   "command.provider.connect": "Connetti provider",
   "session.activity.waiting": "In attesa di una risposta o approvazione.",
   "session.activity.error": "Errore o connessione persa.",
@@ -1171,6 +1182,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrotto.",
   "session.outcome.error": "Turno fallito.",
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+  "session.goal.label": "Obiettivo",
+  "prompt.goal.set": "Imposta obiettivo",
+  "prompt.goal.start": "Avvia obiettivo",
+  "session.goal.active": "Attivo",
+  "session.goal.paused": "In pausa",
+  "session.goal.pause": "Pausa",
+  "session.goal.resume": "Riprendi",
+  "session.goal.clear": "Cancella obiettivo",
   "session.costAlert.header": "Avviso costo sessione",
   "session.costAlert.continue": "Continua",
   "session.costAlert.question":

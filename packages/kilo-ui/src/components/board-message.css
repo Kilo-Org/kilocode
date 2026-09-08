@@ -1,0 +1,105 @@
+[data-component="board-route"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--kilo-font-size-16);
+
+  .board-route-member {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &[data-broadcast="true"] .board-route-member:last-child {
+    flex-shrink: 0;
+    max-width: none;
+  }
+
+  > [data-component="icon"],
+  [data-slot="board-route-recipient-icon"] {
+    flex: 0 0 auto;
+  }
+
+  [data-slot="board-route-recipient-icon"] {
+    display: inline-flex;
+  }
+}
+
+[data-component="board-messages"] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+
+  [data-slot="board-message"] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  [data-slot="board-message"] + [data-slot="board-message"] {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-weak-base);
+  }
+
+  [data-slot="board-message-note"] {
+    color: var(--text-weak);
+    font-size: var(--kilo-font-size-12);
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="board-message-body"] {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@container (max-width: 260px) {
+  [data-component="board-route"] {
+    display: grid;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    gap: 4px 6px;
+
+    .board-route-member {
+      max-width: none;
+    }
+
+    .board-route-sender {
+      grid-area: 1 / 2 / 2 / -1;
+    }
+
+    [data-slot="board-route-recipient-icon"] {
+      grid-area: 2 / 2;
+    }
+
+    .board-route-recipient {
+      grid-area: 2 / 3;
+    }
+  }
+}
+
+.board-route-tooltip {
+  max-width: min(400px, calc(100vw - 24px));
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  [data-slot="board-route-detail"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  code {
+    font-size: var(--kilo-font-size-11);
+    opacity: 0.7;
+  }
+}

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Završeno (prema modelu)",
+  "session.goal.blocked": "Blokirano",
+  "session.goal.restart": "Ponovo pokreni cilj (troši kredite modela)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Ploča",
+  "task.swarm.refresh": "Osvježi",
+  "task.swarm.reset": "Resetuj ploču",
+  "task.swarm.resetTitle": "Resetovati ovu ploču?",
+  "task.swarm.resetDescription":
+    "Obrisati vidljive poruke? Razgovori i zadaci koji se izvršavaju ostaju nepromijenjeni. Agenti mogu objaviti nove poruke.",
+  "task.swarm.loading": "Učitavanje ploče...",
+  "task.swarm.failed": "Ploču nije moguće učitati ili resetovati. Pokušajte je osvježiti.",
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -752,6 +763,14 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.goal.label": "Cilj",
+  "prompt.goal.set": "Postavi cilj",
+  "prompt.goal.start": "Pokreni cilj",
+  "session.goal.active": "Aktivan",
+  "session.goal.paused": "Pauziran",
+  "session.goal.pause": "Pauziraj",
+  "session.goal.resume": "Nastavi",
+  "session.goal.clear": "Obriši cilj",
   "session.costAlert.header": "Upozorenje o trošku sesije",
   "session.costAlert.continue": "Nastavi",
   "session.costAlert.question":

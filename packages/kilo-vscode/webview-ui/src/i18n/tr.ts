@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.blocked": "Engellendi",
+  "session.goal.restart": "Hedefi yeniden başlat (model kredisi kullanır)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Pano",
+  "task.swarm.refresh": "Yenile",
+  "task.swarm.reset": "Panoyu sıfırla",
+  "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
+  "task.swarm.resetDescription":
+    "Görünür mesajlar temizlensin mi? Konuşmalar ve çalışan görevler değişmez. Ajanlar yeni mesajlar gönderebilir.",
+  "task.swarm.loading": "Pano yükleniyor...",
+  "task.swarm.failed": "Pano yüklenemedi veya sıfırlanamadı. Yenilemeyi deneyin.",
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -738,6 +749,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.goal.label": "Hedef",
+  "prompt.goal.set": "Hedef belirle",
+  "prompt.goal.start": "Hedefi başlat",
+  "session.goal.active": "Etkin",
+  "session.goal.paused": "Duraklatıldı",
+  "session.goal.pause": "Duraklat",
+  "session.goal.resume": "Sürdür",
+  "session.goal.clear": "Hedefi temizle",
   "session.costAlert.header": "Oturum Maliyeti Uyarısı",
   "session.costAlert.continue": "Devam et",
   "session.costAlert.question":

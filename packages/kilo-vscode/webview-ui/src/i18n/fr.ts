@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Terminé (signalé par le modèle)",
+  "session.goal.blocked": "Bloqué",
+  "session.goal.restart": "Relancer l'objectif (consomme des crédits)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tableau",
+  "task.swarm.refresh": "Actualiser",
+  "task.swarm.reset": "Réinitialiser le tableau",
+  "task.swarm.resetTitle": "Réinitialiser ce tableau ?",
+  "task.swarm.resetDescription":
+    "Effacer les messages visibles ? Les conversations et les tâches en cours restent inchangées. Les agents peuvent publier de nouveaux messages.",
+  "task.swarm.loading": "Chargement du tableau...",
+  "task.swarm.failed": "Impossible de charger ou de réinitialiser le tableau. Essayez de l’actualiser.",
 
   "command.provider.connect": "Connecter un fournisseur",
 
@@ -764,6 +775,14 @@ export const dict = {
   "session.outcome.interrupted": "Tour interrompu",
   "session.outcome.error": "Échec du tour",
   "session.outcome.finish": "Motif de fin : {{reason}}",
+  "session.goal.label": "Objectif",
+  "prompt.goal.set": "Définir un objectif",
+  "prompt.goal.start": "Démarrer l'objectif",
+  "session.goal.active": "Actif",
+  "session.goal.paused": "En pause",
+  "session.goal.pause": "Mettre en pause",
+  "session.goal.resume": "Reprendre",
+  "session.goal.clear": "Effacer l'objectif",
   "session.costAlert.header": "Alerte de coût de session",
   "session.costAlert.continue": "Continuer",
   "session.costAlert.question":

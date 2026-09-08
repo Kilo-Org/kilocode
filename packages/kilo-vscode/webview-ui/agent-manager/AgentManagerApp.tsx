@@ -1606,14 +1606,6 @@ const AgentManagerContent: Component = () => {
     setReviewActive(true)
   }
 
-  const toggleReviewTab = () => {
-    if (reviewActive()) {
-      closeReviewTab()
-      return
-    }
-    openReviewTab()
-  }
-
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
@@ -2115,8 +2107,8 @@ const AgentManagerContent: Component = () => {
           worktreeStats={worktreeStats}
           applyState={apply.applyStateForSelection}
           reviewScope={review.scope}
+          onApply={metrics.click("apply_to_local", "tab_toolbar", openApplyDialog)}
           onOpen={openWindow}
-          onApply={openApplyDialog}
           runStatuses={runStatuses}
           runConfigured={runScriptConfigured}
           onRun={(id) => runWorktree(id, sideCtl.destination())}
@@ -2125,16 +2117,24 @@ const AgentManagerContent: Component = () => {
           reviewActive={reviewActive}
           onToggleDiff={toggleDiffPanel}
           {...browser.tabs}
-          onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
+          onToggleBrowser={metrics.click("browser", "tab_toolbar", browser.tabs.onToggleBrowser, () => ({
+            action: browser.tabs.browserOpen() ? "close" : "open",
+          }))}
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
-          onTogglePR={togglePRPanel}
+          onTogglePR={metrics.click("pull_request", "tab_toolbar", togglePRPanel, () => ({
+            action: prOpen() ? "close" : "open",
+          }))}
           documentsOpen={documentInspector.isOpen}
           documentsAvailable={documentInspector.available}
-          onToggleDocuments={documentInspector.toggle}
+          onToggleDocuments={metrics.click("documents", "tab_toolbar", documentInspector.toggle, () => ({
+            action: documentInspector.isOpen() ? "close" : "open",
+          }))}
           subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
           subagentsOpen={() => sidePanel() === SidePanel.Subagents}
-          onToggleSubagents={subagentCtl.toolbar.toggle}
+          onToggleSubagents={metrics.click("subagents", "tab_toolbar", subagentCtl.toolbar.toggle, () => ({
+            action: sidePanel() === SidePanel.Subagents ? "close" : "open",
+          }))}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2235,6 +2235,7 @@ const AgentManagerContent: Component = () => {
                 </Show>
                 <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
                   <ChatView
+                    projectId={currentProjectId()}
                     worktrees={references}
                     emptyState={intro.render}
                     introduction={intro.visible()}

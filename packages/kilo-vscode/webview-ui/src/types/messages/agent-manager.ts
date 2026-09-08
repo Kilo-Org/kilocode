@@ -1,4 +1,4 @@
-export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing" | "no_commits"
 
 export interface BaseUpdateRequest {
   type: "agentManager.updateFromBase"
