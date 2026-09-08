@@ -54,6 +54,14 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
 
 `kilo cloud` can start tasks, send follow-up prompts, and check task status and results. Repository, branch, model, mode, and organization are inferred from your local checkout and CLI defaults unless you pass the matching flags. Add `--stream` to `kilo cloud start` to print task events as JSONL until the task completes. See the [CLI reference](/docs/code-with-ai/platforms/cli-reference#kilo-cloud) for all commands and options.
 
+`kilo cloud start` and `kilo cloud send` take exactly one prompt source: `--prompt` or `--prompt-stdin`. Use `--prompt-stdin` to read the prompt from standard input, which is useful for piping long or pre-rendered prompts:
+
+```bash
+cat task.md | kilo cloud start --prompt-stdin --repo Kilo-Org/kilocode
+```
+
+Standard-input prompts are validated as UTF-8 and limited to 100,000 characters.
+
 ## How Cloud Agents Work
 
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).

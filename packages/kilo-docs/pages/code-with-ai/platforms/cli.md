@@ -593,6 +593,8 @@ This instructs the AI to proceed without user input.
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
 
+A `kilo run` that completes without any assistant message also exits `1`, printing `run ended without an assistant message; the model returned no output` to stderr (or emitting a final `error` record under `--format json`). This lets scripts and CI pipelines distinguish an empty run from a successful one. If the prompt request itself fails, only that error is reported.
+
 Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
 ### Example CI/CD Integration

@@ -68,7 +68,7 @@ There are several ways to switch agents:
 | **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
 | **Tool Access** | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only) |
 | **Ideal For** | System design, high-level planning, and architecture discussions |
-| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach |
+| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach. When the plan is ready for review, the agent opens the saved plan file in the editor with the `open_plan` tool before handing off. |
 
 ### debug
 

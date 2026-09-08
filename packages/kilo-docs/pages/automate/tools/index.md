@@ -21,7 +21,7 @@ Tools are organized into logical groups based on their functionality:
 | **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
 | **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
-| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager` | Context switching and task organization |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `open_plan` | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -115,6 +115,7 @@ These tools help manage the conversation and task flow:
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
+- `open_plan` - Opens a saved plan file in the editor for review (VS Code only)
 
 ## Tool Calling Mechanism
 
