@@ -16,7 +16,6 @@ import com.intellij.openapi.ide.CopyPasteManager
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -445,90 +444,82 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals(color ?: before, view.md.linkColor)
     }
 
-    // ---- collapsed transcript prompt bubble ------
+    // ---- folded pasted blocks in the transcript bubble ------
 
-    fun `test long prompt bubble is clipped and offers to expand`() {
-        val view = realizedPrompt(lines(120))
+    fun `test a large block in the prompt bubble renders folded behind a placeholder`() {
+        val view = realizedPrompt(fence(60))
 
         try {
-            assertTrue(view.toggleControl().isVisible)
-            assertFalse(view.isExpanded())
-            assertEquals(KiloBundle.message("prompt.transcript.expand"), (view.toggleControl() as JBLabel).text)
-            assertTrue(view.preferredSize.height < view.md.component.preferredSize.height)
+            val ed = codeEditor(codePane(view)).getEditor(true)!!
+            val region = ed.foldingModel.allFoldRegions.single()
+            assertFalse(region.isExpanded)
+            assertEquals(KiloBundle.message("prompt.paste.collapsed", 60), region.placeholderText)
         } finally {
             Disposer.dispose(view)
         }
     }
 
-    fun `test short prompt bubble has no expand toggle`() {
-        val view = realizedPrompt("just a line")
+    fun `test a small block in the prompt bubble is not folded`() {
+        val view = realizedPrompt(fence(2))
 
         try {
-            assertFalse(view.toggleControl().isVisible)
-            assertEquals(view.md.component.preferredSize.height, clipOf(view).preferredSize.height)
+            val ed = codeEditor(codePane(view)).getEditor(true)!!
+            assertEquals(0, ed.foldingModel.allFoldRegions.size)
+            assertFalse(ed.settings.isFoldingOutlineShown)
         } finally {
             Disposer.dispose(view)
         }
     }
 
-    fun `test expanding a prompt bubble reveals the full height`() {
-        val view = realizedPrompt(lines(120))
-        val clipped = clipOf(view).preferredSize.height
-
-        view.toggle()
+    fun `test a folded prompt block shows the gutter handle`() {
+        val view = realizedPrompt(fence(60))
 
         try {
-            assertTrue(view.isExpanded())
-            assertEquals(KiloBundle.message("prompt.transcript.collapse"), (view.toggleControl() as JBLabel).text)
-            assertTrue(clipOf(view).preferredSize.height > clipped)
-            assertEquals(view.md.component.preferredSize.height, clipOf(view).preferredSize.height)
+            val ed = codeEditor(codePane(view)).getEditor(true)!!
+            assertTrue(ed.settings.isFoldingOutlineShown)
+            val y = ed.visualLineToY(0) + ed.lineHeight / 2
+            val hit = (0..ed.gutterComponentEx.preferredSize.width)
+                .firstNotNullOfOrNull { ed.gutterComponentEx.findFoldingAnchorAt(it, y) }
+            assertSame(ed.foldingModel.allFoldRegions.single(), hit)
         } finally {
             Disposer.dispose(view)
         }
     }
 
-    fun `test collapsing a prompt bubble clips it again`() {
-        val view = realizedPrompt(lines(120))
-        val clipped = clipOf(view).preferredSize.height
-        view.toggle()
-
-        view.toggle()
+    fun `test a folded prompt block takes one line and grows when unfolded`() {
+        val view = realizedPrompt(fence(60))
 
         try {
-            assertFalse(view.isExpanded())
-            assertEquals(clipped, clipOf(view).preferredSize.height)
-            assertEquals(KiloBundle.message("prompt.transcript.expand"), (view.toggleControl() as JBLabel).text)
+            val pane = codePane(view)
+            val ed = codeEditor(pane).getEditor(true)!!
+            val folded = pane.preferredSize.height
+
+            ed.foldingModel.runBatchFoldingOperation { ed.foldingModel.allFoldRegions.single().setExpanded(true) }
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertTrue(pane.preferredSize.height > folded)
+            // Still capped, so a long block does not take over the transcript once unfolded.
+            assertTrue(pane.preferredSize.height < ed.lineHeight * 60)
         } finally {
             Disposer.dispose(view)
         }
     }
 
-    fun `test clicking the toggle expands the prompt bubble`() {
-        val view = realizedPrompt(lines(120))
-        val control = view.toggleControl()
-
-        control.mouseListeners.forEach {
-            it.mouseClicked(MouseEvent(control, MouseEvent.MOUSE_CLICKED, 0L, 0, 1, 1, 1, false))
-        }
+    fun `test unfolding then folding a prompt block returns to one line`() {
+        val view = realizedPrompt(fence(60))
 
         try {
-            assertTrue(view.isExpanded())
-        } finally {
-            Disposer.dispose(view)
-        }
-    }
+            val pane = codePane(view)
+            val ed = codeEditor(pane).getEditor(true)!!
+            val folded = pane.preferredSize.height
+            val region = ed.foldingModel.allFoldRegions.single()
 
-    fun `test a prompt bubble shrinking below the cap drops the toggle and expanded state`() {
-        val view = realizedPrompt(lines(120))
-        view.toggle()
-        assertTrue(view.isExpanded())
+            ed.foldingModel.runBatchFoldingOperation { region.setExpanded(true) }
+            UIUtil.dispatchAllInvocationEvents()
+            ed.foldingModel.runBatchFoldingOperation { region.setExpanded(false) }
+            UIUtil.dispatchAllInvocationEvents()
 
-        view.update(Text("p1").also { it.content.append("now short") })
-        layout(view)
-
-        try {
-            assertFalse(view.toggleControl().isVisible)
-            assertFalse(view.isExpanded())
+            assertEquals(folded, pane.preferredSize.height)
         } finally {
             Disposer.dispose(view)
         }
@@ -583,23 +574,16 @@ class TextViewTest : BasePlatformTestCase() {
         }
     }
 
-    private fun lines(count: Int): String = (1..count).joinToString("\n\n") { "paragraph $it" }
-
     private fun realizedPrompt(markdown: String): PromptView {
         val view = PromptView(Text("p1").also { it.content.append(markdown) })
-        layout(view)
-        return view
-    }
-
-    private fun layout(view: PromptView) {
         val host = JPanel(BorderLayout())
         host.add(view, BorderLayout.CENTER)
         host.setSize(600, 4000)
         host.doLayout()
         view.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+        return view
     }
-
-    private fun clipOf(view: PromptView): JComponent = view.md.component.parent as JComponent
 
     private fun fence(lines: Int, seed: Int = 0): String = buildString {
         append("```text\n")

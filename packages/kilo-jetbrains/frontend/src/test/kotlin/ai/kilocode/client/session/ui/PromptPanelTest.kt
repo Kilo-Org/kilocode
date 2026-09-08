@@ -1261,52 +1261,70 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(0, ed.foldingModel.allFoldRegions.size)
     }
 
-    fun `test pasting the same large text again expands the existing fold`() {
+    fun `test each large paste becomes its own fold`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
-        val text = (1..20).joinToString("\n") { "line $it" }
         val provider = PromptTextPasteProvider()
-        provider.performPaste(pasteContext(ed, StringSelection(text)))
+        val piles = (1..3).map { pile -> (1..10).joinToString("\n") { "pile $pile line $it" } }
 
-        provider.performPaste(pasteContext(ed, StringSelection(text)))
+        piles.forEach { provider.performPaste(pasteContext(ed, StringSelection(it))) }
 
-        assertEquals(text, ed.document.text)
+        assertEquals(piles.joinToString(""), ed.document.text)
+        val regions = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }
+        assertEquals(3, regions.size)
+        assertEquals(listOf(false, false, false), regions.map { it.isExpanded })
+        assertEquals(piles.map { KiloBundle.message("prompt.paste.collapsed", 10) }, regions.map { it.placeholderText })
+    }
+
+    fun `test pasting the same large text repeatedly keeps every copy folded`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ed = realizedEditor(panel)
+        val provider = PromptTextPasteProvider()
+        val text = (1..10).joinToString("\n") { "same $it" }
+
+        repeat(3) { provider.performPaste(pasteContext(ed, StringSelection(text))) }
+
+        assertEquals(text.repeat(3), ed.document.text)
         val regions = ed.foldingModel.allFoldRegions
-        assertEquals(1, regions.size)
-        assertTrue(regions.single().isExpanded)
+        assertEquals(3, regions.size)
+        assertEquals(listOf(false, false, false), regions.map { it.isExpanded })
     }
 
-    fun `test pasting the same large text a third time collapses a fresh copy`() {
+    fun `test unfolding one paste leaves the others folded`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
-        val text = (1..20).joinToString("\n") { "line $it" }
         val provider = PromptTextPasteProvider()
-        provider.performPaste(pasteContext(ed, StringSelection(text)))
-        provider.performPaste(pasteContext(ed, StringSelection(text)))
+        repeat(3) { pile -> provider.performPaste(pasteContext(ed, StringSelection((1..10).joinToString("\n") { "pile $pile line $it" }))) }
+        val middle = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }[1]
 
-        ed.caretModel.moveToOffset(ed.document.textLength)
-        provider.performPaste(pasteContext(ed, StringSelection(text)))
-
-        assertEquals(text + text, ed.document.text)
-        val collapsed = ed.foldingModel.allFoldRegions.filterNot { it.isExpanded }
-        assertEquals(1, collapsed.size)
-        assertEquals(text.length, collapsed.single().startOffset)
-    }
-
-    fun `test expanding a collapsed paste grows the editor`() {
-        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
-        val field = panel.defaultFocusedComponent as EditorTextField
-        realize(panel, 260, 4000)
-        val ed = field.getEditor(true)!!
-        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "line $it" })))
-        val folded = field.preferredSize.height
-
-        ed.foldingModel.runBatchFoldingOperation {
-            ed.foldingModel.allFoldRegions.single().setExpanded(true)
-        }
+        ed.foldingModel.runBatchFoldingOperation { middle.setExpanded(true) }
         UIUtil.dispatchAllInvocationEvents()
 
-        assertTrue(field.preferredSize.height > folded)
+        val regions = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }
+        assertEquals(listOf(false, true, false), regions.map { it.isExpanded })
+    }
+
+    fun `test folds survive detach and reattach independently`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val root = realize(panel, 260, 400)
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val provider = PromptTextPasteProvider()
+        repeat(3) { pile ->
+            provider.performPaste(pasteContext(field.getEditor(true)!!, StringSelection((1..10).joinToString("\n") { "pile $pile line $it" })))
+        }
+        val before = field.getEditor(true)!!
+        val middle = before.foldingModel.allFoldRegions.sortedBy { it.startOffset }[1]
+        before.foldingModel.runBatchFoldingOperation { middle.setExpanded(true) }
+        UIUtil.dispatchAllInvocationEvents()
+
+        root.removeNotify()
+        root.addNotify()
+        UIUtil.dispatchAllInvocationEvents()
+
+        val ed = field.getEditor(true)!!
+        val regions = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }
+        assertEquals(3, regions.size)
+        assertEquals(listOf(false, true, false), regions.map { it.isExpanded })
     }
 
     fun `test fold gutter appears only while a paste is tracked`() {

@@ -20,6 +20,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
@@ -53,8 +54,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.FoldRegion
-import com.intellij.openapi.editor.RangeMarker
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -63,8 +62,6 @@ import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.ex.EditorEx
-import com.intellij.openapi.editor.ex.FoldingListener
-import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
@@ -73,9 +70,7 @@ import com.intellij.openapi.keymap.KeymapManagerListener
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
-import com.intellij.openapi.util.TextRange
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
@@ -173,7 +168,7 @@ class PromptPanel(
     }
     private val attachments = mutableListOf<PromptAttachment>()
     private val highlighters = mutableListOf<RangeHighlighter>()
-    private val pastes = mutableListOf<Paste>()
+    private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
@@ -214,7 +209,7 @@ class PromptPanel(
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             syncHighlights()
-            installPasteFolds(ed)
+            folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
                     val provider = completion ?: return
@@ -332,7 +327,7 @@ class PromptPanel(
                     onChange()
                     return
                 }
-                syncPastes()
+                folds.sync()
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
@@ -595,9 +590,7 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
-        pastes.forEach { it.marker.dispose() }
-        pastes.clear()
-        editor.getEditor(false)?.let(::syncFoldGutter)
+        folds.clear()
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
@@ -938,149 +931,29 @@ class PromptPanel(
     }
 
     /**
-     * Handles a paste large enough to collapse ([collapsible]). Pasting text identical to a block
-     * that is still collapsed expands that block instead of inserting a second copy, mirroring the
-     * CLI's second-identical-paste gesture; once expanded, the same text collapses a fresh copy.
+     * Handles a paste large enough to collapse ([collapsible]) by inserting it and folding it behind
+     * a placeholder. Every such paste becomes its own fold, so a second one never disturbs the
+     * first even when the text is identical.
      */
     @RequiresEdt
     private fun handlePastedText(ed: EditorEx, raw: String) {
         val text = normalizePaste(raw)
-        val existing = pastes.firstOrNull { it.collapsed && it.marker.isValid && body(ed, it) == text }
-        if (existing != null) {
-            // The folding listener records the new state and resizes once the batch ends.
-            ed.foldingModel.runBatchFoldingOperation {
-                ed.foldingModel.getFoldRegion(existing.marker.startOffset, existing.marker.endOffset)?.setExpanded(true)
-            }
-            return
-        }
         val sel = ed.selectionModel
         val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
         val end = if (sel.hasSelection()) sel.selectionEnd else start
-        WriteCommandAction.runWriteCommandAction(project) {
-            ed.document.replaceString(start, end, text)
-            ed.caretModel.moveToOffset(start + text.length)
+        // Inserting can expand a neighbouring fold on its own; quiet keeps that from reading as the
+        // reader unfolding it.
+        folds.quiet {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ed.document.replaceString(start, end, text)
+                ed.caretModel.moveToOffset(start + text.length)
+            }
         }
-        pastes += Paste(ed.document.createRangeMarker(start, start + text.length))
-        syncPasteFolds(ed)
+        folds.fold(ed, start, start + text.length, placeholder(text))
         syncEditorHeight()
     }
 
     private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
-
-    /**
-     * Restores tracked pastes on [ed] and keeps them in sync with its folding model.
-     *
-     * Folding and unfolding a paste — from the gutter handle, the collapsed placeholder, the
-     * Collapse/Expand Region shortcuts, or a second identical paste — records the new state and
-     * resizes the field, so revealed text is not clipped by the pinned prompt height.
-     */
-    @RequiresEdt
-    private fun installPasteFolds(ed: EditorEx) {
-        val parent = Disposer.newDisposable("kilo-prompt-paste-folds")
-        EditorUtil.disposeWithEditor(ed, parent)
-        ed.foldingModel.addListener(object : FoldingListener {
-            private var changed = false
-
-            // The folding model may report inconsistent data until processing ends, so only note
-            // that something moved here and act on it in onFoldProcessingEnd().
-            override fun onFoldRegionStateChange(region: FoldRegion) {
-                changed = true
-            }
-
-            override fun onFoldProcessingEnd() {
-                if (!changed) return
-                changed = false
-                // Only react while this editor is the field's live one. EditorTextField clears it
-                // both before creating an editor (settings providers run there, and resizing would
-                // re-enter initEditor) and before releasing one (whose regions disappear without
-                // the pastes themselves going away).
-                if (editor.getEditor(false) !== ed) return
-                pastes.filter(::stale).forEach(::drop)
-                pastes.forEach { item ->
-                    val region = ed.foldingModel.getFoldRegion(item.marker.startOffset, item.marker.endOffset)
-                    if (region != null) item.collapsed = !region.isExpanded
-                }
-                syncFoldGutter(ed)
-                syncEditorHeight()
-            }
-        }, parent)
-        syncPasteFolds(ed)
-    }
-
-    /**
-     * Rebuilds fold regions for every tracked paste that does not already have one on [ed].
-     * Range markers are document-scoped and survive [EditorTextField] recreating its [EditorEx] on
-     * detach/reattach, so this runs on every settings-provider pass to restore pasted blocks in
-     * whichever state the user last left them.
-     */
-    @RequiresEdt
-    private fun syncPasteFolds(ed: EditorEx) {
-        pastes.filter(::stale).forEach(::drop)
-        if (pastes.isNotEmpty()) {
-            ed.foldingModel.runBatchFoldingOperation {
-                pastes.toList().forEach { item ->
-                    val from = item.marker.startOffset
-                    val to = item.marker.endOffset
-                    if (ed.foldingModel.getFoldRegion(from, to) != null) return@forEach
-                    val region = ed.foldingModel.addFoldRegion(from, to, placeholder(body(ed, item)))
-                    if (region == null) {
-                        drop(item)
-                        return@forEach
-                    }
-                    // A paste that fits on one line (a single long line) gets no gutter handle by
-                    // default, which would leave no way to fold it back once expanded.
-                    region.isGutterMarkEnabledForSingleLine = true
-                    region.setExpanded(!item.collapsed)
-                }
-            }
-        }
-        syncFoldGutter(ed)
-    }
-
-    /**
-     * Drops pastes whose text is gone and takes the fold gutter down with them.
-     *
-     * Deleting a pasted block changes no fold state, so the folding listener never hears about it;
-     * this runs from the document listener instead.
-     */
-    @RequiresEdt
-    private fun syncPastes() {
-        if (pastes.isEmpty()) return
-        pastes.filter(::stale).forEach(::drop)
-        editor.getEditor(false)?.let(::syncFoldGutter)
-    }
-
-    /** Whether [item] no longer covers any text, so there is nothing left to fold. */
-    private fun stale(item: Paste): Boolean =
-        !item.marker.isValid || item.marker.startOffset >= item.marker.endOffset
-
-    /**
-     * Shows the gutter fold handles only while a paste is tracked.
-     *
-     * The prompt turns every other gutter area off, so the folding outline is the only thing that
-     * would claim gutter width — leaving it always on reserves an empty inset next to the input for
-     * a control with nothing to fold.
-     */
-    @RequiresEdt
-    private fun syncFoldGutter(ed: EditorEx) {
-        val show = pastes.isNotEmpty()
-        if (ed.settings.isFoldingOutlineShown == show) return
-        ed.settings.isFoldingOutlineShown = show
-        ed.gutterComponentEx.revalidateMarkup()
-        ed.gutterComponentEx.revalidate()
-        ed.gutterComponentEx.repaint()
-    }
-
-    @RequiresEdt
-    private fun body(ed: EditorEx, item: Paste): String =
-        ed.document.getText(TextRange(item.marker.startOffset, item.marker.endOffset))
-
-    /** Stops tracking [item] and releases its marker from the document's marker tree. */
-    @RequiresEdt
-    private fun drop(item: Paste) {
-        pastes.remove(item)
-        item.marker.dispose()
-    }
 
     private fun processAttachments(
         kind: String,
@@ -1280,7 +1153,7 @@ class PromptPanel(
         ApplicationManager.getApplication().invokeLater {
             deferred = false
             if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
-            syncPastes()
+            folds.sync()
             syncEditorHeight()
             syncHighlights()
             syncButton()
@@ -1372,15 +1245,6 @@ class PromptPanel(
             sink.set(PromptDataKeys.SEND, this@PromptPanel)
         }
     }
-
-    /**
-     * A pasted block rendered as a fold region.
-     *
-     * [marker] is document-scoped so the range survives [EditorTextField] releasing its editor,
-     * while [collapsed] carries the fold state across the same gap — that lives only on the
-     * per-editor `FoldRegion`, so without it a block the user unfolded would come back folded.
-     */
-    private class Paste(val marker: RangeMarker, var collapsed: Boolean = true)
 
     private inner class AutoApproveButton : PromptButton()
 
