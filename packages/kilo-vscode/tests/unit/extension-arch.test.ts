@@ -198,6 +198,32 @@ describe("Extension — package.json command sync", () => {
       ]),
     )
   })
+
+  it("routes task-close commands to the focused Kilo surface", () => {
+    const commands = pkg.contributes?.commands ?? []
+    expect(commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.closeTask", title: "Close Task", category: "Kilo Code" }),
+        expect.objectContaining({
+          command: "kilo-code.new.closeAllTasks",
+          title: "Close All Tasks",
+          category: "Kilo Code",
+        }),
+      ]),
+    )
+
+    const source = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const closeTask = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeTask"'))
+    const closeAll = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeAllTasks"'))
+    expect(closeTask).toContain('taskTarget().postMessage({ type: "action", action: "closeTask" })')
+    expect(closeAll).toContain('taskTarget().postMessage({ type: "action", action: "closeAllTasks" })')
+
+    // A panel can stay "active" while the sidebar has focus, and on Agent
+    // Manager these commands stop sessions, so focus must be consulted first.
+    const target = sliceBlock(source, source.indexOf("const taskTarget = () =>"))
+    expect(target).toContain("sidebarFocused: provider.isFocused()")
+    expect(target).toContain("agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined")
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ import { handleSection } from "./section-handler"
 import { STATE_GATED } from "./project/state-gate"
 import {
   addSessionToLifecycleWorktree,
-  closeLifecycleSession,
+  closeLifecycleSessions,
   createLifecycleWorktree,
   deleteLifecycleWorktree,
   promoteLifecycleSession,
@@ -291,7 +291,7 @@ export class AgentManagerProvider implements Disposable {
       pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
       routeSession: (id, dir) => this.panel?.sessions.setSessionDirectory(id, dir),
-      closeSession: (id) => this.onCloseSession(id),
+      closeSession: (id) => this.onCloseSessions([id]),
       postSessionClosed: (id, projectId) =>
         this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id, projectId }),
       log: (...args) => this.log(...args),
@@ -589,7 +589,8 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId, m.sessionId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
-    if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
+    if (m.type === "agentManager.closeSession") return this.onCloseSessions([m.sessionId])
+    if (m.type === "agentManager.closeSessions") return this.onCloseSessions(m.sessionIds)
   }
 
   private onSessionMessage(
@@ -1179,13 +1180,12 @@ export class AgentManagerProvider implements Disposable {
     )
   }
 
-  /** Stop a session and remove it from Agent Manager. */
-  private async onCloseSession(sessionId: string): Promise<null> {
+  /** Stop sessions and remove them from Agent Manager. */
+  private async onCloseSessions(sessionIds: readonly string[]): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
-    return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
+    return closeLifecycleSessions(ctx, this.lifecycleHost, sessionIds)
   }
-
   // Multi-version worktree creation
 
   /** Create N worktree sessions for the same prompt (multi-version mode). */
