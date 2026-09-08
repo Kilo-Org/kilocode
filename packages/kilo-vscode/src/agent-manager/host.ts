@@ -126,6 +126,9 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Local files with unsaved editor changes. */
+  dirtyFiles(): string[]
+
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
   pickFolder(): Promise<string | undefined>
 

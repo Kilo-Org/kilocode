@@ -92,6 +92,9 @@ export async function handleBaseUpdate(msg: BaseUpdateRequest, ctx: ProjectConte
       text: baseUpdatePrompt(worktree),
       messageID: randomUUID(),
       questions: "dismiss",
+      model: msg.model,
+      variant: msg.variant,
+      agent: msg.agent,
     })
   } catch (err) {
     host.log("Update from base failed:", err)

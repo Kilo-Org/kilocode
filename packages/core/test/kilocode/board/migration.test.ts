@@ -35,7 +35,7 @@ describe("board migration", () => {
         expect(yield* db.all(sql`PRAGMA foreign_key_list('kilo_board')`)).toMatchObject([
           { table: "session", on_delete: "CASCADE" },
         ])
-        expect(migrations.at(-1)?.id).toContain("kilocode_board")
+        expect(migrations.find((migration) => migration.id.includes("kilocode_board"))?.id).toContain("kilocode_board")
       }),
     )
   })

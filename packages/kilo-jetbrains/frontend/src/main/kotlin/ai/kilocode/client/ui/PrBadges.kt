@@ -5,9 +5,12 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 
 /**
@@ -66,8 +69,59 @@ internal fun checksTooltip(checks: GhChecksDto): String {
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 
+/** Plain-text review-conversation summary, for a popup row and as the head of the badge tooltip. */
+internal fun commentsLabel(value: GhCommentsDto): String {
+    if (value.unresolved <= 0) return ""
+    return KiloBundle.message("worktree.pr.comments.unresolved", value.unresolved, value.total)
+}
+
+/** The count a comment glyph is shown with. Blank when nothing is unresolved, which gets no glyph either. */
+internal fun commentsCount(value: GhCommentsDto): String =
+    if (value.unresolved > 0) value.unresolved.toString() else ""
+
+/**
+ * Tooltip for the review-conversation badge. The glyph already shows the unresolved count, so the tooltip's
+ * job is to name what is being counted and how many conversations there are in total.
+ */
+internal fun commentsTooltip(value: GhCommentsDto): String {
+    val head = commentsLabel(value).takeIf { it.isNotBlank() } ?: return ""
+    val lines = listOf(head, KiloBundle.message("worktree.pr.comments.tooltip.open")).map(XmlStringUtil::escapeString)
+    return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
+}
+
 /** GitHub's checks tab for a pull request, which is what a CI glyph should open. */
 internal fun checksUrl(pull: WorktreePrDto): String = "${pull.url.trimEnd('/')}/checks"
+
+/**
+ * Whether [pull] no longer merges into its base branch.
+ *
+ * Only while it is still open. GitHub keeps answering `mergeable` for a merged or closed pull request, and
+ * on a closed one the answer is usually stale anyway — a conflict nobody can act on any more is not worth
+ * marking a row for. [GhMerge.UNKNOWN] is not a conflict either; see the enum for why.
+ */
+internal fun conflicted(pull: WorktreePrDto?): Boolean =
+    pull?.merge == GhMerge.CONFLICTING && (pull.state == GhState.OPEN || pull.state == GhState.DRAFT)
+
+/**
+ * Plain-text merge verdict, for a popup line and as the head of a changes tooltip. Names the branch when the
+ * base ref is known: "the base branch" is not what someone holding four worktrees needs to read.
+ */
+internal fun mergeLabel(base: String): String = when {
+    base.isBlank() -> KiloBundle.message("worktree.pr.merge.conflict")
+    else -> KiloBundle.message("worktree.pr.merge.conflict.base", base)
+}
+
+/**
+ * [tip] with the merge verdict added as its own leading line, so a changes summary carrying the conflict
+ * marker also says in words what the marker means.
+ *
+ * Leading, because it outranks what the tooltip was going to open with: a diff that no longer merges is the
+ * fact to read before its counts or its click hint.
+ */
+internal fun conflictTooltip(tip: String, base: String): String {
+    val head = XmlStringUtil.escapeString(mergeLabel(base))
+    return XmlStringUtil.wrapInHtml("$head<br>${UIUtil.getHtmlBody(tip)}")
+}
 
 /**
  * [next], but carrying [previous]'s pull request when [next] could not carry one of its own.
@@ -87,8 +141,16 @@ internal fun held(next: BranchStatusDto, previous: BranchStatusDto?): BranchStat
  * Tooltip for a PR pill that shows its own number and state, such as the one on a worktree row. Only
  * the click hint: repeating "Open #8" under a pill that reads "#8" tells the user nothing.
  */
-internal fun openTooltip(): String =
-    XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message("worktree.pr.tooltip.open")))
+internal fun openTooltip(): String = hint("worktree.pr.tooltip.open")
+
+/** The checks click hint alone, for a surface that already states the verdict in words. */
+internal fun checksOpenTooltip(): String = hint("worktree.pr.checks.tooltip.open")
+
+/** The conversation click hint alone, for a surface that already states the count in words. */
+internal fun commentsOpenTooltip(): String = hint("worktree.pr.comments.tooltip.open")
+
+private fun hint(key: String): String =
+    XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message(key)))
 
 /**
  * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out

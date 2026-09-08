@@ -13,7 +13,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Database } from "@opencode-ai/core/database/database"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -158,6 +158,66 @@ describe("session model usage", () => {
   it.instance("returns undefined for a missing session", () =>
     Effect.gen(function* () {
       expect(yield* ModelUsage.get(SessionID.make("ses_missing"))).toBeUndefined()
+    }),
+  )
+
+  it.instance("keeps usage correct when step-finish parts are inserted, updated, and deleted", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "usage updates" })
+      const model = ref("test", "model")
+      const message = yield* seed(root.id, model)
+      const empty = yield* ModelUsage.get(root.id)
+      const { db } = yield* Database.Service
+      yield* db.run(sql`
+        INSERT INTO part (id, message_id, session_id, time_created, time_updated, data)
+        VALUES (${PartID.ascending()}, ${message.id}, ${root.id}, 1, 1, '{')`)
+      const part = {
+        id: PartID.ascending(),
+        messageID: message.id,
+        sessionID: root.id,
+        type: "step-finish",
+        reason: "stop",
+        cost: 0.25,
+        tokens: { input: 10, output: 2, reasoning: 1, cache: { read: 4, write: 3 } },
+      } satisfies MessageV2.StepFinishPart
+      yield* sessions.updatePart(part)
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: message.id,
+        sessionID: root.id,
+        type: "text",
+        text: "Non-step output must not contribute to usage",
+      })
+      const usage = { steps: 1, cost: part.cost, tokens: part.tokens }
+      expect(yield* ModelUsage.get(root.id)).toEqual({
+        sessionIDs: [root.id],
+        totals: usage,
+        models: [{ ...model, ...usage }],
+      })
+
+      const updated = { ...part, cost: 0.5, tokens: { ...part.tokens, input: 20 } }
+      yield* sessions.updatePart(updated)
+      const totals = { steps: 1, cost: updated.cost, tokens: updated.tokens }
+      expect(yield* ModelUsage.get(root.id)).toEqual({
+        sessionIDs: [root.id],
+        totals,
+        models: [{ ...model, ...totals }],
+      })
+
+      // Changing the discriminator must remove and restore partial-index membership.
+      yield* sessions.updatePart({
+        id: part.id,
+        messageID: message.id,
+        sessionID: root.id,
+        type: "text",
+        text: "Replaced step",
+      })
+      expect(yield* ModelUsage.get(root.id)).toEqual(empty)
+      yield* sessions.updatePart(updated)
+      expect((yield* ModelUsage.get(root.id))?.totals).toEqual(totals)
+      yield* sessions.removePart({ sessionID: root.id, messageID: message.id, partID: part.id })
+      expect(yield* ModelUsage.get(root.id)).toEqual(empty)
     }),
   )
 })

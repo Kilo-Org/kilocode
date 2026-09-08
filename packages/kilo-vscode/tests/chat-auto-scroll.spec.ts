@@ -51,6 +51,66 @@ async function state(page: Page) {
   }))
 }
 
+test("transcript navigation does not scroll the outer webview host", async ({ page }) => {
+  await page.route("**/webview-host", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><style>
+        body { margin: 0; }
+        #host { margin-top: 40px; height: 600px; overflow: hidden; font: 16px/20px sans-serif; }
+        iframe { width: 100%; height: 100%; border: 0; }
+      </style><div id="host"><iframe src="/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}"></iframe></div>`,
+    }),
+  )
+  await page.goto("/webview-host")
+  const host = page.locator("#host")
+  const frame = page.frameLocator("iframe")
+  const list = frame.locator(".message-list")
+  const row = frame.locator('[data-message="rail-asst-400"]').first()
+  await expect(row).toBeVisible()
+  for (const _ of [1, 2, 3]) await frame.getByTestId("append-stream").click()
+  await expect.poll(() => row.evaluate((el) => el.clientHeight)).toBeGreaterThan(600)
+
+  // An inline iframe leaves a baseline gap, as in VS Code's overlay wrapper.
+  // Prove that the old call can scroll that wrapper before testing the real jump.
+  await expect.poll(() => host.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(0)
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await row.evaluate((el) => el.scrollIntoView({ block: "start" }))
+  await expect.poll(() => host.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+  await list.evaluate((el) => (el.scrollTop = el.scrollHeight))
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await row.evaluate((el) => {
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: el.getAttribute("data-message") } }))
+  })
+  await expect
+    .poll(() =>
+      row.evaluate((el) => {
+        const list = el.closest(".message-list")!
+        return Math.abs(el.getBoundingClientRect().top - list.getBoundingClientRect().top - list.clientTop)
+      }),
+    )
+    .toBeLessThanOrEqual(1)
+  expect(await host.evaluate((el) => el.scrollTop)).toBe(0)
+
+  await frame.locator(".task-header-search-toggle").press("Enter")
+  const search = frame.locator('[data-slot="transcript-search-input"]')
+  await search.fill("Initial streamed response.")
+  await list.evaluate((el) => (el.scrollTop = el.scrollHeight))
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await search.press("Enter")
+  await expect
+    .poll(() =>
+      frame.getByText("Initial streamed response.", { exact: true }).evaluate((el) => {
+        const list = el.closest(".message-list")!
+        const rect = el.getBoundingClientRect()
+        return Math.abs(rect.top + rect.height / 2 - list.getBoundingClientRect().top - list.clientHeight / 2)
+      }),
+    )
+    .toBeLessThanOrEqual(2)
+  expect(await host.evaluate((el) => el.scrollTop)).toBe(0)
+})
+
 test("keeps following after a stable-height layout correction", async ({ page }) => {
   await open(page)
   const list = page.locator(".message-list")

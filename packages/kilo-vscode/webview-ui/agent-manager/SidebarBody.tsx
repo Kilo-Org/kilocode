@@ -21,7 +21,8 @@ import type { LanguageContextValue } from "../src/context/language"
 import type { SidebarSearchItem } from "./sidebar-search"
 import { LOCAL, adjacentHint } from "./navigate"
 import { applyTabOrder, reorderTabs } from "./tab-order"
-import { isGroupEnd, isGroupStart, isGrouped, type TopLevelItem } from "./section-helpers"
+import { buildTopLevelItems, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import { createWorktreeCompletion } from "./worktree-completion"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
@@ -65,10 +66,6 @@ export interface SidebarBodyProps {
   onHistory: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
-  worktrees: () => WorktreeState[]
-  ungrouped: () => WorktreeState[]
-  topLevelItems: () => TopLevelItem[]
-  worktreesInSection: (id: string) => WorktreeState[]
   sidebarOrder: () => { id: string }[]
   sidebarWorktreeOrder: () => string[]
   setSidebarWorktreeOrder: (fn: (prev: string[]) => string[]) => void
@@ -89,7 +86,7 @@ export interface SidebarBodyProps {
   worktreeStats: () => Record<string, WorktreeGitStats>
   prStatuses: () => Record<string, PRStatus | null>
   runStatuses: () => Record<string, RunStatus>
-  confirmDeleteWorktree: (id: string) => void
+  cancelPendingDelete: () => void
   handleDeleteWorktree: (id: string, e: MouseEvent) => void
   confirmRemoveStaleWorktree: (id: string) => void
   track: (event: string, source: string, action: () => void) => () => void
@@ -97,6 +94,12 @@ export interface SidebarBodyProps {
 
 /** Legacy single-project sidebar body: local repo, worktrees, unassigned sessions. */
 export const SidebarBody: Component<SidebarBodyProps> = (props) => {
+  const completion = createWorktreeCompletion(props.sortedWorktrees, () => props.projectId, props.worktreeLabel)
+  const sorted = completion.rows
+  const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
+  const top = createMemo(() =>
+    buildTopLevelItems(props.sections(), ungrouped(), sorted(), props.sidebarWorktreeOrder()),
+  )
   const vscode = useVSCode()
   const updateBase = useBaseUpdate()
   const localState = () => props.activityFor(null)
@@ -239,9 +242,9 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                 }
 
                 const hasSections = createMemo(() => props.sections().length > 0)
-                const wtIds = createMemo(() => props.sortedWorktrees().map((wt) => wt.id))
+                const wtIds = createMemo(() => sorted().map((wt) => wt.id))
                 const secIds = createMemo(() => new Set(props.sections().map((s) => s.id)))
-                const home = () => new Map(props.sortedWorktrees().map((w) => [w.id, w.sectionId] as const))
+                const home = () => new Map(sorted().map((w) => [w.id, w.sectionId] as const))
                 const sectionAware = sectionAwareDetector(secIds, home)
 
                 const onWtDragStart = (event: DragEvent) => {
@@ -256,7 +259,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                   if (secIds().has(to)) return
                   props.setSidebarWorktreeOrder((prev) => {
                     const cur = applyTabOrder(
-                      props.sortedWorktrees().map((w) => ({ id: w.id })),
+                      sorted().map((w) => ({ id: w.id })),
                       prev,
                     ).map((item: { id: string }) => item.id)
                     return reorderTabs(cur, from, to) ?? prev
@@ -298,7 +301,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                               props.bindings().nextSession ?? "",
                             )
                           const groupSize = () =>
-                            !wt.groupId ? 0 : props.sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
+                            !wt.groupId ? 0 : sorted().filter((w) => w.groupId === wt.groupId).length
                           const sortable = createSortable(wt.id)
                           void sortable
                           return (
@@ -307,6 +310,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                               class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}
                             >
                               <WorktreeItem
+                                completed={completion.completed(wt.id)}
+                                onCompletionEnd={() => completion.release(wt.id)}
                                 worktree={wt}
                                 label={props.worktreeLabel(wt)}
                                 subtitle={props.worktreeSubtitle(wt)}
@@ -321,8 +326,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 navHint={navHint()}
                                 sessions={wtSessions().length}
                                 grouped={isGrouped(wt)}
-                                groupStart={isGroupStart(wt, idx(), list ?? props.sortedWorktrees())}
-                                groupEnd={isGroupEnd(wt, idx(), list ?? props.sortedWorktrees())}
+                                groupStart={isGroupStart(wt, idx(), list ?? sorted())}
+                                groupEnd={isGroupEnd(wt, idx(), list ?? sorted())}
                                 groupSize={groupSize()}
                                 renaming={renamingWt() === wt.id}
                                 renameValue={renameValue()}
@@ -350,13 +355,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 onMoveToNewSection={props.track("new_section", "worktree_menu", () =>
                                   props.onNewSection(),
                                 )}
-                                onClick={() => {
-                                  if (props.pendingDelete() === wt.id) {
-                                    props.confirmDeleteWorktree(wt.id)
-                                    return
-                                  }
-                                  props.selectWorktree(wt.id)
-                                }}
+                                onClick={() => props.selectWorktree(wt.id)}
+                                onCancelDelete={props.cancelPendingDelete}
                                 onDelete={(e) => props.handleDeleteWorktree(wt.id, e)}
                                 onStartRename={(current) => startRename(wt.id, current)}
                                 onRenameInput={(v) => setRenameValue(v)}
@@ -381,11 +381,11 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                         if (hasSections()) {
                           const post = vscode.postMessage.bind(vscode)
                           return (
-                            <For each={props.topLevelItems()}>
+                            <For each={top()}>
                               {(item, idx) => {
                                 if (item.kind === "section") {
                                   const sec = item.section
-                                  const members = createMemo(() => props.worktreesInSection(sec.id))
+                                  const members = createMemo(() => sorted().filter((wt) => wt.sectionId === sec.id))
                                   return (
                                     <SectionHeader
                                       section={sec}
@@ -403,7 +403,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                         post({ type: "agentManager.setSectionColor", sectionId: sec.id, color })
                                       }
                                       isFirst={idx() === 0}
-                                      isLast={idx() === props.topLevelItems().length - 1}
+                                      isLast={idx() === top().length - 1}
                                       onMoveUp={() => props.moveSection(sec.id, -1)}
                                       onMoveDown={() => props.moveSection(sec.id, 1)}
                                     >
@@ -415,19 +415,19 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     </SectionHeader>
                                   )
                                 }
-                                const ug = props.ungrouped()
+                                const ug = ungrouped()
                                 const wtIdx = () => ug.indexOf(item.wt)
                                 return renderWt(item.wt, wtIdx, ug)
                               }}
                             </For>
                           )
                         }
-                        return <For each={props.sortedWorktrees()}>{(wt, idx) => renderWt(wt, idx)}</For>
+                        return <For each={sorted()}>{(wt, idx) => renderWt(wt, idx)}</For>
                       })()}
                     </SortableProvider>
                     <DragOverlay>
                       {(() => {
-                        const wt = props.sortedWorktrees().find((w) => w.id === props.draggingWorktree())
+                        const wt = sorted().find((w) => w.id === props.draggingWorktree())
                         if (!wt) return null
                         return (
                           <div class="am-wt-overlay">
@@ -440,7 +440,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                   </DragDropProvider>
                 )
               })()}
-              <Show when={props.worktrees().length === 0}>
+              <Show when={sorted().length === 0}>
                 <button class="am-worktree-create" onClick={props.onNewWorktree}>
                   <Icon name="plus" size="small" />
                   <span>{props.t("agentManager.worktree.new")}</span>

@@ -63,6 +63,95 @@ async function alignTarget(page: Page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 }
 
+for (const width of [420, 200]) {
+  test(`keeps PR-panel headers stable above inline threads at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    const story = width === 200 ? "agentmanager--pr-panel-comments-200" : "agentmanager--pr-panel-comments"
+    await page.goto(`/iframe.html?id=${story}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+    await disableAnimations(page)
+    const card = page.locator('[data-thread-id="PRRT_1"]')
+    const header = card.locator(".am-pr-comment-head")
+    const diff = card.locator(".am-pr-diff-thread")
+    const annotation = diff.locator(".am-pr-thread-annotation")
+    await expect(card).toBeVisible()
+    await header.scrollIntoViewIfNeeded()
+    await header.focus()
+    const original = await header.evaluateHandle((el) => el)
+    const title = await header.locator(".am-pr-comment-preview").textContent()
+    const position = await header.evaluate((el) => ({
+      x: el.getBoundingClientRect().x,
+      y: el.getBoundingClientRect().y,
+    }))
+
+    async function stable() {
+      await expect(header.locator(".am-pr-comment-preview")).toHaveText(title!)
+      await expect(card).toHaveCount(1)
+      await expect(header).toHaveCount(1)
+      await expect(header).toBeFocused()
+      expect(await header.evaluate((el, original) => el === original, original)).toBe(true)
+      await expect.poll(() => header.evaluate((el) => el.getBoundingClientRect().x)).toBeCloseTo(position.x, 0)
+      await expect.poll(() => header.evaluate((el) => el.getBoundingClientRect().y)).toBeCloseTo(position.y, 0)
+    }
+
+    async function inline() {
+      await expect(header).toHaveAttribute("aria-expanded", "true")
+      await expect(diff.locator(".am-pr-diff-context-marker + [data-component='diff']")).toHaveCount(0)
+      await expect(annotation.locator(".am-pr-comment-head")).toHaveCount(0)
+      await expect(annotation.locator(".am-pr-comment-body").first()).toContainText("This throws when")
+      await expect(annotation.locator(".am-pr-comment-reply")).toHaveCount(1)
+      await expect(annotation.locator(".am-pr-comment-actions")).toHaveCount(1)
+      await expect
+        .poll(() =>
+          header.evaluate((el) => {
+            const diff = el.parentElement?.querySelector(".am-pr-diff-thread")
+            return (
+              !el.closest(".am-pr-thread-annotation") &&
+              !!diff &&
+              !!(el.compareDocumentPosition(diff) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+              el.getBoundingClientRect().bottom <= diff.getBoundingClientRect().top + 1
+            )
+          }),
+        )
+        .toBe(true)
+      await expect
+        .poll(() =>
+          annotation.evaluate((el) => {
+            const wrapper = el.closest<HTMLElement>("[slot]")
+            const root = el.closest("diffs-container")?.shadowRoot
+            const lines = [...(root?.querySelectorAll<HTMLElement>("[data-content] [data-line]") ?? [])]
+            const target = lines.find((line) => line.getAttribute("data-line-type") === "change-addition")
+            const next = lines.find((line) => line.textContent?.includes("return result"))
+            const bounds = el.getBoundingClientRect()
+            return (
+              wrapper?.assignedSlot?.name === "annotation-additions-42" &&
+              !!target &&
+              !!next &&
+              bounds.top >= target.getBoundingClientRect().bottom - 1 &&
+              next.getBoundingClientRect().top >= bounds.bottom - 1 &&
+              bounds.width <= innerWidth
+            )
+          }),
+        )
+        .toBe(true)
+    }
+
+    await inline()
+    for (const input of ["click", "Enter", "Space"]) {
+      if (input === "click") await header.click()
+      if (input !== "click") await page.keyboard.press(input)
+      await expect(diff).toHaveCount(0)
+      await expect(card.locator(".am-pr-comment-body")).toHaveCount(0)
+      await expect(header).toHaveAttribute("aria-expanded", "false")
+      await stable()
+      if (input === "click") await header.click()
+      if (input !== "click") await page.keyboard.press(input)
+      await inline()
+      await stable()
+    }
+    await original.dispose()
+  })
+}
+
 test("preserves diff scroll position while an agent edit refreshes a file", async ({ page }) => {
   const first = await openStory(page)
   const scroller = page.locator(".am-review-diff")

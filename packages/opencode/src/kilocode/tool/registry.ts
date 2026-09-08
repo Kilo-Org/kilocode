@@ -11,6 +11,7 @@ import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./noteb
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
 import { NotifyUserTool } from "./notify-user"
+import { OpenPlanTool } from "./open-plan"
 import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -85,6 +86,7 @@ export namespace KiloToolRegistry {
       // context here and injects it into the tool's init Effect.
       const sessions = yield* KiloSessions.Service
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
+      const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
       const board = yield* Effect.all({ boardRead: BoardReadTool, boardPost: BoardPostTool })
       if (!notebook)
@@ -100,6 +102,7 @@ export namespace KiloToolRegistry {
           image,
           terminal,
           notify,
+          openPlan,
           send,
           ...board,
         }
@@ -120,6 +123,7 @@ export namespace KiloToolRegistry {
         image,
         terminal,
         notify,
+        openPlan,
         send,
         ...board,
         ...tools,
@@ -142,6 +146,7 @@ export namespace KiloToolRegistry {
       image: Tool.Info
       terminal?: Tool.Info
       notify: Tool.Info
+      openPlan?: Tool.Info
       send: Tool.Info
       boardRead?: Tool.Info
       boardPost?: Tool.Info
@@ -165,6 +170,7 @@ export namespace KiloToolRegistry {
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
       })
+      const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const board =
         tools.boardRead && tools.boardPost
@@ -180,7 +186,17 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, ...board, terminal, browser, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return {
+        ...base,
+        ...board,
+        terminal,
+        browser,
+        ...notebooks,
+        semantic,
+        openPlan,
+        notify: base.notify,
+        send: base.send,
+      }
     })
   }
 
@@ -244,6 +260,7 @@ export namespace KiloToolRegistry {
       image: Tool.Def
       terminal?: Tool.Def
       notify: Tool.Def
+      openPlan?: Tool.Def
       send: Tool.Def
       boardRead?: Tool.Def
       boardPost?: Tool.Def
@@ -285,6 +302,7 @@ export namespace KiloToolRegistry {
         ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
         : []),
       tools.notify,
+      ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
     ]
   }

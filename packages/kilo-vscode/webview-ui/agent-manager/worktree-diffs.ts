@@ -9,7 +9,7 @@
 
 import { createSignal, type Accessor } from "solid-js"
 import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
-import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
+import { mergeWorktreeDiffs, resolveDiffFile } from "../diff-viewer/diff-state"
 import { parseDiffId } from "./diff-scope-state"
 import type { useVSCode } from "../src/context/vscode"
 import type {
@@ -203,21 +203,21 @@ export function createWorktreeDiffs(
 
   const onWorktreeDiffFile = (ev: AgentManagerWorktreeDiffFileMessage) => {
     const data = diffDataKey(ev.projectId, ev.sessionId)
-    if (ev.diff) {
-      setDiffDatas((prev) => {
-        const existing = prev[data] ?? []
-        const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
-        return { ...prev, [data]: next }
-      })
-      retain(data)
-      setDiffFilePending(data, ev.diff.file, false)
-      return
-    }
-    setDiffFilePending(data, ev.file, false)
+    setDiffDatas((prev) => {
+      const existing = prev[data]
+      if (!existing) return prev
+      return { ...prev, [data]: resolveDiffFile(existing, ev.file, ev.diff) }
+    })
+    retain(data)
+    setDiffFilePending(data, ev.diff?.file ?? ev.file, false)
   }
 
   const onWorktreeDiffLoading = (ev: AgentManagerWorktreeDiffLoadingMessage) => {
     const data = diffDataKey(ev.projectId, ev.sessionId)
+    if (ev.reset) {
+      const prefix = diffDataKey(ev.projectId, "")
+      setDiffFileLoading((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => !id.startsWith(prefix))))
+    }
     // One source is active per project. Replacing the map on start also clears
     // an interrupted source whose stale completion is intentionally discarded.
     if (ev.loading) {

@@ -17,6 +17,8 @@ import { VscodeUserMessage } from "./VscodeUserMessage"
 interface TranscriptRowViewProps {
   row: TranscriptRow
   index?: number
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onForkMessage?: (sessionId: string, messageId: string) => void
   onEditMessage?: (sessionID: string, messageID: string) => void
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
@@ -65,6 +67,8 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
             <VscodeUserMessage
               message={row().message}
               parts={row().parts}
+              onSelectSession={props.onSelectSession}
+              isSessionOpen={props.isSessionOpen}
               interrupted={row().interrupted}
               queued={row().queued}
               onEdit={

@@ -7,11 +7,13 @@
  */
 import { describe, it, expect } from "bun:test"
 import {
+  formatReviewCommentMarkdown,
   formatReviewCommentsMarkdown,
   isPRReviewComment,
   partReview,
   parseReview,
   reviewMetadata,
+  type CIReviewCommentData,
   type PRReviewCommentData,
   type ReviewCommentData,
 } from "../../src/shared/review-comments"
@@ -38,6 +40,16 @@ function pr(overrides: Partial<PRReviewCommentData> = {}): PRReviewCommentData {
 
 function local(): ReviewCommentData {
   return { id: "c1", file: "src/a.ts", side: "additions", line: 3, comment: "rename", selectedText: "const x = 1" }
+}
+
+function ci(overrides: Partial<CIReviewCommentData> = {}): CIReviewCommentData {
+  return {
+    id: "ci:42:100",
+    origin: "ci",
+    title: "Typecheck failed",
+    body: "Inspect the failed typecheck job before making a fix.",
+    ...overrides,
+  }
 }
 
 function thread(overrides: Partial<PRComment> = {}): PRComment {
@@ -133,6 +145,49 @@ describe("PR review comment metadata", () => {
     const comments = [pr({ line: 0 })]
     expect(parseReview({ version: 1, comments }, formatReviewCommentsMarkdown(comments))).toBeUndefined()
   })
+
+  it("rejects invalid optional PR location and URL fields", () => {
+    const valid = pr({ side: "deletions", originalLine: 41, startLine: 40, url: "https://github.com/org/repo/pull/1" })
+    const text = formatReviewCommentsMarkdown([valid])
+    expect(parseReview({ version: 1, comments: [{ ...valid, side: "context" }] }, text)).toBeUndefined()
+    expect(parseReview({ version: 1, comments: [{ ...valid, originalLine: 0 }] }, text)).toBeUndefined()
+    expect(parseReview({ version: 1, comments: [{ ...valid, startLine: 0 }] }, text)).toBeUndefined()
+    expect(
+      parseReview({ version: 1, comments: [{ ...valid, url: "http://github.com/org/repo/pull/1" }] }, text),
+    ).toBeUndefined()
+    expect(parseReview({ version: 1, comments: [{ ...valid, avatar: "javascript:alert(1)" }] }, text)).toBeUndefined()
+  })
+
+  it("ignores unknown optional fields in old metadata", () => {
+    const comment = { ...pr(), future: { value: true } }
+    const text = formatReviewCommentsMarkdown([comment])
+    expect(parseReview({ version: 1, comments: [comment] }, text)?.comments).toEqual([pr()])
+  })
+})
+
+describe("CI review comment metadata", () => {
+  it("round-trips CI metadata with and without a visible message body", () => {
+    const data = { version: 1 as const, comments: [ci({ body: "Failed: `typecheck`\n\nRead logs on demand." })] }
+    const text = formatReviewCommentsMarkdown(data.comments)
+    const metadata = JSON.parse(JSON.stringify(reviewMetadata(data)))
+    expect(partReview(metadata, text)).toEqual({ data, body: "" })
+    expect(partReview(metadata, `${text}\n\nFix only these failures.`)).toEqual({
+      data,
+      body: "Fix only these failures.",
+    })
+  })
+
+  it("round-trips mixed local, PR, and CI metadata", () => {
+    const data = { version: 1 as const, comments: [local(), pr(), ci()] }
+    const text = formatReviewCommentsMarkdown(data.comments)
+    const metadata = JSON.parse(JSON.stringify(reviewMetadata(data)))
+    expect(partReview(metadata, text)).toEqual({ data, body: "" })
+  })
+
+  it("rejects an oversized CI body", () => {
+    const comments = [ci({ body: "x".repeat(16_001) })]
+    expect(parseReview({ version: 1, comments }, formatReviewCommentsMarkdown(comments))).toBeUndefined()
+  })
 })
 
 describe("prPayload", () => {
@@ -154,6 +209,36 @@ describe("prPayload", () => {
     expect(lines[0]).toBe("line 0")
     expect(lines[1]).toBe("...")
     expect(payload.diffHunk?.endsWith("line 79")).toBe(true)
+  })
+
+  it("crops the correct side when both sides have the same line number", () => {
+    const hunk = [
+      "@@ -1,80 +1,80 @@",
+      ...Array.from({ length: 80 }, (_, i) => `-old ${i + 1}`),
+      ...Array.from({ length: 80 }, (_, i) => `+new ${i + 1}`),
+    ].join("\n")
+    const removed = displayHunk(hunk, 10, undefined, "deletions")
+    const added = displayHunk(hunk, 10, undefined, "additions")
+    expect(removed.patch).toContain("-old 10")
+    expect(removed.patch).not.toContain("+new 10")
+    expect(added.patch).toContain("+new 10")
+    expect(added.patch).not.toContain("-old 10")
+    expect(prPayload(thread({ diffHunk: hunk, line: 10, side: "deletions" })).diffHunk).toContain("-old 10")
+    expect(prPayload(thread({ diffHunk: hunk, line: 10, side: "deletions" })).diffHunk).not.toContain("+new 10")
+  })
+
+  it("uses the original hunk line for a comment whose current location moved", () => {
+    const hunk = ["@@ -0,0 +1,80 @@", ...Array.from({ length: 80 }, (_, i) => `+line ${i + 1}`)].join("\n")
+    const value = prPayload(thread({ diffHunk: hunk, line: 70, originalLine: 30, side: "additions" }))
+    expect(value.line).toBe(70)
+    expect(value.diffHunk).toContain("+line 30")
+    expect(value.diffHunk).not.toContain("+line 70")
+  })
+
+  it("does not append current-worktree context to a deleted-side hunk", () => {
+    const view = displayHunk("@@ -1 +1,0 @@\n-old", 1, ["unrelated current line"], "deletions")
+    expect(view.patch).toContain("-old")
+    expect(view.patch).not.toContain("unrelated current line")
   })
 
   it("crops a full-file hunk around the commented line", () => {
@@ -264,6 +349,42 @@ describe("prPayload", () => {
     expect(prPayload(thread({ replies: [] })).replies).toBeUndefined()
   })
 
+  it("preserves location, resolution, and safe avatar metadata", () => {
+    const value = thread({
+      avatar: "https://avatar/alice",
+      side: "deletions",
+      originalLine: 41,
+      startLine: 40,
+      url: "https://github.com/org/repo/pull/1#discussion_r1",
+      resolved: true,
+      replies: [{ author: "bob", body: "ok", avatar: "https://avatar/bob" }],
+    })
+    expect(prPayload(value)).toEqual(
+      expect.objectContaining({
+        avatar: "https://avatar/alice",
+        side: "deletions",
+        originalLine: 41,
+        startLine: 40,
+        url: "https://github.com/org/repo/pull/1#discussion_r1",
+        resolved: true,
+        replies: [{ author: "bob", body: "ok", avatar: "https://avatar/bob" }],
+      }),
+    )
+  })
+
+  it("drops unsafe URLs and avatars from the payload", () => {
+    const payload = prPayload(
+      thread({
+        avatar: "http://avatar/alice",
+        url: "javascript:alert(1)",
+        replies: [{ author: "bob", body: "ok", avatar: "data:text/plain,bad" }],
+      }),
+    )
+    expect(payload).not.toHaveProperty("avatar")
+    expect(payload).not.toHaveProperty("url")
+    expect(payload.replies).toEqual([{ author: "bob", body: "ok" }])
+  })
+
   it("only treats https comment urls as openable", () => {
     expect(githubUrl("http://example.com")).toBeUndefined()
     expect(githubUrl("javascript:alert(1)")).toBeUndefined()
@@ -273,8 +394,27 @@ describe("prPayload", () => {
   })
 
   it("survives the payload parser", () => {
-    const comments = [prPayload(thread({ diffHunk: "@@ -1 +1 @@", outdated: true }))]
+    const comments = [
+      prPayload(
+        thread({
+          diffHunk: "@@ -1 +1 @@",
+          outdated: true,
+          avatar: "https://avatar/alice",
+          side: "additions",
+          originalLine: 41,
+          startLine: 40,
+          url: "https://github.com/org/repo/pull/1#discussion_r1",
+          replies: [{ author: "bob", body: "ok", avatar: "https://avatar/bob" }],
+        }),
+      ),
+    ]
     expect(parseReview({ version: 1, comments }, formatReviewCommentsMarkdown(comments))?.comments).toEqual(comments)
+  })
+
+  it("does not include reply avatars in Markdown", () => {
+    const withAvatar = pr({ replies: [{ author: "bob", body: "ok", avatar: "https://avatar/bob" }] })
+    const withoutAvatar = pr({ replies: [{ author: "bob", body: "ok" }] })
+    expect(formatReviewCommentMarkdown(withAvatar)).toBe(formatReviewCommentMarkdown(withoutAvatar))
   })
 
   it("formats the whole thread for the copy action", () => {

@@ -14,7 +14,6 @@ import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.ui.JBUI
-import com.intellij.xml.util.XmlStringUtil
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -77,7 +76,7 @@ class ModelPicker : PickerButton() {
     init {
         isEnabled = false
         text = " "
-        toolTipText = KiloBundle.message("model.picker.tooltip")
+        syncTooltip()
 
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
@@ -114,7 +113,7 @@ class ModelPicker : PickerButton() {
             isEnabled = allowEmpty
             text = if (allowEmpty) emptyText else " "
             icon = null
-            toolTipText = KiloBundle.message("model.picker.tooltip")
+            syncTooltip()
             cursor = if (allowEmpty) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
             return
         }
@@ -123,14 +122,52 @@ class ModelPicker : PickerButton() {
         icon = if (item?.let(ModelText::collectsData) == true) ModelPickerRenderer.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
-        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollectedTooltip() else KiloBundle.message("model.picker.tooltip")
+        syncTooltip()
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    }
+
+    override fun syncTooltip() {
+        val item = selected ?: if (allowEmpty) null else items.firstOrNull()
+        toolTipText = if (item != null && ModelText.collectsData(item)) {
+            tip(KiloBundle.message("model.picker.tooltip"), KiloBundle.message("model.picker.dataCollected.current"))
+        } else {
+            tip(KiloBundle.message("model.picker.tooltip"))
+        }
     }
 
     fun open() {
         if (!isEnabled || (items.isEmpty() && !allowEmpty)) return
         showPopup()
+    }
+
+    /** Whether [cycle] would move to a different model than the one selected now. */
+    fun canCycle(): Boolean = nextCycleItem() != null
+
+    /** Selects the next model in the Ctrl+2 cycle order (favorites, else recommended), wrapping at the end. */
+    fun cycle() {
+        val next = nextCycleItem() ?: return
+        activate(next)
+    }
+
+    private fun nextCycleItem(): Item? {
+        val pool = modelCycle(items, favorites(), includeSmall)
+        if (pool.isEmpty()) return null
+        val index = pool.indexOfFirst { it.key == selected?.key }
+        val next = pool[(index + 1).mod(pool.size)]
+        return next.takeIf { it.key != selected?.key }
+    }
+
+    private fun activate(item: Item) {
+        selected = item
+        refresh()
+        onSelect(item)
+    }
+
+    private fun clear() {
+        selected = null
+        refresh()
+        onClear()
     }
 
     private fun showPopup() {
@@ -147,18 +184,6 @@ class ModelPicker : PickerButton() {
             toggle = { refreshFavorite(it) },
         ).apply {
             background = popupBackground
-        }
-
-        fun activate(item: Item) {
-            selected = item
-            refresh()
-            onSelect(item)
-        }
-
-        fun clear() {
-            selected = null
-            refresh()
-            onClear()
         }
 
         fun activate(row: ModelPickerRow) {
@@ -307,11 +332,6 @@ internal object ModelText {
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
 
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
-
-    fun dataCollectedTooltip(): String = XmlStringUtil.wrapInHtmlLines(
-        KiloBundle.message("model.picker.tooltip"),
-        KiloBundle.message("model.picker.dataCollected.current"),
-    )
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
 

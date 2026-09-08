@@ -24,7 +24,6 @@ import {
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
-import { PRStatusBridge } from "./pr-status-bridge"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { GitOps } from "./GitOps"
 import type { GitExecutable } from "../util/git-executable"
@@ -100,7 +99,7 @@ export class AgentManagerProvider implements Disposable {
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
   private readonly projectPollers: ProjectPollers
-  private prBridge!: PRStatusBridge
+  private prBridge!: ReturnType<typeof createPollers>["pr"]
   private orchestration: AgentManagerOrchestrationBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
@@ -241,6 +240,7 @@ export class AgentManagerProvider implements Disposable {
       projectId: () => this.context?.id,
     })
     const pollers = createPollers({
+      dirtyFiles: () => this.host.dirtyFiles(),
       git: this.gitOps,
       semaphore,
       state: () => this.state,
@@ -393,12 +393,12 @@ export class AgentManagerProvider implements Disposable {
     this.panel = ctx
     this.browserLifecycle.replay()
 
-    this.statsPoller.setVisible(ctx.visible)
-    this.projectPollers.setVisible(ctx.visible)
+    for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(ctx.visible)
+    this.diffs.setVisible(ctx.visible).catch((err) => this.log("Failed to update diff visibility:", err))
     this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
-      this.statsPoller.setVisible(visible)
-      this.projectPollers.setVisible(visible)
+      for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(visible)
+      this.diffs.setVisible(visible).catch((err) => this.log("Failed to update diff visibility:", err))
       this.visiblePresence.flush()
     })
 
@@ -874,7 +874,7 @@ export class AgentManagerProvider implements Disposable {
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type !== "openFile") return undefined
 
-    const sessionId = this.activeSessionId
+    const sessionId = m.sessionID ?? this.activeSessionId
     const state = this.getStateManager()
     if (sessionId && state?.directoryFor(sessionId)) {
       this.openWorktreeFile(sessionId, m.filePath, m.line, m.column)
