@@ -481,14 +481,9 @@ export const RunCommand = effectCmd({
               action: "deny",
               pattern: "*",
             },
-            // kilocode_change start - non-interactive runs cannot answer suggestions or take over a terminal
+            // kilocode_change start
             {
               permission: "suggest",
-              action: "deny",
-              pattern: "*",
-            },
-            {
-              permission: "interactive_terminal",
               action: "deny",
               pattern: "*",
             },

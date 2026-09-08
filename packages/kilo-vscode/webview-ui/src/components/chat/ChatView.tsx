@@ -31,6 +31,7 @@ import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
+  projectId?: string
   onSelectSession?: (id: string) => void
   isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
@@ -357,7 +358,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
           <SessionTabStrip />
         </Show>
-        <TaskHeader readonly={props.readonly} />
+        <TaskHeader readonly={props.readonly} projectId={props.projectId} />
         <div class="chat-messages-wrapper">
           <div class="chat-messages">
             <MessageList

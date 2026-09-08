@@ -24,7 +24,13 @@ import {
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { MessageID, SessionID } from "@/session/schema"
-import { ApiNotFoundError, InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
+import {
+  ApiNotFoundError,
+  ConflictError,
+  InvalidRequestError,
+  UnknownError,
+} from "@/server/routes/instance/httpapi/errors"
+import { BoardStore } from "@/kilocode/board/store"
 import { CommandFiles } from "@/kilocode/command-files"
 import { Token } from "@opencode-ai/schema/kilocode/session-drain"
 
@@ -71,6 +77,16 @@ export const ResumeSessionPayload = Schema.Struct({
 
 export const DrainSessionPayload = Schema.Struct({ token: Token })
 
+export const SessionBoard = BoardStore.SessionBoard
+export const SessionBoardQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  before: Schema.optional(Schema.String),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 }))),
+})
+export const ResetSessionBoardPayload = Schema.Struct({
+  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+})
+
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
@@ -94,6 +110,8 @@ export const KilocodePaths = {
   sessionModelUsage: `/session/:sessionID/model-usage`,
   resumeSession: `${root}/session/:sessionID/resume`,
   drainSession: `${root}/session/:sessionID/drain`,
+  sessionBoard: `${root}/session/:sessionID/board`,
+  resetSessionBoard: `${root}/session/:sessionID/board/reset`,
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
@@ -129,6 +147,31 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Wait for session completion",
             description:
               "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+          }),
+        ),
+        HttpApiEndpoint.get("sessionBoard", KilocodePaths.sessionBoard, {
+          params: { sessionID: SessionID },
+          query: SessionBoardQuery,
+          success: described(SessionBoard, "Shared board snapshot"),
+          error: [ApiNotFoundError, InvalidRequestError, ConflictError, UnknownError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.sessionBoard",
+            summary: "Observe a session's shared board",
+            description: "Read stored board messages without changing the board.",
+          }),
+        ),
+        HttpApiEndpoint.post("resetSessionBoard", KilocodePaths.resetSessionBoard, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          payload: ResetSessionBoardPayload,
+          success: described(SessionBoard, "Shared board after reset"),
+          error: [ApiNotFoundError, InvalidRequestError, ConflictError, UnknownError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.resetSessionBoard",
+            summary: "Clear a session's shared board",
+            description: "Clear visible messages without changing conversations or running tasks.",
           }),
         ),
         HttpApiEndpoint.post("heapSnapshot", KilocodePaths.heapSnapshot, {

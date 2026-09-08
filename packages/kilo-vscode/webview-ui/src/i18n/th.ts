@@ -55,6 +55,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "กระดาน",
+  "task.swarm.refresh": "รีเฟรช",
+  "task.swarm.reset": "รีเซ็ตกระดาน",
+  "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
+  "task.swarm.resetDescription":
+    "ล้างข้อความที่แสดงหรือไม่? การสนทนาและงานที่กำลังทำจะไม่เปลี่ยนแปลง เอเจนต์สามารถโพสต์ข้อความใหม่ได้",
+  "task.swarm.loading": "กำลังโหลดกระดาน...",
+  "task.swarm.failed": "ไม่สามารถโหลดหรือรีเซ็ตกระดานได้ โปรดลองรีเฟรช",
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 

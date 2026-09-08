@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Доска",
+  "task.swarm.refresh": "Обновить",
+  "task.swarm.reset": "Сбросить доску",
+  "task.swarm.resetTitle": "Сбросить эту доску?",
+  "task.swarm.resetDescription":
+    "Очистить видимые сообщения? Разговоры и выполняемые задачи останутся без изменений. Агенты могут публиковать новые сообщения.",
+  "task.swarm.loading": "Загрузка доски...",
+  "task.swarm.failed": "Не удалось загрузить или сбросить доску. Попробуйте обновить её.",
 
   "command.provider.connect": "Подключить провайдера",
 

@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Bord",
+  "task.swarm.refresh": "Vernieuwen",
+  "task.swarm.reset": "Bord resetten",
+  "task.swarm.resetTitle": "Dit bord resetten?",
+  "task.swarm.resetDescription":
+    "Zichtbare berichten wissen? Gesprekken en lopende taken blijven ongewijzigd. Agenten kunnen nieuwe berichten plaatsen.",
+  "task.swarm.loading": "Bord laden...",
+  "task.swarm.failed": "Het bord kon niet worden geladen of gereset. Probeer het te vernieuwen.",
 
   "command.provider.connect": "Provider verbinden",
 

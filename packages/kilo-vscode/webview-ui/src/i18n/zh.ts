@@ -57,6 +57,13 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "刷新",
+  "task.swarm.reset": "重置看板",
+  "task.swarm.resetTitle": "重置此看板？",
+  "task.swarm.resetDescription": "清除可见消息？对话和正在运行的任务不会改变。智能体可以发布新消息。",
+  "task.swarm.loading": "正在加载看板...",
+  "task.swarm.failed": "无法加载或重置看板。请尝试刷新。",
 
   "command.provider.connect": "连接提供商",
 

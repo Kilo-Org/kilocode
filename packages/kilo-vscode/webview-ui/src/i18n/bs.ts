@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Ploča",
+  "task.swarm.refresh": "Osvježi",
+  "task.swarm.reset": "Resetuj ploču",
+  "task.swarm.resetTitle": "Resetovati ovu ploču?",
+  "task.swarm.resetDescription":
+    "Obrisati vidljive poruke? Razgovori i zadaci koji se izvršavaju ostaju nepromijenjeni. Agenti mogu objaviti nove poruke.",
+  "task.swarm.loading": "Učitavanje ploče...",
+  "task.swarm.failed": "Ploču nije moguće učitati ili resetovati. Pokušajte je osvježiti.",
 
   "command.provider.connect": "Poveži provajdera",
 

@@ -13,6 +13,9 @@ export interface GhReactionGroup {
   viewerHasReacted?: boolean
 }
 export interface GhComment {
+  viewerDidAuthor?: boolean
+  viewerCanUpdate?: boolean
+  viewerCanDelete?: boolean
   id: string
   author?: GhAuthor
   body?: string
@@ -36,6 +39,7 @@ export interface GhThread {
   originalStartLine?: number | null
   startDiffSide?: "LEFT" | "RIGHT" | null
   comments?: { nodes?: GhComment[] }
+  latest?: { nodes?: GhComment[] }
 }
 export interface GhReviewRequest {
   requestedReviewer?: GhAuthor
@@ -48,6 +52,9 @@ export interface GhReview {
 }
 
 export interface GhConversationComment {
+  viewerDidAuthor?: boolean
+  viewerCanUpdate?: boolean
+  viewerCanDelete?: boolean
   id: string
   author?: GhAuthor & { __typename?: string }
   body?: string
@@ -67,6 +74,7 @@ export interface GhReviewWithBody {
 }
 
 export interface PRResult {
+  id?: string
   number: number
   baseRefOid?: string
   headRefOid?: string

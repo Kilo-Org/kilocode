@@ -139,7 +139,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const unsubscribePlans = vscode.onMessage((message) => {
-    for (const plan of planOpens(message)) {
+    for (const plan of planOpens(message, session.currentSessionID())) {
       const id = `${plan.sessionID}:${plan.id}`
       if (opened.has(id)) continue
       opened.add(id)

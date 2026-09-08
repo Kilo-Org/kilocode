@@ -568,7 +568,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function submission(sessionID?: string, model = selected(sessionID)) {
     return {
-      model: model ?? undefined,
+      model: model ? { providerID: model.providerID, modelID: model.modelID } : undefined,
       variant: variants.request(sessionID),
       agent: resolvePromptAgent({
         sessionID,

@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.5.15",
+  "version": "7.5.16",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -54,6 +54,7 @@
     "./session-diff": "./src/components/session-diff.ts",
     "./session-turn": "./src/components/session-turn.tsx",
     "./basic-tool": "./src/components/basic-tool.tsx",
+    "./board-message": "./src/components/board-message.tsx",
     "./error-details": "./src/components/error-details.tsx",
     "./diff-changes": "./src/components/diff-changes.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",

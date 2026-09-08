@@ -865,9 +865,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
-    const container = range.startContainer
-    const target = container instanceof Element ? container : container?.parentElement
-    target?.scrollIntoView({ block: "center", inline: "nearest" })
+    // Scroll only the transcript, not VS Code's outer webview container.
+    el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
   // Two frames of margin so the virtualizer has settled the DOM for the new
@@ -956,7 +955,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
   // the virtualizer; direct/live/queued rows are mounted, so they use
-  // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
+  // the transcript scroller. Pauses auto-follow first so the jump isn't snapped back.
   const jump = (key: string) => {
     autoScroll.pause()
     const index = indexes().get(key)
@@ -973,9 +972,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
-    if (target) {
+    if (el && target) {
       setPending(undefined)
-      target.scrollIntoView({ block: "start" })
+      el.scrollBy({ top: target.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
       return
     }
     const sid = session.currentSessionID()
@@ -1002,10 +1001,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
-    if (!row) return
+    if (!el || !row) return
     setPending(undefined)
     autoScroll.pause()
-    row.scrollIntoView({ block: "start" })
+    el.scrollBy({ top: row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
   })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.

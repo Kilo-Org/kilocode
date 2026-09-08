@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Pano",
+  "task.swarm.refresh": "Yenile",
+  "task.swarm.reset": "Panoyu sıfırla",
+  "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
+  "task.swarm.resetDescription":
+    "Görünür mesajlar temizlensin mi? Konuşmalar ve çalışan görevler değişmez. Ajanlar yeni mesajlar gönderebilir.",
+  "task.swarm.loading": "Pano yükleniyor...",
+  "task.swarm.failed": "Pano yüklenemedi veya sıfırlanamadı. Yenilemeyi deneyin.",
 
   "command.provider.connect": "Sağlayıcı bağla",
 

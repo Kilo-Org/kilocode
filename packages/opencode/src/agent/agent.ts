@@ -142,7 +142,6 @@ const layer = Layer.effect(
           },
           suggest: "deny", // kilocode_change
           question: "deny",
-          interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
           // kilocode_change start
@@ -174,10 +173,7 @@ const layer = Layer.effect(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                // kilocode_change start
-                interactive_terminal: "allow",
-                suggest: "allow",
-                // kilocode_change end
+                suggest: "allow", // kilocode_change
                 plan_enter: "allow",
               }),
               user,

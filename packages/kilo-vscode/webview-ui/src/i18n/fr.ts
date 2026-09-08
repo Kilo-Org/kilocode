@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tableau",
+  "task.swarm.refresh": "Actualiser",
+  "task.swarm.reset": "Réinitialiser le tableau",
+  "task.swarm.resetTitle": "Réinitialiser ce tableau ?",
+  "task.swarm.resetDescription":
+    "Effacer les messages visibles ? Les conversations et les tâches en cours restent inchangées. Les agents peuvent publier de nouveaux messages.",
+  "task.swarm.loading": "Chargement du tableau...",
+  "task.swarm.failed": "Impossible de charger ou de réinitialiser le tableau. Essayez de l’actualiser.",
 
   "command.provider.connect": "Connecter un fournisseur",
 

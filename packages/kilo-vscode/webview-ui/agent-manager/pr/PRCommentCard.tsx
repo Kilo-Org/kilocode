@@ -1,9 +1,9 @@
 /** @jsxImportSource solid-js */
-import { For, Show, type JSXElement } from "solid-js"
+import { For, Show, createMemo, type JSXElement } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { PRCommentBody } from "./PRCommentBody"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
@@ -14,8 +14,14 @@ import { prMarkdown, preview } from "./pr-comment-payload"
 import { PRCommentTime } from "./PRCommentTime"
 import type { PRComment, PRReaction, PRReactionContent } from "./pr-types"
 import { PRReactions } from "./PRReactions"
+import { PRCommentForm } from "./PRCommentForm"
 
 interface Props {
+  projectId?: string
+  worktreeId?: string
+  prNumber?: number
+  prUrl?: string
+  applySuggestions?: boolean
   comment: PRComment
   resolved: boolean
   pending: boolean
@@ -29,6 +35,10 @@ interface Props {
   reactions?: PRReaction[]
   reactionPending?: (content: PRReactionContent) => boolean
   onReaction?: (content: PRReactionContent, add: boolean) => void
+  replyReactionError?: (id: string) => string | undefined
+  replyReactions?: (id: string, reactions?: PRReaction[]) => PRReaction[]
+  replyReactionPending?: (id: string, content: PRReactionContent) => boolean
+  onReplyReaction?: (id: string, content: PRReactionContent, add: boolean) => void
   onToggleOpen: () => void
   onToggleResolved?: () => void
   onSend: () => void
@@ -39,6 +49,19 @@ interface Props {
 
 export function PRCommentCard(props: Props) {
   const { t } = useLanguage()
+  const replies = createMemo(() => new Map(props.comment.replies?.map((reply, index) => [reply.id ?? index, reply])))
+  const target = () => {
+    if (!props.worktreeId || !props.prNumber || !props.prUrl) return
+    return {
+      projectId: props.projectId,
+      worktreeId: props.worktreeId,
+      prNumber: props.prNumber,
+      prUrl: props.prUrl,
+    }
+  }
+  const eligible = () =>
+    props.applySuggestions !== false && !props.comment.outdated && props.comment.side !== "deletions"
+  const published = () => (eligible() ? target() : undefined)
   const location = () => {
     const file = props.comment.file
     if (!file) return ""
@@ -124,29 +147,54 @@ export function PRCommentCard(props: Props) {
 
       <Show when={props.open}>
         <Content>
-          <div class="am-pr-comment-body">
-            <Markdown text={props.comment.body} />
-          </div>
-          <For each={props.comment.replies}>
-            {(reply) => (
-              <div class="am-pr-comment-reply">
-                <div class="am-pr-comment-reply-head am-pr-row">
-                  <PRAvatar avatar={reply.avatar} author={reply.author} />
-                  <span class="am-pr-comment-author">{reply.author}</span>
-                </div>
-                <div class="am-pr-comment-body">
-                  <Markdown text={reply.body} />
-                </div>
-              </div>
+          <PRCommentBody comment={props.comment} target={target()} suggestion published={published()} />
+          <Show when={props.onReaction}>
+            <div class="am-pr-comment-reactions" data-comment-id={props.comment.id}>
+              <PRReactions
+                reactions={props.reactions ?? props.comment.reactions}
+                pending={props.reactionPending}
+                onToggle={(content, add) => props.onReaction?.(content, add)}
+              />
+              <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
+            </div>
+          </Show>
+          <For each={[...replies().keys()]}>
+            {(id) => (
+              <Show when={replies().get(id)}>
+                {(reply) => (
+                  <div class="am-pr-comment-reply">
+                    <div class="am-pr-comment-reply-head am-pr-row">
+                      <PRAvatar avatar={reply().avatar} author={reply().author} />
+                      <span class="am-pr-comment-author">{reply().author}</span>
+                      <PRCommentTime time={reply().createdAt} />
+                    </div>
+                    <PRCommentBody comment={reply()} target={target()} suggestion published={published()} />
+                    <Show when={reply().id && props.onReplyReaction}>
+                      <div class="am-pr-comment-reactions" data-comment-id={reply().id}>
+                        <PRReactions
+                          reactions={props.replyReactions?.(reply().id!, reply().reactions) ?? reply().reactions}
+                          pending={(content) => props.replyReactionPending?.(reply().id!, content) ?? false}
+                          onToggle={(content, add) => props.onReplyReaction?.(reply().id!, content, add)}
+                        />
+                        <Show when={props.replyReactionError?.(reply().id!)}>
+                          {(err) => <div class="am-pr-comment-error">{err()}</div>}
+                        </Show>
+                      </div>
+                    </Show>
+                  </div>
+                )}
+              </Show>
             )}
           </For>
+          <Show when={target() && props.comment.threadId}>
+            <PRCommentForm action="reply" {...target()!} threadId={props.comment.threadId} />
+          </Show>
           <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
-          <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
           <div class="am-pr-comment-actions am-pr-row">
             <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
               {t("agentManager.pr.fixWithKilo")}
             </Button>
-            <Show when={props.onToggleResolved}>
+            <Show when={target() && props.onToggleResolved}>
               <Button
                 variant="secondary"
                 size="small"
@@ -159,13 +207,6 @@ export function PRCommentCard(props: Props) {
                 </Show>
                 {props.resolved ? t("agentManager.pr.comment.unresolve") : t("agentManager.pr.comment.resolve")}
               </Button>
-            </Show>
-            <Show when={props.onReaction}>
-              <PRReactions
-                reactions={props.reactions ?? props.comment.reactions}
-                pending={props.reactionPending}
-                onToggle={(content, add) => props.onReaction?.(content, add)}
-              />
             </Show>
             <span class="am-pr-comment-actions-gap" />
             <CopyButton text={prMarkdown(props.comment)} label={t("agentManager.pr.comment.copy")} />
@@ -205,6 +246,18 @@ export function PRCommentCard(props: Props) {
           </div>
         </Content>
       </Show>
+      <div class="am-pr-comment-footer">
+        <Button
+          data-action="toggle-thread"
+          variant="ghost"
+          size="small"
+          aria-expanded={props.open}
+          onClick={props.onToggleOpen}
+        >
+          <Icon name="chevron-down" class={props.open ? "am-pr-comment-collapse-icon" : undefined} size="small" />
+          {t(props.open ? "agentManager.pr.comment.collapseThread" : "agentManager.pr.comment.expandThread")}
+        </Button>
+      </div>
     </div>
   )
 }

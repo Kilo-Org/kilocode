@@ -87,6 +87,7 @@ import type {
   MigrationSessionProgressMessage,
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
+import type { SessionBoardLoadedMessage } from "./board"
 
 // ============================================
 // Messages FROM extension TO webview
@@ -1275,6 +1276,8 @@ export interface DiffViewerContextMessage {
 export interface DiffViewerPRCommentsMessage {
   type: "diffViewer.prComments"
   comments: PRComment[]
+  target?: import("../../../../src/shared/pr-comment-actions").PRTarget
+  threads?: string[]
 }
 
 export interface DiffViewerFocusCommentMessage {
@@ -1537,6 +1540,14 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | {
+      type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+      projectId?: string
+      worktreeId: string
+      threadId: string
+      success: boolean
+      error?: string
+    }
   | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
   | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
@@ -1739,3 +1750,4 @@ export type ExtensionMessage =
   | MemoryEventMessage
   | MemoryOperationResultMessage
   | BackgroundJobsLoadedMessage
+  | SessionBoardLoadedMessage

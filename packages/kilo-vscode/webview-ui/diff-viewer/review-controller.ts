@@ -307,6 +307,8 @@ export interface ReviewViewProps {
   remoteComments?: PRComment[]
   projectId?: string
   worktreeId?: string
+  remoteTarget?: (comment: PRComment) => import("../../src/shared/pr-comment-actions").PRTarget | undefined
+  applySuggestions?: boolean
   focusedComment?: { id: string; file: string }
   markdownRender?: boolean
   onRequestDiff?: (file: string) => void
@@ -328,6 +330,8 @@ export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivE
   const remote = createRemoteCommentController({
     key: () => props.sessionKey,
     comments: () => props.remoteComments,
+    target: (comment) => props.remoteTarget?.(comment),
+    applySuggestions: () => props.applySuggestions !== false,
     diffs: rows,
     active: () => true,
     activeTerminalId: () => props.activeTerminalId,

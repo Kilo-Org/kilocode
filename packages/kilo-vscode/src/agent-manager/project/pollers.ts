@@ -38,6 +38,7 @@ export type StatsOutMessage =
 type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktreeStats" | "agentManager.localStats" }>
 
 interface PollerDeps {
+  dirtyFiles?: () => string[]
   git: GitOps
   semaphore: Semaphore
   hot?: () => Set<string>
@@ -72,6 +73,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     onLocalStats: (stats) => deps.post({ type: "agentManager.localStats", projectId: ctx.id, stats }),
   })
   const pr = PRStatusBridge.create({
+    dirtyFiles: deps.dirtyFiles,
     getWorktrees: () => state()?.getWorktrees() ?? [],
     getWorkspaceRoot: () => ctx.root,
     postToWebview: (m) => deps.post({ ...m, projectId: ctx.id } as StatsOutMessage),
@@ -170,6 +172,7 @@ export class ProjectPollers {
 
 /** Create the provider's poller trio: singleton active-project pollers plus per-project background pollers. */
 export function createPollers(opts: {
+  dirtyFiles?: () => string[]
   git: GitOps
   semaphore: Semaphore
   state: () => WorktreeStateManager | undefined
@@ -203,6 +206,7 @@ export function createPollers(opts: {
     git: opts.git,
   })
   const pr = PRStatusBridge.create({
+    dirtyFiles: opts.dirtyFiles,
     getWorktrees: () => opts.state()?.getWorktrees() ?? [],
     getWorkspaceRoot: opts.root,
     postToWebview: (m) => opts.post(m.type === "agentManager.prStatus" ? { ...m, projectId: opts.activeId() } : m),
@@ -214,6 +218,7 @@ export function createPollers(opts: {
     projectId: opts.activeId,
   })
   const projects = new ProjectPollers({
+    dirtyFiles: opts.dirtyFiles,
     git: opts.git,
     semaphore: opts.semaphore,
     hot: opts.hot,

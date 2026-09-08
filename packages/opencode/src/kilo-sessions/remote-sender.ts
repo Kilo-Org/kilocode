@@ -173,7 +173,6 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
-    ephemeralTools: { interactive_terminal: false },
   }
 }
 
@@ -1168,7 +1167,7 @@ export namespace RemoteSender {
           })
           return
         }
-        const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
+        const promptInput = input.data as SessionPrompt.PromptInput
         const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
         if (remote) {
           begin(promptInput.sessionID)

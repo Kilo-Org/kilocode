@@ -8,7 +8,8 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   },
   "pull-request": {
     viewBox: "0 0 20 20",
-    path: `<path d="M1.875 4.0625a2.8125 2.8125 0 1 1 3.75 2.6525v6.57a2.8138 2.8138 0 1 1-1.875 0V6.715A2.8125 2.8125 0 0 1 1.875 4.0625Zm7.096-.22125L11.96625.84625A.3125.3125 0 0 1 12.5 1.0675V3.125h1.25A3.125 3.125 0 0 1 16.875 6.25v7.035a2.8138 2.8138 0 1 1-1.875 0V6.25a1.25 1.25 0 0 0-1.25-1.25H12.5v2.0575a.3125.3125 0 0 1-.53375.22125L8.97125 4.34125a.3125.3125 0 0 1 0-.4425ZM4.6875 3.125a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm0 11.875a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm10.3125.9375a.9375.9375 0 1 0 1.875 0 .9375.9375 0 0 0-1.875 0Z" fill="currentColor"/>`,
+    // Stroked at 1.25 on the 20-unit grid (1px at 16px) to match the other outline icons.
+    path: `<circle cx="4.6875" cy="4.0625" r="1.875" stroke="currentColor" stroke-width="1.25"/><circle cx="4.6875" cy="15.9375" r="1.875" stroke="currentColor" stroke-width="1.25"/><circle cx="15.9375" cy="15.9375" r="1.875" stroke="currentColor" stroke-width="1.25"/><path d="M4.6875 5.9375V14.0625M15.9375 14.0625V6.25A2.5 2.5 0 0 0 13.4375 3.75H9.6875M11.5625 1.875L9.6875 3.75L11.5625 5.625" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
   refresh: {
     viewBox: "0 0 20 20",

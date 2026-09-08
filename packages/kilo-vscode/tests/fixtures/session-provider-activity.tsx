@@ -9,7 +9,7 @@ Object.defineProperty(window.document, "hasFocus", { value: () => focused.value 
 const sent: WebviewMessage[] = []
 const api = {
   postMessage: (message: WebviewMessage) => {
-    sent.push(message)
+    sent.push(message.type === "agentManager.updateFromBase" ? structuredClone(message) : message)
     if (message.type === "acknowledgeSession") {
       queueMicrotask(() => post({ ...message, type: "sessionAcknowledged" }))
     }

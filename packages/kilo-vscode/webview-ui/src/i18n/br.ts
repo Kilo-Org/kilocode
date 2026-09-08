@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Quadro",
+  "task.swarm.refresh": "Atualizar",
+  "task.swarm.reset": "Redefinir quadro",
+  "task.swarm.resetTitle": "Redefinir este quadro?",
+  "task.swarm.resetDescription":
+    "Limpar as mensagens visíveis? As conversas e as tarefas em execução não serão alteradas. Agentes podem publicar novas mensagens.",
+  "task.swarm.loading": "Carregando quadro...",
+  "task.swarm.failed": "Não foi possível carregar ou redefinir o quadro. Tente atualizá-lo.",
 
   "command.provider.connect": "Conectar provedor",
 

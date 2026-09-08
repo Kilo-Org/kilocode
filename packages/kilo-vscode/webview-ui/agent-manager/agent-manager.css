@@ -1021,12 +1021,6 @@ html[data-theme="kilo-vscode"]
   }
 }
 
-/* Green accent when running — uses VS Code's standard green token */
-.am-run-active,
-.am-run-active [data-component="icon"] {
-  color: var(--vscode-testing-iconPassed, #34d399) !important;
-}
-
 .am-stat-files {
   color: var(--text-muted);
 }
@@ -1745,6 +1739,54 @@ body.am-wt-dragging-active * {
   border-left: 1px solid var(--border-weak-base);
 }
 
+/* Optional session panel handles sit left of the fixed workbench buttons,
+   separated by a hairline so they read as a different class of control. */
+.am-tab-session-panels {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 4px;
+}
+
+.am-tab-actions-separator {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: var(--border-weak-base);
+  flex-shrink: 0;
+}
+
+/* Ghost icon buttons do not dim their icon when disabled (the ghost variant
+   sets color on the svg itself), so a disabled Apply looked identical to an
+   enabled toggle and kept the pointer cursor. */
+.am-tab-actions [data-component="icon-button"]:disabled {
+  cursor: default;
+}
+
+.am-tab-actions [data-component="icon-button"]:disabled [data-slot="icon-svg"] {
+  color: var(--icon-disabled);
+}
+
+/* Normalize stroke weight to 1px at 16px (codicon weight). Upstream icons
+   draw at stroke 1 on a 20-unit grid, which renders as a 0.8px hairline;
+   Kilo icons draw at 2, which renders bolder. Filled icons are unaffected.
+   Upstream icons render via an SVG sprite, so the value is set on the svg
+   and inherited by the sprite paths, which carry no explicit stroke-width.
+   Scoped to the tab bar until the same value rolls out in kilo-ui. */
+.am-tab-actions [data-slot="icon-svg"] {
+  stroke-width: 1.25;
+}
+
+/* Kilo icons render inline with an explicit stroke-width attribute, which
+   beats the inherited value, so override per grid. */
+.am-tab-actions [data-slot="icon-svg"][viewBox="0 0 20 20"] [stroke] {
+  stroke-width: 1.25;
+}
+
+.am-tab-actions [data-slot="icon-svg"][viewBox="0 0 24 24"] [stroke] {
+  stroke-width: 1.5;
+}
+
 .am-tab-apply {
   display: flex;
   position: relative;
@@ -1920,6 +1962,8 @@ body.am-wt-dragging-active * {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* Digits keep one width so count changes do not shift the buttons to the left. */
+  font-variant-numeric: tabular-nums;
 }
 
 .am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-files {

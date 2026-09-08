@@ -22,6 +22,7 @@ import type { BranchInfo, ReviewComment, WebviewMessage, WorktreeFileDiff } from
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
 import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
 import type { PRComment } from "../agent-manager/pr/pr-types"
+import type { PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
@@ -43,6 +44,8 @@ const DiffViewerContent: Component = () => {
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [context, setContext] = createSignal("")
   const [remote, setRemote] = createSignal<PRComment[]>([])
+  const [target, setTarget] = createSignal<PRTarget>()
+  const [threads, setThreads] = createSignal<string[]>([])
   const [focus, setFocus] = createSignal<{ id: string; file: string }>()
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
   const [markdown, setMarkdown] = createSignal(false)
@@ -116,6 +119,8 @@ const DiffViewerContent: Component = () => {
         setDiffs([])
         setComments([])
         setRemote([])
+        setTarget(undefined)
+        setThreads([])
         setFocus(undefined)
         setInitialFile(undefined)
         setLoadingFiles(new Set<string>())
@@ -130,7 +135,11 @@ const DiffViewerContent: Component = () => {
       return
     }
     if (msg.type === "diffViewer.prComments") {
-      setRemote(msg.comments)
+      batch(() => {
+        setRemote(msg.comments)
+        setTarget(msg.target)
+        setThreads(msg.threads ?? [])
+      })
       return
     }
     if (msg.type === "diffViewer.focusComment") {
@@ -297,6 +306,8 @@ const DiffViewerContent: Component = () => {
         sessionKey={`${context()}\0${currentSourceId() ?? "local"}`}
         worktreeId="diff"
         remoteComments={remote()}
+        remoteTarget={(comment) => (threads().includes(comment.threadId) ? target() : undefined)}
+        applySuggestions={false}
         focusedComment={focus()}
         comments={comments()}
         onCommentsChange={setComments}

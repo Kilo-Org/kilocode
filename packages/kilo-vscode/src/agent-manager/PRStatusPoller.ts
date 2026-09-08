@@ -150,10 +150,11 @@ export class PRStatusPoller {
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
-    if (!this.active) return
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
     if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
-    void this.fetchOne(worktreeId)
+    this.lastHash.delete(worktreeId)
+    if (!this.active) return
+    void this.fetchOne(worktreeId, this.generation, true)
   }
 
   setActiveWorktreeId(id: string | undefined): void {
@@ -260,7 +261,11 @@ export class PRStatusPoller {
     this.failures++
   }
 
-  private async fetchOne(worktreeId: string, generation = this.generation): Promise<void> {
+  private async fetchOne(
+    worktreeId: string,
+    generation = this.generation,
+    full = this.activeWorktreeId === worktreeId,
+  ): Promise<void> {
     const wt = this.target(worktreeId)
     if (!wt) return
 
@@ -269,8 +274,8 @@ export class PRStatusPoller {
       branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
       if (this.stale(generation)) return
       const pr = await this.cachedFetchPR(branch ?? wt.branch, wt.path)
-      if (!pr || this.stale(generation)) {
-        if (this.stale(generation)) return
+      if (this.stale(generation)) return
+      if (!pr) {
         const hash = `${worktreeId}:${branch ?? wt.branch}:none`
         if (this.lastHash.get(worktreeId) === hash) return
         this.lastHash.set(worktreeId, hash)
@@ -280,13 +285,14 @@ export class PRStatusPoller {
 
       const [checks, reviewers, threads] = await Promise.all([
         ...this.extras(pr, wt.path),
-        this.fetchThreads(pr.number, wt.path, this.activeWorktreeId === worktreeId),
+        this.fetchThreads(pr.number, wt.path, full),
       ])
       if (this.stale(generation)) return
       if (threads && (threads.baseRefOid !== pr.baseRefOid || threads.headRefOid !== pr.headRefOid))
         this.prCache.delete(this.key(branch ?? wt.branch, wt.path))
 
       const status: PRStatus = {
+        id: pr.id,
         number: pr.number,
         baseRefOid: pr.baseRefOid,
         headRefOid: pr.headRefOid,
@@ -339,7 +345,7 @@ export class PRStatusPoller {
   }
 
   private static readonly BASE_JSON_FIELDS =
-    "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid"
+    "id,number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid"
   private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews`
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
@@ -504,7 +510,11 @@ export class PRStatusPoller {
     cwd: string,
     full: boolean,
   ): Promise<
-    Pick<PRStatus, "comments" | "unresolvedThreads" | "conversation" | "baseRefOid" | "headRefOid"> | undefined
+    | Pick<
+        PRStatus,
+        "comments" | "unresolvedThreads" | "conversation" | "baseRefOid" | "headRefOid" | "viewerDidAuthor"
+      >
+    | undefined
   > {
     let refs: { baseRefOid: string; headRefOid: string } | undefined
     try {
@@ -519,6 +529,9 @@ export class PRStatusPoller {
            startLine
            originalStartLine
            startDiffSide
+           latest: comments(last: 10) {
+             nodes { id author { login avatarUrl } body viewerDidAuthor viewerCanUpdate viewerCanDelete }
+           }
            comments(first: 10) {
              nodes {
                id
@@ -530,7 +543,8 @@ export class PRStatusPoller {
                url
                createdAt
                diffHunk
-               reactionGroups { content reactors { totalCount } viewerHasReacted }
+                reactionGroups { content reactors { totalCount } viewerHasReacted }
+                viewerDidAuthor viewerCanUpdate viewerCanDelete
              }
            }`
         : ""
@@ -542,7 +556,8 @@ export class PRStatusPoller {
                body
                createdAt
                url
-               reactionGroups { content reactors { totalCount } viewerHasReacted }
+                reactionGroups { content reactors { totalCount } viewerHasReacted }
+                viewerDidAuthor viewerCanUpdate viewerCanDelete
              }
            }
            reviews(last: 50) {
@@ -569,6 +584,7 @@ export class PRStatusPoller {
             pullRequest(number: $number) {
               baseRefOid
               headRefOid
+              viewerDidAuthor
               reviewThreads(first: 100, after: $cursor) {
                 totalCount
                 pageInfo { hasNextPage endCursor }
@@ -627,6 +643,7 @@ export class PRStatusPoller {
           })
           return {
             ...refs,
+            viewerDidAuthor: page.viewerDidAuthor,
             unresolvedThreads: unresolved,
             comments: { total, unresolved, comments },
             conversation,
@@ -655,6 +672,7 @@ function threads(json: string) {
         pullRequest?: {
           baseRefOid?: string
           headRefOid?: string
+          viewerDidAuthor?: boolean
           reviewThreads?: {
             totalCount: number
             pageInfo: { hasNextPage: boolean; endCursor?: string | null }
@@ -676,7 +694,7 @@ function threads(json: string) {
   ) {
     throw new Error("Incomplete PR review threads response")
   }
-  return { ...page, baseRefOid: pr.baseRefOid, headRefOid: pr.headRefOid }
+  return { ...page, baseRefOid: pr.baseRefOid, headRefOid: pr.headRefOid, viewerDidAuthor: pr.viewerDidAuthor }
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */

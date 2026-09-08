@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Bacheca",
+  "task.swarm.refresh": "Aggiorna",
+  "task.swarm.reset": "Reimposta bacheca",
+  "task.swarm.resetTitle": "Reimpostare questa bacheca?",
+  "task.swarm.resetDescription":
+    "Cancellare i messaggi visibili? Le conversazioni e le attività in corso restano invariate. Gli agenti possono pubblicare nuovi messaggi.",
+  "task.swarm.loading": "Caricamento della bacheca...",
+  "task.swarm.failed": "Impossibile caricare o reimpostare la bacheca. Prova ad aggiornarla.",
   "command.provider.connect": "Connetti provider",
   "session.activity.waiting": "In attesa di una risposta o approvazione.",
   "session.activity.error": "Errore o connessione persa.",

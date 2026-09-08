@@ -257,6 +257,12 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  dirtyFiles(): string[] {
+    return vscode.workspace.textDocuments
+      .filter((doc) => doc.isDirty && doc.uri.scheme === "file")
+      .map((doc) => doc.uri.fsPath)
+  }
+
   async pickFolder(): Promise<string | undefined> {
     const uris = await vscode.window.showOpenDialog({
       canSelectFiles: false,

@@ -88,4 +88,45 @@ describe("multi-version provisioning", () => {
     expect(flow).toContain("setup:2")
     expect(flow.filter((event) => event.startsWith("prompt:"))).toHaveLength(3)
   })
+
+  it("uses the detailed no-commit error in the final notification", async () => {
+    const message = "This repository has no commits yet. Create an initial commit before using worktrees."
+    const error = mock(() => {})
+    const host = {
+      createOnDisk: mock(async (opts: { onError?: (failure: { message: string; code?: string }) => void }) => {
+        opts.onError?.({ message, code: "no_commits" })
+        return null
+      }),
+      log: () => {},
+      post: () => {},
+      error,
+    } as unknown as MultiVersionHost
+
+    await createMultiVersion({ id: "project-1" } as ProjectContext, host, {
+      type: "agentManager.createMultiVersion",
+      versions: 1,
+    })
+
+    expect(error).toHaveBeenCalledWith(message)
+  })
+
+  it("keeps the generic notification for other failures", async () => {
+    const error = mock(() => {})
+    const host = {
+      createOnDisk: mock(async (opts: { onError?: (failure: { message: string }) => void }) => {
+        opts.onError?.({ message: "Branch already exists" })
+        return null
+      }),
+      log: () => {},
+      post: () => {},
+      error,
+    } as unknown as MultiVersionHost
+
+    await createMultiVersion({ id: "project-1" } as ProjectContext, host, {
+      type: "agentManager.createMultiVersion",
+      versions: 1,
+    })
+
+    expect(error).toHaveBeenCalledWith("Failed to create any of the 1 multi-version worktrees.")
+  })
 })

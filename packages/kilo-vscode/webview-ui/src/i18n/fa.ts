@@ -56,6 +56,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "برد",
+  "task.swarm.refresh": "تازه‌سازی",
+  "task.swarm.reset": "بازنشانی برد",
+  "task.swarm.resetTitle": "این برد بازنشانی شود؟",
+  "task.swarm.resetDescription":
+    "پیام‌های قابل مشاهده پاک شوند؟ گفتگوها و کارهای در حال اجرا تغییر نمی‌کنند. عامل‌ها می‌توانند پیام‌های جدید منتشر کنند.",
+  "task.swarm.loading": "در حال بارگیری برد...",
+  "task.swarm.failed": "بارگیری یا بازنشانی برد ممکن نشد. تازه‌سازی را امتحان کنید.",
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 

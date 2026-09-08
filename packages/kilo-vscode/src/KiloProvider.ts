@@ -91,6 +91,7 @@ import {
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
+import * as Board from "./kilo-provider/session-board"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
@@ -1096,6 +1097,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
+          board: (msg) => this.handleBoardMessage(msg),
           cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
           promoteBackgroundJob: (jobID, sessionID) => this.promoteBackgroundJob(jobID, sessionID),
         })
@@ -3038,6 +3040,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
+  }
+
+  private handleBoardMessage(message: Record<string, unknown>): Promise<boolean> {
+    return Board.handle(message, {
+      client: this.connectionState === "connected" ? this.client : null,
+      routes: this.opts.routeService,
+      projectId: this.opts.projectQualifier?.()?.projectId,
+      directories: this.sessionDirectories,
+      session: this.currentSession,
+      post: (msg) => this.postMessage(msg),
+    })
   }
 
   private async fetchAndSendBackgroundJobs(sessionID: string, requestID: string): Promise<void> {

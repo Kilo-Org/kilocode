@@ -9,7 +9,7 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
-import { batch, createSignal } from "solid-js"
+import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -29,6 +29,7 @@ import { SessionContext } from "../context/session"
 import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
+import { getVSCodeAPI } from "../context/vscode"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
@@ -37,6 +38,7 @@ import type {
   QuestionRequest,
   ReviewComment,
   ReviewCommentEntry,
+  SessionBoard,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
@@ -1513,6 +1515,136 @@ export const WelcomeWithSwitcherAndNotification: Story = {
           <ChatView />
         </div>
       </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+const swarm: SessionBoard = {
+  ownerSessionID: SESSION_ID,
+  revision: 3,
+  messages: [
+    {
+      id: "board_first",
+      timestamp: 1788431800000,
+      from: "main",
+      to: "ses_parser",
+      toLabel: "Inspect parser edge cases and Unicode compatibility",
+      type: "INFO",
+      body: "Check empty input and Unicode identifiers.",
+    },
+    {
+      id: "board_second",
+      timestamp: 1788431900000,
+      from: "ses_parser",
+      fromLabel: "Inspect parser edge cases and Unicode compatibility",
+      to: "ALL",
+      type: "RESULT",
+      body: "The parser accepts both cases. The focused checks pass.",
+    },
+    {
+      id: "board_third",
+      timestamp: 1788432000000,
+      from: "ses_serializer",
+      fromLabel: "Check serializer compatibility",
+      to: "main",
+      type: "ASK",
+      body: "Should serialization preserve whitespace?",
+    },
+  ],
+  hasMore: false,
+}
+
+function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
+  const api = getVSCodeAPI()
+  const [scene, setScene] = createSignal({
+    sessionID: SESSION_ID,
+    projectId: "project-a",
+    parentID: null as string | null,
+    readonly: false,
+    active: true,
+  })
+  createEffect(() => window.postMessage({ type: "webviewActiveChanged", active: scene().active }, "*"))
+  const change = (event: Event) =>
+    setScene((previous) => ({ ...previous, ...(event as CustomEvent<Partial<ReturnType<typeof scene>>>).detail }))
+  window.addEventListener("swarmStoryChange", change)
+  onCleanup(() => window.removeEventListener("swarmStoryChange", change))
+  if (props.board && !new URL(location.href).searchParams.has("manual")) {
+    const post = api.postMessage
+    api.postMessage = (message) => {
+      if (message.type !== "requestSessionBoard" && message.type !== "resetSessionBoard") return post(message)
+      const board = message.type === "resetSessionBoard" ? { ...props.board!, messages: [] } : props.board
+      queueMicrotask(() =>
+        window.postMessage(
+          {
+            type: "sessionBoardLoaded",
+            sessionID: message.sessionID,
+            requestID: message.requestID,
+            projectId: message.projectId,
+            board,
+          },
+          "*",
+        ),
+      )
+    }
+    onCleanup(() => {
+      api.postMessage = post
+    })
+  }
+  onMount(() => {
+    if (!props.open) return
+    const observer = new MutationObserver(() => {
+      const button = document.querySelector<HTMLButtonElement>('[data-slot="task-header-stats"] [aria-label="Board"]')
+      if (!button) return
+      observer.disconnect()
+      button.click()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    onCleanup(() => observer.disconnect())
+  })
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID }),
+    messages: () => [
+      { id: "msg_board_story", sessionID: scene().sessionID, role: "user", time: { created: 1788431800000 } },
+    ],
+    currentSessionID: () => scene().sessionID,
+    currentSession: () => ({
+      id: scene().sessionID,
+      parentID: scene().parentID,
+      title: "Coordinate parser and serializer checks",
+      createdAt: new Date(1788431800000).toISOString(),
+      updatedAt: new Date(1788432000000).toISOString(),
+    }),
+  }
+  return (
+    <SessionContext.Provider value={session as unknown as SessionContextValue}>
+      <TaskHeader readonly={scene().readonly} projectId={scene().projectId} />
+    </SessionContext.Provider>
+  )
+}
+
+export const BoardClosed: Story = {
+  name: "Board, header button",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={swarm} />
+    </StoryProviders>
+  ),
+}
+
+export const BoardEmpty: Story = {
+  name: "Board, hidden when empty",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={{ ...swarm, messages: [] }} />
+    </StoryProviders>
+  ),
+}
+
+export const BoardOpen: Story = {
+  name: "Board, messages",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={swarm} open />
     </StoryProviders>
   ),
 }
