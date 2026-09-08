@@ -51,7 +51,6 @@ export const dict = {
   "agentManager.project.add": "Dodaj projekat",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
   "agentManager.project.missing": "Repozitorij nije pronađen",
-  "agentManager.notGitRepo": "Nije git repozitorij",
 
   "agentManager.updateBase.title": "Ažuriraj iz baze",
   "agentManager.updateBase.selectWorktree": "Prvo odaberite worktree kojim upravlja Agent Manager.",
@@ -155,13 +154,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Sljedeći način rada agenta",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Prethodni način rada agenta",
   "agentManager.shortcuts.showShortcuts": "Prikaži prečice na tastaturi",
-  "agentManager.dialog.removeStaleWorktree.title": "Ukloni zastarjeli Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Ukloni zastarjeli Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Ovo uklanja samo mapiranje u Agent Manageru i ne dira datoteke na disku.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Otkaži",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
-
   "agentManager.dialog.project.select": "Odaberi projekat",
   "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",

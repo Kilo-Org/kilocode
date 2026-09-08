@@ -50,7 +50,6 @@ export const dict = {
   "agentManager.project.add": "إضافة مشروع",
   "agentManager.project.remove": "إزالة من Agent Manager",
   "agentManager.project.missing": "المستودع غير موجود",
-  "agentManager.notGitRepo": "ليس مستودع git",
 
   "agentManager.updateBase.title": "تحديث من الفرع الأساسي",
   "agentManager.updateBase.selectWorktree": "اختر أولًا worktree مُدارًا.",
@@ -152,13 +151,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "وضع الوكيل التالي",
   "agentManager.shortcuts.cyclePreviousAgentMode": "وضع الوكيل السابق",
   "agentManager.shortcuts.showShortcuts": "إظهار اختصارات لوحة المفاتيح",
-  "agentManager.dialog.removeStaleWorktree.title": "إزالة Worktree القديم",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "إزالة Worktree القديم ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "؟ سيؤدي هذا إلى إزالة الربط في Agent Manager فقط وترك الملفات على القرص دون تغيير.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "إلغاء",
-  "agentManager.dialog.removeStaleWorktree.confirm": "إزالة Worktree القديم",
-
   "agentManager.dialog.project.select": "اختيار مشروع",
   "agentManager.dialog.project.missing": "المستودع غير موجود",
   "agentManager.dialog.openWorktree": "شجرة عمل جديدة",

@@ -1787,7 +1787,7 @@ export const SidebarSearchOpen: Story = {
         <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
           <div class="am-section-header">
             <span class="am-section-label">WORKTREES</span>
-            <div class="am-section-actions">
+            <div class="am-project-actions">
               <SidebarSearchMenu
                 items={() => sidebarSearchItems}
                 keybind="⌘F"

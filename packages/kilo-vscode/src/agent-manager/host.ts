@@ -132,8 +132,6 @@ export interface Host {
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
   pickFolder(): Promise<string | undefined>
 
-  /** Whether the experimental multi-project Agent Manager mode is enabled. */
-  multiProject(): boolean
   browserAutomation(): boolean
 
   /** Read the persisted additional-project registry payload. */
@@ -147,8 +145,6 @@ export interface Host {
   /** Subscribe to workspace folder changes (pinned project re-derivation). */
   onDidChangeWorkspaceFolders(cb: () => void): Disposable
 
-  /** Subscribe to multi-project flag changes. */
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 

@@ -18,7 +18,7 @@ function gitRepo(): string {
   return fs.realpathSync(dir)
 }
 
-function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {}) {
+function setup(opts: { workspace?: string; git?: GitOps } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {
@@ -31,7 +31,6 @@ function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
-    enabled: () => opts.enabled ?? true,
     deps: { log: () => {}, exists: (dir) => fs.existsSync(dir) },
   })
   const calls = {
@@ -46,7 +45,6 @@ function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {
   const deps: ProjectMessageDeps = {
     registry,
     contexts,
-    enabled: () => opts.enabled ?? true,
     pickFolder: async () => {
       calls.pick++
       return pickResult
@@ -84,11 +82,9 @@ describe("handleProjectMessage", () => {
     expect(calls.push).toBe(1)
   })
 
-  it("rejects every mutation while the experiment is disabled", async () => {
-    const { deps, calls } = setup({ enabled: false })
+  it("rejects unknown project selection and expansion", async () => {
+    const { deps, calls, registry, contexts } = setup()
     for (const m of [
-      msg("agentManager.addProject"),
-      msg("agentManager.removeProject", { projectId: "prj-x" }),
       msg("agentManager.selectProject", { projectId: "prj-x" }),
       msg("agentManager.setProjectExpanded", { projectId: "prj-x", expanded: true }),
     ]) {
@@ -96,7 +92,10 @@ describe("handleProjectMessage", () => {
     }
     expect(calls.pick).toBe(0)
     expect(calls.activate).toEqual([])
-    expect(calls.error.length).toBe(4)
+    expect(calls.expand).toEqual([])
+    expect(calls.error).toEqual(["The project is unavailable. Check that the repository still exists."])
+    expect(registry.list()).toEqual([])
+    expect(contexts.active()?.root).toBe(WORKSPACE)
   })
 
   it("adds a picked git repository to the registry", async () => {

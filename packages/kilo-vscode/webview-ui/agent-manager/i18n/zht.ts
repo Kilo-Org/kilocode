@@ -49,7 +49,6 @@ export const dict = {
   "agentManager.project.add": "新增專案",
   "agentManager.project.remove": "從 Agent Manager 移除",
   "agentManager.project.missing": "找不到儲存庫",
-  "agentManager.notGitRepo": "不是 git 儲存庫",
 
   "agentManager.updateBase.title": "從基底分支更新",
   "agentManager.updateBase.selectWorktree": "請先選擇受管理的 worktree。",
@@ -149,12 +148,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "下一個代理模式",
   "agentManager.shortcuts.cyclePreviousAgentMode": "上一個代理模式",
   "agentManager.shortcuts.showShortcuts": "顯示鍵盤快捷鍵",
-  "agentManager.dialog.removeStaleWorktree.title": "移除失效 Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "移除失效 Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost": "？這只會移除 Agent Manager 對應，不會變更磁碟上的檔案。",
-  "agentManager.dialog.removeStaleWorktree.cancel": "取消",
-  "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
-
   "agentManager.dialog.project.select": "選擇專案",
   "agentManager.dialog.project.missing": "找不到儲存庫",
   "agentManager.dialog.openWorktree": "新建工作樹",

@@ -52,7 +52,6 @@ export const dict = {
   "agentManager.project.add": "Dodaj projekt",
   "agentManager.project.remove": "Usuń z Agent Manager",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
-  "agentManager.notGitRepo": "Nie jest repozytorium git",
 
   "agentManager.updateBase.title": "Aktualizuj z bazy",
   "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
@@ -157,13 +156,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Następny tryb agenta",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Poprzedni tryb agenta",
   "agentManager.shortcuts.showShortcuts": "Pokaż skróty klawiszowe",
-  "agentManager.dialog.removeStaleWorktree.title": "Usuń nieaktualny Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Usunąć nieaktualny Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? To usunie tylko mapowanie w Agent Manager i nie zmieni plików na dysku.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Anuluj",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
-
   "agentManager.dialog.project.select": "Wybierz projekt",
   "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",

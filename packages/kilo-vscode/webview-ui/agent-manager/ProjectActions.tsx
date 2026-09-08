@@ -8,7 +8,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
 
-export interface WorktreeCreateProps {
+interface WorktreeCreateProps {
   branch: string
   bindings: Record<string, string>
   loaded: boolean
@@ -18,7 +18,7 @@ export interface WorktreeCreateProps {
   onSection: () => void
 }
 
-export const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
+const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
   <div class="am-split-button">
     <TooltipKeybind
       title={props.t("agentManager.shortcuts.advancedWorktree")}

@@ -51,7 +51,6 @@ export const dict = {
   "agentManager.project.add": "프로젝트 추가",
   "agentManager.project.remove": "Agent Manager에서 제거",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
-  "agentManager.notGitRepo": "git 저장소가 아닙니다",
 
   "agentManager.updateBase.title": "베이스에서 업데이트",
   "agentManager.updateBase.selectWorktree": "먼저 관리 중인 worktree를 선택하세요.",
@@ -154,13 +153,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "다음 에이전트 모드",
   "agentManager.shortcuts.cyclePreviousAgentMode": "이전 에이전트 모드",
   "agentManager.shortcuts.showShortcuts": "키보드 단축키 표시",
-  "agentManager.dialog.removeStaleWorktree.title": "오래된 Worktree 제거",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "오래된 Worktree 제거 ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? 이 작업은 Agent Manager 매핑만 제거하며 디스크의 파일은 변경하지 않습니다.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "취소",
-  "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
-
   "agentManager.dialog.project.select": "프로젝트 선택",
   "agentManager.dialog.project.missing": "저장소를 찾을 수 없음",
   "agentManager.dialog.openWorktree": "새 워크트리",

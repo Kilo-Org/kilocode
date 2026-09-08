@@ -50,7 +50,6 @@ export const dict = {
   "agentManager.project.add": "Add project",
   "agentManager.project.remove": "Remove from Agent Manager",
   "agentManager.project.missing": "Repository not found",
-  "agentManager.notGitRepo": "Not a git repository",
 
   "agentManager.updateBase.title": "Update from base",
   "agentManager.updateBase.selectWorktree": "Select a managed worktree first.",
@@ -157,13 +156,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Remove stale worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? This only removes the Agent Manager mapping and leaves files on disk untouched.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancel",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Remove stale worktree",
 
   "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",

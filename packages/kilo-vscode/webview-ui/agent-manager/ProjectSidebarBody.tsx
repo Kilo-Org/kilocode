@@ -28,15 +28,8 @@ import { useBaseUpdate } from "./update-from-base"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
-import {
-  buildSidebarOrder,
-  buildTopLevelItems,
-  sortWorktrees,
-  isGroupEnd,
-  isGroupStart,
-  isGrouped,
-} from "./section-helpers"
-import { LOCAL, nextSelectionAfterDelete } from "./navigate"
+import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import type { WorktreeDelete } from "./worktree-delete"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
@@ -51,6 +44,7 @@ interface Props {
   project: AgentProjectSnapshot
   state?: AgentManagerStateMessage
   store?: ProjectStore
+  deletion: WorktreeDelete
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
   activityFor: (worktreeId: string | null) => Activity
@@ -81,7 +75,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       if (state) store.applyState(state)
     })
   }
-  const [pending, setPending] = createSignal<string>()
   const [renaming, setRenaming] = createSignal<string>()
   const [renamingSection, setRenamingSection] = createSignal<string>()
   const [pendingSection, setPendingSection] = createSignal<
@@ -90,23 +83,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const [dragging, setDragging] = createSignal<string>()
   const [dragOrigin, setDragOrigin] = createSignal<string[]>()
   const [name, setName] = createSignal("")
-  let pendingTimer: ReturnType<typeof setTimeout> | undefined
-  onCleanup(() => clearTimeout(pendingTimer))
-  /** Arm on the first click, execute on the second, matching the legacy sidebar. */
-  const confirmDelete = (worktreeId: string) => {
-    if (props.busy(worktreeId) || props.blocked(worktreeId)) return
-    if (pending() === worktreeId) {
-      clearTimeout(pendingTimer)
-      setPending(undefined)
-      store.setBusy((prev) => new Map([...prev, [worktreeId, { reason: "deleting" as const }]]))
-      post({ type: "agentManager.deleteWorktree", worktreeId })
-      selectAfterDelete(worktreeId)
-      return
-    }
-    clearTimeout(pendingTimer)
-    setPending(worktreeId)
-    pendingTimer = setTimeout(() => setPending(undefined), 2500)
-  }
   const state = () => props.state
   const sessions = (worktreeId: string | null) => rootSessions(props.sessions ?? [], worktreeId)
   const active = () => props.selectedProject === props.project.id
@@ -127,21 +103,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
   const localState = () => props.activityFor(null)
-
-  const selectAfterDelete = (id: string) => {
-    if (!active() || props.selection !== id) return
-    const ids = new Set(store.managedSessions().map((item) => item.worktreeId))
-    const order = buildSidebarOrder(top(), sorted(), sections(), members, id)
-      .filter((item) => item.type === "wt")
-      .map((item) => item.id)
-    const next = nextSelectionAfterDelete(
-      id,
-      order,
-      (id) => ids.has(id) && !props.busy(id) && !store.staleWorktreeIds().has(id),
-    )
-    if (next === LOCAL) return props.onSelectLocal(props.project.id)
-    props.onSelectWorktree(props.project.id, next)
-  }
 
   const row = (id: string) =>
     projectWorktreeRow({
@@ -274,7 +235,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           label={worktree.label || label()}
           subtitle={worktree.label ? (worktree.label !== worktree.branch ? worktree.branch : undefined) : subtitle()}
           active={active() && props.selection === worktree.id}
-          pendingDelete={pending() === worktree.id}
+          pendingDelete={
+            props.deletion.pending()?.projectId === props.project.id &&
+            props.deletion.pending()?.worktreeId === worktree.id
+          }
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
@@ -300,10 +264,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           }
           onMoveToNewSection={() => createSection([worktree.id])}
           onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
-          onCancelDelete={() => setPending(undefined)}
+          onCancelDelete={props.deletion.cancel}
           onDelete={(event) => {
             event.stopPropagation()
-            confirmDelete(worktree.id)
+            props.deletion.confirm(props.project.id, worktree.id)
           }}
           onStartRename={(value) => {
             setName(value)
@@ -314,7 +278,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onCancelRename={cancelRename}
           onRemoveStale={() => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
-            selectAfterDelete(worktree.id)
+            props.deletion.select(props.project.id, worktree.id)
           }}
           onUpdateBase={() =>
             updateBase(

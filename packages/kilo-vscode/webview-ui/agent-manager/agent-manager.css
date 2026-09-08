@@ -319,11 +319,6 @@ html[data-theme="kilo-vscode"]
   text-align: center;
 }
 
-.am-section-grow {
-  flex: 1;
-  min-height: 0;
-}
-
 .am-section-header {
   display: flex;
   align-items: center;
@@ -461,12 +456,6 @@ html[data-theme="kilo-vscode"]
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-.am-section-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
 /* Worktree list */
 
 .am-worktree-list {
@@ -476,11 +465,6 @@ html[data-theme="kilo-vscode"]
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 50vh;
-}
-
-.am-section-grow .am-worktree-list {
-  max-height: none;
-  flex: 1;
 }
 
 /* Worktree item — larger card style */
@@ -939,12 +923,6 @@ html[data-theme="kilo-vscode"]
   font-variant-numeric: tabular-nums;
 }
 
-.am-worktree-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .am-worktree-stats-skeleton {
   display: flex;
   align-items: center;
@@ -1385,35 +1363,6 @@ html[data-theme="kilo-vscode"]
 
 .am-wt-grouped.am-worktree-item-active {
   border-left-color: var(--border-focus, #007fd4);
-}
-
-/* Create worktree button (empty state) */
-
-.am-worktree-create {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px;
-  border: 1px dashed var(--border-weak-base);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-12);
-  cursor: pointer;
-  transition:
-    background-color 120ms,
-    color 120ms;
-}
-
-.am-worktree-create:hover {
-  background: var(--surface-inset-base-hover);
-  color: var(--text-base);
-}
-
-.am-worktree-create:active {
-  opacity: 0.8;
 }
 
 /* Detail pane */
@@ -2793,54 +2742,6 @@ body.am-wt-dragging-active * {
   flex-shrink: 0;
 }
 
-/* Confirmation dialog */
-
-.am-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 0 24px 16px 24px;
-}
-
-.am-confirm-message {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: var(--font-size-base);
-  color: var(--text-base);
-  line-height: 1.5;
-}
-
-.am-confirm-message > [data-component="icon"] {
-  flex-shrink: 0;
-  color: var(--icon-critical-base);
-  margin-top: 2px;
-}
-
-.am-confirm-branch {
-  font-family: var(--font-family-mono, monospace);
-  font-size: var(--font-size-small);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset-base);
-  white-space: nowrap;
-}
-
-.am-confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.am-confirm-delete {
-  background: var(--surface-critical-strong) !important;
-  color: var(--text-on-brand-base) !important;
-}
-
-.am-confirm-delete:hover {
-  opacity: 0.9;
-}
-
 /* Keyboard shortcut hint inside buttons */
 
 .am-shortcut-hint {
@@ -3695,17 +3596,6 @@ body.am-wt-dragging-active * {
   50% {
     opacity: 0.28;
   }
-}
-
-/* Not a git repo notice */
-
-.am-not-git-notice {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  font-size: var(--kilo-font-size-12);
-  color: var(--text-weak);
 }
 
 .am-skeleton-list {
@@ -4730,11 +4620,6 @@ body.vscode-high-contrast-light {
     border-color: var(--vscode-contrastBorder, transparent);
   }
 
-  /* Create worktree button */
-  .am-worktree-create {
-    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
-  }
-
   /* Tab bar */
   .am-tab-bar {
     border-bottom-color: var(--vscode-contrastBorder, var(--border-weak-base));
@@ -4904,7 +4789,6 @@ body.vscode-high-contrast-light {
   .am-local-item:focus-visible,
   .am-worktree-item:focus-visible,
   .am-tab:focus-visible,
-  .am-worktree-create:focus-visible,
   .am-nv-pill:focus-visible,
   .am-tab-switcher-pill:focus-visible,
   .am-diff-toggle-btn:focus-visible,

@@ -30,7 +30,6 @@ export function rememberSelectionTab(
 export function createTabMemory(opts: {
   selection: () => string | null
   tab: () => string | undefined
-  multi: () => boolean
   applied: () => string | undefined
   active: () => string | undefined
   owns: (selection: string) => boolean
@@ -43,11 +42,8 @@ export function createTabMemory(opts: {
     const sel = opts.selection()
     const tab = opts.tab()
     if (sel === null || !tab) return
-    if (opts.multi() && opts.applied() !== opts.active()) return
-    if (
-      opts.multi() &&
-      !(sel === LOCAL ? opts.localTab?.(tab) || opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel))
-    )
+    if (opts.applied() !== opts.active()) return
+    if (!(sel === LOCAL ? opts.localTab?.(tab) || opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel)))
       return
     rememberSelectionTab(opts.set, sel, tab)
   }

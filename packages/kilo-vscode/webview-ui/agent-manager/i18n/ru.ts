@@ -54,7 +54,6 @@ export const dict = {
   "agentManager.project.add": "Добавить проект",
   "agentManager.project.remove": "Удалить из Agent Manager",
   "agentManager.project.missing": "Репозиторий не найден",
-  "agentManager.notGitRepo": "Не является git-репозиторием",
 
   "agentManager.updateBase.title": "Обновить из базовой ветки",
   "agentManager.updateBase.selectWorktree": "Сначала выберите управляемый worktree.",
@@ -159,13 +158,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Следующий режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Предыдущий режим агента",
   "agentManager.shortcuts.showShortcuts": "Показать сочетания клавиш",
-  "agentManager.dialog.removeStaleWorktree.title": "Удалить устаревший Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Удалить устаревший Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Это удалит только привязку в Agent Manager и не затронет файлы на диске.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Отмена",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
-
   "agentManager.dialog.project.select": "Выбрать проект",
   "agentManager.dialog.project.missing": "Репозиторий не найден",
   "agentManager.dialog.openWorktree": "Новый worktree",

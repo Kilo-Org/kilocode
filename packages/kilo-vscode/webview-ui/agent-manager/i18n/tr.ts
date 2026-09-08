@@ -53,7 +53,6 @@ export const dict = {
   "agentManager.project.add": "Proje ekle",
   "agentManager.project.remove": "Agent Manager'dan kaldır",
   "agentManager.project.missing": "Depo bulunamadı",
-  "agentManager.notGitRepo": "Bir git deposu değil",
 
   "agentManager.updateBase.title": "Temel daldan güncelle",
   "agentManager.updateBase.selectWorktree": "Önce yönetilen bir worktree seçin.",
@@ -162,13 +161,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Sonraki agent modu",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Önceki agent modu",
   "agentManager.shortcuts.showShortcuts": "Klavye kısayollarını göster",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Eskimiş Worktree'yi Kaldır",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Eskimiş worktree kaldırılsın mı: ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Bu, yalnızca Agent Manager eşlemesini kaldırır ve diskteki dosyalara dokunmaz.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "İptal",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
   "agentManager.dialog.project.select": "Proje seç",
   "agentManager.dialog.project.missing": "Depo bulunamadı",

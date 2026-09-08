@@ -26,10 +26,6 @@ export interface ProjectLiveDeps {
     setLocalStats: (stats: LocalGitStats) => void
     setPrStatuses: (update: (prev: Record<string, PRStatus | null>) => Record<string, PRStatus | null>) => void
   }
-  /** Whether the tagged project currently drives the interactive body. */
-  active: (pid: string | undefined) => boolean
-  /** Branch label side-effect for the active project's local stats. */
-  branch: (branch: string | undefined) => void
 }
 
 export function createProjectLive(deps: ProjectLiveDeps) {
@@ -52,7 +48,6 @@ export function createProjectLive(deps: ProjectLiveDeps) {
       const ev = msg as AgentManagerLocalStatsMessage
       deps.ensure(ev.projectId).setLocalStats(ev.stats)
       if (ev.projectId) setLocal((prev) => ({ ...prev, [ev.projectId!]: ev.stats }))
-      if (deps.active(ev.projectId)) deps.branch(ev.stats.branch)
       return true
     }
     if (msg.type === "agentManager.prStatus") {

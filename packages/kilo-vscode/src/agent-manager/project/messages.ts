@@ -3,7 +3,7 @@
  *
  * Extracted from AgentManagerProvider (file-size cap) and kept free of VS Code
  * imports so the flows are unit-testable. All handlers fail closed: unknown
- * projects and disabled experiments leave state untouched.
+ * projects leave state untouched.
  */
 
 import simpleGit from "simple-git"
@@ -36,8 +36,6 @@ export function routeProjectSession(
 export interface ProjectMessageDeps {
   registry: ProjectRegistry
   contexts: ProjectContexts
-  /** Whether the multi-project experiment is enabled. */
-  enabled: () => boolean
   /** Show a folder picker; resolves undefined when cancelled. */
   pickFolder: () => Promise<string | undefined>
   /** Re-initialize provider state for a freshly activated context. */
@@ -105,9 +103,8 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
 }
 
 async function activateSelection(requested: SidebarTarget, deps: ProjectMessageDeps, restore = false): Promise<void> {
-  if (disabled(deps)) return
   const ctx = deps.contexts.resolve(requested.projectId)
-  if (!ctx || !deps.contexts.usable(requested.projectId)) {
+  if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
@@ -141,9 +138,8 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
  * already gone (the session may be live only).
  */
 async function openSessionLocally(projectId: string, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
   const ctx = deps.contexts.resolve(projectId)
-  if (!ctx || !deps.contexts.usable(projectId)) {
+  if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
@@ -196,14 +192,7 @@ function rememberTarget(projectId: string, target: SidebarTarget, deps: ProjectM
   state.setActiveTarget(target)
 }
 
-function disabled(deps: ProjectMessageDeps): boolean {
-  if (deps.enabled()) return false
-  deps.error("Multi-project Agent Manager is disabled. Enable it in Kilo Settings > Experimental to add projects.")
-  return true
-}
-
 async function addProject(deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
   const dir = await deps.pickFolder()
   if (!dir) return
   // resolveProjectRoot (not resolveGitRoot) so a folder inside a linked worktree
@@ -245,14 +234,12 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
 }
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
   await deps.contexts.remove(id)
   await deps.registry.remove(id)
   deps.push()
 }
 
 function selectProject(id: string, deps: ProjectMessageDeps): void {
-  if (disabled(deps)) return
   const ctx = deps.contexts.activate(id)
   if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
@@ -264,8 +251,7 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
 }
 
 async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
-  const ctx = expanded ? deps.contexts.usable(id) : deps.contexts.resolve(id)
+  const ctx = deps.contexts.resolve(id)
   if (!ctx) {
     deps.push()
     return
