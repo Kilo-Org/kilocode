@@ -318,3 +318,91 @@ describe("KiloSecurityGate reviewer progress", () => {
     expect(records).toEqual([])
   })
 })
+
+/**
+ * A binding is made once, at bootstrap, in whichever workspace happened to start the process — and
+ * the comparison that authorized its transport was made against *that* workspace's merged config.
+ * A process can serve several, so the comparison is made again here, against the configuration this
+ * ask actually arrives with. Otherwise one workspace's proof authorizes calls for every other,
+ * including one whose repository repointed the provider at a server of its own.
+ */
+describe("KiloSecurityGate reviewer transport", () => {
+  const trusted = { small_model: "anthropic/claude-haiku-4-5" }
+  const reviewerFlag = process.env["KILO_SECURITY_REVIEWER"]
+
+  afterEach(() => {
+    if (reviewerFlag === undefined) delete process.env["KILO_SECURITY_REVIEWER"]
+    else process.env["KILO_SECURITY_REVIEWER"] = reviewerFlag
+  })
+
+  const scoped = (effective: Record<string, unknown>) => ({
+    getGlobal: () => Effect.succeed(trusted as never),
+    get: () => Effect.succeed(effective as never),
+  })
+
+  const counting = () => {
+    const state = { called: 0 }
+    SecurityReviewer.bind(
+      () => {
+        state.called++
+        return Promise.resolve('{"decision":"allow","reason_code":"OK"}')
+      },
+      undefined,
+      "anthropic/claude-haiku-4-5",
+    )
+    return state
+  }
+
+  test("is consulted where the transport is the trusted one", async () => {
+    on()
+    process.env["KILO_SECURITY_REVIEWER"] = "1"
+    const state = counting()
+
+    const out = await run({ ...unclassified, config: scoped(trusted) })
+
+    expect(state.called).toBe(1)
+    expect(out?.decision).toBe("allow")
+  })
+
+  // The stage's switch is an environment variable, so it answers the same in every workspace of the
+  // process. Treating its absence as disagreement would drop the reviewer for a binding made by any
+  // caller that binds directly — which is how the pipeline itself, and the benchmark, use it.
+  test("keeps a binding when the only refusal is the process-wide flag", async () => {
+    on()
+    delete process.env["KILO_SECURITY_REVIEWER"]
+    const state = counting()
+
+    const out = await run({ ...unclassified, config: scoped(trusted) })
+
+    expect(state.called).toBe(1)
+    expect(out?.decision).toBe("allow")
+  })
+
+  test("is not consulted where this workspace has no trusted model of its own", async () => {
+    on()
+    process.env["KILO_SECURITY_REVIEWER"] = "1"
+    const state = counting()
+
+    const out = await run({
+      ...unclassified,
+      config: { getGlobal: () => Effect.succeed({} as never), get: () => Effect.succeed({} as never) },
+    })
+
+    expect(state.called).toBe(0)
+    expect(out?.decision).toBe("ask")
+  })
+
+  test("is not consulted where this workspace's config repoints the transport", async () => {
+    on()
+    process.env["KILO_SECURITY_REVIEWER"] = "1"
+    const state = counting()
+
+    const out = await run({
+      ...unclassified,
+      config: scoped({ ...trusted, provider: { anthropic: { options: { baseURL: "http://elsewhere.example" } } } }),
+    })
+
+    expect(state.called).toBe(0)
+    expect(out?.decision).toBe("ask")
+  })
+})

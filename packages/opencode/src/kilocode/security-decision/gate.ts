@@ -6,6 +6,7 @@ import { SecurityAuthorization } from "./authorization"
 import { SecurityDecisionAdapter } from "./adapter"
 import { SecurityDecisionRules as R } from "./rules"
 import { SecurityReviewer } from "./reviewer"
+import { SecurityReviewerConfig } from "./reviewer-config"
 import type { SecurityDecisionTypes as T } from "./types"
 
 /**
@@ -32,7 +33,12 @@ export namespace KiloSecurityGate {
   }>
 
   export type Input = Readonly<{
-    config: Pick<Config.Interface, "getGlobal">
+    /**
+     * This ask's own configuration. `get` is optional only so a caller with nothing merged to offer
+     * can still reach the deterministic decision; where it is present the reviewer's transport is
+     * re-proven against it.
+     */
+    config: Pick<Config.Interface, "getGlobal"> & Partial<Pick<Config.Interface, "get">>
     workspace: string
     source?: "builtin" | "mcp" | "unknown"
     permission: string
@@ -75,6 +81,30 @@ export namespace KiloSecurityGate {
   function rank(action: PermissionV1.Action) {
     return action === "deny" ? 2 : action === "ask" ? 1 : 0
   }
+
+  /**
+   * Whether the bound reviewer's transport is still the trusted one *for this ask*.
+   *
+   * Resolution reads the caller's own global config and its merged view, so running it here answers
+   * the question in the asking workspace's own terms. Anything unreadable, disabled or resolving to
+   * a different model than the one bound leaves the reviewer out of this call.
+   */
+  const provenHere = Effect.fn("KiloSecurityGate.provenHere")(function* (
+    config: Pick<Config.Interface, "getGlobal"> & Partial<Pick<Config.Interface, "get">>,
+  ) {
+    // Nothing merged to compare against: the caller cannot express a repointed transport either, so
+    // this is the single-configuration case the binding was already proven for.
+    if (typeof config.get !== "function") return true
+    const resolved = yield* SecurityReviewerConfig.resolve(
+      config as Pick<Config.Interface, "get" | "getGlobal">,
+    ).pipe(Effect.catchCause(() => Effect.succeed({ enabled: false, reason: "config_unreadable" } as const)))
+    // The stage's own switch lives in the environment precisely so a clone cannot set it, which makes
+    // it process-wide: reading it again in another workspace cannot say anything the binding did not
+    // already settle. Every other refusal is about *this* workspace — its provider block, its model,
+    // its privacy setting — and a binding proven somewhere else is not an answer to any of them.
+    if (!resolved.enabled) return resolved.reason === "flag_off"
+    return SecurityReviewer.attributed().model === `${resolved.providerID}/${resolved.modelID}`
+  })
 
   export const evaluate = Effect.fn("KiloSecurityGate.evaluate")(function* (input: Input) {
     if (!SecurityDecisionAdapter.enabled()) return undefined
@@ -190,6 +220,12 @@ export namespace KiloSecurityGate {
     if (input.blocked) return { ...directive, reviewable: false }
     // Nothing is asked of a model that is not there, so nothing is reported as running either.
     if (!SecurityReviewer.bound()) return directive
+    // The binding was authorized once, at bootstrap, by comparing the merged provider entry against
+    // the trusted one — in whichever workspace started this process. A process can serve several, so
+    // that one proof must not travel: it is made again here, against the configuration this ask
+    // arrives with. A workspace whose repository repointed the transport gets no reviewer, and the
+    // deterministic ask stands, which is the same outcome as having no reviewer at all.
+    if (!(yield* provenHere(input.config))) return directive
 
     if (input.audit)
       yield* input
