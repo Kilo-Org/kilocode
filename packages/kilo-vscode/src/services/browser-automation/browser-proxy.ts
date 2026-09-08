@@ -267,7 +267,7 @@ export class BrowserProxy {
     server.on("upgrade", (request, client, head) => void this.upgrade(request, client, head))
     server.on("connect", (request, client, head) => this.tunnel(request, client, head))
     server.on("clientError", (_error, socket) => {
-      socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n", () => socket.destroy())
+      socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n")
     })
   }
 
@@ -339,7 +339,6 @@ export class BrowserProxy {
     const challenge = status === 407 ? `Proxy-Authenticate: ${this.challenge()["Proxy-Authenticate"]}\r\n` : ""
     client.end(
       `HTTP/1.1 ${status} Proxy Request Rejected\r\n${challenge}Connection: close\r\nContent-Length: 0\r\n\r\n`,
-      () => client.destroy(),
     )
   }
 

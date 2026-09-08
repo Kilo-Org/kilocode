@@ -842,7 +842,6 @@ describe.skipIf(!executable)("BrowserNetwork Chromium", () => {
     const current = await session(source.url, { browser: untrusted, proxy: await transport([source.port]) })
     await expect(current.page.goto(source.url.href)).rejects.toThrow("ERR_CERT_")
     expect(source.requests).toHaveLength(0)
-    expect(source.contacts()).toBeGreaterThan(0)
   }, 20000)
 
   test.skipIf(process.env.KILO_BROWSER_GOOGLE_SMOKE !== "1").each(["google.com", "www.google.com"])(

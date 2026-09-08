@@ -91,6 +91,10 @@ function closed(socket: Socket) {
   })
 }
 
+function destroyed(response: ServerResponse) {
+  return response.destroyed ?? response.socket?.destroyed ?? false
+}
+
 function command(proxy: BrowserProxy, target: string) {
   return `CONNECT ${target} HTTP/1.1\r\nHost: ${target}\r\nProxy-Authorization: ${auth(proxy)}\r\n\r\n`
 }
@@ -364,7 +368,7 @@ describe("browser proxy", () => {
     if (mode === "disposal") await value.close()
     if (mode === "disconnect") socket.destroy()
     await end
-    expect(upstream.destroyed).toBe(true)
+    expect(destroyed(upstream)).toBe(true)
     expect(calls).toEqual(["8.8.8.8"])
   })
 
@@ -642,14 +646,14 @@ describe("browser proxy", () => {
       const upstream = await pending.promise
       const end = once(upstream, "close")
       expect((await response).toString()).toStartWith("HTTP/1.1 200")
-      expect(upstream.destroyed).toBe(false)
+      expect(destroyed(upstream)).toBe(false)
       const done = closed(socket)
       if (mode === "end") upstream.end()
       if (mode === "disconnect") socket.destroy()
       if (mode === "disposal") await value.close()
       if (mode === "error") upstream.destroy()
       await Promise.all([end, done])
-      expect(upstream.destroyed).toBe(true)
+      expect(destroyed(upstream)).toBe(true)
     },
   )
 
@@ -663,7 +667,7 @@ describe("browser proxy", () => {
     const end = closed(upstream)
     expect((await response).status).toBe(502)
     await end
-    expect(upstream.destroyed).toBe(true)
+    expect(destroyed(upstream)).toBe(true)
   })
 
   test("does not contact a non-loopback answer for an approved localhost origin", async () => {

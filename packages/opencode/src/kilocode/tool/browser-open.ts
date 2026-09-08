@@ -1,5 +1,4 @@
-import { isIP } from "node:net"
-import { isPublicAddress } from "@kilocode/sandbox/destination"
+import { isIpAddress, isPublicAddress } from "@kilocode/sandbox/destination"
 import { HttpClient } from "effect/unstable/http"
 import { Effect, Schema } from "effect"
 import { Env } from "@/env"
@@ -88,7 +87,7 @@ export const BrowserOpenTool = Tool.define<
             url.protocol === "https:" &&
             host !== "localhost" &&
             !host.endsWith(".localhost") &&
-            (!isIP(host) || isPublicAddress(host))
+            (!isIpAddress(host) || isPublicAddress(host))
           if ((!local && !remote) || url.username || url.password) {
             return {
               title: "Browser URL blocked",
