@@ -6,6 +6,12 @@ export interface GhAuthor {
   login?: string
   avatarUrl?: string
 }
+export interface GhReactionGroup {
+  content?: string
+  reactors?: { totalCount?: number }
+  users?: { totalCount?: number }
+  viewerHasReacted?: boolean
+}
 export interface GhComment {
   id: string
   author?: GhAuthor
@@ -16,6 +22,7 @@ export interface GhComment {
   url?: string
   createdAt?: string
   diffHunk?: string
+  reactionGroups?: GhReactionGroup[]
 }
 export interface GhThread {
   id?: string
@@ -46,6 +53,7 @@ export interface GhConversationComment {
   body?: string
   createdAt?: string
   url?: string
+  reactionGroups?: GhReactionGroup[]
 }
 
 export interface GhReviewWithBody {
@@ -55,6 +63,7 @@ export interface GhReviewWithBody {
   state?: string
   submittedAt?: string
   url?: string
+  reactionGroups?: GhReactionGroup[]
 }
 
 export interface PRResult {

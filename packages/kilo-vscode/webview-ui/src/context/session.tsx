@@ -566,12 +566,16 @@ export const SessionProvider: ParentComponent = (props) => {
     if (pending.modelID) selectModel(KILO_PROVIDER_ID, pending.modelID)
   })
 
-  function promptAgent(sessionID?: string) {
-    return resolvePromptAgent({
-      sessionID,
-      selections: store.agentSelections,
-      pending: pendingAgentSelection(),
-    })
+  function submission(sessionID?: string, model = selected(sessionID)) {
+    return {
+      model: model ?? undefined,
+      variant: variants.request(sessionID),
+      agent: resolvePromptAgent({
+        sessionID,
+        selections: store.agentSelections,
+        pending: pendingAgentSelection(),
+      }),
+    }
   }
 
   function hideErrors(sid: string) {
@@ -2146,16 +2150,16 @@ export const SessionProvider: ParentComponent = (props) => {
         : null
     if (preview) {
       const scope = draftID ?? sid
-      const agent = promptAgent(scope)
+      const settings = submission(scope, selection)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text,
         messageID,
-        providerID: selection.providerID,
-        modelID: selection.modelID,
-        agent,
-        variant: variants.request(scope),
+        providerID: settings.model?.providerID,
+        modelID: settings.model?.modelID,
+        agent: settings.agent,
+        variant: settings.variant,
         files,
         review,
         browserFeedback,
@@ -2178,7 +2182,7 @@ export const SessionProvider: ParentComponent = (props) => {
         setDraftSessionID(scope)
       }
     }
-    const agent = promptAgent(scope)
+    const settings = submission(scope, selection)
 
     submit({
       type: "sendMessage",
@@ -2186,10 +2190,10 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID: selection.providerID,
-      modelID: selection.modelID,
-      agent,
-      variant: variants.request(scope),
+      providerID: settings.model?.providerID,
+      modelID: settings.model?.modelID,
+      agent: settings.agent,
+      variant: settings.variant,
       files,
       review,
       browserFeedback,
@@ -2252,16 +2256,16 @@ export const SessionProvider: ParentComponent = (props) => {
         ? cloudPreviewId()
         : null
     if (preview) {
-      const agent = promptAgent(scope)
+      const settings = submission(scope, effectiveSelection)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
         messageID: Identifier.ascending("message"),
-        providerID: effectiveProvider,
-        modelID: effectiveModel,
-        agent,
-        variant: variants.request(scope),
+        providerID: settings.model?.providerID,
+        modelID: settings.model?.modelID,
+        agent: settings.agent,
+        variant: settings.variant,
         files,
         command,
         commandArgs: args,
@@ -2285,7 +2289,7 @@ export const SessionProvider: ParentComponent = (props) => {
         setDraftSessionID(scope)
       }
     }
-    const agent = promptAgent(scope)
+    const settings = submission(scope, effectiveSelection)
 
     vscode.postMessage({
       type: "sendCommand",
@@ -2294,10 +2298,10 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID: effectiveProvider,
-      modelID: effectiveModel,
-      agent,
-      variant: variants.request(scope),
+      providerID: settings.model?.providerID,
+      modelID: settings.model?.modelID,
+      agent: settings.agent,
+      variant: settings.variant,
       files,
       agentManagerContext: context,
     })
@@ -2909,6 +2913,7 @@ export const SessionProvider: ParentComponent = (props) => {
     disconnectMcp,
     authenticateMcp,
     selectedAgent: agentForScope,
+    submission,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     setSessionModel: models.session,

@@ -126,7 +126,7 @@ describe("agent manager diff state", () => {
     expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
-  it("opens every diff initially", () => {
+  it("opens reviewable diffs initially while keeping generated files collapsed", () => {
     expect(
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
@@ -135,7 +135,7 @@ describe("agent manager diff state", () => {
         diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
-    ).toEqual(["src/app.ts", "node_modules/pkg/index.js", "src/huge.ts"])
+    ).toEqual(["src/app.ts", "src/huge.ts"])
 
     const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
     expect(initialOpenFiles(many)).toHaveLength(26)
@@ -185,6 +185,14 @@ describe("agent manager diff state", () => {
     expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
       open: ["src/app.ts", "src/new.ts"],
       known: ["src/app.ts", "src/new.ts"],
+    })
+  })
+
+  it("keeps newly arriving generated files collapsed", () => {
+    const current = [diff({ file: "src/app.ts" }), diff({ file: "src/generated.ts", generatedLike: true })]
+    expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
+      open: ["src/app.ts"],
+      known: ["src/app.ts", "src/generated.ts"],
     })
   })
 

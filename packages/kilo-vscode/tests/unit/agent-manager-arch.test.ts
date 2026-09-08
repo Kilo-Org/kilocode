@@ -467,6 +467,19 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
+  it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf("const closeActiveTab = () =>")
+    const end = source.indexOf("// Close the currently selected worktree", start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("termHandlers.closeFocused()")
+    expect(action).toContain("termHandlers.closeActive()")
+    expect(action).toContain("if (tabs.length === 0)")
+  })
+
   it("forwards the quick-worktree command to immediate creation", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
     const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')

@@ -12,6 +12,9 @@ import { turnSourceId } from "./sources/turn"
 import { WORKSPACE_SOURCE_ID } from "./sources/worktree"
 import type { PanelContext } from "./types"
 import { SourceController } from "./SourceController"
+import { addCommentReaction, isPRReactionContent, removeCommentReaction } from "../agent-manager/pr/PRActions"
+import type { PRStatus } from "../agent-manager/types"
+import { ghErrorReason } from "../agent-manager/pr/am-pr-utils"
 
 type CommentHandler = (comments: unknown[], autoSend: boolean) => void
 type OpenArgs = {
@@ -43,6 +46,27 @@ function openSource(arg: OpenArgs | undefined, sessionId: string | undefined): s
 
 function openTarget(arg: OpenArgs | undefined, handler: CommentHandler | undefined): CommentHandler | undefined {
   return typeof arg?.onComments === "function" ? arg.onComments : handler
+}
+
+type ReactionRequest = {
+  commentId: string
+  reaction: Parameters<typeof addCommentReaction>[1]
+  add: boolean
+}
+
+function reactionRequest(msg: Record<string, unknown>): ReactionRequest | undefined {
+  if (typeof msg.commentId !== "string") return
+  if (!isPRReactionContent(msg.reaction)) return
+  if (typeof msg.add !== "boolean") return
+  return { commentId: msg.commentId, reaction: msg.reaction, add: msg.add }
+}
+
+function hasReactionComment(pr: PRStatus | undefined, id: string): boolean {
+  return (
+    pr?.comments?.comments.some((comment) => comment.id === id) ||
+    pr?.conversation?.some((comment) => comment.id === id) ||
+    false
+  )
 }
 
 function context(
@@ -248,6 +272,42 @@ export class DiffViewerProvider implements vscode.Disposable {
     handler?.(msg)
   }
 
+  private async onCommentReaction(msg: Record<string, unknown>): Promise<void> {
+    const request = reactionRequest(msg)
+    if (!request) return
+    const { commentId, reaction, add } = request
+    const result = (success: boolean, error?: string) => {
+      void this.panel?.webview.postMessage({
+        type: "agentManager.commentReactionResult",
+        worktreeId: "diff",
+        commentId,
+        reaction,
+        add,
+        success,
+        ...(error ? { error } : {}),
+      })
+    }
+    const pr = this.prPolling.getStatus()
+    if (!hasReactionComment(pr, commentId)) {
+      result(false, "PR comment not found. Refresh and try again.")
+      return
+    }
+    const dir = this.ctx?.dir ?? this.ctx?.workspaceRoot ?? getWorkspaceRoot()
+    if (!dir) {
+      result(false, "The PR comment directory is unavailable.")
+      return
+    }
+    try {
+      await (add ? addCommentReaction(commentId, reaction, dir) : removeCommentReaction(commentId, reaction, dir))
+      result(true)
+      this.prPolling.refresh()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.log("Failed to update PR comment reaction:", message)
+      result(false, ghErrorReason(message))
+    }
+  }
+
   private readonly messageHandlers: Record<string, (msg: Record<string, unknown>) => void> = {
     webviewReady: () => this.onWebviewReady(),
     selectSource: (msg) => {
@@ -261,6 +321,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     "agentManager.copyToClipboard": (msg) => {
       if (typeof msg.text === "string") void vscode.env.clipboard.writeText(msg.text)
     },
+    "agentManager.commentReaction": (msg) => void this.onCommentReaction(msg),
     openExternal: (msg) => {
       if (typeof msg.url !== "string" || !isHttpsUrl(msg.url)) return
       void vscode.env.openExternal(vscode.Uri.parse(msg.url))

@@ -132,6 +132,7 @@ for (const [label, config] of [
           expect(Permission.evaluate(permission, "src/index.ts", plan!.permission).action).toBe(expected)
         }
         expect(Permission.evaluate("plan_exit", "*", plan!.permission).action).toBe(expected)
+        expect(Permission.evaluate("open_plan", "*", plan!.permission).action).toBe(expected)
         expect(Permission.disabled(["read", "grep"], ask!.permission)).toEqual(new Set())
       },
     })

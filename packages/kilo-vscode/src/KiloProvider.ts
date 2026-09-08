@@ -2067,13 +2067,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /** Non-blocking: refresh session metadata + status for the webview after switching. */
-  private refreshSessionDetails(sessionID: string, dir: string, signal?: AbortSignal): void {
+  private async refreshSessionDetails(
+    sessionID: string,
+    dir: string,
+    signal?: AbortSignal,
+  ): Promise<Session | undefined> {
     if (!this.client) return
     void this.refreshGitStatus(this.sessionGitDirectories.get(sessionID) ?? dir, sessionID)
     const revision = this.revisions.get(sessionID)
     const refresh = (this.refreshes.get(sessionID) ?? 0) + 1
     this.refreshes.set(sessionID, refresh)
-    this.client.session
+    const details = this.client.session
       .get({ sessionID, directory: dir })
       .then((r) => {
         if (!r.data || signal?.aborted || this.contextSessionID !== sessionID) return
@@ -2088,10 +2092,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.setCurrentSession(r.data)
         this.contextSessionID = r.data.id
         this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(r.data) })
+        return r.data
       })
-      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e))
+      .catch((e: unknown) => {
+        console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e)
+        return undefined
+      })
     this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
     this.sync(sessionID, dir, signal, refresh)
+    return details
   }
 
   private sync(sessionID: string, dir: string, signal?: AbortSignal, refresh?: number): void {
@@ -2170,8 +2179,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (abort) {
       this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
-      this.refreshSessionDetails(sessionID, dir, abort.signal)
     }
+    const revision = this.revisions.get(sessionID)
+    const details = abort ? this.refreshSessionDetails(sessionID, dir, abort.signal) : undefined
     const since = mode === "reconcile" ? Date.now() : undefined
     try {
       const page = await fetchMessagePage(this.client, {
@@ -2180,6 +2190,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         limit: options.limit ?? MESSAGE_PAGE_LIMIT,
         before: options.before,
         signal: abort?.signal,
+        tail:
+          details &&
+          (async () => {
+            const session = await details
+            return !!session && !session.revert && this.revisions.get(sessionID) === revision
+          }),
       })
       if (abort?.signal.aborted) return
       // Drop results for a session deleted mid-fetch. Prepend/reconcile have
@@ -3906,11 +3922,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private configSettings() {
+    const naming = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
     return {
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       multiProject: this.multiProjectSetting(),
       browserAutomation: this.browserAutomationSetting(),
+      "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
+      "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
     }
   }
 

@@ -368,7 +368,9 @@ export type AgentManagerPromptRequest = {
   sessionID: string
   operation: "prompt"
   targetSessionID: string
+  sourceSessionID?: string
   prompt: string
+  replyTo?: AgentManagerRequestId
 }
 
 export type AgentManagerStopRequest = {
@@ -5092,6 +5094,7 @@ export type EventKilocodeAgentManagerStart = {
     sessionID: string
     sandboxInheritanceToken?: string
     mode: "worktree" | "local"
+    worktreeID?: string
     versions?: boolean
     tasks: Array<{
       prompt?: string

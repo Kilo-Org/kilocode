@@ -1,10 +1,22 @@
-import { afterEach, describe, expect, it, mock, spyOn } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
 import * as vscode from "vscode"
 import { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
 import type { DiffPRPoller, DiffPRPollerOptions } from "../../src/diff/pr-poller"
 import type { PRComment, PRStatus } from "../../src/agent-manager/types"
 import type { PRReviewCommentData } from "../../src/shared/review-comments"
 import type { PanelContext } from "../../src/diff/types"
+
+const addCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
+const removeCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
+const isPRReactionContent = (value: unknown): value is string =>
+  typeof value === "string" &&
+  ["THUMBS_UP", "THUMBS_DOWN", "LAUGH", "HOORAY", "CONFUSED", "HEART", "ROCKET", "EYES"].includes(value)
+
+mock.module("../../src/agent-manager/pr/PRActions", () => ({
+  addCommentReaction,
+  isPRReactionContent,
+  removeCommentReaction,
+}))
 
 const original = { panel: vscode.window.createWebviewPanel, clipboard: vscode.env.clipboard }
 const providers: DiffViewerProvider[] = []
@@ -22,6 +34,11 @@ afterEach(() => {
   Object.assign(vscode.window, { createWebviewPanel: original.panel })
   Object.assign(vscode.env, { clipboard: original.clipboard })
   mock.restore()
+})
+
+beforeEach(() => {
+  addCommentReaction.mockReset()
+  removeCommentReaction.mockReset()
 })
 
 function event<T>() {
@@ -69,7 +86,17 @@ function status(comments?: PRComment[]): PRStatus {
 }
 
 function harness() {
-  const posted: Array<{ type: string; id?: string; file?: string; comments?: PRComment[] }> = []
+  const posted: Array<{
+    type: string
+    id?: string
+    file?: string
+    comments?: PRComment[]
+    commentId?: string
+    reaction?: string
+    add?: boolean
+    success?: boolean
+    error?: string
+  }> = []
   const received = event<unknown>()
   const disposed = event<void>()
   const changed = event<{ webviewPanel: { visible: boolean } }>()
@@ -106,6 +133,7 @@ function harness() {
           setActiveWorktreeId: mock(() => undefined),
           setEnabled: mock(() => undefined),
           setVisible: mock(() => undefined),
+          refresh: mock(() => undefined),
           stop: mock(() => undefined),
         }
         pollers.push(poller)
@@ -192,6 +220,44 @@ describe("DiffViewerProvider.openFromCommand", () => {
 })
 
 describe("DiffViewerProvider remote PR comments", () => {
+  it("adds and removes reactions on comments in the standalone diff", async () => {
+    const h = harness()
+    const item = comment()
+    h.pollers.at(0)!.onStatus("diff", status([item]))
+
+    h.received.fire({
+      type: "agentManager.commentReaction",
+      commentId: item.id,
+      reaction: "HEART",
+      add: true,
+    })
+    await Promise.resolve()
+    expect(addCommentReaction).toHaveBeenCalledWith(item.id, "HEART", "/repo")
+    expect(h.messages("agentManager.commentReactionResult").at(-1)).toMatchObject({
+      commentId: item.id,
+      reaction: "HEART",
+      add: true,
+      success: true,
+    })
+    expect(h.pollers.at(0)!.refresh).toHaveBeenCalledTimes(1)
+
+    removeCommentReaction.mockRejectedValueOnce(new Error("forbidden"))
+    h.received.fire({
+      type: "agentManager.commentReaction",
+      commentId: item.id,
+      reaction: "HEART",
+      add: false,
+    })
+    await Promise.resolve()
+    expect(removeCommentReaction).toHaveBeenCalledWith(item.id, "HEART", "/repo")
+    expect(h.messages("agentManager.commentReactionResult").at(-1)).toMatchObject({
+      commentId: item.id,
+      reaction: "HEART",
+      add: false,
+      success: false,
+    })
+  })
+
   it("focuses the live file once when a snapshot is replaced, without jumping on later polls", () => {
     const h = harness()
     h.provider.openPanel({ ...h.ctx, comment: review })

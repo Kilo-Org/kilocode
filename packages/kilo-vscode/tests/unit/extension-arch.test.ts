@@ -324,7 +324,7 @@ describe("Extension — Agent Manager remote wiring", () => {
   const host = fs.readFileSync(VSCODE_HOST_FILE, "utf-8")
 
   it("passes the shared remote service to Agent Manager", () => {
-    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService)")
+    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)")
   })
 
   it("wires the remote service before attaching the Agent Manager webview", () => {

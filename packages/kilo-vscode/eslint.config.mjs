@@ -26,7 +26,8 @@ export default [
       ],
 
       curly: "warn",
-      eqeqeq: "warn",
+      // Nullish checks intentionally cover both null and undefined.
+      eqeqeq: ["warn", "always", { null: "ignore" }],
       "no-throw-literal": "warn",
       "max-lines": ["error", 3000],
       complexity: ["error", 20],

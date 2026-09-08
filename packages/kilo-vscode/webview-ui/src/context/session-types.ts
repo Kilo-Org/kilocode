@@ -135,6 +135,7 @@ export interface SessionContextValue {
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
   selectedAgent: (sessionID?: string) => string
+  submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void

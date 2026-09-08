@@ -32,6 +32,7 @@ import { createDiffRequests } from "./diff-requests"
 import { treeOrder } from "./file-tree-utils"
 import { isDiffExpandable, shouldVirtualizeDiff } from "./diff-open-policy"
 import { isMarkdownFile } from "./MarkdownDiffView"
+import { createReactionController } from "../agent-manager/pr/pr-comment-state"
 
 type Props = {
   diffs: Accessor<WorktreeFileDiff[]>
@@ -304,6 +305,8 @@ export interface ReviewViewProps {
   onSendClick?: () => void
   onSendAll?: () => void
   remoteComments?: PRComment[]
+  projectId?: string
+  worktreeId?: string
   focusedComment?: { id: string; file: string }
   markdownRender?: boolean
   onRequestDiff?: (file: string) => void
@@ -331,6 +334,13 @@ export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivE
     onSendClick: props.onSendClick,
     onOpenFile: props.onOpenFile,
     onOpenUrl: (url) => vscode.postMessage({ type: "openExternal", url }),
+    reactions: createReactionController({
+      worktree: () => props.worktreeId,
+      project: () => props.projectId,
+      post: vscode.postMessage,
+      onMessage: vscode.onMessage,
+      fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
+    }),
   })
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()

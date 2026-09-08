@@ -316,6 +316,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    open_plan: "allow",
     task: {
       "*": "allow",
       general: "deny",
