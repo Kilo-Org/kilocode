@@ -378,7 +378,6 @@ html[data-theme="kilo-vscode"]
   margin-right: -4px;
 }
 
-.am-projects-tools,
 .am-project-actions {
   display: flex;
   align-items: center;
@@ -559,13 +558,16 @@ html[data-theme="kilo-vscode"]
   opacity: 0;
   visibility: hidden;
 }
-.am-worktree-item:hover .am-wt-hover-actions {
+.am-worktree-item:hover .am-wt-hover-actions,
+.am-worktree-item:focus-within .am-wt-hover-actions {
   opacity: 1;
   visibility: visible;
 }
 /* Stats fade out on hover (replaced by hover actions in same grid cell) */
 .am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats,
-.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton {
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats-skeleton {
   opacity: 0;
   visibility: hidden;
 }
@@ -720,8 +722,125 @@ html[data-theme="kilo-vscode"]
   visibility: hidden;
 }
 
-/* Inline delete confirmation */
+/* Finish stays separate from the agent activity indicator. */
+.am-worktree-exit {
+  display: grid;
+  grid-template-rows: 1fr;
+}
 
+.am-worktree-exit-content {
+  min-height: 0;
+  min-width: 0;
+}
+
+/*
+ * The card leaves, it is not ticked off. The row acknowledges the click with an
+ * instant neutral wash, the title dims behind a quick strike, then the card is
+ * swept out while the list closes the gap. Transform, opacity, and one small
+ * repaint only, so a click still feels immediate.
+ */
+.am-worktree-completed {
+  /* Monochrome on purpose: deletion borrows the list's own greys, never an accent hue. */
+  --am-finish-line: var(--text-weaker, var(--vscode-disabledForeground));
+  --am-finish-tint: var(--surface-base-hover, var(--vscode-list-hoverBackground));
+  --am-finish-hold: 170ms;
+  --am-finish-collapse: 190ms;
+  pointer-events: none;
+  animation: am-worktree-collapse var(--am-finish-collapse) cubic-bezier(0.3, 0, 0.2, 1) var(--am-finish-hold) forwards;
+}
+
+.am-worktree-completed .am-worktree-exit-content {
+  overflow: hidden;
+  animation: am-worktree-sweep var(--am-finish-collapse) cubic-bezier(0.3, 0, 0.2, 1) var(--am-finish-hold) forwards;
+}
+
+.am-worktree-completed .am-worktree-item {
+  animation: am-worktree-finish-tint 340ms ease-out;
+}
+
+/*
+ * A leaving card carries no controls and no pending metadata. Skeletons in
+ * particular would keep pulsing for attention on a row that is already gone.
+ */
+.am-worktree-completed .am-wt-hover-actions,
+.am-worktree-completed .am-worktree-delete-hint,
+.am-worktree-completed .am-worktree-stats-skeleton,
+.am-worktree-completed .am-pr-badge-skeleton {
+  display: none;
+}
+
+/* The strike grows from the left as the title dims, so the row reads as removed. */
+.am-worktree-completed .am-wt-name {
+  background-image: linear-gradient(var(--am-finish-line), var(--am-finish-line));
+  background-repeat: no-repeat;
+  background-position: 0 calc(50% - 1px);
+  background-size: 100% 1px;
+  color: var(--text-weaker);
+  animation: am-worktree-strike 160ms cubic-bezier(0.22, 0.9, 0.24, 1) 20ms both;
+}
+
+.am-worktree-completion-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@keyframes am-worktree-collapse {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes am-worktree-sweep {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes am-worktree-finish-tint {
+  from {
+    background: color-mix(in srgb, var(--am-finish-tint) 100%, transparent);
+  }
+  to {
+    background: color-mix(in srgb, var(--am-finish-tint) 0%, transparent);
+  }
+}
+
+@keyframes am-worktree-strike {
+  from {
+    background-size: 0 1px;
+    color: var(--text-base);
+  }
+  to {
+    background-size: 100% 1px;
+    color: var(--text-weaker);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-worktree-completed {
+    animation-duration: 1ms;
+    animation-delay: 200ms;
+  }
+
+  .am-worktree-completed .am-worktree-exit-content,
+  .am-worktree-completed .am-worktree-item,
+  .am-worktree-completed .am-wt-name {
+    animation: none;
+  }
+}
+
+/* Inline delete confirmation */
 .am-worktree-item.am-worktree-pending-delete,
 .am-worktree-item.am-worktree-pending-delete.am-worktree-item-active {
   background: color-mix(in srgb, var(--surface-critical-strong) 18%, transparent);
@@ -752,21 +871,19 @@ html[data-theme="kilo-vscode"]
   visibility: hidden !important;
 }
 
-.am-worktree-delete-hint {
+.am-worktree-delete-hint[data-component="button"] {
   position: absolute;
   right: 0;
+  height: auto;
+  min-height: 0;
   font-size: var(--font-size-small);
-  color: var(--text-on-brand-base);
-  background: var(--surface-critical-strong);
+  color: var(--text-on-brand-base) !important;
+  background: var(--surface-critical-strong) !important;
   white-space: nowrap;
   padding: 1px 8px;
   border-radius: 4px;
   cursor: pointer;
   animation: am-hint-slide-in 200ms ease;
-}
-
-.am-worktree-delete-hint:hover {
-  opacity: 0.9;
 }
 
 @keyframes am-hint-slide-in {

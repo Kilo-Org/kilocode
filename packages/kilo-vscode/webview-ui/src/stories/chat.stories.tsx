@@ -321,6 +321,45 @@ export const UserMessageReviewComments: Story = {
   },
 }
 
+export const UserMessageMixedReviewComments: Story = {
+  name: "User message - local and PR comments",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {reviewMessage([
+          {
+            id: "local-note",
+            file: "src/review.ts",
+            side: "additions",
+            line: 12,
+            comment: "Keep the local draft when the active session changes.",
+            selectedText: "const draft = drafts.get(session)",
+          },
+          {
+            id: "pr-kilo",
+            origin: "pr",
+            author: "kilo-code-bot",
+            file: "src/review.ts",
+            line: 12,
+            side: "additions",
+            body: "This request needs a guard against stale session state.",
+            replies: [{ author: "octocat", body: "Keep the draft scoped to the original session." }],
+          },
+          {
+            id: "pr-reviewer",
+            origin: "pr",
+            author: "octocat",
+            file: "src/comments.ts",
+            line: 28,
+            side: "deletions",
+            body: "Check the existing callers before removing this branch.",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
+}
+
 /**
  * Many local review comments at once. Locks in the collapsed preview + "show
  * more" behavior so a large paste cannot take over the transcript.

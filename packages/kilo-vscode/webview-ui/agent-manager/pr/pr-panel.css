@@ -145,6 +145,10 @@
 }
 
 .am-pr-panel-section-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--kilo-font-size-11);
   font-weight: 400;
   text-transform: none;
@@ -233,6 +237,22 @@
   text-align: left;
   color: var(--vscode-foreground);
   min-width: 0;
+}
+
+.am-pr-comment-inline .am-pr-comment-head {
+  flex-wrap: wrap;
+}
+
+.am-pr-comment-inline .am-pr-comment-author {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-wrap: anywhere;
+}
+
+.am-pr-comment-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .am-pr-comment-head:hover {
@@ -338,6 +358,14 @@
   padding-left: 0;
 }
 
+.am-pr-comment [data-component="avatar"] {
+  border-radius: 50%;
+}
+
+.am-pr-comment-reply-head {
+  gap: 6px;
+}
+
 .am-pr-comment-error {
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-testing-iconFailed, #f87171);
@@ -352,6 +380,57 @@
 
 .am-pr-comment-actions-gap {
   flex: 1;
+}
+
+.am-pr-reactions {
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.am-pr-reaction {
+  min-width: 34px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-base);
+  border-radius: 999px;
+  gap: 3px;
+  line-height: 1;
+  transition:
+    background 80ms ease-out,
+    border-color 80ms ease-out;
+}
+
+.am-pr-reaction.am-pr-reaction-active {
+  border-color: var(--border-focus, var(--border-base));
+  background: var(--surface-interactive-base);
+}
+
+/* Fixed width, so swapping the count for the spinner cannot move the pill,
+   the pills after it, or the picker button next to them. */
+.am-pr-reaction-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.am-pr-reaction-spinner {
+  width: 10px;
+  height: 10px;
+}
+
+.am-pr-reaction-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 4px;
+}
+
+.am-pr-reaction-option {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px;
+  font-size: var(--font-size-base);
 }
 
 /* Same bordered treatment the local review comment actions use, because the
@@ -372,7 +451,8 @@
   margin-right: 4px;
 }
 
-.am-pr-comment-send-all {
+.am-pr-comment-send-all,
+.am-pr-checks-fix {
   margin-top: 6px;
   align-self: flex-start;
 }
@@ -387,6 +467,24 @@
   border-radius: 4px;
   overflow: hidden;
   margin: 6px 8px 0;
+}
+
+.am-pr-diff-thread {
+  margin: 0;
+}
+
+.am-pr-diff-file {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  color: var(--text-weak);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-11);
+  overflow-wrap: anywhere;
+}
+
+.am-pr-thread-annotation {
+  padding: 8px;
+  background: var(--vscode-editor-background);
 }
 
 .am-pr-diff-context-marker {
@@ -475,9 +573,31 @@
   margin-top: 4px;
 }
 
+.am-pr-panel-checks[data-scrollable="true"] {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.am-pr-check-group-heading {
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 0;
+  color: var(--text-weak);
+  cursor: pointer;
+}
+
+.am-pr-check-group-heading:hover {
+  color: var(--vscode-foreground);
+}
+
+.am-pr-check-group-items {
+  gap: 0;
+}
+
 .am-pr-panel-check-item {
   gap: 6px;
-  padding: 3px 0;
+  padding: 2px 0;
   font-size: var(--kilo-font-size-12);
 }
 
@@ -507,11 +627,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.am-pr-check-status {
-  color: var(--text-weak);
-  flex-shrink: 0;
 }
 
 .am-pr-check-duration {

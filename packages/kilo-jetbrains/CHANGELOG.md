@@ -448,6 +448,12 @@
 
 ## [Unreleased]
 
+## [7.1.6-rc.2] - 2026-09-06
+
+### Fixed
+
+- Replace internal IntelliJ badge-icon APIs used for the worktree live-run indicator with a supported approach, fixing a plugin verification failure.
+
 ## [7.1.6-rc.1] - 2026-09-05
 
 ### Added

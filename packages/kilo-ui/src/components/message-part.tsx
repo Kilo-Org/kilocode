@@ -752,6 +752,7 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  bubbleHeader?: JSX.Element
   edit?: { label: string; onClick: () => void; disabled?: boolean }
   queuedDisabled?: boolean
   onDelete?: () => void
@@ -909,19 +910,20 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
-        <Show when={!text() && !props.header && props.queued}>
+        <Show when={!text() && !props.header && !props.bubbleHeader && props.queued}>
           <div data-slot="user-message-queued-indicator">
             <TextShimmer text={i18n.t("ui.message.queued")} />
             <Edit />
             <Delete />
           </div>
         </Show>
-        <Show when={text() || props.header}>
+        <Show when={text() || props.header || props.bubbleHeader}>
           <>
             <div data-slot="user-message-body">
               {props.header}
-              <Show when={text()}>
+              <Show when={text() || props.bubbleHeader}>
                 <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>
+                  {props.bubbleHeader}
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
@@ -1287,7 +1289,7 @@ function McpTool(props: ToolProps) {
   })
 
   const formattedOutput = createMemo(() => {
-    if (!props.output) return undefined
+    if (messages() || !props.output) return undefined
     try {
       const parsed = JSON.parse(props.output)
       return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```"
@@ -1303,6 +1305,7 @@ function McpTool(props: ToolProps) {
     >
       <BasicTool
         icon={board() ? "task" : "mcp"}
+        defer={board()}
         status={props.status}
         tool={props.tool}
         partID={props.partID}

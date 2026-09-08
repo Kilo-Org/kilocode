@@ -7,7 +7,7 @@ import type { PRStatus } from "../../src/types/messages"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { PRCommentCard } from "./PRCommentCard"
 import { SEND_LIMIT, githubUrl, prPayload } from "./pr-comment-payload"
-import { commentState, omit, patchCommentState } from "./pr-comment-state"
+import { commentState, createReactionController, omit, patchCommentState } from "./pr-comment-state"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 
@@ -17,12 +17,20 @@ interface Props {
   worktreeId: string
   activeTerminalId?: string
   onOpenFile?: (file: string, line?: number) => void
+  onOpenDiff?: (comment: PRComment) => void
   onOpenUrl?: (url: string) => void
 }
 
 export function PRComments(props: Props) {
   const { t } = useLanguage()
   const vscode = useVSCode()
+  const reactions = createReactionController({
+    worktree: () => props.worktreeId,
+    project: () => props.projectId,
+    post: vscode.postMessage,
+    onMessage: vscode.onMessage,
+    fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
+  })
 
   // Held per worktree outside this component, so a remount does not collapse
   // the threads the user opened.
@@ -131,11 +139,16 @@ export function PRComments(props: Props) {
       {(comment) => (
         <PRCommentCard
           comment={comment()}
+          preview={comment().outdated ? undefined : comment().preview}
           resolved={resolved(comment())}
           pending={state().pending[id] !== undefined}
           sent={state().sent[id] === true}
           open={expandedFor(comment())}
           error={state().errors[id]}
+          reactionError={reactions.error(comment().id)}
+          reactions={reactions.list(comment().id, comment().reactions)}
+          reactionPending={(content) => reactions.pending(comment().id, content)}
+          onReaction={(content, add) => reactions.toggle(comment().id, content, add)}
           onToggleOpen={() => {
             const next = !expandedFor(comment())
             patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))
@@ -143,8 +156,15 @@ export function PRComments(props: Props) {
           onToggleResolved={() => toggleResolved(comment())}
           onSend={() => send([id])}
           onOpenFile={
-            comment().file && props.onOpenFile ? () => props.onOpenFile?.(comment().file!, comment().line) : undefined
+            comment().file && props.onOpenFile
+              ? () =>
+                  props.onOpenFile?.(
+                    comment().file!,
+                    comment().outdated || comment().side === "deletions" ? undefined : comment().line,
+                  )
+              : undefined
           }
+          onOpenDiff={comment().file && props.onOpenDiff ? () => props.onOpenDiff?.(comment()) : undefined}
           onOpenUrl={
             githubUrl(comment().url) && props.onOpenUrl ? () => props.onOpenUrl?.(githubUrl(comment().url)!) : undefined
           }
@@ -174,7 +194,7 @@ export function PRComments(props: Props) {
               {t(
                 props.activeTerminalId
                   ? "agentManager.pr.comment.sendAllToTerminal"
-                  : "agentManager.pr.comment.sendAll",
+                  : "agentManager.pr.fixWithKiloCount",
                 { count: Math.min(unsent().length, SEND_LIMIT) },
               )}
             </Button>

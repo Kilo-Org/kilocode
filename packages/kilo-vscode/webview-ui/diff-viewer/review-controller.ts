@@ -1,12 +1,18 @@
 import { createEffect, createMemo, createRenderEffect, createSignal, on, untrack, type Accessor } from "solid-js"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { UiI18nParams } from "@kilocode/kilo-ui/context"
+import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
+import type { VirtualizerHandle } from "virtua/solid"
+import type { PRComment } from "../agent-manager/pr/pr-types"
+import { useLanguage } from "../src/context/language"
+import { useVSCode } from "../src/context/vscode"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
   clearReviewComposer,
+  createReviewComposer,
   reviewComposerDraft,
   reviewComposerEdit,
   reviewDraftSpeechKey,
@@ -17,7 +23,16 @@ import {
   type ReviewComposer,
 } from "./review-annotations"
 import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
-import { createReviewSpeech } from "./review-setup"
+import { createReviewSpeech, keepsNativeFocus, reviewFocus } from "./review-setup"
+import { createRemoteCommentController, createRemoteFocus, type DiffAnnotationMeta } from "./remote-comment-renderer"
+import { createReviewOpenState } from "./review-state"
+import { createReviewScrollPreserver } from "./review-scroll"
+import { createDiffRows } from "./diff-state"
+import { createDiffRequests } from "./diff-requests"
+import { treeOrder } from "./file-tree-utils"
+import { isDiffExpandable, shouldVirtualizeDiff } from "./diff-open-policy"
+import { isMarkdownFile } from "./MarkdownDiffView"
+import { createReactionController } from "../agent-manager/pr/pr-comment-state"
 
 type Props = {
   diffs: Accessor<WorktreeFileDiff[]>
@@ -275,5 +290,166 @@ export function createReviewController(props: Props) {
     handleGutterClick,
     sendAllToChat,
     sendAllClick,
+  }
+}
+
+export interface ReviewViewProps {
+  diffs: WorktreeFileDiff[]
+  loadingFiles?: Set<string>
+  comments: ReviewComment[]
+  onCommentsChange: (comments: ReviewComment[]) => void
+  composer?: ReviewComposer
+  sessionKey?: string
+  active?: boolean
+  activeTerminalId?: string
+  onSendClick?: () => void
+  onSendAll?: () => void
+  remoteComments?: PRComment[]
+  projectId?: string
+  worktreeId?: string
+  focusedComment?: { id: string; file: string }
+  markdownRender?: boolean
+  onRequestDiff?: (file: string) => void
+  onOpenFile?: (file: string, line?: number) => void
+  canComment?: boolean
+}
+
+export function createReviewView(props: ReviewViewProps, root: Accessor<HTMLDivElement | undefined>) {
+  const { t } = useLanguage()
+  const vscode = useVSCode()
+  const local = createReviewComposer()
+  const state = createReviewOpenState(
+    () => props.diffs,
+    () => props.sessionKey,
+  )
+  const { open, setOpen } = state
+  const sorted = createMemo(() => treeOrder(props.diffs))
+  const rows = createDiffRows(sorted, () => props.sessionKey)
+  const remote = createRemoteCommentController({
+    key: () => props.sessionKey,
+    comments: () => props.remoteComments,
+    diffs: rows,
+    active: () => true,
+    activeTerminalId: () => props.activeTerminalId,
+    onSendClick: props.onSendClick,
+    onOpenFile: props.onOpenFile,
+    onOpenUrl: (url) => vscode.postMessage({ type: "openExternal", url }),
+    reactions: createReactionController({
+      worktree: () => props.worktreeId,
+      project: () => props.projectId,
+      post: vscode.postMessage,
+      onMessage: vscode.onMessage,
+      fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
+    }),
+  })
+  const [scroller, setScroller] = createSignal<HTMLDivElement>()
+  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
+  const [focused, setFocused] = createSignal<string>()
+  const focus = createRemoteFocus(root, setFocused, { root: scroller, to: (offset) => virtualizer()?.scrollTo(offset) })
+  const handles = new Map<string, DiffHandle>()
+  const reveal = (file: string) => {
+    const diff = props.diffs.find((item) => item.file === file)
+    if (!diff || (props.markdownRender && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff)) return true
+    const target = props.focusedComment
+    const anchor = target
+      ? remote
+          .map()
+          .anchors.get(file)
+          ?.find((item) => item.comments.some((comment) => comment.threadId === target.id))
+      : undefined
+    return anchor ? (handles.get(file)?.scrollToLine(anchor.line, anchor.side) ?? false) : false
+  }
+  const register = (file: string, handle: DiffHandle | undefined) => {
+    if (!handle) return void handles.delete(file)
+    handles.set(file, handle)
+    if (focused() === file) reveal(file)
+  }
+  const comments = () => props.comments
+  const review = createReviewController({
+    diffs: () => props.diffs,
+    rows,
+    comments,
+    setComments: (next) => props.onCommentsChange(next),
+    composer: () => props.composer ?? local,
+    key: () => props.sessionKey,
+    preserveScroll: createReviewScrollPreserver(rows, virtualizer),
+    focus: () => reviewFocus(root),
+    label: t,
+    activeTerminalId: () => props.activeTerminalId,
+    active: () => props.active !== false,
+    canComment: () => props.canComment !== false,
+    onSendClick: props.onSendClick,
+    onSendAll: props.onSendAll,
+  })
+  const pinned = createMemo(() => {
+    const keep = new Set(review.pinned())
+    const target = focused()
+    return rows().flatMap((diff, index) => (keep.has(index) || diff.file === target ? [index] : []))
+  })
+  const render = (annotation: DiffLineAnnotation<DiffAnnotationMeta>): HTMLElement | undefined => {
+    if (annotation.metadata?.type === "remote") return remote.render(annotation.metadata)
+    return review.buildAnnotation(annotation as DiffLineAnnotation<AnnotationMeta>)
+  }
+  const request = createDiffRequests({
+    key: () => props.sessionKey,
+    diffs: () => props.diffs,
+    open,
+    loading: () => props.loadingFiles,
+    send: () => (props.active === false ? undefined : props.onRequestDiff),
+    eager: false,
+  })
+  createEffect(
+    on(
+      () => [props.focusedComment, props.active, props.sessionKey, virtualizer()] as const,
+      ([target]) => {
+        if (!target || props.active === false) return focus.stop()
+        focus.request(
+          target.id,
+          target.file,
+          () => {
+            remote.open(target.id)
+            const diff = props.diffs.find((item) => item.file === target.file)
+            if (!diff) return
+            if (isDiffExpandable(diff) && !open().includes(target.file)) setOpen((prev) => [...prev, target.file])
+            const index = rows().findIndex((item) => item.file === target.file)
+            if (index >= 0) virtualizer()?.scrollToIndex(index, { offset: -8, smooth: false })
+            request(diff)
+          },
+          () => remote.location(target.file, target.id),
+          () => reveal(target.file),
+        )
+      },
+    ),
+  )
+  const handleRootMouseDown = (event: MouseEvent) => {
+    if (!keepsNativeFocus(event.target)) reviewFocus(root)
+  }
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return
+    if (keepsNativeFocus(event.target) || props.canComment === false || !comments().length) return
+    event.preventDefault()
+    event.stopPropagation()
+    review.sendAllToChat()
+  }
+  return {
+    open,
+    setOpen,
+    rows,
+    remote,
+    register,
+    scroller,
+    setScroller,
+    virtualizer,
+    setVirtualizer,
+    comments,
+    review,
+    pinned,
+    render,
+    request,
+    handleRootMouseDown,
+    handleKeyDown,
+    commentsByFile: review.commentsByFile,
+    handleGutterClick: review.handleGutterClick,
+    sendAllClick: review.sendAllClick,
   }
 }

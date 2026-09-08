@@ -9,8 +9,14 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
-import { resolveComment, unresolveComment } from "./pr/PRActions"
-import { ghErrorReason, mergePRStatus } from "./pr/am-pr-utils"
+import {
+  addCommentReaction,
+  isPRReactionContent,
+  removeCommentReaction,
+  resolveComment,
+  unresolveComment,
+} from "./pr/PRActions"
+import { ghErrorReason, mergePRStatus, retainPRStatus } from "./pr/am-pr-utils"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -28,6 +34,29 @@ interface PRBridgeHost {
 interface PanelLike {
   readonly visible: boolean
   onDidChangeVisibility(cb: (visible: boolean) => void): Disposable
+}
+
+interface ReactionRequest {
+  id: string
+  commentId: string
+  content: Parameters<typeof addCommentReaction>[1]
+  add: boolean
+}
+
+function reactionRequest(m: Record<string, unknown>): ReactionRequest | undefined {
+  if (typeof m.worktreeId !== "string") return
+  if (typeof m.commentId !== "string") return
+  if (!isPRReactionContent(m.reaction)) return
+  if (typeof m.add !== "boolean") return
+  return { id: m.worktreeId, commentId: m.commentId, content: m.reaction, add: m.add }
+}
+
+function hasComment(pr: PRStatus, id: string): boolean {
+  return (
+    pr.comments?.comments.some((comment) => comment.id === id) ||
+    pr.conversation?.some((comment) => comment.id === id) ||
+    false
+  )
 }
 
 export class PRStatusBridge {
@@ -100,7 +129,48 @@ export class PRStatusBridge {
     }
     if (m.type === "agentManager.resolveComment" || m.type === "agentManager.unresolveComment")
       return this.handleComment(m)
+    if (m.type === "agentManager.commentReaction") return this.handleReaction(m)
     return false
+  }
+
+  private handleReaction(m: Record<string, unknown>): boolean {
+    if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
+    const request = reactionRequest(m)
+    if (!request) return true
+    const { id, commentId, content, add } = request
+    const projectId = typeof m.projectId === "string" ? m.projectId : this.host.projectId?.()
+    const result = (success: boolean, error?: string) => {
+      this.host.postToWebview({
+        type: "agentManager.commentReactionResult",
+        ...(projectId ? { projectId } : {}),
+        worktreeId: id,
+        commentId,
+        reaction: content,
+        add,
+        success,
+        ...(error ? { error } : {}),
+      })
+    }
+    const wt = this.host.getWorktrees().find((item) => item.id === id)
+    const cached = this.cache.get(id)
+    const pr = cached?.type === "agentManager.prStatus" ? cached.pr : undefined
+    if (!wt || !pr || !hasComment(pr, commentId)) {
+      result(false, "PR comment not found. Refresh and try again.")
+      return true
+    }
+    const action = add ? addCommentReaction : removeCommentReaction
+    action(commentId, content, wt.path).then(
+      () => {
+        result(true)
+        this.poller.refresh(id)
+      },
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        this.host.log(`commentReaction failed: ${message}`)
+        result(false, ghErrorReason(message))
+      },
+    )
+    return true
   }
 
   private handleComment(m: Record<string, unknown>): boolean {
@@ -219,7 +289,7 @@ function accept(bridge: PRStatusBridge, host: PRBridgeHost, id: string, pr: PRSt
   // PR cannot leave a branch, so on the same branch the known PR is kept:
   // forwarding pr:null would unmount the panel and throw away the comment the
   // user is reading.
-  if (!pr && prev && branch !== undefined && bridge["branches"].get(id) === branch) {
+  if (prev && retainPRStatus(prev, bridge["branches"].get(id), branch, pr)) {
     host.log(`PR status: keeping PR #${prev.number} for ${id}, empty result on ${branch}`)
     return
   }

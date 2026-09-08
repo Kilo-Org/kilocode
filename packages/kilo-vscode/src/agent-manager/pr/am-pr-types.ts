@@ -6,21 +6,35 @@ export interface GhAuthor {
   login?: string
   avatarUrl?: string
 }
+export interface GhReactionGroup {
+  content?: string
+  reactors?: { totalCount?: number }
+  users?: { totalCount?: number }
+  viewerHasReacted?: boolean
+}
 export interface GhComment {
   id: string
   author?: GhAuthor
   body?: string
   path?: string
-  line?: number
-  originalLine?: number
+  line?: number | null
+  originalLine?: number | null
   url?: string
   createdAt?: string
   diffHunk?: string
+  reactionGroups?: GhReactionGroup[]
 }
 export interface GhThread {
   id?: string
   isResolved?: boolean
   isOutdated?: boolean
+  path?: string
+  diffSide?: "LEFT" | "RIGHT"
+  line?: number | null
+  originalLine?: number | null
+  startLine?: number | null
+  originalStartLine?: number | null
+  startDiffSide?: "LEFT" | "RIGHT" | null
   comments?: { nodes?: GhComment[] }
 }
 export interface GhReviewRequest {
@@ -39,6 +53,7 @@ export interface GhConversationComment {
   body?: string
   createdAt?: string
   url?: string
+  reactionGroups?: GhReactionGroup[]
 }
 
 export interface GhReviewWithBody {
@@ -48,10 +63,13 @@ export interface GhReviewWithBody {
   state?: string
   submittedAt?: string
   url?: string
+  reactionGroups?: GhReactionGroup[]
 }
 
 export interface PRResult {
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body: string
   url: string

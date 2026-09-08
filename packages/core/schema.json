@@ -2236,6 +2236,20 @@
         {
           "value": "session_id",
           "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "json_valid(\"part\".\"data\") AND json_extract(\"part\".\"data\", '$.type') = 'step-finish'",
+      "origin": "manual",
+      "name": "part_session_step_finish_idx",
+      "entityType": "indexes",
+      "table": "part"
+    },
+    {
+      "columns": [
+        {
+          "value": "session_id",
+          "isExpression": false
         },
         {
           "value": "id",

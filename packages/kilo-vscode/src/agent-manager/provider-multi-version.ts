@@ -2,7 +2,7 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { PLATFORM } from "./constants"
 import type { ProjectContext } from "./project/context"
 import type { AgentManagerInMessage } from "./types"
-import { versionedName } from "./branch-name"
+import { sanitizeBranchName, versionedName } from "./branch-name"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
 import type { LifecycleHost } from "./provider-lifecycle"
@@ -37,7 +37,7 @@ export async function createMultiVersion(
   const agent = msg.agent
   const files = msg.files
   const baseBranch = msg.baseBranch
-  const branchName = msg.branchName?.trim() || undefined
+  const branchName = msg.branchName || undefined
 
   const fallback = msg.providerID && msg.modelID ? { providerID: msg.providerID, modelID: msg.modelID } : undefined
   const resolved = resolveVersionModels(msg.modelAllocations, fallback, Number(msg.versions) || 1)
@@ -157,10 +157,12 @@ async function prepareVersion(host: MultiVersionHost, spec: VersionSpec): Promis
   host.log(`Creating worktree ${spec.index + 1}/${spec.versions}`)
 
   const version = versionedName(spec.branchName || spec.worktreeName, spec.index, spec.versions)
+  // Display names retain automatic slugging; explicit Git branches stay literal.
+  const branch = spec.branchName ? version.branch : sanitizeBranchName(version.branch ?? "") || undefined
   const wt = await host.createOnDisk({
     groupId: spec.groupId,
     baseBranch: spec.baseBranch,
-    branchName: version.branch,
+    branchName: branch,
     name: version.branch,
     label: version.label,
   })

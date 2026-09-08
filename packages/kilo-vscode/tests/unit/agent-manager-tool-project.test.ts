@@ -1,7 +1,32 @@
 import { describe, expect, it } from "bun:test"
-import { routeToolRequest } from "../../src/agent-manager/tool-project"
+import { handleToolEvent, routeToolRequest } from "../../src/agent-manager/tool-project"
 
 describe("Agent Manager tool project routing", () => {
+  it("forwards the target in the caller's project scope", () => {
+    const owner = { id: "prj-caller" }
+    const calls: unknown[] = []
+    handleToolEvent(
+      { properties: { mode: "local", worktreeID: "wt-target", tasks: [{ name: "Prepared" }] } },
+      "/caller",
+      {
+        byDirectory: (dir) => (dir === "/caller" ? owner : undefined),
+        usable: () => undefined,
+      },
+      {
+        run: async (project, fn) => {
+          calls.push(project)
+          return fn()
+        },
+      },
+      async (req) => {
+        calls.push(req)
+      },
+    )
+    expect(calls).toEqual([
+      owner,
+      expect.objectContaining({ worktreeID: "wt-target", directory: "/caller", projectId: owner.id }),
+    ])
+  })
   it("routes by the event directory before any explicit project id", () => {
     const secondary = { id: "prj-secondary" }
     const request = routeToolRequest({ requestID: "am-1", projectId: "prj-active", mode: "worktree" }, "/secondary", {

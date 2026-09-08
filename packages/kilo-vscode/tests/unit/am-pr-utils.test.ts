@@ -7,8 +7,10 @@ import {
   ghErrorReason,
   parseComments,
   parseConversation,
+  parseReactions,
   parseReviewers,
   signature,
+  summarize,
 } from "../../src/agent-manager/pr/am-pr-utils"
 import type {
   GhThread,
@@ -50,6 +52,11 @@ describe("parsePRResult", () => {
       deletions: 3,
       files: 2,
     })
+  })
+
+  it("preserves both immutable PR refs", () => {
+    const refs = { baseRefOid: "a".repeat(40), headRefOid: "b".repeat(40) }
+    expect(parsePRResult(JSON.stringify({ number: 42, ...refs }))).toMatchObject(refs)
   })
 
   it("maps isDraft to draft state regardless of gh state field", () => {
@@ -216,6 +223,32 @@ describe("parsePRResult", () => {
     expect(result?.checks?.failed).toBe(1)
   })
 
+  it("keeps the latest duplicate check run", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 12,
+        statusCheckRollup: [
+          { name: "build", conclusion: "FAILURE", startedAt: "2024-01-01T00:00:00Z" },
+          { name: "build", conclusion: "SUCCESS", startedAt: "2024-01-01T00:01:00Z" },
+        ],
+      }),
+    )
+    expect(result?.checks?.checks).toEqual([{ name: "build", status: "success", url: undefined, duration: undefined }])
+  })
+
+  it("prefers a queued rerun without a start time", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 12,
+        statusCheckRollup: [
+          { name: "build", conclusion: "SUCCESS", startedAt: "2024-01-01T00:00:00Z" },
+          { name: "build", status: "QUEUED" },
+        ],
+      }),
+    )
+    expect(result?.checks?.checks).toEqual([{ name: "build", status: "pending", url: undefined, duration: undefined }])
+  })
+
   it("keeps CI running when cancelled checks coexist with pending checks", () => {
     const result = parsePRResult(
       JSON.stringify({
@@ -271,9 +304,9 @@ describe("checkStatus", () => {
   it("maps WAITING to pending", () => expect(checkStatus("WAITING")).toBe("pending"))
   it("maps SKIPPED", () => expect(checkStatus("SKIPPED")).toBe("skipped"))
   it("maps CANCELLED", () => expect(checkStatus("CANCELLED")).toBe("cancelled"))
-  it("maps TIMED_OUT to cancelled", () => expect(checkStatus("TIMED_OUT")).toBe("cancelled"))
+  it("maps TIMED_OUT to failure", () => expect(checkStatus("TIMED_OUT")).toBe("failure"))
   it("maps STALE to cancelled", () => expect(checkStatus("STALE")).toBe("cancelled"))
-  it("maps STARTUP_FAILURE to cancelled", () => expect(checkStatus("STARTUP_FAILURE")).toBe("cancelled"))
+  it("maps STARTUP_FAILURE to failure", () => expect(checkStatus("STARTUP_FAILURE")).toBe("failure"))
   it("maps unknown state to pending", () => expect(checkStatus("WHATEVER")).toBe("pending"))
   it("is case-insensitive", () => expect(checkStatus("success")).toBe("success"))
 })
@@ -362,6 +395,34 @@ describe("parseComments", () => {
     ])
   })
 
+  it("parses reaction groups and ignores empty or unknown reactions", () => {
+    expect(
+      parseReactions([
+        { content: "HEART", reactors: { totalCount: 3 }, viewerHasReacted: true },
+        { content: "THUMBS_UP", users: { totalCount: 0 }, viewerHasReacted: false },
+        { content: "NOT_A_REACTION", users: { totalCount: 2 }, viewerHasReacted: false },
+      ]),
+    ).toEqual([{ content: "HEART", count: 3, viewerHasReacted: true }])
+  })
+
+  it("includes reactions on the top-level review comment", () => {
+    const result = parseComments([
+      {
+        id: "thread",
+        comments: {
+          nodes: [
+            {
+              id: "comment",
+              body: "note",
+              reactionGroups: [{ content: "ROCKET", users: { totalCount: 1 }, viewerHasReacted: false }],
+            },
+          ],
+        },
+      },
+    ])
+    expect(result[0]?.reactions).toEqual([{ content: "ROCKET", count: 1, viewerHasReacted: false }])
+  })
+
   it("uses comment id as threadId fallback when thread has no id", () => {
     const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } }]
     const result = parseComments(threads)
@@ -423,6 +484,84 @@ describe("parseComments", () => {
     ]
     expect(parseComments(threads)[0]?.line).toBe(42)
   })
+
+  it("treats nullable GitHub locations as absent instead of emitting null metadata", () => {
+    const result = parseComments([
+      {
+        id: "file-thread",
+        path: "src/foo.ts",
+        line: null,
+        originalLine: null,
+        startLine: null,
+        diffSide: "RIGHT",
+        startDiffSide: "RIGHT",
+        comments: { nodes: [{ id: "file-comment", line: null, originalLine: null, body: "File-level note" }] },
+      },
+    ])[0]
+    expect(result?.file).toBe("src/foo.ts")
+    expect(result?.line).toBeUndefined()
+    expect(result?.originalLine).toBeUndefined()
+    expect(result?.startLine).toBeUndefined()
+  })
+
+  it("prefers thread location fields and preserves matching multi-line starts", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_left",
+        path: "thread-left.ts",
+        diffSide: "LEFT",
+        line: 12,
+        originalLine: 9,
+        startLine: 10,
+        originalStartLine: 8,
+        startDiffSide: "LEFT",
+        comments: {
+          nodes: [
+            {
+              id: "left",
+              author: { login: "alice", avatarUrl: "https://avatar/alice" },
+              body: "old line",
+              path: "comment-left.ts",
+              line: 4,
+              originalLine: 3,
+            },
+            { id: "left-reply", author: { login: "bob", avatarUrl: "https://avatar/bob" }, body: "reply" },
+          ],
+        },
+      },
+      {
+        id: "PRT_right",
+        path: "thread-right.ts",
+        diffSide: "RIGHT",
+        line: 20,
+        originalLine: 19,
+        startLine: 18,
+        startDiffSide: "LEFT",
+        comments: { nodes: [{ id: "right", body: "new line", path: "comment-right.ts", line: 5 }] },
+      },
+    ]
+
+    const result = parseComments(threads)
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        file: "thread-left.ts",
+        side: "deletions",
+        line: 12,
+        originalLine: 9,
+        startLine: 10,
+        replies: [{ author: "bob", body: "reply", avatar: "https://avatar/bob" }],
+      }),
+    )
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        file: "thread-right.ts",
+        side: "additions",
+        line: 20,
+        originalLine: 19,
+      }),
+    )
+    expect(result[1]).not.toHaveProperty("startLine")
+  })
 })
 
 describe("PR signature", () => {
@@ -443,6 +582,13 @@ describe("PR signature", () => {
   it("keeps free text and reviewer fields separate in the snapshot", () => {
     expect(signature({ ...pr, reviewers: [{ login: "alice", state: "approved" }] })).not.toBe(signature(pr))
     expect(signature({ ...pr, title: "A:B", body: "C" })).not.toBe(signature({ ...pr, title: "A", body: "B:C" }))
+  })
+
+  it("changes when either captured PR ref changes", () => {
+    const refs = { baseRefOid: "a".repeat(40), headRefOid: "b".repeat(40) }
+    const before = signature({ ...pr, ...refs })
+    expect(signature({ ...pr, ...refs, baseRefOid: "c".repeat(40) })).not.toBe(before)
+    expect(signature({ ...pr, ...refs, headRefOid: "c".repeat(40) })).not.toBe(before)
   })
 
   it("deduplicates unchanged PRs and distinguishes unknown and updated thread counts", () => {
@@ -698,5 +844,40 @@ describe("signature with conversation", () => {
 
     expect(withConvo).not.toBe(withoutConvo)
     expect(updatedConvo).not.toBe(withConvo)
+  })
+
+  it("updates check links and failures even when aggregate counts stay the same", () => {
+    const base: PRStatus = {
+      number: 1,
+      title: "PR",
+      url: "https://example.com/pr/1",
+      state: "open",
+      review: null,
+      checks: summarize([
+        { name: "Lint", status: "failure", url: "https://example.com/job/1" },
+        { name: "Tests", status: "success" },
+      ]),
+      reviewers: [],
+      additions: 0,
+      deletions: 0,
+      files: 0,
+    }
+    const rerun = {
+      ...base,
+      checks: summarize([
+        { name: "Lint", status: "failure", url: "https://example.com/job/2" },
+        { name: "Tests", status: "success" },
+      ]),
+    }
+    const swapped = {
+      ...base,
+      checks: summarize([
+        { name: "Lint", status: "success", url: "https://example.com/job/1" },
+        { name: "Tests", status: "failure" },
+      ]),
+    }
+    expect(signature(rerun)).not.toBe(signature(base))
+    expect(signature(swapped)).not.toBe(signature(base))
+    expect(signature(structuredClone(base))).toBe(signature(base))
   })
 })

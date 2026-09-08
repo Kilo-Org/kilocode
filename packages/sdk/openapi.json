@@ -27851,10 +27851,17 @@
             "type": "string",
             "pattern": "^ses"
           },
+          "sourceSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
           "prompt": {
             "type": "string",
             "minLength": 1,
             "maxLength": 100000
+          },
+          "replyTo": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
           }
         },
         "required": ["id", "sessionID", "operation", "targetSessionID", "prompt"],
@@ -42419,6 +42426,9 @@
               "mode": {
                 "type": "string",
                 "enum": ["worktree", "local"]
+              },
+              "worktreeID": {
+                "type": "string"
               },
               "versions": {
                 "type": "boolean"
