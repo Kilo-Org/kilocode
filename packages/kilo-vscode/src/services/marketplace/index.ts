@@ -1,8 +1,5 @@
 import * as vscode from "vscode"
-import { MarketplaceApiClient } from "./api"
-import { MarketplacePaths } from "./paths"
-import { InstallationDetector, type CliSkill } from "./detection"
-import { MarketplaceInstaller } from "./installer"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { detectMarketplaceRelevance } from "./relevance"
 import type {
   MarketplaceItem,
@@ -11,33 +8,30 @@ import type {
   MarketplaceRelevanceMetadata,
   InstallResult,
   RemoveResult,
+  MarketplaceItemRef,
 } from "./types"
 
 export class MarketplaceService {
-  private api: MarketplaceApiClient
-  private paths: MarketplacePaths
-  private detector: InstallationDetector
-  private installer: MarketplaceInstaller
   private scans = new Map<string, Promise<MarketplaceRelevanceMetadata>>()
 
-  constructor() {
-    this.paths = new MarketplacePaths()
-    this.api = new MarketplaceApiClient()
-    this.detector = new InstallationDetector(this.paths)
-    this.installer = new MarketplaceInstaller(this.paths)
-  }
-
-  async fetchData(workspace: string | undefined, skills: CliSkill[] | undefined, roots: readonly vscode.Uri[]) {
-    const fetched = this.api.fetchAll()
-    const metadata = this.detector.detect(workspace, skills)
-    const relevance = fetched.then((result) => this.relevance(result.items, roots))
-    const [items, installed, matches] = await Promise.all([fetched, metadata, relevance])
+  async fetchData(
+    client: KiloClient,
+    project: string | undefined,
+    dir: string,
+    roots: readonly vscode.Uri[],
+  ): Promise<MarketplaceDataResponse> {
+    const { data } = await client.kilocode.marketplace.list({ directory: dir }, { throwOnError: true })
+    const items = (data.items ?? []) as MarketplaceItem[]
+    const relevance = await this.relevance(items, roots)
+    const installed = project
+      ? data.installed
+      : { project: {}, global: { ...data.installed.global, ...data.installed.project } }
 
     return {
-      marketplaceItems: items.items,
+      marketplaceItems: items,
       marketplaceInstalledMetadata: installed,
-      marketplaceRelevance: matches,
-      errors: items.errors.length > 0 ? items.errors : undefined,
+      marketplaceRelevance: relevance,
+      errors: data.errors && data.errors.length > 0 ? data.errors : undefined,
     }
   }
 
@@ -52,32 +46,37 @@ export class MarketplaceService {
   }
 
   async install(
+    client: KiloClient,
     item: MarketplaceItem,
     options: InstallMarketplaceItemOptions,
-    workspace?: string,
+    dir: string,
   ): Promise<InstallResult> {
-    const result = await this.installer.install(item, options, workspace)
-
-    if (result.success) {
-      vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
-    }
-
-    return result
+    const { data } = await client.kilocode.marketplace.install(
+      { directory: dir, item, target: options.target, parameters: options.parameters },
+      { throwOnError: true },
+    )
+    // Success notifications are owned by the caller driving the user-facing flow
+    // (the marketplace panel). The all-scopes sidebar cleanup path calls remove()
+    // twice, so notifying here would produce duplicate toasts for one removal.
+    return data as InstallResult
   }
 
-  async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-    const result = await this.installer.remove(item, scope, workspace)
-
-    if (result.success) {
-      vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
-    }
-
-    return result
+  async remove(
+    client: KiloClient,
+    item: MarketplaceItemRef,
+    scope: "project" | "global",
+    dir: string,
+  ): Promise<RemoveResult> {
+    const { data } = await client.kilocode.marketplace.remove(
+      { directory: dir, item: { id: item.id, type: item.type }, scope },
+      { throwOnError: true },
+    )
+    // Notifications are owned by the caller (see install() above).
+    return data as RemoveResult
   }
 
   dispose(): void {
     this.scans.clear()
-    this.api.dispose()
   }
 }
 

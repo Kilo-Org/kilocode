@@ -24,6 +24,14 @@ import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import * as MarketplaceApi from "@/kilocode/marketplace/api"
+import * as MarketplaceDetection from "@/kilocode/marketplace/detection"
+import * as MarketplaceInstaller from "@/kilocode/marketplace/installer"
+import {
+  MarketplaceInstallPayload,
+  MarketplaceRemovePayload,
+  type MarketplaceRemoveResult,
+} from "@/kilocode/marketplace/schema"
 import { ProviderUsage } from "@opencode-ai/core/kilocode/provider-usage"
 import { Location } from "@opencode-ai/core/location"
 import { LocationServiceMap } from "@opencode-ai/core/location-services"
@@ -225,6 +233,94 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const marketplaceList = Effect.fn("KilocodeHttpApi.marketplaceList")(function* () {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      yield* Effect.logInfo("marketplace request", { endpoint: "list", directory: instance.directory })
+      const items = yield* Effect.promise(() => MarketplaceApi.fetchAll())
+      const entries = yield* skills.all()
+      const installed = yield* Effect.promise(() =>
+        MarketplaceDetection.detect({ directory: instance.directory, worktree: instance.worktree, skills: entries }),
+      )
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "list",
+        directory: instance.directory,
+        outcome: "success",
+        count: items.items.length,
+        errors: items.errors.length,
+        durationMs: Date.now() - started,
+      })
+      return {
+        items: items.items,
+        installed,
+        ...(items.errors.length > 0 ? { errors: items.errors } : {}),
+      }
+    })
+
+    const marketplaceInstall = Effect.fn("KilocodeHttpApi.marketplaceInstall")(function* (ctx: {
+      payload: typeof MarketplaceInstallPayload.Type
+    }) {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      const target = ctx.payload.target ?? "project"
+      yield* Effect.logInfo("marketplace request", {
+        endpoint: "install",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        target,
+        parameterKeys: Object.keys(ctx.payload.parameters ?? {}),
+        parameterCount: Object.keys(ctx.payload.parameters ?? {}).length,
+      })
+      const result = yield* MarketplaceInstaller.install(
+        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        ctx.payload,
+      )
+      if (result.success) yield* store.dispose(instance)
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "install",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        target,
+        outcome: result.success ? "success" : "failure",
+        error: result.error,
+        durationMs: Date.now() - started,
+      })
+      return result
+    })
+
+    const marketplaceRemove = Effect.fn("KilocodeHttpApi.marketplaceRemove")(function* (ctx: {
+      payload: typeof MarketplaceRemovePayload.Type
+    }) {
+      const started = Date.now()
+      const instance = yield* InstanceState.context
+      yield* Effect.logInfo("marketplace request", {
+        endpoint: "remove",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        scope: ctx.payload.scope,
+      })
+      const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
+        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        ctx.payload.item,
+        ctx.payload.scope,
+      )
+      if (result.success) yield* store.dispose(instance)
+      yield* Effect.logInfo("marketplace request complete", {
+        endpoint: "remove",
+        directory: instance.directory,
+        itemId: ctx.payload.item.id,
+        itemType: ctx.payload.item.type,
+        scope: ctx.payload.scope,
+        outcome: result.success ? "success" : "failure",
+        error: result.error,
+        durationMs: Date.now() - started,
+      })
+      return result
+    })
+
     const removeSnapshot = Effect.fn("KilocodeHttpApi.removeSnapshot")(function* (ctx: {
       payload: typeof RemoveSnapshotPayload.Type
     }) {
@@ -354,6 +450,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("marketplaceList", marketplaceList)
+      .handle("marketplaceInstall", marketplaceInstall)
+      .handle("marketplaceRemove", marketplaceRemove)
       .handle("removeSnapshot", removeSnapshot)
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)

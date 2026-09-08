@@ -3,7 +3,7 @@ import { Schema } from "effect"
 /** Safe operational refusal from a standard tool pack, reported as `ToolFailure`. */
 export class ToolError extends Schema.TaggedErrorClass<ToolError>()("ToolError", {
   message: Schema.String,
-  cause: Schema.optionalKey(Schema.Defect()),
+  cause: Schema.optionalKey(Schema.Unknown),
 }) {}
 
 /** Creates a tool refusal whose message is safe to include in an execution diagnostic. */

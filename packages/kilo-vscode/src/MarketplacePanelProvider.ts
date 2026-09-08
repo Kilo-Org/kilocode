@@ -280,6 +280,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.project ?? undefined,
       this.directory(),
     )
+    if (result.success) void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
     this.post({ type: "marketplaceInstallResult", ...result })
   }
 
@@ -291,6 +292,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.project ?? undefined,
       this.directory(),
     )
+    if (result.success) void vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
     this.post({ type: "marketplaceRemoveResult", ...result })
   }
 
