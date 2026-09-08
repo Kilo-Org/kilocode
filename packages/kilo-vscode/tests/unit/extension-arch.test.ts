@@ -218,11 +218,20 @@ describe("Extension — package.json command sync", () => {
     expect(closeTask).toContain('taskTarget().postMessage({ type: "action", action: "closeTask" })')
     expect(closeAll).toContain('taskTarget().postMessage({ type: "action", action: "closeAllTasks" })')
 
-    // A panel can stay "active" while the sidebar has focus, and on Agent
-    // Manager these commands stop sessions, so focus must be consulted first.
+    // A panel can stay "active" while the user is in the sidebar, and on Agent
+    // Manager these commands stop sessions, so the remembered surface decides.
+    // It must be the tracked one, never focus sampled when the command runs:
+    // the Command Palette blurs the webview before it executes.
     const target = sliceBlock(source, source.indexOf("const taskTarget = () =>"))
-    expect(target).toContain("sidebarFocused: provider.isFocused()")
+    expect(target).toContain("focused: focus.current()")
     expect(target).toContain("agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined")
+
+    // Every surface has to report focus, or the remembered one goes stale and
+    // commands keep targeting a surface the user has already left.
+    for (const surface of ["sidebar", "tab", "agentManager"]) {
+      expect(source, `${surface} should report focus gains`).toContain(`focus.gained("${surface}")`)
+      expect(source, `${surface} should be forgotten when it goes away`).toContain(`focus.lost("${surface}")`)
+    }
   })
 })
 

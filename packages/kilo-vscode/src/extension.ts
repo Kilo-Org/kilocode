@@ -24,7 +24,7 @@ import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
-import { closeTaskTarget } from "./commands/close-task-target"
+import { closeTaskTarget, SurfaceFocus } from "./commands/close-task-target"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
@@ -135,9 +135,15 @@ export async function activate(context: vscode.ExtensionContext) {
     return undefined
   }
 
+  // Tracks the Kilo surface the user last worked in, so commands invoked from
+  // the Command Palette still know where to act after it takes focus away.
+  const focus = new SurfaceFocus()
+
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context, {
     focusContext: "kilo-code.new.sidebarFocused",
+    onFocused: () => focus.gained("sidebar"),
+    onHidden: () => focus.lost("sidebar"),
   })
   provider.setRemoteService(remoteService)
 
@@ -225,6 +231,10 @@ export async function activate(context: vscode.ExtensionContext) {
   })
   const binary = process.platform === "win32" ? await git() : git
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)
+  agentManagerHost.setFocusListener({
+    gained: () => focus.gained("agentManager"),
+    lost: () => focus.lost("agentManager"),
+  })
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
@@ -310,6 +320,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
       tabTitle: panelTitleHandler(panel),
       topBarSurface: "tab",
+      onFocused: () => focus.gained("tab"),
+      onHidden: () => focus.lost("tab"),
     })
     tabProvider.setRemoteService(remoteService)
     tabProvider.setAutoApproveController(autoApprove)
@@ -441,10 +453,11 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // Task-close commands stop work on whichever surface the user is on, so they
-  // resolve their target from real focus rather than from panel activation alone.
+  // resolve their target from the last focused surface rather than from panel
+  // activation alone.
   const taskTarget = () =>
     closeTaskTarget<KiloProvider | AgentManagerProvider>({
-      sidebarFocused: provider.isFocused(),
+      focused: focus.current(),
       sidebar: provider,
       tab: activeTabProvider(),
       agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined,

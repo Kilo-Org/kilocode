@@ -1,35 +1,69 @@
 import { describe, expect, it } from "bun:test"
-import { closeTaskTarget } from "../../src/commands/close-task-target"
+import { closeTaskTarget, SurfaceFocus } from "../../src/commands/close-task-target"
 
 const surfaces = { sidebar: "sidebar", tab: "tab", agentManager: "agentManager" }
 
 describe("close-task command routing", () => {
-  // WebviewPanel.active can still report an editor panel as active while the
-  // user works in the sidebar. Closing tasks on Agent Manager stops sessions,
-  // so a stale panel flag must never win over real focus.
-  it("keeps a focused sidebar even while Agent Manager is the active panel", () => {
-    expect(closeTaskTarget({ ...surfaces, tab: undefined, sidebarFocused: true })).toBe("sidebar")
+  it("uses the surface the user last worked in", () => {
+    expect(closeTaskTarget({ ...surfaces, focused: "sidebar" })).toBe("sidebar")
+    expect(closeTaskTarget({ ...surfaces, focused: "agentManager" })).toBe("agentManager")
+    expect(closeTaskTarget({ ...surfaces, focused: "tab" })).toBe("tab")
   })
 
-  it("keeps a focused sidebar even while a Kilo editor tab is active", () => {
-    expect(closeTaskTarget({ ...surfaces, agentManager: undefined, sidebarFocused: true })).toBe("sidebar")
+  // WebviewPanel.active is tracked per editor group, so Agent Manager and a Kilo
+  // tab can both report active while the user is in the sidebar.
+  it("keeps a focused sidebar even while both editor panels report active", () => {
+    expect(closeTaskTarget({ ...surfaces, focused: "sidebar" })).toBe("sidebar")
   })
 
-  it("uses Agent Manager when its panel is active and the sidebar is unfocused", () => {
-    expect(closeTaskTarget({ ...surfaces, tab: undefined, sidebarFocused: false })).toBe("agentManager")
+  it("falls back to an active editor panel when no surface is known", () => {
+    expect(closeTaskTarget({ ...surfaces, focused: undefined })).toBe("agentManager")
+    expect(closeTaskTarget({ ...surfaces, agentManager: undefined, focused: undefined })).toBe("tab")
+    expect(closeTaskTarget({ sidebar: "sidebar", focused: undefined })).toBe("sidebar")
   })
 
-  // `active` is per editor group, so opening Agent Manager beside a Kilo tab
-  // leaves both panels reporting active.
-  it("prefers Agent Manager when a Kilo editor tab also reports active", () => {
-    expect(closeTaskTarget({ ...surfaces, sidebarFocused: false })).toBe("agentManager")
+  it("ignores a remembered surface that is no longer available", () => {
+    expect(closeTaskTarget({ sidebar: "sidebar", tab: "tab", focused: "agentManager" })).toBe("tab")
+    expect(closeTaskTarget({ sidebar: "sidebar", focused: "tab" })).toBe("sidebar")
+  })
+})
+
+describe("SurfaceFocus", () => {
+  // The Command Palette blurs the webview before the command runs, so the
+  // surface must survive losing focus or these commands would target the wrong
+  // one and, on Agent Manager, abort sessions.
+  it("remembers the surface after its webview loses focus", () => {
+    const focus = new SurfaceFocus()
+
+    focus.gained("sidebar")
+
+    expect(focus.current()).toBe("sidebar")
   })
 
-  it("uses the Kilo editor tab when one is active and the sidebar is unfocused", () => {
-    expect(closeTaskTarget({ ...surfaces, agentManager: undefined, sidebarFocused: false })).toBe("tab")
+  it("follows the user to another surface", () => {
+    const focus = new SurfaceFocus()
+
+    focus.gained("sidebar")
+    focus.gained("agentManager")
+
+    expect(focus.current()).toBe("agentManager")
   })
 
-  it("falls back to the sidebar when no editor surface is active", () => {
-    expect(closeTaskTarget({ sidebar: "sidebar", sidebarFocused: false })).toBe("sidebar")
+  it("forgets a surface once it is hidden or closed", () => {
+    const focus = new SurfaceFocus()
+
+    focus.gained("agentManager")
+    focus.lost("agentManager")
+
+    expect(focus.current()).toBeUndefined()
+  })
+
+  it("keeps the current surface when a different one goes away", () => {
+    const focus = new SurfaceFocus()
+
+    focus.gained("sidebar")
+    focus.lost("agentManager")
+
+    expect(focus.current()).toBe("sidebar")
   })
 })
