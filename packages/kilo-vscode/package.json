@@ -112,6 +112,16 @@
         "icon": "$(add)"
       },
       {
+        "command": "kilo-code.new.closeTask",
+        "title": "Close Task",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.closeAllTasks",
+        "title": "Close All Tasks",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManagerOpen",
         "title": "Agent Manager",
         "category": "Kilo Code",

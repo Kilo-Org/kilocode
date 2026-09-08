@@ -139,6 +139,10 @@ export function closeTab(state: LocalTabState, id: string, pending: PendingTabFa
   return normalize(ids, nextTabAfterClose(state.ids, id), pending)
 }
 
+export function closeAllTabs(pending: PendingTabFactory): LocalTabState {
+  return normalize([], undefined, pending)
+}
+
 export function closeOtherTabs(state: LocalTabState, id: string): LocalTabState {
   if (!state.ids.includes(id)) return state
   return { ids: [id], active: id }
