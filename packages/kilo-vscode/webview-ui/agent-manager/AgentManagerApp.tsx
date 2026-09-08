@@ -81,6 +81,7 @@ import { worktreeSessionIds as worktreeMembership, worktreeSessions } from "./pr
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import {
   createLocalSessions,
+  backgroundCreated,
   needsLocalDraft,
   persistLocalTabs,
   projectLocalIds,
@@ -243,7 +244,8 @@ const AgentManagerContent: Component = () => {
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
-  const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
+  const [repoBranches, setRepoBranches] = createSignal<Record<string, string | undefined>>({})
+  const repoDetectedBranch = () => repoBranches()[currentProjectId() ?? "single"]
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
 
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
@@ -272,8 +274,7 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
-  const defaultBase = (id: string) =>
-    projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoDetectedBranch())
+  const defaultBase = (id: string) => projectDefaultBase(registry.ensure(id), true, repoBranches()[id])
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
@@ -1017,7 +1018,11 @@ const AgentManagerContent: Component = () => {
     pruneLive: (ids) => projectLive.prune(ids),
   })
   const stateHandlers = createProjectStateHandlers({
-    setProjects: setProjectList,
+    setProjects: (projects) => {
+      const target = projects.find((project) => project.pinned) ?? projects.at(0)
+      if (target) registry.migrate(target.id)
+      setProjectList(projects)
+    },
     setStates: setProjectStates,
     prune: (ids) => registry.prune(ids),
     ensure: (id) => registry.ensure(id),
@@ -1232,6 +1237,26 @@ const AgentManagerContent: Component = () => {
       if (created.draftID) createdSessions.add(created.session.id)
       if (created.draftID && closedDrafts.delete(created.draftID)) return
       if (created.draftID && promotePendingDraftDiscard(created.draftID, created.session.id)) return
+      const owner =
+        created.projectId ??
+        registry
+          .all()
+          .find(
+            (store) =>
+              (created.draftID && store.tabs.ids().includes(created.draftID)) ||
+              store.managedSessions().some((item) => item.id === created.session.id),
+          )?.id
+      if (owner && owner !== (currentProjectId() ?? "single")) {
+        if (!projectList().some((project) => project.id === owner)) return
+        if (backgroundCreated(registry.ensure(owner), created))
+          vscode.postMessage({
+            type: "agentManager.persistSession",
+            projectId: owner,
+            sessionId: created.session.id,
+            draftID: created.draftID,
+          })
+        return
+      }
       const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
       if (!pending && localSessionIDs().includes(created.session.id)) return
       if (worktreeSessionIds().has(created.session.id)) return
@@ -1242,6 +1267,7 @@ const AgentManagerContent: Component = () => {
       if (!pending) setSelection(LOCAL)
       vscode.postMessage({
         type: "agentManager.persistSession",
+        projectId: owner,
         sessionId: created.session.id,
         draftID: created.draftID,
       })
@@ -1299,7 +1325,7 @@ const AgentManagerContent: Component = () => {
       clearFailedDelete(msg, registry)
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
-        if (info.defaultBranch) setRepoDetectedBranch(info.defaultBranch)
+        setRepoBranches((prev) => ({ ...prev, [info.projectId ?? "single"]: info.defaultBranch }))
       }
 
       if (msg.type === "agentManager.worktreeSetup") {

@@ -40,6 +40,8 @@ export interface ProjectMessageDeps {
   pickFolder: () => Promise<string | undefined>
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
+  /** Clear the applied project when the last project is removed. */
+  empty?: () => void
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Push the current project snapshots to the webview. */
@@ -234,9 +236,15 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
 }
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
-  await deps.contexts.remove(id)
+  if (deps.contexts.pinned()?.id === id) return
+  const active = deps.contexts.active()?.id === id
   await deps.registry.remove(id)
+  await deps.contexts.remove(id)
   deps.push()
+  if (!active) return
+  const next = deps.contexts.active()
+  if (next) deps.activate(next)
+  else deps.empty?.()
 }
 
 function selectProject(id: string, deps: ProjectMessageDeps): void {

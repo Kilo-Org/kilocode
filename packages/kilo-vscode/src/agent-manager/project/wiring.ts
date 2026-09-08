@@ -32,6 +32,7 @@ export function createProjectWiring(opts: {
   output: (msg: string) => void
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
+  empty: () => void
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
@@ -66,6 +67,7 @@ export function createProjectWiring(opts: {
     contexts,
     pickFolder: () => opts.host.pickFolder(),
     activate: opts.activate,
+    empty: opts.empty,
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,

@@ -74,6 +74,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -86,6 +87,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -175,7 +177,7 @@ export class VscodeHost implements Host {
       listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
-      registerSession: (s) => provider.registerSession(s),
+      registerSession: (s) => provider.registerSession(s, false, opts.sessionProject?.()),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),

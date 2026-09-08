@@ -121,6 +121,8 @@ export interface Host {
     /** Dynamic root directory for the panel's session provider (follows the active project). */
     workspaceRoot?: () => string | undefined
     projectId?: () => string | undefined
+    /** Source of an externally created session, including async background work. */
+    sessionProject?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */

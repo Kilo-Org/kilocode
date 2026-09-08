@@ -18,7 +18,7 @@ function gitRepo(): string {
   return fs.realpathSync(dir)
 }
 
-function setup(opts: { workspace?: string; git?: GitOps } = {}) {
+function setup(opts: { workspace?: string | null; git?: GitOps } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {
@@ -29,7 +29,7 @@ function setup(opts: { workspace?: string; git?: GitOps } = {}) {
   }
   const registry = new ProjectRegistry(storage)
   const contexts = new ProjectContexts({
-    workspaceRoot: () => opts.workspace ?? WORKSPACE,
+    workspaceRoot: () => (opts.workspace === null ? undefined : (opts.workspace ?? WORKSPACE)),
     registry,
     deps: { log: () => {}, exists: (dir) => fs.existsSync(dir) },
   })
@@ -37,6 +37,7 @@ function setup(opts: { workspace?: string; git?: GitOps } = {}) {
     activate: [] as string[],
     expand: [] as string[],
     push: 0,
+    empty: 0,
     error: [] as string[],
     pick: 0,
     ready: [] as string[],
@@ -50,6 +51,7 @@ function setup(opts: { workspace?: string; git?: GitOps } = {}) {
       return pickResult
     },
     activate: (ctx) => calls.activate.push(ctx.id),
+    empty: () => calls.empty++,
     expand: (ctx) => calls.expand.push(ctx.id),
     push: () => calls.push++,
     error: (message) => calls.error.push(message),
@@ -214,7 +216,7 @@ describe("handleProjectMessage", () => {
     expect(calls.expand).toEqual([id])
   })
 
-  it("removes projects without touching the pinned fallback", async () => {
+  it("activates the pinned fallback when removing the active project", async () => {
     const repo = gitRepo()
     const { deps, registry, contexts, calls } = setup()
     const id = projectIdFor(repo)
@@ -224,6 +226,24 @@ describe("handleProjectMessage", () => {
     expect(registry.get(id)).toBeUndefined()
     expect(contexts.get(id)).toBeUndefined()
     expect(contexts.active()?.root).toBe(WORKSPACE)
-    expect(calls.activate).toEqual([id])
+    expect(calls.activate).toEqual([id, projectIdFor(WORKSPACE)])
+  })
+
+  it("clears applied state after removing the last project without a workspace", async () => {
+    const { deps, registry, contexts, calls } = setup({ workspace: null })
+    await registry.add({ id: "extra", root: "/extra" })
+    contexts.activate("extra")
+    await handleProjectMessage(msg("agentManager.removeProject", { projectId: "extra" }), deps)
+    expect(contexts.active()).toBeUndefined()
+    expect(calls.empty).toBe(1)
+  })
+
+  it("does not reactivate the foreground when removing a background project", async () => {
+    const { deps, registry, contexts, calls } = setup()
+    await registry.add({ id: "extra", root: "/extra" })
+    contexts.resolve("extra")
+    await handleProjectMessage(msg("agentManager.removeProject", { projectId: "extra" }), deps)
+    expect(calls.activate).toEqual([])
+    expect(calls.empty).toBe(0)
   })
 })

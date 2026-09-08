@@ -656,6 +656,7 @@ interface CloseSessionIn {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 interface PersistSessionIn {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }

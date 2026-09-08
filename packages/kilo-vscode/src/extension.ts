@@ -287,6 +287,7 @@ export async function activate(context: vscode.ExtensionContext) {
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
           workspaceRoot: () => agentManagerProvider.workspaceRoot(),
           projectId: () => agentManagerProvider.projectId(),
+          sessionProject: () => agentManagerProvider.sessionProject(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()

@@ -204,6 +204,7 @@ export class AgentManagerProvider implements Disposable {
       log: (...args) => this.log(...args),
       output: (msg) => this.outputChannel.appendLine(msg),
       activate: (ctx) => this.activateProject(ctx),
+      empty: () => this.pushEmptyState(),
       expand: (ctx) => this.initExpanded(ctx),
       ready: (ctx) => initContextState(ctx, (...args) => this.log(...args)),
       push: () => this.pushProjects(),
@@ -357,6 +358,7 @@ export class AgentManagerProvider implements Disposable {
       worktreeDirectories: () => this.getWorktreeDirectories(),
       workspaceRoot: () => this.getRoot(),
       projectId: () => this.contexts.active()?.id,
+      sessionProject: () => this.sessionProject(),
     })
     this.attachPanel(panel)
     if (!preserveFocus) focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
@@ -1261,12 +1263,13 @@ export class AgentManagerProvider implements Disposable {
   // Repo info
 
   private async sendRepoInfo(): Promise<void> {
+    const ctx = this.context
     const manager = this.getWorktreeManager()
     if (!manager) return
     try {
       const branch = await manager.currentBranch()
       const defaultBranch = await manager.defaultBranch()
-      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch, projectId: this.context?.id })
+      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch, projectId: ctx?.id })
     } catch (error) {
       this.log(`Failed to get current branch: ${error}`)
     }
@@ -1767,6 +1770,10 @@ export class AgentManagerProvider implements Disposable {
   public workspaceRoot = () => this.getRoot()
 
   public projectId = () => this.contexts.active()?.id
+
+  public sessionProject(): string | undefined {
+    return this.projectScope.current()?.id ?? this.contexts.active()?.id
+  }
   /**
    * Continue a sidebar session in a new worktree.
    * Captures git state, creates worktree, applies state, forks session.
