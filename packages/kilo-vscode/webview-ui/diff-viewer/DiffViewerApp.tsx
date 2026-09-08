@@ -295,6 +295,7 @@ const DiffViewerContent: Component = () => {
         loadingFiles={loadingFiles()}
         onRequestDiff={requestDiffFile}
         sessionKey={`${context()}\0${currentSourceId() ?? "local"}`}
+        worktreeId="diff"
         remoteComments={remote()}
         focusedComment={focus()}
         comments={comments()}

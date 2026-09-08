@@ -4,7 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { isPRReviewComment } from "../../../../src/shared/review-comments"
+import { isCIReviewComment, isPRReviewComment } from "../../../../src/shared/review-comments"
 import { PRAvatar } from "../../../agent-manager/pr/PRAvatar"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -26,9 +26,17 @@ const PREVIEW = 3
 const SCROLL = 6
 
 export const ReviewComments: Component<ReviewCommentsProps> = (props) => (
-  <For each={["local", "pr"] as const}>
+  <For each={["local", "pr", "ci"] as const}>
     {(source) => {
-      const comments = createMemo(() => props.comments.filter((item) => isPRReviewComment(item) === (source === "pr")))
+      const comments = createMemo(() =>
+        props.comments.filter((item) =>
+          source === "pr"
+            ? isPRReviewComment(item)
+            : source === "ci"
+              ? isCIReviewComment(item)
+              : !isPRReviewComment(item) && !isCIReviewComment(item),
+        ),
+      )
       return (
         <Show when={comments().length > 0}>
           <Group {...props} comments={comments()} source={source} />
@@ -38,7 +46,7 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => (
   </For>
 )
 
-function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
+function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
   const language = useLanguage()
   const vscode = useVSCode()
   const [open, setOpen] = createSignal(true)
@@ -46,14 +54,23 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
   const [full, setFull] = createSignal<string[]>([])
 
   const author = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.author : "")
-  const side = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? "" : item.side === "deletions" ? "-" : "+")
-  const line = (item: ReviewCommentEntry) => (item.line ? `${side(item)}${item.line}` : "")
-  const body = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.body : item.comment)
-  const snippet = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.diffHunk : item.selectedText)
-  const label = (item: ReviewCommentEntry) => (item.file ? fileName(item.file) : `@${author(item)}`)
+  const side = (item: ReviewCommentEntry) =>
+    isPRReviewComment(item) || isCIReviewComment(item) ? "" : item.side === "deletions" ? "-" : "+"
+  const line = (item: ReviewCommentEntry) => (!isCIReviewComment(item) && item.line ? `${side(item)}${item.line}` : "")
+  const body = (item: ReviewCommentEntry) =>
+    isPRReviewComment(item) || isCIReviewComment(item) ? item.body : item.comment
+  const snippet = (item: ReviewCommentEntry) => {
+    if (isCIReviewComment(item)) return undefined
+    return isPRReviewComment(item) ? item.diffHunk : item.selectedText
+  }
+  const file = (item: ReviewCommentEntry) => (isCIReviewComment(item) ? undefined : item.file)
+  const label = (item: ReviewCommentEntry) => {
+    if (isCIReviewComment(item)) return item.title
+    return item.file ? fileName(item.file) : `@${author(item)}`
+  }
   const outdated = (item: ReviewCommentEntry) => isPRReviewComment(item) && item.outdated === true
 
-  const files = createMemo(() => new Set(props.comments.filter((item) => item.file).map((item) => item.file)).size)
+  const files = createMemo(() => new Set(props.comments.map(file).filter(Boolean)).size)
   // Collapsing a single extra row is not worth a toggle, so only hide from two up.
   const hidden = createMemo(() => (props.comments.length > PREVIEW + 1 ? props.comments.length - PREVIEW : 0))
   const rows = createMemo(() => (hidden() > 0 && !all() ? props.comments.slice(0, PREVIEW) : props.comments))
@@ -62,7 +79,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
     setFull((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]))
 
   const reveal = (item: ReviewCommentEntry) => {
-    if (!item.file) return
+    if (isCIReviewComment(item) || !item.file) return
     // An outdated PR thread is anchored to a line that has since moved, so
     // jumping there lands on unrelated code. Open the file at the top instead.
     const at = outdated(item) || (isPRReviewComment(item) && item.side === "deletions") ? undefined : item.line
@@ -95,11 +112,19 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
           onClick={() => setOpen(!open())}
         >
           <Icon name={open() ? "chevron-down" : "chevron-right"} size="small" />
-          <Icon name={props.source === "pr" ? "github" : "comment"} size="small" />
+          <Icon
+            name={props.source === "pr" ? "github" : props.source === "ci" ? "checklist" : "comment"}
+            size="small"
+          />
           <span class="prompt-review-comments-title">
-            {language.t(props.source === "pr" ? "agentManager.review.prCount" : "agentManager.review.inlineCount", {
-              count: props.comments.length,
-            })}
+            {language.t(
+              props.source === "ci"
+                ? "agentManager.pr.checks.feedback"
+                : props.source === "pr"
+                  ? "agentManager.review.prCount"
+                  : "agentManager.review.inlineCount",
+              { count: props.comments.length },
+            )}
           </span>
           <Show when={files() > 1}>
             <span class="prompt-review-comments-meta">
@@ -124,7 +149,10 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
               <div class="prompt-review-row" classList={{ "prompt-review-row--full": full().includes(item.id) }}>
                 <div class="prompt-review-row-top">
                   <span class="prompt-review-row-icon">
-                    <Show when={isPRReviewComment(item) && item} fallback={<Icon name="comment" size="small" />}>
+                    <Show
+                      when={isPRReviewComment(item) && item}
+                      fallback={<Icon name={isCIReviewComment(item) ? "checklist" : "comment"} size="small" />}
+                    >
                       {(comment) => <PRAvatar author={comment().author} avatar={comment().avatar} />}
                     </Show>
                   </span>
@@ -137,7 +165,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
                     <span class="prompt-review-row-head">
                       <span class="prompt-review-row-label">{label(item)}</span>
                       <Show when={line(item)}>{(value) => <span class="prompt-review-row-line">{value()}</span>}</Show>
-                      <Show when={item.file && author(item)}>
+                      <Show when={file(item) && author(item)}>
                         <span class="prompt-review-row-author">@{author(item)}</span>
                       </Show>
                       <Show when={outdated(item)}>
@@ -148,7 +176,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
                       <span class="prompt-review-row-preview">{body(item)}</span>
                     </Show>
                   </button>
-                  <Show when={item.file && isPRReviewComment(item)}>
+                  <Show when={isPRReviewComment(item) && item.file}>
                     <Tooltip value={language.t("agentManager.pr.comment.showInDiff")} placement="top">
                       <IconButton
                         icon="code"
@@ -161,7 +189,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
                       />
                     </Tooltip>
                   </Show>
-                  <Show when={item.file}>
+                  <Show when={file(item)}>
                     <Tooltip value={language.t("agentManager.diff.openFile")} placement="top">
                       <IconButton
                         icon="go-to-file"
@@ -186,9 +214,9 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" }) {
 
                 <Show when={full().includes(item.id)}>
                   <div class="prompt-review-row-detail">
-                    <Show when={item.file}>{(file) => <code class="prompt-review-row-path">{file()}</code>}</Show>
+                    <Show when={file(item)}>{(file) => <code class="prompt-review-row-path">{file()}</code>}</Show>
                     <div class="prompt-review-row-text">
-                      <Show when={isPRReviewComment(item)} fallback={body(item)}>
+                      <Show when={isPRReviewComment(item) || isCIReviewComment(item)} fallback={body(item)}>
                         <Markdown text={body(item)} />
                       </Show>
                     </div>

@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { For, Show } from "solid-js"
+import { For, Show, type JSXElement } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -11,7 +11,9 @@ import { PRCommentDiff } from "../../diff-viewer/PRCommentDiff"
 import { CopyButton } from "./CopyButton"
 import { PRAvatar } from "./PRAvatar"
 import { prMarkdown, preview } from "./pr-comment-payload"
-import type { PRComment } from "./pr-types"
+import { PRCommentTime } from "./PRCommentTime"
+import type { PRComment, PRReaction, PRReactionContent } from "./pr-types"
+import { PRReactions } from "./PRReactions"
 
 interface Props {
   comment: PRComment
@@ -20,7 +22,13 @@ interface Props {
   sent: boolean
   open: boolean
   inline?: boolean
+  preview?: PRComment["preview"]
   error?: string
+  reactionError?: string
+  /** Polled reactions with an unconfirmed pick applied; falls back to the comment. */
+  reactions?: PRReaction[]
+  reactionPending?: (content: PRReactionContent) => boolean
+  onReaction?: (content: PRReactionContent, add: boolean) => void
   onToggleOpen: () => void
   onToggleResolved?: () => void
   onSend: () => void
@@ -36,6 +44,41 @@ export function PRCommentCard(props: Props) {
     if (!file) return ""
     return props.comment.line ? `${file}:${props.comment.line}` : file
   }
+
+  // Only the panel opts into preview hunks; the header stays outside the annotation.
+  const Content = (slot: { children: JSXElement }) => (
+    <Show
+      when={props.preview}
+      fallback={
+        <>
+          <Show when={!props.inline && location()}>{(value) => <div class="am-pr-diff-file">{value()}</div>}</Show>
+          <Show when={!props.inline && props.comment.diffHunk && props.comment.file}>
+            <PRCommentDiff
+              file={props.comment.file!}
+              line={props.comment.originalLine ?? props.comment.line}
+              side={props.comment.side}
+              hunk={props.comment.diffHunk!}
+              after={props.comment.after}
+            />
+          </Show>
+          {slot.children}
+        </>
+      }
+    >
+      {(preview) => (
+        <PRCommentDiff
+          file={props.comment.file ?? ""}
+          line={preview().line}
+          side={preview().side}
+          hunk={preview().patch}
+          bottom={preview().bottom}
+          inline
+        >
+          {slot.children}
+        </PRCommentDiff>
+      )}
+    </Show>
+  )
 
   return (
     <div
@@ -62,101 +105,105 @@ export function PRCommentCard(props: Props) {
             {t("agentManager.import.pullRequest")}
           </span>
         </Show>
-        <Show when={props.open} fallback={<span class="am-pr-comment-preview">{preview(props.comment.body)}</span>}>
-          <Show when={!props.inline && location()}>{(value) => <span class="am-pr-comment-file">{value()}</span>}</Show>
+        <Show when={!props.inline || !props.open}>
+          <span class="am-pr-comment-preview">{preview(props.comment.body)}</span>
         </Show>
-        <Show when={props.comment.outdated}>
-          <span class="am-pr-comment-tag">{t("agentManager.pr.comment.outdated")}</span>
-        </Show>
-        <Show when={props.inline && props.resolved}>
-          <span class="am-pr-comment-tag">{t("agentManager.pr.comment.resolved")}</span>
-        </Show>
-        <Show when={props.sent}>
-          <span class="am-pr-comment-tag am-pr-comment-tag-sent">{t("agentManager.pr.comment.sent")}</span>
-        </Show>
+        <div class="am-pr-comment-tags">
+          <Show when={props.comment.outdated}>
+            <span class="am-pr-comment-tag">{t("agentManager.pr.comment.outdated")}</span>
+          </Show>
+          <Show when={props.inline && props.resolved}>
+            <span class="am-pr-comment-tag">{t("agentManager.pr.comment.resolved")}</span>
+          </Show>
+          <Show when={props.sent}>
+            <span class="am-pr-comment-tag am-pr-comment-tag-sent">{t("agentManager.pr.comment.sent")}</span>
+          </Show>
+          <PRCommentTime time={props.comment.createdAt} />
+        </div>
       </button>
 
       <Show when={props.open}>
-        <Show when={!props.inline && props.comment.diffHunk && props.comment.file}>
-          <PRCommentDiff
-            file={props.comment.file!}
-            line={props.comment.originalLine ?? props.comment.line}
-            side={props.comment.side}
-            hunk={props.comment.diffHunk!}
-            after={props.comment.after}
-          />
-        </Show>
-        <div class="am-pr-comment-body">
-          <Markdown text={props.comment.body} />
-        </div>
-        <For each={props.comment.replies}>
-          {(reply) => (
-            <div class="am-pr-comment-reply">
-              <div class="am-pr-comment-reply-head am-pr-row">
-                <PRAvatar avatar={reply.avatar} author={reply.author} />
-                <span class="am-pr-comment-author">{reply.author}</span>
+        <Content>
+          <div class="am-pr-comment-body">
+            <Markdown text={props.comment.body} />
+          </div>
+          <For each={props.comment.replies}>
+            {(reply) => (
+              <div class="am-pr-comment-reply">
+                <div class="am-pr-comment-reply-head am-pr-row">
+                  <PRAvatar avatar={reply.avatar} author={reply.author} />
+                  <span class="am-pr-comment-author">{reply.author}</span>
+                </div>
+                <div class="am-pr-comment-body">
+                  <Markdown text={reply.body} />
+                </div>
               </div>
-              <div class="am-pr-comment-body">
-                <Markdown text={reply.body} />
-              </div>
-            </div>
-          )}
-        </For>
-        <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
-        <div class="am-pr-comment-actions am-pr-row">
-          <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
-            {t("agentManager.review.sendToChat")}
-          </Button>
-          <Show when={props.onToggleResolved}>
-            <Button
-              variant="secondary"
-              size="small"
-              class="am-pr-comment-btn"
-              disabled={props.pending}
-              onClick={props.onToggleResolved}
-            >
-              <Show when={props.pending}>
-                <Spinner class="am-pr-comment-spinner" />
-              </Show>
-              {props.resolved ? t("agentManager.pr.comment.unresolve") : t("agentManager.pr.comment.resolve")}
+            )}
+          </For>
+          <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
+          <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
+          <div class="am-pr-comment-actions am-pr-row">
+            <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
+              {t("agentManager.pr.fixWithKilo")}
             </Button>
-          </Show>
-          <span class="am-pr-comment-actions-gap" />
-          <CopyButton text={prMarkdown(props.comment)} label={t("agentManager.pr.comment.copy")} />
-          <Show when={props.onOpenDiff}>
-            <Tooltip value={t("agentManager.pr.comment.showInDiff")} placement="top">
-              <IconButton
-                icon="code"
+            <Show when={props.onToggleResolved}>
+              <Button
+                variant="secondary"
                 size="small"
-                variant="ghost"
-                aria-label={t("agentManager.pr.comment.showInDiff")}
-                onClick={() => props.onOpenDiff?.()}
+                class="am-pr-comment-btn"
+                disabled={props.pending}
+                onClick={props.onToggleResolved}
+              >
+                <Show when={props.pending}>
+                  <Spinner class="am-pr-comment-spinner" />
+                </Show>
+                {props.resolved ? t("agentManager.pr.comment.unresolve") : t("agentManager.pr.comment.resolve")}
+              </Button>
+            </Show>
+            <Show when={props.onReaction}>
+              <PRReactions
+                reactions={props.reactions ?? props.comment.reactions}
+                pending={props.reactionPending}
+                onToggle={(content, add) => props.onReaction?.(content, add)}
               />
-            </Tooltip>
-          </Show>
-          <Show when={props.onOpenFile}>
-            <Tooltip value={t("agentManager.diff.openFile")} placement="top">
-              <IconButton
-                icon="go-to-file"
-                size="small"
-                variant="ghost"
-                aria-label={t("agentManager.diff.openFile")}
-                onClick={() => props.onOpenFile?.()}
-              />
-            </Tooltip>
-          </Show>
-          <Show when={props.onOpenUrl}>
-            <Tooltip value={t("agentManager.pr.comment.openOnGitHub")} placement="top">
-              <IconButton
-                icon="square-arrow-top-right"
-                size="small"
-                variant="ghost"
-                aria-label={t("agentManager.pr.comment.openOnGitHub")}
-                onClick={() => props.onOpenUrl?.()}
-              />
-            </Tooltip>
-          </Show>
-        </div>
+            </Show>
+            <span class="am-pr-comment-actions-gap" />
+            <CopyButton text={prMarkdown(props.comment)} label={t("agentManager.pr.comment.copy")} />
+            <Show when={props.onOpenDiff}>
+              <Tooltip value={t("agentManager.pr.comment.showInDiff")} placement="top">
+                <IconButton
+                  icon="code"
+                  size="small"
+                  variant="ghost"
+                  aria-label={t("agentManager.pr.comment.showInDiff")}
+                  onClick={() => props.onOpenDiff?.()}
+                />
+              </Tooltip>
+            </Show>
+            <Show when={props.onOpenFile}>
+              <Tooltip value={t("agentManager.diff.openFile")} placement="top">
+                <IconButton
+                  icon="go-to-file"
+                  size="small"
+                  variant="ghost"
+                  aria-label={t("agentManager.diff.openFile")}
+                  onClick={() => props.onOpenFile?.()}
+                />
+              </Tooltip>
+            </Show>
+            <Show when={props.onOpenUrl}>
+              <Tooltip value={t("agentManager.pr.comment.openOnGitHub")} placement="top">
+                <IconButton
+                  icon="square-arrow-top-right"
+                  size="small"
+                  variant="ghost"
+                  aria-label={t("agentManager.pr.comment.openOnGitHub")}
+                  onClick={() => props.onOpenUrl?.()}
+                />
+              </Tooltip>
+            </Show>
+          </div>
+        </Content>
       </Show>
     </div>
   )

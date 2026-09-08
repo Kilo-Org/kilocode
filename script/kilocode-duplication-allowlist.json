@@ -105,15 +105,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-vscode/src/diff/sources/staged.ts", "packages/kilo-vscode/src/diff/sources/unstaged.ts"],
-      "fingerprint": "2aad5496387de63a",
-      "maxMatches": 1,
-      "maxTokens": 131,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": [
         "packages/kilo-vscode/webview-ui/src/context/session-variant-store.ts",
         "packages/opencode/src/kilocode/cli/cmd/run/variant.ts"

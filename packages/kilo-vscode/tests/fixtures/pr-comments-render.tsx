@@ -3,6 +3,7 @@ import { Window } from "happy-dom"
 import type { PRStatus, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const refreshed: WebviewMessage[] = []
+const reactions: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -10,6 +11,17 @@ class CSSStyleSheetStub {
   replace() {
     return Promise.resolve(this)
   }
+}
+class IntersectionObserverStub {
+  constructor(private callback: IntersectionObserverCallback) {}
+  observe(target: Element) {
+    this.callback(
+      [{ isIntersecting: true, target } as IntersectionObserverEntry],
+      this as unknown as IntersectionObserver,
+    )
+  }
+  unobserve(_target: Element) {}
+  disconnect() {}
 }
 
 Object.assign(globalThis, {
@@ -30,6 +42,7 @@ Object.assign(globalThis, {
   CSSStyleSheet: CSSStyleSheetStub,
   MutationObserver: window.MutationObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: IntersectionObserverStub,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
   MouseEvent: window.MouseEvent,
@@ -40,6 +53,7 @@ Object.assign(globalThis, {
   acquireVsCodeApi: () => ({
     postMessage: (message: WebviewMessage) => {
       if (message.type === "agentManager.refreshPR") refreshed.push(message)
+      if (message.type === "agentManager.commentReaction") reactions.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -47,8 +61,10 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
+const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { MarkedProvider } = await import("@kilocode/kilo-ui/context/marked")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
+const { useVSCode } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
 const { PRComments } = await import("../../webview-ui/agent-manager/pr/PRComments")
 const { Diff } = await import("@kilocode/kilo-ui/diff")
@@ -56,7 +72,9 @@ const { Show, createRoot, createSignal } = await import("solid-js")
 const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
 const { createPRNavigation, PRPanelHost } = await import("../../webview-ui/agent-manager/pr/PRPanelHost")
 const { createPRReview } = await import("../../webview-ui/agent-manager/pr/review")
-const { commentState, patchCommentState } = await import("../../webview-ui/agent-manager/pr/pr-comment-state")
+const { commentState, createReactionController, patchCommentState } = await import(
+  "../../webview-ui/agent-manager/pr/pr-comment-state"
+)
 const { createRemoteCommentController, createRemoteFocus } = await import(
   "../../webview-ui/diff-viewer/remote-comment-renderer"
 )
@@ -84,10 +102,15 @@ const [comments, setComments] = createSignal({
       line: 14,
       resolved: false,
       outdated: false,
+      createdAt: Date.now() - 5 * 60 * 1000,
       diffHunk: HUNK,
       // Read from the worktree by the extension: a hunk stops at the commented line.
       after: ["  return <View {...options} />", "}", ""],
       replies: [{ author: "marius", body: "reply body is visible" }],
+      reactions: [
+        { content: "THUMBS_UP", count: 2, viewerHasReacted: false },
+        { content: "HEART", count: 1, viewerHasReacted: true },
+      ],
     },
     {
       id: "PRRC_done",
@@ -128,6 +151,104 @@ const comment = shadow?.querySelector('[data-content] span[style*="--syntax-comm
 const code = shadow?.querySelectorAll("[data-content] [data-line]")
 assert.match(root.textContent ?? "", /comment body survives Pierre rendering/)
 assert.match(root.textContent ?? "", /reply body is visible/)
+const reactionButtons = [...root.querySelectorAll<HTMLButtonElement>(".am-pr-reaction")]
+const addReaction = reactionButtons.at(0)
+const removeReaction = reactionButtons.at(1)
+assert.ok(addReaction, "add reaction control is rendered")
+assert.ok(removeReaction, "remove reaction control is rendered")
+const reactionCount = (button: HTMLButtonElement) => button.querySelector(".am-pr-reaction-count")?.textContent
+const pickerTrigger = () => root.querySelector('.am-pr-reactions [data-component="icon-button"]')
+assert.equal(reactionCount(addReaction!), "2")
+assert.ok(pickerTrigger(), "reaction picker trigger is rendered")
+addReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions[0], {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "PRRC_open",
+  reaction: "THUMBS_UP",
+  add: true,
+})
+// The spinner runs inside the pill it belongs to; nothing is unmounted around it.
+assert.ok(addReaction!.querySelector('[data-component="spinner"]'), "the pill shows its own spinner")
+assert.equal(addReaction!.getAttribute("aria-busy"), "true")
+assert.equal(removeReaction!.querySelector('[data-component="spinner"]'), null)
+assert.equal(removeReaction!.getAttribute("aria-busy"), "false")
+assert.ok(pickerTrigger(), "the picker trigger stays in place while an update runs")
+const reactionResult = (reaction: string, add: boolean, success: boolean) => {
+  post(
+    {
+      type: "agentManager.commentReactionResult",
+      worktreeId: "wt-test",
+      commentId: "PRRC_open",
+      reaction,
+      add,
+      success,
+      ...(success ? {} : { error: "GitHub rejected the update" }),
+    },
+    window,
+  )
+}
+reactionResult("THUMBS_UP", true, false)
+await window.happyDOM.waitUntilComplete()
+// A failure restores the count it had and lets the user try the same pill again.
+assert.equal(addReaction!.querySelector('[data-component="spinner"]'), null)
+assert.equal(reactionCount(addReaction!), "2")
+assert.equal(addReaction!.classList.contains("am-pr-reaction-active"), false)
+assert.match(root.textContent ?? "", /Could not update reaction/)
+addReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions[1], {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "PRRC_open",
+  reaction: "THUMBS_UP",
+  add: true,
+})
+reactionResult("THUMBS_UP", true, true)
+await window.happyDOM.waitUntilComplete()
+// The pick holds until a poll reports it, so the count does not drop back.
+assert.equal(reactionCount(addReaction!), "3")
+assert.equal(addReaction!.classList.contains("am-pr-reaction-active"), true)
+addReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.ok(addReaction!.querySelector('[data-component="spinner"]'), "a pending removal keeps a new reaction mounted")
+reactionResult("THUMBS_UP", false, false)
+await window.happyDOM.waitUntilComplete()
+assert.equal(reactionCount(addReaction!), "3")
+assert.equal(addReaction!.classList.contains("am-pr-reaction-active"), true)
+removeReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions[3], {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "PRRC_open",
+  reaction: "HEART",
+  add: false,
+})
+// Removing the last reaction keeps the pill mounted, so its spinner is visible.
+assert.ok(removeReaction!.querySelector('[data-component="spinner"]'), "the emptied pill keeps its spinner")
+reactionResult("HEART", false, false)
+await window.happyDOM.waitUntilComplete()
+assert.equal(removeReaction!.querySelector('[data-component="spinner"]'), null)
+assert.equal(reactionCount(removeReaction!), "1")
+assert.equal(removeReaction!.classList.contains("am-pr-reaction-active"), true)
+assert.match(root.textContent ?? "", /Could not update reaction/)
+removeReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions[4], {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "PRRC_open",
+  reaction: "HEART",
+  add: false,
+})
+assert.equal(root.querySelector('[data-thread-id="PRRT_open"] .am-pr-comment-time')?.textContent, "5 min ago")
+assert.equal(root.querySelector('[data-thread-id="PRRT_done"] .am-pr-comment-time'), null)
 assert.equal(root.querySelectorAll('[data-component="diff"]').length, 1)
 // Four hunk lines ending at the commented line, like the GitHub comment
 // snippet, then the worktree lines below it so a comment about what happens
@@ -159,14 +280,17 @@ const resolvedRow = rows.find((node) => /reviewer/.test(node.textContent ?? ""))
 assert.ok(resolvedRow, "resolved row is present")
 assert.equal(resolvedRow!.getAttribute("aria-expanded"), "false")
 assert.ok(resolvedRow!.querySelector(".am-pr-comment-preview"), "collapsed row shows a preview")
+const summary = resolvedRow!.querySelector(".am-pr-comment-preview")!.textContent
 assert.doesNotMatch(root.textContent ?? "", /second paragraph only shows when expanded/)
 
 // The row expands into a full card whose unresolve action is enabled.
 ;(resolvedRow as HTMLButtonElement).click()
 await window.happyDOM.waitUntilComplete()
 assert.equal(resolvedRow!.getAttribute("aria-expanded"), "true")
+assert.equal(resolvedRow!.querySelector(".am-pr-comment-preview")!.textContent, summary)
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
 const card = resolvedRow!.parentElement!
+assert.equal(card.querySelector(".am-pr-diff-file")!.textContent, "packages/kilo-ui/src/components/other.tsx:3")
 const actions = [...card.querySelectorAll('[data-component="button"]')]
 const unresolve = actions.find((node) => /Unresolve/.test(node.textContent ?? ""))
 assert.ok(unresolve, "unresolve button is rendered")
@@ -183,7 +307,7 @@ assert.equal(refreshedRow?.getAttribute("aria-expanded"), "true")
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
 
 const send = [...root.querySelectorAll('[data-component="button"]')].find((node) =>
-  /Send to chat/.test(node.textContent ?? ""),
+  /Fix with Kilo/.test(node.textContent ?? ""),
 )
 assert.ok(send, "send button is rendered")
 ;(send as HTMLButtonElement).click()
@@ -237,18 +361,28 @@ const threads = [1, 2].map((line) => ({
   side: "additions" as const,
   resolved: false,
   outdated: false,
+  ...(line === 1 ? { reactions: [{ content: "ROCKET" as const, count: 1, viewerHasReacted: false }] } : {}),
 }))
 const [diffs, setDiffs] = createSignal([
   { file: "inline.ts", before: "", after: "", additions: 2, deletions: 0, summarized: true },
 ])
 const ready = Promise.withResolvers<ReturnType<typeof createRemoteCommentController>>()
 const Probe = () => {
+  const vscode = useVSCode()
+  const reactions = createReactionController({
+    worktree: () => "wt-test",
+    project: () => undefined,
+    post: vscode.postMessage,
+    onMessage: vscode.onMessage,
+    fail: (error) => `Could not update reaction. ${error ?? ""}`,
+  })
   const remote = createRemoteCommentController({
     key: () => "inline",
     comments: () => threads,
     diffs,
     active: () => true,
     activeTerminalId: () => undefined,
+    reactions,
   })
   const annotations = remote.annotations("stable.ts")
   ready.resolve(remote)
@@ -337,6 +471,19 @@ assert.equal(observers.size, 1)
 const check = checks.get([...observers].at(0)!)!
 const first = mounts.at(0)!
 const last = mounts.at(1)!
+const inlineReaction = first.host.querySelector<HTMLButtonElement>(".am-pr-reaction")
+assert.ok(inlineReaction, "inline reaction control is rendered")
+inlineReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions.at(5), {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "inline-1",
+  reaction: "ROCKET",
+  add: true,
+})
+assert.ok(first.host.querySelector('[data-component="spinner"]'), "inline reaction update shows a spinner")
 for (const revealed of [false, true]) {
   let prepared = 0
   const dispose = createRoot((cleanup) => {
@@ -625,14 +772,17 @@ setBadge((prev) => ({ ...prev, unresolvedThreads: 0 }))
 assert.equal(indicator(), null)
 const inline = () => second.querySelector<HTMLElement>('[data-thread-id="feedback"]')!
 const placed = (name: string) => {
-  const wrapper = inline().closest<HTMLElement>("[slot]")
-  const host = inline().closest("diffs-container")
+  const body = inline().querySelector(".am-pr-comment-body")!
+  const wrapper = body.closest<HTMLElement>("[slot]")
+  const host = body.closest("diffs-container")
   assert.ok(wrapper && host)
   assert.equal(wrapper.parentElement, host)
   assert.equal(wrapper.getAttribute("slot"), name)
   assert.ok(host.shadowRoot!.querySelector(`slot[name="${name}"]`))
 }
-const container = inline().closest("diffs-container")!
+const toggle = inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!
+assert.equal(toggle.closest("diffs-container"), null)
+const container = inline().querySelector("diffs-container")!
 assert.ok(container)
 placed("annotation-additions-417")
 assert.match(container.shadowRoot!.textContent ?? "", /chevron-down/)
@@ -645,7 +795,8 @@ setBadge((prev) => ({
   },
 }))
 await window.happyDOM.waitUntilComplete()
-assert.equal(inline().closest("diffs-container"), container)
+assert.equal(inline().querySelector("diffs-container"), container)
+assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
 assert.match(inline().textContent ?? "", /Updated committed thread/)
 const count = sent.length
 inline().querySelector<HTMLButtonElement>('.am-pr-comment-actions [data-variant="primary"]')!.click()
@@ -653,11 +804,13 @@ await window.happyDOM.waitUntilComplete()
 assert.equal(sent.length, count + 1)
 inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
 await window.happyDOM.waitUntilComplete()
-assert.equal(inline().closest("diffs-container"), null)
+assert.equal(inline().querySelector("diffs-container"), null)
+assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
 assert.equal(inline().querySelector(".am-pr-comment-head")!.getAttribute("aria-expanded"), "false")
 inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
 await window.happyDOM.waitUntilComplete()
 placed("annotation-additions-417")
+assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
 setBadge((prev) => ({
   ...prev,
   comments: {
@@ -712,3 +865,79 @@ for (const file of ["old.ts", "renamed.ts"]) {
   assert.equal(navigation.review.focus(scope), focused)
 }
 navigation.dispose()
+
+const { PRChecks } = await import("../../webview-ui/agent-manager/pr/PRChecks")
+const { summarize } = await import("../../src/agent-manager/pr/am-pr-utils")
+const third = document.createElement("div")
+document.body.append(third)
+const [prState, setPrState] = createSignal<PRStatus>({
+  ...base,
+  checks: summarize([
+    { name: "Typecheck", status: "failure", url: "https://github.com/example/repo/actions/runs/100/job/200" },
+    { name: "Tests", status: "success" },
+    { name: "Lint", status: "pending" },
+  ]),
+})
+const cleanup = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  third,
+)
+await window.happyDOM.waitUntilComplete()
+const fix = () => third.querySelector<HTMLButtonElement>(".am-pr-checks-fix")
+const failureGroup = () => third.querySelector<HTMLElement>('.am-pr-check-group[data-bucket="failure"]')
+const successGroup = () => third.querySelector<HTMLElement>('.am-pr-check-group[data-bucket="success"]')
+assert.ok(failureGroup()?.querySelector(".am-pr-check-group-items"))
+assert.equal(successGroup()?.querySelector(".am-pr-check-group-items"), null)
+successGroup()?.querySelector<HTMLButtonElement>(".am-pr-check-group-heading")?.click()
+await window.happyDOM.waitUntilComplete()
+assert.ok(successGroup()?.querySelector(".am-pr-check-group-items"))
+cleanup()
+const remount = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  third,
+)
+await window.happyDOM.waitUntilComplete()
+assert.ok(successGroup()?.querySelector(".am-pr-check-group-items"))
+assert.equal(fix()?.textContent?.trim(), "Fix with Kilo")
+assert.equal(fix()?.querySelector('[data-component="icon"]'), null)
+const before = sent.length
+fix()!.click()
+const feedback = sent.at(-1) as {
+  autoSend: boolean
+  comments: import("../../src/shared/review-comments").CIReviewCommentData[]
+}
+assert.equal(sent.length, before + 1)
+assert.equal(feedback.autoSend, true)
+assert.equal(feedback.comments[0]?.origin, "ci")
+// Draft removal and session changes are outside PRChecks. Unchanged checks
+// must remain sendable without remounting or waiting for another CI run.
+assert.equal(fix()?.disabled, false)
+assert.equal(fix()?.textContent?.trim(), "Fix with Kilo")
+fix()!.click()
+assert.equal(sent.length, before + 2)
+assert.deepEqual(sent.at(-1), feedback)
+fix()!.click()
+assert.equal(sent.length, before + 3)
+assert.deepEqual(sent.at(-1), feedback)
+setPrState((prev) => ({
+  ...prev,
+  checks: summarize([
+    { name: "Typecheck", status: "failure", url: "https://github.com/example/repo/actions/runs/100/job/201" },
+  ]),
+}))
+assert.equal(fix()?.disabled, false)
+setPrState((prev) => ({ ...prev, checks: summarize([{ name: "Tests", status: "success" }]) }))
+assert.equal(fix(), null)
+remount()

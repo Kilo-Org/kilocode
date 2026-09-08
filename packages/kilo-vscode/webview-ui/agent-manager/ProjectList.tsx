@@ -23,6 +23,7 @@ import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -190,6 +191,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}

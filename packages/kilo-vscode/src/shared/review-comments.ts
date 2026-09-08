@@ -33,10 +33,21 @@ export interface PRReviewCommentData {
   replies?: PRReviewReply[]
 }
 
-export type ReviewCommentEntry = ReviewCommentData | PRReviewCommentData
+export interface CIReviewCommentData {
+  id: string
+  origin: "ci"
+  title: string
+  body: string
+}
+
+export type ReviewCommentEntry = ReviewCommentData | PRReviewCommentData | CIReviewCommentData
 
 export function isPRReviewComment(item: ReviewCommentEntry): item is PRReviewCommentData {
   return "origin" in item && item.origin === "pr"
+}
+
+export function isCIReviewComment(item: ReviewCommentEntry): item is CIReviewCommentData {
+  return "origin" in item && item.origin === "ci"
 }
 
 export interface ReviewMessageData {
@@ -89,6 +100,7 @@ function formatPR(comment: PRReviewCommentData): string {
 
 export function formatReviewCommentMarkdown(comment: ReviewCommentEntry): string {
   if (isPRReviewComment(comment)) return formatPR(comment)
+  if (isCIReviewComment(comment)) return `CI feedback: **${escapeInline(comment.title)}**\n${comment.body}`
   const lines = [`**${escapeInline(comment.file)}** (line ${comment.line}):`]
   if (comment.selectedText) lines.push(...fenced(comment.selectedText))
   lines.push(comment.comment)
@@ -96,7 +108,8 @@ export function formatReviewCommentMarkdown(comment: ReviewCommentEntry): string
 }
 
 export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): string {
-  const lines = ["## Review Comments", ""]
+  const ci = comments.length > 0 && comments.every(isCIReviewComment)
+  const lines = [ci ? "## CI Feedback" : "## Review Comments", ""]
   for (const item of comments) {
     lines.push(formatReviewCommentMarkdown(item), "")
   }
@@ -212,10 +225,19 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
   }
 }
 
+function parseCI(item: Record<string, unknown>): CIReviewCommentData | undefined {
+  const id = text(item.id, 512)
+  const title = text(item.title, 256)
+  const body = text(item.body, 16_000)
+  if (!id || !title || body === undefined) return undefined
+  return { id, origin: "ci", title, body }
+}
+
 function parseComment(value: unknown): ReviewCommentEntry | undefined {
   const item = record(value)
   if (!item) return undefined
   if (item.origin === "pr") return parsePR(item)
+  if (item.origin === "ci") return parseCI(item)
   if (item.origin !== undefined) return undefined
 
   const id = text(item.id, 512)
@@ -233,6 +255,7 @@ function parseComment(value: unknown): ReviewCommentEntry | undefined {
 }
 
 function weight(item: ReviewCommentEntry): number {
+  if (isCIReviewComment(item)) return item.id.length + item.title.length + item.body.length
   if (!isPRReviewComment(item))
     return item.id.length + item.file.length + item.comment.length + item.selectedText.length
   const replies = (item.replies ?? []).reduce(

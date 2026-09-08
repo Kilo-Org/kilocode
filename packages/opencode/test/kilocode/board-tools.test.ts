@@ -235,15 +235,17 @@ describe("shared board tools", () => {
           expect(unknown.metadata.availability).toMatchObject({ total: 1, active: 0, inactive: 0, unknown: 1 })
           expect(JSON.parse(unknown.output).warning).toContain("Availability was unknown")
           expect(yield* observed).toBe("unknown")
-          const self = yield* send("main", "main")
-          expect(self.metadata.availability).toMatchObject({ total: 0, active: 0 })
-          expect(JSON.parse(self.output)).not.toHaveProperty("warning")
-          const own = yield* post.execute(
-            { to: child.id, type: "INFO", body: "Note to self" },
-            yield* context(child.id, MessageID.ascending()),
+          const self = yield* Effect.exit(send("main", "main"))
+          expect(self._tag).toBe("Failure")
+          if (Exit.isFailure(self)) expect(Cause.pretty(self.cause)).toContain("cannot be sent to yourself")
+          const own = yield* Effect.exit(
+            post.execute(
+              { to: child.id, type: "INFO", body: "Note to self" },
+              yield* context(child.id, MessageID.ascending()),
+            ),
           )
-          expect(own.metadata.availability.total).toBe(0)
-          expect(JSON.parse(own.output)).not.toHaveProperty("warning")
+          expect(own._tag).toBe("Failure")
+          if (Exit.isFailure(own)) expect(Cause.pretty(own.cause)).toContain("cannot be sent to yourself")
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
           const running = yield* send(child.id, "running")
           expect(JSON.parse(running.output)).not.toHaveProperty("warning")

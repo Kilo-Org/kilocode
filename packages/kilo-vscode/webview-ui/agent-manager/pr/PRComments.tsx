@@ -7,10 +7,9 @@ import type { PRStatus } from "../../src/types/messages"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { PRCommentCard } from "./PRCommentCard"
 import { SEND_LIMIT, githubUrl, prPayload } from "./pr-comment-payload"
-import { commentState, omit, patchCommentState } from "./pr-comment-state"
+import { commentState, createReactionController, omit, patchCommentState } from "./pr-comment-state"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
-import { PRCommentDiff } from "../../diff-viewer/PRCommentDiff"
 
 interface Props {
   comments: NonNullable<PRStatus["comments"]>
@@ -25,6 +24,13 @@ interface Props {
 export function PRComments(props: Props) {
   const { t } = useLanguage()
   const vscode = useVSCode()
+  const reactions = createReactionController({
+    worktree: () => props.worktreeId,
+    project: () => props.projectId,
+    post: vscode.postMessage,
+    onMessage: vscode.onMessage,
+    fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
+  })
 
   // Held per worktree outside this component, so a remount does not collapse
   // the threads the user opened.
@@ -128,17 +134,21 @@ export function PRComments(props: Props) {
 
   // `For` over stable thread ids: the DOM survives a poll, so Pierre and
   // Markdown are not torn down and an open card stays open and clickable.
-  const content = (id: string, inline = false) => (
+  const card = (id: string) => (
     <Show when={index().get(id)}>
       {(comment) => (
         <PRCommentCard
           comment={comment()}
-          inline={inline}
+          preview={comment().outdated ? undefined : comment().preview}
           resolved={resolved(comment())}
           pending={state().pending[id] !== undefined}
           sent={state().sent[id] === true}
           open={expandedFor(comment())}
           error={state().errors[id]}
+          reactionError={reactions.error(comment().id)}
+          reactions={reactions.list(comment().id, comment().reactions)}
+          reactionPending={(content) => reactions.pending(comment().id, content)}
+          onReaction={(content, add) => reactions.toggle(comment().id, content, add)}
           onToggleOpen={() => {
             const next = !expandedFor(comment())
             patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))
@@ -159,31 +169,6 @@ export function PRComments(props: Props) {
             githubUrl(comment().url) && props.onOpenUrl ? () => props.onOpenUrl?.(githubUrl(comment().url)!) : undefined
           }
         />
-      )}
-    </Show>
-  )
-
-  const card = (id: string) => (
-    <Show when={index().get(id)}>
-      {(comment) => (
-        <Show
-          when={!comment().outdated && expandedFor(comment()) ? comment().preview : undefined}
-          fallback={content(id)}
-        >
-          {(preview) => (
-            <PRCommentDiff
-              file={comment().file ?? ""}
-              line={preview().line}
-              side={preview().side}
-              hunk={preview().patch}
-              top={preview().top}
-              bottom={preview().bottom}
-              inline
-            >
-              {content(id, true)}
-            </PRCommentDiff>
-          )}
-        </Show>
       )}
     </Show>
   )
@@ -209,7 +194,7 @@ export function PRComments(props: Props) {
               {t(
                 props.activeTerminalId
                   ? "agentManager.pr.comment.sendAllToTerminal"
-                  : "agentManager.review.sendAllToChatWithCount",
+                  : "agentManager.pr.fixWithKiloCount",
                 { count: Math.min(unsent().length, SEND_LIMIT) },
               )}
             </Button>

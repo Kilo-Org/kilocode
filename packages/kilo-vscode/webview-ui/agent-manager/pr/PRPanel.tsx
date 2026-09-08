@@ -229,8 +229,8 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
             <PRReviewers reviewers={props.pr.reviewers ?? []} />
           </Show>
           <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
-          <Show when={props.pr.checks.total > 0}>
-            <PRChecks checks={props.pr.checks} />
+          <Show when={props.pr.checks.checks.length > 0}>
+            <PRChecks pr={props.pr} worktreeId={props.worktreeId} activeTerminalId={props.activeTerminalId} />
           </Show>
           <Show when={comments()}>
             {(item) => (

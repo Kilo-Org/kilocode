@@ -190,6 +190,8 @@ export namespace BoardStore {
           Effect.gen(function* () {
             const current = yield* ensure(tx, input.sessionID)
             const target = yield* recipient(input.to, current.root, tx)
+            if (target !== ALL && target === input.sessionID)
+              return yield* fail("Board messages cannot be sent to yourself")
             const ids = target === ALL ? [input.sessionID] : [input.sessionID, target]
             const labels = yield* titles(tx, current.root, ids, true)
             const call = input.callID ?? ""

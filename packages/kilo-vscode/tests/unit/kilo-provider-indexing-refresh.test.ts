@@ -159,13 +159,15 @@ describe("KiloProvider indexing refresh", () => {
       languageCommitMessage: "sync",
       multiProject: false,
       browserAutomation: false,
+      "agentManager.autoBranchNaming": true,
+      "agentManager.branchPrefix": "",
     })
     const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
     const sent: Array<Record<string, unknown>> = []
     provider.postMessage = (message) => void sent.push(message as Record<string, unknown>)
-    Object.assign(internal, { connectionState: "connected", commitMessageLanguageSetting: () => "sync" })
+    Object.assign(internal, { connectionState: "connected", configSettings: settings })
     await internal.fetchAndSendConfig()
     await internal.fetchAndSendConfigUpdated()
     // Save against the binding the latest config load issued, like the webview

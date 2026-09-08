@@ -88,6 +88,35 @@ describe("BoardStore", () => {
     expect(result.raw).toEqual({ objective: "Build the shared board", objective_message_id: "msg_objective" })
   })
 
+  test("rejects messages addressed to the sending session", async () => {
+    const result = await setup(() =>
+      Effect.gen(function* () {
+        const main = yield* Effect.exit(
+          BoardStore.post({
+            sessionID: id("root"),
+            messageID: "msg_self_main",
+            to: "main",
+            type: "INFO",
+            body: "Main cannot receive its own message",
+          }),
+        )
+        const child = yield* Effect.exit(
+          BoardStore.post({
+            sessionID: id("child"),
+            messageID: "msg_self_child",
+            to: id("child"),
+            type: "INFO",
+            body: "Child cannot receive its own message",
+          }),
+        )
+        return { main, child, messages: (yield* BoardStore.read({ sessionID: id("root") })).messages }
+      }),
+    )
+    expect(result.main._tag).toBe("Failure")
+    expect(result.child._tag).toBe("Failure")
+    expect(result.messages).toEqual([])
+  })
+
   test.each(["legacy", "sequenced", "unsequenced"] as const)(
     "rejects JavaScript whitespace before capturing a %s objective",
     async (source) => {

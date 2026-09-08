@@ -145,6 +145,10 @@
 }
 
 .am-pr-panel-section-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--kilo-font-size-11);
   font-weight: 400;
   text-transform: none;
@@ -378,6 +382,57 @@
   flex: 1;
 }
 
+.am-pr-reactions {
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.am-pr-reaction {
+  min-width: 34px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-base);
+  border-radius: 999px;
+  gap: 3px;
+  line-height: 1;
+  transition:
+    background 80ms ease-out,
+    border-color 80ms ease-out;
+}
+
+.am-pr-reaction.am-pr-reaction-active {
+  border-color: var(--border-focus, var(--border-base));
+  background: var(--surface-interactive-base);
+}
+
+/* Fixed width, so swapping the count for the spinner cannot move the pill,
+   the pills after it, or the picker button next to them. */
+.am-pr-reaction-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.am-pr-reaction-spinner {
+  width: 10px;
+  height: 10px;
+}
+
+.am-pr-reaction-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 4px;
+}
+
+.am-pr-reaction-option {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px;
+  font-size: var(--font-size-base);
+}
+
 /* Same bordered treatment the local review comment actions use, because the
    VS Code theme renders secondary kilo-ui buttons as bare text. */
 [data-component="button"].am-pr-comment-btn[data-variant="secondary"] {
@@ -396,7 +451,8 @@
   margin-right: 4px;
 }
 
-.am-pr-comment-send-all {
+.am-pr-comment-send-all,
+.am-pr-checks-fix {
   margin-top: 6px;
   align-self: flex-start;
 }
@@ -517,9 +573,31 @@
   margin-top: 4px;
 }
 
+.am-pr-panel-checks[data-scrollable="true"] {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.am-pr-check-group-heading {
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 0;
+  color: var(--text-weak);
+  cursor: pointer;
+}
+
+.am-pr-check-group-heading:hover {
+  color: var(--vscode-foreground);
+}
+
+.am-pr-check-group-items {
+  gap: 0;
+}
+
 .am-pr-panel-check-item {
   gap: 6px;
-  padding: 3px 0;
+  padding: 2px 0;
   font-size: var(--kilo-font-size-12);
 }
 
@@ -549,11 +627,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.am-pr-check-status {
-  color: var(--text-weak);
-  flex-shrink: 0;
 }
 
 .am-pr-check-duration {

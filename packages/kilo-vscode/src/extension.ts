@@ -17,6 +17,9 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
+import { CaffeinationService } from "./services/caffeination"
+import { confirmCaffeination } from "./services/caffeination/confirm"
+import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
 import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -31,6 +34,7 @@ import { isCursorHost } from "./utils"
 import { sameDirectory } from "./kilo-provider-utils"
 
 let agentManager: AgentManagerProvider | undefined
+let caffeination: CaffeinationService | undefined
 let shuttingDown = false
 
 const RESTORE_KEY = "kilo.workbench.restore"
@@ -177,7 +181,38 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(kiloClawProvider)
 
   // Create Agent Manager provider for editor panel
-  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
+  const reason = vscode.env.remoteName ? "Keep Awake is only available in a local VS Code window." : undefined
+  const awake = new CaffeinationService(connectionService, createCaffeinationDriver({ reason }))
+  caffeination = awake
+  const toggle = confirmCaffeination(awake, async () => {
+    if (!vscode.workspace.isTrusted) {
+      await vscode.window.showWarningMessage("Trust this workspace before enabling Keep Awake.")
+      return false
+    }
+    if (context.globalState.get<boolean>("caffeination.confirmed") === true) return true
+    const detail = [
+      "Keep Awake prevents system sleep while Kilo sessions are in progress, including some waits for approval. It does not keep the display on or disable screen locking. It turns off when this VS Code window reloads.",
+      "Agents may continue to access files, network services, and available credentials while the computer is locked. Enable only if your organization's device policy permits it.",
+      ...(process.platform === "linux"
+        ? ["On Linux, this can also block manual suspend. Turn Keep Awake off before suspending."]
+        : []),
+    ].join("\n\n")
+    const answer = await vscode.window.showWarningMessage(
+      "Keep this computer awake while Kilo agents work?",
+      { modal: true, detail },
+      "Enable Keep Awake",
+    )
+    if (answer !== "Enable Keep Awake") return false
+    await context.globalState.update("caffeination.confirmed", true).then(undefined, (error: unknown) => {
+      console.warn("[Kilo New] Could not save Keep Awake confirmation:", error)
+    })
+    return true
+  })
+  const controls = {
+    getState: () => awake.getState(),
+    onChange: awake.onChange.bind(awake),
+    setEnabled: toggle,
+  }
   const git = createGitExecutable({
     preferred: async () => {
       const extension = vscode.extensions.getExtension("vscode.git")
@@ -188,6 +223,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
   const binary = process.platform === "win32" ? await git() : git
+  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
@@ -495,6 +531,14 @@ export async function activate(context: vscode.ExtensionContext) {
       await target.waitForReady()
       await target.toggleMemory()
     }),
+    vscode.commands.registerCommand("kilo-code.new.toggleCaffeination", (enabled?: boolean) => {
+      const state = awake.getState()
+      const next = typeof enabled === "boolean" ? enabled : !(state.enabled || state.active)
+      if (next && !state.available) {
+        return vscode.window.showWarningMessage(state.error ?? "Keep Awake is unavailable on this platform.")
+      }
+      return toggle(next)
+    }),
     vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
       const input = await vscode.window.showInputBox({
         prompt: "Describe the terminal command you want to generate",
@@ -655,6 +699,9 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push({
     dispose: () => {
       shuttingDown = true
+      void caffeination?.dispose().catch((error: unknown) => {
+        console.warn("[Kilo New] Keep-awake cleanup failed:", error)
+      })
       unsubscribeStateChange()
       attention.dispose()
       browserBroker.dispose()
@@ -667,7 +714,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export async function deactivate() {
   shuttingDown = true
-  await agentManager?.shutdown()
+  const results = await Promise.allSettled([caffeination?.dispose(), agentManager?.shutdown()])
+  for (const result of results) {
+    if (result.status === "rejected") console.warn("[Kilo New] Extension shutdown failed:", result.reason)
+  }
   TelemetryProxy.getInstance().shutdown()
 }
 

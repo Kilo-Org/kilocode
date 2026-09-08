@@ -104,6 +104,8 @@ export const DiffPanelCache: Component<Props> = (props) => {
               active={active()}
               loadingFiles={props.loadingFiles(entry.key)}
               sessionKey={entry.cacheKey}
+              projectId={props.project()}
+              worktreeId={entry.ctx}
               notice={props.notice(entry.key)}
               lead={active() ? props.lead() : undefined}
               canRevert={props.canRevert}
