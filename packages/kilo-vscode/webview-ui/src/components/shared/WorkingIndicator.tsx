@@ -16,6 +16,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
 import { tracksElapsed } from "./working-indicator-utils"
+import { active as activeTiming } from "../../context/session-timing"
 
 export const WorkingIndicator: Component = () => {
   const session = useSession()
@@ -26,18 +27,22 @@ export const WorkingIndicator: Component = () => {
   const [retryCountdown, setRetryCountdown] = createSignal(0)
 
   createEffect(() => {
-    const since = session.busySince()
+    const timing = session.busyTiming()
     const status = session.status()
 
-    if (!tracksElapsed(status, session.submitting(), since)) {
+    if (!tracksElapsed(status, session.submitting(), timing)) {
       setElapsed(0)
       return
     }
 
-    setElapsed(Math.floor((Date.now() - since) / 1000))
+    setElapsed(Math.floor(activeTiming(timing, Date.now()) / 1000))
+
+    // A paused turn (parked on a permission/question) has no running stretch to
+    // tick — the counter holds its value until the family is cleared.
+    if (timing.since === undefined) return
 
     const id = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - since) / 1000))
+      setElapsed(Math.floor(activeTiming(timing, Date.now()) / 1000))
     }, 1000)
 
     onCleanup(() => clearInterval(id))
@@ -84,7 +89,7 @@ export const WorkingIndicator: Component = () => {
 
   // The counter's slot is reserved for exactly as long as the turn is timed, so a
   // state that never counts (a retry with no start time) keeps the row compact.
-  const timing = () => tracksElapsed(session.status(), session.submitting(), session.busySince())
+  const timing = () => tracksElapsed(session.status(), session.submitting(), session.busyTiming())
 
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()
