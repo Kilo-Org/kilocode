@@ -923,7 +923,8 @@ export interface AgentManagerSelectionActivatedMessage {
 export interface AgentManagerRevealSessionMessage {
   type: "agentManager.revealSession"
   projectId: string
-  worktreeId: string
+  /** Absent when the session lives in the project's Local tabs. */
+  worktreeId?: string
   sessionId: string
 }
 

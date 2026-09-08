@@ -6,17 +6,22 @@ export interface ManagedSessionTarget {
   context: ProjectContext
   projectId: string
   sessionId: string
-  worktreeId: string
+  /** Absent for a session in the project's Local tabs. */
+  worktreeId?: string
 }
 
 interface RevealMessage {
   type: "agentManager.revealSession"
   projectId: string
   sessionId: string
-  worktreeId: string
+  worktreeId?: string
 }
 
-/** Resolve a live Agent Manager session only while its owning worktree remains present. */
+/**
+ * Resolve a session Agent Manager owns, or undefined when the sidebar should
+ * handle it. Worktree ownership requires the worktree to still exist and still
+ * match the session's directory, so a removed worktree falls back.
+ */
 export function resolveManagedSession(
   contexts: ProjectContexts,
   directories: ReadonlyMap<string, string>,
@@ -25,12 +30,20 @@ export function resolveManagedSession(
   const directory = directories.get(sessionId)
   if (!directory) return
   const context = contexts.byDirectory(directory) ?? contexts.byLiveSession(sessionId)
-  const state = context?.peekState()
+  if (!context) return
+  const state = context.peekState()
   const session = state?.getSession(sessionId)
+  // A Local tab has no worktree. The panel also tracks plain sidebar sessions
+  // discovered in the project root, so only a session Agent Manager persisted
+  // counts as owned; anything else keeps the sidebar.
+  if (session && !session.worktreeId) {
+    if (!samePath(context.root, directory)) return
+    return { context, projectId: context.id, sessionId }
+  }
   const worktree = session?.worktreeId
     ? state?.getWorktree(session.worktreeId)
     : state?.getWorktrees().find((item) => samePath(item.path, directory))
-  if (!context || !worktree || !samePath(worktree.path, directory)) return
+  if (!worktree || !samePath(worktree.path, directory)) return
   return { context, projectId: context.id, sessionId, worktreeId: worktree.id }
 }
 
@@ -61,9 +74,13 @@ export async function revealManagedSession(
 ): Promise<boolean> {
   const target = resolveManagedSession(contexts, deps.directories(), sessionId)
   if (!target) return false
-  contexts.activate(target.projectId)
-  deps.activate(target.context)
-  deps.projects()
+  // Re-activating the project the panel already shows would reset its PR,
+  // stats, and busy-session state for no gain, so only switch when needed.
+  if (contexts.active()?.id !== target.projectId) {
+    contexts.activate(target.projectId)
+    deps.activate(target.context)
+    deps.projects()
+  }
   deps.open()
   await deps.state()
   if (!(await deps.ready())) return false
