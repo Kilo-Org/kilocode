@@ -12,7 +12,13 @@ describe("Slack system prompt", () => {
   })
 
   test("does not affect unrelated MCP servers", () => {
-    expect(KilocodeSystemPrompt.slack({ type: "remote", url: "https://example.com/mcp" })).toBeUndefined()
+    expect(KilocodeSystemPrompt.slack({ name: "slack", type: "remote", url: "https://example.com/mcp" })).toBeUndefined()
     expect(KilocodeSystemPrompt.slack(undefined)).toBeUndefined()
+  })
+
+  test("uses the official endpoint regardless of the config key", () => {
+    expect(KilocodeSystemPrompt.slack({ name: "company-chat", type: "remote", url: "https://mcp.slack.com/mcp" })).toContain(
+      "Slack publishing policy",
+    )
   })
 })

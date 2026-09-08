@@ -37,4 +37,9 @@ describe("Slack MCP connector", () => {
     expect(slackScope).not.toContain("channels:write")
     expect(slackScope).not.toContain("groups:write")
   })
+
+  test("overrides Kilo's 127.0.0.1 default with Slack's registered localhost callback", () => {
+    expect(slackRedirect).toBe("http://localhost:19876/mcp/oauth/callback")
+    expect(slack("123.456").oauth).toMatchObject({ redirectUri: slackRedirect })
+  })
 })

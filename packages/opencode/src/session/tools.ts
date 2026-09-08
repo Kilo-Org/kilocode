@@ -490,8 +490,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
             Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              const next = SlackMcp.message({ server: entry.clientName, tool: entry.def.name, args })
+              const next = SlackMcp.message({ url: entry.url, tool: entry.def.name, args })
+              const permission = SlackMcp.permission({ url: entry.url, tool: entry.def.name, args: next })
+              yield* ctx.ask({ permission: key, ...permission })
               return yield* Effect.promise(() => execute(next, opts))
             }),
           ).pipe(

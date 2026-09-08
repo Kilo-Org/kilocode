@@ -2,6 +2,7 @@ import type { McpRemoteConfig } from "@kilocode/sdk/v2/client"
 
 export const slackId = "slack"
 export const slackUrl = "https://mcp.slack.com/mcp"
+// Kilo defaults to 127.0.0.1, but Slack requires an exact match with the app's registered localhost PKCE redirect.
 export const slackRedirect = "http://localhost:19876/mcp/oauth/callback"
 export const slackScope = [
   "search:read.public",

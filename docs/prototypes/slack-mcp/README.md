@@ -41,8 +41,10 @@ code exchange for native clients.
 Kilo's OAuth implementation already stores a PKCE code verifier and defaults
 to `http://127.0.0.1:19876/mcp/oauth/callback`. The prototype explicitly uses
 `localhost` because Slack documents localhost redirects as desktop redirects
-when PKCE is enabled. If Slack requires exact host matching, use the same host
-in both the Slack manifest and Kilo configuration.
+when PKCE is enabled and requires the authorization request to match the app's
+registered redirect exactly. Kilo passes this explicit URI to both its OAuth
+provider and local callback server, overriding the default host. Keep
+`localhost` in both the Slack manifest and Kilo configuration.
 
 ## Slack Scope
 

@@ -6,6 +6,7 @@ import { staticEnvLines, type EditorContext } from "@/kilocode/editor-context"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import type { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
+import { endpoint as slackEndpoint } from "@/kilocode/mcp/slack"
 import type { Provider } from "@/provider/provider"
 import type { InstanceContext } from "@/project/instance-context"
 import * as Log from "@opencode-ai/core/util/log"
@@ -37,7 +38,7 @@ export namespace KilocodeSystemPrompt {
   export function slack(input: unknown) {
     if (!input || typeof input !== "object") return
     const cfg = input as Record<string, unknown>
-    if (cfg.type !== "remote" || cfg.url !== "https://mcp.slack.com/mcp") return
+    if (cfg.type !== "remote" || cfg.url !== slackEndpoint) return
     return [
       "Slack publishing policy:",
       "- You may read channels, threads, files, direct messages, and group direct messages that the authenticated Slack user can access.",

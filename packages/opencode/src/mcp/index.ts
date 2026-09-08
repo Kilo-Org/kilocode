@@ -186,6 +186,8 @@ export interface McpTool {
   // kilocode_change start - identifies the owning server for MCP Apps routing
   /** The MCP server name this tool belongs to. */
   readonly clientName: string
+  /** Effective remote endpoint for endpoint-specific policy. */
+  readonly url?: string
   // kilocode_change end
   readonly timeout?: number
 }
@@ -719,7 +721,13 @@ const layer = Layer.effect(
         }
         const timeout = requestTimeout(s, clientName, mcpConfig, defaultTimeout)
         for (const def of listed) {
-          const tool = { def, client, clientName, timeout } // kilocode_change - clientName for MCP Apps routing
+          const tool = {
+            def,
+            client,
+            clientName,
+            timeout,
+            ...(entry?.type === "remote" ? { url: entry.url } : {}),
+          } // kilocode_change - retain server identity and endpoint for routing and endpoint policy
           // kilocode_change start - preserve remote MCP authority on the native entry for every execution path
           result[McpCatalog.toolName(clientName, def.name)] =
             entry?.type === "remote" ? SandboxNetwork.remote(tool) : tool
