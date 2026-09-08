@@ -283,6 +283,7 @@ export async function activate(context: vscode.ExtensionContext) {
     visible: (sessionID) => connectionService.isVisible(sessionID),
     os: showOSNotification,
     show: async (sessionID, directory) => {
+      if (await agentManagerProvider.revealSession(sessionID)) return
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.openSession(sessionID, directory)
     },

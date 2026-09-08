@@ -982,13 +982,13 @@ const AgentManagerContent: Component = () => {
     return true
   }
 
-  const focusManagedSession = (worktreeId: string, sid: string) => {
+  const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
     selectWorktree(worktreeId)
     closeHistory()
     terms.setActiveId(undefined)
     setActivePendingId(undefined)
     setReviewActive(false)
-    session.selectSession(sid)
+    session.selectSession(sid, { scrollToBottom })
     requestChatFocus()
     return true
   }
@@ -1400,6 +1400,11 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
+      if (msg.type === "agentManager.revealSession") {
+        if (currentProjectId() !== msg.projectId) return
+        focusManagedSession(msg.worktreeId, msg.sessionId, true)
+        return
+      }
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
       stateHandlers.browser(msg)

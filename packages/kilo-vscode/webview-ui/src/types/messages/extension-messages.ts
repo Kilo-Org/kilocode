@@ -919,6 +919,14 @@ export interface AgentManagerSelectionActivatedMessage {
   target: AgentManagerSidebarTarget
 }
 
+/** Host request to select a managed session and scroll its chat to the latest message. */
+export interface AgentManagerRevealSessionMessage {
+  type: "agentManager.revealSession"
+  projectId: string
+  worktreeId: string
+  sessionId: string
+}
+
 export interface AgentManagerProjectSessionsMessage {
   type: "agentManager.projectSessions"
   projectId: string
@@ -1660,6 +1668,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
+  | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
   | AgentManagerCaffeinationMessage
