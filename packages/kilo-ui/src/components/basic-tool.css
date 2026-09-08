@@ -137,6 +137,20 @@ html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
   }
 }
 
+[data-component="tool-part-wrapper"]:is([data-tool="board_post"], [data-tool="board_read"]) {
+  container-type: inline-size;
+
+  [data-slot="basic-tool-details"] {
+    min-width: 0;
+  }
+}
+
+[data-component="tool-part-wrapper"][data-tool="board_post"] [data-component="tool-trigger"] {
+  [data-slot="basic-tool-icon"] {
+    display: none;
+  }
+}
+
 @keyframes tool-card-down {
   from {
     grid-template-rows: 0fr;

@@ -112,6 +112,7 @@ private fun points(mark: Mark, measure: Measure, spec: Spec): List<Pt> = when (m
     is Mark.Box -> corners(mark.rect)
     is Mark.Oval -> corners(mark.rect)
     is Mark.Poly -> mark.points
+    is Mark.Sector -> listOf(Pt(mark.at.x - mark.r, mark.at.y - mark.r), Pt(mark.at.x + mark.r, mark.at.y + mark.r))
     is Mark.Edge -> mark.points
     is Mark.Text -> span(mark, measure, spec)
     is Mark.Group -> emptyList()

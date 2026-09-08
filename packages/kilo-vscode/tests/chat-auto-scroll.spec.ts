@@ -24,6 +24,21 @@ async function settle(page: Page, frames = 2) {
   )
 }
 
+async function open(page: Page) {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  await expect(list).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  await settle(page, 10)
+
+  await list.hover()
+  await page.mouse.wheel(0, -2 * (await list.evaluate((el) => el.clientHeight)))
+  const bottom = page.getByRole("button", { name: "Scroll to bottom" })
+  await expect(bottom).toBeVisible()
+  await settle(page, 10)
+  await bottom.click()
+}
+
 async function distance(page: Page) {
   return page.locator(".message-list").evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)
 }
@@ -36,8 +51,68 @@ async function state(page: Page) {
   }))
 }
 
+test("transcript navigation does not scroll the outer webview host", async ({ page }) => {
+  await page.route("**/webview-host", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><style>
+        body { margin: 0; }
+        #host { margin-top: 40px; height: 600px; overflow: hidden; font: 16px/20px sans-serif; }
+        iframe { width: 100%; height: 100%; border: 0; }
+      </style><div id="host"><iframe src="/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}"></iframe></div>`,
+    }),
+  )
+  await page.goto("/webview-host")
+  const host = page.locator("#host")
+  const frame = page.frameLocator("iframe")
+  const list = frame.locator(".message-list")
+  const row = frame.locator('[data-message="rail-asst-400"]').first()
+  await expect(row).toBeVisible()
+  for (const _ of [1, 2, 3]) await frame.getByTestId("append-stream").click()
+  await expect.poll(() => row.evaluate((el) => el.clientHeight)).toBeGreaterThan(600)
+
+  // An inline iframe leaves a baseline gap, as in VS Code's overlay wrapper.
+  // Prove that the old call can scroll that wrapper before testing the real jump.
+  await expect.poll(() => host.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(0)
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await row.evaluate((el) => el.scrollIntoView({ block: "start" }))
+  await expect.poll(() => host.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+  await list.evaluate((el) => (el.scrollTop = el.scrollHeight))
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await row.evaluate((el) => {
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: el.getAttribute("data-message") } }))
+  })
+  await expect
+    .poll(() =>
+      row.evaluate((el) => {
+        const list = el.closest(".message-list")!
+        return Math.abs(el.getBoundingClientRect().top - list.getBoundingClientRect().top - list.clientTop)
+      }),
+    )
+    .toBeLessThanOrEqual(1)
+  expect(await host.evaluate((el) => el.scrollTop)).toBe(0)
+
+  await frame.locator(".task-header-search-toggle").press("Enter")
+  const search = frame.locator('[data-slot="transcript-search-input"]')
+  await search.fill("Initial streamed response.")
+  await list.evaluate((el) => (el.scrollTop = el.scrollHeight))
+  await host.evaluate((el) => (el.scrollTop = 0))
+  await search.press("Enter")
+  await expect
+    .poll(() =>
+      frame.getByText("Initial streamed response.", { exact: true }).evaluate((el) => {
+        const list = el.closest(".message-list")!
+        const rect = el.getBoundingClientRect()
+        return Math.abs(rect.top + rect.height / 2 - list.getBoundingClientRect().top - list.clientHeight / 2)
+      }),
+    )
+    .toBeLessThanOrEqual(2)
+  expect(await host.evaluate((el) => el.scrollTop)).toBe(0)
+})
+
 test("keeps following after a stable-height layout correction", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -61,7 +136,7 @@ test("keeps following after a stable-height layout correction", async ({ page })
 })
 
 test("keeps the reading position when the prompt rail scrolls upward", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -81,7 +156,7 @@ test("keeps the reading position when the prompt rail scrolls upward", async ({ 
 })
 
 test("pauses on a native scrollbar drag and resumes at the bottom", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -152,7 +227,7 @@ test("pauses on a native scrollbar drag and resumes at the bottom", async ({ pag
 })
 
 test("keeps a long native scrollbar drag user-controlled", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   await expect(list).toBeVisible()
   await settle(page, 10)
@@ -194,7 +269,7 @@ test("keeps a long native scrollbar drag user-controlled", async ({ page }) => {
 })
 
 test("pauses on an upward wheel over the Copy response button", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   await expect(list).toBeVisible()
@@ -210,7 +285,7 @@ test("pauses on an upward wheel over the Copy response button", async ({ page })
 })
 
 test("keeps a one-pixel upward wheel pause through delayed streaming", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   await expect(list).toBeVisible()
@@ -235,7 +310,7 @@ test("keeps a one-pixel upward wheel pause through delayed streaming", async ({ 
 })
 
 test("keeps the pause after a pending bottom scroll event", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const copy = page.getByRole("button", { name: "Copy response" }).first()
   const bottom = page.getByRole("button", { name: "Scroll to bottom" })
@@ -267,7 +342,7 @@ test("keeps the pause after a pending bottom scroll event", async ({ page }) => 
 
 for (const input of ["wheel", "keyboard"] as const) {
   test(`keeps new upward ${input} input before a pending return-to-bottom scroll`, async ({ page }) => {
-    await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+    await open(page)
     const list = page.locator(".message-list")
     const bottom = page.getByRole("button", { name: "Scroll to bottom" })
     await expect(list).toBeVisible()
@@ -316,7 +391,7 @@ for (const input of ["wheel", "keyboard"] as const) {
 }
 
 test("preserves the pause across working status changes", async ({ page }) => {
-  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await open(page)
   const list = page.locator(".message-list")
   const bottom = page.getByRole("button", { name: "Scroll to bottom" })
   await expect(list).toBeVisible()

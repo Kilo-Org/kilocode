@@ -816,7 +816,7 @@ describe("RemoteWS", () => {
           heartbeat: 60_000,
           timers: clock,
           now: () => clock.now,
-        timeout: 300_000,
+          timeout: 300_000,
           connectTimeout: 1000,
         })
 
@@ -1103,7 +1103,7 @@ describe("RemoteWS", () => {
           heartbeat: 60_000,
           timers: clock,
           now: () => clock.now,
-        timeout: 300_000,
+          timeout: 300_000,
           onClose: (c) => codes.push(c),
         })
 
@@ -1277,12 +1277,17 @@ describe("RemoteWS", () => {
   test("AC4a: degraded heartbeat preserves the last known-good non-empty session list", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "fresh" | "wedge" = "fresh"
-      const knownGoodSessions = [
-        { id: "s1", status: "active" as const, title: "One" },
-      ] as RemoteWS.SessionInfo[]
+      const knownGoodSessions = [{ id: "s1", status: "active" as const, title: "One" }] as RemoteWS.SessionInfo[]
+      const instance = {
+        name: "host",
+        projectName: "project",
+        kind: "cli" as const,
+        startedAt: "2026-08-28T12:34:56.789Z",
+        gitBranch: "main",
+      }
       const getSessions = () =>
         mode === "fresh"
-          ? Promise.resolve({ sessions: knownGoodSessions })
+          ? Promise.resolve({ sessions: knownGoodSessions, instance })
           : new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
 
       conn = RemoteWS.connect({
@@ -1308,6 +1313,8 @@ describe("RemoteWS", () => {
       const payload1 = JSON.parse(socket.sent[0])
       expect(payload1.type).toBe("heartbeat")
       expect(payload1.sessions).toEqual(knownGoodSessions)
+      expect(payload1.instance).toEqual(instance)
+      expect(payload1.capabilities).toEqual({ attachments: true, sessionClone: true })
 
       // Cycle 2: wedged gather times out → degraded send carries the same list.
       mode = "wedge"
@@ -1318,8 +1325,18 @@ describe("RemoteWS", () => {
       const payload2 = JSON.parse(socket.sent[1])
       expect(payload2.type).toBe("heartbeat")
       expect(payload2.sessions).toEqual(knownGoodSessions)
+      expect(payload2).not.toHaveProperty("instance")
+      expect(payload2.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(payload2.protocolVersion).toBe(payload1.protocolVersion)
 
-      // Connection still live
+      // Recovery must advertise fresh metadata, not the cached instance.
+      mode = "fresh"
+      instance.gitBranch = "feature/recovered"
+      await conn.heartbeat()
+      const recovered = JSON.parse(socket.sent.at(-1)!)
+      expect(recovered.instance).toEqual({ ...payload1.instance, gitBranch: "feature/recovered" })
+      expect(recovered.sessions).toEqual(knownGoodSessions)
+      expect(recovered.capabilities).toEqual({ attachments: true, sessionClone: true })
       expect(conn.connected).toBe(true)
     })
   })
@@ -1372,9 +1389,7 @@ describe("RemoteWS", () => {
   test("AC4c: after a timed-out cycle, a later fresh-gather cycle sends fresh sessions", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1422,9 +1437,7 @@ describe("RemoteWS", () => {
       let calls = 0
       let mode: "wedge" | "fresh" = "wedge"
       const wedgeResolvers: Array<(v: { sessions: RemoteWS.SessionInfo[] }) => void> = []
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         if (mode === "wedge") {
@@ -1494,9 +1507,7 @@ describe("RemoteWS", () => {
     await withFakeWebSocket(async (clock) => {
       let calls = 0
       let mode: "reject" | "fresh" = "reject"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         return mode === "reject"
@@ -1547,9 +1558,7 @@ describe("RemoteWS", () => {
     await withFakeWebSocket(async (clock) => {
       let calls = 0
       let mode: "throw" | "fresh" = "throw"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         if (mode === "throw") {
@@ -1619,9 +1628,7 @@ describe("RemoteWS", () => {
   test("AC6a: heartbeat() does not resolve on degraded, resolves on the next fresh send", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1678,9 +1685,7 @@ describe("RemoteWS", () => {
   test("AC6b: pending heartbeat() survives disconnect+reconnect and resolves on fresh send over the new socket", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1745,8 +1750,7 @@ describe("RemoteWS", () => {
 
   test("AC6c: pending heartbeat() rejects (does not hang) when close() is called", async () => {
     await withFakeWebSocket(async (clock) => {
-      const getSessions = () =>
-        new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}) // wedge
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}) // wedge
 
       conn = RemoteWS.connect({
         url: "ws://example.test",
@@ -1806,8 +1810,7 @@ describe("RemoteWS", () => {
       const targetSession = { id: "target", status: "active" as const, title: "Target" }
       const listWithout = [otherSession] as RemoteWS.SessionInfo[]
       const listWith = [otherSession, targetSession] as RemoteWS.SessionInfo[]
-      const getSessions = () =>
-        Promise.resolve({ sessions: mode === "without" ? listWithout : listWith })
+      const getSessions = () => Promise.resolve({ sessions: mode === "without" ? listWithout : listWith })
 
       conn = RemoteWS.connect({
         url: "ws://example.test",
@@ -2004,15 +2007,20 @@ describe("RemoteWS", () => {
   // to see the instance. The periodic 10s timer is the fallback for
   // other code paths.
 
-  test("propagates instance advertisement from getSessions to the heartbeat payload", async () => {
+  test("propagates current instance metadata and capabilities across reconnects", async () => {
     await withFakeWebSocket(async (clock) => {
+      const instance = {
+        name: "mbp-igor",
+        projectName: "cloud",
+        version: "1.2.3",
+        kind: "remote" as const,
+        startedAt: "2026-08-28T12:34:56.789Z",
+        gitBranch: "main",
+      }
       conn = RemoteWS.connect({
         url: "ws://example.test",
         getToken: async () => "tok",
-        getSessions: async () => ({
-          sessions: [],
-          instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
-        }),
+        getSessions: async () => ({ sessions: [], instance }),
         log: nolog(),
         heartbeat: 60_000,
         timers: clock,
@@ -2021,18 +2029,24 @@ describe("RemoteWS", () => {
       })
 
       await flush()
-      const socket = FakeWebSocket.instances[0]
+      const socket = FakeWebSocket.instances.at(-1)!
       socket.open()
-      await flushLong()
-      // No immediate heartbeat on first open; the periodic timer would
-      // eventually fire (60_000 in this test) but the test fires one
-      // explicitly to verify the payload flow.
-      fireHeartbeat()
-      await flushLong()
+      await conn.heartbeat()
+      const first = JSON.parse(socket.sent.at(-1)!)
+      expect(first.instance).toEqual(instance)
+      expect(first.capabilities).toEqual({ attachments: true, sessionClone: true })
 
-      expect(socket.sent.length).toBe(1)
-      const parsed = JSON.parse(socket.sent[0])
-      expect(parsed.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+      socket.disconnect(1000, "transient")
+      instance.gitBranch = "feature/reconnected"
+      clock.advance(1000)
+      await flush()
+      const next = FakeWebSocket.instances.at(-1)!
+      next.open()
+      await conn.heartbeat()
+      const second = JSON.parse(next.sent.at(-1)!)
+      expect(second.instance).toEqual({ ...first.instance, gitBranch: "feature/reconnected" })
+      expect(second.capabilities).toEqual({ attachments: true, sessionClone: true })
+      expect(second.protocolVersion).toBe(first.protocolVersion)
     })
   })
 
@@ -2058,8 +2072,9 @@ describe("RemoteWS", () => {
 
       expect(socket.sent.length).toBe(1)
       const parsed = JSON.parse(socket.sent[0])
-      expect(parsed.instance).toBeUndefined()
+      expect(parsed).not.toHaveProperty("instance")
       expect(parsed.protocolVersion).toBeDefined()
+      expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true })
     })
   })
 

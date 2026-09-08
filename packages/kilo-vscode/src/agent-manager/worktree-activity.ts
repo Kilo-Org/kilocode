@@ -147,6 +147,14 @@ export class WorktreeActivity {
     this.publish()
   }
 
+  pause(): void {
+    if (this.dead) return
+    for (const state of this.states) {
+      state.request = undefined
+      state.loaded = false
+    }
+  }
+
   clear(): void {
     if (this.dead) return
     for (const state of this.states) this.invalidate(state)
@@ -385,6 +393,7 @@ export function createWorktreeActivity(opts: FactoryOptions) {
     return activity.sync(force)
   }
   const unsubState = opts.connection.onStateChange((state) => {
+    if (state === "connecting") return activity.pause()
     if (state !== "connected") return activity.clear()
     void sync(true)
   })

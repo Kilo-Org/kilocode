@@ -5,8 +5,9 @@ import ai.kilocode.client.session.SessionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAware
 
-class OpenSessionAction : AnAction() {
+class OpenSessionAction : AnAction(), DumbAware {
     override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {

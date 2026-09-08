@@ -46,7 +46,7 @@ class KiloBackendActivityManager(
         directory: (String) -> String?,
         chatEvents: SharedFlow<ChatEventDto>,
     ) {
-        if (status?.isActive == true || events?.isActive == true) stop()
+        if (status?.isActive == true || events?.isActive == true) detach()
         this.statuses = statuses
         this.directory = directory
         status = cs.launch {
@@ -64,10 +64,7 @@ class KiloBackendActivityManager(
     }
 
     fun stop() {
-        status?.cancel()
-        events?.cancel()
-        status = null
-        events = null
+        detach()
         statuses = null
         directory = { null }
         synchronized(lock) {
@@ -77,6 +74,37 @@ class KiloBackendActivityManager(
         }
         _activity.value = emptyMap()
         log.info("Activity manager stopped")
+    }
+
+    /**
+     * Cancels the collectors without discarding what they recorded.
+     *
+     * [start] runs on every reload, including the one a disposal triggers in the same breath as
+     * cancelling the running turns. Clearing state there would erase the interruption badges that
+     * disposal just recorded, so an in-place restart keeps them and lets fresh collectors carry on.
+     * A real teardown still goes through [stop].
+     */
+    private fun detach() {
+        status?.cancel()
+        events?.cancel()
+        status = null
+        events = null
+    }
+
+    /**
+     * Badge [ids] as having lost a turn nobody asked to stop.
+     *
+     * Called directly instead of being driven from [ChatEventDto.SessionInterrupted]: the disposal that
+     * cancels those turns reloads the app immediately, the reload restarts the event collector, and the
+     * chat event flow replays nothing — an emission racing that restart can land in the gap where
+     * nothing is subscribed and be dropped. A direct call is ordered with the disposal that caused it.
+     */
+    fun interrupt(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        synchronized(lock) {
+            errors.addAll(ids)
+            recompute()
+        }
     }
 
     private fun handle(event: ChatEventDto) {
@@ -89,6 +117,8 @@ class KiloBackendActivityManager(
             // A Stop publishes MessageAbortedError. That is a deliberate user action, not a failure, so
             // it must not badge the session list, worktree rows, or the Agents tab attention dot.
             is ChatEventDto.Error -> if (event.error?.aborted != true) event.sessionID?.let { errors.add(it) }
+            // A cancellation nobody asked for is a failure, but the abort reporting it is
+            // indistinguishable from a Stop, so that badge arrives through [interrupt] instead.
             is ChatEventDto.TurnOpen -> errors.remove(event.sessionID)
             // Not every failure publishes a session error — a turn whose provider ended the response in
             // error writes the failure onto the message and only reports it through this close reason. The

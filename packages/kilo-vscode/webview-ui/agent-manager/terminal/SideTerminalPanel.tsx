@@ -59,8 +59,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
   const ids = () => sides().map((term) => term.id)
   const active = () => props.state.sideActiveFor(props.contextKey())
   const pending = () => props.state.pendingSide(props.contextKey())
-  const close = (id: string, focus: { restore: () => void }) => {
+  const close = (id: string, focus: { restore: () => void }, release: () => void) => {
     props.onClose(id)
+    requestAnimationFrame(release)
     if (ids().length > 0) focus.restore()
   }
 
@@ -87,6 +88,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
               label={props.state.title(term.id) ?? term.title}
               tooltip={props.state.title(term.id) ?? term.title}
               status={props.state.scriptStatus(term.id)}
+              state={props.state.activity(term.id)}
               showKeybind={false}
               keybind={active() === term.id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
@@ -101,9 +103,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                 if (event.button !== 1) return
                 event.preventDefault()
                 event.stopPropagation()
-                close(term.id, api.focus)
+                close(term.id, api.focus, api.release)
               }}
-              onClose={() => close(term.id, api.focus)}
+              onClose={() => close(term.id, api.focus, api.release)}
               onCloseOthers={() => props.onCloseOthers(term.id)}
               onStop={(event) => {
                 event.stopPropagation()

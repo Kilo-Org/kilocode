@@ -6,12 +6,19 @@ on:
       - ".github/**"
       - "github/**"
       - "packages/extensions/**"
+      - "packages/kilo-*/**"
+      - "packages/*/src/kilocode/**"
+      - "packages/*/src/kilo-*/**"
+      - "packages/plugin-atomic-chat/**"
       - "packages/opencode/**"
       - "packages/script/**"
       - "packages/shared/**"
       - "packages/storybook/**"
       - "packages/ui/**"
       - "script/**"
+      - "package.json"
+      - "bun.lock"
+      - "!packages/kilo-jetbrains/**"
   workflow_dispatch:
 
 jobs:
@@ -43,6 +50,13 @@ jobs:
 
       - name: Check domain architecture boundaries and ratchets
         run: bun run script/check-architecture.ts
+
+      - name: Test the Kilo duplication ratchet
+        working-directory: packages/script
+        run: bun test ./tests/check-kilocode-duplication.test.ts
+
+      - name: Check Kilo-owned code duplication
+        run: bun run check:duplication
 
       - name: Check model tool network boundary
         run: bun run script/check-model-tool-network.ts

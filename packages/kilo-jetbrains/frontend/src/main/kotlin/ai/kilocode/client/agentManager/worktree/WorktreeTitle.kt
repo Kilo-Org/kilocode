@@ -9,10 +9,6 @@ internal object WorktreeTitle {
             ?: fallback(path)
     }
 
-    fun custom(name: String?, path: String): String? {
-        return name?.takeIf { it != fallback(path) }
-    }
-
     fun fallback(path: String): String {
         val value = path.trimEnd('/', '\\')
         return value.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotBlank() } ?: value

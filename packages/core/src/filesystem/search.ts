@@ -13,7 +13,7 @@ import { RelativePath } from "../schema"
 import { Flag } from "../flag/flag"
 // kilocode_change start
 import * as SearchTarget from "../kilocode/search-target"
-import { scanning } from "../kilocode/fff"
+import { allowed, message } from "../kilocode/fff"
 // kilocode_change end
 
 export interface Interface {
@@ -48,20 +48,25 @@ export const ripgrepLayer = Layer.effect(
       directories: [] as string[],
     }
     const directories = new Set<string>()
-    yield* ripgrep
-      .find({
-        cwd: location.directory,
-        pattern: "*",
-        limit: location.vcs ? Number.MAX_SAFE_INTEGER : 100_000,
-        onEntry: (entry) =>
-          Effect.sync(() => {
-            state.files.push(entry.path)
-            const parts = entry.path.split("/")
-            parts.slice(0, -1).forEach((_, index) => directories.add(parts.slice(0, index + 1).join("/") + path.sep))
-            state.directories = Array.from(directories)
-          }),
-      })
-      .pipe(Effect.orDie, Effect.asVoid, Effect.forkIn(scope))
+    // kilocode_change start - never eagerly enumerate a filesystem root.
+    const real = yield* fs.realPath(location.directory).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    if (real && allowed(real)) {
+      yield* ripgrep
+        .find({
+          cwd: real,
+          pattern: "*",
+          limit: location.vcs ? Number.MAX_SAFE_INTEGER : 100_000,
+          onEntry: (entry) =>
+            Effect.sync(() => {
+              state.files.push(entry.path)
+              const parts = entry.path.split("/")
+              parts.slice(0, -1).forEach((_, index) => directories.add(parts.slice(0, index + 1).join("/") + path.sep))
+              state.directories = Array.from(directories)
+            }),
+        })
+        .pipe(Effect.orDie, Effect.asVoid, Effect.forkIn(scope))
+    }
+    // kilocode_change end
     return Service.of({
       glob: (input) =>
         Effect.gen(function* () {
@@ -176,14 +181,15 @@ export const fffLayer = Layer.effect(
       }).pipe(Effect.ignore)
     const make = Effect.uninterruptible(
       Effect.gen(function* () {
+        const real = yield* fs.realPath(location.directory).pipe(Effect.orDie)
+        if (!allowed(real)) return yield* Effect.die(new Error(message))
         const result = yield* Effect.try({
           try: () =>
             Fff.create({
-              basePath: location.directory,
+              basePath: real,
               aiMode: true,
               disableMmapCache: true,
               disableContentIndexing: true,
-              ...scanning(location.directory),
             }),
           catch: (cause) => cause,
         }).pipe(Effect.orDie)
@@ -329,7 +335,17 @@ export const fffLayer = Layer.effect(
   }),
 )
 
-const layer = Layer.unwrap(Effect.sync(() => (Flag.KILO_DISABLE_FFF || !Fff.available() ? ripgrepLayer : fffLayer)))
+// kilocode_change start - FFF owns an initial scan and watcher, so roots must use the non-indexing fallback.
+const layer = Layer.unwrap(
+  Effect.gen(function* () {
+    if (Flag.KILO_DISABLE_FFF || !Fff.available()) return ripgrepLayer
+    const location = yield* Location.Service
+    const fs = yield* FSUtil.Service
+    const real = yield* fs.realPath(location.directory).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    return real && allowed(real) ? fffLayer : ripgrepLayer
+  }),
+)
+// kilocode_change end
 
 export const locationLayer = layer
 

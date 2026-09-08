@@ -14,7 +14,7 @@ import type { EventSource } from "@opencode-ai/tui/context/sdk"
 import { writeHeapSnapshot } from "v8"
 import type { StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change - runtime imports deferred into handlers
 import { win32InstallCtrlCGuard } from "@opencode-ai/tui/terminal-win32"
-import { validateSession } from "../tui/validate-session"
+import { validate as validateSession } from "@/kilocode/cli/cmd/tui" // kilocode_change
 // kilocode_change start - correlate the TUI worker with its parent process
 import {
   KILO_PROCESS_ROLE,
@@ -276,7 +276,7 @@ export const TuiThreadCommand = cmd({
       exiting: false,
     }
     try {
-      const { TuiConfig } = await import("@/config/tui")
+      // kilocode_change
       if (args.fork && !args.continue && !args.session) {
         UI.error("--fork requires --continue or --session")
         process.exitCode = 1
@@ -418,6 +418,7 @@ export const TuiThreadCommand = cmd({
       // kilocode_change end
 
       const prompt = await input(args.prompt)
+      const { TuiConfig } = await import("@/config/tui") // kilocode_change
       const config = await TuiConfig.get()
 
       const network = resolveNetworkOptionsNoConfig(args)

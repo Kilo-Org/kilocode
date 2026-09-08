@@ -39,6 +39,18 @@ describe("session preference recovery", () => {
     })
   })
 
+  it.each([undefined, ""])("restores model default %s instead of an older effort", (variant) => {
+    const prefs = resolveMessagePrefs(
+      [
+        msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "high" } }),
+        msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant } }),
+      ],
+      agents,
+    )
+
+    expect(prefs.variant).toBe("")
+  })
+
   it("ignores assistant-only model data and invalid agents", () => {
     const prefs = resolveMessagePrefs(
       [
@@ -66,7 +78,7 @@ describe("session preference recovery", () => {
     expect(prefs).toEqual({
       agent: "code",
       model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-      variant: undefined,
+      variant: "",
     })
   })
 })

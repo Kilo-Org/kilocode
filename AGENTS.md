@@ -93,7 +93,8 @@ Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributi
 - Prefer single word variable names where possible
 - Use Bun APIs when possible, like `Bun.file()`
 - Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
-- Prefer `Promise.withResolvers<T>()` for deferreds when runtime/types support it; allow callback/event executors, not async executors or redundant Promise wrapping.
+- Always use `Promise.withResolvers<T>()` to create deferred promises; all supported runtimes provide it. Never capture `resolve` and `reject` from a `new Promise` executor in external variables or object properties.
+- Use `ref == null` to check for both `null` and `undefined` instead of `ref === undefined || ref === null`.
 
 ### Avoid let statements
 

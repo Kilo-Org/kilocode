@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { DateTime, Effect, Layer, Schema, Stream } from "effect"
+import { DateTime, Effect, Schema, Stream } from "effect"
 import { eq } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -176,6 +176,36 @@ replay.effect("reads and replays released prompt promotion events", () =>
       type: "user",
       seq: 1,
     })
+  }),
+)
+
+it.effect("round-trips assistant tool content across running and settled states", () =>
+  Effect.sync(() => {
+    const text = { type: "text", text: "Tool output" }
+    const legacy = { type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }
+    const file = { type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "image.png" }
+    const stored = { type: "file", source: { type: "data", data: "AAAA" }, mime: "image/png", name: "image.png" }
+    for (const status of ["running", "completed", "error"]) {
+      const input = { type: "assistant", content: [{ type: "tool", state: { status, content: [text, legacy] } }] }
+      const normalized = StoredMessage.normalize(input)
+      expect(normalized).toMatchObject({ content: [{ state: { status, content: [text, file] } }] })
+      const encoded = StoredMessage.encode(normalized)
+      expect(encoded).toMatchObject({ content: [{ state: { status, content: [text, stored] } }] })
+      expect(StoredMessage.normalize(encoded)).toEqual(normalized)
+      expect(input.content.at(0)?.state.content.at(1)).toBe(legacy)
+    }
+  }),
+)
+
+it.effect("leaves non-assistant values and pending tool content unchanged", () =>
+  Effect.sync(() => {
+    for (const input of [null, 1, [], { type: "user", content: [] }, { type: "assistant", content: null }]) {
+      expect(StoredMessage.normalize(input)).toBe(input)
+      expect(StoredMessage.encode(input)).toBe(input)
+    }
+    const pending = { type: "assistant", content: [{ type: "tool", state: { status: "pending", content: [null] } }] }
+    expect(StoredMessage.normalize(pending)).toEqual(pending)
+    expect(StoredMessage.encode(pending)).toEqual(pending)
   }),
 )
 

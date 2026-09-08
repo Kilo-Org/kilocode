@@ -3,9 +3,6 @@
 /**
  * MessageList component
  * Scrollable turn-based message list with virtualization.
- * Each user message is rendered as a VscodeSessionTurn — a custom component that
- * renders all assistant parts as a flat, verbose list with no context grouping,
- * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
@@ -23,6 +20,7 @@ import {
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -85,17 +83,22 @@ import {
 import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
-  onSelectSession?: (id: string) => void
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onEditMessage?: (sessionID: string, messageID: string) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  queuedDisabled?: boolean
+  editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
+  introduction?: boolean
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
   sessionID?: Accessor<string | undefined>
@@ -114,21 +117,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // back to kilo-ui's default hideDetails renderer, which never shows a
   // task's result text — indexing it there would produce a phantom match.
   const inAgentManager = !!useWorktreeMode()
-
-  // Mirrors message-part.tsx's own (unexported) relativizeProjectPath/
-  // getDirectory exactly, so the directory text indexed here matches what
-  // ToolMetaLine/ToolFileAccordion actually put on screen.
-  function relativizeProjectPath(path: string, directory?: string) {
-    if (!path) return ""
-    if (!directory) return path
-    if (directory === "/") return path
-    if (directory === "\\") return path
-    if (path === directory) return ""
-    const separator = directory.includes("\\") ? "\\" : "/"
-    const prefix = directory.endsWith(separator) ? directory : directory + separator
-    if (!path.startsWith(prefix)) return path
-    return path.slice(directory.length)
-  }
 
   function getDirectory(path: string | undefined) {
     return relativizeProjectPath(getRawDirectory(path), data.directory)
@@ -178,6 +166,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     ),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
+  const introduction = createMemo(() => isEmpty() && !props.readonly && props.introduction)
 
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(
@@ -876,9 +865,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
-    const container = range.startContainer
-    const target = container instanceof Element ? container : container?.parentElement
-    target?.scrollIntoView({ block: "center", inline: "nearest" })
+    // Scroll only the transcript, not VS Code's outer webview container.
+    el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
   // Two frames of margin so the virtualizer has settled the DOM for the new
@@ -967,7 +955,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
   // the virtualizer; direct/live/queued rows are mounted, so they use
-  // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
+  // the transcript scroller. Pauses auto-follow first so the jump isn't snapped back.
   const jump = (key: string) => {
     autoScroll.pause()
     const index = indexes().get(key)
@@ -984,9 +972,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
-    if (target) {
+    if (el && target) {
       setPending(undefined)
-      target.scrollIntoView({ block: "start" })
+      el.scrollBy({ top: target.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
       return
     }
     const sid = session.currentSessionID()
@@ -1013,10 +1001,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
-    if (!row) return
+    if (!el || !row) return
     setPending(undefined)
     autoScroll.pause()
-    row.scrollIntoView({ block: "start" })
+    el.scrollBy({ top: row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
   })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.
@@ -1207,7 +1195,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const setScrollRef = (el: HTMLElement | undefined) => {
     resize?.disconnect()
     setScrollEl(el)
-    autoScroll.scrollRef(el)
     if (!el) return
     refreshLayout()
     resize = new ResizeObserver(refreshLayout)
@@ -1219,6 +1206,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
     resize?.disconnect()
     window.removeEventListener("resize", refreshLayout)
     document.fonts?.removeEventListener("loadingdone", refreshLayout)
+  })
+
+  createEffect(() => {
+    const el = scrollEl()
+    autoScroll.scrollRef(introduction() ? undefined : el)
+    if (introduction() && el) el.scrollTop = 0
   })
 
   const [pendingRestore, setPendingRestore] = createSignal<string>()
@@ -1256,27 +1249,34 @@ export const MessageList: Component<MessageListProps> = (props) => {
   onCleanup(() => save(session.currentSessionID()))
 
   return (
-    <div class="message-list-container">
+    <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
       <Show when={props.announce === false}>
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {announcement()}
         </div>
       </Show>
       <Show when={isEmpty()}>
-        <div class="welcome-header">
+        <div class="welcome-header" data-slot="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications sessionID={props.sessionID} />
+          <Show when={!props.introduction || props.readonly}>
+            <KiloNotifications sessionID={props.sessionID} />
+          </Show>
         </div>
       </Show>
       <div
         ref={setScrollRef}
         onScroll={handleScroll}
         class="message-list"
+        data-slot="message-list"
         role={props.announce === false ? undefined : "log"}
         aria-live={props.announce === false ? undefined : "polite"}
         aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}
       >
-        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
+        <div
+          ref={autoScroll.contentRef}
+          data-slot="message-list-content"
+          class={isEmpty() ? "message-list-content-empty" : "message-list-content"}
+        >
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
@@ -1329,7 +1329,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       <TranscriptRowView
                         row={row}
                         index={index()}
+                        onSelectSession={props.onSelectSession}
+                        isSessionOpen={props.isSessionOpen}
                         onForkMessage={props.onForkMessage}
+                        onEditMessage={props.onEditMessage}
+                        queuedDisabled={props.queuedDisabled}
+                        editDisabled={props.editDisabled}
                         highlight={highlight}
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
@@ -1343,7 +1348,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   {(key) => (
                     <TranscriptRowView
                       row={lookup().get(key)!}
+                      onSelectSession={props.onSelectSession}
+                      isSessionOpen={props.isSessionOpen}
                       onForkMessage={props.onForkMessage}
+                      onEditMessage={props.onEditMessage}
+                      queuedDisabled={props.queuedDisabled}
+                      editDisabled={props.editDisabled}
                       highlight={highlight}
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
@@ -1361,6 +1371,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onSelectSession={props.onSelectSession}
+                  isSessionOpen={props.isSessionOpen}
+                  onEditMessage={props.onEditMessage}
+                  queuedDisabled={props.queuedDisabled}
+                  editDisabled={props.editDisabled}
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
@@ -1401,7 +1416,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
         seeking={() => Boolean(seek())}
       />
 
-      <Show when={autoScroll.userScrolled()}>
+      <Show when={!introduction() && autoScroll.userScrolled()}>
         <button
           class="scroll-to-bottom-button"
           onClick={() => autoScroll.resume()}

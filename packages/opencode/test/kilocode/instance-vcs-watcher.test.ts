@@ -1,7 +1,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Context, Deferred, Effect, Fiber, Layer, LayerMap } from "effect"
+import { ConfigProvider, Context, Deferred, Effect, Fiber, Layer, LayerMap } from "effect"
 import * as TestConsole from "effect/testing/TestConsole"
 import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 import { InstanceRef } from "../../src/effect/instance-ref"
@@ -21,16 +21,10 @@ const layer = Layer.mergeAll(
   AppNodeBuilder.build(Git.node),
   AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
-const it = testEffect(layer)
-
-// The suite disables the file watcher (see test/preload.ts); this file tests it, so opt back in.
-const disableFilewatcher = process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER
-beforeAll(() => {
-  delete process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER
+const config = ConfigProvider.layerAdd(ConfigProvider.fromUnknown({ KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "false" }), {
+  asPrimary: true,
 })
-afterAll(() => {
-  if (disableFilewatcher !== undefined) process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER = disableFilewatcher
-})
+const it = testEffect(layer.pipe(Layer.provideMerge(config)))
 
 // The watcher is unreliable on Windows CI, so this test only runs on unix.
 const live = process.platform === "win32" ? it.live.skip : it.live

@@ -134,36 +134,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         }
         yield* markInstanceForDisposal(instance)
       }
-      const all = yield* auth.all().pipe(Effect.orElseSucceed(() => ({})))
-      const active = yield* account.active().pipe(
-        Effect.map(Option.getOrUndefined),
-        Effect.orElseSucceed(() => undefined),
-      )
-      const [base, global, sources] = yield* Effect.all(
-        [
-          config.get(),
-          config.getGlobal(),
-          Effect.promise(() =>
-            KilocodeConfigSources.list({
-              directory: instance.directory,
-              worktree: instance.worktree,
-              auth: all,
-              account: active,
-            }),
-          ),
-        ],
-        { concurrency: 3 },
-      )
-      const output = yield* Effect.promise(() =>
-        KilocodeConfigOverlay.resolve({
-          directory: instance.directory,
-          worktree: instance.worktree,
-          scope: body.scope,
-          effective: base,
-          global,
-          sources: sources.sources,
-        }),
-      )
+      const output = yield* overlay({ query: { scope: body.scope } })
       if (body.scope === "global" && result.changed && !hot) {
         yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
           Effect.catchCause(() => Effect.void),

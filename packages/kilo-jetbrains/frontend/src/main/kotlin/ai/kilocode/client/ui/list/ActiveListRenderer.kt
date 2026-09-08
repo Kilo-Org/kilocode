@@ -1,7 +1,8 @@
 package ai.kilocode.client.ui.list
 
-import ai.kilocode.client.agentManager.worktree.WorktreeStatsView
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
@@ -10,20 +11,23 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.RelativeFont
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import ai.kilocode.rpc.dto.WorktreeStatsDto
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -32,10 +36,29 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import javax.swing.Icon
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
+
+/**
+ * Unscaled gap around a row's badge columns.
+ *
+ * Read from the same theme key as [JBUI.CurrentTheme.ActionsList.elementIconGap] but left unscaled, so
+ * one value can feed both the layout gaps (which need pixels) and [JBUI.Borders] (which scales what it
+ * is handed).
+ */
+private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
+/**
+ * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
+ *
+ * On by default. Off leaves the cut exposed, which is legible but reads as the end of the text rather than
+ * the middle of it — the escape hatch for a surface where the fade is wrong, such as a theme that paints a
+ * row background the renderer cannot name.
+ */
+private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
 
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
@@ -50,12 +73,6 @@ internal class ActiveListRenderer(
         if (menu == null) return
         glyph.update(activeListMenuCell())
         glyph.isVisible = false
-        // Mirror the flush leading icon: drop the row's trailing inset and let the empty-icon spacer
-        // hold a dedicated menu column at the content edge. The overlay glyph then floats over that
-        // same slot, revealed on hover.
-        row.border = JBUI.Borders.empty(UiStyle.Gap.md(), 0, UiStyle.Gap.md(), 0)
-        (row.layout as BorderLayout).hgap = 0
-        mark.border = JBUI.Borders.emptyRight(UiStyle.Gap.md())
         val tail = JPanel(BorderLayout())
         UiStyle.Components.transparent(tail)
         tail.add(endPane, BorderLayout.CENTER)
@@ -69,6 +86,9 @@ internal class ActiveListRenderer(
             val width = child.preferredSize.width.coerceAtMost(host.width)
             Rectangle((host.width - width).coerceAtLeast(0), 0, width, host.height)
         }
+        // The menu column changes the row's own padding, so re-derive the scaled geometry now that
+        // [menu] is known.
+        syncScale()
     }
 
     private var menu: ActiveListMenu<*>? = null
@@ -82,25 +102,36 @@ internal class ActiveListRenderer(
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
-    private val title = SimpleColoredComponent()
-    private val badges = Stack.horizontal()
-    // Title in CENTER clips when the group is narrow; trailing tags in EAST keep their full
-    // preferred width. A squeezed row sacrifices the title text but never drops the tags.
+    private val title = FadeText()
+    private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
+    private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
+    private val secondary = Stack.horizontal(UiStyle.Gap.md())
+    // Title in CENTER clips when the group is narrow; tags in WEST/EAST keep their full preferred
+    // width. A squeezed row sacrifices the title text but never drops the tags.
     private val titleGroup = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+        add(leading, BorderLayout.WEST)
         add(title, BorderLayout.CENTER)
         add(badges, BorderLayout.EAST)
     }
-    // Pin the title+badges group to the leading edge so badges trail the title text directly
-    // instead of drifting to the far right of the row.
-    private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
-    private val desc = JBLabel()
-    private val metrics = WorktreeStatsView()
-    private val metricsPane = metrics.align(HAlign.RIGHT, VAlign.CENTER)
-    // The description (branch) line carries the changes/PR metrics on its trailing edge so they sit
-    // on the branch row instead of spanning the full row height.
+    // Pin the title+badges group to the leading edge so badges trail the title text directly instead of
+    // drifting to the far right of the row. A list that opts into [ActiveListConfig.badgesRight] gets
+    // the group stretched across the row instead, which lands its badges on the same trailing edge as
+    // the metrics and secondary badges below them.
+    private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
+    // Carries the description as a [FadeText] rather than the JBLabel it used to be, so both lines of a
+    // row clip the same way: cut and faded, not ellipsed through the label UI. The internal padding and
+    // border a colored component ships with are cleared to keep the label's own geometry, which would
+    // otherwise indent the line by a few pixels and grow every row.
+    private val desc = FadeText().apply {
+        ipad = JBUI.emptyInsets()
+        myBorder = null
+    }
+    private val metrics = ActiveListChangesCell()
+    private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
+    private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
     private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(desc, BorderLayout.CENTER)
-        add(metricsPane, BorderLayout.EAST)
+        add(detailsPane, BorderLayout.EAST)
     }
     private val text = Stack.vertical().next(header).next(descLine)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
@@ -112,7 +143,6 @@ internal class ActiveListRenderer(
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val pill = JPanel(BorderLayout()).apply {
-        border = JBUI.Borders.empty(UiStyle.Gap.sm())
         add(cellPane, BorderLayout.CENTER)
     }
     // The dropdown button keeps the overlay approach: a real empty-icon [spacer] holds the trailing
@@ -121,8 +151,6 @@ internal class ActiveListRenderer(
     // the icon sits flush against the content edge, mirroring the flush leading icon.
     private val glyph = ActiveListActionCell()
     private val spacer = JBLabel(EmptyIcon.create(AllIcons.Actions.More))
-    // Width of the dropdown column, used to offset the action pill when a list opts into both.
-    private val reserve: Int by lazy { glyph.preferredSize.width }
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
@@ -134,6 +162,8 @@ internal class ActiveListRenderer(
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
     private var gap = false
+    // JPanel's constructor calls updateUI() before any field below exists, so guard the refresh.
+    private var wired = false
 
     init {
         isOpaque = true
@@ -145,6 +175,7 @@ internal class ActiveListRenderer(
             mark,
             icon,
             title,
+            leading,
             badges,
             titleGroup,
             header,
@@ -153,7 +184,9 @@ internal class ActiveListRenderer(
             desc,
             descLine,
             metrics,
-            metricsPane,
+            secondary,
+            details,
+            detailsPane,
             trail,
             trailPane,
             endPane,
@@ -162,15 +195,10 @@ internal class ActiveListRenderer(
             glyph,
             spacer,
         )
-        row.border = JBUI.Borders.empty(
-            UiStyle.Gap.md(),
-            0,
-            UiStyle.Gap.md(),
-            UiStyle.Gap.pad(),
-        )
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
-            val gap = if (menu != null) reserve else 0
+            // The dropdown column, so the pill clears it when a list opts into both.
+            val gap = if (menu != null) glyph.preferredSize.width else 0
             Rectangle(
                 (host.width - size.width - UiStyle.Gap.pad() - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),
@@ -181,8 +209,52 @@ internal class ActiveListRenderer(
         wrap.setContent(layers)
         add(top, BorderLayout.NORTH)
         add(wrap, BorderLayout.CENTER)
+        wired = true
+        syncScale()
     }
 
+    /**
+     * Re-derives every scale-dependent value in the stamp.
+     *
+     * The renderer is one long-lived component reused for every row, and both a layout manager's gap
+     * and an assigned border capture their pixel width when they are created. An IDE zoom moves the
+     * JBUI user scale without touching row data, so anything captured in a constructor would keep its
+     * pre-zoom size while the fonts and icons around it grow. Everything DPI-derived therefore lives
+     * here and is re-applied from [updateUI].
+     */
+    private fun syncScale() {
+        // Shared with [sep], which holds this exact instance, so one update covers the header band too.
+        (insets as? JBInsets)?.update()
+        // [sep]'s own font is left alone on purpose: GroupHeaderSeparator builds it from JBFont, and a
+        // JBFont re-derives its size from "Label.font" on read, so it already follows an IDE zoom.
+        val iconGap = JBUI.scale(activeListIconGap())
+        leading.space = iconGap
+        badges.space = iconGap
+        secondary.space = UiStyle.Gap.md()
+        details.space = UiStyle.Gap.md()
+        cells.space = activeListCellGap()
+        (titleGroup.layout as BorderLayout).hgap = UiStyle.Gap.xs()
+        (descLine.layout as BorderLayout).hgap = UiStyle.Gap.md()
+        pill.border = JBUI.Borders.empty(UiStyle.Gap.SM)
+        // Mirror the flush leading icon when a menu column is present: drop the row's trailing inset
+        // and let the empty-icon spacer hold a dedicated column at the content edge. The overlay glyph
+        // then floats over that same slot, revealed on hover.
+        (row.layout as BorderLayout).hgap = if (menu == null) UiStyle.Gap.md() else 0
+        row.border = if (menu == null) {
+            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, UiStyle.Gap.PAD)
+        } else {
+            JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, 0)
+        }
+        mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.MD)
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        if (!wired) return
+        syncScale()
+    }
+
+    @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveListItem>,
         value: ActiveListItem,
@@ -214,6 +286,13 @@ internal class ActiveListRenderer(
         gap = false
         layers.isVisible = true
 
+        // Text that runs out of room is cut and faded rather than ellipsed, so the row spends every pixel
+        // it has on the text itself. The fade blends into whatever the row painted behind the line, read
+        // back off [wrap] so it cannot drift from the selection color the row actually filled.
+        val backdrop = if (activeListFade()) wrap.selectionColor ?: wrap.background else null
+        title.backdrop = backdrop
+        desc.backdrop = backdrop
+
         title.clear()
         // Bold carries most rows by default: the description under it and the icon beside it both
         // render in the muted secondary color, so cfg.title separates the two lines when enabled.
@@ -222,33 +301,32 @@ internal class ActiveListRenderer(
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
-        syncBadges(value)
+        // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
+        // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
+        // aware, so a highlighted row does not leave the count dark on dark blue.
+        syncBadges(value, fg)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
         icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
-        desc.text = note
+        desc.clear()
+        if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
         desc.isVisible = note.isNotBlank()
         desc.border = if (cfg.descriptionIndent && desc.isVisible) {
-            JBUI.Borders.emptyLeft(UiStyle.Gap.sm())
+            JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
         } else {
             JBUI.Borders.empty()
         }
-        desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
-        metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr, data?.prTooltip ?: data?.pr?.text)
-        metrics.setActions(data?.onChanges, data?.onPr)
+        metrics.isEnabled = list.isEnabled && !value.disabled
+        metrics.update(data)
         val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
-        metrics.isVisible = data != null
-        // Hide the wrapper too so a metrics-less row does not reserve the trailing gap on its
-        // description, and collapse the whole second row when it would be empty so title-only rows
-        // stay vertically centered.
-        metricsPane.isVisible = metrics.isVisible
-        descLine.isVisible = desc.isVisible || metrics.isVisible
+        detailsPane.isVisible = metrics.isVisible || secondary.isVisible
+        descLine.isVisible = desc.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
@@ -364,22 +442,22 @@ internal class ActiveListRenderer(
         return image to Point(wrap.x, wrap.y)
     }
 
-    private fun syncBadges(item: ActiveListItem) {
-        val items = if (item.progress != null) emptyList() else item.badges
-        while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
-        while (badges.componentCount < items.size) {
-            badges.add(JBLabel().apply {
-                border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
-            })
-        }
-        badges.isVisible = items.isNotEmpty()
+    private fun syncBadges(item: ActiveListItem, color: Color) {
+        val hidden = item.progress != null
+        val gap = activeListIconGap()
+        leading.border = JBUI.Borders.emptyRight(gap)
+        badges.border = JBUI.Borders.emptyLeft(gap)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color)
+    }
+
+    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>, color: Color) {
+        while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
+        while (stack.componentCount < items.size) stack.add(ActiveListBadgeCell())
+        stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            val badge = items[i]
-            val label = badges.getComponent(i) as JBLabel
-            val current = label.icon as? FilledBadgeIcon
-            if (current?.text != badge.text || current.style != badge.style) {
-                label.icon = FilledBadgeIcon(badge.text, badge.style)
-            }
+            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i], color)
         }
     }
 
@@ -398,6 +476,46 @@ internal interface ActiveListActive {
     fun active(): Boolean
 
     fun hoveredIndex(): Int = -1
+}
+
+internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderLayout()), ActiveListHitCell {
+    private val panel = ChangesPanel(ChangesPanel.Mode.COMPACT)
+    private var data: ActiveListMetrics? = null
+
+    override val cellId = ACTIVE_LIST_CHANGES_CELL
+
+    init {
+        UiStyle.Components.transparent(this)
+        add(panel, BorderLayout.CENTER)
+    }
+
+    @RequiresEdt
+    fun update(data: ActiveListMetrics?) {
+        this.data = data
+        panel.update(
+            data?.files ?: 0,
+            data?.additions ?: 0,
+            data?.deletions ?: 0,
+            localFiles = data?.localFiles ?: 0,
+            localAdditions = data?.localAdditions ?: 0,
+            localDeletions = data?.localDeletions ?: 0,
+            base = data?.base.orEmpty(),
+            conflict = data?.conflict == true,
+        )
+        panel.setActions(data?.action.takeIf { isEnabled })
+        isVisible = panel.isVisible
+        toolTipText = panel.toolTipText
+    }
+
+    @RequiresEdt
+    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.action != null
+
+    override fun cellCursor(): Int = Cursor.HAND_CURSOR
+
+    @RequiresEdt
+    override fun cellTooltip(): String? = toolTipText
+
+    override fun cellAction(): (() -> Unit)? = data?.action
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
@@ -429,4 +547,55 @@ internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
         super.setEnabled(enabled)
         if (text.isNotBlank()) UiStyle.Components.actionLabel(this, enabled)
     }
+}
+
+/** A retained badge pill or status glyph that opts into list hit-testing when its model carries an id. */
+internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
+    private var badge: ActiveListBadge? = null
+
+    override var cellId: String = ""
+        private set
+
+    /**
+     * [color] is the row's text foreground, applied only to a labelled glyph. A pill paints its own text
+     * inside [FilledBadgeIcon], and a bare glyph has no text to color; a labelled glyph does, and a
+     * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
+     * in, so a count would otherwise be unreadable on a selected row.
+     */
+    fun update(badge: ActiveListBadge, color: Color? = null) {
+        this.badge = badge
+        cellId = badge.id.orEmpty()
+        val next = badge.icon ?: pill(badge)
+        // Both branches answer with the instance already installed when nothing changed, so a repaint
+        // of an unchanged row does not churn the label's icon.
+        if (icon !== next) icon = next
+        val label = if (badge.icon != null) badge.text else ""
+        if (text != label) text = label
+        if (label.isNotBlank()) {
+            // Font and gap match the ahead/behind counters in ChangesPanel: a glyph with a figure beside it
+            // reads as one token, and a default label gap pulls the two apart into an icon with a caption.
+            // Re-read rather than assigned once, because updateUI puts the LaF defaults back on an IDE
+            // zoom; the comparisons make that the only time this writes.
+            val small = JBFont.small()
+            if (font != small) font = small
+            val gap = UiStyle.Gap.xs()
+            if (iconTextGap != gap) iconTextGap = gap
+            if (color != null && foreground != color) foreground = color
+        }
+        toolTipText = cellTooltip()
+    }
+
+    private fun pill(badge: ActiveListBadge): Icon {
+        val current = icon as? FilledBadgeIcon
+        if (current?.text == badge.text && current.style == badge.style) return current
+        return FilledBadgeIcon(badge.text, badge.style)
+    }
+
+    override fun cellEnabled(): Boolean = badge?.action != null
+
+    override fun cellCursor(): Int = Cursor.HAND_CURSOR
+
+    override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
+
+    override fun cellAction(): (() -> Unit)? = badge?.action
 }

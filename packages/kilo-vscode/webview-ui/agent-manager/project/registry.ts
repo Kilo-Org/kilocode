@@ -28,23 +28,21 @@ export function createProjectRegistry(opts: { persisted: PersistedProjectTabs; a
       stores.delete("single")
       return
     }
-    // Only consume the legacy bucket when its tabs actually moved; a project
-    // that already has its own tabs must not swallow them silently.
-    const store = stores.get(id)
-    if (!store || store.tabs.ids().length > 0) return
-    store.tabs.set(legacy.tabs.ids())
+    const store = ensure(id)
+    store.tabs.set([...new Set([...legacy.tabs.ids(), ...store.tabs.ids()])])
     stores.delete("single")
   }
 
   const ensure = (id: string): ProjectStore => {
     let store = stores.get(id)
     if (!store) {
-      const persisted = opts.persisted.localTabs?.[id] ?? (id === "single" ? opts.persisted.localSessionIDs : undefined)
+      const persisted =
+        opts.persisted.localTabs?.[id] ??
+        (id === "single" && !opts.persisted.localTabs ? opts.persisted.localSessionIDs : undefined)
       store = createProjectStore(id, { tabs: persisted })
       stores.set(id, store)
       bump((n) => n + 1)
     }
-    migrate(id)
     return store
   }
 
@@ -60,9 +58,9 @@ export function createProjectRegistry(opts: { persisted: PersistedProjectTabs; a
     }
   }
 
-  // Materialize the legacy bucket eagerly so migration works regardless of
-  // which project is ensured first.
-  if (opts.persisted.localSessionIDs?.length) ensure("single")
+  // localSessionIDs is only a compatibility mirror when project buckets exist.
+  if (opts.persisted.localTabs?.single?.length || (!opts.persisted.localTabs && opts.persisted.localSessionIDs?.length))
+    ensure("single")
 
-  return { ensure, active, all, prune, version }
+  return { ensure, active, all, prune, version, migrate }
 }

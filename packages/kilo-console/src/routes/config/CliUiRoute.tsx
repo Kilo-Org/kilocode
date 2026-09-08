@@ -3,7 +3,7 @@ import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
-import { ConfigPage, ConfigTag as Tag } from "./ConfigPage"
+import { ConfigPage, ConfigToggle as Toggle } from "./ConfigPage"
 import { type Theme, themeTitle, useTuiUiSettings } from "./state/ui"
 
 const diffs = [
@@ -28,31 +28,6 @@ function ThemePreview(props: { item: Theme }) {
       </div>
       <ThemeSwatches swatches={props.item.swatches} />
     </div>
-  )
-}
-
-function Toggle(props: {
-  label: string
-  description: string
-  checked: boolean
-  disabled?: boolean
-  onChange: () => void
-}) {
-  return (
-    <button
-      class="ui-toggle"
-      classList={{ selected: props.checked }}
-      type="button"
-      aria-pressed={props.checked}
-      disabled={props.disabled}
-      onClick={props.onChange}
-    >
-      <span>
-        <strong>{props.label}</strong>
-        <small>{props.description}</small>
-      </span>
-      <Tag tone={props.checked ? "success" : "neutral"}>{props.checked ? "On" : "Off"}</Tag>
-    </button>
   )
 }
 

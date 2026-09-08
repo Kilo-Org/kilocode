@@ -1,7 +1,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { Cause, Effect, Exit, Layer } from "effect"
+import { Cause, Effect, Exit, Layer, RcMap } from "effect"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import * as Reference from "../../src/kilocode/reference"
 import { Reference as CoreReference } from "@opencode-ai/core/reference"
@@ -25,6 +25,37 @@ function remote() {
 }
 
 describe("configured references", () => {
+  test("does not initialize location services for an empty reference configuration", async () => {
+    await using tmp = await tmpdir()
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const map = yield* LocationServiceMap.Service
+        const references = yield* Reference.list({ references: {}, directory: tmp.path, worktree: tmp.path }, map)
+        return { references, keys: Array.from(yield* RcMap.keys(map.rcMap)) }
+      }).pipe(Effect.provide(buildLocationServiceMap()), Effect.scoped),
+    )
+    expect(result).toEqual({ references: [], keys: [] })
+  })
+
+  test("clears previously initialized references when configuration becomes empty", async () => {
+    await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const map = yield* LocationServiceMap.Service
+        const input = { directory: tmp.path, worktree: tmp.path }
+        const before = yield* Reference.list({ ...input, references: { docs: "./docs" } }, map)
+        const after = yield* Reference.list({ ...input, references: {} }, map)
+        const persisted = yield* CoreReference.Service.use((service) => service.list()).pipe(
+          Effect.provide(map.get(Location.Ref.make({ directory: AbsolutePath.make(tmp.path) }))),
+        )
+        return { before, after, persisted }
+      }).pipe(Effect.provide(buildLocationServiceMap()), Effect.scoped),
+    )
+    expect(result.before.map((reference) => reference.path)).toEqual([AbsolutePath.make(path.join(tmp.path, "docs"))])
+    expect(result.after).toEqual([])
+    expect(result.persisted).toEqual([])
+  }, 15_000)
+
   test("preserves interruption while materializing a repository", async () => {
     const cache = RepositoryCache.Service.of({ ensure: () => Effect.interrupt })
     const exit = await Effect.runPromiseExit(Reference.ensure(cache, remote()))

@@ -87,7 +87,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     variantList: () => [],
     currentVariant: () => undefined,
     selectVariant: noop,
-    sendMessage: noop,
+    sendMessage: () => true,
     abort: noop,
     compact: noop,
     respondToPermission: noop,

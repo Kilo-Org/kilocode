@@ -54,10 +54,28 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Completo (según el modelo)",
+  "session.goal.blocked": "Bloqueado",
+  "session.goal.restart": "Reiniciar objetivo (consume créditos)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablero",
+  "task.swarm.refresh": "Actualizar",
+  "task.swarm.reset": "Restablecer tablero",
+  "task.swarm.resetTitle": "¿Restablecer este tablero?",
+  "task.swarm.resetDescription":
+    "¿Borrar los mensajes visibles? Las conversaciones y las tareas en curso no cambian. Los agentes pueden publicar nuevos mensajes.",
+  "task.swarm.loading": "Cargando tablero...",
+  "task.swarm.failed": "No se pudo cargar o restablecer el tablero. Intenta actualizarlo.",
 
   "command.provider.connect": "Conectar proveedor",
+
+  "session.activity.waiting": "Esperando una respuesta o aprobación.",
+  "session.activity.error": "Error o conexión perdida.",
+  "session.activity.retry": "Reintentando automáticamente.",
+  "session.activity.busy": "En curso.",
+  "session.activity.done": "Turno completado.",
+  "session.activity.idle": "No está en ejecución.",
 
   "command.session.new": "Nueva sesión",
   "command.session.show.changes": "Mostrar cambios",
@@ -179,6 +197,7 @@ export const dict = {
   "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
   "prompt.action.send": "Enviar",
+  "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
@@ -748,6 +767,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrumpido",
   "session.outcome.error": "Turno fallido",
   "session.outcome.finish": "Motivo de finalización: {{reason}}",
+  "session.goal.label": "Objetivo",
+  "prompt.goal.set": "Establecer objetivo",
+  "prompt.goal.start": "Iniciar objetivo",
+  "session.goal.active": "Activo",
+  "session.goal.paused": "En pausa",
+  "session.goal.pause": "Pausar",
+  "session.goal.resume": "Reanudar",
+  "session.goal.clear": "Borrar objetivo",
   "session.costAlert.header": "Alerta de coste de sesión",
   "session.costAlert.continue": "Continuar",
   "session.costAlert.question":
@@ -866,6 +893,9 @@ export const dict = {
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
   "settings.experimental.imageGeneration.title": "Generación de imágenes",
   "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Comparte un tablero entre una sesión principal y sus subagentes de tareas, incluidos los subagentes anidados. Úsalo para intentos de solución en paralelo o trabajos complementarios, no para todas las tareas.",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
   "settings.experimental.imageGenerationModel.description": "Modelo de generación de imágenes",
   "settings.experimental.imageGenerationModel.placeholder": "Predeterminado (Auto Router)",
@@ -891,9 +921,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
-  "settings.experimental.multiProject.description":
-    "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
+  "settings.experimental.taskModelSelection.title": "Selección de modelo de subagente de Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permite seleccionar explícitamente el modelo, proveedor y esfuerzo de razonamiento de los subagentes de Task.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1171,61 +1201,18 @@ export const dict = {
   "question.summary": "{{n}} de {{total}} preguntas",
   "common.review": "Revisar",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "Migrar desde la versión heredada",
-  "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
   "settings.aboutKiloCode.rooImport.description":
     "Importa el historial de conversaciones de una instalación de Roo Code.",
   "settings.aboutKiloCode.rooImport.button": "Importar sesiones desde Roo Code",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Novedades en Kilo Code",
-  "migration.whatsNew.subtitle": "Hemos reconstruido la extensión sobre una base más rápida y eficiente.",
-  "migration.whatsNew.features.performance.title": "Rendimiento de agente más rápido",
-  "migration.whatsNew.features.performance.detail":
-    "Las llamadas a herramientas en paralelo y los subagentes permiten que tu agente aborde más a la vez — así pasas menos tiempo esperando y más tiempo entregando.",
-  "migration.whatsNew.features.interface.title": "Interfaz optimizada",
-  "migration.whatsNew.features.interface.detail": "Menos distracciones, más fácil y rápido de leer.",
-  "migration.whatsNew.features.agentManager.title": "Administrador de agentes",
-  "migration.whatsNew.features.agentManager.detail":
-    "Una interfaz unificada para ejecutar múltiples agentes en paralelo, cada uno en su propio worktree — supervisa el progreso, cambia de contexto y revisa cambios en un solo lugar.",
-  "migration.whatsNew.features.foundation.title": "Base compartida",
-  "migration.whatsNew.features.foundation.detail":
-    "Un núcleo pequeño y eficiente en todos los productos Kilo. Una experiencia familiar sin importar cómo elijas trabajar.",
-  "migration.whatsNew.blogLink": "Leer el anuncio completo",
-  "migration.whatsNew.docsLink": "Novedades y preguntas frecuentes",
-  "migration.whatsNew.continue": "Continuar",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "Migra tu configuración",
-  "migration.migrate.subtitle":
-    "Encontramos configuraciones de tu instalación anterior. Esto es lo que podemos transferir.",
+  "migration.roo.button": "Importar sesiones",
+  "migration.roo.empty": "No se encontraron sesiones de Roo Code.",
   "migration.migrate.selectLabel": "Selecciona qué migrar",
   "migration.migrate.chatHistory": "Sesiones de chat e historial",
-  "migration.migrate.button": "Migrar configuración",
-  "migration.migrate.skip": "Omitir",
-  "migration.migrate.keysDetected": "{{count}} claves detectadas",
-  "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
-  "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
   "migration.migrate.sessionsDetected": "{{count}} sesiones detectadas",
-  "migration.migrate.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "Claves API de proveedores",
-  "migration.select.mcpServers": "Servidores MCP",
-  "migration.select.customModes": "Modos personalizados / Agentes",
-  "migration.select.defaultModel": "Modelo predeterminado",
-  "migration.select.autoApproval": "Aprobación automática",
-  "migration.select.language": "Idioma de la interfaz",
-  "migration.select.autocomplete": "Configuración de autocompletado",
 
   // Migrate — completion
   "migration.complete.summary": "{{success}} de {{total}} elementos migrados con éxito.",
-  "migration.complete.cleanup": "Eliminar datos de la configuración heredada",
-  "migration.complete.cleanupDescription":
-    "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
   "migration.complete.done": "Hecho",
   "migration.error.continue": "Continuar",
   "migration.sessionSummary.title": "Resumen:",
@@ -1257,7 +1244,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "Fecha desconocida",
   "migration.sessionFormat.unknown": "Desconocido",
   "migration.sessionFormat.unknownError": "Error desconocido",
-  // legacy-migration end
 
   "error.details.show": "Detalles",
 
@@ -1265,7 +1251,9 @@ export const dict = {
   "task.todos.allDone": "{{count}} tareas completadas",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
+  "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
+  "task.backgroundAgents.openAll": "Abrir todos los agentes en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",
   "task.backgroundAgents.waiting": "Un agente en segundo plano necesita tu entrada",
@@ -1278,6 +1266,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Cancelado",
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Agente en segundo plano",
+  "task.backgroundAgents.stopAll": "Detener todos ({{count}})",
   "settings.saveBar.unsavedChanges": "Cambios sin guardar",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Guardar",

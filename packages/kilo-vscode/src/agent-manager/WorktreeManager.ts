@@ -8,7 +8,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { randomUUID } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
@@ -31,6 +31,21 @@ import {
 
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
+const NO_COMMITS_MESSAGE = "This repository has no commits yet. Create an initial commit before using worktrees."
+
+function directory(branch: string): string {
+  // Keep ordinary directory names, but isolate refs that need filesystem escaping.
+  if (
+    /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,99}$/.test(branch) &&
+    !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\.|$)/i.test(branch)
+  ) {
+    return branch
+  }
+  // Hash the original ref to distinguish names that produce the same shortened slug.
+  const slug = sanitizeBranchName(branch) || "branch"
+  const hash = createHash("sha256").update(branch).digest("hex").slice(0, 16)
+  return `${slug}-${hash}`
+}
 
 export interface WorktreeInfo {
   branch: string
@@ -78,7 +93,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -212,6 +227,16 @@ export class WorktreeManager {
     }
   }
 
+  private async ensureCommit(): Promise<void> {
+    try {
+      const commit = await this.git.raw(["rev-list", "-n", "1", "--all"])
+      if (!commit.trim()) throw new Error("No commits found")
+    } catch (error) {
+      this.log(`ensureCommit: ${error}`)
+      throw new Error(NO_COMMITS_MESSAGE)
+    }
+  }
+
   private async createWorktreeImpl(params: {
     prompt?: string
     existingBranch?: string
@@ -226,6 +251,17 @@ export class WorktreeManager {
       throw new Error(
         "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
       )
+
+    const requested = params.existingBranch ?? params.branchName
+    if (requested !== undefined) {
+      // Validate the literal ref first so --branch cannot expand checkout shorthand.
+      await this.git.raw(["check-ref-format", `refs/heads/${requested}`])
+      await this.git.raw(["check-ref-format", "--branch", requested])
+    }
+
+    // An explicit base branch skips defaultBranch(), so check the repository
+    // state here before trying to resolve a start point.
+    if (params.baseBranch) await this.ensureCommit()
 
     // Git LFS Pre-flight Check
     if (await this.repoUsesLfs()) {
@@ -273,10 +309,10 @@ export class WorktreeManager {
     }
 
     let branch = await this.resolveBranch(params)
-    const dirName = branch.replace(/\//g, "-")
+    const dirName = directory(branch)
     let worktreePath = path.join(this.dir, dirName)
 
-    await this.prepareWorktreePath(worktreePath, !!params.existingBranch)
+    worktreePath = await this.prepareWorktreePath(worktreePath, params.existingBranch)
 
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
@@ -301,7 +337,7 @@ export class WorktreeManager {
       }
       // Another process may create the branch after resolveBranch checks it.
       branch = await this.resolveBranch(params)
-      const retryDir = branch.replace(/\//g, "-")
+      const retryDir = directory(branch)
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
@@ -354,11 +390,26 @@ export class WorktreeManager {
     return branch
   }
 
-  private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
-    if (!fs.existsSync(worktreePath)) return
-    if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+  private async prepareWorktreePath(worktreePath: string, branch?: string): Promise<string> {
+    if (!fs.existsSync(worktreePath)) return worktreePath
+    if (!branch) throw new Error(`Worktree path already exists: ${worktreePath}`)
+    const entries = parseWorktreeList(await this.git.raw(["worktree", "list", "--porcelain"]))
+    const canonical = normalizePath(await fs.promises.realpath(worktreePath))
+    const entry = entries.find((entry) => normalizePath(entry.path) === canonical)
+    if (entry && (entry.branch !== branch || entry.detached || entry.bare)) {
+      // A literal branch can match another ref's hashed directory name.
+      const parent = await fs.promises.realpath(path.dirname(worktreePath))
+      for (let suffix = 2; ; suffix++) {
+        const candidate = `${worktreePath}-${suffix}`
+        const canonical = normalizePath(path.join(parent, path.basename(candidate)))
+        if (!fs.existsSync(candidate) && !entries.some((entry) => normalizePath(entry.path) === canonical)) {
+          return candidate
+        }
+      }
+    }
     this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
     await this.removeWorktreeImpl(worktreePath)
+    return worktreePath
   }
 
   private async resolveBranch(params: {
@@ -376,15 +427,14 @@ export class WorktreeManager {
       .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
       .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
-    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
+    const branch = params.branchName ?? generateBranchName(params.prompt || "agent-task", existing)
     return this.availableBranch(branch, existing)
   }
 
   private availableBranch(base: string, existing: string[]): string {
     const branches = new Set(existing)
     const available = (branch: string) => {
-      const dir = path.join(this.dir, branch.replace(/\//g, "-"))
+      const dir = path.join(this.dir, directory(branch))
       return !branches.has(branch) && !fs.existsSync(dir)
     }
     if (available(base)) return base
@@ -482,10 +532,15 @@ export class WorktreeManager {
     const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
     try {
       await fs.promises.rename(worktreePath, temp)
-    } catch {
-      // Rename failed (e.g. locked files on Windows) — fall back to force remove
-      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
-      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+    } catch (err) {
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}: ${err}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch((error: unknown) => {
+        this.log(`Git worktree removal failed for ${worktreePath}: ${error}`)
+      })
+      if (fs.existsSync(worktreePath)) await fs.promises.rm(worktreePath, RM_OPTS)
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch((error: unknown) => {
+        this.log(`Failed to prune worktree metadata for ${worktreePath}: ${error}`)
+      })
       if (branch) await this.deleteBranch(branch)
       return
     }
@@ -645,7 +700,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     const excludePath = path.join(gitDir, "info", "exclude")
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
@@ -707,17 +762,6 @@ export class WorktreeManager {
       await fs.promises.mkdir(this.dir, { recursive: true })
     }
     await markNoIndex(this.dir, this.log)
-  }
-
-  private async resolveGitDir(): Promise<string> {
-    const gitPath = path.join(this.root, ".git")
-    const stat = await fs.promises.stat(gitPath)
-    if (stat.isDirectory()) return gitPath
-
-    const content = await fs.promises.readFile(gitPath, "utf-8")
-    const match = content.match(/^gitdir:\s*(.+)$/m)
-    if (!match) throw new Error("Invalid .git file format")
-    return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
   }
 
   private async worktreeInfo(wtPath: string): Promise<WorktreeInfo | undefined> {
@@ -914,7 +958,7 @@ export class WorktreeManager {
 
   async repoUsesLfs(): Promise<boolean> {
     // Check .git/lfs/ directory
-    const gitDir = await this.resolveGitDir()
+    const gitDir = await resolveGitDir(this.root)
     if (fs.existsSync(path.join(gitDir, "lfs"))) return true
 
     // Check .gitattributes
@@ -1023,13 +1067,7 @@ export class WorktreeManager {
     }
 
     // Check if this is an empty repo with no commits (unborn branch).
-    // rev-parse --verify HEAD exits non-zero only when HEAD has no target
-    // commit, which is the definitive test for an unborn branch.
-    try {
-      await this.git.raw(["rev-parse", "--verify", "HEAD"])
-    } catch {
-      throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
-    }
+    await this.ensureCommit()
 
     throw new Error("Could not determine default branch")
   }

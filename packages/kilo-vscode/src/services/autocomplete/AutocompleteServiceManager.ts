@@ -11,12 +11,8 @@ import { disposeLog } from "./next-edit/log"
 import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
 import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
 import type { KiloConnectionService } from "../cli-backend"
-import { hasValidCredentials } from "./fim"
-import {
-  DEFAULT_AUTOCOMPLETE_MODEL,
-  getAutocompleteModel,
-  getAutocompleteModelById,
-} from "../../shared/autocomplete-models"
+import { hasValidCredentials, fimModel as notebookModel } from "./fim"
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -24,11 +20,7 @@ export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector
   return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
 }
 
-export function notebookModel(provider?: string, model?: string) {
-  const info = getAutocompleteModel(provider, model)
-  if (info.kind !== "edit") return info
-  return getAutocompleteModelById(info.fimModelID)
-}
+export { notebookModel }
 
 export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean

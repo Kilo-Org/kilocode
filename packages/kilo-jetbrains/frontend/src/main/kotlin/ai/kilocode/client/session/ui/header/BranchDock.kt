@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -24,30 +25,20 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Dimension
 
-/**
- * Branch/PR dock shown above the prompt in the chat side panel.
- *
- * Two mutually exclusive layouts, stacked so the row height stays stable:
- * - PR present: the shared [PrHeaderView] (state badge + PR title + changes badge).
- * - No PR: a horizontally centered row with the New Worktree / Move to Worktree toolbar actions and
- *   the changes badge.
- *
- * The two actions are registered platform actions (`Kilo.Chat.NewWorktree`, `Kilo.Chat.MoveToWorktree`)
- * rendered through an [com.intellij.openapi.actionSystem.ActionToolbar]; each is invisible when it is
- * not enabled. The dock exposes its state to those actions via [ChatDockKeys.DOCK]. Collapses to
- * nothing unless it has a PR, changes, messages, or an enabled action.
- *
- * The action row is offered only while the session is idle: an active turn ([setBusy]) withdraws it.
- * The PR row stays through a turn — it is informational, not an action.
- */
-internal class BranchDock(
+internal class BranchDock @RequiresEdt constructor(
     openDiff: () -> Unit,
     private val onMove: (() -> Unit)?,
     private val onNewWorktree: (() -> Unit)? = null,
     titleStyle: Int = SimpleTextAttributes.STYLE_PLAIN,
+    /**
+     * Whether the dock carries the branch's pull request and its changes summary above the action row.
+     * A host whose own header already shows the branch, its PR, and its counts (the worktree editor
+     * tab) takes just the action row, and leaves that reporting to the header it already has.
+     */
+    private val header: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, UiDataProvider {
-    private val core = PrHeaderView(titleStyle = titleStyle, openDiff = openDiff)
-    private val changes = BranchChangesBadge(openDiff)
+    private val core = PrHeaderView(titleStyle = titleStyle, mode = ChangesPanel.Mode.COMPACT, openDiff = openDiff)
+    private val changes = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = openDiff)
     private val group = DefaultActionGroup().apply {
         ActionManager.getInstance().getAction("Kilo.Chat.NewWorktree")?.let { add(it) }
         ActionManager.getInstance().getAction("Kilo.Chat.MoveToWorktree")?.let { add(it) }
@@ -58,6 +49,7 @@ internal class BranchDock(
         .next(changes.align(HAlign.CENTER, VAlign.CENTER))
         .align(HAlign.CENTER, VAlign.CENTER)
     private var files = emptyList<DiffFileDto>()
+    private var local = 0
     private var branch: BranchStatusDto? = null
     private var hasMessages = false
     private var hasSession = false
@@ -66,15 +58,16 @@ internal class BranchDock(
     init {
         isOpaque = true
         toolbar.targetComponent = this
-        // Transparent so the toolbar shows the dock's prompt-matching background and tracks LaF.
         toolbar.component.isOpaque = false
         addToCenter(Stack.vertical().next(core).next(actionRow).align(HAlign.TRACK, VAlign.CENTER))
         isVisible = false
         sync()
     }
 
+    @RequiresEdt
     override fun getBackground(): Color = SessionUiStyle.Colors.codeBlockBackground()
 
+    @RequiresEdt
     override fun updateUI() {
         super.updateUI()
         border = JBUI.Borders.compound(
@@ -83,18 +76,28 @@ internal class BranchDock(
         )
     }
 
+    @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
         sink[ChatDockKeys.DOCK] = this
     }
 
     @RequiresEdt
     fun setChanges(files: List<DiffFileDto>) {
+        if (this.files == files) return
         this.files = files
         sync()
     }
 
     @RequiresEdt
+    fun setLocal(files: List<DiffFileDto>) {
+        if (local == files.size) return
+        local = files.size
+        sync()
+    }
+
+    @RequiresEdt
     fun setBranch(branch: BranchStatusDto?) {
+        if (this.branch == branch) return
         this.branch = branch
         sync()
     }
@@ -113,10 +116,6 @@ internal class BranchDock(
         sync()
     }
 
-    /**
-     * Whether the chat already has a persisted session. A session-less move transfers only local
-     * changes; this value affects action wording, not visibility.
-     */
     @RequiresEdt
     fun setHasSession(value: Boolean) {
         if (hasSession == value) return
@@ -124,48 +123,55 @@ internal class BranchDock(
         syncToolbar()
     }
 
-    // ---- state read by the toolbar actions ----
-
+    @RequiresEdt
     fun newWorktreeEnabled(): Boolean = onNewWorktree != null && dockActive()
 
+    @RequiresEdt
     fun moveEnabled(): Boolean = onMove != null && dockActive()
 
-    fun changeCount(): Int = files.size
+    @RequiresEdt
+    fun changeCount(): Int = local
 
+    @RequiresEdt
     fun hasSession(): Boolean = hasSession
 
+    @RequiresEdt
     fun triggerNewWorktree() = onNewWorktree?.invoke() ?: Unit
 
+    @RequiresEdt
     fun triggerMove() = onMove?.invoke() ?: Unit
 
-    private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || files.isNotEmpty())
+    @RequiresEdt
+    private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || local > 0)
 
     private fun gitAvailable(): Boolean {
         val branch = branch ?: return false
         return branch.availability != GhAvailability.GIT_MISSING
     }
 
+    @RequiresEdt
     private fun sync() {
-        val pull = branch?.pr
+        // A header-less host treats the branch as having no PR, so the PR row never shows and never
+        // takes the place of the action row below it.
+        val pull = branch?.pr?.takeIf { header }
         val count = files.size
-        core.update(count, files.sumOf { it.additions }, files.sumOf { it.deletions }, pull, branch?.branch.orEmpty())
-        changes.update(count, files.sumOf { it.additions }, files.sumOf { it.deletions })
-
-        // PR present -> the informational PR header; otherwise the centered action row.
-        core.isVisible = pull != null
-        val rowVisible = pull == null && dockActive()
-        actionRow.isVisible = rowVisible
-
-        val next = pull != null || rowVisible
+        val additions = files.sumOf { it.additions }
+        val deletions = files.sumOf { it.deletions }
+        core.update(count, additions, deletions, pull, branch?.branch.orEmpty())
+        changes.update(count, additions, deletions)
+        if (core.isVisible != (pull != null)) core.isVisible = pull != null
+        val visible = pull == null && gitAvailable() && !busy &&
+            (files.isNotEmpty() || hasMessages || newWorktreeEnabled() || moveEnabled())
+        if (actionRow.isVisible != visible) actionRow.isVisible = visible
+        val next = pull != null || visible
         if (isVisible != next) isVisible = next
         syncToolbar()
         revalidate()
         repaint()
     }
 
+    @RequiresEdt
     private fun syncToolbar() {
-        // Tests need a synchronous refresh to assert action presentations; production nudges the
-        // platform's action-update pass instead of the deprecated blocking updateActionsImmediately().
         if (ApplicationManager.getApplication().isUnitTestMode) {
             @Suppress("DEPRECATION")
             toolbar.updateActionsImmediately()
@@ -174,19 +180,23 @@ internal class BranchDock(
         ActivityTracker.getInstance().inc()
     }
 
+    @RequiresEdt
     override fun getPreferredSize(): Dimension {
         val base = super.getPreferredSize()
-        // Reserve a stable row height so the transcript does not jump as stats/PR arrive late.
         return Dimension(base.width, maxOf(base.height, JBUI.scale(ROW_HEIGHT)))
     }
 
+    @RequiresEdt
     override fun getMinimumSize(): Dimension = preferredSize
 
+    @RequiresEdt
     override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
 
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         core.applyStyle(style)
-        changes.applyStyle(style)
+        changes.font = style.smallFont
+        changes.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     private companion object {

@@ -6,6 +6,10 @@ const path = join(__dirname, "..", "..", "webview-ui", "src", "components", "cha
 const buttonPath = join(__dirname, "..", "..", "webview-ui", "src", "components", "shared", "SandboxButton.tsx")
 const iconPath = join(__dirname, "..", "..", "..", "kilo-ui", "src", "components", "icon.tsx")
 const src = readFileSync(path, "utf8")
+const responses = readFileSync(
+  join(__dirname, "..", "..", "webview-ui", "src", "components", "chat", "prompt-sandbox-messages.ts"),
+  "utf8",
+)
 const button = readFileSync(buttonPath, "utf8")
 const icons = readFileSync(iconPath, "utf8")
 
@@ -14,7 +18,7 @@ describe("PromptInput connection guard", () => {
     const attachments = src.indexOf("const gitFile = await git.resolveAttachment")
     const guard = src.indexOf("if (isDisabled()) {", attachments)
     const finish = src.indexOf("finishPending(pendingId)", guard)
-    const send = src.indexOf("session.sendMessage(message", guard)
+    const send = src.indexOf("session.sendMessage(", guard)
     const clear = src.indexOf("drafts.delete(key)", send)
 
     expect(attachments).toBeGreaterThan(-1)
@@ -49,8 +53,8 @@ describe("PromptInput sandbox toggle", () => {
   })
 
   it("captures edits made while sandbox session creation is pending", () => {
-    const start = src.indexOf('if (message.type === "sessionCreated")')
-    const end = src.indexOf('if (message.type === "action"', start)
+    const start = src.indexOf("const created = (message:")
+    const end = src.indexOf("const unsubscribe", start)
     const created = src.slice(start, end)
     const save = created.indexOf(
       "if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())",
@@ -61,7 +65,10 @@ describe("PromptInput sandbox toggle", () => {
     expect(end).toBeGreaterThan(start)
     expect(save).toBeGreaterThan(-1)
     expect(move).toBeGreaterThan(save)
-    expect(created).toContain("{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts }")
+    expect(created).toContain(
+      "{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references }",
+    )
+    expect(created).toContain("saveDraft(source, text(), reviewComments(), imageAttach.images())")
   })
 
   it("restores each prompt draft's textarea and highlight scroll positions", () => {
@@ -70,8 +77,14 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain("textareaRef.scrollTop = scroll")
     expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
     expect(src).toContain("scrollDrafts.set(draftKey(), textareaRef.scrollTop)")
-    expect(src).toContain("images: imageAttach.images(),\n    scroll: textareaRef?.scrollTop")
-    expect(src).toContain("draft.text, draft.comments, draft.images, draft.scroll")
+    expect(src).toContain(
+      "images: imageAttach.images(),\n    browsers: browsers(),\n    scroll: textareaRef?.scrollTop",
+    )
+    expect(src).toContain("draft.text,")
+    expect(src).toContain("draft.comments,")
+    expect(src).toContain("draft.images,")
+    expect(src).toContain("draft.scroll,")
+    expect(src).toContain("draft.browsers")
   })
 
   it("tracks in-flight toggles per session while switching", () => {
@@ -79,7 +92,9 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain('const sandboxRequest = (sessionID?: string) => sandboxRequests()[sessionID ?? ""]')
     expect(src).toContain("sandboxRequest(sandboxID()) !== undefined")
     expect(src).toContain("if (current[key] !== requestID) return current")
-    expect(src).toContain("clearSandboxRequest(message.sessionID, message.requestID!)")
+    expect(src).toContain("pending: sandboxRequest")
+    expect(src).toContain("clear: clearSandboxRequest")
+    expect(responses).toContain("input.clear(message.sessionID, message.requestID!)")
     expect(src).not.toContain("setSandboxTarget")
   })
 
@@ -92,13 +107,13 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain("{ action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() }")
     expect(src).toContain('if (!sandboxVisible()) hidden.add("sandbox")')
     expect(src).toContain("onToggle={toggleSandbox}")
-    expect(src).toContain('message.type === "sandboxStatus"')
-    expect(src).not.toContain("message.sessionID !== sandboxID() && !matching")
-    expect(src).toContain("const next = applySandboxStates(current, message)")
-    expect(src).toContain("if (next !== current) setSandboxes(next)")
-    expect(src).toContain("message.requestID === sandboxRequest(message.sessionID)")
-    expect(src).toContain("if (message.sessionID === sandboxID())")
-    expect(src).toContain("if (message.sessionID === sandboxID()) retrySandbox(message.sessionID)")
+    expect(responses).toContain('case "sandboxStatus":')
+    expect(responses).not.toContain("message.sessionID !== input.session() && !matching")
+    expect(responses).toContain("const next = applySandboxStates(current, message)")
+    expect(responses).toContain("if (next !== current) input.setStates(next)")
+    expect(responses).toContain("message.requestID === input.pending(message.sessionID)")
+    expect(responses).toContain("if (message.sessionID === input.session()) input.reset()")
+    expect(responses).toContain("if (message.sessionID === input.session()) input.retry(message.sessionID)")
     expect(src).toContain("sandboxID() ? sandbox()?.enabled : sandboxDefault()?.enabled")
     expect(src).toContain('type: "requestSandboxDefault", agentManagerContext: ctx()')
     expect(src).toContain("<SandboxButtonBase")
@@ -108,7 +123,26 @@ describe("PromptInput sandbox toggle", () => {
     expect(button).toContain("aria-pressed={props.enabled}")
     expect(button).toContain('class={`prompt-status-button ${props.enabled ? "prompt-status-button--active" : ""}`}')
     expect(src).toContain("if (sandboxRequest(undefined)) return")
-    expect(src).not.toContain("if (state === current) return true")
+    expect(responses).not.toContain("if (state === current) return true")
+  })
+
+  it("keeps the response subscription and retry timer in the prompt", () => {
+    expect(src).toContain("const handleSandboxMessage = sandboxMessages({")
+    expect(src).toContain("connected: server.isConnected")
+    expect(src).toContain("session: sandboxID")
+    expect(src).toContain("defaults: sandboxDefault")
+    expect(src).toContain("setDefault: setSandboxDefault")
+    expect(src).toContain("states: sandboxes")
+    expect(src).toContain("setStates: setSandboxes")
+    expect(src).toContain("retry: retrySandbox")
+    expect(src).toContain("refresh: requestSandbox")
+    expect(src).toContain(
+      "reset: () => {\n      sandboxAttempts = 0\n      if (sandboxRetry) clearTimeout(sandboxRetry)\n      sandboxRetry = undefined",
+    )
+    expect(src).toContain(
+      "const unsubscribe = vscode.onMessage((message) => {\n    if (handleSandboxMessage(message)) return",
+    )
+    expect(src).toContain("unsubscribe()")
   })
 
   it("preserves the draft when the sandbox control is disabled", () => {

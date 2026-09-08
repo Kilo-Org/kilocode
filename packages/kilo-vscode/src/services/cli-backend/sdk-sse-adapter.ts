@@ -168,6 +168,7 @@ export class SdkSSEAdapter {
         console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
         const events = await this.client.global.event({
           signal: attempt.signal,
+          headers: { "x-kilo-sse-skip-fork-sync": "1" },
           // Disable SDK-internal retries — consumeLoop handles reconnection
           // with its own outer while-loop. Without this the SDK's infinite
           // retry loop with exponential backoff runs in parallel, causing

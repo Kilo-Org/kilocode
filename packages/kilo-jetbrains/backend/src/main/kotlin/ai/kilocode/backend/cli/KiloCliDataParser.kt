@@ -20,7 +20,6 @@ import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.CompactionConfigDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
@@ -72,6 +71,7 @@ import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -881,8 +881,12 @@ object KiloCliDataParser {
             return "{${fields.joinToString(",")}}"
         }
         fields += "\"text\":${escape(part.text.orEmpty())}"
+        if (part.synthetic == true) fields += "\"synthetic\":true"
         return "{${fields.joinToString(",")}}"
     }
+
+    /** Body for `POST /session/{id}/fork`. A whole-session fork sends no body at all; see the caller. */
+    fun buildForkJson(messageId: String): String = """{"messageID":${escape(messageId)}}"""
 
     /**
      * Build the JSON body for `POST /session/{id}/summarize`.
@@ -912,31 +916,6 @@ object KiloCliDataParser {
         val parts = prompt.parts.filter { it.type == "file" }.joinToString(",") { buildPromptPartJson(it) }
         if (parts.isNotEmpty()) fields += "\"parts\":[$parts]"
         return "{${fields.joinToString(",")}}"
-    }
-
-    /**
-     * Build the partial JSON body for `PATCH /global/config`.
-     */
-    fun buildConfigPartial(update: ConfigUpdateDto): String {
-        val sb = StringBuilder("{")
-        var first = true
-        fun sep() { if (!first) sb.append(","); first = false }
-
-        val model = update.model
-        if (model != null) {
-            sep(); sb.append(""""model":${escape(model)}""")
-        }
-        val agent = update.agent
-        if (agent != null) {
-            sep(); sb.append(""""default_agent":${escape(agent)}""")
-        }
-        val temp = update.temperature
-        if (temp != null) {
-            val target = agent ?: "ask"
-            sep(); sb.append(""""agent":{"$target":{"temperature":$temp}}""")
-        }
-        sb.append("}")
-        return sb.toString()
     }
 
     fun buildConfigPatch(patch: ConfigPatchDto): String {
@@ -1616,6 +1595,7 @@ object KiloCliDataParser {
                 )
             },
             revert = parseRevert(obj["revert"].obj()),
+            share = obj["share"].obj()?.str("url")?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 

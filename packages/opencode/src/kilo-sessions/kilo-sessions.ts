@@ -291,6 +291,79 @@ export namespace KiloSessions {
       remote ? remote.conn.heartbeat(opts) : Promise.reject(new Error("attachRemoteSession: no remote connection")),
     log: attachedLog,
   })
+
+  // kilocode_change - locally started sessions never announce to the remote
+  // connection, so the mobile live list (fed by per-connection attached ids)
+  // never shows them. Announce on the first turn (idempotent via
+  // AttachedState.announce) and detach on dispose, mirroring the create_session
+  // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
+  // fire-and-forget event handlers log failures instead of surfacing them.
+  // Per-session in-flight local announce tracker. A delete that races the
+  // announce — while it awaits the in-flight enable, or while the attach
+  // heartbeat is in flight — must converge on the same outcome instead of
+  // no-oping and leaving the dead id attached forever. `deleted` is set by
+  // detachLocalSession so an announce that has not yet attached can skip.
+  type LocalAnnounce = { promise: Promise<void>; deleted: boolean }
+  const localAnnounceInflight = new Map<string, LocalAnnounce>()
+
+  async function announceLocalSession(id: string) {
+    const existing = localAnnounceInflight.get(id)
+    if (existing) {
+      await existing.promise
+      return
+    }
+    const entry: LocalAnnounce = { promise: Promise.resolve(), deleted: false }
+    localAnnounceInflight.set(id, entry)
+    entry.promise = doAnnounceLocalSession(id, entry)
+    await entry.promise
+  }
+
+  async function doAnnounceLocalSession(id: string, entry: LocalAnnounce) {
+    try {
+      // Do not announce when remote is disabled. A first turn that races
+      // bootstrap auto-enable waits for the in-flight enable so the session
+      // still lands in the live list.
+      if (!remote && !enabling) return
+      const inflight = enabling
+      if (inflight) {
+        await inflight.catch(() => undefined)
+        if (!remote) return
+      }
+      // A delete that fired while we awaited the enable must cancel this
+      // announce so the dead session never lands in the live list.
+      if (entry.deleted) return
+      await attachRemoteSession(id)
+    } catch (error) {
+      log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    } finally {
+      if (localAnnounceInflight.get(id) === entry) localAnnounceInflight.delete(id)
+    }
+  }
+
+  // kilocode_change - detach a locally announced session on dispose so it leaves
+  // the live list. No-op for an unowned id (e.g. an app-spawned session already
+  // detached via exit_cli). Detaches the raw attached state without touching
+  // SessionStatus, because the session row is already gone on delete.
+  async function detachLocalSession(id: string) {
+    try {
+      // Converge with an in-flight announce: mark it deleted so it skips the
+      // attach, then wait for it to settle. If it already attached (the delete
+      // raced the attach heartbeat), the ownership check below still sees it
+      // and detaches it. Without this, a delete during the enable await no-ops
+      // (the id is not yet attached) and the announce then attaches the dead
+      // session forever.
+      const announce = localAnnounceInflight.get(id)
+      if (announce) {
+        announce.deleted = true
+        await announce.promise
+      }
+      if (!hasRemoteSession(id)) return
+      await attachedState.detach(id)
+    } catch (error) {
+      log.warn("local session detach failed", { sessionID: id, error: String(error) })
+    }
+  }
+
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -518,6 +591,8 @@ export namespace KiloSessions {
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
+            // kilocode_change - detach a locally announced session on dispose.
+            void detachLocalSession(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -533,9 +608,13 @@ export namespace KiloSessions {
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          watch(Session.Event.TurnOpen, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
-          )
+          watch(Session.Event.TurnOpen, (evt) => {
+            const sessionID = evt.properties.sessionID
+            // kilocode_change - announce a locally started session on its first
+            // turn so it appears in the mobile live list.
+            void announceLocalSession(sessionID)
+            return ingest.sync(sessionID, [{ type: "session_open", data: {} }])
+          })
           watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
@@ -724,7 +803,7 @@ export namespace KiloSessions {
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
         const [statusMap, permissions, questions] = await Promise.all([
-          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(SessionStatus.listAll()),
           AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
           AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
         ])
@@ -771,7 +850,11 @@ export namespace KiloSessions {
           for (const row of sessions) await syncPrLinkTriple(row.id, pr.triple)
         }
         const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
-        const instance = instanceAdvertisement
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Reuse the current session branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 

@@ -37,6 +37,7 @@ object ChatLogSummary {
         is ChatEventDto.SessionCompacted -> event.sessionID
         is ChatEventDto.SessionDiffChanged -> event.sessionID
         is ChatEventDto.TodoUpdated -> event.sessionID
+        is ChatEventDto.SessionInterrupted -> event.sessionID
     }
 
     fun dir(dir: String): String = "dirHash=${hash(dir)}"
@@ -245,6 +246,12 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=todo.updated",
             todos(event.todos),
+        )
+
+        is ChatEventDto.SessionInterrupted -> join(
+            sid(event.sessionID),
+            "evt=session.interrupted",
+            "reason=${event.reason}",
         )
     }
 

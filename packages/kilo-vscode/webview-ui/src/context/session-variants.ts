@@ -1,5 +1,5 @@
 import type { Accessor } from "solid-js"
-import type { ExtensionMessage, ModelSelection } from "../types/messages"
+import type { AgentConfig, ExtensionMessage, ModelSelection } from "../types/messages"
 import { DEFAULT_VARIANT, getAgentVariant, getVariant, preserveVariant, variantKey } from "./session-variant-store"
 
 interface Model {
@@ -14,6 +14,7 @@ interface Options {
   selected: (sessionID?: string) => ModelSelection | null
   session: Accessor<string | undefined>
   agent: (sessionID?: string) => string
+  config: (agent: string) => Pick<AgentConfig, "model" | "variant"> | undefined
   find: (selection: ModelSelection) => Model | undefined
   post: (message: Message) => void
   listen: (handler: (message: ExtensionMessage) => void) => () => void
@@ -26,9 +27,15 @@ export function createSessionVariants(options: Options) {
     return Object.keys(options.find(selection)?.variants ?? {})
   }
 
+  const configured = (name: string, selection: ModelSelection) => {
+    const config = options.config(name)
+    if (config?.model !== `${selection.providerID}/${selection.modelID}`) return undefined
+    return config.variant ?? undefined
+  }
+
   const agent = (name: string, selection: ModelSelection | null) => {
     if (!selection) return undefined
-    return getAgentVariant(options.selections(), selection, options.find(selection), name)
+    return getAgentVariant(options.selections(), selection, options.find(selection), name, configured(name, selection))
   }
 
   const current = (sessionID?: string) => {
@@ -37,8 +44,12 @@ export function createSessionVariants(options: Options) {
     if (!selection) return undefined
     const variants = list(sid)
     if (variants.length === 0) return undefined
-    return getVariant(options.selections(), selection, variants, options.agent(sid), sid)
+    const name = options.agent(sid)
+    return getVariant(options.selections(), selection, variants, name, sid, configured(name, selection))
   }
+
+  const request = (sessionID?: string) =>
+    current(sessionID) ?? (list(sessionID).length > 0 ? DEFAULT_VARIANT : undefined)
 
   const select = (value: string | undefined, sessionID?: string) => {
     const sid = sessionID ?? options.session()
@@ -75,5 +86,5 @@ export function createSessionVariants(options: Options) {
     return unsub
   }
 
-  return { carry, list, agent, current, select, load }
+  return { carry, list, agent, current, request, select, load }
 }

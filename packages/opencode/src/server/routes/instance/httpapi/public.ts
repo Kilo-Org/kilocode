@@ -74,6 +74,7 @@ const QueryParameterSchemas: Record<string, OpenApiSchema> = {
   "GET /session start": { type: "number" },
   "GET /session roots": QueryBooleanOpenApi,
   "GET /session limit": { type: "number" },
+  "DELETE /session/{sessionID}/message/{messageID} queued": QueryBooleanOpenApi, // kilocode_change
   "GET /session/{sessionID}/message limit": { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
   "GET /vcs/diff context": { type: "integer", minimum: 0 },
   "GET /api/session limit": { type: "number" },

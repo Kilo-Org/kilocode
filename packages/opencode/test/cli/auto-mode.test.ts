@@ -23,14 +23,9 @@ describe("Auto mode flag", () => {
         action: "deny" as const,
         pattern: "*",
       },
-      {
-        permission: "interactive_terminal",
-        action: "deny" as const,
-        pattern: "*",
-      },
     ]
 
-    expect(autoPermissions).toHaveLength(4)
+    expect(autoPermissions).toHaveLength(3)
 
     // First rule: allow all
     expect(autoPermissions[0].permission).toBe("*")
@@ -44,9 +39,6 @@ describe("Auto mode flag", () => {
     expect(autoPermissions[2].permission).toBe("suggest")
     expect(autoPermissions[2].action).toBe("deny")
     expect(autoPermissions[2].pattern).toBe("*")
-    expect(autoPermissions[3].permission).toBe("interactive_terminal")
-    expect(autoPermissions[3].action).toBe("deny")
-    expect(autoPermissions[3].pattern).toBe("*")
   })
 
   test("non-auto mode should not set allow-all permissions", () => {
@@ -64,7 +56,6 @@ describe("Auto mode flag", () => {
       { permission: "*", action: "allow" as const, pattern: "*" },
       { permission: "question", action: "deny" as const, pattern: "*" },
       { permission: "suggest", action: "deny" as const, pattern: "*" },
-      { permission: "interactive_terminal", action: "deny" as const, pattern: "*" },
     ]
 
     // Simulate findLast behavior
@@ -82,8 +73,6 @@ describe("Auto mode flag", () => {
     expect(questionRule?.action).toBe("deny")
     const suggestRule = findLastMatch("suggest")
     expect(suggestRule?.action).toBe("deny")
-    const terminalRule = findLastMatch("interactive_terminal")
-    expect(terminalRule?.action).toBe("deny")
 
     // Test that other permissions resolve to "allow"
     const bashRule = findLastMatch("bash")

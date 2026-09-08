@@ -151,18 +151,6 @@ import type {
   InstanceDisposeResponses,
   InstanceReloadErrors,
   InstanceReloadResponses,
-  InteractiveTerminalCloseErrors,
-  InteractiveTerminalCloseResponses,
-  InteractiveTerminalGetErrors,
-  InteractiveTerminalGetResponses,
-  InteractiveTerminalListErrors,
-  InteractiveTerminalListResponses,
-  InteractiveTerminalResizeErrors,
-  InteractiveTerminalResizeInput,
-  InteractiveTerminalResizeResponses,
-  InteractiveTerminalWriteErrors,
-  InteractiveTerminalWriteInput,
-  InteractiveTerminalWriteResponses,
   KiloAudioTranscriptionsErrors,
   KiloAudioTranscriptionsResponses,
   KiloAuthStatusErrors,
@@ -191,8 +179,14 @@ import type {
   KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
+  KilocodeDrainSessionErrors,
+  KilocodeDrainSessionResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMigrateDiscoverErrors,
+  KilocodeMigrateDiscoverResponses,
+  KilocodeMigrateSessionsErrors,
+  KilocodeMigrateSessionsResponses,
   KilocodeNotebookListErrors,
   KilocodeNotebookListResponses,
   KilocodeNotebookRejectErrors,
@@ -211,6 +205,12 @@ import type {
   KilocodeRemoveSkillResponses,
   KilocodeRemoveSnapshotErrors,
   KilocodeRemoveSnapshotResponses,
+  KilocodeResetSessionBoardErrors,
+  KilocodeResetSessionBoardResponses,
+  KilocodeResumeSessionErrors,
+  KilocodeResumeSessionResponses,
+  KilocodeSessionBoardErrors,
+  KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -2765,7 +2765,7 @@ export class Vcs extends HeyApiClient {
     parameters: {
       directory?: string
       workspace?: string
-      mode: "git" | "branch"
+      mode: "git" | "branch" | "last-commit"
       context?: number
     },
     options?: Options<never, ThrowOnError>,
@@ -4682,6 +4682,7 @@ export class Session2 extends HeyApiClient {
       messageID: string
       directory?: string
       workspace?: string
+      queued?: boolean | "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4694,6 +4695,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "messageID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "queued" },
           ],
         },
       ],
@@ -4792,6 +4794,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      scope?: "session" | "tree"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4803,6 +4806,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
           ],
         },
       ],
@@ -6717,200 +6721,6 @@ export class Indexing extends HeyApiClient {
   }
 }
 
-export class InteractiveTerminal extends HeyApiClient {
-  /**
-   * List interactive terminals
-   *
-   * List active human-driven terminal sessions for the current instance.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalListResponses,
-      InteractiveTerminalListErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get interactive terminal
-   *
-   * Get metadata and retained output for an active interactive terminal.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalGetResponses,
-      InteractiveTerminalGetErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Write interactive terminal input
-   *
-   * Send raw keyboard input to an active interactive terminal.
-   */
-  public write<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalWriteInput?: InteractiveTerminalWriteInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalWriteInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalWriteResponses,
-      InteractiveTerminalWriteErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/input",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Resize interactive terminal
-   *
-   * Resize an active interactive terminal's PTY.
-   */
-  public resize<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalResizeInput?: InteractiveTerminalResizeInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalResizeInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalResizeResponses,
-      InteractiveTerminalResizeErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/resize",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Close interactive terminal
-   *
-   * Terminate an active interactive terminal and unblock its tool call.
-   */
-  public close<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalCloseResponses,
-      InteractiveTerminalCloseErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/close",
-      ...options,
-      ...params,
-    })
-  }
-}
-
 export class Audio extends HeyApiClient {
   /**
    * Speech to text transcription
@@ -7934,6 +7744,102 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Migrate extends HeyApiClient {
+  /**
+   * Migrate external sessions into Kilo
+   *
+   * Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.
+   */
+  public sessions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+      ids?: Array<string>
+      agent?: string
+      model?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+            { in: "body", key: "ids" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateSessionsResponses,
+      KilocodeMigrateSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Discover migratable external session transcripts
+   *
+   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.
+   */
+  public discover<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateDiscoverResponses,
+      KilocodeMigrateDiscoverErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions/discover",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -8321,6 +8227,177 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
+   * Resume an interrupted session
+   *
+   * Resume the specified unfinished assistant turn without adding a user message. Active, completed, reverted, and blocked sessions cannot be resumed.
+   */
+  public resumeSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      messageID: string
+      snapshotInitialization?: "wait"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "snapshotInitialization" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeResumeSessionResponses,
+      KilocodeResumeSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/resume",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Wait for session completion
+   *
+   * Wait for active session work and background result delivery, then publish the matching drain acknowledgment.
+   */
+  public drainSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      token: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "token" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeDrainSessionResponses,
+      KilocodeDrainSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/drain",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Observe a session's shared board
+   *
+   * Read stored board messages without changing the board.
+   */
+  public sessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      before?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "before" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeSessionBoardResponses,
+      KilocodeSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Clear a session's shared board
+   *
+   * Clear visible messages without changing conversations or running tasks.
+   */
+  public resetSessionBoard<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      revision: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "revision" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeResetSessionBoardResponses,
+      KilocodeResetSessionBoardErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/board/reset",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * List command files
    *
    * List commands with editable file locations for settings clients.
@@ -8481,10 +8558,10 @@ export class Kilocode extends HeyApiClient {
    * Remove the snapshot repository for an already deleted Agent Manager worktree.
    */
   public removeSnapshot<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      worktree?: string
+      worktree: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8611,6 +8688,11 @@ export class Kilocode extends HeyApiClient {
   private _backgroundJob?: BackgroundJob
   get backgroundJob(): BackgroundJob {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
+  }
+
+  private _migrate?: Migrate
+  get migrate(): Migrate {
+    return (this._migrate ??= new Migrate({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport
@@ -11787,11 +11869,6 @@ export class KiloClient extends HeyApiClient {
   private _indexing?: Indexing
   get indexing(): Indexing {
     return (this._indexing ??= new Indexing({ client: this.client }))
-  }
-
-  private _interactiveTerminal?: InteractiveTerminal
-  get interactiveTerminal(): InteractiveTerminal {
-    return (this._interactiveTerminal ??= new InteractiveTerminal({ client: this.client }))
   }
 
   private _kilo?: Kilo

@@ -1,19 +1,23 @@
 package ai.kilocode.client.agentManager.worktree
 
-import ai.kilocode.client.session.ui.header.BranchChangesBadge
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
+import org.jetbrains.plugins.terminal.TerminalIcons
 import java.awt.Container
 import java.awt.Cursor
 import java.awt.Point
@@ -69,8 +73,9 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
     fun `test no PR keeps changes badge on the right`() {
         val view = edt { WorktreePrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
         val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
 
         edt {
             view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x")
@@ -81,16 +86,19 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
         val changesX = edt { SwingUtilities.convertPoint(changes, Point(0, 0), view).x }
         val openX = edt { SwingUtilities.convertPoint(open, Point(0, 0), view).x }
-        val openRight = edt { openX + open.width }
+        val terminalX = edt { SwingUtilities.convertPoint(terminal, Point(0, 0), view).x }
+        val terminalRight = edt { terminalX + terminal.width }
         assertTrue(edt { changes.isVisible })
-        // Changes badge precedes the Open button, and the whole action cluster hugs the right edge.
+        // Changes badge precedes Open, which precedes the icon-only Terminal button, and the whole
+        // action cluster hugs the right edge.
         assertTrue(changesX < openX)
-        assertTrue(400 - openRight <= 20)
+        assertTrue(openX < terminalX)
+        assertTrue(400 - terminalRight <= 20)
     }
 
     fun `test changes view visibility follows stats`() {
         val view = edt { WorktreePrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
 
         edt { view.update(WorktreeStatsDto("/repo"), null, "feature-x") }
         assertFalse(edt { changes.isVisible })
@@ -104,7 +112,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         val view = edt { WorktreePrHeaderView { opened++ } }
 
         edt { view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x") }
-        edt { click(UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!!) }
+        edt { click(components(view).filterIsInstance<JBLabel>().single { it.text == "1 file" }) }
 
         assertEquals(1, opened)
     }
@@ -117,31 +125,91 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         edt { view.update(stats, pull, "feature-x") }
         val labels = edt { components(view).filterIsInstance<JBLabel>() }
         val title = edt { title(view) }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
 
         edt { view.update(stats, pull, "feature-x") }
 
         assertEquals(labels, edt { components(view).filterIsInstance<JBLabel>() })
         assertSame(title, edt { title(view) })
-        assertSame(changes, edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java) })
+        assertSame(changes, edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java) })
     }
 
-    fun `test changes badge reuses session branch badge with file count`() {
+    fun `test full changes retain local and base counts with and without a PR`() {
         val view = edt { WorktreePrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
+        val stats = WorktreeStatsDto("/repo", additions = 10, deletions = 4, ahead = 3, behind = 2, files = 5, base = "origin/main")
+        val dirty = WorktreeDirtyDto("/repo", additions = 6, deletions = 1, files = 1, unpushed = 19)
 
-        edt { view.update(WorktreeStatsDto("/repo", additions = 10, deletions = 4, ahead = 3, files = 2), null, "feature-x") }
-
-        assertEquals("2 files", edt { changes.countText() })
-        assertEquals(10 to 4, edt { changes.stats() })
-        assertTrue(edt { changes.isVisible })
-        assertEquals("Compare with base branch", edt { changes.toolTipText })
+        listOf(null, pull(GhState.OPEN)).forEach { pull ->
+            edt { view.update(stats, pull, "feature-x", dirty) }
+            assertEquals(
+                listOf("1 file", "-1", "+6", "3", "2", "5 files", "-4", "+10"),
+                edt { labels(changes) },
+            )
+            assertTrue(edt { changes.isVisible })
+            assertEquals(
+                KiloBundle.message("worktree.stats.base.tooltip", 5, 10, 4, "origin/main"),
+                edt { components(changes).filterIsInstance<JBLabel>().single { it.text == "5 files" }.toolTipText },
+            )
+        }
     }
 
-    fun `test terminal button triggers callback`() {
+    fun `test local and base child clicks route independently`() {
+        val opened = mutableListOf<String>()
+        val view = edt { WorktreePrHeaderView(onLocal = { opened += "local" }, openDiff = { opened += "base" }) }
+        edt {
+            view.update(WorktreeStatsDto("/repo", files = 2), null, "feature-x", WorktreeDirtyDto("/repo", files = 1))
+            click(components(view).filterIsInstance<JBLabel>().single { it.text == "1 file" })
+            click(components(view).filterIsInstance<JBLabel>().single { it.text == "2 files" })
+        }
+        assertEquals(listOf("local", "base"), opened)
+    }
+
+    fun `test clearing either comparison preserves the other and controls`() {
+        val view = edt { WorktreePrHeaderView {} }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
+        val dirty = WorktreeDirtyDto("/repo", files = 1)
+        edt { view.update(null, null, "feature-x", dirty) }
+        assertEquals(listOf("1 file"), edt { labels(changes) })
+        edt { view.update(WorktreeStatsDto("/repo", ahead = 2), null, "feature-x") }
+        assertEquals(listOf("2"), edt { labels(changes) })
+        edt { view.update(null, null, "feature-x") }
+        assertFalse(edt { changes.isVisible })
+        val icons = edt { components(view).filterIsInstance<HoverIcon>().filter { it.isVisible } }
+        assertEquals(listOf("Open"), edt { icons.map { it.text }.filterNot { it.isNullOrEmpty() } })
+        assertTrue(edt { icons.any { it.icon === TerminalIcons.OpenTerminal_13x13 } })
+    }
+
+    fun `test open and terminal controls remain disabled for unavailable worktrees`() {
+        var opened = 0
+        val view = edt { WorktreePrHeaderView(openEnabled = false, openWorktree = { opened++ }, openTerminal = { opened++ }, openDiff = {}) }
+        edt {
+            val buttons = components(view).filterIsInstance<HoverIcon>()
+            assertTrue(buttons.all { !it.isEnabled })
+            buttons.forEach(::click)
+        }
+        assertEquals(0, opened)
+    }
+
+    fun `test icon only terminal shares labelled action metrics`() {
+        val view = edt { WorktreePrHeaderView(openDiff = {}) }
+        val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
+
+        assertEquals(edt { open.insets }, edt { terminal.insets })
+        assertEquals(edt { open.preferredSize.height }, edt { terminal.preferredSize.height })
+        // Icon-only stays square: it matches the labelled height without inheriting its wide minimum.
+        assertEquals(edt { terminal.preferredSize.height }, edt { terminal.preferredSize.width })
+        assertTrue(edt { terminal.preferredSize.width < open.preferredSize.width })
+    }
+
+    fun `test terminal button is icon-only and triggers callback`() {
         var opened = 0
         val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }
-        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.text == "Terminal" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
+
+        assertTrue(edt { terminal.text.isNullOrEmpty() })
+        assertEquals(KiloBundle.message("worktree.session.terminal.tooltip"), edt { terminal.toolTipText })
 
         edt { click(terminal) }
 
@@ -156,14 +224,17 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         title = "Implement header",
     )
 
+    @RequiresEdt
     private fun badge(view: WorktreePrHeaderView): JBLabel {
         return components(view).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
     }
 
+    @RequiresEdt
     private fun title(view: WorktreePrHeaderView): SimpleColoredComponent {
         return components(view).filterIsInstance<SimpleColoredComponent>().single()
     }
 
+    @RequiresEdt
     private fun fragments(title: SimpleColoredComponent): List<Fragment> {
         val out = mutableListOf<Fragment>()
         val iter = title.iterator()
@@ -176,6 +247,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
     private data class Fragment(val text: String, val attrs: SimpleTextAttributes)
 
+    @RequiresEdt
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
         fun visit(item: java.awt.Component) {
@@ -186,6 +258,14 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         return out
     }
 
+    @RequiresEdt
+    private fun labels(root: java.awt.Component): List<String> {
+        if (!root.isVisible) return emptyList()
+        if (root is JBLabel) return listOfNotNull(root.text)
+        return if (root is Container) root.components.flatMap(::labels) else emptyList()
+    }
+
+    @RequiresEdt
     private fun click(target: JComponent) {
         target.setSize(target.preferredSize)
         val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)

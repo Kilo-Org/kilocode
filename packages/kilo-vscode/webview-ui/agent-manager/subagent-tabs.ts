@@ -162,7 +162,9 @@ export function createSubagentToolbar(opts: {
     }
     const id = opts.current()
     if (!id) return
-    for (const tab of available()) opts.open(tab.id, tab.title, id)
+    batch(() => {
+      for (const tab of available()) opts.open(tab.id, tab.title, id)
+    })
   }
   createEffect(
     on(

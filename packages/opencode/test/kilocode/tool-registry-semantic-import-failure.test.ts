@@ -53,6 +53,7 @@ function infos() {
     save: info("kilo_memory_save"),
     manager: info("agent_manager"),
     process: info("background_process"),
+    browser: info("browser_open"),
     chart: info("chart"),
     image: info("generate_image"),
     notify: info("notify_user"),

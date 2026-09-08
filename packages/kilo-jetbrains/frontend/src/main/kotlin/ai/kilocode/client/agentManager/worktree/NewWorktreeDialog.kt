@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.modeItems
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -174,14 +175,16 @@ internal class NewWorktreeDialog(
 
     private fun tabs(): JComponent {
         val fresh = TabInfo(newContent()).setText(KiloBundle.message("worktree.dialog.tab.new"))
-        val pr = TabInfo(prContent()).setText(KiloBundle.message("worktree.dialog.tab.pr"))
+        // Importing a PR needs gh, which is exactly what the GitHub integration setting turns off,
+        // so the tab is omitted rather than offered as a guaranteed failure.
+        val pr = if (KiloPluginSettings.getGithub()) TabInfo(prContent()).setText(KiloBundle.message("worktree.dialog.tab.pr")) else null
         val local = TabInfo(branchContent()).setText(KiloBundle.message("worktree.dialog.tab.branch"))
         val tabs: JBTabs = JBTabsFactory.createTabs(project, disposable).apply {
             presentation.setSingleRow(true)
             presentation.setTabsPosition(JBTabsPosition.top)
             presentation.showBorder = false
             addTab(fresh).setPreferredFocusableComponent(prompt.defaultFocusedComponent)
-            addTab(pr).setPreferredFocusableComponent(url)
+            pr?.let { addTab(it).setPreferredFocusableComponent(url) }
             addTab(local).setPreferredFocusableComponent(pick)
             addListener(object : TabsListener {
                 override fun beforeSelectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) {

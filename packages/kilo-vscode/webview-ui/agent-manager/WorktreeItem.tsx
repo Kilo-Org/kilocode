@@ -2,10 +2,9 @@
  * Sidebar worktree item with inline delete confirmation, HoverCard, rename, and stats.
  * Extracted from AgentManagerApp for reuse and visual-regression testing via Storybook.
  */
-import { Component, For, Match, Show, Switch, createSignal } from "solid-js"
+import { Component, For, Match, Show, Switch, createEffect, createSignal, onCleanup, type ParentProps } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
@@ -13,7 +12,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
 import type { PRStatus } from "../src/types/messages"
 import { ActivityIcon } from "../src/components/shared/ActivityIcon"
-import { label, running, type Activity } from "../src/utils/session-activity"
+import { description, label, running, strongest, type Activity } from "../src/utils/session-activity"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -23,6 +22,7 @@ import { parseBindingTokens } from "./keybind-tokens"
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 interface WorktreeItemProps {
+  preview?: boolean
   worktree: WorktreeState
   /** Stable composite ID used by multi-project sidebar bodies. */
   sidebarId?: string
@@ -32,6 +32,8 @@ interface WorktreeItemProps {
   subtitle?: string
   active: boolean
   pendingDelete: boolean
+  completed?: boolean
+  onCompletionEnd?: () => void
   busy: boolean
   activity: Activity
   blocked?: boolean
@@ -64,6 +66,7 @@ interface WorktreeItemProps {
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
+  onOpenComments?: () => void
   /** Available sections for the "Move to Section" submenu. */
   sections?: SectionState[]
   /** ID of the section this worktree currently belongs to (for disabling current item). */
@@ -75,6 +78,7 @@ interface WorktreeItemProps {
 
   onClick: () => void
   onDelete: (e: MouseEvent) => void
+  onCancelDelete?: () => void
   onStartRename: (current: string) => void
   onRenameInput: (value: string) => void
   onCommitRename: () => void
@@ -82,6 +86,7 @@ interface WorktreeItemProps {
   onRemoveStale: () => void
   onCopyPath: () => void
   onOpen: () => void
+  onUpdateBase?: () => void
 }
 
 const MAX_SHORTCUT = 9
@@ -153,17 +158,62 @@ function RunBadge(props: { status?: RunStatus }) {
   )
 }
 
+function Completion(props: ParentProps<{ completed?: boolean; onEnd?: () => void }>) {
+  return (
+    <div
+      class="am-worktree-exit"
+      classList={{ "am-worktree-completed": props.completed }}
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget && props.completed) props.onEnd?.()
+      }}
+    >
+      <div class="am-worktree-exit-content">{props.children}</div>
+    </div>
+  )
+}
+
 export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const { t } = useLanguage()
   const [hovered, setHovered] = createSignal(false)
-  const [overClose, setOverClose] = createSignal(false)
-  const state = () => props.activity
+  const [overAction, setOverAction] = createSignal(false)
+  let card: HTMLDivElement | undefined
+  let trash: HTMLButtonElement | undefined
+  const state = () =>
+    strongest([
+      props.activity,
+      !props.completed && (props.busy || props.runStatus?.state === "running") ? "busy" : "idle",
+    ])
   const blocked = () =>
+    props.completed ||
     props.busy ||
     props.blocked ||
     running(state()) ||
     props.runStatus?.state === "running" ||
     props.runStatus?.state === "stopping"
+
+  createEffect(() => {
+    if (!props.pendingDelete) return
+    if (blocked()) {
+      props.onCancelDelete?.()
+      return
+    }
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !card?.contains(event.target)) props.onCancelDelete?.()
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      event.stopPropagation()
+      props.onCancelDelete?.()
+      trash?.focus()
+    }
+    document.addEventListener("pointerdown", dismiss, true)
+    document.addEventListener("keydown", escape, true)
+    onCleanup(() => {
+      document.removeEventListener("pointerdown", dismiss, true)
+      document.removeEventListener("keydown", escape, true)
+    })
+  })
 
   const handleOpenPR = (e: MouseEvent) => {
     e.stopPropagation()
@@ -179,7 +229,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   }
 
   return (
-    <>
+    <Completion completed={props.completed} onEnd={props.onCompletionEnd}>
       <Show when={props.groupStart}>
         <div class="am-wt-group-header">
           <Icon name="layers" size="small" />
@@ -193,11 +243,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
           closeDelay={0}
           placement="right-start"
           gutter={8}
-          open={hovered() && !overClose() && !props.pendingDelete}
+          open={hovered() && !overAction() && !props.pendingDelete && !props.completed}
           onOpenChange={(open) => setHovered(open)}
           trigger={
             <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
               <div
+                ref={card}
+                inert={props.completed}
                 class="am-worktree-item"
                 classList={{
                   "am-worktree-item-active": props.active,
@@ -205,16 +257,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.sidebarId ?? props.worktree.id}
-                onClick={() => props.onClick()}
+                data-sidebar-id={props.preview || props.completed ? undefined : (props.sidebarId ?? props.worktree.id)}
+                onClick={() => {
+                  props.onCancelDelete?.()
+                  props.onClick()
+                }}
               >
                 <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
-                  <Show
-                    when={!props.busy && props.runStatus?.state !== "running"}
-                    fallback={<Spinner class="am-worktree-spinner" />}
-                  >
-                    <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
-                  </Show>
+                  <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
                 </div>
                 <div class="am-wt-content">
                   {/* Row 1: label + stale badge + stats/hover-actions overlay */}
@@ -241,7 +291,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                           }}
                           title={t("agentManager.worktree.doubleClickRename")}
                         >
-                          {props.label}
+                          {/* Inner span keeps the finish strikethrough tight to the text. */}
+                          <span class="am-wt-name">{props.label}</span>
                         </span>
                       }
                     >
@@ -303,8 +354,18 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                           </Show>
                         </div>
                       </Show>
-                      <Show when={props.pendingDelete && !props.busy}>
-                        <span class="am-worktree-delete-hint">{t("agentManager.worktree.confirmDelete")}</span>
+                      <Show when={props.pendingDelete && !blocked()}>
+                        <Button
+                          class="am-worktree-delete-hint"
+                          size="small"
+                          variant="ghost"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            if (!blocked()) props.onDelete(e)
+                          }}
+                        >
+                          {t("agentManager.worktree.confirmDelete")}
+                        </Button>
                       </Show>
                       <div class="am-wt-hover-actions">
                         <Show
@@ -318,8 +379,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                         <Show when={!blocked() && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
-                            onMouseEnter={() => setOverClose(true)}
-                            onMouseLeave={() => setOverClose(false)}
+                            onMouseEnter={() => setOverAction(true)}
+                            onMouseLeave={() => setOverAction(false)}
                           >
                             <TooltipKeybind
                               title={t("agentManager.worktree.delete")}
@@ -327,11 +388,17 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                               placement="top"
                             >
                               <IconButton
+                                ref={trash}
                                 icon="trash"
                                 size="small"
                                 variant="ghost"
-                                label={t("agentManager.worktree.delete")}
-                                onClick={(e: MouseEvent) => props.onDelete(e)}
+                                aria-label={t("agentManager.worktree.delete")}
+                                onClick={(e: MouseEvent) => {
+                                  e.stopPropagation()
+                                  if (blocked()) return
+                                  props.onCancelDelete?.()
+                                  props.onDelete(e)
+                                }}
                               />
                             </TooltipKeybind>
                           </div>
@@ -355,6 +422,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                     >
                       {(pr) => {
                         const indicator = () => prBadgeIndicator(pr())
+                        const count = () => pr().unresolvedThreads ?? pr().comments?.unresolved ?? 0
+                        const tooltip = () =>
+                          t(
+                            count() === 1
+                              ? "agentManager.pr.comment.unresolvedThread"
+                              : "agentManager.pr.comment.unresolvedThreads",
+                            { count: count() },
+                          )
                         return (
                           <span
                             class="am-pr-badge"
@@ -391,6 +466,27 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                                 />
                               </Match>
                             </Switch>
+                            <Show when={count() > 0}>
+                              <Tooltip value={tooltip()} placement="top">
+                                <Button
+                                  class="am-pr-badge-comments"
+                                  variant="ghost"
+                                  size="small"
+                                  aria-label={tooltip()}
+                                  onMouseEnter={() => setOverAction(true)}
+                                  onMouseLeave={() => setOverAction(false)}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    setHovered(false)
+                                    props.onOpenComments?.()
+                                  }}
+                                >
+                                  <Icon name="speech-bubble" size="small" />
+                                  <span>{count()}</span>
+                                </Button>
+                              </Tooltip>
+                            </Show>
                           </span>
                         )
                       }}
@@ -412,6 +508,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 <span class="am-hover-card-keybind">{props.navHint}</span>
               </Show>
             </div>
+            <Show when={state() !== "idle"}>
+              <div class="am-hover-card-divider" />
+              <div class="am-hover-card-label">{t(label(state()))}</div>
+              <div class="am-hover-card-note">{t(description(state()))}</div>
+            </Show>
             <div class="am-hover-card-divider" />
             <div class="am-hover-card-row">
               <span class="am-hover-card-row-label">{t("agentManager.hoverCard.worktree")}</span>
@@ -533,7 +634,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
             <Show when={!blocked()}>
-              <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
+              <ContextMenu.Item
+                onSelect={() => {
+                  if (blocked()) return
+                  props.onCancelDelete?.()
+                  props.onDelete(new MouseEvent("click"))
+                }}
+              >
                 <Icon name="trash" size="small" />
                 <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
                 <Show when={props.closeKeybind}>
@@ -557,6 +664,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 </span>
               </Show>
             </ContextMenu.Item>
+            <Show when={props.onUpdateBase && !props.stale}>
+              <ContextMenu.Item onSelect={() => props.onUpdateBase?.()}>
+                <Icon name="branch" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.updateBase.title")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Item onSelect={() => props.onCopyPath()}>
               <Icon name="copy" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.copyPath")}</ContextMenu.ItemLabel>
@@ -596,6 +709,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
           </ContextMenu.Content>
         </ContextMenu.Portal>
       </ContextMenu>
-    </>
+      <Show when={props.completed}>
+        <span class="am-worktree-completion-status" role="status">
+          {props.label}: {t("ui.patch.action.deleted")}
+        </span>
+      </Show>
+    </Completion>
   )
 }

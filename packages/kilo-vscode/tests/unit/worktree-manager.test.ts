@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it, spyOn } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
@@ -263,6 +263,40 @@ describe("WorktreeStateManager.updateWorktreeLabel", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree", () => {
+  it.each([
+    "Feature/My_fix.v2",
+    "Release_" + "a".repeat(60),
+    ...(process.platform === "win32" ? [] : ["CON", 'fix/a"b<c>d|e']),
+  ])("preserves explicit branch %s with a safe directory", async (branch) => {
+    const root = await createTempRepo()
+    const result = await createManager(root).createWorktree({ branchName: branch })
+    expect(result.branch).toBe(branch)
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(branch)
+    expect(path.dirname(result.path)).toBe(path.join(root, ".kilo", "worktrees"))
+    expect(path.basename(result.path)).toMatch(/^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$/)
+    expect(path.basename(result.path)).not.toBe("CON")
+  })
+
+  it.each(["../escape", "bad name", "bad..name", "bad.lock", "-option", "@{-1}", "HEAD", ""])(
+    "rejects invalid explicit branch %s before creating directories",
+    async (branchName) => {
+      const root = await createTempRepo()
+      await expect(createManager(root).createWorktree({ branchName })).rejects.toThrow()
+      expect(existsSync(path.join(root, ".kilo", "worktrees"))).toBe(false)
+    },
+  )
+
+  it("keeps slash refs independent from flat refs and preserves collision suffixes", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const first = await manager.createWorktree({ branchName: "Feature/My_fix.v2" })
+    const flat = await manager.createWorktree({ branchName: "Feature-My_fix.v2" })
+    const second = await manager.createWorktree({ branchName: "Feature/My_fix.v2" })
+    expect(flat.branch).toBe("Feature-My_fix.v2")
+    expect(second.branch).toBe("Feature/My_fix.v2-2")
+    expect(new Set([first.path, flat.path, second.path]).size).toBe(3)
+  })
+
   it("uses a configured Git executable for worktree creation", async () => {
     const root = await createTempRepo()
     gitExec(["git", "-C", root, "config", "core.autocrlf", "false"])
@@ -395,6 +429,26 @@ describe("WorktreeManager.createWorktree", () => {
     )
   })
 
+  it("reports when an explicit base branch is selected in a repository with no commits", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-empty-"))
+    tempDirs.push(root)
+    gitExec(["git", "init", "-b", "main", root])
+
+    await expect(createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })).rejects.toThrow(
+      "This repository has no commits yet. Create an initial commit before using worktrees.",
+    )
+  })
+
+  it("allows an explicit base branch from an orphan current branch", async () => {
+    const root = await createTempRepo()
+    gitExec(["git", "-C", root, "checkout", "--orphan", "orphan"])
+    gitExec(["git", "-C", root, "rm", "-rf", "."])
+
+    const result = await createManager(root).createWorktree({ baseBranch: "main", branchName: "feature" })
+
+    expect(result.parentBranch).toBe("main")
+  })
+
   it("throws when workspace is not a git repo", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-nogit-"))
     tempDirs.push(dir)
@@ -483,6 +537,77 @@ describe("WorktreeManager.removeWorktree", () => {
       .catch(() => false)
     expect(exists).toBe(false)
   }, 15_000)
+
+  it("falls back to git removal when Windows prevents renaming the worktree", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const worktree = await manager.createWorktree({ branchName: "rename-blocked" })
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+
+    try {
+      await manager.removeWorktree(worktree.path, worktree.branch)
+      expect(existsSync(worktree.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(worktree.branch)
+    } finally {
+      rename.mockRestore()
+    }
+  })
+
+  it("keeps the branch when the worktree directory remains locked", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root)
+    const worktree = await manager.createWorktree({ branchName: "locked-worktree" })
+    await simpleGit(root).raw(["worktree", "lock", worktree.path])
+    const rename = spyOn(fs, "rename").mockRejectedValueOnce(
+      Object.assign(new Error("directory busy"), { code: "EBUSY" }),
+    )
+    const remove = spyOn(fs, "rm").mockRejectedValueOnce(Object.assign(new Error("directory busy"), { code: "EBUSY" }))
+
+    try {
+      await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow("directory busy")
+      expect(existsSync(worktree.path)).toBe(true)
+      expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
+    } finally {
+      rename.mockRestore()
+      remove.mockRestore()
+    }
+  })
+
+  it.skipIf(process.platform !== "win32")(
+    "keeps a Windows worktree tracked while a live process locks its directory",
+    async () => {
+      const root = await createTempRepo()
+      const manager = createManager(root)
+      const worktree = await manager.createWorktree({ branchName: "windows-process-lock" })
+      const child = Bun.spawn(
+        [process.execPath, "-e", 'process.stdout.write("ready\\n"); setInterval(() => {}, 1000)'],
+        {
+          cwd: worktree.path,
+          stdout: "pipe",
+          stderr: "pipe",
+          windowsHide: true,
+        },
+      )
+
+      try {
+        const ready = await child.stdout.getReader().read()
+        expect(Buffer.from(ready.value ?? []).toString()).toContain("ready")
+        await expect(manager.removeWorktree(worktree.path, worktree.branch)).rejects.toThrow()
+        expect(existsSync(worktree.path)).toBe(true)
+        expect((await simpleGit(root).branch()).all).toContain(worktree.branch)
+      } finally {
+        child.kill()
+        await child.exited
+      }
+
+      await manager.removeWorktree(worktree.path, worktree.branch)
+      expect(existsSync(worktree.path)).toBe(false)
+      expect((await simpleGit(root).branch()).all).not.toContain(worktree.branch)
+    },
+    30_000,
+  )
 
   it("does not throw when worktree path does not exist", async () => {
     const root = await createTempRepo()
@@ -676,6 +801,7 @@ describe("WorktreeManager.createWorktree cleanup", () => {
     const second = await mgr.createWorktree({ existingBranch: branch })
 
     expect(second.branch).toBe(branch)
+    expect(second.path).toBe(first.path)
     const gitFile = await fs.stat(path.join(second.path, ".git"))
     expect(gitFile.isFile()).toBe(true)
 
@@ -912,6 +1038,32 @@ describe("WorktreeManager.renameBranch", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree branch collision", () => {
+  it("preserves an unrelated dirty worktree when an existing slash branch hashes to its literal name", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const branch = "Feature/My_fix.v2"
+    const original = await mgr.createWorktree({ branchName: branch })
+    const literal = path.basename(original.path)
+    await mgr.removeWorktree(original.path)
+    const other = await mgr.createWorktree({ branchName: literal })
+    const file = path.join(other.path, "draft.txt")
+    await fs.writeFile(file, "uncommitted work")
+    const occupied = `${other.path}-2`
+    await fs.mkdir(occupied)
+    await fs.writeFile(path.join(occupied, "keep.txt"), "keep")
+
+    const result = await mgr.createWorktree({ existingBranch: branch })
+
+    expect(result.branch).toBe(branch)
+    expect(result.path).toBe(`${other.path}-3`)
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "HEAD"])).trim()).toBe(`refs/heads/${branch}`)
+    expect((await simpleGit(other.path).raw(["symbolic-ref", "HEAD"])).trim()).toBe(`refs/heads/${literal}`)
+    expect(await fs.readFile(file, "utf8")).toBe("uncommitted work")
+    expect(await changedFiles(other.path)).toEqual(["?? draft.txt"])
+    expect(await fs.readFile(path.join(occupied, "keep.txt"), "utf8")).toBe("keep")
+    expect(await mgr.checkedOutBranches()).toEqual(new Set(["main", literal, branch]))
+  })
+
   it("creates a suffixed worktree without replacing an active explicitly named worktree", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)

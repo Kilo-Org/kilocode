@@ -1,18 +1,78 @@
 import { beforeEach, describe, it, expect } from "bun:test"
 import { createEffect, createRoot, createSignal, on } from "solid-js"
-import { deleteDraftsForSession, drafts, imageDrafts, reviewDrafts } from "../../webview-ui/src/utils/draft-store"
+import { browserFeedbackData, formatBrowserFeedback } from "../../src/shared/browser-feedback"
+import { formatReviewCommentsMarkdown } from "../../src/shared/review-comments"
 import {
+  browserDrafts,
+  deleteDraftsForSession,
+  drafts,
+  imageDrafts,
+  mentionDrafts,
+  reviewDrafts,
+  scrollDrafts,
+} from "../../webview-ui/src/utils/draft-store"
+import {
+  clearPromptDraftRoutes,
   createdDraftKey,
+  failedPrompt,
   movePromptDraft,
   pendingDraftKey,
+  promotePromptDraft,
+  promptDraftKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../webview-ui/src/utils/prompt-drafts"
 
 beforeEach(() => {
   drafts.clear()
+  browserDrafts.clear()
   reviewDrafts.clear()
   imageDrafts.clear()
+  mentionDrafts.clear()
+  scrollDrafts.clear()
+  clearPromptDraftRoutes()
+})
+
+describe("failedPrompt", () => {
+  it("restores browser feedback from the failed-send wire shape", () => {
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save", text: "Save" }])!
+    const text = `${formatBrowserFeedback(browser.references)}\n\nMake this button red`
+    expect(failedPrompt({ text, browserFeedback: browser })).toEqual({
+      text: "Make this button red",
+      comments: [],
+      browsers: browser.references,
+    })
+  })
+
+  it("restores both review comments and browser references without raw context text", () => {
+    const review = {
+      version: 1 as const,
+      comments: [
+        {
+          id: "review",
+          file: "src/app.ts",
+          side: "additions" as const,
+          line: 3,
+          comment: "Keep this",
+          selectedText: "value",
+        },
+      ],
+    }
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
+    const text = `${formatReviewCommentsMarkdown(review.comments)}\n\n${formatBrowserFeedback(browser.references)}\n\nApply both`
+    expect(failedPrompt({ text, review, browserFeedback: browser })).toEqual({
+      text: "Apply both",
+      comments: review.comments,
+      browsers: browser.references,
+    })
+  })
+
+  it("preserves empty instructions and rejects mismatched feedback metadata", () => {
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
+    expect(failedPrompt({ text: formatBrowserFeedback(browser.references), browserFeedback: browser })?.text).toBe("")
+    expect(failedPrompt({ text: "Unrelated text", browserFeedback: browser })).toBeUndefined()
+    expect(failedPrompt({ text: "Plain draft" })).toEqual({ text: "Plain draft", comments: [], browsers: [] })
+  })
 })
 
 describe("deleteDraftsForSession", () => {
@@ -20,16 +80,26 @@ describe("deleteDraftsForSession", () => {
     drafts.set("prompt:default:session:a", "draft a")
     drafts.set("prompt:default:pending:a", "pending a")
     drafts.set("prompt:default:session:b", "draft b")
+    browserDrafts.set("prompt:default:session:a", [
+      { id: "element", sessionId: "a", selector: "#feature-card", content: "Browser feedback" },
+    ])
+    browserDrafts.set("prompt:default:session:b", [
+      { id: "other", sessionId: "b", selector: "#other", content: "Other browser feedback" },
+    ])
     reviewDrafts.set("prompt:default:session:a", [])
     imageDrafts.set("prompt:default:session:a", [])
+    mentionDrafts.set("prompt:default:session:a", { paths: ["file with spaces.ts"], sessions: [] })
 
     deleteDraftsForSession("a")
 
     expect(drafts.has("prompt:default:session:a")).toBe(false)
     expect(drafts.has("prompt:default:pending:a")).toBe(false)
     expect(drafts.get("prompt:default:session:b")).toBe("draft b")
+    expect(browserDrafts.has("prompt:default:session:a")).toBe(false)
+    expect(browserDrafts.get("prompt:default:session:b")?.[0]?.selector).toBe("#other")
     expect(reviewDrafts.has("prompt:default:session:a")).toBe(false)
     expect(imageDrafts.has("prompt:default:session:a")).toBe(false)
+    expect(mentionDrafts.has("prompt:default:session:a")).toBe(false)
   })
 
   it("is a no-op when given an empty id", () => {
@@ -125,6 +195,64 @@ describe("pendingDraftKey", () => {
   })
 })
 
+describe("promptDraftKey", () => {
+  it("uses pending keys for offscreen pending sessions", () => {
+    expect(promptDraftKey("prompt:default", "sidebar-pending:1")).toBe("prompt:default:pending:sidebar-pending:1")
+  })
+
+  it("uses a draft key for the active unprefixed pending id", () => {
+    expect(promptDraftKey("prompt:default", "draft-1", { draft: "draft-1" })).toBe("prompt:default:pending:draft-1")
+  })
+
+  it("does not classify a selected session as pending when its draft id matches", () => {
+    const state = { current: "ses_selected", draft: "ses_selected" }
+
+    expect(promptDraftKey("prompt:default", "ses_selected", state)).toBe("prompt:default:session:ses_selected")
+    expect(promptDraftKey("prompt:default", "ses_other", state)).toBe("prompt:default:session:ses_other")
+  })
+
+  it("routes both ids of an active promoted draft to the same session", () => {
+    const state = { current: "ses_created", draft: "ses_created" }
+    promotePromptDraft("prompt:default", "pending:1", state.current)
+
+    expect(promptDraftKey("prompt:default", "pending:1", state)).toBe("prompt:default:session:ses_created")
+    expect(promptDraftKey("prompt:default", "ses_created", state)).toBe("prompt:default:session:ses_created")
+  })
+
+  it("resolves an old pending id to its promoted session", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:session:session-1")
+    expect(promptDraftKey("prompt:other", "pending:1")).toBe("prompt:other:pending:1")
+  })
+
+  it("does not confuse a pending id with an existing session id", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+
+    expect(promptDraftKey("prompt:default", "session-1")).toBe("prompt:default:session:session-1")
+    expect(promptDraftKey("prompt:default", "pending:2")).toBe("prompt:default:pending:2")
+  })
+
+  it("uses session keys for existing sessions", () => {
+    expect(promptDraftKey("prompt:default", "session-1")).toBe("prompt:default:session:session-1")
+  })
+
+  it("clears routes when the promoted session is deleted", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+    deleteDraftsForSession("session-1")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:pending:1")
+  })
+
+  it("keeps routes for other prompt boxes", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+    promotePromptDraft("prompt:other", "pending:2", "session-2")
+    deleteDraftsForSession("session-1")
+
+    expect(promptDraftKey("prompt:other", "pending:2")).toBe("prompt:other:session:session-2")
+  })
+})
+
 describe("scopeDraftKey", () => {
   it("scopes raw keys to a prompt box", () => {
     expect(scopeDraftKey("prompt:1", "session:abc")).toBe("prompt:1:session:abc")
@@ -159,16 +287,53 @@ describe("movePromptDraft", () => {
     const comments = new Map([[source, [comment]]])
     const images = new Map([[source, [image]]])
     const scrolls = new Map([[source, 128]])
+    const browser = new Map([[source, [{ id: "browser-1", sessionId: "session-1", selector: "#save" }]]])
+    const expected = browser.get(source)
 
-    expect(movePromptDraft({ text, comments, images, scrolls }, source, target)).toEqual({
+    expect(movePromptDraft({ text, comments, images, scrolls, browsers: browser }, source, target)).toEqual({
       text: "Keep this prompt",
       comments: [comment],
       images: [image],
       scroll: 128,
+      browsers: expected,
     })
     expect(text.get(target)).toBe("Keep this prompt")
     expect(comments.get(target)).toEqual([comment])
     expect(images.get(target)).toEqual([image])
+    expect(browser.get(target)).toEqual([{ id: "browser-1", sessionId: "session-1", selector: "#save" }])
+    expect(scrolls.get(target)).toBe(128)
+    expect(text.has(source)).toBe(false)
+    expect(comments.has(source)).toBe(false)
+    expect(images.has(source)).toBe(false)
+    expect(browser.has(source)).toBe(false)
+    expect(scrolls.has(source)).toBe(false)
+  })
+
+  it("keeps existing target artifacts during promotion", () => {
+    const source = scopeDraftKey("prompt:default", pendingDraftKey("pending-1"))
+    const target = scopeDraftKey("prompt:default", sessionDraftKey("session-1"))
+    const text = new Map([
+      [source, "pending prompt"],
+      [target, "existing prompt"],
+    ])
+    const comments = new Map<string, { id: string }[]>([
+      [source, [{ id: "pending-comment" }]],
+      [target, [{ id: "existing-comment" }]],
+    ])
+    const images = new Map<string, string[]>([
+      [source, ["pending-image"]],
+      [target, ["existing-image"]],
+    ])
+    const scrolls = new Map([
+      [source, 64],
+      [target, 128],
+    ])
+
+    movePromptDraft({ text, comments, images, scrolls }, source, target)
+
+    expect(text.get(target)).toBe("existing prompt")
+    expect(comments.get(target)).toEqual([{ id: "existing-comment" }])
+    expect(images.get(target)).toEqual(["existing-image"])
     expect(scrolls.get(target)).toBe(128)
     expect(text.has(source)).toBe(false)
     expect(comments.has(source)).toBe(false)

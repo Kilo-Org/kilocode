@@ -8,6 +8,7 @@ import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import fsNode from "fs/promises"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { notices } from "@opencode-ai/core/kilocode/fff" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
@@ -479,7 +480,7 @@ const layer = Layer.effect(
     const loadInstanceState = Effect.fn("Config.loadInstanceState")(
       function* (ctx: InstanceContext) {
         // kilocode_change start - warning accumulator and legacy Kilo config
-        const warnings: Warning[] = []
+        const warnings: Warning[] = notices(ctx.directory)
         // Untrusted project config may only read files inside this root (worktree, or directory for non-git projects).
         const projectRoot = ctx.worktree === "/" ? ctx.directory : ctx.worktree
         const auth = yield* authSvc.all().pipe(Effect.orDie)

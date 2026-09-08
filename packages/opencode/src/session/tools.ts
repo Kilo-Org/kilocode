@@ -1,6 +1,8 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
+import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -55,6 +57,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
   memoryCache: MemoryMarker.Cache // kilocode_change
+  // kilocode_change start
+  notify?: <T extends Tool.ExecuteResult>(tool: string, output: T, signal?: AbortSignal) => Effect.Effect<T>
+  // kilocode_change end
 }) {
   const tools: Record<string, AITool> = {}
   const run = yield* EffectBridge.make()
@@ -71,6 +76,20 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const config = yield* Config.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
+  const notify = cfg.experimental?.shared_agent_board === true ? input.notify : undefined
+  type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
+  const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
+    Effect.gen(function* () {
+      const clean = BoardNotice.clean(output)
+      if (notify && !opts.abortSignal?.aborted) {
+        yield* input.processor.metadata(opts.toolCallId, { metadata: { output: clean.output } })
+      }
+      const result = yield* (notify?.(name, clean, opts.abortSignal) ?? Effect.succeed(clean)).pipe(
+        Effect.onInterrupt(() => input.processor.completeToolCall(opts.toolCallId, clean)),
+      )
+      if (opts.abortSignal?.aborted) yield* input.processor.completeToolCall(opts.toolCallId, result)
+      return result
+    })
   // kilocode_change end
   const flags = yield* RuntimeFlags.Service
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
@@ -157,6 +176,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     permission: input.session.permission,
     networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
+    if (!GoalPolicy.available(input.session.id, item.id)) continue // kilocode_change
     const base = ToolJsonSchema.fromTool(item)
     const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
@@ -190,10 +210,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
               output,
             )
-            if (options.abortSignal?.aborted) {
-              yield* input.processor.completeToolCall(options.toolCallId, output)
-            }
-            return output
+            return yield* finish(item.id, output, options) // kilocode_change
           }),
         )
       },
@@ -277,10 +294,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.list, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
-            if (opts.abortSignal?.aborted) {
-              yield* input.processor.completeToolCall(opts.toolCallId, output)
-            }
-            return output
+            return yield* finish(MCP_RESOURCE_TOOLS.list, output, opts) // kilocode_change
           }),
         )
       },
@@ -360,10 +374,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.listTemplates, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
-            if (opts.abortSignal?.aborted) {
-              yield* input.processor.completeToolCall(opts.toolCallId, output)
-            }
-            return output
+            return yield* finish(MCP_RESOURCE_TOOLS.listTemplates, output, opts) // kilocode_change
           }),
         )
       },
@@ -442,10 +453,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.read, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
-            if (opts.abortSignal?.aborted) {
-              yield* input.processor.completeToolCall(opts.toolCallId, output)
-            }
-            return output
+            return yield* finish(MCP_RESOURCE_TOOLS.read, output, opts) // kilocode_change
           }),
         )
       },
@@ -561,10 +569,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             })),
             content: result.content,
           }
-          if (opts.abortSignal?.aborted) {
-            yield* input.processor.completeToolCall(opts.toolCallId, output)
-          }
-          return output
+          return yield* finish(key, output, opts) // kilocode_change
         }),
       )
     tools[key] = item

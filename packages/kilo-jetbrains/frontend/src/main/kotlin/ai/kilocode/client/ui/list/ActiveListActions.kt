@@ -13,9 +13,20 @@ internal const val ACTIVE_LIST_RENAME_CELL = "rename"
 internal const val ACTIVE_LIST_DELETE_CELL = "delete"
 internal const val ACTIVE_LIST_MENU_CELL = "__menu__"
 
-/** Ids for the trailing metrics badges hit-tested in place (see [ActiveListMetrics]). */
+/** Well-known ids for rich badges hit-tested in place. */
 internal const val ACTIVE_LIST_CHANGES_CELL = "__changes__"
-internal const val ACTIVE_LIST_PR_CELL = "__pr__"
+
+internal fun activeListRegions(item: ActiveListItem): Map<String, () -> Unit> {
+    if (item.progress != null) return emptyMap()
+    val out = linkedMapOf<String, () -> Unit>()
+    for (badge in item.leading + item.badges + item.secondaryBadges) {
+        val id = badge.id
+        val act = badge.action
+        if (!id.isNullOrBlank() && act != null) out[id] = act
+    }
+    item.metrics?.action?.let { out[ACTIVE_LIST_CHANGES_CELL] = it }
+    return out
+}
 
 internal fun activeListRenameCell(label: String = KiloBundle.message("common.rename")) = ActiveListCell(
     ACTIVE_LIST_RENAME_CELL,

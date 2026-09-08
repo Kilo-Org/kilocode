@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -51,13 +52,16 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
+        KiloPluginSettings.unsetAgent()
     }
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
+            KiloPluginSettings.unsetAgent()
         } finally {
             super.tearDown()
         }
@@ -75,7 +79,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test selecting a mode forwards it with the created prompt and writes no global config`() {
+    fun `test selecting a mode forwards it with the created prompt only`() {
         open()
         flushUntil { edt { model().selectionKeyForTest() != null } }
 
@@ -86,9 +90,10 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
 
+        // The prompt is the only place the pick travels: writing it to the CLI's global default_agent
+        // disposed every instance the CLI held and cancelled every running turn in every worktree.
         assertEquals("plan", submitted().prompt?.agent)
-        // Picking a mode must no longer mutate the global default_agent config.
-        assertTrue(sessionRpc.configs.none { it.second.agent != null })
+        assertNull(KiloPluginSettings.getAgent())
     }
 
     fun `test selecting a model persists it for the default agent`() {
@@ -297,6 +302,17 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
         assertTrue(edt { newTab().isVisible })
         assertFalse(edt { prTab().isVisible })
+    }
+
+    fun `test the pr tab is dropped while the github integration is off`() {
+        // Importing a PR needs gh, so the tab must not be offered as a guaranteed failure.
+        KiloPluginSettings.setGithub(false)
+        open()
+
+        edt {
+            val titles = tabs().tabs.map { it.text }
+            assertEquals(listOf("New", "From Branch"), titles)
+        }
     }
 
     fun `test an empty branch list disables the branch picker`() {

@@ -4,6 +4,7 @@ import { tmpdir } from "os"
 import { join } from "path"
 
 const script = join(import.meta.dir, "..", "..", "bin", "kilo")
+const helper = join(import.meta.dir, "..", "..", "bin", "kilocode", "windows-avx2.cjs")
 const platform = process.platform === "win32" ? "windows" : process.platform
 const binary = platform === "windows" ? "kilo.exe" : "kilo"
 
@@ -15,10 +16,14 @@ describe("bin/kilo tree-sitter resources", () => {
     const wasm = join(dir, "tree-sitter")
     const bin = join(dir, nested ? binary : ".kilo")
     const log = join(root, nested ? "nested-env.txt" : "cached-env.txt")
+    const cli = join(root, "node_modules", "@kilocode", "cli", "bin")
+    const helperTarget = join(cli, "kilocode", "windows-avx2.cjs")
 
     await mkdir(wasm, { recursive: true })
+    await mkdir(join(cli, "kilocode"), { recursive: true })
     await writeFile(join(wasm, "tree-sitter.wasm"), "wasm")
     await writeFile(bin, "binary")
+    await Bun.write(helperTarget, Bun.file(helper))
 
     return { bin, log, wasm, wrapper: join(dir, "kilo") }
   }
@@ -49,6 +54,7 @@ kiloChild.spawn = (target) => {
         cwd: root,
         env: {
           PATH: process.env.PATH ?? "",
+          XDG_CACHE_HOME: join(root, "cache"),
           ...(bin ? { KILO_BIN_PATH: bin } : {}),
         },
       },

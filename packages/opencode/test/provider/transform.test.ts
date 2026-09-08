@@ -3375,7 +3375,7 @@ describe("ProviderTransform.message - cache control on gateway", () => {
       },
       id: "gpt-5.6",
     })
-    const envBlock = "<environment_details>\nCurrent time: 2026-08-08T18:00:00+00:00\n</environment_details>"
+    const envBlock = "\n\n<environment_details>\nCurrent time: 2026-08-08T18:00:00+00:00\n</environment_details>"
     const msgs = [
       {
         role: "system",

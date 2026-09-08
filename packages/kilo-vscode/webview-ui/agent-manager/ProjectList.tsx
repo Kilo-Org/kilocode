@@ -1,7 +1,8 @@
-import { createMemo, type Component } from "solid-js"
+import { createEffect, createMemo, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
+  AgentManagerSidebarTarget,
   AgentManagerStateMessage,
   AgentProjectSnapshot,
   LocalGitStats,
@@ -20,8 +21,10 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { label, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import type { ProjectStore } from "./project/store"
+import { createProjectStore, type ProjectStore } from "./project/store"
+import { createWorktreeDelete, type WorktreeDelete } from "./worktree-delete"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -46,6 +49,8 @@ interface Props {
   mode: ModeRouter
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
+  onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
@@ -53,6 +58,8 @@ interface Props {
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
+  onDeleteRef?: (confirm: WorktreeDelete["confirm"]) => void
+  onDelete?: (projectId: string, worktreeId: string) => void
   onShortcuts: () => void
   onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
@@ -61,8 +68,45 @@ interface Props {
 export const ProjectList: Component<Props> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
-  const select = (target: Record<string, unknown>) =>
-    vscode.postMessage({ type: "agentManager.activateSelection", target } as never)
+  const select = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    if (props.onSelect) return props.onSelect(target, restore)
+    vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
+  }
+  const stores = new Map<string, ProjectStore>()
+  const store = (id: string) => {
+    if (!props.projects.some((project) => project.id === id)) return
+    if (props.store) return props.store(id)
+    const existing = stores.get(id)
+    if (existing) return existing
+    const value = createProjectStore(id)
+    stores.set(id, value)
+    return value
+  }
+  createEffect(() => {
+    if (props.store) return
+    for (const [id, state] of Object.entries(props.states)) store(id)?.applyState(state)
+  })
+  const deletion = createWorktreeDelete({
+    store,
+    project: () => props.selectedProject,
+    selection: () => props.selection,
+    busy: (projectId, id) => props.busy(projectId, id) || store(projectId)?.busy().has(id) === true,
+    blocked: (projectId, id) => props.blocked(projectId, id),
+    select,
+    remove: (projectId, worktreeId) => {
+      props.onDelete?.(projectId, worktreeId)
+      vscode.postMessage({ type: "agentManager.deleteWorktree", projectId, worktreeId })
+    },
+    reveal: (projectId, worktreeId) => {
+      if (!props.projects.find((project) => project.id === projectId)?.expanded)
+        vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded: true })
+      const state = store(projectId)
+      const section = state?.worktrees().find((wt) => wt.id === worktreeId)?.sectionId
+      if (section && state?.sections().find((item) => item.id === section)?.collapsed)
+        vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", projectId, sectionId: section })
+    },
+  })
+  props.onDeleteRef?.(deletion.confirm)
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
@@ -185,6 +229,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}
@@ -204,11 +249,7 @@ export const ProjectList: Component<Props> = (props) => {
       onSelect={(projectId) =>
         // Selecting the project itself returns to where the user left off in it;
         // the extension resolves its persisted target authoritatively.
-        vscode.postMessage({
-          type: "agentManager.activateSelection",
-          target: { projectId, kind: "local" },
-          restore: true,
-        })
+        select({ projectId, kind: "local" }, true)
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
@@ -223,7 +264,8 @@ export const ProjectList: Component<Props> = (props) => {
         <ProjectSidebarBody
           project={project}
           state={props.states[project.id]}
-          store={props.store?.(project.id)}
+          store={store(project.id)}
+          deletion={deletion}
           busy={(id) => props.busy(project.id, id)}
           blocked={(id) => props.blocked(project.id, id)}
           activityFor={(id) => props.activityFor(project.id, id)}
@@ -238,6 +280,7 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
+          onOpenComments={props.onOpenComments}
           onNewWorktree={newWorktree}
           shortcutMap={props.shortcutMap}
         />

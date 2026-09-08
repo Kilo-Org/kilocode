@@ -596,7 +596,13 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
             },
         )
 
-        flush()
+        // History load and recovery are two separate update cycles, and recovery seeds state from the
+        // status flow KiloSessionService collects off the fake RPC. A fixed number of drain rounds does
+        // not always outrun that collection, so wait for both cycles to be observed instead.
+        // Each waitFor round ends in a pumpEdt, so reading the hook log from the test thread is ordered
+        // against the EDT writes the same way the other tests in this file rely on.
+        val both = waitFor { order.size >= 4 }
+        assertTrue("history load and recovery did not both run, saw $order", both)
 
         assertTrue(order.contains("before:0"))
         assertTrue(order.contains("after:true:1"))

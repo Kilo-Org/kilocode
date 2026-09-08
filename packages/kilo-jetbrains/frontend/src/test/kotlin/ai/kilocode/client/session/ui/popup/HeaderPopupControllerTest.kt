@@ -86,10 +86,18 @@ class HeaderPopupControllerTest : BasePlatformTestCase() {
 
     private fun target(controller: HeaderPopupController): PartView? = field(controller, "target")
 
+    /**
+     * Reads lifecycle state out of the shared [SidePopupController] the chat adapter delegates to. These
+     * tests stay on the chat entry points deliberately — they assert that hovering and exiting a card
+     * leaves no guard behind, which is a property of the pair rather than of either half.
+     */
     private inline fun <reified T> field(controller: HeaderPopupController, name: String): T? {
-        val field = HeaderPopupController::class.java.getDeclaredField(name)
+        val delegate = HeaderPopupController::class.java.getDeclaredField("popup")
+        delegate.isAccessible = true
+        val inner = delegate.get(controller)
+        val field = inner.javaClass.getDeclaredField(name)
         field.isAccessible = true
-        return field.get(controller) as? T
+        return field.get(inner) as? T
     }
 
     private class TestView : PartView() {

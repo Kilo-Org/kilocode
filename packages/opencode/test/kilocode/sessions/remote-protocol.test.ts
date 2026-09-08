@@ -297,6 +297,72 @@ describe("RemoteProtocol", () => {
     }
   })
 
+  test.each(["cli", "remote"])("heartbeat preserves full %s instance metadata and capabilities", (kind) => {
+    const msg = {
+      type: "heartbeat" as const,
+      protocolVersion: "1.0.0",
+      sessions: [{ id: "s1", status: "busy", title: "Task", gitBranch: "feature/session-branch-is-not-truncated" }],
+      instance: {
+        name: "host",
+        projectName: "project",
+        version: "1.2.3",
+        kind,
+        startedAt: "2024-02-29T12:34:56.789Z",
+        gitBranch: "feature/current",
+      },
+      capabilities: { attachments: true, sessionClone: true },
+    }
+    expect(RemoteProtocol.Outbound.parse(JSON.parse(JSON.stringify(msg)))).toEqual(msg)
+  })
+
+  test("legacy instance field limits remain accepted", () => {
+    const instance = { name: "h".repeat(64), projectName: "p".repeat(64), version: "v".repeat(32) }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+  })
+
+  test.each(["terminal", "REMOTE", "", null, 1])("rejects invalid instance kind %j", (kind) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", kind }).success).toBe(false)
+  })
+
+  test.each([
+    "2026-08-28T12:34:56Z",
+    "2026-08-28T12:34:56.78Z",
+    "2026-08-28T12:34:56.7890Z",
+    "2026-08-28T12:34:56.789+00:00",
+    "2026-08-28T12:34:56.789",
+    "2026-02-29T12:34:56.789Z",
+    "2026-08-32T12:34:56.789Z",
+    "2026-13-01T12:34:56.789Z",
+    "2026-08-28T24:00:00.000Z",
+    "2026-08-28T12:60:00.000Z",
+    "2026-08-28T12:34:60.000Z",
+    "2026-08-28t12:34:56.789z",
+    "not-a-timestamp",
+    null,
+    0,
+  ])("rejects invalid instance start time %j", (startedAt) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", startedAt }).success).toBe(
+      false,
+    )
+  })
+
+  test.each(["a".repeat(24), '"\\\n\u0001'.repeat(6), "界".repeat(24), "\u{10400}".repeat(12)])(
+    "accepts 24 UTF-16 branch units and rejects one more: %j",
+    (gitBranch) => {
+      const instance = { name: "h", projectName: "p", gitBranch }
+      expect(RemoteProtocol.InstanceAdvertisement.parse(JSON.parse(JSON.stringify(instance)))).toEqual(instance)
+      expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: gitBranch + "a" }).success).toBe(
+        false,
+      )
+    },
+  )
+
+  test("instance branch can be empty but cannot be null", () => {
+    const instance = { name: "h", projectName: "p", gitBranch: "" }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: null }).success).toBe(false)
+  })
+
   test("instance advertisement version is optional", () => {
     const msg = {
       type: "heartbeat",

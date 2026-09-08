@@ -107,6 +107,34 @@ class StackTest : BasePlatformTestCase() {
         assertEquals(10 x 5, stack.preferredSize)
     }
 
+    fun `test space setter re derives the base gap without recreating children`() {
+        val a = child(pref = 10 x 5)
+        val b = child(pref = 20 x 7)
+        val stack = Stack.vertical(gap = 3).apply {
+            next(a)
+            next(b)
+        }
+
+        stack.setBounds(0, 0, 100, 50)
+        stack.doLayout()
+        assertBounds(0, 8, 100, 7, b)
+
+        // A DPI-derived gap (see ai.kilocode.client.ui.UiStyle.Gap) is only known at construction
+        // time; an IDE zoom must be able to widen it later on the same retained Stack instance.
+        stack.space = 11
+        stack.doLayout()
+
+        assertSame(a, stack.getComponent(0))
+        assertSame(b, stack.getComponent(1))
+        assertBounds(0, 16, 100, 7, b)
+    }
+
+    fun `test space getter reflects the constructor gap`() {
+        val stack = Stack.horizontal(gap = 9)
+
+        assertEquals(9, stack.space)
+    }
+
     fun `test removeAll clears explicit gaps`() {
         val a = child(pref = 10 x 5)
         val b = child(pref = 20 x 7)

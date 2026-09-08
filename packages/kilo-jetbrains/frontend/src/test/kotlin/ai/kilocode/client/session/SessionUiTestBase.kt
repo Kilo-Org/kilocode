@@ -4,8 +4,8 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.onboarding.FakeOnboardingController
+import ai.kilocode.client.onboarding.OnboardingController
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.controller.SessionController
@@ -88,7 +88,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         id: String? = null,
         displayMs: Long = 0,
         open: ((SessionRef) -> Unit)? = null,
-        migration: MigrationUiController = FakeMigrationUiController(),
+        onboarding: OnboardingController = FakeOnboardingController(),
         manager: SessionManager? = null,
     ): SessionUi {
         val owner = manager ?: open?.let { fn ->
@@ -104,7 +104,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
             displayMs = displayMs,
             manager = owner,
             workspaces = workspaces,
-            migration = migration,
+            onboarding = onboarding,
         ).apply {
             setSize(800, 600)
         }

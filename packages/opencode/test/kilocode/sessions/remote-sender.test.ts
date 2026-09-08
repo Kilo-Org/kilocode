@@ -14,7 +14,7 @@ import { Permission } from "../../../src/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { SessionID } from "../../../src/session/schema"
+import { MessageID, SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue"
@@ -674,7 +674,7 @@ describe("RemoteSender", () => {
     sender.dispose()
   })
 
-  test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
+  test("send_message preserves client tool toggles", async () => {
     const { conn } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
@@ -699,7 +699,6 @@ describe("RemoteSender", () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(calls[0]?.tools).toEqual({ bash: true })
-    expect(calls[0]?.ephemeralTools).toEqual({ interactive_terminal: false })
   })
 
   test("interrupt waits for session cancellation before responding", async () => {
@@ -735,6 +734,122 @@ describe("RemoteSender", () => {
     finishCancel!()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(sent).toEqual([{ type: "response", id: "req_interrupt", result: {} }])
+  })
+
+  test("drop_queued_message drops a waiting message and ACKs success", async () => {
+    const { conn, sent } = fakeConn()
+    const sessionID = SessionID.make("ses_drop_cmd_waiting")
+    const activeID = MessageID.make("msg_drop_cmd_active_1")
+    const queuedID = MessageID.make("msg_drop_cmd_queued_1")
+    const activeStarted = Promise.withResolvers<void>()
+    const activeRelease = Promise.withResolvers<void>()
+
+    const active = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        activeID,
+        Effect.promise(async () => {
+          activeStarted.resolve()
+          await activeRelease.promise
+          return "active"
+        }),
+        Effect.succeed("active-cancelled"),
+      ),
+    )
+    await activeStarted.promise
+
+    const queued = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        queuedID,
+        Effect.sync(() => "queued"),
+        Effect.succeed("queued-cancelled"),
+      ),
+    )
+
+    expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([queuedID])
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_drop_waiting",
+      command: "drop_queued_message",
+      sessionId: sessionID,
+      data: { messageID: queuedID },
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(sent).toContainEqual({ type: "response", id: "req_drop_waiting", result: {} })
+
+    activeRelease.resolve()
+    expect(await active).toBe("active")
+    expect(await queued).toBe("queued-cancelled")
+  })
+
+  test("drop_queued_message leaves the active run untouched and returns an error", async () => {
+    const { conn, sent } = fakeConn()
+    const sessionID = SessionID.make("ses_drop_cmd_active")
+    const activeID = MessageID.make("msg_drop_cmd_active_2")
+    const activeStarted = Promise.withResolvers<void>()
+    const activeRelease = Promise.withResolvers<void>()
+
+    const active = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        activeID,
+        Effect.promise(async () => {
+          activeStarted.resolve()
+          await activeRelease.promise
+          return "active"
+        }),
+        Effect.succeed("active-cancelled"),
+      ),
+    )
+    await activeStarted.promise
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_drop_active",
+      command: "drop_queued_message",
+      sessionId: sessionID,
+      data: { messageID: activeID },
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0].type).toBe("response")
+    expect(sent[0].id).toBe("req_drop_active")
+    expect(sent[0].error).toContain("message not queued")
+
+    activeRelease.resolve()
+    expect(await active).toBe("active")
   })
 
   test("send_message with invalid data sends error response immediately", () => {
@@ -1250,7 +1365,6 @@ describe("RemoteSender", () => {
           providerID: ProviderV2.ID.make("kilo"),
           modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514"),
         },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -1285,7 +1399,6 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("gpt-5-mini") },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -1325,7 +1438,6 @@ describe("RemoteSender", () => {
           providerID: ProviderV2.ID.make("custom:edge"),
           modelID: ModelV2.ID.make("deployment/model-v1"),
         },
-        ephemeralTools: { interactive_terminal: false },
         variant: "precise",
       },
     ])
@@ -1421,9 +1533,65 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("kilo/gpt-5-mini") },
-        ephemeralTools: { interactive_terminal: false },
       },
     ])
+  })
+
+  test("send_message forwards messageID to prompt when present", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_message_id",
+      command: "send_message",
+      data: {
+        sessionID: "ses_x",
+        messageID: "msg_remote_1",
+        parts: [{ type: "text", text: "hello" }],
+      },
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(sent[0]).toEqual({ type: "response", id: "req_message_id", result: {} })
+    expect(calls[0]?.messageID).toBe(MessageID.make("msg_remote_1"))
+  })
+
+  test("send_message leaves messageID unset when absent", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_no_message_id",
+      command: "send_message",
+      data: {
+        sessionID: "ses_x",
+        parts: [{ type: "text", text: "hello" }],
+      },
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(sent[0]).toEqual({ type: "response", id: "req_no_message_id", result: {} })
+    expect(calls[0]?.messageID).toBeUndefined()
   })
   // kilocode_change end
 

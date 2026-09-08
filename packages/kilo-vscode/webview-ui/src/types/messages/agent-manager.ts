@@ -1,4 +1,14 @@
-export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing" | "no_commits"
+
+export interface BaseUpdateRequest {
+  type: "agentManager.updateFromBase"
+  projectId?: string
+  worktreeId: string
+  sessionId?: string
+  model?: { providerID: string; modelID: string }
+  variant?: string
+  agent?: string
+}
 
 export interface TerminalFont {
   fontFamily: string
@@ -55,6 +65,7 @@ import type {
   PRCheck,
   PRComment,
   PRReviewer,
+  PRConversationComment,
 } from "../../../agent-manager/pr/pr-types"
 export type {
   PRState,
@@ -65,10 +76,17 @@ export type {
   PRComment,
   PRCommentReply,
   PRReviewer,
+  PRConversationComment,
+  PRReaction,
+  PRReactionContent,
 } from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
+  id?: string
+  viewerDidAuthor?: boolean
   number: number
+  baseRefOid?: string
+  headRefOid?: string
   title: string
   body?: string
   url: string
@@ -83,11 +101,13 @@ export interface PRStatus {
     checks: PRCheck[]
   }
   reviewers: PRReviewer[]
+  unresolvedThreads?: number
   comments?: {
     total: number
     unresolved: number
     comments: PRComment[]
   }
+  conversation?: PRConversationComment[]
   additions: number
   deletions: number
   files: number
@@ -103,6 +123,17 @@ export interface RunStatus {
   startedAt?: string
   finishedAt?: string
   error?: string
+}
+
+export interface CaffeinationState {
+  enabled: boolean
+  active: boolean
+  available: boolean
+  error?: string
+}
+
+export interface AgentManagerCaffeinationMessage extends CaffeinationState {
+  type: "agentManager.caffeination"
 }
 
 export interface ManagedSessionState {
@@ -147,6 +178,7 @@ export interface WorktreeFileDiff {
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
+  failed?: boolean
   stamp?: string
   kind?: "image"
   image?: DiffImage

@@ -234,6 +234,15 @@ export const dict: Record<Keys, string> = {
   "ui.message.deleteQueued": "Slett melding i kø",
   "ui.messagePart.mcp.input": "Inndata",
   "ui.messagePart.mcp.output": "Utdata",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Les meldinger fra agenter",
+  "ui.messagePart.board.all": "Alle agenter",
+  "ui.messagePart.board.primary": "Hovedagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} til {{to}}",
+  "ui.messagePart.board.empty": "Ingen meldinger fra agenter",
+  "ui.messagePart.board.stored": "Kun lagret. Levering og lesing er ikke bekreftet.",
+  // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Endret",

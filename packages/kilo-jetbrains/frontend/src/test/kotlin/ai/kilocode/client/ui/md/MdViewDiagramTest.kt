@@ -163,13 +163,13 @@ class MdViewDiagramTest : BasePlatformTestCase() {
     }
 
     /**
-     * `classDiagram`, `stateDiagram` and friends are valid mermaid this engine does not draw. Marking them
+     * `zenuml` and other types this engine does not draw are still valid mermaid. Marking them
      * red would report working markdown as broken, so they read as a note over the source instead.
      */
     fun `test an unsupported diagram type reads as a note rather than an error`() {
-        engine.out = Out.Err(Fault.Unsupported, "unsupported diagram type: Class")
+        engine.out = Out.Err(Fault.Unsupported, "unsupported diagram type: Unknown")
 
-        view.set("```mermaid\nclassDiagram\nA <|-- B\n```")
+        view.set("```mermaid\nzenuml\nA->B: hi\n```")
         drain()
 
         assertFalse(diagram().isVisible)

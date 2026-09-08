@@ -239,6 +239,7 @@ internal class SeqLayout(private val measure: Measure, private val spec: Spec) {
         is Mark.Box -> corners(mark.rect)
         is Mark.Oval -> corners(mark.rect)
         is Mark.Poly -> mark.points
+        is Mark.Sector -> listOf(Pt(mark.at.x - mark.r, mark.at.y - mark.r), Pt(mark.at.x + mark.r, mark.at.y + mark.r))
         is Mark.Edge -> mark.points
         is Mark.Text -> span(mark)
         is Mark.Group -> mark.marks.flatMap(::pts)
@@ -263,6 +264,7 @@ internal class SeqLayout(private val measure: Measure, private val spec: Spec) {
         is Mark.Box -> mark.copy(rect = move(mark.rect, dx, dy))
         is Mark.Oval -> mark.copy(rect = move(mark.rect, dx, dy))
         is Mark.Poly -> mark.copy(points = mark.points.map { move(it, dx, dy) })
+        is Mark.Sector -> mark.copy(at = move(mark.at, dx, dy))
         is Mark.Edge -> mark.copy(points = mark.points.map { move(it, dx, dy) })
         is Mark.Text -> mark.copy(at = move(mark.at, dx, dy))
         is Mark.Group -> mark.copy(marks = mark.marks.map { move(it, dx, dy) })

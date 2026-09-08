@@ -10,7 +10,7 @@ class ErrorTest {
 
     @Test
     fun `unsupported diagram types are rejected without parsing`() {
-        val out = draw("pie title Pets\n \"Dogs\" : 40")
+        val out = draw("zenuml\n A->B: hi")
 
         assertEquals(Fault.Unsupported, err(out).fault)
     }

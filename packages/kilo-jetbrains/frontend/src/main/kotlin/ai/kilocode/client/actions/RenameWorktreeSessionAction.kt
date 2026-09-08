@@ -4,8 +4,9 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionDataKeys
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAware
 
-class RenameWorktreeSessionAction : AnAction() {
+class RenameWorktreeSessionAction : AnAction(), DumbAware {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {

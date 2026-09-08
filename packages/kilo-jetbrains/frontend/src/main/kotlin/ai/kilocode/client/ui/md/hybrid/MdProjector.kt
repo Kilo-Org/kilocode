@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.md.hybrid
 
+import ai.kilocode.client.ui.md.MdCommon
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
@@ -7,13 +8,19 @@ import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.node.AbstractVisitor
 import org.commonmark.node.Block
+import org.commonmark.node.Code
 import org.commonmark.node.Document
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Node
 import org.commonmark.node.ThematicBreak
 import org.commonmark.parser.Parser
+import org.commonmark.renderer.NodeRenderer
+import org.commonmark.renderer.html.HtmlNodeRendererContext
 import org.commonmark.renderer.html.HtmlRenderer
+import org.nibor.autolink.LinkExtractor
+import org.nibor.autolink.LinkSpan
+import org.nibor.autolink.LinkType
 
 internal class MdProjector {
     private val extensions = listOf(
@@ -28,6 +35,9 @@ internal class MdProjector {
         .extensions(extensions)
         .escapeHtml(true)
         .sanitizeUrls(true)
+        // HtmlRenderer always appends the core node renderer last, so any factory added here wins
+        // for the node types it handles.
+        .nodeRendererFactory { context -> CodeLinks(context) }
         .build()
 
     fun project(text: String): Projection {
@@ -211,6 +221,46 @@ internal class MdProjector {
             }
         }
     }
+}
+
+/**
+ * Renders `Code` (inline code span) nodes, linkifying any `http(s)` URL found in the literal text.
+ *
+ * CommonMark's [AutolinkExtension] only scans [org.commonmark.node.Text] nodes, so a URL written in
+ * backticks is otherwise never linkified. This reuses the same URL scanner the extension is built on
+ * ([LinkExtractor], from the `autolink` library CommonMark depends on) to detect links, then relies on
+ * [org.commonmark.renderer.html.HtmlWriter] to escape both the link text and the `href` attribute the
+ * same way the core renderer would.
+ */
+private class CodeLinks(private val context: HtmlNodeRendererContext) : NodeRenderer {
+    companion object {
+        private val EXTRACTOR: LinkExtractor = LinkExtractor.builder().linkTypes(setOf(LinkType.URL)).build()
+    }
+
+    override fun getNodeTypes(): Set<Class<out Node>> = setOf(Code::class.java)
+
+    override fun render(node: Node) {
+        val code = node as Code
+        val html = context.writer
+        html.tag("code", context.extendAttributes(code, "code", emptyMap()))
+        val literal = code.literal
+        for (span in EXTRACTOR.extractSpans(literal)) {
+            val text = literal.substring(span.beginIndex, span.endIndex)
+            if (span !is LinkSpan || !web(text)) {
+                html.text(text)
+                continue
+            }
+            html.tag("a", mapOf("class" to MdCommon.URL_REF_CLASS, "href" to text))
+            html.text(text)
+            html.tag("/a")
+        }
+        html.tag("/code")
+    }
+
+    // LinkExtractor.linkTypes(URL) matches any "scheme://…", not just http(s) (e.g. file://, ftp://);
+    // restrict to what SessionFileLinks.isFileHref routes to the browser opener.
+    private fun web(text: String): Boolean =
+        text.startsWith("http://", ignoreCase = true) || text.startsWith("https://", ignoreCase = true)
 }
 
 internal sealed class Desc {

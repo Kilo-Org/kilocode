@@ -4,10 +4,12 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -17,6 +19,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
@@ -26,8 +29,8 @@ import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -41,9 +44,11 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override val id: String = ID
 
     override fun title(params: Map<String, String>): String {
-        return params["title"].takeIfPresent()
+        params["title"].takeIfPresent()?.let { return it }
+        val comparison = KiloDiffComparison.entries.firstOrNull { it.source == params["source"] }
+        return comparison?.title(params["branch"].takeIfPresent())
             ?: params["branch"].takeIfPresent()?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
-            ?: KiloBundle.message(if (params["source"] == "branch") "diff.editor.branch.title" else "diff.editor.session.title")
+            ?: KiloBundle.message("diff.editor.session.title")
     }
 
     override fun presentablePath(params: Map<String, String>): String = title(params)
@@ -51,7 +56,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override fun isValid(params: Map<String, String>): Boolean {
         val dir = params["directory"].takeIfPresent() ?: return false
         if (dir.isBlank()) return false
-        if (params["source"] == "branch") return true
+        if (params["source"] == "branch" || params["source"] == "local") return true
         if (params["source"] == "inline") return params["token"].takeIfPresent() != null
         return params["sessionId"].takeIfPresent() != null
     }
@@ -100,6 +105,37 @@ internal class KiloDiffEditorService(
 ) {
     internal val scope: CoroutineScope
         get() = cs
+
+    @RequiresEdt
+    fun open(directory: String, comparison: KiloDiffComparison, branch: String?, parent: Disposable) {
+        if (project.isDisposed || Disposer.isDisposed(parent) || !cs.isActive) return
+        val dir = FileUtil.toCanonicalPath(FileUtil.toSystemIndependentName(directory), '/', true)
+            .takeIfPresent() ?: return
+        val name = branch.takeIfPresent()
+        if (name != null) {
+            show(dir, comparison, name)
+            return
+        }
+        val job = cs.launch {
+            val branch = service<KiloWorkspaceService>().branchName(dir)
+            withContext(Dispatchers.Main) {
+                if (!project.isDisposed && !Disposer.isDisposed(parent)) show(dir, comparison, branch)
+            }
+        }
+        val guard = Disposable { job.cancel() }
+        Disposer.register(parent, guard)
+        job.invokeOnCompletion { Disposer.dispose(guard) }
+    }
+
+    @RequiresEdt
+    private fun show(dir: String, comparison: KiloDiffComparison, branch: String?) {
+        ensureDiffEditorKind()
+        val opened = project.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams(comparison.source, dir, null, comparison.title(branch), branch),
+        )
+        if (opened) Telemetry.send("Diff Editor Opened", mapOf("source" to comparison.source))
+    }
 
     fun load(params: Map<String, String>, parent: Disposable, done: (DiffEditorData) -> Unit) {
         val disposed = AtomicBoolean(false)
@@ -152,15 +188,14 @@ internal class KiloDiffEditorService(
         val store = project.service<KiloInlineDiffStore>()
         val session = project.service<KiloSessionService>()
         val files = when (params["source"]) {
-            // branch is authoritative here (no store seeding): recompute on every load/refresh so a
-            // re-open or Refresh always reflects the current worktree instead of a stale click seed.
             "branch" -> workspace.branchDiff(dir)
+            "local" -> workspace.localDiff(dir)
             "inline" -> store.get(params["token"].orEmpty()).orEmpty()
             else -> session.diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
         val branch = params["branch"].takeIfPresent()
-            ?: if (params["source"] == "branch") workspace.branchName(dir) else null
+            ?: if (params["source"] == "branch" || params["source"] == "local") workspace.branchName(dir) else null
         return DiffEditorData.Files(detail(params, dir, files, session), branch)
     }
 
@@ -178,6 +213,7 @@ internal class KiloDiffEditorService(
         // return the whole-session before/after and splice in changes from kept turns. Render the
         // scoped hunk patches directly instead.
         if (params["token"].takeIfPresent()?.startsWith("revert:") == true) return files
+        if (params["source"] == "branch" || params["source"] == "local") return files
         val sessionId = params["sessionId"].takeIfPresent()
         val message = message(params)
         LOG.info("diff editor detail source=${params["source"]} files=${files.size} session=${!sessionId.isNullOrBlank()} message=${!message.isNullOrBlank()}")
@@ -229,6 +265,27 @@ internal fun diffParams(source: String, directory: String, sessionId: String?, t
 
 fun ensureDiffEditorKind() {
     service<KiloEditorKindRegistry>().register(KiloDiffEditorKind)
+}
+
+enum class KiloDiffComparison(internal val source: String, private val title: String, private val named: String) {
+    BASE("branch", "diff.editor.branch.title", "diff.editor.branch.title.named"),
+    LOCAL("local", "diff.editor.local.title", "diff.editor.local.title.named"),
+    ;
+
+    internal fun title(branch: String?): String =
+        branch.takeIfPresent()?.let { KiloBundle.message(named, it) } ?: KiloBundle.message(title)
+}
+
+@RequiresEdt
+fun openKiloDiff(
+    project: Project,
+    directory: String,
+    comparison: KiloDiffComparison,
+    branch: String? = null,
+    parent: Disposable = project,
+) {
+    if (project.isDisposed || Disposer.isDisposed(parent)) return
+    project.service<KiloDiffEditorService>().open(directory, comparison, branch, parent)
 }
 
 private fun connecting(): JComponent = Stack.horizontal(gap = UiStyle.Gap.sm()).apply {

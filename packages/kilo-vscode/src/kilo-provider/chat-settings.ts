@@ -12,10 +12,21 @@ export function buildChatSettingsMessage() {
   }
 }
 
+export function buildTimelineSettingMessage() {
+  const config = vscode.workspace.getConfiguration("kilo-code.new")
+  return {
+    type: "timelineSettingLoaded" as const,
+    visible: config.get<boolean>("showTaskTimeline", true),
+  }
+}
+
 export function watchChatConfig(post: Post): vscode.Disposable {
   return vscode.workspace.onDidChangeConfiguration((event) => {
     if (event.affectsConfiguration("kilo-code.new.chat")) {
       post(buildChatSettingsMessage())
+    }
+    if (event.affectsConfiguration("kilo-code.new.showTaskTimeline")) {
+      post(buildTimelineSettingMessage())
     }
   })
 }

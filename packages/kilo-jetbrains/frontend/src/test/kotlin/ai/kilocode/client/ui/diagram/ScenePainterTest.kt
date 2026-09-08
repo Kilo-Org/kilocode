@@ -19,6 +19,7 @@ class ScenePainterTest {
                 Mark.Poly(listOf(Pt(15.0, 50.0), Pt(35.0, 45.0), Pt(45.0, 65.0)), Role.Cluster, Role.Border),
                 Mark.Edge(listOf(Pt(70.0, 50.0), Pt(110.0, 50.0)), Role.Accent, dash = true, thick = true, head = Head.Arrow),
                 Mark.Group("g", listOf(Mark.Text("T", Pt(90.0, 25.0), Anchor.Center, Role.Text, bold = true))),
+                Mark.Sector(Pt(115.0, 65.0), 12.0, 90.0, -270.0, null, Role.Border, tone = 0),
             ),
             Size(130.0, 80.0),
         )
@@ -30,7 +31,41 @@ class ScenePainterTest {
         assertNotEquals(0, img.rgb(60, 20))
         assertNotEquals(0, img.rgb(25, 55))
         assertNotEquals(0, img.rgb(105, 50))
+        assertNotEquals(0, img.rgb(112, 70))
         assertTrue(nonEmpty(img) > 300)
+    }
+
+    /** Every head variant paints something at the arrow tip without throwing. */
+    @Test
+    fun `test painter renders every head variant`() {
+        for (head in Head.entries.filter { it != Head.None }) {
+            val scene = Scene(
+                Type.Class,
+                listOf(Mark.Edge(listOf(Pt(10.0, 20.0), Pt(50.0, 20.0)), Role.Line, head = head)),
+                Size(70.0, 40.0),
+            )
+            val img = BufferedImage(70, 40, BufferedImage.TYPE_INT_ARGB)
+
+            ScenePainter.paint(img.createGraphics(), scene, palette())
+
+            assertTrue(nonEmpty(img) > 10, "head $head painted nothing")
+        }
+    }
+
+    /** Soft tones must fill translucently so overlapping chart bands stay readable. */
+    @Test
+    fun `test soft tone fills are translucent`() {
+        val scene = Scene(
+            Type.Radar,
+            listOf(Mark.Poly(listOf(Pt(5.0, 5.0), Pt(60.0, 5.0), Pt(60.0, 35.0), Pt(5.0, 35.0)), null, null, tone = 0, soft = true)),
+            Size(70.0, 40.0),
+        )
+        val img = BufferedImage(70, 40, BufferedImage.TYPE_INT_ARGB)
+
+        ScenePainter.paint(img.createGraphics(), scene, palette())
+
+        val alpha = img.rgb(30, 20)
+        assertTrue(alpha in 1..254, "expected a translucent fill but alpha was $alpha")
     }
 
     @Test

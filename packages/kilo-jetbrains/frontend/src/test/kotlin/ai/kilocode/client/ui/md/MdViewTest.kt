@@ -166,6 +166,83 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(view.html().contains("https://example.com"))
     }
 
+    fun `test inline code urls become underlined link colored links`() {
+        view.set("Release PR: `https://github.com/Kilo-Org/kilocode/pull/13524`")
+        val code = MdCommon.hex(MdCommon.defaults(SessionEditorStyle.current()).inlineCodeFg)
+        val link = MdCommon.hex(MdCommon.defaults(SessionEditorStyle.current()).linkColor)
+        val html = view.html()
+        val sheet = view.overrideSheet()
+
+        assertTrue(
+            html.contains(
+                "<code style=\"color: $code\">" +
+                    "<a class=\"kilo-url-ref\" href=\"https://github.com/Kilo-Org/kilocode/pull/13524\">" +
+                    "https://github.com/Kilo-Org/kilocode/pull/13524</a></code>",
+            ),
+        )
+        assertTrue(sheet.contains("a.kilo-url-ref, code a.kilo-url-ref { color: $link; font-family:"))
+        assertTrue(sheet.contains("monospace; text-decoration: underline"))
+    }
+
+    fun `test inline code urls keep query separators in href`() {
+        view.set("Open `https://example.com/a?b=1&c=2` now")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a?b=1&amp;c=2\">https://example.com/a?b=1&amp;c=2</a>"))
+    }
+
+    fun `test inline code urls exclude trailing punctuation and unbalanced brackets`() {
+        view.set("See `https://example.com/a.` and `(https://example.com/b)`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>."))
+        assertTrue(html.contains("(<a class=\"kilo-url-ref\" href=\"https://example.com/b\">https://example.com/b</a>)"))
+    }
+
+    fun `test inline code urls keep balanced brackets inside link`() {
+        view.set("See `https://example.com/a_(b)`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a_(b)\">https://example.com/a_(b)</a>"))
+    }
+
+    fun `test autolinked urls are not wrapped again`() {
+        view.set("Visit https://example.com/a for details")
+        val html = view.html()
+
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test markdown link urls are not wrapped again`() {
+        view.set("[docs](https://example.com/a)")
+        val html = view.html()
+
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test fenced code urls are not links`() {
+        view.set("```text\nhttps://example.com/a\n```")
+        val html = view.html()
+
+        assertTrue(html.contains("https://example.com/a"))
+        assertFalse(html.contains("kilo-url-ref"))
+    }
+
+    fun `test inline code urls do not swallow following file refs`() {
+        view.set("`https://example.com/a` then packages/opencode/src/session/prompt.ts")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>"))
+        assertTrue(html.contains("<a class=\"kilo-file-ref\" href=\"packages/opencode/src/session/prompt.ts\">"))
+    }
+
+    fun `test inline code urls stop at characters that cannot appear in a url`() {
+        view.set("See `https://example.com/a<b>`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>&lt;b&gt;"))
+    }
+
     // ---- append ----
 
     fun `test append accumulates source`() {

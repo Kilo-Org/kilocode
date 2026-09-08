@@ -83,13 +83,13 @@ describe("send_file tool", () => {
     const tool = { id: "send_file" } as Tool.Def
 
     status.mockReturnValue({ enabled: false, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: false })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+    expect(KiloToolRegistry.available(tool)).toBe(false)
 
     status.mockReturnValue({ enabled: true, connected: true })
-    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(true)
+    expect(KiloToolRegistry.available(tool)).toBe(true)
   })
 
   test("returns unavailable when not connected", async () => {
@@ -448,6 +448,7 @@ describe("send_file tool", () => {
         save: tool,
         manager: tool,
         process: tool,
+        browser: tool,
         chart: tool,
         image: tool,
         notify: { id: "notify_user" } as Tool.Def,

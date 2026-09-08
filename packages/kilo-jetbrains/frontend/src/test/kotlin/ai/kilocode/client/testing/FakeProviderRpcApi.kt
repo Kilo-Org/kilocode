@@ -26,8 +26,10 @@ class FakeProviderRpcApi : KiloProviderRpcApi {
     val callbacks = mutableListOf<ProviderOAuthCallbackDto>()
     val authorizesReady = ArrayDeque<CompletableDeferred<ProviderOAuthReadyDto>>()
     val callbacksReady = ArrayDeque<CompletableDeferred<ProviderActionResultDto>>()
+    val fetches = mutableListOf<CustomModelFetchDto>()
     var ready = ProviderOAuthReadyDto()
     var disconnectError: Exception? = null
+    var fetchResult = CustomModelFetchResultDto()
 
     override suspend fun state(directory: String): ProviderSettingsDto {
         assertNotEdt("provider.state")
@@ -77,6 +79,7 @@ class FakeProviderRpcApi : KiloProviderRpcApi {
 
     override suspend fun fetchCustomModels(input: CustomModelFetchDto): CustomModelFetchResultDto {
         assertNotEdt("provider.fetchCustomModels")
-        return CustomModelFetchResultDto()
+        fetches.add(input)
+        return fetchResult
     }
 }

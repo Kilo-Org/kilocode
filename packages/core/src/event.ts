@@ -7,6 +7,7 @@ import { and, asc, eq, gt, inArray } from "drizzle-orm"
 import { Database } from "./database/database"
 import { EventSequenceTable, EventTable } from "./event/sql"
 import * as EventStorage from "./kilocode/event-storage" // kilocode_change - released tool content shapes
+import * as EventBatch from "./kilocode/event-batch" // kilocode_change
 import { Location } from "./location"
 import { makeGlobalNode } from "./effect/app-node"
 import { isDeepStrictEqual } from "node:util"
@@ -131,6 +132,12 @@ export interface Interface {
     data: Data<D>,
     options?: PublishOptions,
   ) => Effect.Effect<Payload<D>>
+  // kilocode_change start
+  readonly publishAll: (
+    entries: readonly { readonly definition: Definition; readonly data: Data<Definition> }[],
+    options?: PublishOptions,
+  ) => Effect.Effect<void>
+  // kilocode_change end
   readonly subscribe: <D extends Definition>(definition: D) => Stream.Stream<Payload<D>>
   readonly all: () => Stream.Stream<Payload>
   readonly durable: (input: { readonly aggregateID: string; readonly after?: number }) => Stream.Stream<Payload>
@@ -624,6 +631,7 @@ export const layerWith = (options?: LayerOptions) =>
 
       return Service.of({
         publish,
+        publishAll: EventBatch.make({ db, projectors, durable: pubsub.durable, notify }), // kilocode_change
         subscribe,
         all: streamAll,
         durable,

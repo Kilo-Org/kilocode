@@ -162,6 +162,8 @@ data class PromptPartDto(
     val url: String? = null,
     val filename: String? = null,
     val source: PartSourceDto? = null,
+    /** Hides the part from the transcript; used for handoff notes the agent reads but the user never sees. */
+    val synthetic: Boolean? = null,
 )
 
 // --- Streaming Events ---
@@ -316,6 +318,25 @@ sealed class ChatEventDto {
         val sessionID: String,
         val todos: List<TodoDto> = emptyList(),
     ) : ChatEventDto()
+
+    /**
+     * The CLI cancelled this session's turn on its own, for [reason].
+     *
+     * Synthesized by the backend, never parsed from a CLI event. The CLI reports a server-side
+     * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
+     * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
+     */
+    @Serializable
+    @SerialName("session.interrupted")
+    data class SessionInterrupted(
+        val sessionID: String,
+        val reason: String,
+    ) : ChatEventDto() {
+        companion object {
+            /** The CLI disposed its instances — a config, provider, or organization change — and cancelled every running turn. */
+            const val RELOAD = "reload"
+        }
+    }
 }
 
 // --- Permission DTOs ---
@@ -442,13 +463,4 @@ data class DiffFileDto(
     val status: String? = null,
     val before: String? = null,
     val after: String? = null,
-)
-
-// --- Config Update ---
-
-@Serializable
-data class ConfigUpdateDto(
-    val model: String? = null,
-    val agent: String? = null,
-    val temperature: Double? = null,
 )

@@ -249,6 +249,64 @@ class KiloBackendActivityManagerTest {
         assertEquals("/repo/new", snap["ses_new"]?.directory)
     }
 
+    @Test
+    fun `interrupt badges the session as failed`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        manager.interrupt(listOf("ses_1"))
+        statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+
+        await("ses_1", SessionActivityKindDto.ERROR)
+    }
+
+    /**
+     * The disposal that cancels a turn reloads the app in the same breath, and that reload calls
+     * [KiloBackendActivityManager.start] again. Clearing on that in-place restart erased the badge the
+     * disposal had just recorded, leaving a lost turn resting as if it had finished cleanly.
+     */
+    @Test
+    fun `interrupt badge survives the reload that follows a disposal`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        manager.interrupt(listOf("ses_1"))
+
+        // What load() does after a disposal: same flows, fresh collectors.
+        val reloaded = MutableStateFlow(mapOf("ses_1" to SessionStatusDto("idle")))
+        manager.start(reloaded, { directories[it] }, events)
+
+        await("ses_1", SessionActivityKindDto.ERROR)
+    }
+
+    @Test
+    fun `resumed work clears an interrupt badge`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        start()
+        manager.interrupt(listOf("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        events.emit(ChatEventDto.TurnOpen("ses_1"))
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+
+        await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    /** A real teardown is a disconnect, not a restart, so nothing may outlive it. */
+    @Test
+    fun `stop clears an interrupt badge`() = runBlocking<Unit> {
+        directories["ses_1"] = "/repo/wt"
+        start()
+        manager.interrupt(listOf("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        manager.stop()
+
+        assertEquals(emptyMap(), manager.activity.value)
+    }
+
     private suspend fun await(id: String, kind: SessionActivityKindDto) = withTimeout(5_000) {
         manager.activity.first { it[id]?.kind == kind }
     }

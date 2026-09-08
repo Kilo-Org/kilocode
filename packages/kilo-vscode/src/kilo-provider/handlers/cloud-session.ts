@@ -9,7 +9,8 @@ import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocod
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
 import type { MessageFile } from "../message-files"
-import { reviewMetadata, type ReviewMessageData } from "../../shared/review-comments"
+import { type ReviewMessageData } from "../../shared/review-comments"
+import { feedbackMetadata, type BrowserFeedbackData } from "../../shared/browser-feedback"
 import { completesWithoutStatus } from "../command-completion"
 
 const TIMEOUT = 30_000
@@ -22,6 +23,7 @@ export interface CloudSessionContext {
     recordMessageSessionId(messageId: string, sessionId: string): void
   }
   postMessage(msg: unknown): void
+  notify?(message: string): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
   runWithMessageConfirmation?<T>(
@@ -124,6 +126,7 @@ export async function handleImportAndSend(
   review?: ReviewMessageData,
   command?: string,
   commandArgs?: string,
+  browserFeedback?: BrowserFeedbackData,
 ): Promise<void> {
   if (!ctx.client) {
     ctx.postMessage({
@@ -193,7 +196,7 @@ export async function handleImportAndSend(
           filename: f.filename,
           source: f.source,
         }))
-        await client.session.command(
+        const result = await client.session.command(
           {
             sessionID: session.id,
             directory: dir,
@@ -207,6 +210,13 @@ export async function handleImportAndSend(
           },
           { throwOnError: true },
         )
+        if (command === "goal" && !commandArgs?.trim()) {
+          const message = result.data.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+          if (message) ctx.notify?.(message)
+        }
         return
       }
 
@@ -216,7 +226,7 @@ export async function handleImportAndSend(
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text, metadata: review ? reviewMetadata(review) : undefined })
+      parts.push({ type: "text", text, metadata: feedbackMetadata(review, browserFeedback) })
 
       const editorContext = await ctx.gatherEditorContext()
       await client.session.promptAsync(
@@ -247,6 +257,7 @@ export async function handleImportAndSend(
       messageID,
       files,
       review: command ? undefined : review,
+      browserFeedback: command ? undefined : browserFeedback,
     })
   }
 }

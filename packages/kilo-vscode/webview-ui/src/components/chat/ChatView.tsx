@@ -31,7 +31,9 @@ import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
+  projectId?: string
   onSelectSession?: (id: string) => void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   onForkSession?: (sessionId: string) => void
@@ -39,6 +41,7 @@ interface ChatViewProps {
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   worktree?: boolean
+  onUpdateBase?: () => void
   promptBoxId?: string
   terminalContext?: () => string | undefined
   worktrees?: () => WorktreeReference[]
@@ -47,6 +50,7 @@ interface ChatViewProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
+  introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
@@ -64,11 +68,17 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const canContinueInWorktree = () => props.continueInWorktree === true
 
   const id = () => session.currentSessionID()
+  const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.
   const hasMessages = () => session.messages().length > 0 || session.submitting()
 
-  // "Continue in Worktree" state
+  const [editable, setEditable] = createSignal(false)
+  const [editing, setEditing] = createSignal<{ sessionID: string; messageID: string }>()
+  const edit = (sessionID: string, messageID: string) => {
+    if (props.readonly || !editable() || editing()) return
+    setEditing({ sessionID, messageID })
+  }
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
@@ -94,7 +104,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest() || session.submitting() || session.status() !== "idle"
+  const dock = () =>
+    !props.readonly || !!goal() || !!permissionRequest() || session.submitting() || session.status() !== "idle"
   // The session dock stays empty while another surface owns the interaction:
   // a permission card, a pending question or suggestion, or agent requirements.
   // A spinner there would claim the agent is working while it waits on the user.
@@ -103,7 +114,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
+      if (
+        e.key !== "Escape" ||
+        (!session.submitting() && session.status() === "idle" && !goal()?.active) ||
+        e.defaultPrevented
+      )
+        return
       e.preventDefault()
       session.abort()
     }
@@ -222,8 +238,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean) => (
-    <Show when={hasActions(hasChat)}>
+  const renderActions = (hasChat: boolean, control: () => JSX.Element) => (
+    <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
           <Show when={canStartSession(hasChat)}>
@@ -338,6 +354,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Tooltip>
             </>
           </Show>
+          {control()}
         </div>
       </div>
     </Show>
@@ -349,17 +366,22 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
           <SessionTabStrip />
         </Show>
-        <TaskHeader readonly={props.readonly} />
+        <TaskHeader readonly={props.readonly} projectId={props.projectId} />
         <div class="chat-messages-wrapper">
           <div class="chat-messages">
             <MessageList
               onSelectSession={props.onSelectSession}
+              isSessionOpen={props.isSessionOpen}
               onShowHistory={props.onShowHistory}
               onForkMessage={props.onForkMessage}
+              onEditMessage={edit}
+              queuedDisabled={editing()?.sessionID === id() && !!editing()}
+              editDisabled={!editable() || !!editing()}
               questions={standaloneQuestions}
               suggestions={standaloneSuggestions}
               readonly={props.readonly}
               emptyState={props.emptyState}
+              introduction={props.introduction}
               announce={isSidebar()}
               sessionID={pendingSessionID}
             />
@@ -382,15 +404,20 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </Show>
             <SessionDock
               blocked={dockBlocked()}
-              hasActions={() => !props.readonly && hasActions(hasMessages())}
-              actions={() => renderActions(hasMessages())}
+              hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
+              actions={(control) => renderActions(hasMessages(), control)}
+              readonly={props.readonly}
             />
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}
+                edit={editing()}
+                onEditComplete={() => setEditing(undefined)}
+                onEditReady={setEditable}
                 suggesting={suggesting}
                 questioning={questioning}
                 worktree={props.worktree}
+                onUpdateBase={props.onUpdateBase}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
                 worktrees={props.worktrees}

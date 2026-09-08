@@ -55,6 +55,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.event.KeyEvent
@@ -272,6 +273,7 @@ internal class ProvidersSettingsUi(
                 baseUrl = cfg.options["baseURL"].orEmpty(),
                 envVar = cfg.env.firstOrNull(),
                 models = cfg.models.values.map { it.id },
+                headers = cfg.headers,
             ),
         )
     }
@@ -617,6 +619,7 @@ internal data class CustomProviderEdit(
     val baseUrl: String,
     val envVar: String?,
     val models: List<String>,
+    val headers: Map<String, String> = emptyMap(),
 )
 
 internal class CustomProviderDialog(
@@ -703,12 +706,21 @@ internal class CustomProviderDialog(
             KiloBundle.message("settings.providers.customId") to id,
             KiloBundle.message("settings.providers.customName") to name,
             KiloBundle.message("settings.providers.customUrl") to url,
-            KiloBundle.message("settings.providers.apiKey") to key,
-            KiloBundle.message("settings.providers.customEnv") to env,
         ).forEach { (label, field) ->
             panel.next(JBLabel(label))
             panel.next(field)
         }
+        panel.next(JBLabel(KiloBundle.message("settings.providers.apiKey")))
+        panel.next(key)
+        if (existing != null) {
+            panel.next(
+                JBLabel(KiloBundle.message("settings.providers.customKeyStored")).apply {
+                    foreground = UIUtil.getContextHelpForeground()
+                },
+            )
+        }
+        panel.next(JBLabel(KiloBundle.message("settings.providers.customEnv")))
+        panel.next(env)
         panel.next(JBLabel(KiloBundle.message("settings.providers.customModels")))
         panel.next(JPanel(BorderLayout(UiStyle.Gap.sm(), 0)).apply {
             add(models, BorderLayout.CENTER)
@@ -797,9 +809,14 @@ internal class CustomProviderDialog(
             return
         }
         startFetch()
+        val envName = env.text.trim().takeIf { it.isNotBlank() }
         val input = CustomModelFetchDto(
             baseUrl = url.text.trim(),
+            directory = directory,
+            providerId = id.text.trim().takeIf { it.isNotBlank() },
             apiKey = String(key.password).takeIf { it.isNotBlank() },
+            env = envName,
+            headers = existing?.headers ?: emptyMap(),
         )
         val current = token
         job = cs.launch {
@@ -819,17 +836,24 @@ internal class CustomProviderDialog(
                 finishFetch()
                 val error = result.error
                 if (error != null) {
-                    fail(error)
+                    fail(envHint(error, envName, result.envMissing))
                     return@withContext
                 }
                 val ids = result.models.mapNotNull { it.trim().takeIf(String::isNotBlank) }.distinct()
                 if (ids.isEmpty()) {
-                    fail(KiloBundle.message("settings.providers.customModelsEmpty"))
+                    fail(envHint(KiloBundle.message("settings.providers.customModelsEmpty"), envName, result.envMissing))
                     return@withContext
                 }
                 showModelPopup(ids)
             }
         }
+    }
+
+    // Local-only providers (e.g. Ollama, LM Studio) need no credential, so a missing env var must
+    // not block the fetch — only annotate the resulting error with which variable was unresolved.
+    private fun envHint(message: String, envName: String?, envMissing: Boolean): String {
+        if (!envMissing || envName == null) return message
+        return "$message ${KiloBundle.message("settings.providers.customEnvMissing", envName)}"
     }
 
     @RequiresEdt

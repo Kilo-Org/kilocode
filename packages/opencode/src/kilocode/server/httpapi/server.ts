@@ -19,10 +19,10 @@ import { configConsoleHandlers } from "./handlers/config-console"
 import { enhancePromptHandlers } from "./handlers/enhance-prompt"
 import { indexingHandlers } from "./handlers/indexing"
 import { instanceReloadHandlers } from "./handlers/instance-reload"
-import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
 import { memoryHandlers } from "./handlers/memory"
+import { migrateHandlers } from "./handlers/migrate"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sandboxHandlers } from "./handlers/sandbox"
@@ -40,10 +40,10 @@ export const provide = Layer.provide([
   enhancePromptHandlers,
   indexingHandlers,
   instanceReloadHandlers,
-  interactiveTerminalHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
   memoryHandlers,
+  migrateHandlers,
   networkHandlers,
   remoteHandlers,
   sandboxHandlers,

@@ -59,7 +59,7 @@ jobs:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-ui) # kilocode_change
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 15
 
     steps:
@@ -221,7 +221,7 @@ jobs:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-vscode webview) # kilocode_change
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 15
     env:
       NODE_OPTIONS: --max-old-space-size=4096

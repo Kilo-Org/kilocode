@@ -33,6 +33,7 @@ import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
@@ -359,7 +360,7 @@ const layer = Layer.effect(
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
-        if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
+        if (!KiloToolRegistry.available(tool)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
           if (cfg.web_search === true) return true // kilocode_change
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
@@ -516,6 +517,7 @@ export const node = LayerNode.suspend(() =>
       Skill.node,
       Session.node,
       BackgroundJob.node,
+      SessionDrain.node,
       Provider.node,
       LSP.node,
       Instruction.node,

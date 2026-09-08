@@ -20,18 +20,97 @@ data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
 @Serializable
 data class WorktreeStatsDto(
     val path: String,
+    /** Committed additions vs `merge-base(base, HEAD)` — GitHub's "Files changed" number. */
     val additions: Int = 0,
     val deletions: Int = 0,
     val ahead: Int = 0,
     val behind: Int = 0,
     val files: Int = 0,
+    /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
+    val base: String = "",
 )
 
 @Serializable
 data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
 
+/**
+ * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
+ * together. Deliberately separate from [WorktreeStatsDto], which is measured against the base branch.
+ */
+@Serializable
+data class WorktreeDirtyDto(
+    val path: String,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val files: Int = 0,
+    /** How many of [files] are untracked. Their additions are line counts; deletions are always 0. */
+    val untracked: Int = 0,
+    /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
+    val unpushed: Int = 0,
+)
+
+@Serializable
+data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
+
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
+
+/**
+ * Aggregate review verdict for a pull request, from GitHub's `reviewDecision`. Orthogonal to
+ * [GhState]: a draft PR can be approved, and an open one can be waiting on review.
+ *
+ * [PENDING] means a review is required but not yet given; [NONE] means the repository asks for none.
+ */
+@Serializable
+enum class GhReview { NONE, PENDING, APPROVED, CHANGES_REQUESTED }
+
+/** Rolled-up CI verdict for a pull request head. [NONE] means the head reports no checks at all. */
+@Serializable
+enum class GhChecks { NONE, PENDING, PASSED, FAILED }
+
+/**
+ * Rolled-up CI state for a pull request head, from GitHub's `statusCheckRollup`.
+ *
+ * Counts only, deliberately: per-check names, URLs, and timestamps would make every poll produce a
+ * DTO that compares unequal to the last one, and both `WorktreeRow.equals` and `WorktreeNameCache`
+ * gate listener/row refreshes on whole-DTO equality. Aggregates stay stable between polls that found
+ * nothing new. [total] excludes skipped checks, matching what GitHub's own PR page counts.
+ */
+@Serializable
+data class GhChecksDto(
+    val state: GhChecks = GhChecks.NONE,
+    val total: Int = 0,
+    val passed: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+)
+
+/**
+ * Review conversations on a pull request, from GitHub's `reviewThreads`.
+ *
+ * Counts only, for the same reason as [GhChecksDto]. [total] counts conversations, not individual
+ * comments — a thread with a dozen replies is one. [unresolved] counts the threads nobody has marked
+ * resolved, outdated ones included, which is what GitHub's own "unresolved conversations" number says.
+ *
+ * Both are read from the first 100 threads, so a pull request with more under-reports. That bound is
+ * GitHub's page size rather than a limit worth paginating for: no reviewer scans a hundredth thread from
+ * a worktree row.
+ */
+@Serializable
+data class GhCommentsDto(
+    val total: Int = 0,
+    val unresolved: Int = 0,
+)
+
+/**
+ * Whether a pull request still merges into its base branch, from GitHub's `mergeable`.
+ *
+ * [UNKNOWN] is what GitHub answers for the first seconds after a push, because it computes mergeability
+ * asynchronously, and also what an older `gh` or a refused field leaves behind. It therefore has to read as
+ * "nothing to report" — the absence of a verdict is never evidence that the branches merge cleanly.
+ */
+@Serializable
+enum class GhMerge { UNKNOWN, CLEAN, CONFLICTING }
 
 @Serializable
 data class WorktreePrDto(
@@ -40,10 +119,24 @@ data class WorktreePrDto(
     val state: GhState,
     val url: String,
     val title: String = "",
+    val review: GhReview = GhReview.NONE,
+    val checks: GhChecksDto = GhChecksDto(),
+    val comments: GhCommentsDto = GhCommentsDto(),
+    /** Whether the head still merges into base. Answered by the same request as [checks]. */
+    val merge: GhMerge = GhMerge.UNKNOWN,
 )
 
+/**
+ * Why gh cannot answer, or [OK] when it can.
+ *
+ * [RATE_LIMITED] is temporary and fixes itself, unlike the others: GitHub refused the query because the
+ * token's hourly budget is spent. It still has to be a state of its own, because the alternative is
+ * reading a refusal as "this checkout has no pull request" — which blanks every badge with no reason
+ * given, and costs the most calls doing it, since a lookup that stops at the first answer instead walks
+ * its whole strategy ladder.
+ */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
+enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
 
 @Serializable
 data class WorktreePrListDto(

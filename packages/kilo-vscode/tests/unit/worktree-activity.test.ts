@@ -450,6 +450,59 @@ describe("WorktreeActivity", () => {
     expect(statuses).toHaveLength(1)
   })
 
+  it("preserves activity during reconnect without accepting snapshots from the previous stream", async () => {
+    const stale = defer<{ data: Snapshot["statuses"] }>()
+    const fresh = defer<{ data: Snapshot["statuses"] }>()
+    const replies = [Promise.resolve({ data: snapshot({ s1: "busy" }).statuses }), stale.promise, fresh.promise]
+    const client = {
+      session: { status: () => replies.shift()! },
+      permission: { list: async () => ({ data: [] }) },
+      question: { list: async () => ({ data: [] }) },
+    }
+    const conn = connection(client)
+    const posted: string[][] = []
+    const wrapper = createWorktreeActivity({
+      connection: conn as never,
+      paths: () => ["/repo"],
+      post: (active) => posted.push(active),
+      status: () => {},
+      lifecycle: () => {},
+      log: (err) => {
+        throw err
+      },
+    })
+    await wrapper.sync()
+    expect(posted.at(-1)).toEqual(["/repo"])
+
+    const pending = wrapper.sync(true)
+    await Promise.resolve()
+    const count = posted.length
+    conn.change("connecting")
+    await wrapper.sync()
+    expect(posted).toHaveLength(count)
+    expect(posted.at(-1)).toEqual(["/repo"])
+    expect(replies).toHaveLength(1)
+
+    conn.change("connected")
+    const recovered = wrapper.sync()
+    stale.resolve({ data: {} })
+    await pending
+    expect(posted.at(-1)).toEqual(["/repo"])
+    fresh.resolve({ data: {} })
+    await recovered
+    expect(posted.at(-1)).toEqual([])
+    expect(replies).toHaveLength(0)
+
+    conn.emit(status("s1", "busy"), "/repo")
+    expect(posted.at(-1)).toEqual(["/repo"])
+    conn.change("error")
+    expect(posted.at(-1)).toEqual([])
+    conn.change("connecting")
+    await wrapper.sync(true)
+    expect(posted.at(-1)).toEqual([])
+    wrapper.dispose()
+  })
+
   it("replays before a forced sync checks connection state", async () => {
     const client = {
       session: { status: async () => ({ data: { s1: { type: "busy" } } }) },

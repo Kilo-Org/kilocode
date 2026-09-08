@@ -18,22 +18,25 @@ import type {
   WorktreeGitStats,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
-import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
+import { useBaseUpdate } from "./update-from-base"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
 import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
+import type { WorktreeDelete } from "./worktree-delete"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
+import { createWorktreeCompletion } from "./worktree-completion"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -41,6 +44,7 @@ interface Props {
   project: AgentProjectSnapshot
   state?: AgentManagerStateMessage
   store?: ProjectStore
+  deletion: WorktreeDelete
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
   activityFor: (worktreeId: string | null) => Activity
@@ -55,6 +59,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -62,6 +67,7 @@ interface Props {
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
     createEffect(() => {
@@ -69,7 +75,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       if (state) store.applyState(state)
     })
   }
-  const [pending, setPending] = createSignal<string>()
   const [renaming, setRenaming] = createSignal<string>()
   const [renamingSection, setRenamingSection] = createSignal<string>()
   const [pendingSection, setPendingSection] = createSignal<
@@ -78,21 +83,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const [dragging, setDragging] = createSignal<string>()
   const [dragOrigin, setDragOrigin] = createSignal<string[]>()
   const [name, setName] = createSignal("")
-  let pendingTimer: ReturnType<typeof setTimeout> | undefined
-  onCleanup(() => clearTimeout(pendingTimer))
-  /** Arm on the first click, execute on the second, matching the legacy sidebar. */
-  const confirmDelete = (worktreeId: string) => {
-    if (props.busy(worktreeId) || props.blocked(worktreeId)) return
-    if (pending() === worktreeId) {
-      clearTimeout(pendingTimer)
-      setPending(undefined)
-      post({ type: "agentManager.deleteWorktree", worktreeId })
-      return
-    }
-    clearTimeout(pendingTimer)
-    setPending(worktreeId)
-    pendingTimer = setTimeout(() => setPending(undefined), 2500)
-  }
   const state = () => props.state
   const sessions = (worktreeId: string | null) => rootSessions(props.sessions ?? [], worktreeId)
   const active = () => props.selectedProject === props.project.id
@@ -100,7 +90,12 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sections = () => store.sections()
   const worktrees = () => store.worktrees()
   const order = () => store.worktreeOrder()
-  const sorted = createMemo(() => sortWorktrees(worktrees(), order()))
+  const completion = createWorktreeCompletion(
+    () => sortWorktrees(worktrees(), order()),
+    () => props.project.id,
+    (wt) => wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
+  )
+  const sorted = completion.rows
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
@@ -233,12 +228,17 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     return (
       <div use:sortable class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}>
         <WorktreeItem
+          completed={completion.completed(worktree.id)}
+          onCompletionEnd={() => completion.release(worktree.id)}
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
           label={worktree.label || label()}
           subtitle={worktree.label ? (worktree.label !== worktree.branch ? worktree.branch : undefined) : subtitle()}
           active={active() && props.selection === worktree.id}
-          pendingDelete={pending() === worktree.id}
+          pendingDelete={
+            props.deletion.pending()?.projectId === props.project.id &&
+            props.deletion.pending()?.worktreeId === worktree.id
+          }
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
@@ -263,13 +263,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
           }
           onMoveToNewSection={() => createSection([worktree.id])}
-          onClick={() => {
-            if (pending() === worktree.id) return confirmDelete(worktree.id)
-            props.onSelectWorktree(props.project.id, worktree.id)
-          }}
+          onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
+          onCancelDelete={props.deletion.cancel}
           onDelete={(event) => {
             event.stopPropagation()
-            confirmDelete(worktree.id)
+            props.deletion.confirm(props.project.id, worktree.id)
           }}
           onStartRename={(value) => {
             setName(value)
@@ -278,9 +276,22 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onRenameInput={setName}
           onCommitRename={() => commitRename(worktree.id)}
           onCancelRename={cancelRename}
-          onRemoveStale={() => post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })}
+          onRemoveStale={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
+            props.deletion.select(props.project.id, worktree.id)
+          }}
+          onUpdateBase={() =>
+            updateBase(
+              worktree.id,
+              props.project.id,
+              state()?.sessions.find(
+                (item) => item.worktreeId === worktree.id && item.id === props.currentSessionID?.(),
+              )?.id,
+            )
+          }
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
+          onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
           onOpenPR={() => {
             const url = props.prs?.[worktree.id]?.url
             post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })
@@ -298,18 +309,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         data-sidebar-id={`${props.project.id}:local`}
         onClick={() => props.onSelectLocal(props.project.id)}
       >
-        <span class="am-local-status" data-activity={localState()} aria-label={props.t(label(localState()))}>
-          <ActivityIcon
-            state={localState()}
-            idle={
-              <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-                <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-                <path d="M10 13.5V16.5" stroke="currentColor" />
-              </svg>
-            }
-          />
-        </span>
+        <LocalActivity state={localState()} label={props.t(label(localState()))} />
         <div class="am-local-text">
           <span class="am-local-label">{props.t("agentManager.local")}</span>
           <Show when={props.local === undefined}>

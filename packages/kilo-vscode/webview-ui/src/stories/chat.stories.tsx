@@ -9,7 +9,7 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
-import { batch, createSignal } from "solid-js"
+import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -26,20 +26,26 @@ import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
+import { getVSCodeAPI } from "../context/vscode"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
+  BrowserReference,
   Part,
   QuestionRequest,
   ReviewComment,
   ReviewCommentEntry,
+  SessionBoard,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
+  ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
@@ -203,13 +209,19 @@ export const ChatViewSessionDockStability: Story = {
   name: "ChatView — session dock keeps its height",
   render: () => {
     const [busy, setBusy] = createSignal(false)
+    const [goal, setGoal] = createSignal(false)
     // Statuses of deliberately different widths: the label swap is what used to
     // shove the centered spinner sideways.
     const labels = ["Thinking…", "Searching the codebase", "Making edits"]
     const [step, setStep] = createSignal(0)
     const status = () => (busy() ? "busy" : "idle")
+    const base = mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" })
     const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      ...base,
+      currentSession: () => ({
+        ...base.currentSession(),
+        goal: goal() ? { text: "Keep the session controls available", active: busy() } : undefined,
+      }),
       status,
       statusInfo: () => ({ type: status() }),
       statusText: () => (busy() ? labels[step() % labels.length] : undefined),
@@ -224,12 +236,15 @@ export const ChatViewSessionDockStability: Story = {
         <ServerContext.Provider value={mockServer as any}>
           <SessionContext.Provider value={session as any}>
             <WorktreeModeProvider>
-              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+              <div style={{ height: "400px", display: "flex", "flex-direction": "column" }}>
                 <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
                   toggle busy
                 </button>
                 <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
                   next status
+                </button>
+                <button data-testid="toggle-goal" onClick={() => setGoal(!goal())}>
+                  toggle goal
                 </button>
                 <ChatView onForkSession={() => undefined} continueInWorktree />
               </div>
@@ -259,6 +274,28 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
       type: "text",
       text: `${prefix}\n\nPlease address these review comments.`,
       metadata: reviewMetadata({ version: 1, comments }),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
+function browserMessage(references: BrowserReference[]) {
+  const data = { version: 1 as const, references }
+  const message: Message = {
+    id: "browser-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "browser-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${formatBrowserFeedback(references)}\n\nPlease fix the selected browser elements.`,
+      metadata: feedbackMetadata(undefined, data),
     },
   ]
   return <VscodeUserMessage message={message} parts={parts} />
@@ -295,6 +332,45 @@ export const UserMessageReviewComments: Story = {
   },
 }
 
+export const UserMessageMixedReviewComments: Story = {
+  name: "User message - local and PR comments",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {reviewMessage([
+          {
+            id: "local-note",
+            file: "src/review.ts",
+            side: "additions",
+            line: 12,
+            comment: "Keep the local draft when the active session changes.",
+            selectedText: "const draft = drafts.get(session)",
+          },
+          {
+            id: "pr-kilo",
+            origin: "pr",
+            author: "kilo-code-bot",
+            file: "src/review.ts",
+            line: 12,
+            side: "additions",
+            body: "This request needs a guard against stale session state.",
+            replies: [{ author: "octocat", body: "Keep the draft scoped to the original session." }],
+          },
+          {
+            id: "pr-reviewer",
+            origin: "pr",
+            author: "octocat",
+            file: "src/comments.ts",
+            line: 28,
+            side: "deletions",
+            body: "Check the existing callers before removing this branch.",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
+}
+
 /**
  * Many local review comments at once. Locks in the collapsed preview + "show
  * more" behavior so a large paste cannot take over the transcript.
@@ -316,6 +392,39 @@ export const UserMessageManyReviewComments: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const UserMessageBrowserFeedback: Story = {
+  name: "User message — browser feedback",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {browserMessage([
+          {
+            id: "browser-1",
+            sessionId: SESSION_ID,
+            selector: "main > button.save",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "button.save"],
+            text: "Save settings",
+            html: '<button class="save">Save settings</button>',
+            styles: { color: "rgb(30, 30, 30)", backgroundColor: "white" },
+            source: { file: "src/settings.tsx", line: 42, column: 7 },
+          },
+          {
+            id: "browser-2",
+            sessionId: SESSION_ID,
+            selector: "form input[name=email]",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "form", "input[name=email]"],
+            text: "Email address",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /**
@@ -1199,6 +1308,57 @@ export const TaskHeaderWithTodos: Story = {
   },
 }
 
+export const TaskHeaderBackgroundAgents1280: Story = {
+  name: "TaskHeader background agents, wide",
+  args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
+  render: (args: { names: string[] }) => {
+    const tools: ToolPart[] = args.names.map((description, index) => ({
+      id: `task-${index}`,
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "task",
+      state: { status: "completed", input: { description }, output: "Started background agent", title: description },
+      metadata: { sessionId: `child-${index}`, background: true },
+    }))
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID }),
+      messages: () => headerMessages,
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Investigate request size limits",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getSessionToolParts: () => tools,
+      allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} noPadding>
+        <SessionContext.Provider value={session as unknown as SessionContextValue}>
+          <TaskHeader />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderBackgroundAgents420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, narrow",
+}
+
+export const TaskHeaderBackgroundAgents200: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, compact",
+}
+
+export const TaskHeaderSingleBackgroundAgent420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader single background agent, narrow",
+  args: { names: ["Check request limits"] },
+}
+
 export const TaskHeaderWithTodosAllDone: Story = {
   name: "TaskHeader — with todos (all done)",
   render: () => {
@@ -1364,6 +1524,136 @@ export const WelcomeWithSwitcherAndNotification: Story = {
           <ChatView />
         </div>
       </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+const swarm: SessionBoard = {
+  ownerSessionID: SESSION_ID,
+  revision: 3,
+  messages: [
+    {
+      id: "board_first",
+      timestamp: 1788431800000,
+      from: "main",
+      to: "ses_parser",
+      toLabel: "Inspect parser edge cases and Unicode compatibility",
+      type: "INFO",
+      body: "Check empty input and Unicode identifiers.",
+    },
+    {
+      id: "board_second",
+      timestamp: 1788431900000,
+      from: "ses_parser",
+      fromLabel: "Inspect parser edge cases and Unicode compatibility",
+      to: "ALL",
+      type: "RESULT",
+      body: "The parser accepts both cases. The focused checks pass.",
+    },
+    {
+      id: "board_third",
+      timestamp: 1788432000000,
+      from: "ses_serializer",
+      fromLabel: "Check serializer compatibility",
+      to: "main",
+      type: "ASK",
+      body: "Should serialization preserve whitespace?",
+    },
+  ],
+  hasMore: false,
+}
+
+function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
+  const api = getVSCodeAPI()
+  const [scene, setScene] = createSignal({
+    sessionID: SESSION_ID,
+    projectId: "project-a",
+    parentID: null as string | null,
+    readonly: false,
+    active: true,
+  })
+  createEffect(() => window.postMessage({ type: "webviewActiveChanged", active: scene().active }, "*"))
+  const change = (event: Event) =>
+    setScene((previous) => ({ ...previous, ...(event as CustomEvent<Partial<ReturnType<typeof scene>>>).detail }))
+  window.addEventListener("swarmStoryChange", change)
+  onCleanup(() => window.removeEventListener("swarmStoryChange", change))
+  if (props.board && !new URL(location.href).searchParams.has("manual")) {
+    const post = api.postMessage
+    api.postMessage = (message) => {
+      if (message.type !== "requestSessionBoard" && message.type !== "resetSessionBoard") return post(message)
+      const board = message.type === "resetSessionBoard" ? { ...props.board!, messages: [] } : props.board
+      queueMicrotask(() =>
+        window.postMessage(
+          {
+            type: "sessionBoardLoaded",
+            sessionID: message.sessionID,
+            requestID: message.requestID,
+            projectId: message.projectId,
+            board,
+          },
+          "*",
+        ),
+      )
+    }
+    onCleanup(() => {
+      api.postMessage = post
+    })
+  }
+  onMount(() => {
+    if (!props.open) return
+    const observer = new MutationObserver(() => {
+      const button = document.querySelector<HTMLButtonElement>('[data-slot="task-header-stats"] [aria-label="Board"]')
+      if (!button) return
+      observer.disconnect()
+      button.click()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    onCleanup(() => observer.disconnect())
+  })
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID }),
+    messages: () => [
+      { id: "msg_board_story", sessionID: scene().sessionID, role: "user", time: { created: 1788431800000 } },
+    ],
+    currentSessionID: () => scene().sessionID,
+    currentSession: () => ({
+      id: scene().sessionID,
+      parentID: scene().parentID,
+      title: "Coordinate parser and serializer checks",
+      createdAt: new Date(1788431800000).toISOString(),
+      updatedAt: new Date(1788432000000).toISOString(),
+    }),
+  }
+  return (
+    <SessionContext.Provider value={session as unknown as SessionContextValue}>
+      <TaskHeader readonly={scene().readonly} projectId={scene().projectId} />
+    </SessionContext.Provider>
+  )
+}
+
+export const BoardClosed: Story = {
+  name: "Board, header button",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={swarm} />
+    </StoryProviders>
+  ),
+}
+
+export const BoardEmpty: Story = {
+  name: "Board, hidden when empty",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={{ ...swarm, messages: [] }} />
+    </StoryProviders>
+  ),
+}
+
+export const BoardOpen: Story = {
+  name: "Board, messages",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} config={{ experimental: { shared_agent_board: true } }} noPadding>
+      <SwarmScene board={swarm} open />
     </StoryProviders>
   ),
 }

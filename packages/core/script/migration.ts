@@ -6,6 +6,9 @@ import os from "os"
 import path from "path"
 import { pathToFileURL } from "url"
 import { parseArgs } from "util"
+// kilocode_change start
+import { block, file, line } from "./kilocode/migration"
+// kilocode_change end
 
 const root = path.resolve(import.meta.dirname, "../../..")
 const snapshot = path.join(root, "packages/core/schema.json")
@@ -125,18 +128,23 @@ async function typescriptMigrations() {
 }
 
 function renderMigration(name: string, sql: string) {
-  return `import { Effect } from "effect"
+  // kilocode_change start
+  return file(
+    name,
+    `import { Effect } from "effect"
 import type { DatabaseMigration } from "../migration"
 
 export default {
   id: ${JSON.stringify(name)},
   up(tx) {
     return Effect.gen(function* () {
-${renderStatements(sql)}
+${renderStatements(sql, name)}
     })
   },
 } satisfies DatabaseMigration.Migration
-`
+`,
+  )
+  // kilocode_change end
 }
 
 function renderSchema(sql: string) {
@@ -153,20 +161,25 @@ ${renderStatements(sql)}
 `
 }
 
-function renderStatements(sql: string) {
+// kilocode_change start
+function renderStatements(sql: string, name?: string) {
   return sql
     .split("--> statement-breakpoint")
     .map((statement) => statement.trim())
     .filter((statement) => statement.length > 0)
-    .map(renderRun)
+    .map((statement) => renderRun(statement, name))
     .join("\n")
 }
 
-function renderRun(statement: string) {
+function renderRun(statement: string, name?: string) {
   const lines = statement.replaceAll("\t", "  ").split("\n")
-  if (lines.length === 1) return `      yield* tx.run(\`${escapeTemplate(lines[0])}\`)`
-  return `      yield* tx.run(\`\n${lines.map((line) => `        ${escapeTemplate(line)}`).join("\n")}\n      \`)`
+  const output =
+    lines.length === 1
+      ? `      yield* tx.run(\`${escapeTemplate(lines[0])}\`)`
+      : `      yield* tx.run(\`\n${lines.map((line) => `        ${escapeTemplate(line)}`).join("\n")}\n      \`)`
+  return block(name, statement, output)
 }
+// kilocode_change end
 
 function escapeTemplate(line: string) {
   return line.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${")
@@ -185,12 +198,14 @@ async function formatTypescript(input: string) {
 }
 
 function renderRegistry(names: string[]) {
+  // kilocode_change start
   return `import type { DatabaseMigration } from "./migration"
 
 export const migrations = (
   await Promise.all([
-${names.map((name) => `    import("./migration/${name}"),`).join("\n")}
+${names.map((name) => `    ${line(name, `import("./migration/${name}"),`)}`).join("\n")}
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]
 `
+  // kilocode_change end
 }

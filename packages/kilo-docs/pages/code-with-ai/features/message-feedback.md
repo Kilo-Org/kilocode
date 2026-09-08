@@ -56,7 +56,7 @@ Feedback is part of telemetry, so turning telemetry off will cause the feedback 
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux), search for **`telemetry.telemetryLevel`**, and set it to **Off**. The feedback buttons will no longer appear. Set it back to **All** to bring them back. (For more on what this setting controls, see [VS Code's telemetry docs](https://code.visualstudio.com/docs/getstarted/telemetry).)
+Open Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux), search for **`telemetry.telemetryLevel`**, and set it to **Off**. The feedback buttons will no longer appear. Set it back to **All** to bring them back. (For more on what this setting controls, see [VS Code's telemetry docs](https://code.visualstudio.com/docs/configure/telemetry).)
 
 {% /tab %}
 

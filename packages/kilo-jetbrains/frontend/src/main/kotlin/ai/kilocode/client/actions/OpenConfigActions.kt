@@ -1,6 +1,7 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
@@ -76,6 +77,41 @@ class OpenGlobalConfigAction : ConfigAction(
         Telemetry.send("Config Opened", mapOf("surface" to "tool_window", "scope" to "global"))
         service<KiloWorkspaceService>().openGlobalConfig { ok ->
             if (!ok) failed()
+        }
+    }
+}
+
+class OpenSetupScriptAction : AnAction(
+    KiloBundle.message("action.Kilo.OpenSetupScript.text"),
+    KiloBundle.message("action.Kilo.OpenSetupScript.description"),
+    null,
+), DumbAware {
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    /** Worktree-row-only: hidden on the main worktree row, like Run. */
+    override fun update(e: AnActionEvent) {
+        if (e.getData(WorktreeDataKeys.WORKTREE)?.main == true) {
+            e.presentation.isEnabledAndVisible = false
+            return
+        }
+        val dir = e.workspaceDirectory()
+        val service = service<KiloWorkspaceService>()
+        val target = dir?.let { service.setupScript[it] }
+        e.presentation.isEnabledAndVisible = dir != null
+        e.presentation.text = KiloBundle.message(
+            if (target?.exists == false) "action.Kilo.CreateSetupScript.text" else "action.Kilo.OpenSetupScript.text",
+        )
+
+        if (dir != null && target == null) {
+            service.refreshSetupScriptTarget(dir)
+        }
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val dir = e.workspaceDirectory() ?: return
+        Telemetry.send("Worktree Setup Script Opened", mapOf("surface" to "worktree_row"))
+        service<KiloWorkspaceService>().openSetupScript(dir) { ok ->
+            if (!ok) KiloNotifications.error(KiloBundle.message("action.Kilo.OpenConfig.failed"))
         }
     }
 }

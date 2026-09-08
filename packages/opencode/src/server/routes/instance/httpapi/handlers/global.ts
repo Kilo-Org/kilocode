@@ -4,6 +4,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Installation } from "@/installation"
 import { disconnect } from "@/kilocode/server/sse" // kilocode_change
+import { copied } from "@/kilocode/event-wire" // kilocode_change
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect, Queue, Schema } from "effect"
@@ -37,7 +38,12 @@ function eventResponse(request: HttpServerRequest.HttpServerRequest) {
     // kilocode_change end
     yield* Effect.logInfo("global event connected")
     const events = Stream.callback<GlobalBusEvent>((queue) => {
-      const handler = (event: GlobalBusEvent) => Queue.offerUnsafe(queue, event)
+      // kilocode_change start
+      const handler = (event: GlobalBusEvent) => {
+        if (request.headers["x-kilo-sse-skip-fork-sync"] === "1" && copied in event) return
+        Queue.offerUnsafe(queue, event)
+      }
+      // kilocode_change end
       return Effect.acquireRelease(
         Effect.sync(() => GlobalBus.on("event", handler)),
         () => Effect.sync(() => GlobalBus.off("event", handler)),

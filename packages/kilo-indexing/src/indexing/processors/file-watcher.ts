@@ -1,15 +1,19 @@
-import { watch as chokidarWatch, type FSWatcher as ChokidarFSWatcher } from "chokidar"
+import type ParcelWatcher from "@parcel/watcher"
+// @ts-ignore - the wrapper subpath ships without type declarations
+import { createWrapper } from "@parcel/watcher/wrapper"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
+import { glob } from "glob"
 import { v5 as uuidv5 } from "uuid"
-import { Emitter, type Disposable } from "../runtime"
+import { Emitter } from "../runtime"
 import {
   QDRANT_CODE_BLOCK_NAMESPACE,
   MAX_FILE_SIZE_BYTES,
   BATCH_SEGMENT_THRESHOLD,
   MAX_BATCH_RETRIES,
   INITIAL_RETRY_DELAY_MS,
+  PARCEL_SUBSCRIBE_TIMEOUT_MS,
 } from "../constants"
 import { scannerExtensions } from "../shared/supported-extensions"
 import {
@@ -38,15 +42,115 @@ import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "file-watcher" })
 
-/**
- * Implementation of the file watcher interface.
- *
- * RATIONALE: Uses chokidar instead of vscode.workspace.createFileSystemWatcher
- * so the watcher works outside VS Code (CLI, tests, headless).
- */
+declare const KILO_LIBC: string | undefined
+
+export interface FileWatchEvent {
+  path: string
+  type: "create" | "update" | "delete"
+}
+
+export interface FileWatchSubscription {
+  unsubscribe(): Promise<void>
+}
+
+// Injectable so tests can supply a fake watcher instead of a real subscription.
+export type FileWatchSubscribe = (
+  directory: string,
+  onEvents: (events: readonly FileWatchEvent[]) => void,
+  ignore: readonly string[],
+) => Promise<FileWatchSubscription>
+
+function watcherBackend(): ParcelWatcher.BackendType | undefined {
+  if (process.platform === "win32") return "windows"
+  if (process.platform === "darwin") return "fs-events"
+  if (process.platform === "linux") return "inotify"
+  return undefined
+}
+
+let parcelModule: typeof import("@parcel/watcher") | null | undefined
+function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
+  if (parcelModule !== undefined) return parcelModule ?? undefined
+  try {
+    // The platform binding stays a dynamic require so bun-compiled multi-platform
+    // binaries resolve the right prebuild at runtime (mirrors @kilocode/core).
+    const libc = typeof KILO_LIBC === "undefined" ? undefined : KILO_LIBC
+    const suffix = process.platform === "linux" ? `-${libc || "glibc"}` : ""
+    const binding = require(`@parcel/watcher-${process.platform}-${process.arch}${suffix}`)
+    parcelModule = createWrapper(binding) as typeof import("@parcel/watcher")
+  } catch {
+    // Single loading path: degrade cleanly when the native binding is unavailable
+    // (no @parcel/watcher main-package fallback), exactly like the core watcher.
+    parcelModule = null
+  }
+  return parcelModule ?? undefined
+}
+
+// Kilo's always-ignored infrastructure dirs as globs the native watcher prunes.
+// Per-repo .gitignore/.kilocodeignore dirs are unioned in initialize() from the
+// ignore matcher; correctness for indexed files stays in shouldIndex().
+function watcherIgnoreGlobs(): string[] {
+  return FileIgnore.PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}`))
+}
+
+function withSubscribeTimeout(
+  pending: Promise<FileWatchSubscription>,
+  directory: string,
+): Promise<FileWatchSubscription> {
+  let timedOut = false
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      timedOut = true
+      reject(new Error(`Timed out establishing the file watcher subscription for "${directory}".`))
+    }, PARCEL_SUBSCRIBE_TIMEOUT_MS)
+    timer.unref()
+  })
+  // Reconcile a subscription that only settles after we've already given up:
+  // tear a live one down, or note that the subscribe itself failed — without
+  // mislabeling one as the other.
+  void pending.then(
+    (subscription) => {
+      if (!timedOut) return
+      void subscription
+        .unsubscribe()
+        .catch((err) =>
+          log.warn("failed to tear down late file watcher subscription", { err, workspacePath: directory }),
+        )
+    },
+    (err) => {
+      if (timedOut) log.warn("file watcher subscribe failed after the timeout", { err, workspacePath: directory })
+    },
+  )
+  return Promise.race([pending, timeout]).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
+// @parcel/watcher subscribes without a blocking initial walk (reporting only
+// future changes), so it does not stall startup the way chokidar did under bun.
+const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore) => {
+  const parcel = loadParcelWatcher()
+  if (!parcel) {
+    return Promise.reject(new Error("native file watcher backend (@parcel/watcher) is unavailable"))
+  }
+  const pending = parcel.subscribe(
+    directory,
+    (error, events) => {
+      if (error) {
+        log.error("file watcher reported an error", { workspacePath: directory, err: error })
+        return
+      }
+      onEvents(events)
+    },
+    { ignore: [...ignore], backend: watcherBackend() },
+  )
+  return withSubscribeTimeout(pending, directory)
+}
+
+/** Watches the workspace via @parcel/watcher and feeds changes into the incremental indexer. */
 export class FileWatcher implements IFileWatcher {
   private ignoreInstance?: IgnoreMatcher
-  private watcher?: ChokidarFSWatcher
+  private subscription?: FileWatchSubscription
   private accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }> = new Map()
   private batchProcessDebounceTimer?: NodeJS.Timeout
   private readonly BATCH_DEBOUNCE_DELAY_MS = 500
@@ -68,6 +172,15 @@ export class FileWatcher implements IFileWatcher {
   }>()
   public readonly onDidFinishBatchProcessing = new Emitter<BatchProcessingSummary>()
 
+  // @parcel/watcher reports "update" where the pipeline expects "change".
+  private readonly onWatchEvents = (events: readonly FileWatchEvent[]): void => {
+    for (const event of events) {
+      const type: "create" | "change" | "delete" =
+        event.type === "create" ? "create" : event.type === "delete" ? "delete" : "change"
+      this.handleFileEvent(event.path, type, true)
+    }
+  }
+
   constructor(
     private workspacePath: string,
     private readonly cacheManager: CacheManager,
@@ -80,6 +193,7 @@ export class FileWatcher implements IFileWatcher {
     private readonly telemetryMeta?: IndexingTelemetryMeta,
     extensions: readonly string[] = scannerExtensions,
     private readonly parser: ICodeParser = codeParser,
+    private readonly subscribeFn: FileWatchSubscribe = parcelSubscribe,
   ) {
     if (ignoreInstance) {
       this.ignoreInstance = ignoreInstance
@@ -124,10 +238,10 @@ export class FileWatcher implements IFileWatcher {
   }
 
   /**
-   * Initializes the file watcher using chokidar.
-   *
-   * RATIONALE: chokidar watches the filesystem directly using native OS events,
-   * removing the dependency on VS Code's file system watcher API.
+   * Subscribes to the workspace for incremental updates. The watcher is only
+   * needed for incremental updates, so a subscription failure (missing native
+   * backend, inotify limits, ...) degrades to a warning and lets the full scan
+   * proceed rather than failing indexing.
    */
   async initialize(): Promise<void> {
     if (this.ready) {
@@ -137,26 +251,40 @@ export class FileWatcher implements IFileWatcher {
 
     log.info("initializing file watcher", { workspacePath: this.workspacePath })
 
-    this.watcher = chokidarWatch(this.workspacePath, {
-      ignored: (filePath: string) => {
-        const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
-        if (!relativeFilePath) return false
-        if (FileIgnore.match(relativeFilePath)) return true
-        return this.ignoreInstance?.ignores(relativeFilePath) ?? false
-      },
-      persistent: true,
-      ignoreInitial: true,
-    })
+    // Prune Kilo's infra dirs plus (best-effort) the per-repo gitignored dirs
+    // from the native watch, so a large repo doesn't exhaust inotify descriptors
+    // (ENOSPC) watching trees we never index.
+    const ignore = [...new Set([...watcherIgnoreGlobs(), ...(this.ignoreInstance?.watchIgnoreGlobs?.() ?? [])])]
 
-    this.watcher.on("add", (filePath) => this.handleFileEvent(filePath, "create"))
-    this.watcher.on("change", (filePath) => this.handleFileEvent(filePath, "change"))
-    this.watcher.on("unlink", (filePath) => this.handleFileEvent(filePath, "delete"))
-    this.ready = new Promise((resolve, reject) => {
-      this.watcher?.once("ready", resolve)
-      this.watcher?.once("error", reject)
-    })
+    const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents, ignore).then(
+      (subscription) => {
+        // If shutdown()/dispose() cleared this.ready, or a newer initialize()
+        // superseded us while subscribing, don't store this subscription — it
+        // would leak and keep feeding accumulatedEvents. Tear it down instead.
+        if (this.ready !== ready) {
+          void subscription
+            .unsubscribe()
+            .catch((err) =>
+              log.error("failed to unsubscribe superseded file watcher", { err, workspacePath: this.workspacePath }),
+            )
+          return
+        }
+        this.subscription = subscription
+        log.info("file watcher subscribed", { workspacePath: this.workspacePath })
+      },
+      (error) => {
+        // The watcher only powers incremental updates, so degrade to a warning
+        // and let the full scan proceed. Clear this.ready (when still current)
+        // so a later run retries a transient failure such as inotify ENOSPC.
+        if (this.ready === ready) this.ready = undefined
+        log.warn("file watcher unavailable; continuing without incremental updates", {
+          workspacePath: this.workspacePath,
+          err: error,
+        })
+      },
+    )
+    this.ready = ready
     await this.ready
-    log.info("file watcher ready", { workspacePath: this.workspacePath })
   }
 
   setOverlay(overlay?: WorktreeOverlay): void {
@@ -191,14 +319,24 @@ export class FileWatcher implements IFileWatcher {
     this.collecting = false
     if (this.batchProcessDebounceTimer) clearTimeout(this.batchProcessDebounceTimer)
     this.batchProcessDebounceTimer = undefined
-    await this.watcher?.close()
+    const subscription = this.subscription
+    this.subscription = undefined
+    await subscription
+      ?.unsubscribe()
+      .catch((err) => log.error("failed to unsubscribe file watcher", { err, workspacePath: this.workspacePath }))
     await this.drainTask
     this.dispose()
   }
 
   dispose(): void {
     this.collecting = false
-    void this.watcher?.close()
+    const subscription = this.subscription
+    this.subscription = undefined
+    if (subscription) {
+      void subscription
+        .unsubscribe()
+        .catch((err) => log.error("failed to unsubscribe file watcher", { err, workspacePath: this.workspacePath }))
+    }
     if (this.batchProcessDebounceTimer) clearTimeout(this.batchProcessDebounceTimer)
     this.batchProcessDebounceTimer = undefined
     this.onDidStartBatchProcessing.dispose()
@@ -209,10 +347,10 @@ export class FileWatcher implements IFileWatcher {
   }
 
   /**
-   * Handles a file event from chokidar by accumulating it and scheduling batch processing.
+   * Handles a file event reported by the watcher by accumulating it and scheduling batch processing.
    */
-  private handleFileEvent(filePath: string, type: "create" | "change" | "delete"): void {
-    if (!this.shouldIndex(filePath)) return
+  private handleFileEvent(filePath: string, type: "create" | "change" | "delete", directory = false): void {
+    if (!this.shouldIndex(filePath) && !(directory && this.shouldIndex(filePath, true))) return
     this.overlay?.block(filePath)
     this.accumulatedEvents.set(filePath, { path: filePath, type })
     if (!this.collecting) return
@@ -259,8 +397,12 @@ export class FileWatcher implements IFileWatcher {
       while (this.collecting && this.accumulatedEvents.size > 0) {
         const eventsToProcess = new Map(this.accumulatedEvents)
         this.accumulatedEvents.clear()
+        await this.expand(eventsToProcess)
+        if (!this.collecting) return
+        if (eventsToProcess.size === 0) continue
 
         const filePathsInBatch = Array.from(eventsToProcess.keys())
+        for (const file of filePathsInBatch) this.overlay?.block(file)
         this.onDidStartBatchProcessing.fire(filePathsInBatch)
         await this.processBatch(eventsToProcess)
       }
@@ -271,13 +413,53 @@ export class FileWatcher implements IFileWatcher {
     }
   }
 
-  private shouldIndex(filePath: string) {
+  private async expand(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void> {
+    const known = [...new Set([...Object.keys(this.cacheManager.getAllHashes()), ...events.keys()])]
+    for (const event of [...events.values()]) {
+      if (!this.collecting) return
+      if (event.type === "delete") {
+        const children = known.filter((file) => file.startsWith(event.path + path.sep))
+        for (const file of children) events.set(file, { path: file, type: "delete" })
+        if (children.length || !this.shouldIndex(event.path)) events.delete(event.path)
+        continue
+      }
+      const info = await stat(event.path).catch((err: NodeJS.ErrnoException) => {
+        if (err.code === "ENOENT" || err.code === "ENOTDIR") return
+        throw err
+      })
+      if (!info?.isDirectory()) {
+        if (!this.shouldIndex(event.path)) events.delete(event.path)
+        continue
+      }
+      events.delete(event.path)
+      if (!this.shouldIndex(event.path, true)) continue
+      const files = await glob("**/*", {
+        cwd: event.path,
+        absolute: true,
+        nodir: true,
+        dot: true,
+        ignore: {
+          ignored: (entry) => !this.shouldIndex(entry.fullpath(), entry.isDirectory()),
+          childrenIgnored: (entry) => !this.shouldIndex(entry.fullpath(), true),
+        },
+      })
+      const current = new Set(files)
+      for (const file of known) {
+        if (file.startsWith(event.path + path.sep) && !current.has(file)) {
+          events.set(file, { path: file, type: "delete" })
+        }
+      }
+      for (const file of files) events.set(file, { path: file, type: "create" })
+    }
+  }
+
+  private shouldIndex(filePath: string, directory = false) {
     const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
-    if (!relativeFilePath) return false
+    if (!relativeFilePath) return directory && path.resolve(filePath) === path.resolve(this.workspacePath)
     const ext = path.extname(filePath).toLowerCase()
     if (FileIgnore.match(relativeFilePath)) return false
-    if (this.ignoreInstance?.ignores(relativeFilePath)) return false
-    return this.extensions.has(ext)
+    if (this.ignoreInstance?.ignores(relativeFilePath + (directory ? "/" : ""))) return false
+    return directory || this.extensions.has(ext)
   }
 
   /**
@@ -567,7 +749,7 @@ export class FileWatcher implements IFileWatcher {
 
       filesToUpsertDetails.push({
         path: event.path,
-        originalType: event.type,
+        originalType: cached ? "change" : event.type,
       })
     }
 

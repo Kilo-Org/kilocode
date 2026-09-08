@@ -10,6 +10,7 @@ export interface ReviewCommentData {
 export interface PRReviewReply {
   author: string
   body: string
+  avatar?: string
 }
 
 /** A GitHub PR review thread handed to the agent from the Agent Manager PR panel. */
@@ -17,18 +18,36 @@ export interface PRReviewCommentData {
   id: string
   origin: "pr"
   author: string
+  avatar?: string
   body: string
   file?: string
+  side?: "additions" | "deletions"
   line?: number
+  originalLine?: number
+  startLine?: number
+  url?: string
+  resolved?: boolean
   diffHunk?: string
   outdated?: boolean
+  reviewState?: string
   replies?: PRReviewReply[]
 }
 
-export type ReviewCommentEntry = ReviewCommentData | PRReviewCommentData
+export interface CIReviewCommentData {
+  id: string
+  origin: "ci"
+  title: string
+  body: string
+}
+
+export type ReviewCommentEntry = ReviewCommentData | PRReviewCommentData | CIReviewCommentData
 
 export function isPRReviewComment(item: ReviewCommentEntry): item is PRReviewCommentData {
   return "origin" in item && item.origin === "pr"
+}
+
+export function isCIReviewComment(item: ReviewCommentEntry): item is CIReviewCommentData {
+  return "origin" in item && item.origin === "ci"
 }
 
 export interface ReviewMessageData {
@@ -53,7 +72,7 @@ function escapeInline(value: string): string {
 }
 
 /** Wrap a snippet in a fence long enough to survive backticks inside it. */
-function fenced(value: string): string[] {
+export function fenced(value: string): string[] {
   const matches = value.match(/`+/g) ?? []
   const longest = matches.reduce((max, item) => Math.max(max, item.length), 0)
   const fence = "`".repeat(Math.max(3, longest + 1))
@@ -68,9 +87,10 @@ function quote(value: string): string {
 }
 
 function formatPR(comment: PRReviewCommentData): string {
+  const kind = comment.reviewState ? `PR review (${comment.reviewState.replace("_", " ")})` : "PR comment"
   const at = comment.file
-    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, PR comment`
-    : "PR comment"
+    ? `**${escapeInline(comment.file)}**${comment.line ? ` (line ${comment.line})` : ""}, ${kind}`
+    : kind
   const lines = [`${at} by @${comment.author}${comment.outdated ? " (outdated)" : ""}:`]
   if (comment.diffHunk) lines.push(...fenced(comment.diffHunk))
   lines.push(comment.body)
@@ -80,6 +100,7 @@ function formatPR(comment: PRReviewCommentData): string {
 
 export function formatReviewCommentMarkdown(comment: ReviewCommentEntry): string {
   if (isPRReviewComment(comment)) return formatPR(comment)
+  if (isCIReviewComment(comment)) return `CI feedback: **${escapeInline(comment.title)}**\n${comment.body}`
   const lines = [`**${escapeInline(comment.file)}** (line ${comment.line}):`]
   if (comment.selectedText) lines.push(...fenced(comment.selectedText))
   lines.push(comment.comment)
@@ -87,19 +108,20 @@ export function formatReviewCommentMarkdown(comment: ReviewCommentEntry): string
 }
 
 export function formatReviewCommentsMarkdown(comments: ReviewCommentEntry[]): string {
-  const lines = ["## Review Comments", ""]
+  const ci = comments.length > 0 && comments.every(isCIReviewComment)
+  const lines = [ci ? "## CI Feedback" : "## Review Comments", ""]
   for (const item of comments) {
     lines.push(formatReviewCommentMarkdown(item), "")
   }
   return lines.join("\n").trimEnd()
 }
 
-function record(value: unknown): Record<string, unknown> | undefined {
+export function record(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
 }
 
-function text(value: unknown, limit: number): string | undefined {
+export function text(value: unknown, limit: number): string | undefined {
   if (typeof value !== "string" || value.length > limit) return undefined
   return value
 }
@@ -110,13 +132,18 @@ function safe(file: string): boolean {
   return !absolute && !traversal && !file.includes("\0")
 }
 
+export function isHttpsUrl(value: string): boolean {
+  return value.startsWith("https://") && URL.canParse(value)
+}
+
 function parseReply(value: unknown): PRReviewReply | undefined {
   const item = record(value)
   if (!item) return undefined
   const author = text(item.author, AUTHOR_LIMIT)
   const body = text(item.body, TEXT_LIMIT)
-  if (!author || body === undefined) return undefined
-  return { author, body }
+  const avatar = optional(item.avatar, TEXT_LIMIT, isHttpsUrl)
+  if (!author || body === undefined || avatar === false) return undefined
+  return avatar === undefined ? { author, body } : { author, body, avatar }
 }
 
 function parseReplies(value: unknown): PRReviewReply[] | undefined {
@@ -139,23 +166,45 @@ function optional(value: unknown, limit: number, valid?: (item: string) => boole
   return item
 }
 
-function optionalLine(value: unknown): number | false | undefined {
+export function optionalLine(value: unknown): number | false | undefined {
   if (value === undefined) return undefined
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) return false
   return value
+}
+
+function position(
+  item: Record<string, unknown>,
+): Pick<PRReviewCommentData, "file" | "side" | "line" | "originalLine" | "startLine"> | undefined {
+  const file = optional(item.file, 4_096, safe)
+  const side = item.side
+  if (side !== undefined && side !== "additions" && side !== "deletions") return
+  const line = optionalLine(item.line)
+  const originalLine = optionalLine(item.originalLine)
+  const startLine = optionalLine(item.startLine)
+  if (file === false || line === false || originalLine === false || startLine === false) return
+  return {
+    file,
+    ...(side === undefined ? {} : { side }),
+    line,
+    ...(originalLine === undefined ? {} : { originalLine }),
+    ...(startLine === undefined ? {} : { startLine }),
+  }
 }
 
 function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined {
   const id = text(item.id, 512)
   const author = text(item.author, AUTHOR_LIMIT)
   const body = text(item.body, TEXT_LIMIT)
-  if (!id || !author || body === undefined) return undefined
-
-  const file = optional(item.file, 4_096, safe)
+  const place = position(item)
+  const avatar = optional(item.avatar, TEXT_LIMIT, isHttpsUrl)
   const hunk = optional(item.diffHunk, SELECTION_LIMIT)
-  const line = optionalLine(item.line)
-  if (file === false || hunk === false || line === false) return undefined
+  const url = optional(item.url, TEXT_LIMIT, isHttpsUrl)
+  if (!id || !author || body === undefined || !place) return undefined
+  if (avatar === false || hunk === false || url === false) return undefined
   if (item.outdated !== undefined && typeof item.outdated !== "boolean") return undefined
+  if (item.resolved !== undefined && typeof item.resolved !== "boolean") return undefined
+  const reviewState = optional(item.reviewState, 64)
+  if (reviewState === false) return undefined
 
   const replies = item.replies === undefined ? undefined : parseReplies(item.replies)
   if (item.replies !== undefined && !replies) return undefined
@@ -164,19 +213,31 @@ function parsePR(item: Record<string, unknown>): PRReviewCommentData | undefined
     id,
     origin: "pr",
     author,
+    ...(avatar === undefined ? {} : { avatar }),
     body,
-    file,
-    line,
+    ...place,
+    ...(url === undefined ? {} : { url }),
+    ...(item.resolved === undefined ? {} : { resolved: item.resolved }),
     diffHunk: hunk,
     outdated: item.outdated,
+    reviewState: reviewState || undefined,
     replies,
   }
+}
+
+function parseCI(item: Record<string, unknown>): CIReviewCommentData | undefined {
+  const id = text(item.id, 512)
+  const title = text(item.title, 256)
+  const body = text(item.body, 16_000)
+  if (!id || !title || body === undefined) return undefined
+  return { id, origin: "ci", title, body }
 }
 
 function parseComment(value: unknown): ReviewCommentEntry | undefined {
   const item = record(value)
   if (!item) return undefined
   if (item.origin === "pr") return parsePR(item)
+  if (item.origin === "ci") return parseCI(item)
   if (item.origin !== undefined) return undefined
 
   const id = text(item.id, 512)
@@ -194,14 +255,20 @@ function parseComment(value: unknown): ReviewCommentEntry | undefined {
 }
 
 function weight(item: ReviewCommentEntry): number {
+  if (isCIReviewComment(item)) return item.id.length + item.title.length + item.body.length
   if (!isPRReviewComment(item))
     return item.id.length + item.file.length + item.comment.length + item.selectedText.length
-  const replies = (item.replies ?? []).reduce((total, reply) => total + reply.author.length + reply.body.length, 0)
+  const replies = (item.replies ?? []).reduce(
+    (total, reply) => total + reply.author.length + reply.body.length + (reply.avatar?.length ?? 0),
+    0,
+  )
   return (
     item.id.length +
     item.author.length +
     item.body.length +
     (item.file?.length ?? 0) +
+    (item.avatar?.length ?? 0) +
+    (item.url?.length ?? 0) +
     (item.diffHunk?.length ?? 0) +
     replies
   )
@@ -233,10 +300,6 @@ export function parseReview(value: unknown, content: string): ReviewMessageData 
 
 export function reviewMetadata(review: ReviewMessageData): Record<string, unknown> {
   return { kilo: { review } }
-}
-
-export function reviewBody(review: ReviewMessageData, content: string): string | undefined {
-  return view(review, content)?.body
 }
 
 export function partReview(metadata: unknown, content: string): ReviewMessageView | undefined {

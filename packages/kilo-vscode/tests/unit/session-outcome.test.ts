@@ -121,6 +121,7 @@ describe("terminal", () => {
       remaining: 1,
     })
     expect(terminal({ reason: "error", messages: [message("error")], todos: [] })?.kind).toBe("error")
+    expect(terminal({ reason: "error", messages: [message("stop")], todos: [] })?.kind).toBe("error")
   })
 
   it("does not duplicate a concrete rendered failure", () => {

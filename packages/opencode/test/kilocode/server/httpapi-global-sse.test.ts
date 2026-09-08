@@ -7,6 +7,7 @@ import { Auth } from "../../../src/auth"
 import { GlobalBus } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
 import { Installation } from "../../../src/installation"
+import { copied } from "../../../src/kilocode/event-wire"
 import { ServerAuth } from "../../../src/server/auth"
 import { RootHttpApi } from "../../../src/server/routes/instance/httpapi/api"
 import { GlobalPaths } from "../../../src/server/routes/instance/httpapi/groups/global"
@@ -45,20 +46,39 @@ const it = testEffect(apiLayer)
 
 describe("global SSE lifecycle", () => {
   it.live(
-    "removes event listeners after clients disconnect",
+    "filters duplicate fork sync events without leaking listeners",
     () =>
       Effect.gen(function* () {
         const count = GlobalBus.listenerCount("event")
 
         for (const attempt of [1, 2, 3]) {
-          const response = yield* HttpClient.get(GlobalPaths.event)
+          const response = yield* HttpClient.get(GlobalPaths.event, {
+            headers: attempt === 2 ? { "x-kilo-sse-skip-fork-sync": "1" } : {},
+          })
           expect(response.status).toBe(200)
-          const fiber = yield* response.stream.pipe(Stream.runDrain, Effect.forkChild({ startImmediately: true }))
+          const chunks = new Array<string>()
+          const fiber = yield* response.stream.pipe(
+            Stream.decodeText,
+            Stream.runForEach((chunk) => Effect.sync(() => chunks.push(chunk))),
+            Effect.forkChild({ startImmediately: true }),
+          )
 
           yield* pollWithTimeout(
             Effect.sync(() => (GlobalBus.listenerCount("event") === count + 1 ? true : undefined)),
             `global event stream ${attempt} did not subscribe`,
           )
+          for (const id of ["evt_normal", "evt_copy", "evt_live"]) {
+            GlobalBus.emit("event", {
+              payload: { id, type: id === "evt_normal" ? "message.updated" : "sync" },
+              ...(id === "evt_copy" && { [copied]: true }),
+            })
+          }
+          yield* pollWithTimeout(
+            Effect.sync(() => (chunks.join("").includes("evt_live") ? true : undefined)),
+            "global event stream did not deliver live events",
+          )
+          expect(chunks.join("")).toContain("evt_normal")
+          expect(chunks.join("").includes("evt_copy")).toBe(attempt !== 2)
           yield* Fiber.interrupt(fiber)
           yield* pollWithTimeout(
             Effect.sync(() => (GlobalBus.listenerCount("event") === count ? true : undefined)),

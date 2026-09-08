@@ -16,11 +16,15 @@ export interface ModelStore {
   /** sessionID -> agent name */
   agentSelections: Record<string, string>
   recentModels: ModelSelection[]
+  userSetAgents?: Record<string, boolean>
 }
 
 export interface ResolveEnv {
   providers: Record<string, Provider>
   connected: string[]
+  ready?: boolean
+  organizationId?: string | null
+  defaults?: Record<string, string>
   fallback: ModelSelection | null
   getModeModel: (agentName: string) => ModelSelection | null
   getGlobalModel: () => ModelSelection | null
@@ -31,10 +35,15 @@ function resolveModel(
   agentName: string,
   override?: ModelSelection | null,
   recents?: ModelSelection[],
+  session?: ModelSelection,
 ): ModelSelection | null {
   return resolveModelSelection({
     providers: env.providers,
     connected: env.connected,
+    ready: env.ready,
+    organizationId: env.organizationId,
+    defaults: env.defaults,
+    session,
     override,
     mode: env.getModeModel(agentName),
     global: env.getGlobalModel(),
@@ -54,10 +63,8 @@ export function getSessionModel(
   sessionID: string,
   defaultAgent: string,
 ): ModelSelection | null {
-  const override = store.sessionOverrides[sessionID]
-  if (override) return override
   const agentName = store.agentSelections[sessionID] ?? defaultAgent
-  return resolveModel(env, agentName, store.modelSelections[agentName], store.recentModels)
+  return getSelected(store, env, sessionID, agentName)
 }
 
 /**
@@ -71,11 +78,14 @@ export function getSelected(
   sessionID: string | undefined,
   agentName: string,
 ): ModelSelection | null {
-  if (sessionID) {
-    const session = store.sessionOverrides[sessionID]
-    if (session) return session
-  }
-  return resolveModel(env, agentName, store.modelSelections[agentName], store.recentModels)
+  const override = env.organizationId && !store.userSetAgents?.[agentName] ? null : store.modelSelections[agentName]
+  return resolveModel(
+    env,
+    agentName,
+    override,
+    store.recentModels,
+    sessionID ? store.sessionOverrides[sessionID] : undefined,
+  )
 }
 
 /** Returns the effective model for a mode outside a session scope. */
@@ -83,15 +93,19 @@ export function getAgentModel(
   store: ModelStore,
   env: ResolveEnv,
   agentName: string,
-  userSet = false,
+  userSet = store.userSetAgents?.[agentName] === true,
 ): ModelSelection | null {
-  const override = env.getModeModel(agentName) && userSet ? null : store.modelSelections[agentName]
+  const override =
+    (env.getModeModel(agentName) && userSet) || (env.organizationId && !userSet)
+      ? null
+      : store.modelSelections[agentName]
   return resolveModel(env, agentName, override, store.recentModels)
 }
 
 export interface ApplyResult {
   modelSelections: Record<string, ModelSelection | null>
   sessionOverrides: Record<string, ModelSelection>
+  userSetAgents: Record<string, boolean>
 }
 
 /**
@@ -116,5 +130,6 @@ export function applyModel(
     sessionOverrides[sessionID] = selection
   }
 
-  return { modelSelections, sessionOverrides }
+  const userSetAgents = sessionID ? { ...store.userSetAgents } : { ...store.userSetAgents, [agentName]: true }
+  return { modelSelections, sessionOverrides, userSetAgents }
 }

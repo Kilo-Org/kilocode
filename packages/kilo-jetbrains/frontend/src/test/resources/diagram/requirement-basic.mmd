@@ -1,0 +1,11 @@
+requirementDiagram
+    requirement save_req {
+        id: 1
+        text: The editor shall save the state on exit.
+        risk: high
+        verifymethod: test
+    }
+    element state_saver {
+        type: module
+    }
+    state_saver - satisfies -> save_req

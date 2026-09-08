@@ -1,4 +1,5 @@
 import type { WorktreeStateManager } from "./WorktreeStateManager"
+import { normalizePath } from "./git-import"
 
 // ---------------------------------------------------------------------------
 // TerminalHost — narrow interface for the VS Code capabilities this module
@@ -223,6 +224,17 @@ export class SessionTerminalManager {
     const active = this.activeKey()
     if (active === undefined) return this.host.activeTerminal() !== undefined
     return (sessionId !== undefined && active === SessionTerminalManager.sessionKey(sessionId)) || active === key
+  }
+
+  closeDirectory(directory: string): void {
+    const target = normalizePath(directory)
+    for (const [key, entry] of this.terminals) {
+      if (normalizePath(entry.cwd) !== target) continue
+      this.terminals.delete(key)
+      entry.terminal.dispose()
+      this.log(`Removed terminal mapping for ${key} (worktree deleted)`)
+    }
+    this.updateContextKey()
   }
 
   dispose(): void {

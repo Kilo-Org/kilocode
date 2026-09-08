@@ -133,7 +133,10 @@ data class CustomModelDto(
 @Serializable
 data class CustomModelFetchDto(
     val baseUrl: String,
+    val directory: String,
+    val providerId: String? = null,
     val apiKey: String? = null,
+    val env: String? = null,
     val headers: Map<String, String> = emptyMap(),
 )
 
@@ -141,6 +144,7 @@ data class CustomModelFetchDto(
 data class CustomModelFetchResultDto(
     val models: List<String> = emptyList(),
     val error: String? = null,
+    val envMissing: Boolean = false,
 )
 
 @Serializable

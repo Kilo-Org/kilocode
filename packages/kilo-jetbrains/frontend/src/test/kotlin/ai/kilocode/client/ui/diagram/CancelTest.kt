@@ -37,6 +37,20 @@ class CancelTest {
         assertFailsWith<CancellationException> { cancel(source) }
     }
 
+    @Test
+    fun `class layout stops when the job is cancelled`() {
+        val source = "classDiagram\n" + (1..40).joinToString("\n") { "  C$it <|-- C${it + 1}" }
+
+        assertFailsWith<CancellationException> { cancel(source) }
+    }
+
+    @Test
+    fun `treemap layout stops when the job is cancelled`() {
+        val source = "treemap-beta\n\"root\"\n" + (1..40).joinToString("\n") { "    \"leaf$it\": $it" }
+
+        assertFailsWith<CancellationException> { cancel(source) }
+    }
+
     /** Parsing runs before any measurement, so its cancellation checks need their own proof. */
     @Test
     fun `parsing stops before layout when the job is cancelled`() {

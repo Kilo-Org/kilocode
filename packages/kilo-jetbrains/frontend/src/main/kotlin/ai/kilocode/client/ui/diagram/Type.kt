@@ -13,6 +13,21 @@ internal enum class Type {
     Er,
     Gantt,
     Pie,
+    Journey,
+    Quadrant,
+    Requirement,
+    Git,
+    C4,
+    Mindmap,
+    Timeline,
+    Sankey,
+    XyChart,
+    Block,
+    Packet,
+    Kanban,
+    Architecture,
+    Radar,
+    Treemap,
     Unknown;
 
     companion object {
@@ -24,7 +39,8 @@ internal enum class Type {
 
         fun of(clean: Clean): Type {
             val head = clean.lines.firstOrNull { it.text.isNotBlank() }?.text?.trim() ?: return Unknown
-            val token = head.takeWhile { !it.isWhitespace() }.lowercase()
+            // `gitGraph LR:` and `gitGraph:` keep a trailing colon on the keyword itself.
+            val token = head.takeWhile { !it.isWhitespace() }.trimEnd(':').lowercase()
             return when (token) {
                 "graph", "flowchart" -> Flowchart
                 "sequencediagram" -> Sequence
@@ -33,6 +49,21 @@ internal enum class Type {
                 "erdiagram" -> Er
                 "gantt" -> Gantt
                 "pie" -> Pie
+                "journey" -> Journey
+                "quadrantchart" -> Quadrant
+                "requirementdiagram" -> Requirement
+                "gitgraph" -> Git
+                "c4context", "c4container", "c4component", "c4dynamic", "c4deployment" -> C4
+                "mindmap" -> Mindmap
+                "timeline" -> Timeline
+                "sankey-beta", "sankey" -> Sankey
+                "xychart-beta", "xychart" -> XyChart
+                "block-beta", "block" -> Block
+                "packet-beta", "packet" -> Packet
+                "kanban" -> Kanban
+                "architecture-beta", "architecture" -> Architecture
+                "radar-beta", "radar" -> Radar
+                "treemap-beta", "treemap" -> Treemap
                 else -> Unknown
             }
         }

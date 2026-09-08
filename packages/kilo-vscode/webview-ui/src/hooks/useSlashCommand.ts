@@ -26,6 +26,7 @@ interface VSCodeContext {
 
 export interface SlashCommandEntry extends SlashCommandInfo {
   action?: () => void
+  select?: () => void
   enabled?: Accessor<boolean>
   nested?: boolean
 }
@@ -76,7 +77,7 @@ export function useSlashCommand(
       hints: ["clear"],
       action: () => {
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        window.postMessage({ type: "navigate", view: "newTask" }, "*")
+        window.postMessage({ type: "navigate", view: "newTask" }, window.origin)
       },
     },
     {
@@ -84,7 +85,7 @@ export function useSlashCommand(
       description: "Switch to another session",
       hints: ["resume", "continue", "history"],
       action: () => {
-        window.postMessage({ type: "navigate", view: "history" }, "*")
+        window.postMessage({ type: "navigate", view: "history" }, window.origin)
       },
     },
     {
@@ -151,15 +152,15 @@ export function useSlashCommand(
       hints: ["code-review", "diff"],
       nested: true,
     },
-    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
-    { name: "review staged", description: "Review staged changes only", hints: [] },
-    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
-    { name: "review branch", description: "Review current branch against base branch", hints: [] },
     {
       name: "review worktree",
       description: "Review committed and uncommitted worktree changes against its base",
       hints: [],
     },
+    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
+    { name: "review staged", description: "Review staged changes only", hints: [] },
+    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
+    { name: "review branch", description: "Review current branch against base branch", hints: [] },
     {
       name: "review quick",
       description: "Fast single-pass review with minimal token usage",
@@ -346,14 +347,14 @@ export function useSlashCommand(
     // slashEnd is the cursor position from onInput when the slash pattern was matched.
     const trailingText = textarea.value.substring(cursor)
 
-    if (cmd.action) {
+    if (cmd.action || cmd.select) {
       if (cmd.enabled && !cmd.enabled()) return
       textarea.value = trailingText
       setText(trailingText)
       textarea.setSelectionRange(0, 0)
       close()
       onSelect?.()
-      cmd.action()
+      ;(cmd.select ?? cmd.action)?.()
       return
     }
     const commandText = `/${cmd.name} `
@@ -392,7 +393,7 @@ export function useSlashCommand(
       setIndex((i) => Math.max(i - 1, 0))
       return true
     }
-    if (e.key === "Enter" || e.key === "Tab") {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
       const cmd = filtered[index()]
       if (!cmd) return false
       e.preventDefault()

@@ -22,6 +22,7 @@ export function previewSound(value: string) {
 
 export class AttentionService implements vscode.Disposable {
   private readonly active = new Set<string>()
+  private readonly goals = new Set<string>()
   private readonly errored = new Set<string>()
   private readonly questions = new Set<string>()
   private readonly permissions = new Set<string>()
@@ -59,12 +60,20 @@ export class AttentionService implements vscode.Disposable {
   }
 
   private sync(event: Sync) {
-    if (event.name !== "session.deleted.1") return
-    this.remove(event.data.sessionID)
+    if (event.name === "session.deleted.1") return this.remove(event.data.sessionID)
+    if (event.name !== "session.updated.1" && event.name !== "session.created.1") return
+    if (!("metadata" in event.data.info)) return
+    const goal = event.data.info.metadata?.["kilo.goal"]
+    if (goal && typeof goal === "object" && "active" in goal && goal.active === true) {
+      this.goals.add(event.data.sessionID)
+      return
+    }
+    this.goals.delete(event.data.sessionID)
   }
 
   private remove(sessionID: string) {
     this.active.delete(sessionID)
+    this.goals.delete(sessionID)
     this.errored.delete(sessionID)
   }
 
@@ -110,7 +119,7 @@ export class AttentionService implements vscode.Disposable {
     if (!this.active.delete(sessionID)) return
     if (this.errored.delete(sessionID)) return
     if (event.properties.reason !== "completed") return
-    if (event.properties.parentID !== undefined) return
+    if (event.properties.parentID !== undefined || this.goals.has(sessionID)) return
     this.notify("done")
   }
 
@@ -131,6 +140,7 @@ export class AttentionService implements vscode.Disposable {
 
   private reset() {
     this.active.clear()
+    this.goals.clear()
     this.errored.clear()
     this.questions.clear()
     this.permissions.clear()

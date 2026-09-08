@@ -259,3 +259,97 @@ describe("per-mode model memory", () => {
     expect(getSelected(switched, configured, "session-a", "code")).toEqual(gpt)
   })
 })
+
+describe("organization model store", () => {
+  const first = { providerID: "kilo", modelID: "first" }
+  const recommendation = { providerID: "kilo", modelID: "org-default" }
+  const organization: ResolveEnv = {
+    ...env(),
+    ready: true,
+    organizationId: "org-a",
+    providers: { ...providers, kilo: makeProvider("kilo", [first.modelID, recommendation.modelID, KILO_AUTO.modelID]) },
+    defaults: { kilo: recommendation.modelID },
+  }
+
+  it("ignores implicit mode memory and generic recents across every accessor", () => {
+    const store: ModelStore = {
+      ...emptyStore(),
+      modelSelections: { code: KILO_AUTO, ask: first },
+      recentModels: [KILO_AUTO, gpt],
+    }
+    const before = structuredClone(store)
+    expect(getSelected(store, organization, undefined, "code")).toEqual(recommendation)
+    expect(getSelected(store, organization, "session-a", "code")).toEqual(recommendation)
+    expect(getSessionModel(store, organization, "session-a", "code")).toEqual(recommendation)
+    expect(getAgentModel(store, organization, "ask")).toEqual(recommendation)
+    expect(store).toEqual(before)
+  })
+
+  it.each([undefined, "session-a"])("preserves explicit free selections in scope %s", (scope) => {
+    const store = emptyStore()
+    const updated = { ...store, ...applyModel(store, "code", KILO_AUTO, scope) }
+    expect(getSelected(updated, organization, scope, "code")).toEqual(KILO_AUTO)
+    expect(getSessionModel(updated, organization, "session-a", "code")).toEqual(KILO_AUTO)
+    if (!scope) expect(getAgentModel(updated, organization, "code")).toEqual(KILO_AUTO)
+  })
+
+  it.each([undefined, "session-a"])("restores explicit X through X to Y to X in scope %s without writes", (scope) => {
+    const store = emptyStore()
+    const updated = { ...store, ...applyModel(store, "code", KILO_AUTO, scope) }
+    const before = structuredClone(updated)
+    const restricted = { ...organization, providers: { kilo: makeProvider("kilo", [recommendation.modelID]) } }
+    expect(getSelected(updated, env(), scope, "code")).toEqual(KILO_AUTO)
+    expect(getSelected(updated, restricted, scope, "code")).toEqual(recommendation)
+    expect(getSessionModel(updated, restricted, "session-a", "code")).toEqual(recommendation)
+    expect(getSelected(updated, env(), scope, "code")).toEqual(KILO_AUTO)
+    expect(getSessionModel(updated, env(), "session-a", "code")).toEqual(KILO_AUTO)
+    if (!scope) {
+      expect(getAgentModel(updated, restricted, "code")).toEqual(recommendation)
+      expect(getAgentModel(updated, env(), "code")).toEqual(KILO_AUTO)
+    }
+    expect(updated).toEqual(before)
+  })
+
+  it("falls through an unavailable session override to a valid explicit manual choice", () => {
+    const store = {
+      ...emptyStore(),
+      modelSelections: { code: gpt },
+      userSetAgents: { code: true },
+      sessionOverrides: { "session-a": { providerID: "kilo", modelID: "missing" } },
+    }
+    expect(getSelected(store, organization, "session-a", "code")).toEqual(gpt)
+    expect(getSessionModel(store, organization, "session-a", "code")).toEqual(gpt)
+  })
+
+  it("validates history overrides without deleting them when the catalog is empty or pending", () => {
+    const store = { ...emptyStore(), sessionOverrides: { "session-a": KILO_AUTO } }
+    const before = structuredClone(store)
+    for (const pending of [{ ready: false }, { providers: {} }, { organizationId: undefined }]) {
+      expect(getSelected(store, { ...organization, ...pending }, "session-a", "code")).toBeNull()
+      expect(getSessionModel(store, { ...organization, ...pending }, "session-a", "code")).toBeNull()
+    }
+    expect(getSessionModel(store, organization, "session-a", "code")).toEqual(KILO_AUTO)
+    expect(store).toEqual(before)
+  })
+
+  it("preserves connected external session choices while Kilo refreshes", () => {
+    const store = { ...emptyStore(), sessionOverrides: { "session-a": gpt } }
+    expect(getSessionModel(store, { ...organization, ready: false }, "session-a", "code")).toEqual(gpt)
+    expect(getSessionModel(store, { ...organization, connected: [] }, "session-a", "code")).toEqual(recommendation)
+  })
+
+  it("keeps Agent Manager mode configuration precedence without destroying the manual choice", () => {
+    const store = { ...emptyStore(), modelSelections: { code: KILO_AUTO }, userSetAgents: { code: true } }
+    const configured = { ...organization, getModeModel: () => first, getGlobalModel: () => gpt }
+    expect(getAgentModel(store, configured, "code")).toEqual(first)
+    expect(getSelected(store, configured, undefined, "code")).toEqual(KILO_AUTO)
+    expect(store.modelSelections.code).toEqual(KILO_AUTO)
+    expect(getAgentModel(store, organization, "code")).toEqual(KILO_AUTO)
+  })
+
+  it("uses valid mode and global config before the recommendation when implicit memory is stale", () => {
+    const store = { ...emptyStore(), modelSelections: { code: KILO_AUTO } }
+    expect(getAgentModel(store, { ...organization, getModeModel: () => first }, "code")).toEqual(first)
+    expect(getSelected(store, { ...organization, getGlobalModel: () => gpt }, undefined, "code")).toEqual(gpt)
+  })
+})

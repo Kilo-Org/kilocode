@@ -19,6 +19,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { BackgroundAgents } from "./BackgroundAgents"
+import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -30,6 +31,7 @@ import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
+  projectId?: string
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -130,7 +132,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   )
 
   const toggle = () => {
-    if (props.readonly) return
     const next = !expanded()
     setExpanded(next)
     vscode.postMessage({ type: "updateSetting", key: "showTaskTimeline", value: next })
@@ -240,6 +241,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </Tooltip>
             )}
           </Show>
+          <SwarmBoard readonly={props.readonly} projectId={props.projectId} />
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
@@ -265,20 +267,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 aria-pressed={search.active()}
               />
             </Tooltip>
-            <Show when={!props.readonly}>
-              <button
-                data-slot="task-header-expand"
-                onClick={toggle}
-                aria-expanded={expanded()}
-                aria-label="Toggle timeline"
-              >
-                <Icon
-                  name="chevron-down"
-                  size="small"
-                  style={expanded() ? { transform: "rotate(180deg)" } : undefined}
-                />
-              </button>
-            </Show>
+            <button
+              data-slot="task-header-expand"
+              onClick={toggle}
+              aria-expanded={expanded()}
+              aria-label="Toggle timeline"
+            >
+              <Icon name="chevron-down" size="small" style={expanded() ? { transform: "rotate(180deg)" } : undefined} />
+            </button>
           </Show>
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 import type { Semaphore } from "./semaphore"
+import { lines } from "./git-stats-snapshot"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
@@ -388,20 +389,7 @@ export class GitOps {
     if (!untracked) return tracked
 
     const paths = untracked.split("\n").filter((line) => line.trim())
-    const counts = await Promise.all(
-      paths.map(async (p) => {
-        try {
-          const full = nodePath.resolve(cwd, p)
-          const stat = await fs.stat(full)
-          if (stat.size > 1_000_000) return 0
-          const content = await fs.readFile(full, "utf-8")
-          return content.split("\n").length
-        } catch (err) {
-          this.log(`Failed to read untracked file ${p}:`, err)
-          return 0
-        }
-      }),
-    )
+    const counts = await Promise.all(paths.map((file) => lines(nodePath.resolve(cwd, file))))
 
     return {
       files: tracked.files + paths.length,
