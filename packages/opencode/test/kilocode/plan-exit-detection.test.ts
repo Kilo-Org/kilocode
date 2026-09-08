@@ -216,6 +216,23 @@ describe("plan_exit detection", () => {
       await expect(pending).resolves.toBe("break")
     }))
 
+  test("subagent plan_exit does not trigger the interactive plan follow-up", () =>
+    withInstance(async () => {
+      const seeded = await seed({
+        agent: "general",
+        tools: [
+          {
+            tool: "plan_exit",
+            input: {},
+            output: "Plan is ready at .kilo/plans/plan.md. Ending planning turn.",
+          },
+        ],
+      })
+
+      expect(SessionPrompt.shouldAskPlanFollowup({ messages: seeded.messages, abort: AbortSignal.any([]) })).toBe(false)
+      expect(await questions.list()).toHaveLength(0)
+    }))
+
   test("KiloSessionPrompt resolves plan follow-up through the supplied question service", () =>
     withInstance(async () => {
       const seeded = await seed({
