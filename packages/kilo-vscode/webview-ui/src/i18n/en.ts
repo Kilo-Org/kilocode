@@ -1105,6 +1105,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
+  "settings.display.abortOnEscape.title": "Abort Session with Escape",
+  "settings.display.abortOnEscape.description":
+    "Stop a running session when Escape is pressed in the chat webview. Disable this to prevent accidental interruptions while dismissing dialogs or editing text.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

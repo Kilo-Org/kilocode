@@ -8,6 +8,7 @@ export function buildChatSettingsMessage() {
     type: "chatSettingsLoaded" as const,
     settings: {
       shiftTabCyclesVariant: config.get<boolean>("shiftTabCyclesVariant", true),
+      abortOnEscape: config.get<boolean>("abortOnEscape", true),
     },
   }
 }
@@ -32,5 +33,5 @@ export function watchChatConfig(post: Post): vscode.Disposable {
 }
 
 export function validChatSetting(key: string, value: unknown) {
-  return key === "shiftTabCyclesVariant" && typeof value === "boolean"
+  return (key === "shiftTabCyclesVariant" || key === "abortOnEscape") && typeof value === "boolean"
 }

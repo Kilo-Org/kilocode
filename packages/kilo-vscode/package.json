@@ -1214,6 +1214,11 @@
           "default": true,
           "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
         },
+        "kilo-code.new.chat.abortOnEscape": {
+          "type": "boolean",
+          "default": true,
+          "description": "Abort a running Kilo session when Escape is pressed in the chat webview. Disable to keep Escape from interrupting work."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",

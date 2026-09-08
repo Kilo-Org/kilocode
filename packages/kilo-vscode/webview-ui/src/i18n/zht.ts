@@ -1032,6 +1032,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
+  "settings.display.abortOnEscape.title": "使用 Escape 中斷工作階段",
+  "settings.display.abortOnEscape.description":
+    "在聊天 Webview 中按 Escape 停止正在執行的工作階段。停用此選項可避免關閉對話框或編輯文字時意外中斷工作。",
   "settings.display.terminalCommand.title": "終端命令區塊",
   "settings.display.terminalCommand.description": "選擇終端命令區塊的初始狀態：展開或收合。",
   "settings.display.terminalCommand.expanded": "展開",

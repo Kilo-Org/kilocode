@@ -48,10 +48,20 @@ describe("buildChatSettingsMessage", () => {
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(true)
   })
 
+  it("enables Escape aborts by default", () => {
+    expect(buildChatSettingsMessage().settings.abortOnEscape).toBe(true)
+  })
+
   it("returns the persisted cycling preference", () => {
     state.set("shiftTabCyclesVariant", false)
 
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
+  })
+
+  it("returns the persisted Escape abort preference", () => {
+    state.set("abortOnEscape", false)
+
+    expect(buildChatSettingsMessage().settings.abortOnEscape).toBe(false)
   })
 })
 
@@ -109,10 +119,13 @@ describe("timeline settings", () => {
 })
 
 describe("validChatSetting", () => {
-  it("accepts only boolean cycling updates", () => {
+  it("accepts only boolean chat setting updates", () => {
     expect(validChatSetting("shiftTabCyclesVariant", true)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", false)).toBe(true)
+    expect(validChatSetting("abortOnEscape", true)).toBe(true)
+    expect(validChatSetting("abortOnEscape", false)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", "false")).toBe(false)
+    expect(validChatSetting("abortOnEscape", "false")).toBe(false)
     expect(validChatSetting("unknown", true)).toBe(false)
   })
 })

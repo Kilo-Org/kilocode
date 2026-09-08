@@ -491,6 +491,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    abortOnEscape: boolean
   }
 }
 

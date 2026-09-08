@@ -1069,6 +1069,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",
+  "settings.display.abortOnEscape.title": "使用 Escape 中断会话",
+  "settings.display.abortOnEscape.description":
+    "在聊天 Webview 中按 Escape 停止正在运行的会话。禁用此选项可避免在关闭对话框或编辑文本时意外中断任务。",
   "settings.display.terminalCommand.title": "终端命令块",
   "settings.display.terminalCommand.description": "选择终端命令块的初始状态：展开或折叠。",
   "settings.display.terminalCommand.expanded": "展开",
