@@ -295,10 +295,32 @@ class SessionUi(
 
     override val auto: Boolean get() = controller.autoApprove
 
+    /**
+     * Whether this surface offers forking at all. Decided per surface rather than per session, so the
+     * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
+     * "has a session yet" part that the action menus need.
+     */
+    private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
+
+    override val forkable: Boolean get() = forkSurface && controller.id != null
+
     @RequiresEdt
     override fun setAuto(value: Boolean) {
         controller.setAutoApprove(value)
         prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun fork() {
+        forkMessage(null, "session_menu")
+    }
+
+    /** Single fork entry point for this session: the action menus pass no message, a prompt bubble does. */
+    @RequiresEdt
+    private fun forkMessage(messageId: String?, surface: String) {
+        if (!forkable) return
+        val session = controller.id ?: return
+        manager?.forkSession(session, messageId, surface)
     }
 
     @RequiresEdt
@@ -492,6 +514,7 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = if (readonly) null else ::revert,
+            fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
