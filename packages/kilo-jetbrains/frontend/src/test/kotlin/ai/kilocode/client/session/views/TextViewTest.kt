@@ -505,6 +505,24 @@ class TextViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test unfolding a prompt block grows the bubble`() {
+        val view = realizedPrompt(fence(60))
+
+        try {
+            val ed = codeEditor(codePane(view)).getEditor(true)!!
+            val folded = view.preferredSize.height
+
+            ed.foldingModel.runBatchFoldingOperation { ed.foldingModel.allFoldRegions.single().setExpanded(true) }
+            UIUtil.dispatchAllInvocationEvents()
+
+            // The bubble itself has to grow, not just the pane that reports a new preferred size.
+            assertTrue(view.preferredSize.height > folded)
+            assertFalse(view.md.component.isValid)
+        } finally {
+            Disposer.dispose(view)
+        }
+    }
+
     fun `test unfolding then folding a prompt block returns to one line`() {
         val view = realizedPrompt(fence(60))
 

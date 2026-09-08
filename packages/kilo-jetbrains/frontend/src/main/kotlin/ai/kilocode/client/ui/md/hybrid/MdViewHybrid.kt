@@ -505,7 +505,12 @@ internal open class MdViewHybrid(
             override fun copyText() = fieldText(field)
         }
         styleCodePane(pane, opts)
-        field.fold(label) { pane.revalidate() }
+        // A fold changes the block's height and what it draws, so re-measure and repaint the whole
+        // markdown root, the same way every other block size change in this view does.
+        field.fold(label) {
+            root.revalidate()
+            root.repaint()
+        }
         return pane
     }
 
