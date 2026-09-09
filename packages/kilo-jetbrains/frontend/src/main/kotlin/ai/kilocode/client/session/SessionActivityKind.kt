@@ -30,6 +30,18 @@ enum class SessionActivityKind {
     }
 
     fun icon(): Icon = ActivityIcon.of(this)
+
+    /**
+     * Whether the session's turn is still in flight, as
+     * [ai.kilocode.client.session.model.SessionState.isBusy] answers it for the open session: running,
+     * or stopped on a question or a permission it is waiting to be answered. A failed turn and a
+     * login prompt are not -- the session is idle, waiting on the user to start something new -- so
+     * the chat dock keeps offering its actions for those, and so does the session list.
+     */
+    fun busy(): Boolean = when (this) {
+        RUNNING, PERMISSION, PLAN, QUESTION -> true
+        LOGIN_REQUIRED, ERROR -> false
+    }
 }
 
 /**

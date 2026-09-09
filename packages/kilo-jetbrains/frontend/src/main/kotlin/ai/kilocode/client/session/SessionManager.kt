@@ -27,6 +27,15 @@ interface SessionManager {
     /** Opens the Move to Worktree flow. No-op unless [supportsMoveToWorktree] is true. */
     fun moveToWorktree(sessionId: String?, directory: String) {}
 
+    /** Whether this surface can fork a session (Agent Manager worktree editor tabs only). */
+    val supportsFork: Boolean get() = false
+
+    /**
+     * Forks [id] into a new session and opens it. With [messageId] the fork truncates at that
+     * message. [surface] only labels the telemetry. No-op unless [supportsFork] is true.
+     */
+    fun forkSession(id: String, messageId: String? = null, surface: String = "session") {}
+
     fun showHistory(back: (() -> Unit)? = null)
 
     fun openSession(ref: SessionRef)

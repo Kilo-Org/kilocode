@@ -67,6 +67,8 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
         run.states.value = listOf(RunStateDto("id1", "dev [wt]", WORKTREE))
 
         assertTrue(coroutines.pumpUntil { edtWait { control.button.icon } !== idle })
+        // The one the worktree list shows too, rather than a second live-indicator built here.
+        assertSame(WorktreeIcons.runIndicator, edtWait { control.button.icon })
     }
 
     fun `test a process in another worktree leaves the button idle`() {

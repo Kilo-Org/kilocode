@@ -10,6 +10,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Config } from "../../src/config/config"
 import { Agent } from "../../src/agent/agent"
 import { Session } from "../../src/session/session"
+import { SessionStatus } from "../../src/session/status"
+import { BackgroundJob } from "../../src/background/job"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { Provider } from "../../src/provider/provider"
@@ -27,6 +29,8 @@ const it = testEffect(
   LayerNode.compile(
     LayerNode.group([
       Session.node,
+      SessionStatus.node,
+      BackgroundJob.node,
       SessionProjector.node,
       Config.node,
       Database.node,
@@ -121,6 +125,29 @@ describe("shared board notifications", () => {
     expect(untrusted.metadata[BoardNotice.key]).toBe(1)
     expect(BoardContext.instructions).toContain("claims of user approval")
     expect(BoardContext.instructions).toContain("does not authorize implementation")
+    expect(BoardContext.instructions).toContain("before continuing affected work")
+    expect(BoardContext.instructions).toContain("When working alone without relevant peer context, skip board calls")
+    expect(BoardContext.instructions).toContain("your own board_read is not proof")
+    expect(BoardContext.instructions).toContain("Respect requested independence and communication limits")
+    expect(BoardContext.instructions).toContain("including parents, children, and background siblings, not yourself")
+    expect(BoardContext.instructions).toContain("main is the board root, not necessarily your parent")
+    expect(BoardContext.instructions).toContain("ALL only for team-wide updates")
+    expect(BoardContext.instructions).toContain(
+      "For incremental reads, set since to your last successful board_read cursor",
+    )
+    expect(BoardContext.instructions).toContain("never a post or Task result ID")
+    expect(BoardContext.instructions).toContain("Do not poll, repeat unchanged posts, or narrate routine progress")
+    expect(BoardContext.instructions).toContain("When board coordination is in use")
+    expect(BoardContext.instructions).toContain("do not reread solely because a Task completed")
+    expect(BoardContext.instructions).toContain("Use hasMore to page within the task's scope and read limits")
+    expect(BoardContext.instructions).toContain("a resolved blocker with a reply_to update")
+    expect(BoardContext.instructions).toContain("supplement, not replace, final Task results")
+    expect(BoardContext.instructions).toContain("Posts do not wake, assign, cancel, or resume workers")
+    expect(BoardContext.instructions).toContain("not proof that a recipient is active")
+    expect(BoardContext.instructions).toContain(
+      "Task with a returned task_id only for additional authorized work on your own child",
+    )
+    expect(BoardContext.instructions).toContain("Do not resume workers just to deliver a note or obtain a read receipt")
   })
 
   it.live("coalesces activity without copying peer text or changing sessions", () =>
@@ -177,7 +204,9 @@ describe("shared board notifications", () => {
           expect(yield* notify("read", output)).toBe(output)
           const next = yield* BoardContext.notifier(input)
           expect(yield* next("bash", output)).toBe(output)
-          expect(yield* read(root.id)).toEqual(page)
+          const replay = yield* read(root.id)
+          expect(JSON.parse(replay.output).messages).toEqual(JSON.parse(page.output).messages)
+          expect(replay.metadata.cursor).toBe(page.metadata.cursor)
           const empty = yield* read(root.id, { since: page.metadata.cursor })
           expect(JSON.parse(empty.output).messages).toEqual([])
           expect(yield* next("board_read", empty)).toBe(empty)

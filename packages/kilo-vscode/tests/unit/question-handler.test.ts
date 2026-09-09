@@ -297,20 +297,25 @@ describe("question handlers", () => {
     expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-unknown" })
   })
 
-  it("keeps non-404 failures retryable", async () => {
-    const error = new Error("Internal server error", {
-      cause: { status: 500, body: { name: "InternalServerError" } },
+  it.each([500, 404])("keeps HTTP %s failures retryable without retrying the same directory", async (status) => {
+    const error = new Error("Question request failed", { cause: { status } })
+    const dir = "/workspace/.kilo/worktrees/origin"
+    const { fake, messages, rejects, questionDirs } = ctx({
+      extra: [dir],
+      pending: { [dir]: [pending("req-error", "ses-root")] },
+      errors: { reject: error },
     })
-    const { fake, messages, questionDirs } = ctx({ errors: { reject: error } })
     const spy = spyOn(console, "error").mockImplementation(() => {})
-    questionDirs.set("req-error", "/workspace/.kilo/worktrees/origin")
+    questionDirs.set("req-error", dir)
 
     const ok = await handleQuestionReject(fake, "req-error", "ses-root")
     spy.mockRestore()
 
     expect(ok).toBe(false)
-    expect(questionDirs.get("req-error")).toBe("/workspace/.kilo/worktrees/origin")
+    expect(rejects).toHaveLength(1)
+    expect(questionDirs.get("req-error")).toBe(dir)
     expect(messages).toContainEqual({ type: "questionError", requestID: "req-error" })
+    expect(messages).not.toContainEqual({ type: "questionResolved", requestID: "req-error" })
   })
 })
 

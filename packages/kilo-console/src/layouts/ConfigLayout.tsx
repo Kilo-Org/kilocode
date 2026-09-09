@@ -6,6 +6,10 @@ import { ConfigProvider } from "../context/ConfigProvider"
 import { useConfig } from "../context/config"
 import { ConfigSidebar } from "../routes/config/ConfigSidebar"
 import { errMsg } from "../shared/utils"
+import "../styles/config.css"
+import "../styles/dialogs.css"
+import "../styles/models.css"
+import "../styles/providers.css"
 
 export function ConfigLayout(props: { children?: JSX.Element }) {
   return (

@@ -360,7 +360,7 @@ const layer = Layer.effect(
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
-        if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
+        if (!KiloToolRegistry.available(tool)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
           if (cfg.web_search === true) return true // kilocode_change
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })

@@ -6,12 +6,16 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { Agent } from "@/agent/agent"
 import type { Auth } from "@/auth"
+import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import type { Plugin } from "@/plugin"
 import type { Provider } from "@/provider/provider"
 import { LLMRequestPrep } from "@/session/llm/request"
 import { MessageID, SessionID } from "@/session/schema"
 import { SystemPrompt } from "@/session/system"
+import { testEffect } from "../lib/effect"
+
+const it = testEffect(RuntimeFlags.layer({ client: "test" }))
 
 const model: Provider.Model = {
   id: ModelV2.ID.make("test-model"),
@@ -124,4 +128,83 @@ describe("Kilo persona in generated metadata requests", () => {
     expect(result.system[0]).toContain(SystemPrompt.soul())
     expect(oauth.params.options.instructions).toContain(SystemPrompt.soul())
   })
+})
+
+describe("LLM request headers", () => {
+  for (const name of ["opencode", "opencode-go"]) {
+    it.instance(
+      `uses OpenCode headers for ${name}`,
+      () =>
+        Effect.gen(function* () {
+          const id = ProviderV2.ID.make(name)
+          const ctx = yield* InstanceState.context
+          const result = yield* LLMRequestPrep.prepare({
+            user: { ...user("code"), model: { providerID: id, modelID: model.id } },
+            sessionID: "ses_test",
+            model: { ...model, providerID: id },
+            agent: agent("code"),
+            system: [],
+            messages: [],
+            tools: {},
+            provider: { id, name, source: "config", env: [], options: {}, models: {} },
+            auth: undefined,
+            plugin,
+            flags: yield* RuntimeFlags.Service,
+            isWorkflow: false,
+          })
+
+          expect(result.headers).toMatchObject({
+            "x-opencode-project": ctx.project.id,
+            "x-opencode-session": "ses_test",
+            "x-opencode-request": "msg_test",
+            "x-opencode-client": "test",
+          })
+          expect(Object.keys(result.headers).filter((key) => /^x-kilo-/i.test(key))).toEqual([])
+          expect(result.headers).not.toHaveProperty("x-session-affinity")
+          expect(result.headers).not.toHaveProperty("X-Session-Id")
+        }),
+      { git: true },
+    )
+  }
+
+  for (const entry of [
+    { name: "kilo", npm: model.api.npm },
+    { name: "test", npm: model.api.npm },
+    { name: "kilo", npm: "@kilocode/kilo-gateway" },
+  ]) {
+    it.instance(`uses generic headers for ${entry.name} with ${entry.npm}`, () =>
+      Effect.gen(function* () {
+        const id = ProviderV2.ID.make(entry.name)
+        const result = yield* LLMRequestPrep.prepare({
+          user: { ...user("code"), model: { providerID: id, modelID: model.id } },
+          sessionID: "ses_test",
+          parentSessionID: "ses_parent",
+          model: { ...model, providerID: id, api: { ...model.api, npm: entry.npm } },
+          agent: agent("code"),
+          system: [],
+          messages: [],
+          tools: {},
+          provider: { id, name: entry.name, source: "config", env: [], options: {}, models: {} },
+          auth: undefined,
+          plugin,
+          flags: yield* RuntimeFlags.Service,
+          isWorkflow: false,
+        })
+
+        expect(result.headers).toMatchObject({
+          "x-session-affinity": "ses_test",
+          "X-Session-Id": "ses_test",
+          "x-parent-session-id": "ses_parent",
+        })
+        expect(Object.keys(result.headers).filter((key) => /^x-(kilo|opencode)-/i.test(key))).toEqual([])
+        if (entry.npm === "@kilocode/kilo-gateway") {
+          expect(result.headers).toMatchObject({
+            "x-kilocode-mode": "code",
+            "X-KILOCODE-TASKID": "ses_test",
+            "X-KILOCODE-PARENT-TASKID": "ses_parent",
+          })
+        }
+      }),
+    )
+  }
 })
