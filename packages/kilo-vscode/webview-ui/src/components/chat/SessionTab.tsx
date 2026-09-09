@@ -1,4 +1,5 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Show, type Component, type JSX } from "solid-js"
 import { ActivityIcon } from "../shared/ActivityIcon"
@@ -8,6 +9,8 @@ import { useLanguage } from "../../context/language"
 export const SessionTab: Component<{
   title: string
   active: boolean
+  pinned?: boolean
+  pinnedLabel?: string
   state: Activity
   stateLabel: string
   closeTitle: string
@@ -26,7 +29,11 @@ export const SessionTab: Component<{
 }> = (props) => {
   const { t } = useLanguage()
   return (
-    <div class={`am-tab ${props.active ? "am-tab-active" : ""}`} data-activity={props.state}>
+    <div
+      class={`am-tab ${props.active ? "am-tab-active" : ""}`}
+      data-activity={props.state}
+      data-pinned={props.pinned ? "true" : undefined}
+    >
       <div
         class="am-tab-target"
         role={props.role}
@@ -49,6 +56,11 @@ export const SessionTab: Component<{
             <Show when={props.state !== "idle"}>
               <span class="am-tab-icon" data-activity={props.state} aria-label={props.stateLabel}>
                 <ActivityIcon state={props.state} />
+              </span>
+            </Show>
+            <Show when={props.pinned}>
+              <span class="am-tab-pin" aria-label={props.pinnedLabel}>
+                <Icon name="pin-filled" size="small" />
               </span>
             </Show>
             <span class="am-tab-label">{props.title}</span>
