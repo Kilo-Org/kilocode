@@ -18,17 +18,18 @@ describe("Agent Manager diff toggle", () => {
     expect(button).toContain('aria-label={props.t("agentManager.browser.title")}')
   })
 
-  it("renders a real sandboxed browser document instead of an image", () => {
+  it("uses a reusable streamed viewport and keeps developer tools sandboxed", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
-    expect(source).toContain("<iframe")
+    expect(source).toContain("<StreamViewport")
+    expect(source).toContain('class="am-browser-devtools-frame"')
     expect(source).toContain('sandbox="allow-scripts allow-forms allow-same-origin"')
     expect(source).not.toContain("<img")
     expect(source).not.toContain("<canvas")
   })
 
-  it("reloads the visible document on each browser navigation and bridges native element inspection", () => {
+  it("passes navigation state to the stream and bridges element inspection", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
-    expect(source).toContain("props.state?.navigation")
+    expect(source).toContain("state={() => props.state}")
     expect(source).toContain("when={identity()}")
     expect(source).not.toContain("contentWindow")
     expect(source).toContain("onMouseMove={(event) => props.controller.move(position(event))}")
