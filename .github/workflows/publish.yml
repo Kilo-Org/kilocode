@@ -133,7 +133,7 @@ jobs:
   # kilocode_change start - execute supported Unix CLI binaries before packaging VSIX artifacts
   validate-cli-unix:
     name: Validate CLI (${{ matrix.target }})
-    needs: build-cli
+    needs: sign-cli-windows
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -175,14 +175,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli.tar.zst
+          name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p dist
-          tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
+          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C dist
 
       - name: Run CLI smoke test
         run: |
@@ -258,7 +258,7 @@ jobs:
 
   validate-cli-windows:
     name: Validate CLI (windows-${{ matrix.arch }})
-    needs: build-cli
+    needs: sign-cli-windows # kilocode_change
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20 # kilocode_change
     strategy:
@@ -274,7 +274,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli.tar.zst
+          name: kilo-cli-signed.tar.zst # kilocode_change
           path: ${{ runner.temp }}
           skip-decompress: true
 
@@ -289,7 +289,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli.tar.zst" | tar -xf - -C dist
+          zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli-signed.tar.zst" | tar -xf - -C dist # kilocode_change
 
       - name: Run CLI smoke test
         shell: pwsh
@@ -327,9 +327,99 @@ jobs:
             Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
           }
   # kilocode_change end
+  # kilocode_change start - EV-sign Windows binaries via Azure Key Vault.
+  # AzureSignTool is Windows-only, so signing runs on a Windows runner between
+  # build-cli and its consumers. Artifacts are immutable, so the signed dist is
+  # re-uploaded as kilo-cli-signed.tar.zst and all downstream jobs use it.
+  sign-cli-windows:
+    name: Sign CLI (Windows EV)
+    needs: build-cli
+    runs-on: windows-2025
+    if: github.repository == 'Kilo-Org/kilocode'
+    environment: GithubActionEVCodeSignDev
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: kilo-cli.tar.zst
+          path: ${{ runner.temp }}
+          skip-decompress: true
+
+      - name: Install zstd
+        shell: pwsh
+        run: |
+          if (-not (Get-Command zstd -ErrorAction SilentlyContinue)) {
+            choco install zstandard -y --no-progress
+          }
+
+      - name: Unpack CLI dist
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli.tar.zst" | tar -xf - -C dist
+
+      - name: Az login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.EV_CODE_SIGN_APP_CLIENT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+
+      - name: Sign Windows binaries with EV certificate
+        shell: bash
+        run: |
+          dotnet tool install --global AzureSignTool
+          export PATH="$USERPROFILE/.dotnet/tools:$PATH"
+          for exe in dist/@kilocode/cli-windows-*/bin/kilo.exe; do
+            AzureSignTool sign -v \
+              -kvu "${{ secrets.KEY_VAULT_URI }}" \
+              -kvc "${{ secrets.EV_CERT_NAME }}" \
+              -tr http://timestamp.digicert.com \
+              -d "Kilo CLI" \
+              "$exe"
+          done
+
+      - name: Verify signatures
+        shell: pwsh
+        run: |
+          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $signtool = Join-Path $kit.FullName "x64\signtool.exe"
+          foreach ($exe in Get-ChildItem "dist\@kilocode\cli-windows-*\bin\kilo.exe") {
+            & $signtool verify /pa $exe.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Pack signed CLI dist into tar.zst
+        shell: bash
+        run: |
+          find dist -name '*.map' -delete
+          tar --zstd -cf "$RUNNER_TEMP/kilo-cli-signed.tar.zst" -C dist .
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ runner.temp }}/kilo-cli-signed.tar.zst
+          archive: false
+
+      # build-cli already uploaded unsigned Windows zips to the draft release;
+      # replace them with signed copies so release assets match what npm/VSIX ship.
+      - name: Re-upload signed Windows release zips
+        shell: pwsh
+        run: |
+          $archives = @()
+          foreach ($dir in Get-ChildItem "dist\@kilocode\cli-windows-*" -Directory) {
+            $archive = "kilo-" + $dir.Name.Replace("cli-", "") + ".zip"
+            Compress-Archive -Path (Join-Path $dir.FullName "bin\*") -DestinationPath $archive -Force
+            $archives += $archive
+          }
+          gh release upload "v${{ needs.build-cli.outputs.version }}" $archives --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+  # kilocode_change end
+
   build-vscode:
     needs:
       - build-cli
+      - sign-cli-windows # kilocode_change
       - validate-cli-unix
       - validate-cli-windows
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -350,14 +440,14 @@ jobs:
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli.tar.zst
+          name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
-          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
       # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts
@@ -381,6 +471,7 @@ jobs:
     needs:
       - version
       - build-cli
+      - sign-cli-windows
     if: github.repository == 'Kilo-Org/kilocode'
     uses: ./.github/workflows/smoke-test.yml
     with:
@@ -393,6 +484,7 @@ jobs:
       - version
       - build-cli
       - build-vscode
+      - sign-cli-windows # kilocode_change
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
@@ -440,14 +532,14 @@ jobs:
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli.tar.zst
+          name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
-          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
       # kilocode_change end
       - uses: actions/download-artifact@v8
         with:
