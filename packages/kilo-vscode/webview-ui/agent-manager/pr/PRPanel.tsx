@@ -295,7 +295,6 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
             prUrl={props.pr.url}
             own={props.pr.viewerDidAuthor}
             closed={props.pr.state === "closed" || props.pr.state === "merged"}
-            onRefresh={props.onRefresh}
           />
           <Show when={(props.pr.reviewers ?? []).length > 0}>
             <PRReviewers reviewers={props.pr.reviewers ?? []} />

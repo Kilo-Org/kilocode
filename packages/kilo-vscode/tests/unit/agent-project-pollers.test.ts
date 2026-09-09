@@ -41,6 +41,8 @@ interface FakePair {
   enabled: { stats: boolean; pr: boolean }
   visible: { stats: boolean; pr: boolean }
   stopped: { stats: boolean; pr: boolean }
+  interest: string[]
+  detail: string | undefined
 }
 
 function fakes() {
@@ -58,6 +60,8 @@ function fakes() {
           poller: {
             setEnabled: (v) => (rec.enabled.pr = v),
             setVisible: (v) => (rec.visible.pr = v),
+            setWorktreeInterest: (v) => (rec.interest = [...v]),
+            setDetailInterest: (v) => (rec.detail = v),
             stop: () => (rec.stopped.pr = true),
           },
         },
@@ -65,6 +69,8 @@ function fakes() {
       enabled: { stats: false, pr: false },
       visible: { stats: true, pr: true },
       stopped: { stats: false, pr: false },
+      interest: [],
+      detail: undefined,
     }
     made.set(ctx.id, rec)
     return rec.pair
@@ -92,6 +98,21 @@ describe("ProjectPollers", () => {
     const rec = made.get("prj-extra")
     expect(rec).toBeDefined()
     expect(rec!.enabled).toEqual({ stats: true, pr: true })
+  })
+
+  it("applies interest queued before a background poller starts", () => {
+    const extra = stored("prj-extra")
+    const contexts = setup([extra])
+    expand(contexts, "prj-extra")
+    const { made, create, deps } = fakes()
+    const pollers = new ProjectPollers(deps, (ctx) => create(ctx))
+
+    pollers.setInterest(extra.id, ["wt-1"])
+    pollers.setDetailInterest(extra.id, "wt-1")
+    pollers.sync(contexts)
+
+    expect(made.get(extra.id)!.interest).toEqual(["wt-1"])
+    expect(made.get(extra.id)!.detail).toBe("wt-1")
   })
 
   it("does not start pollers for the active project", () => {
@@ -183,7 +204,13 @@ function recorder() {
     return {
       stats: { setEnabled: () => {}, setVisible: () => {}, stop: () => {} },
       pr: {
-        poller: { setEnabled: () => {}, setVisible: () => {}, stop: () => {} },
+        poller: {
+          setEnabled: () => {},
+          setVisible: () => {},
+          setWorktreeInterest: () => {},
+          setDetailInterest: () => {},
+          stop: () => {},
+        },
         replay: () => replayed.push(ctx.id),
       },
     }

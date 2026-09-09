@@ -132,7 +132,8 @@ export class PRStatusBridge {
 
   /** Handle an incoming webview message. Returns true if handled. */
   handleMessage(m: Record<string, unknown>): boolean {
-    if (this.reviews.handle(m) || this.suggestions.handle(m)) return true
+    const special = this.special(m)
+    if (special !== undefined) return special
     if (m.type === "agentManager.refreshPR") {
       if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
       this.poller.refresh(m.worktreeId as string)
@@ -158,6 +159,25 @@ export class PRStatusBridge {
     )
       return this.comment(m, `${m.type}Result`)
     return false
+  }
+
+  private special(m: Record<string, unknown>): boolean | undefined {
+    if (this.reviews.handle(m) || this.suggestions.handle(m)) return true
+    return this.interest(m)
+  }
+
+  private interest(m: Record<string, unknown>): boolean | undefined {
+    if (m.type === "agentManager.prInterest") {
+      if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return false
+      if (!Array.isArray(m.worktreeIds) || m.worktreeIds.some((id) => typeof id !== "string")) return true
+      this.poller.setWorktreeInterest(m.worktreeIds as string[])
+      return true
+    }
+    if (m.type !== "agentManager.prDetailInterest") return
+    if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return false
+    if (m.worktreeId !== undefined && typeof m.worktreeId !== "string") return true
+    this.poller.setDetailInterest(m.worktreeId as string | undefined)
+    return true
   }
 
   private handleReaction(m: Record<string, unknown>): boolean {

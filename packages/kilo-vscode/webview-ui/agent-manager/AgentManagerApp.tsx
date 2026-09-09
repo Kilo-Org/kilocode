@@ -369,6 +369,17 @@ const AgentManagerContent: Component = () => {
     if (!pr) return undefined
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
+  const prDetail = createMemo(() => {
+    if (!prOpen() || history() || reviewActive()) return
+    return activePR()?.selected
+  })
+  createEffect(() =>
+    vscode.postMessage({
+      type: "agentManager.prDetailInterest",
+      projectId: activeProjectId(),
+      worktreeId: prDetail(),
+    }),
+  )
   const diffs = createWorktreeDiffs(vscode, activeProjectId)
   createEffect(on(activeProjectId, diffs.reset, { defer: true }))
   const diffDatas = diffs.diffDatas
@@ -2277,6 +2288,10 @@ const AgentManagerContent: Component = () => {
             onCreate={creation.schedule}
             onSelect={activateSelection}
             onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
+            onPRInterest={(projectId, worktreeIds) =>
+              vscode.postMessage({ type: "agentManager.prInterest", projectId, worktreeIds })
+            }
+            sidebarVisible={!sidebarCollapsed()}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
@@ -2294,6 +2309,10 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
+            onPRInterest={(projectId, worktreeIds) =>
+              vscode.postMessage({ type: "agentManager.prInterest", projectId, worktreeIds })
+            }
+            sidebarVisible={!sidebarCollapsed()}
             onOpenComments={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
             activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}

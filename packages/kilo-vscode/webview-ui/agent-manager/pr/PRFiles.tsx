@@ -26,7 +26,7 @@ function trim(next: Map<string, State>, active: string) {
   }
 }
 
-export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean; onRefresh: () => void }) {
+export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean }) {
   const { t } = useLanguage()
   const vscode = useVSCode()
   let composer: HTMLDivElement | undefined
@@ -194,14 +194,7 @@ export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean; onR
                     snapshotId={snapshot().id}
                     closed={props.closed}
                     onCancel={() => patch({ anchor: undefined })}
-                    onSuccess={(() => {
-                      const id = key()
-                      const refresh = props.onRefresh
-                      return () => {
-                        patch({ anchor: undefined }, id)
-                        refresh()
-                      }
-                    })()}
+                    onSuccess={() => patch({ anchor: undefined }, key())}
                   />
                 </div>
               )}
@@ -216,7 +209,7 @@ export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean; onR
                 head={snapshot().head}
                 own={props.own}
                 closed={props.closed}
-                onSuccess={props.onRefresh}
+                onSuccess={() => undefined}
               />
             </Show>
           </>

@@ -10,6 +10,18 @@ export interface BaseUpdateRequest {
   agent?: string
 }
 
+export interface PRInterestRequest {
+  type: "agentManager.prInterest"
+  projectId?: string
+  worktreeIds: string[]
+}
+
+export interface PRDetailInterestRequest {
+  type: "agentManager.prDetailInterest"
+  projectId?: string
+  worktreeId?: string
+}
+
 export interface TerminalFont {
   fontFamily: string
   fontSize: number

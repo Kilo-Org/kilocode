@@ -860,6 +860,18 @@ interface RefreshPRIn {
   worktreeId: string
 }
 
+interface PRInterestIn {
+  type: "agentManager.prInterest"
+  projectId?: string
+  worktreeIds: string[]
+}
+
+interface PRDetailInterestIn {
+  type: "agentManager.prDetailInterest"
+  projectId?: string
+  worktreeId?: string
+}
+
 interface OpenPRIn {
   type: "agentManager.openPR"
   projectId?: string
@@ -1211,6 +1223,8 @@ export type AgentManagerInMessage =
   | RequestDiffBranchesIn
   | SetDiffBaseBranchIn
   | RefreshPRIn
+  | PRInterestIn
+  | PRDetailInterestIn
   | OpenPRIn
   | CommentActionIn
   | CommentReactionIn

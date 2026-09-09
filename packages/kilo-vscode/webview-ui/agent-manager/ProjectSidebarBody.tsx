@@ -65,6 +65,8 @@ interface Props {
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
+  onPRInterest?: (projectId: string, worktreeIds: string[]) => void
+  sidebarVisible?: boolean
   onOpenComments?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
@@ -114,6 +116,15 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sections = () => store.sections()
   const worktrees = () => store.worktrees()
   const order = () => store.worktreeOrder()
+  const interest = createMemo(() =>
+    props.sidebarVisible === false
+      ? []
+      : worktrees()
+          .filter((wt) => !wt.sectionId || !sections().find((section) => section.id === wt.sectionId)?.collapsed)
+          .map((wt) => wt.id),
+  )
+  createEffect(() => props.onPRInterest?.(props.project.id, interest()))
+  onCleanup(() => props.onPRInterest?.(props.project.id, []))
   const completion = createWorktreeCompletion(
     () => sortWorktrees(worktrees(), order()),
     () => props.project.id,

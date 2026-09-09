@@ -49,6 +49,8 @@ interface Props {
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
   onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
+  onPRInterest?: (projectId: string, worktreeIds: string[]) => void
+  sidebarVisible?: boolean
   onOpenComments?: (projectId: string, worktreeId: string) => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
@@ -241,6 +243,8 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
+          onPRInterest={props.onPRInterest}
+          sidebarVisible={props.sidebarVisible}
           onOpenComments={props.onOpenComments}
           onNewWorktree={newWorktree}
           shortcutMap={props.shortcutMap}

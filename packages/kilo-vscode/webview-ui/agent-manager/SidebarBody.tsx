@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, type Component } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import {
   DragDropProvider,
@@ -46,6 +46,8 @@ export interface SidebarBodyProps {
   currentSessionID: () => string | undefined
   selectLocal: () => void
   selectWorktree: (id: string) => void
+  onPRInterest?: (projectId: string | undefined, worktreeIds: string[]) => void
+  sidebarVisible?: boolean
   onOpenComments?: (id: string) => void
   activityFor: (id: string | null) => Activity
   repoBranch: () => string | undefined
@@ -100,6 +102,15 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
   const top = createMemo(() =>
     buildTopLevelItems(props.sections(), ungrouped(), sorted(), props.sidebarWorktreeOrder()),
   )
+  const interest = createMemo(() =>
+    props.sidebarVisible === false
+      ? []
+      : sorted()
+          .filter((wt) => !wt.sectionId || !props.sections().find((section) => section.id === wt.sectionId)?.collapsed)
+          .map((wt) => wt.id),
+  )
+  createEffect(() => props.onPRInterest?.(props.projectId, interest()))
+  onCleanup(() => props.onPRInterest?.(props.projectId, []))
   const vscode = useVSCode()
   const updateBase = useBaseUpdate()
   const localState = () => props.activityFor(null)

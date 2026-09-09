@@ -24,7 +24,13 @@ import type { WorktreeStateManager } from "../WorktreeStateManager"
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
   pr: {
-    poller: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
+    poller: {
+      setEnabled(enabled: boolean): void
+      setVisible(visible: boolean): void
+      setWorktreeInterest(ids: Iterable<string>): void
+      setDetailInterest(id: string | undefined): void
+      stop(): void
+    }
     replay?(): void
   }
 }
@@ -90,6 +96,8 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
 export class ProjectPollers {
   private readonly pollers = new Map<string, PollerPair>()
   private readonly cache = new Map<string, { worktrees?: StatsOutMessage; local?: StatsOutMessage }>()
+  private readonly interests = new Map<string, string[]>()
+  private readonly details = new Map<string, string | undefined>()
 
   constructor(
     private readonly deps: PollerDeps,
@@ -138,6 +146,9 @@ export class ProjectPollers {
       wanted.add(snap.id)
       if (this.pollers.has(snap.id)) continue
       const pair = this.create(ctx, this.recording(snap.id))
+      const ids = this.interests.get(snap.id)
+      if (ids) pair.pr.poller.setWorktreeInterest(ids)
+      if (this.details.has(snap.id)) pair.pr.poller.setDetailInterest(this.details.get(snap.id))
       pair.stats.setVisible(this.deps.visible())
       pair.pr.poller.setVisible(this.deps.visible())
       pair.stats.setEnabled(true)
@@ -150,6 +161,8 @@ export class ProjectPollers {
       pair.pr.poller.stop()
       this.pollers.delete(id)
       this.cache.delete(id)
+      this.interests.delete(id)
+      this.details.delete(id)
     }
   }
 
@@ -160,6 +173,35 @@ export class ProjectPollers {
     }
   }
 
+  setInterest(projectId: string, ids: Iterable<string>): boolean {
+    const next = [...ids]
+    this.interests.set(projectId, next)
+    const pair = this.pollers.get(projectId)
+    if (!pair) return true
+    pair.pr.poller.setWorktreeInterest(next)
+    return true
+  }
+
+  setDetailInterest(projectId: string, id: string | undefined): boolean {
+    this.details.set(projectId, id)
+    const pair = this.pollers.get(projectId)
+    if (!pair) return true
+    pair.pr.poller.setDetailInterest(id)
+    return true
+  }
+
+  handleInterest(message: Record<string, unknown>): boolean {
+    if (message.type === "agentManager.prInterest" && typeof message.projectId === "string") {
+      if (!Array.isArray(message.worktreeIds) || message.worktreeIds.some((id) => typeof id !== "string")) return true
+      return this.setInterest(message.projectId, message.worktreeIds as string[])
+    }
+    if (message.type === "agentManager.prDetailInterest" && typeof message.projectId === "string") {
+      if (message.worktreeId !== undefined && typeof message.worktreeId !== "string") return true
+      return this.setDetailInterest(message.projectId, message.worktreeId as string | undefined)
+    }
+    return false
+  }
+
   dispose(): void {
     for (const pair of this.pollers.values()) {
       pair.stats.stop()
@@ -167,6 +209,8 @@ export class ProjectPollers {
     }
     this.pollers.clear()
     this.cache.clear()
+    this.interests.clear()
+    this.details.clear()
   }
 }
 
