@@ -2,6 +2,7 @@ import { Image } from "@/image/image" // kilocode_change - classify user image v
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
+import { updateSessionSelection } from "@/kilocode/session/update-selection" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
@@ -200,6 +201,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof UpdatePayload.Type
     }) {
       const current = yield* requireSession(ctx.params.sessionID)
+      // kilocode_change start - persist picker selection without a message
+      yield* updateSessionSelection({
+        sessionID: ctx.params.sessionID,
+        current,
+        agent: ctx.payload.agent,
+        model: ctx.payload.model,
+      })
+      // kilocode_change end
       if (ctx.payload.title !== undefined) {
         yield* session.setTitle({ sessionID: ctx.params.sessionID, title: ctx.payload.title })
       }
@@ -343,8 +352,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
                 error: busy // kilocode_change
-                    ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
-                    : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
+                  ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
+                  : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })
             })
           }),

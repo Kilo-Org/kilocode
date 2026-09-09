@@ -54,6 +54,7 @@ export const DeleteMessageQuery = Schema.Struct({
 // kilocode_change end
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
 export const UpdatePayload = Schema.Struct({
+  ...Struct.pick(Session.Info.fields, ["agent", "model"]), // kilocode_change - persist picker selection without a message
   title: Schema.optional(Schema.String),
   metadata: Schema.optional(Session.Metadata),
   permission: Schema.optional(PermissionV1.Ruleset),

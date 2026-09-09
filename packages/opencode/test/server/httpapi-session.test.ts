@@ -805,12 +805,41 @@ describe("session HttpApi", () => {
         })
         expect(created.title).toBe("created")
 
+        // kilocode_change start - persist selection without creating a message
         const updated = yield* requestJson<Session.Info>(pathFor(SessionPaths.update, { sessionID: created.id }), {
           method: "PATCH",
           headers,
-          body: JSON.stringify({ title: "updated", time: { archived: 1 } }),
+          body: JSON.stringify({
+            title: "updated",
+            agent: "plan",
+            model: { id: "claude-opus", providerID: "anthropic", variant: "max" },
+            time: { archived: 1 },
+          }),
         })
-        expect(updated).toMatchObject({ id: created.id, title: "updated", time: { archived: 1 } })
+        expect(updated).toMatchObject({
+          id: created.id,
+          title: "updated",
+          agent: "plan",
+          model: { id: "claude-opus", providerID: "anthropic", variant: "max" },
+          time: { archived: 1 },
+        })
+        expect(
+          yield* requestJson<SessionV1.WithParts[]>(pathFor(SessionPaths.messages, { sessionID: created.id }), {
+            headers,
+          }),
+        ).toEqual([])
+        // kilocode_change end
+        // kilocode_change start - partial selection updates preserve the other field
+        const agentUpdated = yield* requestJson<Session.Info>(pathFor(SessionPaths.update, { sessionID: created.id }), {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ agent: "code" }),
+        })
+        expect(agentUpdated).toMatchObject({
+          agent: "code",
+          model: { id: "claude-opus", providerID: "anthropic", variant: "max" },
+        })
+        // kilocode_change end
 
         const forked = yield* requestJson<Session.Info>(pathFor(SessionPaths.fork, { sessionID: created.id }), {
           method: "POST",

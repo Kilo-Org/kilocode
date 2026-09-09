@@ -13198,6 +13198,12 @@ export type SessionGetResponse = SessionGetResponses[keyof SessionGetResponses]
 
 export type SessionUpdateData = {
   body?: {
+    agent?: string
+    model?: {
+      id: string
+      providerID: string
+      variant?: string
+    }
     title?: string
     metadata?: {
       [key: string]: unknown
