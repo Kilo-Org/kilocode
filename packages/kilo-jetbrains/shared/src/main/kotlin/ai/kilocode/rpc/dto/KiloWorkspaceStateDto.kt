@@ -30,6 +30,7 @@ data class KiloWorkspaceStateDto(
     val skills: List<SkillDto> = emptyList(),
     val error: String? = null,
     val errors: List<LoadErrorDto> = emptyList(),
+    val warnings: List<ConfigWarningDto> = emptyList(),
 )
 
 @Serializable

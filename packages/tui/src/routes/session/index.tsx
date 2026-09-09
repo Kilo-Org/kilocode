@@ -64,6 +64,7 @@ import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
+import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -72,7 +73,6 @@ import { QuestionPrompt } from "./question"
 import { Suggest } from "@/kilocode/suggestion/tui/render"
 import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt"
 import { NetworkPrompt } from "./network"
-import { TerminalPrompt } from "./terminal"
 // kilocode_change end
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
@@ -95,6 +95,7 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { GoalRow } from "@/kilocode/cli/cmd/tui/component/goal"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
@@ -261,11 +262,6 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.network[x.id] ?? [])
   })
-  const terminals = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.interactive_terminal[x.id] ?? [])
-  })
-  const terminal = createMemo(() => terminals()[0])
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
   const question = createMemo(
@@ -280,15 +276,13 @@ export function Session() {
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
-      network().length === 0 &&
-      terminals().length === 0,
+      network().length === 0,
   )
   const networkVisible = createMemo(
     () =>
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
-      terminals().length === 0 &&
       network().length > 0,
   )
   const disabled = createMemo(
@@ -296,8 +290,7 @@ export function Session() {
       permissions().length > 0 ||
       blockingQuestions().length > 0 ||
       blockingSuggestions().length > 0 ||
-      network().length > 0 ||
-      terminals().length > 0,
+      network().length > 0,
   )
   // kilocode_change end
 
@@ -1422,17 +1415,15 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
-                <Show when={!terminal() && permissions().length > 0}>
+                {/* kilocode_change start */}
+                <GoalRow sessionID={route.sessionID} />
+                <Show when={permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={terminal()} keyed>
-                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
-                </Show>
-                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
+                <Show when={permissions().length === 0 ? question() : undefined} keyed>
                   {(request) => (
                     <QuestionPrompt
                       request={request}
@@ -1442,7 +1433,7 @@ export function Session() {
                     />
                   )}
                 </Show>
-                <Show when={!terminal() && permissions().length === 0 && !question()}>
+                <Show when={permissions().length === 0 && !question()}>
                   <Show when={blockingSuggestion()} keyed>
                     {(request) => <SuggestPrompt request={request} />}
                   </Show>
@@ -1960,11 +1951,11 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
           <Grep {...toolprops} />
         </Match>
         {/* kilocode_change start - preserve Kilo tool-specific status rendering */}
+        <Match when={display() === "board_post" || display() === "board_read"}>
+          <BoardTool part={props.part} block={BlockTool} conceal={ctx.conceal()} />
+        </Match>
         <Match when={display() === "background_process"}>
           <BackgroundProcess {...toolprops} />
-        </Match>
-        <Match when={display() === "interactive_terminal"}>
-          <InteractiveTerminal {...toolprops} />
         </Match>
         <Match when={display() === "semantic_search"}>
           <SemanticSearch {...toolprops} />
@@ -2096,45 +2087,6 @@ function BackgroundProcess(props: ToolProps) {
       part={props.part}
     >
       {title()}
-      <Show when={dir()}> in {dir()}</Show>
-      <Show when={cmd()}> · $ {cmd()}</Show>
-      <Show when={status()}> ({status()})</Show>
-    </InlineTool>
-  )
-}
-
-function InteractiveTerminal(props: ToolProps) {
-  const sync = useSync()
-  const paths = usePathFormatter()
-  const running = createMemo(() => props.part.state.status === "running")
-  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
-  const desc = createMemo(() => stringValue(props.input.description) || cmd() || "interactive command")
-  const dir = createMemo(() => {
-    const raw = stringValue(props.input.workdir)
-    if (!raw || raw === ".") return
-    const base = sync.path.directory
-    if (!base) return paths.format(raw)
-    const abs = path.resolve(base, raw)
-    if (abs === base) return
-    return paths.format(abs)
-  })
-  const status = createMemo(() => {
-    if (props.metadata.closedBy === "user") return "closed by user"
-    if (props.metadata.closedBy === "abort") return "cancelled"
-    if (props.metadata.closedBy !== "exit") return
-    const code = numberValue(props.metadata.exitCode)
-    return code === undefined ? "completed" : `exit ${code}`
-  })
-
-  return (
-    <InlineTool
-      icon="$"
-      pending="Opening interactive terminal..."
-      complete={desc()}
-      spinner={running()}
-      part={props.part}
-    >
-      Interactive terminal: {desc()}
       <Show when={dir()}> in {dir()}</Show>
       <Show when={cmd()}> · $ {cmd()}</Show>
       <Show when={status()}> ({status()})</Show>
@@ -2325,6 +2277,7 @@ export function InlineToolRow(props: {
   )
 }
 
+export { BlockTool } // kilocode_change
 function BlockTool(props: {
   title?: string
   children: JSX.Element
@@ -3053,9 +3006,10 @@ const toolDisplays = new Set([
   "question",
   "skill",
   // kilocode_change start - retain dedicated Kilo tool renderers
+  "board_post",
+  "board_read",
   "execute",
   "background_process",
-  "interactive_terminal",
   "semantic_search",
   // kilocode_change end
 ])

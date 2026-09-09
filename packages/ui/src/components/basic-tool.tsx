@@ -24,6 +24,7 @@ const isTriggerTitle = (val: any): val is TriggerTitle => {
 
 export interface BasicToolProps {
   icon: IconProps["name"]
+  iconNode?: JSX.Element // kilocode_change
   trigger: TriggerTitle | JSX.Element
   children?: JSX.Element
   status?: string
@@ -201,7 +202,7 @@ export function BasicTool(props: BasicToolProps) {
       <div data-slot="basic-tool-tool-trigger-content">
         {/* kilocode_change start */}
         <span data-slot="basic-tool-icon">
-          <Icon name={props.icon} size="small" />
+          {props.iconNode ?? <Icon name={props.icon} size="small" />}
         </span>
         {/* kilocode_change end */}
         <div data-slot="basic-tool-tool-info">

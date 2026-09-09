@@ -2,6 +2,7 @@ import { createMemo, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
+  AgentManagerSidebarTarget,
   AgentManagerStateMessage,
   AgentProjectSnapshot,
   LocalGitStats,
@@ -22,6 +23,7 @@ import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -46,6 +48,9 @@ interface Props {
   mode: ModeRouter
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
+  onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
+  onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
@@ -61,8 +66,10 @@ interface Props {
 export const ProjectList: Component<Props> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
-  const select = (target: Record<string, unknown>) =>
-    vscode.postMessage({ type: "agentManager.activateSelection", target } as never)
+  const select = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    if (props.onSelect) return props.onSelect(target, restore)
+    vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
+  }
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
@@ -185,6 +192,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}
@@ -204,11 +212,7 @@ export const ProjectList: Component<Props> = (props) => {
       onSelect={(projectId) =>
         // Selecting the project itself returns to where the user left off in it;
         // the extension resolves its persisted target authoritatively.
-        vscode.postMessage({
-          type: "agentManager.activateSelection",
-          target: { projectId, kind: "local" },
-          restore: true,
-        })
+        select({ projectId, kind: "local" }, true)
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
@@ -238,6 +242,8 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
+          onOpenComments={props.onOpenComments}
+          onOpenPR={props.onOpenPR}
           onNewWorktree={newWorktree}
           shortcutMap={props.shortcutMap}
         />

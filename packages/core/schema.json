@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "fcf518b9-c8bc-4ee5-8e68-2608bffcef43",
+  "id": "38a74186-5907-4662-9e14-e059300a8b4e",
   "prevIds": [
-    "08cfecbf-f95d-404b-a76a-2afc564baa8b"
+    "fcf518b9-c8bc-4ee5-8e68-2608bffcef43"
   ],
   "ddl": [
     {
@@ -697,6 +697,16 @@
       "default": "1",
       "generated": null,
       "name": "next_seq",
+      "entityType": "columns",
+      "table": "kilo_board"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "cleared_seq",
       "entityType": "columns",
       "table": "kilo_board"
     },
@@ -2228,6 +2238,20 @@
       "where": null,
       "origin": "manual",
       "name": "part_session_idx",
+      "entityType": "indexes",
+      "table": "part"
+    },
+    {
+      "columns": [
+        {
+          "value": "session_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "json_valid(\"part\".\"data\") AND json_extract(\"part\".\"data\", '$.type') = 'step-finish'",
+      "origin": "manual",
+      "name": "part_session_step_finish_idx",
       "entityType": "indexes",
       "table": "part"
     },

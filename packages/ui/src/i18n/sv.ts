@@ -88,6 +88,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "Samlar tankar",
   "ui.sessionTurn.status.consideringNextSteps": "Funderar på nästa steg",
   "ui.messagePart.diagnostic.error": "Fel",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Läs meddelanden från agenter",
+  "ui.messagePart.board.all": "Alla agenter",
+  "ui.messagePart.board.primary": "Huvudagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} till {{to}}",
+  "ui.messagePart.board.empty": "Inga meddelanden från agenter",
+  "ui.messagePart.board.stored": "Endast sparat. Leverans och läsning är inte bekräftade.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Redigera",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv ditt eget svar",
