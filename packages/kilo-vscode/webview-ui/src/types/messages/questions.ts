@@ -21,6 +21,7 @@ export interface QuestionInfo {
   header: string
   options: QuestionOption[]
   multiple?: boolean
+  default?: string
   custom?: boolean
   // Optional i18n keys for question text and header (see QuestionOption for details).
   questionKey?: string

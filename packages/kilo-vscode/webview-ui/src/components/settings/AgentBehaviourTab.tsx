@@ -51,7 +51,8 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, collections, updateConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
+  const { config, collections, settings, updateConfig, updateGlobalConfig, updateProjectConfig, updateSetting } =
+    useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -291,7 +292,6 @@ const AgentBehaviourTab: Component = () => {
           <SettingsRow
             title={language.t("settings.agentBehaviour.defaultAgent.title")}
             description={language.t("settings.agentBehaviour.defaultAgent.description")}
-            last
           >
             <Select
               options={defaultAgentOptions()}
@@ -308,6 +308,19 @@ const AgentBehaviourTab: Component = () => {
               size="small"
               triggerVariant="settings"
             />
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.pushFixes.title")}
+            description={language.t("settings.agentBehaviour.pushFixes.description")}
+            last
+          >
+            <Switch
+              checked={settings()["agentManager.pushFixes"] !== false}
+              onChange={(checked: boolean) => updateSetting("agentManager.pushFixes", checked)}
+              hideLabel
+            >
+              {language.t("settings.agentBehaviour.pushFixes.title")}
+            </Switch>
           </SettingsRow>
         </Card>
 

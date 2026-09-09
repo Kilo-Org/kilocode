@@ -3,6 +3,7 @@ import { Card } from "@kilocode/kilo-web-ui/card"
 import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { ConfigPage, ConfigToggle as Toggle } from "./ConfigPage"
 import { type TitleIcon, useTuiNotificationSettings } from "./state/ui"
+import "../../styles/cli-ui.css"
 
 const icons = [
   { value: "none", label: "None" },

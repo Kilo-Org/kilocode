@@ -42,7 +42,7 @@ test("client and Server contracts generate identically", () => {
   const client = compile(ClientApi, { groupNames, endpointNames, omitEndpoints })
 
   expect(emitPromise(client)).toEqual(emitPromise(server))
-})
+}, 30_000) // kilocode_change - allow full contract generation on shared CI runners
 
 test("shared DTO schemas construct and decode plain objects", () => {
   const made = Prompt.make({ text: "hello" })

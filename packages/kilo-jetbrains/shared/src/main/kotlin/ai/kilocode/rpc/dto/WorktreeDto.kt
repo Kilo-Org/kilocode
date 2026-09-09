@@ -85,6 +85,33 @@ data class GhChecksDto(
     val pending: Int = 0,
 )
 
+/**
+ * Review conversations on a pull request, from GitHub's `reviewThreads`.
+ *
+ * Counts only, for the same reason as [GhChecksDto]. [total] counts conversations, not individual
+ * comments — a thread with a dozen replies is one. [unresolved] counts the threads nobody has marked
+ * resolved, outdated ones included, which is what GitHub's own "unresolved conversations" number says.
+ *
+ * Both are read from the first 100 threads, so a pull request with more under-reports. That bound is
+ * GitHub's page size rather than a limit worth paginating for: no reviewer scans a hundredth thread from
+ * a worktree row.
+ */
+@Serializable
+data class GhCommentsDto(
+    val total: Int = 0,
+    val unresolved: Int = 0,
+)
+
+/**
+ * Whether a pull request still merges into its base branch, from GitHub's `mergeable`.
+ *
+ * [UNKNOWN] is what GitHub answers for the first seconds after a push, because it computes mergeability
+ * asynchronously, and also what an older `gh` or a refused field leaves behind. It therefore has to read as
+ * "nothing to report" — the absence of a verdict is never evidence that the branches merge cleanly.
+ */
+@Serializable
+enum class GhMerge { UNKNOWN, CLEAN, CONFLICTING }
+
 @Serializable
 data class WorktreePrDto(
     val path: String,
@@ -94,6 +121,9 @@ data class WorktreePrDto(
     val title: String = "",
     val review: GhReview = GhReview.NONE,
     val checks: GhChecksDto = GhChecksDto(),
+    val comments: GhCommentsDto = GhCommentsDto(),
+    /** Whether the head still merges into base. Answered by the same request as [checks]. */
+    val merge: GhMerge = GhMerge.UNKNOWN,
 )
 
 /**

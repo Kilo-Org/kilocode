@@ -23,15 +23,6 @@ export const ActivityIcon: Component<{
 
 export const LocalActivity: Component<{ state: Activity; label: string }> = (props) => (
   <span class="am-local-status" data-activity={props.state} aria-label={props.label}>
-    <ActivityIcon
-      state={props.state}
-      idle={
-        <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-          <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-          <path d="M10 13.5V16.5" stroke="currentColor" />
-        </svg>
-      }
-    />
+    <ActivityIcon state={props.state} idle={<Icon name="local" size="small" />} />
   </span>
 )

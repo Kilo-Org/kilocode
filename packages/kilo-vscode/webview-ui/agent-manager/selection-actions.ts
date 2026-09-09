@@ -46,7 +46,7 @@ export function createTabMemory(opts: {
     if (opts.multi() && opts.applied() !== opts.active()) return
     if (
       opts.multi() &&
-      !(sel === LOCAL ? (opts.localTab?.(tab) ?? (opts.pending(tab) || opts.locals().includes(tab))) : opts.owns(sel))
+      !(sel === LOCAL ? opts.localTab?.(tab) || opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel))
     )
       return
     rememberSelectionTab(opts.set, sel, tab)
@@ -127,9 +127,9 @@ function terminal(
   empty: boolean,
 ): string | undefined {
   const key = deps.nsKey(selection)
-  if (deps.terms.hasRemembered(key, remembered)) return remembered
-  if (!empty || deps.isReviewTab(remembered, selection)) return
-  return deps.terms.forSelection(key).at(0)?.id
+  const known = deps.terms.hasRemembered(key, remembered)
+  if (!known && (!empty || deps.isReviewTab(remembered, selection))) return
+  return known ? remembered : deps.terms.forSelection(key).at(0)?.id
 }
 
 /** Select the Local context: restore its remembered tab or fall back to the first session/draft. */

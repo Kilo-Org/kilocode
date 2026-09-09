@@ -433,6 +433,12 @@ describe("classifyWorktreeError", () => {
     ).toBe("lfs_missing")
   })
 
+  it("detects a repository with no commits", () => {
+    expect(
+      classifyWorktreeError("This repository has no commits yet. Create an initial commit before using worktrees."),
+    ).toBe("no_commits")
+  })
+
   it("returns undefined for unrecognized errors", () => {
     expect(classifyWorktreeError('Branch "foo" already exists')).toBeUndefined()
     expect(classifyWorktreeError("Failed to create worktree: fatal: unknown error")).toBeUndefined()

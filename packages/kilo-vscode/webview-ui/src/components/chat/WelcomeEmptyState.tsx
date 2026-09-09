@@ -1,4 +1,4 @@
-import { type Component, For, Show } from "solid-js"
+import { type Component, type JSX, For, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
@@ -10,6 +10,7 @@ import { FeedbackDialog } from "./FeedbackDialog"
 interface WelcomeEmptyStateProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  footer?: JSX.Element
 }
 
 export const KiloLogo = () => {
@@ -60,6 +61,7 @@ export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
         <Icon name="bubble-5" size="small" />
         {language.t("feedback.button")}
       </button>
+      {props.footer}
     </div>
   )
 }

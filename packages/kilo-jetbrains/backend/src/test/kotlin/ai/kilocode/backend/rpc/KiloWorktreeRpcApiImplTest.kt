@@ -1,19 +1,28 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
+import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.SystemInfo
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -74,6 +83,24 @@ class KiloWorktreeRpcApiImplTest {
         // the comparison into "always fresh".
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `reason reports a timeout instead of falling through to the fallback text`() {
+        assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
+        assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
+        assertEquals("git worktree remove failed", api.reason(CmdOut(1, "", ""), "git worktree remove failed"))
+    }
+
+    @Test
+    fun `cancellation checks in the poll wrappers also cover ProcessCanceledException`() {
+        // statsSafe/dirtySafe/prStatus isolate per-worktree failures behind runCatching and rethrow
+        // only CancellationException. That is enough to honor IntelliJ's "never swallow a PCE" rule
+        // solely because PCE extends java.util.concurrent.CancellationException, which is also what
+        // kotlinx.coroutines.CancellationException aliases on the JVM. Locked down here so a platform
+        // change that decoupled the two would fail this test instead of silently turning a cancelled
+        // progress indicator into a fake empty poll result.
+        assertTrue(ProcessCanceledException() is CancellationException)
     }
 
     @Test
@@ -184,6 +211,40 @@ class KiloWorktreeRpcApiImplTest {
     fun `badDir detects a missing working directory spawn failure`() {
         assertTrue(badDir("Cannot start a process, the working directory '/tmp/gone' does not exist"))
         assertFalse(badDir("Cannot run program \"git\": error=2, No such file or directory"))
+        // git's own message for the same race once the process has already started: the working
+        // directory disappeared before git called getcwd(), rather than before it was even spawned.
+        assertTrue(badDir("fatal: Unable to read current working directory: No such file or directory"))
+        assertFalse(badDir("fatal: index file corrupt"))
+        assertFalse(badDir("fatal: not a git repository (or any of the parent directories): .git"))
+    }
+
+    @Test
+    fun `staleWorktrees excludes a worktree already marked doomed in WorktreeTrash`() {
+        val trash = WorktreeTrash(CoroutineScope(Dispatchers.Default + SupervisorJob()))
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val gone = WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true)
+
+        assertEquals(listOf(gone.path), staleWorktrees(listOf(main, gone), trash).map { it.path })
+
+        trash.mark(gone.path)
+        // A worktree WorktreeTrash already knows is being removed is about to become stale by
+        // design (the removal renamed its directory away and will prune it itself); a concurrent
+        // poll's own prune must not race that in-flight removal.
+        assertTrue(staleWorktrees(listOf(main, gone), trash).isEmpty())
+    }
+
+    @Test
+    fun `managedWorktrees excludes a directory staged for delete even while git still lists it`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val staged = WorktreeDto(
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+            "${WorktreeTrash.PREFIX}abc",
+            "feature/x",
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+        )
+        val real = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+
+        assertEquals(listOf(real.path), managedWorktrees(listOf(main, staged, real)).filter { !it.main }.map { it.path })
     }
 
     @Test
@@ -873,6 +934,35 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `dirty reports the main checkout too`() = runBlocking {
+        initRepo()
+        api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
+        val root = repo.toRealPath()
+        // Creating a worktree leaves its own traces in the main checkout, so the edits below are
+        // measured as a delta rather than against an assumed-clean starting point.
+        val items = api.dirty(repo.toString()).items
+        val before = assertNotNull(items.singleOrNull { Path.of(it.path) == root }, "main checkout missing from $items")
+
+        Files.writeString(repo.resolve("README.md"), "hello there\n")
+        Files.writeString(repo.resolve("untracked.txt"), "u\n")
+        val after = assertNotNull(api.dirty(repo.toString()).items.singleOrNull { Path.of(it.path) == root })
+
+        assertEquals(before.files + 2, after.files, "the README edit plus the untracked file")
+        assertEquals(before.untracked + 1, after.untracked)
+    }
+
+    @Test
+    fun `stats leaves the main checkout out`() = runBlocking {
+        initRepo()
+        api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
+        val root = repo.toRealPath()
+
+        // The main checkout holds the branch the others are compared against, so it has no base stats
+        // to report -- only its uncommitted counts, which dirty() answers for.
+        assertTrue(api.stats(repo.toString()).items.none { Path.of(it.path) == root })
+    }
+
+    @Test
     fun `dirty counts commits missing from the upstream`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -887,6 +977,42 @@ class KiloWorktreeRpcApiImplTest {
 
         assertEquals(1, item.unpushed)
         assertEquals(0, item.files, "committed work is not uncommitted")
+    }
+
+    /**
+     * [dirty] and [statsSafe]/[dirtySafe] via [api.dirty] and [api.stats] share the exact same
+     * `runCatching` isolation wrapper (see [statsSafe]/[dirtySafe] in the implementation), so proving
+     * it here for [dirty] covers the mechanism for both. [stats]'s own git calls compare two fully
+     * resolved commits (`GitComparison`'s two-revision form), which is why the same index corruption
+     * cannot be reused to force a throw there: a tree-to-tree diff never reads the index at all,
+     * unlike [dirty]'s working-tree comparison used below.
+     */
+    @Test
+    fun `dirty reports a neutral entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
+        initRepo()
+        val healthy = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("healthy")).worktree)
+        val broken = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("broken")).worktree)
+        Files.writeString(Path.of(healthy.path).resolve("tracked.txt"), "edit\n")
+        corruptIndex(Path.of(broken.path))
+
+        // GitComparison.open() succeeds for `broken` (HEAD resolves fine); the corrupted index only
+        // breaks the later `git diff`/`ls-files` calls inside files() -- exactly the "open succeeded,
+        // a later command threw" shape a real fault takes, as opposed to a directory that is simply
+        // gone (which open() already returns null for, no throw involved).
+        val dto = api.dirty(repo.toString())
+
+        val healthyItem = assertNotNull(dto.items.singleOrNull { it.path == healthy.path })
+        assertEquals(1, healthyItem.files, "a healthy sibling must still be reported correctly")
+        val brokenItem = assertNotNull(dto.items.singleOrNull { it.path == broken.path })
+        assertEquals(WorktreeDirtyDto(broken.path), brokenItem, "a broken worktree gets a neutral entry, not an exception")
+    }
+
+    /** Overwrites [dir]'s own worktree index with garbage so `git diff`/`ls-files` fail well after
+     * `rev-parse --is-inside-work-tree` and `rev-parse HEAD` (which don't read the index) already
+     * succeeded. */
+    private fun corruptIndex(dir: Path) {
+        val gitDir = Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-dir").trim())
+        Files.write(gitDir.resolve("index"), "not an index".toByteArray())
     }
 
     @Test
@@ -1061,6 +1187,27 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhReview.NONE, pull.review)
         assertEquals(GhChecks.NONE, pull.checks.state)
         assertEquals(GhChecksDto(), pull.checks)
+        assertEquals(GhMerge.UNKNOWN, pull.merge, "a merge verdict nobody gave is not a clean merge")
+    }
+
+    @Test
+    fun `parsePr carries the merge verdict gh reported`() {
+        val pull = assertNotNull(
+            parsePr("/repo", """{"number":1,"state":"OPEN","url":"https://pr/1","mergeable":"CONFLICTING"}"""),
+        )
+
+        assertEquals(GhMerge.CONFLICTING, pull.merge)
+    }
+
+    @Test
+    fun `parseMerge maps every github mergeable answer`() {
+        assertEquals(GhMerge.CONFLICTING, parseMerge(obj("""{"mergeable":"CONFLICTING"}""")))
+        assertEquals(GhMerge.CLEAN, parseMerge(obj("""{"mergeable":"MERGEABLE"}""")))
+        // GitHub recomputes mergeability after every push and answers UNKNOWN until it finishes, so an
+        // unsettled or missing verdict must not read as a clean merge.
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("""{"mergeable":"UNKNOWN"}""")))
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("""{"mergeable":null}""")))
+        assertEquals(GhMerge.UNKNOWN, parseMerge(obj("{}")))
     }
 
     @Test
@@ -1119,6 +1266,71 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[]}""")).state)
         // Every check skipped is still nothing to report, not a pass.
         assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"SKIPPED"}]}""")).state)
+    }
+
+    @Test
+    fun `parsePrNodeId reads the node id and tolerates gh answering without one`() {
+        assertEquals("PR_kwDOAbCdEf", parsePrNodeId("""{"id":"  PR_kwDOAbCdEf  ","number":1}"""))
+        assertEquals("", parsePrNodeId("""{"number":1}"""))
+        assertEquals("", parsePrNodeId("""{"id":null}"""))
+        assertEquals("", parsePrNodeId("not json"))
+    }
+
+    @Test
+    fun `parseThreads counts unresolved conversations`() {
+        val comments = parseThreads(
+            """
+            {"data":{"node":{"reviewThreads":{"totalCount":4,"nodes":[
+              {"isResolved":false},
+              {"isResolved":true},
+              {"isResolved":false},
+              {"isResolved":true}
+            ]}}}}
+            """.trimIndent(),
+        )
+
+        assertEquals(2, comments.unresolved)
+        assertEquals(4, comments.total)
+    }
+
+    @Test
+    fun `parseThreads counts an outdated conversation nobody resolved`() {
+        // GitHub's own unresolved-conversation number includes threads whose lines have moved on, and a
+        // reviewer still expects a reply to one.
+        val comments = parseThreads(
+            """{"data":{"node":{"reviewThreads":{"totalCount":1,"nodes":[{"isResolved":false,"isOutdated":true}]}}}}""",
+        )
+
+        assertEquals(1, comments.unresolved)
+    }
+
+    @Test
+    fun `parseThreads treats a missing flag as unresolved`() {
+        // The flag is only absent when GitHub omitted it, which is not evidence anyone resolved the thread.
+        val comments = parseThreads("""{"data":{"node":{"reviewThreads":{"nodes":[{},{"isResolved":true}]}}}}""")
+
+        assertEquals(1, comments.unresolved)
+        assertEquals(2, comments.total, "the node count stands in for an absent totalCount")
+    }
+
+    @Test
+    fun `parseThreads reports nothing for an absent, empty, or malformed payload`() {
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{"node":{"reviewThreads":{"totalCount":0,"nodes":[]}}}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{"node":null}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("""{"data":{}}"""))
+        assertEquals(GhCommentsDto(), parseThreads("{}"))
+        assertEquals(GhCommentsDto(), parseThreads(""))
+        assertEquals(GhCommentsDto(), parseThreads("not json"))
+    }
+
+    @Test
+    fun `parseThreads keeps a total past the query page while the unresolved count cannot`() {
+        // The query asks for the first 100 threads, so `totalCount` is the only honest total past that.
+        val nodes = List(100) { """{"isResolved":false}""" }.joinToString(",")
+        val comments = parseThreads("""{"data":{"node":{"reviewThreads":{"totalCount":137,"nodes":[$nodes]}}}}""")
+
+        assertEquals(100, comments.unresolved)
+        assertEquals(137, comments.total)
     }
 
     @Test

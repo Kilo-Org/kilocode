@@ -2,6 +2,7 @@
 // cloud/apps/web/src/app/(app)/claw/kilo-chat/components/ConversationList.tsx
 
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useClaw } from "../context/claw"
 import { useKiloClawLanguage } from "../context/language"
 import type { ConversationListItem } from "../lib/types"
@@ -69,15 +70,14 @@ export function ConversationList() {
     <div class="kiloclaw-convlist">
       <div class="kiloclaw-convlist-header">
         <span class="kiloclaw-convlist-title">{t("kiloClaw.conversations.title")}</span>
-        <button
-          type="button"
-          class="kiloclaw-iconbtn"
+        <IconButton
+          icon="plus"
+          variant="ghost"
+          size="small"
           onClick={() => claw.createConversation()}
           aria-label={t("kiloClaw.conversations.new")}
           title={t("kiloClaw.conversations.new")}
-        >
-          +
-        </button>
+        />
       </div>
       <div class="kiloclaw-convlist-scroll" ref={scrollEl}>
         <Show
@@ -175,24 +175,23 @@ function ConversationItem(props: { conversation: ConversationListItem }) {
         </span>
       </Show>
       <div class="kiloclaw-convitem-actions" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          class="kiloclaw-iconbtn-sm"
+        <IconButton
+          icon="edit"
+          variant="ghost"
+          size="small"
           onClick={startRename}
           title={t("kiloClaw.conversations.rename")}
           aria-label={t("kiloClaw.conversations.rename")}
-        >
-          ✎
-        </button>
-        <button
-          type="button"
-          class="kiloclaw-iconbtn-sm kiloclaw-iconbtn-danger"
+        />
+        <IconButton
+          icon="close-small"
+          variant="ghost"
+          size="small"
+          tone="danger"
           onClick={() => claw.leaveConversation(props.conversation.conversationId)}
           title={t("kiloClaw.conversations.leave")}
           aria-label={t("kiloClaw.conversations.leave")}
-        >
-          ×
-        </button>
+        />
       </div>
     </div>
   )
