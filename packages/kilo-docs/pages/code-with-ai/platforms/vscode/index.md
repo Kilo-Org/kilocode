@@ -57,6 +57,18 @@ Use these controls in the expanded strip:
 - **Clear finished** hides all agents that are no longer running.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
+## Task notifications
+
+Kilo can alert you when a session finishes, needs your input, needs a permission decision, or stops on an error. Three independent channels are available, all off by default:
+
+| Setting | Behavior |
+|---|---|
+| **Enable Sound Notifications** | Play a sound when sessions complete, error, or need input. Choose from built-in sound packs in the dropdown and use **Test** to preview a sound. |
+| **Enable VS Code Notifications** | Show a VS Code notification when a task completes or needs input. The notification waits with a **Show** action that opens the session at the latest message. |
+| **Enable OS Notifications** | Show a native OS notification while VS Code is in the background. Works on Windows, macOS, and Linux; use **Test** to confirm delivery on your system. |
+
+Enable these in Kilo Code Settings ({% codicon name="gear" /%}) under **Notifications**, or set `kilo-code.new.attention.enabled`, `kilo-code.new.attention.notifications`, and `kilo-code.new.attention.OSNotifications` in VS Code settings. Notifications are skipped for the session you are already viewing, and OS notifications fire only while the editor window is not focused.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

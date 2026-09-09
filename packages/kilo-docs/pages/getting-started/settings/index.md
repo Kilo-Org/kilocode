@@ -230,3 +230,7 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 **Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
+
+When Kilo Swarm is active and the board has messages, a **Board** button appears in the chat session header. Click it to open a chronological reader with the full board history. The reader loads older messages automatically as you scroll. Opening the reader does not create a board or mark messages as read.
+
+You can also reset the board from the reader. Resetting hides all existing messages from the visible history without deleting them or disrupting running agents. Existing message IDs and agent cursors remain valid. The reset requires confirmation and is scoped to the owning session and directory.

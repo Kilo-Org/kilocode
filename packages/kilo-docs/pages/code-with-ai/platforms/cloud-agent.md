@@ -54,6 +54,14 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
 
 `kilo cloud` can start tasks, send follow-up prompts, and check task status and results. Repository, branch, model, mode, and organization are inferred from your local checkout and CLI defaults unless you pass the matching flags. Add `--stream` to `kilo cloud start` to print task events as JSONL until the task completes. See the [CLI reference](/docs/code-with-ai/platforms/cli-reference#kilo-cloud) for all commands and options.
 
+`kilo cloud start` and `kilo cloud send` take exactly one prompt source: `--prompt` or `--prompt-stdin`. Use `--prompt-stdin` to read the prompt from standard input, which is useful for piping long or pre-rendered prompts:
+
+```bash
+cat task.md | kilo cloud start --prompt-stdin --repo Kilo-Org/kilocode
+```
+
+Standard-input prompts are validated as UTF-8 and limited to 100,000 characters.
+
 ## How Cloud Agents Work
 
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
@@ -74,6 +82,10 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
   - Spindown occurs after inactivity
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
+
+## Reviewing Changes
+
+The chat header's **Changes** button shows how many files the agent has changed in the session workspace, with total additions and deletions. Click it to open the **Changes** panel, which lists every changed file with its status (added, modified, or deleted) and per-file line counts. Switch between a flat list grouped by directory and a tree layout, refresh the list on demand, and see which base branch the changes are compared against and when the summary was last saved.
 
 ## Agent Environment Profiles
 

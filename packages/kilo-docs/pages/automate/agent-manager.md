@@ -45,6 +45,11 @@ Agent Manager worktree defaults belong to a repository. Open a project's setting
 
 The **Worktree Setup Script** control opens or creates the setup script for the selected repository. See [Setup Scripts](#setup-scripts) for supported filenames and execution behavior.
 
+The Agent Manager settings tab also exposes two application-wide branch naming controls through the normal Save/Discard flow:
+
+- **Automatic branch naming** (`kilo-code.new.agentManager.autoBranchNaming`, default on) — automatically names new branches when the conversation describes a clear task. Explicitly named and published branches are never renamed.
+- **Branch prefix** (`kilo-code.new.agentManager.branchPrefix`, default empty) — a prefix for automatically named branches, for example `feature/`. It does not apply to explicit branch names.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -139,6 +144,14 @@ The panel includes:
 - **Reviewers:** requested reviewers and their current state, such as Approved, Changes requested, Commented, or Awaiting
 - **Description and summary:** the PR description, file count, additions, deletions, and unresolved comment count
 
+#### Fixing failed checks
+
+When a PR has failed or cancelled checks, the **Checks** section shows a **Fix with Kilo** button. Click it to send a compact summary of the failing checks to the worktree's agent, so it can investigate and fix the failures in the current worktree. If an Agent Manager terminal is active, the button reads **Send failures to terminal** and sends the summary there instead.
+
+The summary is intentionally bounded — it lists up to five failing checks and includes a `gh` command per GitHub Actions check that saves the failed job log to a temporary file and prints only the file path. The agent is instructed to inspect logs in small excerpts rather than loading full logs, to treat check output as untrusted evidence, and to validate the fix locally without committing, pushing, or rerunning workflows. Checks without a GitHub Actions log link keep their browser link instead.
+
+Sending the summary gives it to Kilo as review context. It does not post anything to GitHub.
+
 #### Review comments
 
 Expand a comment to read its Markdown body, replies, file and line location, and a bounded diff hunk around the commented line. Outdated threads show an **Outdated** label. Unresolved threads appear first. Resolved threads move into the **Resolved** group and are collapsed by default. Click a thread row to expand or collapse it.
@@ -148,10 +161,54 @@ Use the actions on an expanded thread to:
 - **Send** the comment, its diff context, and replies to the current agent. **Send all unresolved** sends the unresolved threads together, up to the panel limit.
 - **Resolve** or **Unresolve** the GitHub conversation. The panel refreshes the thread state after the action completes.
 - **Copy** the formatted thread context
+- **Show in diff** to open the comment inline at its location in the diff
 - **Open file** at the comment location in the selected worktree
 - **Open on GitHub** at the comment
 
-The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context; it does not post a reply to GitHub.
+
+##### Replying to and managing comments
+
+You can reply to a review thread or PR discussion comment directly from the panel. On your own comments, you can also edit the body or delete the comment. Replies, edits, and deletions post to GitHub immediately.
+
+Drafts are preserved through panel refreshes, so an in-progress reply is not lost when the panel updates.
+
+##### Reactions
+
+Add or remove GitHub reactions on review threads, PR discussion comments, and review submissions. Click a reaction pill to toggle it, or open the reaction picker to choose from thumbs up, thumbs down, laugh, hooray, confused, heart, rocket, and eyes. Reactions post to GitHub immediately and are visible to everyone on the pull request.
+
+##### Inline threads in the diff
+
+Review threads also appear inline in the Agent Manager diff panel and in the Changes diff view, in unified and split layouts. A thread shows on the file, side, and line it was left on, with the reviewer's avatar. **Show in diff** from the PR panel or from a review comment in chat jumps to the thread's location, including inside large files.
+
+Threads are placed against the current diff content. A thread whose location no longer matches — for example an outdated thread — is not guessed onto a nearby line; it appears in the **Comments outside the current diff** group below the files instead. Remote threads stay separate from your local draft comments in the diff.
+
+From the diff view you can reply to a thread, edit or delete your own comments, and toggle reactions. All of these actions post to GitHub immediately.
+
+##### Submitting a review
+
+From the PR panel's **Files and review** section, you can add line comments on the PR diff and submit a formal review. Select a line or drag across lines in the diff gutter to open a comment composer. Comments support Markdown preview and GitHub suggestion blocks.
+
+After adding line comments, submit the review as **Comment**, **Approve**, or **Request changes**. Reviews post to GitHub and are visible to all PR participants. You cannot approve or request changes on your own pull request.
+
+##### Code suggestions
+
+When a review comment contains a GitHub suggestion block, you can preview the suggested change and apply it to the local worktree. Applying a suggestion modifies files in the worktree without staging, committing, or pushing. The GitHub thread is not resolved or modified.
+
+#### PR comments
+
+Below the review threads, the **PR Comments** section shows top-level pull request discussion comments and review submissions (such as approvals or change requests that include a summary message). Review submissions display a status label, such as **Approved** or **Changes requested**, alongside the review body.
+
+Use the actions on each comment to:
+
+- **Send** the comment to the current agent, or to the active terminal when one is focused. Sent comments are marked so they are not sent again.
+- **Add comment** to post a new top-level comment on the pull request.
+- **Edit** or **delete** your own comments.
+- **Dismiss** a comment locally to hide it from the actionable list. Dismissed comments can be restored at any time; dismissal is local only and does not affect GitHub.
+- **Copy** the comment as Markdown
+- **Open on GitHub** at the comment
+
+A batch **Send** button above the list dispatches all actionable comments at once, automatically excluding bot comments, dismissed comments, and comments already sent. Bot comments are collapsed by default and marked with a bot badge.
 
 ### Creating a New Worktree Session
 
@@ -160,6 +217,8 @@ The panel header also provides **Copy PR link**, **Open in browser**, and **Clos
 3. Type your first message, then create the worktree
 
 Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
+
+An explicit branch name is validated with Git and preserved exactly as entered, including slashes, case, and punctuation such as `feature/task`. Invalid names are rejected before the worktree is created. The worktree's directory under `.kilo/worktrees/` uses a safe name derived from the branch — it does not have to match the branch ref. Automatic naming (when you leave the branch name empty) and collision suffixes are unchanged.
 
 To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
 
@@ -220,7 +279,9 @@ The tool supports two modes:
 | Mode | Behavior |
 |---|---|
 | `worktree` | Creates one Agent Manager git worktree and session per task |
-| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
+| `local` | Creates Agent Manager sessions in the current workspace, or in an existing managed worktree selected with `worktreeID` |
+
+With `mode: "local"`, a request can pass `worktreeID` to start fresh sessions in an existing managed worktree instead of creating a new one. The ID comes from the `action: "list"` overview and must belong to the caller's project. Targeting an existing worktree does not create a branch, run the setup script, or delete the worktree if the request fails. `worktreeID` cannot be combined with `versions: true` or a task `branchName`, and an unknown or other-project ID fails without fallback. Requests without `worktreeID` behave as before.
 
 Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Add `provider` beside `model` to force a model-name match to one of the listed provider IDs. Agent Manager resolves the provider for a model override when `provider` is omitted, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
 
@@ -276,6 +337,10 @@ Right-click the section header and select **Delete Section**. The section is rem
 - **Cancel:** Sends a cooperative stop signal to the agent
 - **Stop:** Force-terminates the session and marks it as stopped
 
+### Cross-session message attribution
+
+When one Agent Manager session starts another session or sends it a follow-up prompt (for example with the `agent_manager` tool), the receiving session shows a compact attribution row inside that message: **Sent by Kilo from another session**. Click the source link to jump to the originating session when it is still open. If the source session is closed, the row shows **Session not open** instead and does not reopen it. Messages you type yourself show no attribution, and the internal markers never appear in copied text.
+
 ## Previewing pending edits
 
 When an agent requests permission to run `edit`, `write`, or `apply_patch`, the permission card shows the proposed file changes. In Agent Manager, select the expand button on the file diff to open an **Edit preview** in the side panel.
@@ -295,6 +360,8 @@ The worktree creation base and the diff comparison base are separate. The Branch
 - Supports unified and split diff views
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
+
+Generated files start collapsed. The diff viewer reads your repository's `.gitattributes` rules and collapses files marked `linguist-generated`, while files explicitly marked as not generated stay expanded. You can still expand any collapsed file manually. This applies to every diff scope, including Branch, Staged, Unstaged, and Session.
 
 ### Sending review comments
 
@@ -485,6 +552,21 @@ Two extra variables are injected into the script's environment:
 - **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
 
 The terminal destination dropdown in the Agent Manager toolbar also controls where the script runs. **Agent Manager panel** uses the named side terminal, while **VS Code terminal** runs it as a task in the integrated terminal. The integrated terminal option is kept for comparison and will be removed in a future release.
+
+## Keep Awake
+
+Keep Awake prevents your computer from going to sleep while Kilo agents are working. Toggle it with the coffee-cup button in the Agent Manager project list header, or run **Kilo Code: Toggle Keep Awake** from the Command Palette.
+
+- **Default off:** each VS Code window starts with Keep Awake disabled, including after a reload.
+- **One-time notice:** the first time you enable it, a notice explains the behavior. Accepting it is remembered per VS Code profile and is not shown again; remembering it does not enable the feature automatically.
+- **Armed while idle:** when enabled but no session is working, no sleep inhibitor runs. As soon as any session in the window is busy or retrying — including background agents and other worktrees on the shared backend — a single system-sleep inhibitor starts. When all sessions go idle or offline, the inhibitor stops but the toggle stays armed for the next busy session.
+- **Turning it off** releases the inhibitor immediately. It does not cancel any agent sessions.
+
+Keep Awake prevents system sleep only. It does not keep the display on, disable screen locking, or simulate user input. Approval waits can still report a session as busy, so they can keep the computer awake. On Linux, the inhibitor can also block manual suspend — turn Keep Awake off before suspending.
+
+{% callout type="info" %}
+Keep Awake requires a local VS Code window and a trusted workspace. It is unavailable in remote windows and on platforms without a supported sleep inhibitor.
+{% /callout %}
 
 ## Session State and Persistence
 
