@@ -35,6 +35,8 @@ import { useDialog } from "../context/dialog"
 import { useClipboard } from "../context/clipboard"
 import { type UiI18n, useI18n } from "../context/i18n"
 import { BasicTool, useToolApprovalLine } from "./basic-tool"
+import { BoardMessage, BoardRoute } from "./board-message"
+import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -1164,61 +1166,6 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
-function BoardRoute(props: { from?: unknown; to?: unknown; fromLabel?: unknown; toLabel?: unknown }) {
-  const i18n = useI18n()
-  const text = (value: unknown) => (typeof value === "string" ? value : "")
-  const from = () => text(props.from)
-  const to = () => text(props.to)
-  const label = (id: string, value: unknown) => {
-    if (id === "ALL") return i18n.t("ui.messagePart.board.all")
-    const title = text(value)
-    if (title.trim()) return title
-    if (id === "main") return i18n.t("ui.messagePart.board.primary")
-    return id ? `${i18n.t("ui.messagePart.board.agent")} · ${id.slice(-8)}` : i18n.t("ui.messagePart.board.agent")
-  }
-  const sender = () => label(from(), props.fromLabel)
-  const recipient = () => label(to(), props.toLabel)
-  const detail = (title: string, id: string) => (
-    <div data-slot="board-route-detail">
-      <span>{title}</span>
-      <Show when={id}>
-        <code>{id}</code>
-      </Show>
-    </div>
-  )
-  return (
-    <span
-      data-component="board-route"
-      data-broadcast={to() === "ALL"}
-      role="group"
-      aria-label={i18n.t("ui.messagePart.board.route", { from: sender(), to: recipient() })}
-    >
-      <Icon name="task" size="small" />
-      <Tooltip
-        class="board-route-member board-route-sender"
-        contentClass="board-route-tooltip"
-        value={detail(sender(), from())}
-      >
-        {sender()}
-      </Tooltip>
-      <Icon name="arrow-right" size="small" />
-      <span data-slot="board-route-recipient-icon" data-broadcast={to() === "ALL"}>
-        <Icon name="task" size="small" />
-        <Show when={to() === "ALL"}>
-          <Icon name="task" size="small" />
-        </Show>
-      </span>
-      <Tooltip
-        class="board-route-member board-route-recipient"
-        contentClass="board-route-tooltip"
-        value={detail(recipient(), to())}
-      >
-        {recipient()}
-      </Tooltip>
-    </span>
-  )
-}
-
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
@@ -1346,16 +1293,7 @@ function McpTool(props: ToolProps) {
                 fallback={<span data-slot="board-message-note">{i18n.t("ui.messagePart.board.empty")}</span>}
               >
                 <For each={rows()}>
-                  {(message) => (
-                    <div data-slot="board-message">
-                      <Show when={props.tool === "board_read"}>
-                        <BoardRoute {...message} />
-                      </Show>
-                      <div data-slot="board-message-body">
-                        <Markdown text={message.body} />
-                      </div>
-                    </div>
-                  )}
+                  {(message) => <BoardMessage {...message} route={props.tool === "board_read"} />}
                 </For>
               </Show>
               <Show when={props.tool === "board_post" && props.status === "completed"}>
@@ -2232,9 +2170,9 @@ ToolRegistry.register({
               animate={props.reveal}
               onClick={data.openFile ? () => data.openFile!(filepath) : undefined}
             />
-    )}
+          )}
         </For>
-      <Show when={images().length > 0}>
+        <Show when={images().length > 0}>
           <div data-slot="tool-read-images">
             <For each={images()}>
               {(file) => (
@@ -2520,6 +2458,7 @@ ToolRegistry.register({
         hideDetails
         approvalPlacement="hidden"
         icon="task"
+        iconNode={<AgentAvatar id={childSessionId() ?? ""} status={taskStatus(props.status)} />}
         status={props.status}
         trigger={trigger()}
         animated
@@ -2967,24 +2906,26 @@ ToolRegistry.register({
       const diffs = files().flatMap((file) => {
         const diff = view(file)
         return diff
-          ? [{
-              file: file.relativePath,
-              patch: diff.patch,
-              status:
-                file.type === "add"
-                  ? ("added" as const)
-                  : file.type === "delete"
-                    ? ("deleted" as const)
-                    : ("modified" as const),
-              additions:
-                file.type === "add" && diff.additions === 0
-                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
-                  : diff.additions,
-              deletions:
-                file.type === "delete" && diff.deletions === 0
-                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
-                  : diff.deletions,
-            }]
+          ? [
+              {
+                file: file.relativePath,
+                patch: diff.patch,
+                status:
+                  file.type === "add"
+                    ? ("added" as const)
+                    : file.type === "delete"
+                      ? ("deleted" as const)
+                      : ("modified" as const),
+                additions:
+                  file.type === "add" && diff.additions === 0
+                    ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
+                    : diff.additions,
+                deletions:
+                  file.type === "delete" && diff.deletions === 0
+                    ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
+                    : diff.deletions,
+              },
+            ]
           : []
       })
       const first = diffs[0]
@@ -3133,11 +3074,7 @@ ToolRegistry.register({
                                       <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
                                     </Show>
 
-                                    <span
-                                      data-slot="apply-patch-filename"
-                                    >
-                                      {getFilename(file.relativePath)}
-                                    </span>
+                                    <span data-slot="apply-patch-filename">{getFilename(file.relativePath)}</span>
                                   </div>
                                 </div>
                                 <div data-slot="apply-patch-trigger-actions">

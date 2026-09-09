@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Završeno (prema modelu)",
+  "session.goal.blocked": "Blokirano",
+  "session.goal.restart": "Ponovo pokreni cilj",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Ploča",
+  "task.swarm.refresh": "Osvježi",
+  "task.swarm.reset": "Resetuj ploču",
+  "task.swarm.resetTitle": "Resetovati ovu ploču?",
+  "task.swarm.resetDescription":
+    "Obrisati vidljive poruke? Razgovori i zadaci koji se izvršavaju ostaju nepromijenjeni. Agenti mogu objaviti nove poruke.",
+  "task.swarm.loading": "Učitavanje ploče...",
+  "task.swarm.failed": "Ploču nije moguće učitati ili resetovati. Pokušajte je osvježiti.",
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -752,6 +763,14 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.goal.label": "Cilj",
+  "prompt.goal.set": "Postavi cilj",
+  "prompt.goal.start": "Pokreni cilj",
+  "session.goal.active": "Aktivan",
+  "session.goal.paused": "Pauziran",
+  "session.goal.pause": "Pauziraj",
+  "session.goal.resume": "Nastavi",
+  "session.goal.clear": "Obriši cilj",
   "session.costAlert.header": "Upozorenje o trošku sesije",
   "session.costAlert.continue": "Nastavi",
   "session.costAlert.question":
@@ -849,7 +868,17 @@ export const dict = {
   "settings.notifications.enable.title": "Omogući zvučne obavijesti",
   "settings.notifications.enable.description":
     "Reproduciraj zvukove kada se sesije završe, naiđu na grešku ili trebaju vaš unos",
+  "settings.notifications.workbench.title": "Omogući VS Code obavijesti",
+  "settings.notifications.workbench.description":
+    "Prikaži VS Code obavijesti kada Kilo završi zadatak ili treba vaš unos",
+  "settings.notifications.os.title": "Omogući obavijesti operativnog sistema",
+  "settings.notifications.os.description":
+    "Prikaži izvorna obavještenja operativnog sistema kada Kilo završi zadatak ili treba vaš unos dok VS Code nije aktivan.",
   "settings.notifications.testSound": "Testiraj",
+  "settings.notifications.testOS": "Testiraj",
+  "settings.notifications.testOS.testing": "Slanje testnog obavještenja…",
+  "settings.notifications.testOS.success": "Testno obavještenje je poslano.",
+  "settings.notifications.testOS.error": "Slanje testnog obavještenja nije uspjelo",
   "settings.notifications.sound.default": "Zadano",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":

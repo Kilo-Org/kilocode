@@ -58,8 +58,19 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
+  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.blocked": "차단됨",
+  "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "보드",
+  "task.swarm.refresh": "새로 고침",
+  "task.swarm.reset": "보드 초기화",
+  "task.swarm.resetTitle": "이 보드를 초기화할까요?",
+  "task.swarm.resetDescription":
+    "표시된 메시지를 지울까요? 대화와 실행 중인 작업은 변경되지 않습니다. 에이전트는 새 메시지를 게시할 수 있습니다.",
+  "task.swarm.loading": "보드 로딩 중...",
+  "task.swarm.failed": "보드를 불러오거나 초기화할 수 없습니다. 새로 고침을 시도하세요.",
 
   "command.provider.connect": "공급자 연결",
 
@@ -746,6 +757,14 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.goal.label": "목표",
+  "prompt.goal.set": "목표 설정",
+  "prompt.goal.start": "목표 시작",
+  "session.goal.active": "활성",
+  "session.goal.paused": "일시 중지됨",
+  "session.goal.pause": "일시 중지",
+  "session.goal.resume": "재개",
+  "session.goal.clear": "목표 지우기",
   "session.costAlert.header": "세션 비용 알림",
   "session.costAlert.continue": "계속",
   "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
@@ -839,7 +858,17 @@ export const dict = {
   "settings.notifications.enable.title": "소리 알림 활성화",
   "settings.notifications.enable.description":
     "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.workbench.title": "VS Code 알림 활성화",
+  "settings.notifications.workbench.description":
+    "Kilo가 작업을 완료하거나 사용자 입력이 필요할 때 VS Code 알림을 표시합니다",
+  "settings.notifications.os.title": "OS 알림 활성화",
+  "settings.notifications.os.description":
+    "VS Code가 활성화되어 있지 않을 때 Kilo가 작업을 완료하거나 사용자 입력이 필요하면 기본 운영 체제 알림을 표시합니다.",
   "settings.notifications.testSound": "테스트",
+  "settings.notifications.testOS": "테스트",
+  "settings.notifications.testOS.testing": "테스트 알림을 보내는 중…",
+  "settings.notifications.testOS.success": "테스트 알림을 보냈습니다.",
+  "settings.notifications.testOS.error": "테스트 알림을 보내지 못했습니다",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.system": "시스템",
   "settings.notifications.sound.description":

@@ -250,8 +250,8 @@ open class WorktreeSessionEditorManager(
      * Copies [id]'s history into a new session in this worktree and opens it.
      *
      * Nothing here touches the session list's visibility: the forked row goes into the same list
-     * model every other creation path writes to, and [WorktreeSessionEditorPanel] applies its own
-     * promotion rule from there.
+     * model every other creation path writes to, and [WorktreeSessionEditorPanel] never changes
+     * visibility on its own -- it stays exactly as the user last left it (or hidden, if never chosen).
      */
     @RequiresEdt
     override fun forkSession(id: String, messageId: String?, surface: String) {

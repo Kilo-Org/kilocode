@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.blocked": "Blokeret",
+  "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Opdater",
+  "task.swarm.reset": "Nulstil tavle",
+  "task.swarm.resetTitle": "Nulstil denne tavle?",
+  "task.swarm.resetDescription":
+    "Ryd synlige beskeder? Samtaler og igangværende opgaver ændres ikke. Agenter kan sende nye beskeder.",
+  "task.swarm.loading": "Indlæser tavle...",
+  "task.swarm.failed": "Tavlen kunne ikke indlæses eller nulstilles. Prøv at opdatere den.",
 
   "command.provider.connect": "Tilslut udbyder",
 
@@ -750,6 +761,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angiv mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Sat på pause",
+  "session.goal.pause": "Sæt på pause",
+  "session.goal.resume": "Genoptag",
+  "session.goal.clear": "Ryd mål",
   "session.costAlert.header": "Advarsel om sessionsomkostning",
   "session.costAlert.continue": "Fortsæt",
   "session.costAlert.question":
@@ -848,7 +867,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktivér lydnotifikationer",
   "settings.notifications.enable.description":
     "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.workbench.title": "Aktivér VS Code-notifikationer",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-notifikationer, når Kilo fuldfører en opgave eller har brug for input fra dig",
+  "settings.notifications.os.title": "Aktivér OS-notifikationer",
+  "settings.notifications.os.description":
+    "Vis oprindelige OS-notifikationsadvarsler, når Kilo fuldfører en opgave eller har brug for input fra dig, mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testnotifikation…",
+  "settings.notifications.testOS.success": "Testnotifikation sendt.",
+  "settings.notifications.testOS.error": "Testnotifikation mislykkedes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":

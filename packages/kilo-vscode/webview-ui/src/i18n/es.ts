@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Completo (según el modelo)",
+  "session.goal.blocked": "Bloqueado",
+  "session.goal.restart": "Reiniciar objetivo",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablero",
+  "task.swarm.refresh": "Actualizar",
+  "task.swarm.reset": "Restablecer tablero",
+  "task.swarm.resetTitle": "¿Restablecer este tablero?",
+  "task.swarm.resetDescription":
+    "¿Borrar los mensajes visibles? Las conversaciones y las tareas en curso no cambian. Los agentes pueden publicar nuevos mensajes.",
+  "task.swarm.loading": "Cargando tablero...",
+  "task.swarm.failed": "No se pudo cargar o restablecer el tablero. Intenta actualizarlo.",
 
   "command.provider.connect": "Conectar proveedor",
 
@@ -756,6 +767,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrumpido",
   "session.outcome.error": "Turno fallido",
   "session.outcome.finish": "Motivo de finalización: {{reason}}",
+  "session.goal.label": "Objetivo",
+  "prompt.goal.set": "Establecer objetivo",
+  "prompt.goal.start": "Iniciar objetivo",
+  "session.goal.active": "Activo",
+  "session.goal.paused": "En pausa",
+  "session.goal.pause": "Pausar",
+  "session.goal.resume": "Reanudar",
+  "session.goal.clear": "Borrar objetivo",
   "session.costAlert.header": "Alerta de coste de sesión",
   "session.costAlert.continue": "Continuar",
   "session.costAlert.question":
@@ -856,7 +875,17 @@ export const dict = {
   "settings.notifications.enable.title": "Activar las notificaciones sonoras",
   "settings.notifications.enable.description":
     "Reproducir sonidos cuando las sesiones finalicen, se produzca un error o se requiera tu intervención",
+  "settings.notifications.workbench.title": "Activar las notificaciones de VS Code",
+  "settings.notifications.workbench.description":
+    "Mostrar notificaciones de VS Code cuando Kilo complete una tarea o requiera tu intervención",
+  "settings.notifications.os.title": "Activar las notificaciones del sistema operativo",
+  "settings.notifications.os.description":
+    "Mostrar alertas de notificación nativas del sistema operativo cuando Kilo complete una tarea o requiera tu intervención mientras VS Code no está activo.",
   "settings.notifications.testSound": "Probar",
+  "settings.notifications.testOS": "Probar",
+  "settings.notifications.testOS.testing": "Enviando notificación de prueba…",
+  "settings.notifications.testOS.success": "Notificación de prueba enviada.",
+  "settings.notifications.testOS.error": "Error al enviar la notificación de prueba",
   "settings.notifications.sound.default": "Predeterminado",
   "settings.notifications.sound.system": "Sistema",
   "settings.notifications.sound.description":

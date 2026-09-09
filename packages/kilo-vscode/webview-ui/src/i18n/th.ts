@@ -53,8 +53,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "เสร็จสมบูรณ์ (โมเดลรายงาน)",
+  "session.goal.blocked": "ถูกบล็อก",
+  "session.goal.restart": "เริ่มเป้าหมายใหม่",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "กระดาน",
+  "task.swarm.refresh": "รีเฟรช",
+  "task.swarm.reset": "รีเซ็ตกระดาน",
+  "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
+  "task.swarm.resetDescription":
+    "ล้างข้อความที่แสดงหรือไม่? การสนทนาและงานที่กำลังทำจะไม่เปลี่ยนแปลง เอเจนต์สามารถโพสต์ข้อความใหม่ได้",
+  "task.swarm.loading": "กำลังโหลดกระดาน...",
+  "task.swarm.failed": "ไม่สามารถโหลดหรือรีเซ็ตกระดานได้ โปรดลองรีเฟรช",
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -741,6 +752,14 @@ export const dict = {
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
+  "session.goal.label": "เป้าหมาย",
+  "prompt.goal.set": "ตั้งเป้าหมาย",
+  "prompt.goal.start": "เริ่มเป้าหมาย",
+  "session.goal.active": "ทำงานอยู่",
+  "session.goal.paused": "หยุดชั่วคราว",
+  "session.goal.pause": "พัก",
+  "session.goal.resume": "ดำเนินการต่อ",
+  "session.goal.clear": "ล้างเป้าหมาย",
   "session.costAlert.header": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "session.costAlert.continue": "ดำเนินการต่อ",
   "session.costAlert.question":
@@ -834,7 +853,17 @@ export const dict = {
   "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
   "settings.notifications.enable.description":
     "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.workbench.title": "เปิดใช้การแจ้งเตือนของ VS Code",
+  "settings.notifications.workbench.description":
+    "แสดงการแจ้งเตือนของ VS Code เมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.os.title": "เปิดใช้การแจ้งเตือนของระบบปฏิบัติการ",
+  "settings.notifications.os.description":
+    "แสดงการแจ้งเตือนแบบเนทีฟของระบบปฏิบัติการเมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูลขณะที่ VS Code ไม่ได้ใช้งานอยู่",
   "settings.notifications.testSound": "ทดสอบ",
+  "settings.notifications.testOS": "ทดสอบ",
+  "settings.notifications.testOS.testing": "กำลังส่งการแจ้งเตือนทดสอบ…",
+  "settings.notifications.testOS.success": "ส่งการแจ้งเตือนทดสอบแล้ว",
+  "settings.notifications.testOS.error": "ส่งการแจ้งเตือนทดสอบไม่สำเร็จ",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
   "settings.notifications.sound.system": "ระบบ",
   "settings.notifications.sound.description":

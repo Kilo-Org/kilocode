@@ -42,6 +42,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     count: 2,
     reason: "disk-backed instance integration test cleanup",
   },
+  "kilocode/snapshot-track-timeout.test.ts": {
+    count: 4,
+    reason: "production default snapshot hooks require the shared runtime and instance context",
+  },
   "kilocode/kilo-sessions.test.ts": {
     count: 36,
     reason:

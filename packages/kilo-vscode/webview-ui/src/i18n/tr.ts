@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.blocked": "Engellendi",
+  "session.goal.restart": "Hedefi yeniden başlat",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Pano",
+  "task.swarm.refresh": "Yenile",
+  "task.swarm.reset": "Panoyu sıfırla",
+  "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
+  "task.swarm.resetDescription":
+    "Görünür mesajlar temizlensin mi? Konuşmalar ve çalışan görevler değişmez. Ajanlar yeni mesajlar gönderebilir.",
+  "task.swarm.loading": "Pano yükleniyor...",
+  "task.swarm.failed": "Pano yüklenemedi veya sıfırlanamadı. Yenilemeyi deneyin.",
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -738,6 +749,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.goal.label": "Hedef",
+  "prompt.goal.set": "Hedef belirle",
+  "prompt.goal.start": "Hedefi başlat",
+  "session.goal.active": "Etkin",
+  "session.goal.paused": "Duraklatıldı",
+  "session.goal.pause": "Duraklat",
+  "session.goal.resume": "Sürdür",
+  "session.goal.clear": "Hedefi temizle",
   "session.costAlert.header": "Oturum Maliyeti Uyarısı",
   "session.costAlert.continue": "Devam et",
   "session.costAlert.question":
@@ -837,7 +856,17 @@ export const dict = {
   "settings.notifications.enable.title": "Sesli bildirimleri etkinleştir",
   "settings.notifications.enable.description":
     "Oturumlar tamamlandığında, bir hatayla karşılaşıldığında veya sizden giriş beklendiğinde ses çal",
+  "settings.notifications.workbench.title": "VS Code bildirimlerini etkinleştir",
+  "settings.notifications.workbench.description":
+    "Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde VS Code bildirimlerini göster",
+  "settings.notifications.os.title": "İşletim sistemi bildirimlerini etkinleştir",
+  "settings.notifications.os.description":
+    "VS Code etkin değilken Kilo bir görevi tamamladığında veya sizden giriş beklendiğinde yerel işletim sistemi bildirim uyarılarını göster.",
   "settings.notifications.testSound": "Test et",
+  "settings.notifications.testOS": "Test et",
+  "settings.notifications.testOS.testing": "Test bildirimi gönderiliyor…",
+  "settings.notifications.testOS.success": "Test bildirimi gönderildi.",
+  "settings.notifications.testOS.error": "Test bildirimi gönderilemedi",
   "settings.notifications.sound.default": "Varsayılan",
   "settings.notifications.sound.system": "Sistem",
   "settings.notifications.sound.description":

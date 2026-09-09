@@ -10,7 +10,7 @@ If you already use the sidebar chat and want to start running multiple agents in
 ## Sidebar vs. Agent Manager
 
 - **Sidebar** — one agent on your current branch. Best for small, interactive tasks where you want tight feedback.
-- **Agent Manager** — multiple agents, each in its own git worktree (its own branch checked out on disk). Best for long-running work, trying several approaches, or keeping side work isolated from your main branch.
+- **Agent Manager** — multiple top-level sessions. Choose a git worktree when each agent needs its own branch and checkout, or use Local sessions when conversations should share one workspace.
 - **Multiple sessions inside one worktree** (`Cmd+T` / `Ctrl+T`) — same branch, separate conversations. Useful for planner + implementer splits or read-only investigations alongside the main agent.
 
 Rule of thumb: if you would stash or switch branches to do the work, create a worktree instead.
@@ -18,6 +18,20 @@ Rule of thumb: if you would stash or switch branches to do the work, create a wo
 {% callout type="info" %}
 All Agent Manager sessions use the extension's embedded runtime. What each worktree isolates is the filesystem and git state: the branch, the directory, and the terminal. Providers, BYOK keys, custom providers, models, and extension settings are shared with the sidebar.
 {% /callout %}
+
+## Task subagents vs. Agent Manager sessions
+
+Use the smallest orchestration layer that matches the work:
+
+| Need | Use |
+|---|---|
+| Get a focused result before the current agent continues | A foreground `task` subagent |
+| Let independent research or implementation run while the current agent continues | A background `task` subagent with `background: true` |
+| Give an agent an isolated branch, checkout, terminal, and diff | An Agent Manager `worktree` session |
+| Start another conversation on the same branch | An Agent Manager Local session or `Cmd+T` / `Ctrl+T` |
+| Share material findings among one session and its task descendants | Kilo Swarm with `board_post` and `board_read` |
+
+Task children are non-interactive delegates. They cannot ask the user directly and do not create worktrees. Agent Manager sessions are top-level sessions with their own prompt queues. Separate Agent Manager sessions do not share a Kilo Swarm board automatically, even when they use the same worktree.
 
 {% callout type="warning" %}
 Git worktrees are lightweight compared with cloning the repository several times, but they are not free. Each worktree has its own checked-out files, and any dependencies, build artifacts, caches, local databases, or generated files created inside that directory count separately on disk.

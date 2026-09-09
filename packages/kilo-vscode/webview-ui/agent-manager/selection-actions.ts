@@ -46,7 +46,7 @@ export function createTabMemory(opts: {
     if (opts.multi() && opts.applied() !== opts.active()) return
     if (
       opts.multi() &&
-      !(sel === LOCAL ? (opts.localTab?.(tab) ?? (opts.pending(tab) || opts.locals().includes(tab))) : opts.owns(sel))
+      !(sel === LOCAL ? opts.localTab?.(tab) || opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel))
     )
       return
     rememberSelectionTab(opts.set, sel, tab)

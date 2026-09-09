@@ -107,9 +107,6 @@ export type Event =
   | EventSessionNetworkRestored
   | EventBackgroundProcessUpdated
   | EventBackgroundProcessDeleted
-  | EventInteractiveTerminalUpdated
-  | EventInteractiveTerminalData
-  | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
   | EventSuggestionShown
   | EventSuggestionAccepted
@@ -298,26 +295,6 @@ export type BackgroundProcessInfo = {
   exitCode?: number
   signal?: string
   output: string
-  time: {
-    started: number
-    updated: number
-    ended?: number
-  }
-}
-
-export type InteractiveTerminalInfo = {
-  id: string
-  sessionID: string
-  pid: number
-  command: string
-  cwd: string
-  description?: string
-  status: "running" | "closed"
-  cols: number
-  rows: number
-  exitCode?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-  signal?: string
-  closedBy?: "exit" | "user" | "abort"
   time: {
     started: number
     updated: number
@@ -1173,9 +1150,6 @@ export type GlobalEvent = {
     | EventSessionNetworkRestored
     | EventBackgroundProcessUpdated
     | EventBackgroundProcessDeleted
-    | EventInteractiveTerminalUpdated
-    | EventInteractiveTerminalData
-    | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
     | EventSuggestionShown
     | EventSuggestionAccepted
@@ -4130,21 +4104,6 @@ export type ConflictError = {
   resource?: string
 }
 
-export type InteractiveTerminalSnapshot = {
-  info: InteractiveTerminalInfo
-  output: string
-  cursor: number
-}
-
-export type InteractiveTerminalWriteInput = {
-  data: string
-}
-
-export type InteractiveTerminalResizeInput = {
-  cols: number
-  rows: number
-}
-
 export type EffectHttpApiErrorUnauthorized = {
   _tag: "Unauthorized"
 }
@@ -4155,6 +4114,32 @@ export type EffectHttpApiErrorServiceUnavailable = {
 
 export type CloudSessionImportError = {
   error: string
+}
+
+export type BoardMessage = {
+  id: string
+  timestamp: number
+  from: string
+  to: string
+  fromLabel?: string
+  toLabel?: string
+  type: "INFO" | "ASK" | "RESULT" | "HOLD" | "VETO"
+  body: string
+  reply_to?: string
+}
+
+export type SessionBoard = {
+  ownerSessionID: string
+  revision: number
+  messages: Array<BoardMessage>
+  cursor?: string
+  hasMore: boolean
+}
+
+export type UnknownError1 = {
+  _tag: "UnknownError"
+  message: string
+  ref?: string
 }
 
 export type CommandFile = {
@@ -4646,7 +4631,7 @@ export type MessageNotFoundError = {
   message: string
 }
 
-export type UnknownError1 = {
+export type UnknownError2 = {
   _tag: "UnknownError"
   message: string
   ref?: string
@@ -4882,26 +4867,6 @@ export type EffectHttpApiErrorForbidden = {
   _tag: "Forbidden"
 }
 
-export type InteractiveTerminalInfo1 = {
-  id: string
-  sessionID: string
-  pid: number
-  command: string
-  cwd: string
-  description?: string
-  status: "running" | "closed"
-  cols: number
-  rows: number
-  exitCode?: number | "NaN" | "Infinity" | "-Infinity"
-  signal?: string
-  closedBy?: "exit" | "user" | "abort"
-  time: {
-    started: number
-    updated: number
-    ended?: number
-  }
-}
-
 export type CredentialValue = CredentialOAuth | CredentialKey
 
 export type IntegrationInputs = {
@@ -5006,34 +4971,6 @@ export type EventBackgroundProcessDeleted = {
     sessionID: string
     processID: string
     scope: string
-  }
-}
-
-export type EventInteractiveTerminalUpdated = {
-  id: string
-  type: "interactive_terminal.updated"
-  properties: {
-    info: InteractiveTerminalInfo
-  }
-}
-
-export type EventInteractiveTerminalData = {
-  id: string
-  type: "interactive_terminal.data"
-  properties: {
-    terminalID: string
-    sessionID: string
-    data: string
-    cursor: number
-  }
-}
-
-export type EventInteractiveTerminalDeleted = {
-  id: string
-  type: "interactive_terminal.deleted"
-  properties: {
-    terminalID: string
-    sessionID: string
   }
 }
 
@@ -15984,173 +15921,6 @@ export type InstanceReloadResponses = {
 
 export type InstanceReloadResponse = InstanceReloadResponses[keyof InstanceReloadResponses]
 
-export type InteractiveTerminalListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal"
-}
-
-export type InteractiveTerminalListErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type InteractiveTerminalListError = InteractiveTerminalListErrors[keyof InteractiveTerminalListErrors]
-
-export type InteractiveTerminalListResponses = {
-  /**
-   * List of interactive terminals
-   */
-  200: Array<InteractiveTerminalSnapshot>
-}
-
-export type InteractiveTerminalListResponse = InteractiveTerminalListResponses[keyof InteractiveTerminalListResponses]
-
-export type InteractiveTerminalGetData = {
-  body?: never
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}"
-}
-
-export type InteractiveTerminalGetErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalGetError = InteractiveTerminalGetErrors[keyof InteractiveTerminalGetErrors]
-
-export type InteractiveTerminalGetResponses = {
-  /**
-   * Interactive terminal snapshot
-   */
-  200: InteractiveTerminalSnapshot
-}
-
-export type InteractiveTerminalGetResponse = InteractiveTerminalGetResponses[keyof InteractiveTerminalGetResponses]
-
-export type InteractiveTerminalWriteData = {
-  body?: InteractiveTerminalWriteInput
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/input"
-}
-
-export type InteractiveTerminalWriteErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalWriteError = InteractiveTerminalWriteErrors[keyof InteractiveTerminalWriteErrors]
-
-export type InteractiveTerminalWriteResponses = {
-  /**
-   * Input written
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalWriteResponse =
-  InteractiveTerminalWriteResponses[keyof InteractiveTerminalWriteResponses]
-
-export type InteractiveTerminalResizeData = {
-  body?: InteractiveTerminalResizeInput
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/resize"
-}
-
-export type InteractiveTerminalResizeErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalResizeError = InteractiveTerminalResizeErrors[keyof InteractiveTerminalResizeErrors]
-
-export type InteractiveTerminalResizeResponses = {
-  /**
-   * Terminal resized
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalResizeResponse =
-  InteractiveTerminalResizeResponses[keyof InteractiveTerminalResizeResponses]
-
-export type InteractiveTerminalCloseData = {
-  body?: never
-  path: {
-    terminalID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/interactive-terminal/{terminalID}/close"
-}
-
-export type InteractiveTerminalCloseErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type InteractiveTerminalCloseError = InteractiveTerminalCloseErrors[keyof InteractiveTerminalCloseErrors]
-
-export type InteractiveTerminalCloseResponses = {
-  /**
-   * Terminal closed
-   */
-  200: boolean
-}
-
-export type InteractiveTerminalCloseResponse =
-  InteractiveTerminalCloseResponses[keyof InteractiveTerminalCloseResponses]
-
 export type KiloProfileData = {
   body?: never
   path?: never
@@ -16861,6 +16631,95 @@ export type KilocodeDrainSessionResponses = {
 }
 
 export type KilocodeDrainSessionResponse = KilocodeDrainSessionResponses[keyof KilocodeDrainSessionResponses]
+
+export type KilocodeSessionBoardData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    before?: string
+    limit?: number
+  }
+  url: "/kilocode/session/{sessionID}/board"
+}
+
+export type KilocodeSessionBoardErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
+}
+
+export type KilocodeSessionBoardError = KilocodeSessionBoardErrors[keyof KilocodeSessionBoardErrors]
+
+export type KilocodeSessionBoardResponses = {
+  /**
+   * Shared board snapshot
+   */
+  200: SessionBoard
+}
+
+export type KilocodeSessionBoardResponse = KilocodeSessionBoardResponses[keyof KilocodeSessionBoardResponses]
+
+export type KilocodeResetSessionBoardData = {
+  body?: {
+    revision: number
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session/{sessionID}/board/reset"
+}
+
+export type KilocodeResetSessionBoardErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
+}
+
+export type KilocodeResetSessionBoardError = KilocodeResetSessionBoardErrors[keyof KilocodeResetSessionBoardErrors]
+
+export type KilocodeResetSessionBoardResponses = {
+  /**
+   * Shared board after reset
+   */
+  200: SessionBoard
+}
+
+export type KilocodeResetSessionBoardResponse =
+  KilocodeResetSessionBoardResponses[keyof KilocodeResetSessionBoardResponses]
 
 export type KilocodeHeapSnapshotData = {
   body?: never
@@ -19572,7 +19431,7 @@ export type V2SessionRevertStageErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionRevertStageError = V2SessionRevertStageErrors[keyof V2SessionRevertStageErrors]
@@ -19613,7 +19472,7 @@ export type V2SessionRevertClearErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionRevertClearError = V2SessionRevertClearErrors[keyof V2SessionRevertClearErrors]
@@ -19687,7 +19546,7 @@ export type V2SessionContextErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionContextError = V2SessionContextErrors[keyof V2SessionContextErrors]
@@ -19887,7 +19746,7 @@ export type V2SessionMessagesErrors = {
   /**
    * UnknownError
    */
-  500: UnknownError1
+  500: UnknownError2
 }
 
 export type V2SessionMessagesError = V2SessionMessagesErrors[keyof V2SessionMessagesErrors]

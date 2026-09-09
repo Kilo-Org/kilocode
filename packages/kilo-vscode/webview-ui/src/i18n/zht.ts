@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型回報）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "重新整理",
+  "task.swarm.reset": "重設看板",
+  "task.swarm.resetTitle": "重設此看板？",
+  "task.swarm.resetDescription": "清除可見訊息？對話和執行中的工作不會改變。代理可以發布新訊息。",
+  "task.swarm.loading": "正在載入看板...",
+  "task.swarm.failed": "無法載入或重設看板。請嘗試重新整理。",
 
   "command.provider.connect": "連接供應商",
 
@@ -685,6 +695,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "設定目標",
+  "prompt.goal.start": "開始目標",
+  "session.goal.active": "執行中",
+  "session.goal.paused": "已暫停",
+  "session.goal.pause": "暫停",
+  "session.goal.resume": "繼續",
+  "session.goal.clear": "清除目標",
   "session.costAlert.header": "工作階段費用提醒",
   "session.costAlert.continue": "繼續",
   "session.costAlert.question": "此工作階段剛剛超過每工作階段提醒門檻 {{limit}}，目前費用為 {{cost}}。是否繼續？",
@@ -774,7 +792,16 @@ export const dict = {
   "settings.notifications.sounds": "聲音",
   "settings.notifications.enable.title": "啟用聲音通知",
   "settings.notifications.enable.description": "在工作階段完成、遇到錯誤或需要你輸入時播放聲音",
+  "settings.notifications.workbench.title": "啟用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成工作或需要你輸入時顯示 VS Code 通知",
+  "settings.notifications.os.title": "啟用作業系統通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未處於使用中狀態時，若 Kilo 完成工作或需要你輸入，則顯示原生作業系統通知提醒。",
   "settings.notifications.testSound": "測試",
+  "settings.notifications.testOS": "測試",
+  "settings.notifications.testOS.testing": "正在傳送測試通知…",
+  "settings.notifications.testOS.success": "測試通知已傳送。",
+  "settings.notifications.testOS.error": "測試通知傳送失敗",
   "settings.notifications.sound.default": "預設",
   "settings.notifications.sound.system": "系統",
   "settings.notifications.sound.description":

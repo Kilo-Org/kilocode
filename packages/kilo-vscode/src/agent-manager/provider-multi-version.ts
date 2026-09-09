@@ -7,6 +7,7 @@ import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from 
 import { ensureSandbox } from "./sandbox-bootstrap"
 import type { LifecycleHost } from "./provider-lifecycle"
 import { Semaphore } from "./semaphore"
+import type { WorktreeCreationFailure } from "./worktree-create"
 
 const PROVISION_CONCURRENCY = 2
 
@@ -63,6 +64,7 @@ export async function createMultiVersion(
   // Phase 1: finish every shared-repository Git mutation before setup scripts
   // or agents can run their own Git commands in the new worktrees.
   const created: CreatedVersion[] = []
+  const failures: WorktreeCreationFailure[] = []
 
   const specs = Array.from({ length: versions }, (_, index) => ({
     index,
@@ -78,7 +80,7 @@ export async function createMultiVersion(
   }))
   const prepared: PreparedVersion[] = []
   for (const spec of specs) {
-    const version = await prepareVersion(host, spec)
+    const version = await prepareVersion(host, spec, failures)
     if (version) prepared.push(version)
   }
 
@@ -127,7 +129,8 @@ export async function createMultiVersion(
   })
 
   if (created.length === 0) {
-    host.error(`Failed to create any of the ${versions} multi-version worktrees.`)
+    const failure = failures.find((item) => item.code === "no_commits")
+    host.error(failure?.message ?? `Failed to create any of the ${versions} multi-version worktrees.`)
   }
 
   host.log(`Multi-version creation complete: ${created.length}/${versions} versions`)
@@ -153,7 +156,11 @@ interface PreparedVersion {
 }
 
 /** Create one version's worktree while the shared-repository Git barrier is active. */
-async function prepareVersion(host: MultiVersionHost, spec: VersionSpec): Promise<PreparedVersion | null> {
+async function prepareVersion(
+  host: MultiVersionHost,
+  spec: VersionSpec,
+  failures: WorktreeCreationFailure[],
+): Promise<PreparedVersion | null> {
   host.log(`Creating worktree ${spec.index + 1}/${spec.versions}`)
 
   const version = versionedName(spec.branchName || spec.worktreeName, spec.index, spec.versions)
@@ -165,6 +172,7 @@ async function prepareVersion(host: MultiVersionHost, spec: VersionSpec): Promis
     branchName: branch,
     name: version.branch,
     label: version.label,
+    onError: (failure) => failures.push(failure),
   })
   if (!wt) {
     host.log(`Failed to create worktree for version ${spec.index + 1}`)

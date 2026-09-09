@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -16,7 +17,7 @@ import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
-import { AttentionService } from "./services/attention"
+import { AttentionService, showOSNotification } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
@@ -184,6 +185,20 @@ export async function activate(context: vscode.ExtensionContext) {
   const reason = vscode.env.remoteName ? "Keep Awake is only available in a local VS Code window." : undefined
   const awake = new CaffeinationService(connectionService, createCaffeinationDriver({ reason }))
   caffeination = awake
+  let previous = awake.getState()
+  const unsubscribeCaffeination = awake.onChange((state) => {
+    const prior = previous
+    previous = state
+    if (state.error && state.error !== prior.error) {
+      void vscode.window.showErrorMessage(`Keep Awake stopped: ${state.error}`)
+      return
+    }
+    if (state.enabled === prior.enabled) return
+    void vscode.window.showInformationMessage(
+      state.enabled ? "Keep Awake enabled. Kilo will prevent system sleep while agents work." : "Keep Awake disabled.",
+    )
+  })
+  context.subscriptions.push({ dispose: unsubscribeCaffeination })
   const toggle = confirmCaffeination(awake, async () => {
     if (!vscode.workspace.isTrusted) {
       await vscode.window.showWarningMessage("Trust this workspace before enabling Keep Awake.")
@@ -266,6 +281,25 @@ export async function activate(context: vscode.ExtensionContext) {
   )
   const attention = new AttentionService(connectionService, {
     approve: (event, directory) => autoApprove.approve(event, directory),
+    details: async (sessionID, directory) => {
+      provider.rememberSession(sessionID, directory)
+      const session = await provider.getSessionInfo(sessionID)
+      const dir = directory ?? session?.directory
+      const workspace = dir
+        ? (vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dir))?.name ?? basename(dir))
+        : (vscode.workspace.name ?? "Workspace")
+      return { workspace, session: session?.title ?? session?.slug ?? sessionID }
+    },
+    focused: () => vscode.window.state.focused,
+    // Every surface already reports the session it displays, gated on its own
+    // visibility, so this covers the sidebar, Kilo editor tabs, and Agent
+    // Manager without each one needing its own accessor.
+    visible: (sessionID) => connectionService.isVisible(sessionID),
+    os: showOSNotification,
+    show: async (sessionID, directory) => {
+      await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await provider.openSession(sessionID, directory)
+    },
   })
 
   // Prewarm only after all global event consumers are ready.

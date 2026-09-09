@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
@@ -10,12 +11,18 @@ import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.util.SystemInfo
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -76,6 +83,24 @@ class KiloWorktreeRpcApiImplTest {
         // the comparison into "always fresh".
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `reason reports a timeout instead of falling through to the fallback text`() {
+        assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
+        assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
+        assertEquals("git worktree remove failed", api.reason(CmdOut(1, "", ""), "git worktree remove failed"))
+    }
+
+    @Test
+    fun `cancellation checks in the poll wrappers also cover ProcessCanceledException`() {
+        // statsSafe/dirtySafe/prStatus isolate per-worktree failures behind runCatching and rethrow
+        // only CancellationException. That is enough to honor IntelliJ's "never swallow a PCE" rule
+        // solely because PCE extends java.util.concurrent.CancellationException, which is also what
+        // kotlinx.coroutines.CancellationException aliases on the JVM. Locked down here so a platform
+        // change that decoupled the two would fail this test instead of silently turning a cancelled
+        // progress indicator into a fake empty poll result.
+        assertTrue(ProcessCanceledException() is CancellationException)
     }
 
     @Test
@@ -186,6 +211,40 @@ class KiloWorktreeRpcApiImplTest {
     fun `badDir detects a missing working directory spawn failure`() {
         assertTrue(badDir("Cannot start a process, the working directory '/tmp/gone' does not exist"))
         assertFalse(badDir("Cannot run program \"git\": error=2, No such file or directory"))
+        // git's own message for the same race once the process has already started: the working
+        // directory disappeared before git called getcwd(), rather than before it was even spawned.
+        assertTrue(badDir("fatal: Unable to read current working directory: No such file or directory"))
+        assertFalse(badDir("fatal: index file corrupt"))
+        assertFalse(badDir("fatal: not a git repository (or any of the parent directories): .git"))
+    }
+
+    @Test
+    fun `staleWorktrees excludes a worktree already marked doomed in WorktreeTrash`() {
+        val trash = WorktreeTrash(CoroutineScope(Dispatchers.Default + SupervisorJob()))
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val gone = WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true)
+
+        assertEquals(listOf(gone.path), staleWorktrees(listOf(main, gone), trash).map { it.path })
+
+        trash.mark(gone.path)
+        // A worktree WorktreeTrash already knows is being removed is about to become stale by
+        // design (the removal renamed its directory away and will prune it itself); a concurrent
+        // poll's own prune must not race that in-flight removal.
+        assertTrue(staleWorktrees(listOf(main, gone), trash).isEmpty())
+    }
+
+    @Test
+    fun `managedWorktrees excludes a directory staged for delete even while git still lists it`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val staged = WorktreeDto(
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+            "${WorktreeTrash.PREFIX}abc",
+            "feature/x",
+            "/repo/.kilo/worktrees/${WorktreeTrash.PREFIX}abc",
+        )
+        val real = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+
+        assertEquals(listOf(real.path), managedWorktrees(listOf(main, staged, real)).filter { !it.main }.map { it.path })
     }
 
     @Test
@@ -918,6 +977,42 @@ class KiloWorktreeRpcApiImplTest {
 
         assertEquals(1, item.unpushed)
         assertEquals(0, item.files, "committed work is not uncommitted")
+    }
+
+    /**
+     * [dirty] and [statsSafe]/[dirtySafe] via [api.dirty] and [api.stats] share the exact same
+     * `runCatching` isolation wrapper (see [statsSafe]/[dirtySafe] in the implementation), so proving
+     * it here for [dirty] covers the mechanism for both. [stats]'s own git calls compare two fully
+     * resolved commits (`GitComparison`'s two-revision form), which is why the same index corruption
+     * cannot be reused to force a throw there: a tree-to-tree diff never reads the index at all,
+     * unlike [dirty]'s working-tree comparison used below.
+     */
+    @Test
+    fun `dirty reports a neutral entry for a worktree whose index is corrupted instead of failing the whole call`() = runBlocking {
+        initRepo()
+        val healthy = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("healthy")).worktree)
+        val broken = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("broken")).worktree)
+        Files.writeString(Path.of(healthy.path).resolve("tracked.txt"), "edit\n")
+        corruptIndex(Path.of(broken.path))
+
+        // GitComparison.open() succeeds for `broken` (HEAD resolves fine); the corrupted index only
+        // breaks the later `git diff`/`ls-files` calls inside files() -- exactly the "open succeeded,
+        // a later command threw" shape a real fault takes, as opposed to a directory that is simply
+        // gone (which open() already returns null for, no throw involved).
+        val dto = api.dirty(repo.toString())
+
+        val healthyItem = assertNotNull(dto.items.singleOrNull { it.path == healthy.path })
+        assertEquals(1, healthyItem.files, "a healthy sibling must still be reported correctly")
+        val brokenItem = assertNotNull(dto.items.singleOrNull { it.path == broken.path })
+        assertEquals(WorktreeDirtyDto(broken.path), brokenItem, "a broken worktree gets a neutral entry, not an exception")
+    }
+
+    /** Overwrites [dir]'s own worktree index with garbage so `git diff`/`ls-files` fail well after
+     * `rev-parse --is-inside-work-tree` and `rev-parse HEAD` (which don't read the index) already
+     * succeeded. */
+    private fun corruptIndex(dir: Path) {
+        val gitDir = Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-dir").trim())
+        Files.write(gitDir.resolve("index"), "not an index".toByteArray())
     }
 
     @Test

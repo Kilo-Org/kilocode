@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
+  "session.goal.blocked": "مسدود",
+  "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "برد",
+  "task.swarm.refresh": "تازه‌سازی",
+  "task.swarm.reset": "بازنشانی برد",
+  "task.swarm.resetTitle": "این برد بازنشانی شود؟",
+  "task.swarm.resetDescription":
+    "پیام‌های قابل مشاهده پاک شوند؟ گفتگوها و کارهای در حال اجرا تغییر نمی‌کنند. عامل‌ها می‌توانند پیام‌های جدید منتشر کنند.",
+  "task.swarm.loading": "در حال بارگیری برد...",
+  "task.swarm.failed": "بارگیری یا بازنشانی برد ممکن نشد. تازه‌سازی را امتحان کنید.",
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -701,6 +712,14 @@ export const dict = {
   "session.outcome.interrupted": "نوبت قطع شد.",
   "session.outcome.error": "نوبت با شکست مواجه شد.",
   "session.outcome.finish": "دلیل فنی پایان: {{reason}}",
+  "session.goal.label": "هدف",
+  "prompt.goal.set": "تعیین هدف",
+  "prompt.goal.start": "شروع هدف",
+  "session.goal.active": "فعال",
+  "session.goal.paused": "متوقف",
+  "session.goal.pause": "توقف موقت",
+  "session.goal.resume": "ازسرگیری",
+  "session.goal.clear": "پاک کردن هدف",
   "session.costAlert.header": "هشدار هزینه جلسه",
   "session.costAlert.continue": "ادامه",
   "session.costAlert.question": "هزینه این جلسه از آستانه هشدار {{limit}} شما فراتر رفت و {{cost}} شد. ادامه می‌دهید؟",
@@ -831,7 +850,17 @@ export const dict = {
   "settings.notifications.sounds": "صداها",
   "settings.notifications.enable.title": "فعال‌سازی اعلان‌های صوتی",
   "settings.notifications.enable.description": "پخش صدا هنگام تکمیل جلسات، بروز خطا یا نیاز به ورودی شما",
+  "settings.notifications.workbench.title": "فعال‌سازی اعلان‌های VS Code",
+  "settings.notifications.workbench.description":
+    "نمایش اعلان‌های VS Code هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما",
+  "settings.notifications.os.title": "فعال‌سازی اعلان‌های سیستم‌عامل",
+  "settings.notifications.os.description":
+    "نمایش هشدارهای اعلان بومی سیستم‌عامل هنگام تکمیل یک وظیفه توسط Kilo یا نیاز به ورودی شما در زمانی که VS Code فعال نیست.",
   "settings.notifications.testSound": "آزمایش",
+  "settings.notifications.testOS": "آزمایش",
+  "settings.notifications.testOS.testing": "در حال ارسال اعلان آزمایشی…",
+  "settings.notifications.testOS.success": "اعلان آزمایشی ارسال شد.",
+  "settings.notifications.testOS.error": "ارسال اعلان آزمایشی ناموفق بود",
   "settings.notifications.sound.default": "پیش‌فرض",
   "settings.notifications.sound.system": "سیستم",
   "settings.notifications.sound.description":

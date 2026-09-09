@@ -4,6 +4,8 @@ import type { PRStatus, WebviewMessage } from "../../webview-ui/src/types/messag
 
 const refreshed: WebviewMessage[] = []
 const reactions: WebviewMessage[] = []
+const replies: Record<string, unknown>[] = []
+const mutations: Record<string, unknown>[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -36,6 +38,8 @@ Object.assign(globalThis, {
   HTMLPreElement: window.HTMLPreElement,
   HTMLAnchorElement: window.HTMLAnchorElement,
   HTMLButtonElement: window.HTMLButtonElement,
+  HTMLInputElement: window.HTMLInputElement,
+  HTMLTextAreaElement: window.HTMLTextAreaElement,
   SVGElement: window.SVGElement,
   ShadowRoot: window.ShadowRoot,
   customElements: window.customElements,
@@ -54,6 +58,8 @@ Object.assign(globalThis, {
     postMessage: (message: WebviewMessage) => {
       if (message.type === "agentManager.refreshPR") refreshed.push(message)
       if (message.type === "agentManager.commentReaction") reactions.push(message)
+      if ((message as { type: string }).type === "agentManager.replyComment") replies.push(message)
+      if ((message as { type: string }).type === "agentManager.mutateComment") mutations.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -80,6 +86,21 @@ const { createRemoteCommentController, createRemoteFocus } = await import(
 )
 
 const root = document.createElement("div")
+const button = (scope: Element, label: string) => {
+  const node = [...scope.querySelectorAll<HTMLButtonElement>("button")].find(
+    (node) => node.textContent?.trim() === label || node.getAttribute("aria-label") === label,
+  )
+  assert.ok(node, `Expected ${label} button`)
+  return node
+}
+const click = async (scope: Element, label: string) => {
+  button(scope, label).click()
+  await window.happyDOM.waitUntilComplete()
+}
+const type = (field: HTMLTextAreaElement, body: string) => {
+  field.value = body
+  field.dispatchEvent(new window.Event("input", { bubbles: true }))
+}
 const colors = document.createElement("style")
 colors.textContent = ":root { --syntax-keyword: rgb(72, 160, 199); --syntax-string: rgb(206, 145, 120); }"
 document.head.append(colors)
@@ -97,6 +118,8 @@ const [comments, setComments] = createSignal({
       id: "PRRC_open",
       threadId: "PRRT_open",
       author: "kilo-code-bot",
+      canEdit: true,
+      canDelete: true,
       body: "comment body survives Pierre rendering",
       file: "packages/kilo-ui/src/components/file.tsx",
       line: 14,
@@ -106,7 +129,17 @@ const [comments, setComments] = createSignal({
       diffHunk: HUNK,
       // Read from the worktree by the extension: a hunk stops at the commented line.
       after: ["  return <View {...options} />", "}", ""],
-      replies: [{ author: "marius", body: "reply body is visible" }],
+      replies: [
+        {
+          id: "PRRC_reply",
+          author: "marius",
+          body: "reply body is visible",
+          canEdit: true,
+          canDelete: true,
+          createdAt: Date.now() - 2 * 60 * 1000,
+          reactions: [{ content: "ROCKET", count: 1, viewerHasReacted: false }],
+        },
+      ],
       reactions: [
         { content: "THUMBS_UP", count: 2, viewerHasReacted: false },
         { content: "HEART", count: 1, viewerHasReacted: true },
@@ -133,7 +166,12 @@ const dispose = render(
     <VSCodeProvider>
       <LanguageProvider>
         <MarkedProvider>
-          <PRComments worktreeId="wt-test" comments={comments()} />
+          <PRComments
+            worktreeId="wt-test"
+            prNumber={42}
+            prUrl="https://github.com/example/repo/pull/42"
+            comments={comments()}
+          />
         </MarkedProvider>
       </LanguageProvider>
     </VSCodeProvider>
@@ -151,7 +189,7 @@ const comment = shadow?.querySelector('[data-content] span[style*="--syntax-comm
 const code = shadow?.querySelectorAll("[data-content] [data-line]")
 assert.match(root.textContent ?? "", /comment body survives Pierre rendering/)
 assert.match(root.textContent ?? "", /reply body is visible/)
-const reactionButtons = [...root.querySelectorAll<HTMLButtonElement>(".am-pr-reaction")]
+const reactionButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-comment-id="PRRC_open"] .am-pr-reaction')]
 const addReaction = reactionButtons.at(0)
 const removeReaction = reactionButtons.at(1)
 assert.ok(addReaction, "add reaction control is rendered")
@@ -176,12 +214,12 @@ assert.equal(addReaction!.getAttribute("aria-busy"), "true")
 assert.equal(removeReaction!.querySelector('[data-component="spinner"]'), null)
 assert.equal(removeReaction!.getAttribute("aria-busy"), "false")
 assert.ok(pickerTrigger(), "the picker trigger stays in place while an update runs")
-const reactionResult = (reaction: string, add: boolean, success: boolean) => {
+const reactionResult = (reaction: string, add: boolean, success: boolean, id = "PRRC_open") => {
   post(
     {
       type: "agentManager.commentReactionResult",
       worktreeId: "wt-test",
-      commentId: "PRRC_open",
+      commentId: id,
       reaction,
       add,
       success,
@@ -247,6 +285,22 @@ assert.deepEqual(reactions[4], {
   reaction: "HEART",
   add: false,
 })
+const replyReaction = root.querySelector<HTMLButtonElement>('[data-comment-id="PRRC_reply"] .am-pr-reaction')
+assert.ok(replyReaction, "reply reaction control is rendered")
+assert.equal(reactionCount(replyReaction!), "1")
+replyReaction!.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(reactions[5], {
+  type: "agentManager.commentReaction",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  commentId: "PRRC_reply",
+  reaction: "ROCKET",
+  add: true,
+})
+reactionResult("ROCKET", true, true, "PRRC_reply")
+await window.happyDOM.waitUntilComplete()
+assert.ok(root.querySelector(".am-pr-comment-reply .am-pr-comment-time"))
 assert.equal(root.querySelector('[data-thread-id="PRRT_open"] .am-pr-comment-time')?.textContent, "5 min ago")
 assert.equal(root.querySelector('[data-thread-id="PRRT_done"] .am-pr-comment-time'), null)
 assert.equal(root.querySelectorAll('[data-component="diff"]').length, 1)
@@ -306,6 +360,251 @@ const refreshedRow = [...root.querySelectorAll(".am-pr-comment-head")].find((nod
 assert.equal(refreshedRow?.getAttribute("aria-expanded"), "true")
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
 
+// The bottom toggle controls the same thread state as the header.
+const toggle = () => card.querySelector<HTMLButtonElement>('[data-action="toggle-thread"]')!
+assert.ok(toggle())
+assert.equal(toggle().getAttribute("aria-expanded"), "true")
+assert.equal(toggle().querySelector("use")?.getAttribute("href"), "#opencode-icon-chevron-down")
+assert.ok(toggle().querySelector(".am-pr-comment-collapse-icon"))
+toggle().click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(toggle().querySelector(".am-pr-comment-collapse-icon"), null)
+assert.equal(refreshedRow?.getAttribute("aria-expanded"), "false")
+assert.equal(toggle().getAttribute("aria-expanded"), "false")
+toggle().click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(refreshedRow?.getAttribute("aria-expanded"), "true")
+
+// Replies keep their draft on failure and accept only the matching host result.
+const composer = () => root.querySelector('[data-thread-id="PRRT_open"] .am-pr-comment-composer[data-action="reply"]')!
+const input = () => composer().querySelector<HTMLTextAreaElement>("textarea")!
+const submit = () => composer().querySelector<HTMLButtonElement>('button[data-action="submit"]')!
+const expand = (scope: Element) => scope.querySelector<HTMLButtonElement>('[data-action="expand"]')!
+assert.equal(input(), null, "reply starts as a compact placeholder")
+assert.equal(expand(composer()).textContent?.trim(), "Write a reply...")
+assert.equal(composer().querySelector('[data-slot="comment-toolbar"]'), null)
+expand(composer()).focus()
+await window.happyDOM.waitUntilComplete()
+assert.ok(input(), "focusing the compact reply expands the editor")
+assert.equal(document.activeElement, input())
+assert.equal(button(composer(), "Reply"), submit())
+assert.equal(submit().disabled, true)
+type(input(), "   ")
+await window.happyDOM.waitUntilComplete()
+assert.equal(submit().disabled, true)
+type(input(), "  Reply with **Markdown**\nand a second line  ")
+await window.happyDOM.waitUntilComplete()
+assert.equal(submit().disabled, false)
+await click(composer(), "Cancel")
+assert.equal(input(), null, "Cancel collapses the reply editor")
+assert.equal(replies.length, 0, "Cancel must not publish a reply")
+expand(composer()).click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(input().value, "  Reply with **Markdown**\nand a second line  ", "Cancel preserves the multiline draft")
+const enter = new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+input().dispatchEvent(enter)
+assert.equal(enter.defaultPrevented, false, "Enter retains native multiline input behavior")
+assert.equal(replies.length, 0, "Enter must not publish a reply")
+for (const modifier of [{ ctrlKey: true }, { metaKey: true }]) {
+  input().dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, isComposing: true, ...modifier }),
+  )
+  assert.equal(replies.length, 0, "IME confirmation must not publish a reply")
+}
+input().dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, ctrlKey: true }))
+await window.happyDOM.waitUntilComplete()
+assert.equal(replies.length, 1)
+assert.equal(replies[0]!.body, "  Reply with **Markdown**\nand a second line  ")
+assert.equal(replies[0]!.threadId, "PRRT_open")
+assert.equal(replies[0]!.worktreeId, "wt-test")
+assert.equal(submit().disabled, true)
+assert.equal(input().disabled, true)
+submit().click()
+assert.equal(replies.length, 1)
+input().dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, metaKey: true }))
+assert.equal(replies.length, 1, "keyboard submit cannot duplicate a pending request")
+const respond = (value: Record<string, unknown>) =>
+  post({ ...replies.at(-1), type: "agentManager.replyCommentResult", ...value })
+respond({ requestId: "unrelated", success: true })
+assert.equal(submit().disabled, true)
+respond({ success: false, error: "Permission denied" })
+await window.happyDOM.waitUntilComplete()
+assert.match(composer().textContent ?? "", /Permission denied/)
+assert.match(input().value, /Reply with/)
+assert.equal(submit().disabled, false)
+input().dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, metaKey: true }))
+await window.happyDOM.waitUntilComplete()
+assert.equal(replies.length, 2)
+// Collapse the card while the request is in flight. Its result still settles.
+root.querySelector<HTMLButtonElement>('[data-thread-id="PRRT_open"] .am-pr-comment-head')!.click()
+respond({ success: true })
+root.querySelector<HTMLButtonElement>('[data-thread-id="PRRT_open"] .am-pr-comment-head')!.click()
+await window.happyDOM.waitUntilComplete()
+assert.match(composer().textContent ?? "", /Reply added/)
+assert.equal(input(), null, "successful reply collapses the editor even after a card remount")
+assert.ok(expand(composer()))
+
+// Only owned comments expose management actions. Editing keeps the original text.
+assert.equal(root.querySelector('[data-thread-id="PRRT_done"] [data-action="edit"]'), null)
+const editor = () => root.querySelector('[data-thread-id="PRRT_open"] [data-action="edit"]')!
+await click(editor(), "Edit")
+const edit = () => editor().querySelector<HTMLTextAreaElement>("textarea")!
+assert.equal(edit().value, "comment body survives Pierre rendering")
+type(edit(), "Edited **review comment**")
+await window.happyDOM.waitUntilComplete()
+await click(editor(), "Cancel")
+assert.equal(edit(), null)
+assert.equal(mutations.length, 0)
+await click(editor(), "Edit")
+assert.equal(edit().value, "Edited **review comment**", "Cancel and reopen preserve the edit draft")
+await click(editor(), "Save")
+assert.equal(mutations.length, 1)
+assert.deepEqual(mutations[0], {
+  type: "agentManager.mutateComment",
+  projectId: undefined,
+  worktreeId: "wt-test",
+  prNumber: 42,
+  prUrl: "https://github.com/example/repo/pull/42",
+  action: "edit",
+  commentId: "PRRC_open",
+  body: "Edited **review comment**",
+  requestId: mutations[0]!.requestId,
+})
+const settle = (value: Record<string, unknown> = {}) =>
+  post({
+    ...mutations.at(-1),
+    type: "agentManager.mutateCommentResult",
+    success: true,
+    ...value,
+  })
+settle({ success: false, error: "Not allowed" })
+await window.happyDOM.waitUntilComplete()
+assert.equal(edit().value, "Edited **review comment**")
+assert.match(editor().textContent ?? "", /Not allowed/)
+await click(editor(), "Save")
+// A poll/remount during submission must not lose the pending edit.
+setComments((prev) => ({ ...prev, comments: prev.comments.map((item) => ({ ...item })) }))
+settle()
+await window.happyDOM.waitUntilComplete()
+assert.match(editor().textContent ?? "", /Comment updated/)
+assert.equal(edit(), null)
+
+// Delete acts once immediately, keeps the comment on failure, and can be retried.
+const manage = () => root.querySelector('.am-pr-comment-reply [data-action="edit"]')!
+await click(manage(), "Edit")
+const focused = manage().querySelector<HTMLTextAreaElement>("textarea")!
+focused.focus()
+focused.setSelectionRange(3, 7)
+setComments((prev) => ({
+  ...prev,
+  comments: prev.comments.map((item) => ({ ...item, replies: item.replies?.map((reply) => ({ ...reply })) })),
+}))
+await window.happyDOM.waitUntilComplete()
+assert.equal(manage().querySelector("textarea"), focused, "a poll must retain the reply editor DOM")
+assert.equal(document.activeElement, focused)
+assert.equal(focused.selectionStart, 3)
+assert.equal(focused.selectionEnd, 7)
+await click(manage(), "Cancel")
+await click(manage(), "Delete")
+assert.equal(mutations.length, 3)
+assert.equal(mutations.at(-1)?.action, "delete")
+assert.equal(mutations.at(-1)?.commentId, "PRRC_reply")
+assert.equal(mutations.at(-1)?.body, undefined)
+assert.doesNotMatch(manage().textContent ?? "", /This cannot be undone/)
+assert.equal(button(manage(), "Delete").disabled, true)
+assert.equal(button(manage(), "Edit").disabled, true)
+button(manage(), "Delete").click()
+assert.equal(mutations.length, 3, "pending delete cannot be submitted twice")
+settle({ success: false, error: "Permission denied" })
+await window.happyDOM.waitUntilComplete()
+assert.match(manage().querySelector('[role="alert"]')?.textContent ?? "", /Permission denied/)
+assert.match(manage().textContent ?? "", /reply body is visible/)
+await click(manage(), "Delete")
+assert.equal(mutations.at(-1)?.action, "delete")
+assert.equal(mutations.at(-1)?.commentId, "PRRC_reply")
+assert.equal(mutations.at(-1)?.body, undefined)
+settle()
+await window.happyDOM.waitUntilComplete()
+assert.match(manage().textContent ?? "", /Comment deleted/)
+
+// Suggestion insertion wraps the selection without losing the surrounding prose.
+const replacement = 'const value = `template`\n```\nconst fence = "````"'
+const prose = `Before **suggestion**\n${replacement}\nAfter suggestion`
+expand(composer()).click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(input().value, "", "successful reply clears the previous draft")
+type(input(), prose)
+assert.equal(composer().querySelector('[role="status"]'), null, "new draft clears the previous reply status")
+input().focus()
+input().setSelectionRange(prose.indexOf(replacement), prose.indexOf(replacement) + replacement.length)
+const insertion = button(composer(), "Insert suggestion")
+assert.equal(insertion.getAttribute("data-action"), "suggestion")
+assert.equal(insertion.getAttribute("aria-label"), "Insert suggestion")
+assert.ok(insertion.querySelector('[data-component="icon"]'), "suggestion insertion is an accessible icon control")
+insertion.click()
+await window.happyDOM.waitUntilComplete()
+const suggested = input().value
+assert.match(suggested, /^Before \*\*suggestion\*\*\n/)
+assert.match(suggested, /\nAfter suggestion$/)
+assert.ok(suggested.includes(replacement), "selected backticks remain literal code")
+assert.match(suggested, /`{5,}suggestion\n/, "fence is longer than backticks inside the selection")
+assert.equal(document.activeElement, input(), "insertion returns focus to the editor")
+assert.equal(input().value.slice(input().selectionStart, input().selectionEnd), replacement)
+await click(composer(), "Preview")
+const preview = composer().querySelector('[data-slot="comment-preview"]')!
+assert.ok(preview)
+assert.match(preview.textContent ?? "", /Suggested change/)
+assert.equal(preview.querySelector("strong")?.textContent, "suggestion")
+const suggestion = preview.querySelector('[data-slot="suggested-change"]')!
+assert.ok(suggestion)
+assert.ok(suggestion.textContent?.includes(replacement), "preview retains code containing Markdown fences")
+assert.doesNotMatch(preview.textContent ?? "", /Apply suggestion|Commit suggestion/)
+const rendered = suggestion.textContent
+await click(composer(), "Write")
+assert.equal(input().value, suggested, "preview must not rewrite the Markdown draft")
+assert.equal(input().value.slice(input().selectionStart, input().selectionEnd), replacement)
+submit().click()
+assert.equal(replies.at(-1)?.body, suggested, "suggestion reply is posted verbatim")
+respond({ success: true })
+setComments((prev) => ({
+  ...prev,
+  comments: prev.comments.map((item) => (item.threadId === "PRRT_open" ? { ...item, body: suggested } : item)),
+}))
+await window.happyDOM.waitUntilComplete()
+assert.equal(editor().querySelector('[data-slot="suggested-change"]')?.textContent, rendered)
+await click(editor(), "Edit")
+assert.equal(edit().value, suggested)
+assert.equal(editor().querySelector('[data-slot="suggested-change"]'), null, "edit replaces the published body")
+button(editor(), "Save").click()
+assert.equal(mutations.at(-1)?.body, suggested, "suggestion edits are saved verbatim")
+settle()
+await window.happyDOM.waitUntilComplete()
+
+// A suggestion example inside an outer code fence is ordinary Markdown, not a suggested change.
+assert.equal(input(), null)
+expand(composer()).click()
+await window.happyDOM.waitUntilComplete()
+type(input(), "````markdown\n```suggestion\nexample only\n```\n````")
+await click(composer(), "Preview")
+assert.equal(composer().querySelector('[data-slot="suggested-change"]'), null)
+assert.match(composer().querySelector('[data-slot="comment-preview"]')?.textContent ?? "", /example only/)
+await click(composer(), "Write")
+
+// Suggestion rendering retains reference links defined elsewhere in the comment.
+type(input(), "[linked][reference]\n\n```suggestion\nnew code\n```\n\n[reference]: https://example.com")
+await click(composer(), "Preview")
+assert.equal(composer().querySelector('[data-slot="comment-preview"] a')?.getAttribute("href"), "https://example.com")
+await click(composer(), "Write")
+// A collapsed selection inserts at the caret rather than replacing the whole draft.
+type(input(), "prefix suffix")
+input().setSelectionRange(7, 7)
+await click(composer(), "Insert suggestion")
+assert.match(input().value, /^prefix /)
+assert.match(input().value, /suffix$/)
+assert.match(input().value, /```suggestion\n/)
+const retained = input().value
+
+// Send to agent hands the thread over as a structured review comment.
 const send = [...root.querySelectorAll('[data-component="button"]')].find((node) =>
   /Fix with Kilo/.test(node.textContent ?? ""),
 )
@@ -327,6 +626,7 @@ assert.equal((send as HTMLButtonElement).disabled, true)
 
 // A poll that resolves the other thread regroups the list. Cards are keyed by
 // thread, so the expanded card must not hand its state to its new neighbour.
+root.querySelector<HTMLButtonElement>('[data-thread-id="PRRT_open"] .am-pr-comment-head')!.click()
 setComments((prev) => ({
   ...prev,
   unresolved: 0,
@@ -343,6 +643,8 @@ assert.equal(byThread.size, 2)
 assert.equal(byThread.get("PRRT_done")?.querySelector(".am-pr-comment-head")?.getAttribute("aria-expanded"), "true")
 assert.equal(byThread.get("PRRT_open")?.querySelector(".am-pr-comment-head")?.getAttribute("aria-expanded"), "false")
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
+byThread.get("PRRT_open")!.querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
+await window.happyDOM.waitUntilComplete()
 
 // A remount must not lobotomize the panel. The extension can briefly report no
 // PR, which tears these components down and builds them again. What the user
@@ -403,7 +705,12 @@ const disposeSecond = render(
     <VSCodeProvider>
       <LanguageProvider>
         <MarkedProvider>
-          <PRComments worktreeId="wt-test" comments={comments()} />
+          <PRComments
+            worktreeId="wt-test"
+            prNumber={42}
+            prUrl="https://github.com/example/repo/pull/42"
+            comments={comments()}
+          />
           <Probe />
         </MarkedProvider>
       </LanguageProvider>
@@ -426,8 +733,8 @@ assert.match(second.textContent ?? "", /Sent/)
 
 const remote = await ready.promise
 const stable = second.querySelector("diffs-container")!.shadowRoot!
-const retained = stable.querySelector("[data-line]")
-assert.ok(retained)
+const line = stable.querySelector("[data-line]")
+assert.ok(line)
 assert.deepEqual(remote.outside(), [])
 assert.equal(remote.location("inline.ts", "inline-1"), "pending")
 assert.equal(remote.fileCount("inline.ts"), 2)
@@ -435,7 +742,7 @@ setDiffs([{ file: "inline.ts", before: "", after: "one\ntwo", additions: 2, dele
 assert.equal(remote.location("inline.ts", "inline-1"), "inline")
 assert.equal(remote.fileCount("inline.ts"), 2)
 await window.happyDOM.waitUntilComplete()
-assert.equal(stable.querySelector("[data-line]"), retained)
+assert.equal(stable.querySelector("[data-line]"), line)
 const panel = document.createElement("div")
 panel.className = "am-diff-panel"
 second.append(panel)
@@ -475,7 +782,7 @@ const inlineReaction = first.host.querySelector<HTMLButtonElement>(".am-pr-react
 assert.ok(inlineReaction, "inline reaction control is rendered")
 inlineReaction!.click()
 await window.happyDOM.waitUntilComplete()
-assert.deepEqual(reactions.at(5), {
+assert.deepEqual(reactions.at(6), {
   type: "agentManager.commentReaction",
   projectId: undefined,
   worktreeId: "wt-test",
@@ -531,10 +838,10 @@ header.click()
 first.wrapper.remove()
 check()
 await window.happyDOM.waitUntilComplete()
-const replacement = remote.render(first.meta)
-assert.notEqual(replacement, first.host)
+const remounted = remote.render(first.meta)
+assert.notEqual(remounted, first.host)
 check()
-assert.equal(remote.render(first.meta), replacement)
+assert.equal(remote.render(first.meta), remounted)
 assert.equal(remote.render(last.meta), last.host)
 assert.equal(header.getAttribute("aria-expanded"), "false")
 last.wrapper.remove()
@@ -543,6 +850,11 @@ await window.happyDOM.waitUntilComplete()
 assert.notEqual(remote.render(last.meta), last.host)
 remote.cleanup()
 globalThis.MutationObserver = Native
+assert.equal(
+  second.querySelector<HTMLTextAreaElement>('[data-thread-id="PRRT_open"] [data-action="reply"] textarea')?.value,
+  retained,
+  "an unsent suggestion draft survives a complete panel remount",
+)
 disposeSecond()
 
 const base: PRStatus = {
@@ -587,7 +899,7 @@ const navigation = createRoot((dispose) => ({
   dispose,
 }))
 let jumps = 0
-window.HTMLElement.prototype.scrollIntoView = () => {
+window.HTMLElement.prototype.scrollBy = () => {
   jumps++
 }
 patchCommentState(target.worktreeId, () => ({ open: false }))
@@ -660,7 +972,7 @@ await window.happyDOM.waitUntilComplete()
 assert.equal(visible(), true)
 assert.deepEqual(clicked, ["select", "refresh"])
 assert.equal(jumps, 0)
-const preview = {
+const snippet = {
   patch:
     '@@ -396,0 +414,7 @@\n+                      size="small"\n+                      class="session-goal-trigger"\n+                      disabled={props.readonly}\n+                      aria-label={language.t("session.goal.label")}\n+                    >\n+                      <Icon name="chevron-down" size="small" />\n+                      <span>',
   line: 417,
@@ -670,6 +982,38 @@ const preview = {
   top: true,
   bottom: true,
 }
+// A PR with no conversation yet still offers a new-comment composer.
+const create = () => second.querySelector('[data-action="create"]')!
+assert.ok(create())
+assert.equal(create().querySelector("textarea"), null, "new PR comments start compact")
+assert.equal(expand(create()).textContent?.trim(), "Write a comment...")
+expand(create()).click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(document.activeElement, create().querySelector("textarea"))
+assert.equal(create().querySelector('[data-action="suggestion"]'), null)
+const initial = create().querySelector<HTMLTextAreaElement>("textarea")!
+type(initial, "A new PR comment")
+await click(create(), "Cancel")
+assert.equal(create().querySelector("textarea"), null)
+const pending = mutations.length
+expand(create()).focus()
+await window.happyDOM.waitUntilComplete()
+const draft = create().querySelector<HTMLTextAreaElement>("textarea")!
+assert.equal(draft.value, "A new PR comment", "Cancel preserves the new comment draft")
+assert.equal(mutations.length, pending, "Cancel and expansion do not publish a comment")
+await click(create(), "Comment")
+assert.equal(mutations.at(-1)?.action, "create")
+assert.equal(mutations.at(-1)?.projectId, target.projectId)
+assert.equal(mutations.at(-1)?.prNumber, base.number)
+assert.equal(mutations.at(-1)?.prUrl, base.url)
+settle()
+await window.happyDOM.waitUntilComplete()
+assert.match(create().textContent ?? "", /Comment added/)
+assert.equal(create().querySelector("textarea"), null, "successful new comment collapses the editor")
+expand(create()).click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(create().querySelector<HTMLTextAreaElement>("textarea")!.value, "")
+await click(create(), "Cancel")
 setBadge({
   ...base,
   unresolvedThreads: 1,
@@ -687,9 +1031,9 @@ setBadge({
         side: "additions",
         resolved: false,
         outdated: false,
-        diffHunk: preview.patch,
+        diffHunk: snippet.patch,
         after: ["DIRTY WORKTREE CONTENT"],
-        preview,
+        preview: snippet,
       },
     ],
   },
@@ -708,6 +1052,14 @@ setBadge({
       isBot: true,
       createdAt: Date.now() - 120_000,
     },
+    {
+      id: "own-issue",
+      kind: "issue",
+      author: "me",
+      body: "My PR comment",
+      canEdit: true,
+      canDelete: true,
+    },
   ],
 })
 await window.happyDOM.waitUntilComplete()
@@ -721,6 +1073,26 @@ assert.match(second.textContent ?? "", /Consider simplifying the signature seria
 assert.match(second.textContent ?? "", /Approved/)
 assert.match(second.textContent ?? "", /kilo-code-bot/)
 assert.match(second.textContent ?? "", /bot/)
+assert.equal(second.querySelector('[data-thread-id="convo1"] [data-action="edit"]'), null)
+const own = second.querySelector('[data-thread-id="own-issue"] [data-action="edit"]')!
+assert.ok(own)
+await click(own, "Edit")
+assert.equal(own.querySelector<HTMLTextAreaElement>("textarea")!.value, "My PR comment")
+assert.equal(own.querySelector('[data-action="suggestion"]'), null, "general conversation has no suggestion toolbar")
+const field = own.querySelector<HTMLTextAreaElement>("textarea")!
+field.focus()
+field.setSelectionRange(2, 5)
+setBadge((prev) => ({ ...prev, conversation: prev.conversation?.map((comment) => ({ ...comment })) }))
+await window.happyDOM.waitUntilComplete()
+assert.equal(second.querySelector('[data-thread-id="own-issue"] textarea'), field)
+assert.equal(document.activeElement, field)
+assert.equal(field.selectionStart, 2)
+assert.equal(field.selectionEnd, 5)
+await click(own, "Save")
+assert.equal(mutations.at(-1)?.commentId, "own-issue")
+assert.equal(mutations.at(-1)?.action, "edit")
+settle()
+await window.happyDOM.waitUntilComplete()
 
 // Send conversation comment to agent
 const convoCard = second.querySelector('[data-thread-id="convo1"]')
@@ -780,8 +1152,8 @@ const placed = (name: string) => {
   assert.equal(wrapper.getAttribute("slot"), name)
   assert.ok(host.shadowRoot!.querySelector(`slot[name="${name}"]`))
 }
-const toggle = inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!
-assert.equal(toggle.closest("diffs-container"), null)
+const heading = inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!
+assert.equal(heading.closest("diffs-container"), null)
 const container = inline().querySelector("diffs-container")!
 assert.ok(container)
 placed("annotation-additions-417")
@@ -796,7 +1168,7 @@ setBadge((prev) => ({
 }))
 await window.happyDOM.waitUntilComplete()
 assert.equal(inline().querySelector("diffs-container"), container)
-assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
+assert.equal(inline().querySelector(".am-pr-comment-head"), heading)
 assert.match(inline().textContent ?? "", /Updated committed thread/)
 const count = sent.length
 inline().querySelector<HTMLButtonElement>('.am-pr-comment-actions [data-variant="primary"]')!.click()
@@ -805,12 +1177,12 @@ assert.equal(sent.length, count + 1)
 inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
 await window.happyDOM.waitUntilComplete()
 assert.equal(inline().querySelector("diffs-container"), null)
-assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
+assert.equal(inline().querySelector(".am-pr-comment-head"), heading)
 assert.equal(inline().querySelector(".am-pr-comment-head")!.getAttribute("aria-expanded"), "false")
 inline().querySelector<HTMLButtonElement>(".am-pr-comment-head")!.click()
 await window.happyDOM.waitUntilComplete()
 placed("annotation-additions-417")
-assert.equal(inline().querySelector(".am-pr-comment-head"), toggle)
+assert.equal(inline().querySelector(".am-pr-comment-head"), heading)
 setBadge((prev) => ({
   ...prev,
   comments: {
@@ -820,7 +1192,7 @@ setBadge((prev) => ({
       file: "removed.ts",
       line: 42,
       side: "deletions",
-      preview: { ...preview, patch: "@@ -41,3 +41,2 @@\n before\n-removed\n after", line: 42, side: "deletions" },
+      preview: { ...snippet, patch: "@@ -41,3 +41,2 @@\n before\n-removed\n after", line: 42, side: "deletions" },
     })),
   },
 }))
@@ -867,6 +1239,7 @@ for (const file of ["old.ts", "renamed.ts"]) {
 navigation.dispose()
 
 const { PRChecks } = await import("../../webview-ui/agent-manager/pr/PRChecks")
+const { PRSummary } = await import("../../webview-ui/agent-manager/pr/PRSummary")
 const { summarize } = await import("../../src/agent-manager/pr/am-pr-utils")
 const third = document.createElement("div")
 document.body.append(third)
@@ -892,6 +1265,9 @@ await window.happyDOM.waitUntilComplete()
 const fix = () => third.querySelector<HTMLButtonElement>(".am-pr-checks-fix")
 const failureGroup = () => third.querySelector<HTMLElement>('.am-pr-check-group[data-bucket="failure"]')
 const successGroup = () => third.querySelector<HTMLElement>('.am-pr-check-group[data-bucket="success"]')
+const pendingCheck = third.querySelector('.am-pr-panel-check-item[data-status="pending"]')
+assert.ok(pendingCheck?.querySelector('[data-component="spinner"]'), "pending checks show a spinner")
+assert.equal(pendingCheck?.querySelector('[data-component="icon"]'), null)
 assert.ok(failureGroup()?.querySelector(".am-pr-check-group-items"))
 assert.equal(successGroup()?.querySelector(".am-pr-check-group-items"), null)
 successGroup()?.querySelector<HTMLButtonElement>(".am-pr-check-group-heading")?.click()
@@ -941,3 +1317,168 @@ assert.equal(fix()?.disabled, false)
 setPrState((prev) => ({ ...prev, checks: summarize([{ name: "Tests", status: "success" }]) }))
 assert.equal(fix(), null)
 remount()
+
+// PR summary: Fix with Kilo and jump-to-section per row, without scrolling.
+const terminalSent: unknown[] = []
+window.addEventListener("message", (ev: MessageEvent) => {
+  if (ev.data?.type === "appendReviewCommentsToTerminal") terminalSent.push(ev.data)
+})
+const fourth = document.createElement("div")
+document.body.append(fourth)
+const jumped: string[] = []
+const [terminal, setTerminal] = createSignal<string | undefined>(undefined)
+const [summaryPR, setSummaryPR] = createSignal<PRStatus>({
+  ...base,
+  review: "changes_requested",
+  checks: summarize([
+    { name: "Typecheck", status: "failure", url: "https://github.com/example/repo/actions/runs/100/job/200" },
+    { name: "Tests", status: "success" },
+  ]),
+  comments: {
+    total: 3,
+    unresolved: 2,
+    comments: [
+      {
+        id: "c1",
+        threadId: "T_one",
+        author: "a",
+        body: "one",
+        file: "a.ts",
+        line: 1,
+        resolved: false,
+        outdated: false,
+      },
+      {
+        id: "c2",
+        threadId: "T_two",
+        author: "b",
+        body: "two",
+        file: "b.ts",
+        line: 2,
+        resolved: false,
+        outdated: false,
+      },
+      {
+        id: "c3",
+        threadId: "T_done",
+        author: "c",
+        body: "done",
+        file: "c.ts",
+        line: 3,
+        resolved: true,
+        outdated: false,
+      },
+    ],
+  },
+  conversation: [
+    { id: "IC_human", author: "marius", body: "please also update docs", createdAt: Date.now(), isBot: false },
+    { id: "IC_bot", author: "kilo-bot", body: "automated", createdAt: Date.now(), isBot: true },
+    { id: "IC_dismissed", author: "reviewer", body: "nit", createdAt: Date.now(), isBot: false },
+  ],
+})
+const summaryWorktree = "wt-summary"
+patchCommentState(summaryWorktree, (prev) => ({ dismissed: { ...prev.dismissed, IC_dismissed: true } }))
+const disposeSummary = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <PRSummary
+          pr={summaryPR()}
+          worktreeId={summaryWorktree}
+          activeTerminalId={terminal()}
+          onJump={(id) => jumped.push(id)}
+        />
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  fourth,
+)
+await window.happyDOM.waitUntilComplete()
+const fifth = document.createElement("div")
+document.body.append(fifth)
+render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <PRSummary
+          pr={{
+            ...base,
+            review: "pending",
+            checks: summarize([{ name: "Lint", status: "pending" }]),
+          }}
+          worktreeId="wt-pending-summary"
+        />
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  fifth,
+)
+await window.happyDOM.waitUntilComplete()
+assert.equal(fifth.querySelectorAll('[data-component="spinner"]').length, 2)
+assert.equal(fifth.querySelectorAll('[data-component="icon"]').length, 0)
+const row = (id: string) => fourth.querySelector<HTMLElement>(`.am-pr-summary-row[data-target="${id}"]`)
+const rowFix = (id: string) => row(id)?.querySelector<HTMLButtonElement>(".am-pr-summary-fix")
+const rowJump = (id: string) => row(id)?.querySelector<HTMLButtonElement>(".am-pr-summary-jump")
+assert.equal(fourth.querySelectorAll(".am-pr-summary-row").length, 4)
+// The review row has no target and no actions.
+assert.equal(fourth.querySelectorAll(".am-pr-summary-row:not([data-target]) button").length, 0)
+assert.match(row("checks")?.textContent ?? "", /1\/2 checks passed/)
+assert.equal(rowFix("checks")?.textContent?.trim(), "Fix with Kilo")
+assert.equal(rowFix("comments")?.textContent?.trim(), "Fix 2 with Kilo")
+assert.match(row("conversation")?.textContent ?? "", /3 PR comments/)
+assert.equal(rowFix("conversation")?.textContent?.trim(), "Fix 1 with Kilo")
+// Discussion is lower-confidence feedback than CI or review threads.
+assert.equal(rowFix("checks")?.getAttribute("data-variant"), "primary")
+assert.equal(rowFix("comments")?.getAttribute("data-variant"), "primary")
+assert.equal(rowFix("conversation")?.getAttribute("data-variant"), "secondary")
+for (const id of ["checks", "comments", "conversation"]) rowJump(id)!.click()
+assert.deepEqual(jumped, ["checks", "comments", "conversation"])
+
+const mark = sent.length
+rowFix("checks")!.click()
+const ci = sent.at(-1) as { autoSend: boolean; comments: Array<{ origin: string }> }
+assert.equal(sent.length, mark + 1)
+assert.equal(ci.autoSend, true)
+assert.equal(ci.comments[0]?.origin, "ci")
+// CI has no sent state; the button stays while failures exist.
+assert.equal(rowFix("checks")?.textContent?.trim(), "Fix with Kilo")
+
+rowFix("comments")!.click()
+const threadsSent = sent.at(-1) as { comments: Array<{ id: string; origin: string }> }
+assert.equal(sent.length, mark + 2)
+assert.deepEqual(
+  threadsSent.comments.map((item) => [item.id, item.origin]),
+  [
+    ["T_one", "pr"],
+    ["T_two", "pr"],
+  ],
+)
+assert.deepEqual(Object.keys(commentState(summaryWorktree).sent).sort(), ["T_one", "T_two"])
+await window.happyDOM.waitUntilComplete()
+assert.equal(rowFix("comments"), null)
+assert.ok(rowJump("comments"))
+
+rowFix("conversation")!.click()
+const talk = sent.at(-1) as { comments: Array<{ id: string }> }
+assert.equal(sent.length, mark + 3)
+assert.deepEqual(
+  talk.comments.map((item) => item.id),
+  ["IC_human"],
+)
+await window.happyDOM.waitUntilComplete()
+assert.equal(rowFix("conversation"), null)
+
+// A terminal tab switches the labels and the transport.
+setTerminal("term-1")
+await window.happyDOM.waitUntilComplete()
+assert.equal(rowFix("checks")?.textContent?.trim(), "Send failures to terminal")
+rowFix("checks")!.click()
+assert.equal(sent.length, mark + 3)
+assert.equal(terminalSent.length, 1)
+
+setSummaryPR((prev) => ({ ...prev, checks: summarize([{ name: "Tests", status: "success" }]) }))
+await window.happyDOM.waitUntilComplete()
+assert.match(row("checks")?.textContent ?? "", /All checks passing/)
+assert.equal(rowFix("checks"), null)
+assert.ok(rowJump("checks"))
+disposeSummary()

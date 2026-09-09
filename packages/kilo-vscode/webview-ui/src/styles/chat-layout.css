@@ -263,8 +263,10 @@
    caps how far a long status label may stretch before it ellipsizes, so the
    indicator stays a centered cluster on the same axis as the actions row instead
    of reaching for both edges. */
-.session-dock-state > .working-indicator {
-  width: 100%;
+.session-working {
+  position: relative;
+  width: fit-content;
+  min-width: 0;
   max-width: var(--session-dock-lane);
   margin-inline: auto;
 }

@@ -139,7 +139,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const unsubscribePlans = vscode.onMessage((message) => {
-    for (const plan of planOpens(message)) {
+    for (const plan of planOpens(message, session.currentSessionID())) {
       const id = `${plan.sessionID}:${plan.id}`
       if (opened.has(id)) continue
       opened.add(id)
@@ -304,6 +304,14 @@ const AppContent: Component = () => {
     if (message.type === "selectKiloModel") setCurrentView("newTask")
   }
 
+  const open = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "openSession" || !message.sessionID) return
+    console.log("[Kilo New] App: opening local session:", message.sessionID)
+    if (tabs) tabs.open(message.sessionID, { scrollToBottom: true })
+    if (!tabs) session.selectSession(message.sessionID, { scrollToBottom: true })
+    setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -323,6 +331,7 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      open(message)
       handleKiloModel(message)
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {

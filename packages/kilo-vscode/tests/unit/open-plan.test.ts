@@ -26,7 +26,9 @@ const update = (part: Part, sessionID = "session-1") =>
 
 describe("planOpens", () => {
   it("returns completed open_plan requests", () => {
-    expect(planOpens(update(done()))).toEqual([{ id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" }])
+    expect(planOpens(update(done()), "session-1")).toEqual([
+      { id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" },
+    ])
   })
 
   it("handles batched updates and ignores unrelated parts", () => {
@@ -39,7 +41,14 @@ describe("planOpens", () => {
       ],
     } satisfies Extract<ExtensionMessage, { type: "partsUpdated" }>
 
-    expect(planOpens(message)).toEqual([{ id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" }])
+    expect(planOpens(message, "session-1")).toEqual([
+      { id: "part-1", path: ".kilo/plans/plan.md", sessionID: "session-1" },
+    ])
+  })
+
+  it("ignores plans from sessions that are not active", () => {
+    expect(planOpens(update(done()), "session-2")).toEqual([])
+    expect(planOpens(update(done()), undefined)).toEqual([])
   })
 
   it("does not open incomplete or unmarked plan parts", () => {
@@ -52,7 +61,7 @@ describe("planOpens", () => {
       state: { ...done("part-unmarked").state, metadata: { plan: ".kilo/plans/plan.md" } },
     } satisfies Part
 
-    expect(planOpens(update(running))).toEqual([])
-    expect(planOpens(update(unmarked))).toEqual([])
+    expect(planOpens(update(running), "session-1")).toEqual([])
+    expect(planOpens(update(unmarked), "session-1")).toEqual([])
   })
 })

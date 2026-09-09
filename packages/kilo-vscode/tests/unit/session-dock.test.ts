@@ -47,7 +47,7 @@ describe("session dock layout", () => {
   it("stacks both states in one grid cell so the row measures the taller one", () => {
     const css = read("webview-ui/src/styles/chat-layout.css")
     const dock = css.match(/\.session-dock \{([\s\S]*?)\}/)
-    const state = css.match(/\.session-dock-state \{([\s\S]*?)\}/)
+    const state = css.match(/^\.session-dock-state \{([\s\S]*?)\}/m)
     expect(dock).not.toBeNull()
     expect(state).not.toBeNull()
     expect(dock![1]).toContain("display: grid")
@@ -81,6 +81,52 @@ describe("session dock layout", () => {
     const css = read("webview-ui/src/styles/chat-layout.css")
     expect(css).not.toContain("working-indicator-slot")
     expect(read("webview-ui/src/components/shared/WorkingIndicator.tsx")).not.toContain("working-indicator-slot")
+  })
+
+  it("keeps Goal inside the shared session actions", () => {
+    const view = read("webview-ui/src/components/chat/ChatView.tsx")
+    expect(view).toContain("hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}")
+    expect(view).toContain("actions={(control) => renderActions(hasMessages(), control)}")
+    expect(view).toContain("{control()}")
+  })
+
+  it("only exposes Goal controls while the action row is available", () => {
+    const dock = read("webview-ui/src/components/chat/SessionDock.tsx")
+    const goal = read("webview-ui/src/components/chat/goal/useGoalDock.tsx")
+    const indicator = read("webview-ui/src/components/shared/WorkingIndicator.tsx")
+    expect(indicator).not.toMatch(/goal|DropdownMenu|Tooltip/)
+    expect(dock).toContain("<WorkingIndicator />")
+    expect(goal).toContain('class="session-goal-action"')
+    expect(goal).toContain('variant="ghost"')
+    expect(goal).toContain("disabled={props.readonly || !actions()}")
+    expect(goal).toContain("if (!actions() || !goal()) setOpen(false)")
+    expect(dock).toContain("props.actions?.(goal.control)")
+    expect(dock).toContain("const goal = useGoalDock({")
+    expect(goal).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
+    expect(goal).toContain('session.sendCommand("goal", "clear")')
+    expect(read("webview-ui/src/components/chat/PromptInput.tsx")).not.toContain('"session.goal.label"')
+    const working = dock.match(/const working = \(\) =>([^\n]*)/)?.[1]
+    expect(working).not.toContain("goal()")
+    expect(dock).toContain("const active = () => working() || actions()")
+    expect(goal).toContain("working() && goal()?.active")
+    expect(dock).toContain("{goal.status()}")
+  })
+
+  it("shares action button styles without modifying the loading indicator", () => {
+    const layout = read("webview-ui/src/styles/chat-layout.css")
+    const css = layout + read("webview-ui/src/styles/goal.css")
+    expect(layout).not.toContain(".session-goal-")
+    expect(read("webview-ui/src/styles/chat.css")).toContain('@import "./goal.css"')
+    const indicator = css.match(/\.working-indicator \{([\s\S]*?)\}/)?.[1]
+    expect(css).not.toContain('.session-goal-action[data-component="button"]')
+    expect(css).not.toContain(".session-dock[data-goal]")
+    expect(css).toContain(".session-goal-status")
+    expect(css).not.toContain(".session-goal-dot")
+    expect(css).not.toContain("@container chat (max-width: 640px)")
+    expect(indicator).toContain("gap: 8px")
+    expect(indicator).toContain("padding: 8px 16px")
+    expect(css).not.toContain("working-goal")
+    expect(css).not.toContain(".working-indicator[data-goal]")
   })
 
   it("keeps the composer column as the only owner of the row", () => {

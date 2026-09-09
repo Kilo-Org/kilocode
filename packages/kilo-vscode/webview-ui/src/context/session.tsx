@@ -94,6 +94,7 @@ import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
+import { goalControl } from "../../../src/kilo-provider/command-completion"
 import { continuation } from "./session-continuation"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
@@ -140,6 +141,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  // Pending "jump to latest" request from a notification-driven session open.
+  // Consumed once by MessageList's restore effect, then cleared.
+  const [scrollBottomID, setScrollBottomID] = createSignal<string>()
   const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
 
   const trackAgentProject = (message: ExtensionMessage): boolean => {
@@ -341,7 +345,6 @@ export const SessionProvider: ParentComponent = (props) => {
   const confirmSubmissions = (sid: string) => {
     for (const [id, scope] of pendingSubmissions) {
       if (scope !== sid) continue
-      aborts.finish(id)
       pendingSubmissions.delete(id)
     }
     setSubmissionMap(
@@ -568,7 +571,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function submission(sessionID?: string, model = selected(sessionID)) {
     return {
-      model: model ?? undefined,
+      model: model ? { providerID: model.providerID, modelID: model.modelID } : undefined,
       variant: variants.request(sessionID),
       agent: resolvePromptAgent({
         sessionID,
@@ -2102,6 +2105,14 @@ export const SessionProvider: ParentComponent = (props) => {
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
+  function dismiss(sid?: string) {
+    const suggestion = scopedSuggestions(sid)[0]
+    if (suggestion) dismissSuggestion(suggestion.id)
+    for (const q of scopedQuestions(sid)) {
+      dismissQuestion(q.id)
+    }
+  }
+
   function submit(input: SendMessageRequest) {
     const messageID = input.messageID ?? Identifier.ascending("message")
     const scope = input.draftID ?? input.sessionID
@@ -2167,11 +2178,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return true
     }
 
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
-    for (const q of scopedQuestions(sid)) {
-      dismissQuestion(q.id)
-    }
+    dismiss(sid)
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
@@ -2211,7 +2218,7 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     origin?: string | null,
-    overrides?: { agent?: string; model?: string; variant?: string },
+    overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
   ): boolean {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
@@ -2219,7 +2226,9 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const control = goalControl(command, args)
     const effectiveSelection = (() => {
+      if (control) return null
       if (overrides?.model) return parseModelString(overrides.model)
       const scope = draftID ?? sid
       const model = overrides?.agent
@@ -2229,25 +2238,31 @@ export const SessionProvider: ParentComponent = (props) => {
           : getSelected(preferences(), environment(), undefined, pendingAgentSelection() ?? defaultAgent())
       return model ?? (providerID && modelID ? { providerID, modelID } : null)
     })()
-    if (!available(effectiveSelection)) return false
+    if (!control && !available(effectiveSelection)) return false
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
     if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
 
-    if (overrides?.agent) {
-      selectAgent(overrides.agent, scope)
-    }
-    if (overrides?.model) {
-      selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)
-    }
-    if (overrides?.variant) {
-      selectVariant(overrides.variant, scope)
+    if (effectiveSelection) {
+      if (overrides?.agent) {
+        selectAgent(overrides.agent, scope)
+      }
+      if (overrides?.model) {
+        selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)
+      }
+      if (overrides?.variant) {
+        selectVariant(overrides.variant, scope)
+      }
+      recordModelUsage(effectiveSelection.providerID, effectiveSelection.modelID)
     }
 
-    const effectiveProvider = effectiveSelection.providerID
-    const effectiveModel = effectiveSelection.modelID
-    recordModelUsage(effectiveProvider, effectiveModel)
+    const settings = (() => {
+      if (!effectiveSelection) return
+      const { model, ...settings } = submission(scope, effectiveSelection)
+      return { ...model, ...settings }
+    })()
+    const messageID = overrides?.messageID ?? Identifier.ascending("message")
 
     // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
@@ -2256,16 +2271,12 @@ export const SessionProvider: ParentComponent = (props) => {
         ? cloudPreviewId()
         : null
     if (preview) {
-      const settings = submission(scope, effectiveSelection)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
-        messageID: Identifier.ascending("message"),
-        providerID: settings.model?.providerID,
-        modelID: settings.model?.modelID,
-        agent: settings.agent,
-        variant: settings.variant,
+        messageID,
+        ...settings,
         files,
         command,
         commandArgs: args,
@@ -2273,24 +2284,19 @@ export const SessionProvider: ParentComponent = (props) => {
       return true
     }
 
-    const messageID = Identifier.ascending("message")
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
-    for (const q of scopedQuestions(sid)) {
-      dismissQuestion(q.id)
-    }
+    if (command !== "goal") dismiss(sid)
 
     if (scope) {
-      clearClose(scope)
-      addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      if (command !== "goal") {
+        clearClose(scope)
+        addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      }
       startSubmission(scope, messageID)
       if (!sid && (!draftID || draftSessionID() === scope)) {
         setUserClearedSession(false)
         setDraftSessionID(scope)
       }
     }
-    const settings = submission(scope, effectiveSelection)
-
     vscode.postMessage({
       type: "sendCommand",
       command,
@@ -2298,10 +2304,7 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID: settings.model?.providerID,
-      modelID: settings.model?.modelID,
-      agent: settings.agent,
-      variant: settings.variant,
+      ...settings,
       files,
       agentManagerContext: context,
     })
@@ -2342,7 +2345,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     const messageID = [...pendingSubmissions].reverse().find(([, sid]) => sid === scope)?.[0]
-    if (!aborts.request(scope, status(), messageID) || !sessionID) return
+    const goal = currentSession()?.goal?.active === true
+    const requested = aborts.request(scope, status(), messageID, goal)
+    if ((!goal && !requested) || !sessionID) return
 
     vscode.postMessage({
       type: "abort",
@@ -2523,12 +2528,15 @@ export const SessionProvider: ParentComponent = (props) => {
   // selection time. Replayed by the reconnect effect below.
   let deferredFetch: { id: string; focus: boolean } | undefined
 
-  function selectSession(id: string, options: { focus?: boolean } = {}) {
+  function selectSession(id: string, options: { focus?: boolean; scrollToBottom?: boolean } = {}) {
     // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
+    // Always reassign: a later plain selection must clear a request that
+    // MessageList never got to consume, or it would fire on a future switch.
+    setScrollBottomID(options.scrollToBottom ? id : undefined)
     const ready = loaded().has(id)
     batch(() => {
       agentDrafts.prune(draftSessionID())
@@ -2551,6 +2559,13 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     deferredFetch = undefined
     loadFocusedMessages(id, ready, focus)
+  }
+
+  /** One-shot consume: true only the first time it's checked for the pending id. */
+  function consumeScrollBottom(id: string): boolean {
+    if (scrollBottomID() !== id) return false
+    setScrollBottomID(undefined)
+    return true
   }
 
   function loadFocusedMessages(id: string, ready: boolean, focus = true) {
@@ -2962,6 +2977,8 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadOlderMessages,
     selectSession,
+    scrollBottomID,
+    consumeScrollBottom,
     releaseSession: handleSessionDeleted,
     deleteSession,
     renameSession,

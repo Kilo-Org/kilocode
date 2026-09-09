@@ -274,12 +274,14 @@ const AgentManagerContent: Component = () => {
   const [isGitRepo, setIsGitRepo] = createSignal(true)
   const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
+  const [restricted, setRestricted] = createSignal(false)
   const [multiProject, setMultiProject] = createSignal(false)
 
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
   const activateSelection = (target: AgentManagerSidebarTarget, restore?: boolean) => {
+    saveTabMemory()
     comments.cancel()
     vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
   }
@@ -676,12 +678,14 @@ const AgentManagerContent: Component = () => {
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
 
+  const releaseTabs = () => setTabWidths(false)
   const freezeTabs = () => {
     const bar = document.querySelector(".am-tab-bar")
-    if (bar instanceof HTMLElement && bar.matches(":hover")) setTabWidths(true)
+    if (!(bar instanceof HTMLElement) || !bar.matches(":hover")) return
+    setTabWidths(true)
+    requestAnimationFrame(releaseTabs)
   }
 
-  const releaseTabs = () => setTabWidths(false)
   const worktreeTabOrder = () => registry.active().tabOrder()
   const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   const sidebarWorktreeOrder = () => registry.active().worktreeOrder()
@@ -718,12 +722,13 @@ const AgentManagerContent: Component = () => {
     return id
   }
   const placeLocal = (id: string, pending: string | undefined, active: string | undefined) => {
+    const existing = localSessionIDs().includes(id)
     const next = pending
       ? replacePendingTab({ ids: localSessionIDs(), active }, pending, id)
       : openSessionTab({ ids: localSessionIDs(), active }, id)
     setLocalSessionIDs(next.ids)
     if (pending) tabOrderSync.replaceOrAppend(LOCAL, pending, id)
-    if (!pending) tabOrderSync.append(LOCAL, id)
+    if (!pending && !existing) tabOrderSync.append(LOCAL, id)
     if (pending && pending === active) setActivePendingId(undefined)
   }
   const focusLocalSession = (id: string) => {
@@ -862,11 +867,14 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
-  const showDetailStack = createMemo(() =>
-    keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
+  const showDetailStack = createMemo(
+    () =>
+      !restricted() &&
+      keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
 
   const overlay = createMemo((): SetupState | null => {
+    if (restricted()) return null
     const state = setup()
     const sel = selection()
     // A live Setup script terminal shows progress and failures on its own
@@ -1163,6 +1171,7 @@ const AgentManagerContent: Component = () => {
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? session.currentSessionID())
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)
+    setRestricted(state.restricted === true)
     if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
     if (!worktreesLoaded()) setWorktreesLoaded(true)
     // When not a git repo, also mark sessions as loaded since the Kilo
@@ -1712,14 +1721,6 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
-  }
-
-  const toggleReviewTab = () => {
-    if (reviewActive()) {
-      closeReviewTab()
-      return
-    }
-    openReviewTab()
   }
 
   // Deferred close: flip signal immediately for instant UI feedback,
@@ -2347,7 +2348,7 @@ const AgentManagerContent: Component = () => {
           t={t}
           bindings={kb}
           selection={selection}
-          empty={contextEmpty}
+          empty={() => restricted() || contextEmpty()}
           collapsed={sidebarCollapsed()}
           onToggleSidebar={toggleSidebar}
           scroll={tabScroll}
@@ -2363,8 +2364,8 @@ const AgentManagerContent: Component = () => {
           worktreeStats={worktreeStats}
           applyState={apply.applyStateForSelection}
           reviewScope={review.scope}
+          onApply={metrics.click("apply_to_local", "tab_toolbar", openApplyDialog)}
           onOpen={openWindow}
-          onApply={openApplyDialog}
           runStatuses={runStatuses}
           runConfigured={runScriptConfigured}
           onRun={(id) => runWorktree(id, sideCtl.destination())}
@@ -2373,16 +2374,24 @@ const AgentManagerContent: Component = () => {
           reviewActive={reviewActive}
           onToggleDiff={toggleDiffPanel}
           {...browser.tabs}
-          onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
+          onToggleBrowser={metrics.click("browser", "tab_toolbar", browser.tabs.onToggleBrowser, () => ({
+            action: browser.tabs.browserOpen() ? "close" : "open",
+          }))}
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
-          onTogglePR={togglePRPanel}
+          onTogglePR={metrics.click("pull_request", "tab_toolbar", togglePRPanel, () => ({
+            action: prOpen() ? "close" : "open",
+          }))}
           documentsOpen={documentInspector.isOpen}
           documentsAvailable={documentInspector.available}
-          onToggleDocuments={documentInspector.toggle}
+          onToggleDocuments={metrics.click("documents", "tab_toolbar", documentInspector.toggle, () => ({
+            action: documentInspector.isOpen() ? "close" : "open",
+          }))}
           subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
           subagentsOpen={() => sidePanel() === SidePanel.Subagents}
-          onToggleSubagents={subagentCtl.toolbar.toggle}
+          onToggleSubagents={metrics.click("subagents", "tab_toolbar", subagentCtl.toolbar.toggle, () => ({
+            action: sidePanel() === SidePanel.Subagents ? "close" : "open",
+          }))}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2393,6 +2402,12 @@ const AgentManagerContent: Component = () => {
           onTerminalDestinationChoose={sideCtl.choose}
           track={metrics.click}
         />
+
+        <Show when={restricted()}>
+          <div class="am-empty-state am-restricted-state" role="status">
+            <div class="am-empty-state-text">{t("agentManager.project.restricted")}</div>
+          </div>
+        </Show>
 
         <Show when={overlay()}>
           {(state) => (
@@ -2417,7 +2432,7 @@ const AgentManagerContent: Component = () => {
             </div>
           )}
         </Show>
-        <Show when={history()}>
+        <Show when={!restricted() && history()}>
           <HistoryView
             onSelectSession={(id) => {
               if (addSessionToCurrentWorktree(id)) return
@@ -2446,7 +2461,7 @@ const AgentManagerContent: Component = () => {
             rowActions={historyRowActions}
           />
         </Show>
-        <Show when={showDetailStack()}>
+        <Show when={!restricted() && showDetailStack()}>
           <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
             <div
               class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
@@ -2483,6 +2498,7 @@ const AgentManagerContent: Component = () => {
                 </Show>
                 <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
                   <ChatView
+                    projectId={currentProjectId()}
                     worktrees={references}
                     emptyState={intro.render}
                     introduction={intro.visible()}
@@ -2575,6 +2591,7 @@ const AgentManagerContent: Component = () => {
                         )
                       }
                       remoteComments={remote.comments}
+                      remoteTarget={remote.target}
                       focusedComment={remote.focus}
                       composer={composers.get}
                       lead={() => diffScopeControls(true)}
@@ -2690,6 +2707,7 @@ const AgentManagerContent: Component = () => {
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   remoteComments={remote.comments()}
+                  remoteTarget={(comment) => remote.target(diffCtx(), comment)}
                   focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
                   onCommentsChange={setReviewCommentsForSelection}
                   composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}

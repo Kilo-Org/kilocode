@@ -24,7 +24,6 @@ import {
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
-import { PRStatusBridge } from "./pr-status-bridge"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { GitOps } from "./GitOps"
 import type { GitExecutable } from "../util/git-executable"
@@ -84,6 +83,7 @@ import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import type { BrowserBroker } from "../services/browser-automation"
 import { createBrowserLifecycle } from "./browser-lifecycle"
 import { handleSessionLifecycle } from "./session-lifecycle"
+import { isRestrictedRoot } from "./home-workspace"
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
   private panel: PanelContext | undefined
@@ -100,7 +100,7 @@ export class AgentManagerProvider implements Disposable {
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
   private readonly projectPollers: ProjectPollers
-  private prBridge!: PRStatusBridge
+  private prBridge!: ReturnType<typeof createPollers>["pr"]
   private orchestration: AgentManagerOrchestrationBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
@@ -241,6 +241,7 @@ export class AgentManagerProvider implements Disposable {
       projectId: () => this.context?.id,
     })
     const pollers = createPollers({
+      dirtyFiles: () => this.host.dirtyFiles(),
       git: this.gitOps,
       semaphore,
       state: () => this.state,
@@ -444,13 +445,11 @@ export class AgentManagerProvider implements Disposable {
     }
     const state = ctx.stateManager()
     const init = await initContextState(ctx, (...args) => this.log(...args))
-
     if (!init.ok) {
       this.postToWebview({ type: "error", message: "Agent Manager state could not be recovered." })
       this.pushState()
       return
     }
-
     // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
     // VS Code's git extension to re-discover them. Without this, worktrees
     // won't appear in Source Control until the next VS Code restart.
@@ -463,7 +462,6 @@ export class AgentManagerProvider implements Disposable {
     await pruneSubagents(state, this.panel?.sessions, (message) => this.log(message))
     for (const s of state.getSessions()) this.panel?.sessions.trackSession(s.id)
     this.pushState()
-
     // Always list sessions, even when the state tracks none: the backend may
     // still hold sessions for this project, and without the listing the
     // sessionsLoaded message never reaches the webview, leaving the sidebar
@@ -874,7 +872,7 @@ export class AgentManagerProvider implements Disposable {
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type !== "openFile") return undefined
 
-    const sessionId = this.activeSessionId
+    const sessionId = m.sessionID ?? this.activeSessionId
     const state = this.getStateManager()
     if (sessionId && state?.directoryFor(sessionId)) {
       this.openWorktreeFile(sessionId, m.filePath, m.line, m.column)
@@ -1410,6 +1408,7 @@ export class AgentManagerProvider implements Disposable {
       terminalFont: readTerminalFont(),
       browserAutomation: this.host.browserAutomation(),
       isGitRepo: true,
+      restricted: isRestrictedRoot(target.root),
       defaultBaseBranch: state.getDefaultBaseBranch(),
       activeTarget: state.getActiveTarget(),
       ...(active ? this.runStateFor(target) : {}),
@@ -1440,6 +1439,7 @@ export class AgentManagerProvider implements Disposable {
       terminalDestination: this.destination.value(),
       terminalFont: readTerminalFont(),
       isGitRepo: false,
+      restricted: isRestrictedRoot(this.contexts.active()?.root),
       runStatuses: [],
       runScriptConfigured: false,
       browserAutomation: this.host.browserAutomation(),

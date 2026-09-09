@@ -3,18 +3,19 @@ import { For, Show, createMemo } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { PRCommentBody } from "./PRCommentBody"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
-import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { CopyButton } from "./CopyButton"
 import { PRCommentTime } from "./PRCommentTime"
 import { SectionHeading } from "./SectionHeading"
+import { actionableConversation, sendConversation } from "./pr-actions"
 import { commentState, createReactionController, patchCommentState } from "./pr-comment-state"
-import { githubUrl, prConversationMarkdown, prConversationPayload, preview, SEND_LIMIT } from "./pr-comment-payload"
+import { githubUrl, prConversationMarkdown, preview, SEND_LIMIT } from "./pr-comment-payload"
 import type { PRConversationComment, PRReaction, PRReactionContent, ReviewerState } from "./pr-types"
 import { PRReactions } from "./PRReactions"
+import { PRCommentForm } from "./PRCommentForm"
 
 const REVIEWER_ICON: Record<ReviewerState, string> = {
   approved: "circle-check",
@@ -31,6 +32,10 @@ const REVIEWER_LABEL: Record<ReviewerState, string> = {
 }
 
 interface CardProps {
+  projectId?: string
+  worktreeId: string
+  prNumber: number
+  prUrl: string
   comment: PRConversationComment
   open: boolean
   sent: boolean
@@ -103,9 +108,7 @@ function PRConversationCard(props: CardProps) {
       </button>
 
       <Show when={props.open}>
-        <div class="am-pr-comment-body">
-          <Markdown text={props.comment.body} />
-        </div>
+        <PRCommentBody comment={props.comment} target={props.comment.kind === "issue" ? props : undefined} />
         <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
         <div class="am-pr-comment-actions am-pr-row">
           <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
@@ -138,11 +141,25 @@ function PRConversationCard(props: CardProps) {
           </Show>
         </div>
       </Show>
+      <div class="am-pr-comment-footer">
+        <Button
+          data-action="toggle-thread"
+          variant="ghost"
+          size="small"
+          aria-expanded={props.open}
+          onClick={props.onToggleOpen}
+        >
+          <Icon name={props.open ? "chevron-down" : "chevron-right"} size="small" />
+          {t(props.open ? "agentManager.pr.comment.collapseThread" : "agentManager.pr.comment.expandThread")}
+        </Button>
+      </div>
     </div>
   )
 }
 
 interface Props {
+  prNumber: number
+  prUrl: string
   comments: PRConversationComment[]
   projectId?: string
   worktreeId: string
@@ -160,6 +177,7 @@ export function PRConversation(props: Props) {
     onMessage: vscode.onMessage,
     fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
   })
+  const index = createMemo(() => new Map(props.comments.map((comment) => [comment.id, comment])))
   const state = () => commentState(props.worktreeId)
   const patch = (fn: (prev: ReturnType<typeof state>) => Partial<ReturnType<typeof state>>) =>
     patchCommentState(props.worktreeId, fn)
@@ -185,25 +203,10 @@ export function PRConversation(props: Props) {
     }))
   }
 
-  const actionable = createMemo(() =>
-    props.comments.filter((c) => !c.isBot && !sent(c.id) && !dismissed(c.id)).map((c) => c.id),
-  )
+  const actionable = createMemo(() => actionableConversation(props.comments, state()))
 
   function send(ids: string[]) {
-    const map = new Map(props.comments.map((c) => [c.id, c]))
-    const batch = ids
-      .flatMap((id) => {
-        const comment = map.get(id)
-        return comment && !state().sent[id] ? [comment] : []
-      })
-      .slice(0, SEND_LIMIT)
-    if (batch.length === 0) return
-    sendReviewComments(batch.map(prConversationPayload), props.activeTerminalId)
-    patch((prev) => {
-      const nextSent = { ...prev.sent }
-      for (const item of batch) nextSent[item.id] = true
-      return { sent: nextSent }
-    })
+    sendConversation(props.worktreeId, props.comments, ids, state(), props.activeTerminalId)
   }
 
   return (
@@ -228,30 +231,45 @@ export function PRConversation(props: Props) {
             </Button>
           </Show>
           <div class="am-pr-panel-comment-list am-pr-col">
-            <For each={props.comments}>
-              {(comment) => (
-                <PRConversationCard
-                  comment={comment}
-                  open={expandedFor(comment)}
-                  sent={sent(comment.id)}
-                  dismissed={dismissed(comment.id)}
-                  activeTerminalId={props.activeTerminalId}
-                  onToggleOpen={() => toggleOpen(comment)}
-                  onSend={() => send([comment.id])}
-                  onDismiss={() => toggleDismiss(comment)}
-                  reactionError={reactions.error(comment.id)}
-                  reactions={reactions.list(comment.id, comment.reactions)}
-                  reactionPending={(content) => reactions.pending(comment.id, content)}
-                  onReaction={(content, add) => reactions.toggle(comment.id, content, add)}
-                  onOpenUrl={
-                    githubUrl(comment.url) && props.onOpenUrl
-                      ? () => props.onOpenUrl?.(githubUrl(comment.url)!)
-                      : undefined
-                  }
-                />
+            <For each={[...index().keys()]}>
+              {(id) => (
+                <Show when={index().get(id)}>
+                  {(comment) => (
+                    <PRConversationCard
+                      projectId={props.projectId}
+                      worktreeId={props.worktreeId}
+                      prNumber={props.prNumber}
+                      prUrl={props.prUrl}
+                      comment={comment()}
+                      open={expandedFor(comment())}
+                      sent={sent(id)}
+                      dismissed={dismissed(id)}
+                      activeTerminalId={props.activeTerminalId}
+                      onToggleOpen={() => toggleOpen(comment())}
+                      onSend={() => send([id])}
+                      onDismiss={() => toggleDismiss(comment())}
+                      reactionError={reactions.error(id)}
+                      reactions={reactions.list(id, comment().reactions)}
+                      reactionPending={(content) => reactions.pending(id, content)}
+                      onReaction={(content, add) => reactions.toggle(id, content, add)}
+                      onOpenUrl={
+                        githubUrl(comment().url) && props.onOpenUrl
+                          ? () => props.onOpenUrl?.(githubUrl(comment().url)!)
+                          : undefined
+                      }
+                    />
+                  )}
+                </Show>
               )}
             </For>
           </div>
+          <PRCommentForm
+            action="create"
+            projectId={props.projectId}
+            worktreeId={props.worktreeId}
+            prNumber={props.prNumber}
+            prUrl={props.prUrl}
+          />
         </Show>
       </div>
     </>

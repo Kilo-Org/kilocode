@@ -1,33 +1,24 @@
 /** @jsxImportSource solid-js */
 
 /**
- * SessionDock component
- *
- * One row between the transcript and the composer. It shows the working
- * indicator while a turn runs, the session actions (New Session, Fork Session,
- * Move to Worktree, changes) once it finishes, and nothing while a permission,
- * question, or requirement surface owns the interaction.
- *
- * The transcript viewport is whatever is left above the composer, so a row that
- * grew when the actions appeared shifted the visible conversation by its own
- * height. Both states are therefore always laid out, stacked in one grid cell,
- * and only the active one is visible. The row measures the taller state at the
- * current width, which also keeps the wrapped narrow-sidebar actions row from
- * being clipped.
+ * One row between the transcript and composer. Both working and action states
+ * stay in the same grid cell so the taller state reserves the row's height,
+ * including wrapped actions in narrow sidebars. Blocking surfaces hide both.
  */
-
 import { type Component, type JSX } from "solid-js"
 import { useSession } from "../../context/session"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
+import { useGoalDock } from "./goal/useGoalDock"
 
 interface SessionDockProps {
   /** Idle-state content. Renders nothing when no action applies. */
-  actions?: () => JSX.Element
+  actions?: (goal: () => JSX.Element) => JSX.Element
   /** Whether idle-state content exists for this surface. */
   hasActions?: () => boolean
   /** True while a permission, question, suggestion, or requirement owns the row. */
   blocked?: boolean
+  readonly?: boolean
 }
 
 export const SessionDock: Component<SessionDockProps> = (props) => {
@@ -35,14 +26,24 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   const working = () => showsWorking(session.status(), session.submitting(), !!props.blocked)
   const actions = () => !working() && !props.blocked && (props.hasActions?.() ?? false)
   const active = () => working() || actions()
+  const goal = useGoalDock({
+    working,
+    actions,
+    get readonly() {
+      return props.readonly
+    },
+  })
 
   return (
     <div class="session-dock" data-component="session-dock" data-active={active() ? "" : undefined}>
-      <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
-        <WorkingIndicator />
+      <div class="session-dock-state" ref={goal.row} data-active={working() ? "" : undefined} aria-hidden={!working()}>
+        <div class="session-working" ref={goal.lane} data-goal={goal.running() ? "" : undefined}>
+          <WorkingIndicator />
+          {goal.status()}
+        </div>
       </div>
       <div class="session-dock-state" data-active={actions() ? "" : undefined} aria-hidden={!actions()}>
-        {props.actions?.()}
+        {props.actions?.(goal.control)}
       </div>
     </div>
   )

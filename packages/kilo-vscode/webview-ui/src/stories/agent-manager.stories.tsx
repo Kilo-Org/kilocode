@@ -1343,7 +1343,6 @@ export const TabBarWithReviewTab: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1383,8 +1382,27 @@ export const TabBarSingleTab: Story = {
 
 const MockFullContextActions = () => (
   <div class="am-tab-actions">
-    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
-      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    <span class="am-tab-session-panels">
+      <TooltipKeybind title="Documents" keybind="" placement="bottom">
+        <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+      </TooltipKeybind>
+      <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+        <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+      </TooltipKeybind>
+      <span class="am-tab-actions-separator" />
+    </span>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
+        <Icon name="layers" size="small" />
+        <span class="am-diff-toggle-stats">
+          <span class="am-stat-files">4f</span>
+          <span class="am-stat-additions">+32</span>
+          <span class="am-stat-deletions">−8</span>
+        </span>
+      </button>
+    </TooltipKeybind>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
     </TooltipKeybind>
     <TooltipKeybind title="Apply selected worktree changes to local branch" keybind="" placement="bottom">
       <IconButton
@@ -1393,6 +1411,12 @@ const MockFullContextActions = () => (
         variant="ghost"
         aria-label="Apply selected worktree changes to local branch"
       />
+    </TooltipKeybind>
+    <TooltipKeybind title="Open this worktree in VS Code" keybind="" placement="bottom">
+      <IconButton icon="folder" size="small" variant="ghost" aria-label="Open this worktree in VS Code" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Browser" keybind="" placement="bottom">
+      <IconButton icon="globe" size="small" variant="ghost" label="Browser" />
     </TooltipKeybind>
     <span class="am-split-button">
       <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
@@ -1404,28 +1428,6 @@ const MockFullContextActions = () => (
         </button>
       </TooltipKeybind>
     </span>
-    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
-      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Documents" keybind="" placement="bottom">
-      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
-      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
-    </TooltipKeybind>
-    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
-      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
-        <Icon name="layers" size="small" />
-        <span class="am-diff-toggle-stats">
-          <span class="am-stat-files">4f</span>
-          <span class="am-stat-additions">+32</span>
-          <span class="am-stat-deletions">−8</span>
-        </span>
-      </button>
-    </TooltipKeybind>
-    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
-      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
-    </TooltipKeybind>
     <div class="am-split-button">
       <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
         <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
@@ -2009,6 +2011,7 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
       side: "additions",
+      reactions: [{ content: "THUMBS_UP", count: 2, viewerHasReacted: false }],
       preview: {
         patch:
           '@@ -40,6 +40,6 @@\n   const options = { timeout: 5000 }\n   const result = await\n-    execWithShellEnv("gh", args, options)\n+    execWithShellEnv("gh", args, { ...options, env: env(options) })\n   return result\n }\n ',
@@ -2019,7 +2022,15 @@ const prComments: NonNullable<PRStatus["comments"]> = {
         top: true,
         bottom: true,
       },
-      replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
+      replies: [
+        {
+          id: "PRRC_1_REPLY",
+          author: "hubot",
+          body: "Agreed. A guard plus a log line is enough here.",
+          createdAt: Date.now() - 4 * 60 * 1000,
+          reactions: [{ content: "HEART", count: 1, viewerHasReacted: false }],
+        },
+      ],
     },
     {
       id: "PRRC_2",
@@ -2065,6 +2076,8 @@ export const PRPanelComments: Story = {
         <PRComments
           comments={prComments}
           worktreeId="wt-a1"
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}
@@ -2082,6 +2095,8 @@ export const PRPanelComments200: Story = {
         <PRComments
           comments={prComments}
           worktreeId="wt-a1"
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}
