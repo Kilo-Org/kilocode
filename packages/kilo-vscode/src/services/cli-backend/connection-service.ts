@@ -123,6 +123,7 @@ export class KiloConnectionService {
       promise?: Promise<PermissionResponseResult>
       result?: PermissionResponseResult
       expires: number
+      discard?: boolean
     }
   >()
   private permissionRevision = 0
@@ -338,13 +339,6 @@ export class KiloConnectionService {
    */
   pruneSession(sessionId: string): void {
     this.explicitAborts.remove(sessionId)
-    this.clearPermissionResponsesForSession(sessionId)
-    for (const [id, sid] of this.permissionSessions) {
-      if (sid !== sessionId) continue
-      this.permissionSessions.delete(id)
-      this.permissionDirectories.delete(id)
-      this.permissionRevision += 1
-    }
     for (const [mid, sid] of this.messageSessionIdsByMessageId) {
       if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
     }
@@ -359,6 +353,21 @@ export class KiloConnectionService {
       if (ids.size === 0) this.visible.delete(key)
     }
     this.flushViewed()
+  }
+
+  /**
+   * Remove permission state only after the backend session is deleted. A normal
+   * prune can temporarily release a live child, so its route and response claim
+   * must remain available to another provider.
+   */
+  clearPermissionSession(sessionID: string): void {
+    for (const [id, sid] of this.permissionSessions) {
+      if (sid !== sessionID) continue
+      this.permissionSessions.delete(id)
+      this.permissionDirectories.delete(id)
+      this.permissionRevision += 1
+    }
+    this.clearPermissionResponsesForSession(sessionID)
   }
 
   /**
@@ -430,12 +439,17 @@ export class KiloConnectionService {
       promise?: Promise<PermissionResponseResult>
       result?: PermissionResponseResult
       expires: number
+      discard?: boolean
     } = { sessionID, promise, expires: Number.POSITIVE_INFINITY }
     this.permissionResponses.set(requestID, record)
     void promise.then(
       (result) => {
         if (this.permissionResponses.get(requestID) !== record) return
         if (result.kind === "error") {
+          this.permissionResponses.delete(requestID)
+          return
+        }
+        if (record.discard) {
           this.permissionResponses.delete(requestID)
           return
         }
@@ -460,9 +474,13 @@ export class KiloConnectionService {
     this.permissionResponses.delete(requestID)
   }
 
+  // Preserve in-flight claims until their action settles; dropping one here can
+  // let a duplicate caller start a second backend response sequence.
   clearPermissionResponsesForSession(sessionID: string): void {
     for (const [id, record] of this.permissionResponses) {
-      if (record.sessionID === sessionID) this.permissionResponses.delete(id)
+      if (record.sessionID !== sessionID) continue
+      if (record.promise) record.discard = true
+      else this.permissionResponses.delete(id)
     }
   }
 

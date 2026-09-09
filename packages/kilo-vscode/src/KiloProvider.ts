@@ -2510,6 +2510,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.activeAlerts.delete(sessionID)
       this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
     }
+    this.connectionService.clearPermissionSession(sessionID)
     this.connectionService.pruneSession(sessionID)
     if (this.currentSession?.id === sessionID) {
       this.contextSessionID = undefined

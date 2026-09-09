@@ -6,8 +6,8 @@ import {
   recoveryDirs,
   type RecoverablePermission,
   type PermissionContext,
-  type PermissionResponseResult,
 } from "../../src/kilo-provider/handlers/permission-handler"
+import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
@@ -141,32 +141,36 @@ describe("handlePermissionResponse", () => {
   })
 
   it("shares one save/reply sequence across concurrent callers", async () => {
-    const { fake, sdk, messages, replies, permDirs } = ctx({ tracked: ["s1"] })
-    const gate = Promise.withResolvers<{ data: true }>()
-    const records = new Map<string, Promise<PermissionResponseResult>>()
-    fake.runPermissionResponse = (id, _sessionID, action) => {
-      const current = records.get(id)
-      if (current) return current
-      const promise = action()
-      records.set(id, promise)
-      void promise.then((result) => {
-        if (result.kind === "error") records.delete(id)
-      })
-      return promise
+    const { fake, sdk, messages, replies, saves } = ctx({ tracked: ["s1"] })
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const routed: PermissionContext = {
+      ...fake,
+      recordPermissionDirectory: (id, dir, sessionID) => service.recordPermissionDirectory(id, dir, sessionID),
+      getPermissionDirectory: (id) => service.getPermissionDirectory(id),
+      getPermissionSession: (id) => service.getPermissionSession(id),
+      clearPermissionDirectory: (id) => service.clearPermissionDirectory(id),
+      runPermissionResponse: (id, sessionID, action) => service.runPermissionResponse(id, sessionID, action),
+      isPermissionResponseClaimed: (id) => service.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => service.clearPermissionResponse(id),
     }
-    fake.clearPermissionResponse = (id) => records.delete(id)
-    permDirs.set("p1", "/workspace")
+    const gate = Promise.withResolvers<{ data: true }>()
+    service.recordPermissionDirectory("p1", "/workspace", "s1")
     spyOn(sdk.permission, "reply").mockImplementation(async (args) => {
       replies.push(args)
       return gate.promise
     })
 
-    const first = handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
-    const second = handlePermissionResponse(fake, "p1", "s1", "reject", ["npm *"], [])
-    await Promise.resolve()
-    gate.resolve({ data: true })
-    await Promise.all([first, second])
+    try {
+      const first = handlePermissionResponse(routed, "p1", "s1", "once", ["bun *"], [])
+      const second = handlePermissionResponse(routed, "p1", "s1", "reject", ["npm *"], [])
+      await Promise.resolve()
+      gate.resolve({ data: true })
+      await Promise.all([first, second])
+    } finally {
+      service.dispose()
+    }
 
+    expect(saves).toEqual([{ requestID: "p1", directory: "/workspace", approvedAlways: ["bun *"], deniedAlways: [] }])
     expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace", interactive: true }])
     expect(messages).toEqual([
       { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
