@@ -16,6 +16,11 @@ object SessionUiStyle {
      * - [sessionBackground] paints the whole session backdrop (containers stay transparent over it).
      * - [codeBlockBackground] is the single raised surface (code blocks, tool/shell output, prompt bubble, prompt input).
      * - [foreground] is normal text and links; [Text.Secondary] owns secondary session text.
+     *
+     * [View.Dialog.bgColor] adds a fourth, derived surface for outlined dialog cards
+     * ([ai.kilocode.client.session.views.base.DialogView]) — a contrast shift off [sessionBackground],
+     * distinct from both the backdrop and [codeBlockBackground] — bordered by
+     * [View.Dialog.outlineColor], the midpoint between the backdrop and that surface.
      */
     object Colors {
         /**
@@ -167,6 +172,12 @@ object SessionUiStyle {
         internal const val HOVER_BORDER_ALPHA = 0.18f
         internal const val HOVER_FILL_ALPHA = 0.10f
 
+        /** Shift applied to the backdrop for the dialog-card surface — enough to read as its own panel. */
+        internal const val DIALOG_DELTA = 12
+
+        /** Dialog border position between the backdrop and the card surface: the midpoint of the two. */
+        internal const val OUTLINE_BLEND = 0.5f
+
         object Surface {
             fun bgColor(): Color = Colors.sessionBackground()
 
@@ -191,6 +202,28 @@ object SessionUiStyle {
             }
 
             fun width(): Int = JBUI.scale(1)
+        }
+
+        /** Filled surface and border for outlined dialog cards (question, permission, login, outcome, revert). */
+        object Dialog {
+            /**
+             * Card fill for [ai.kilocode.client.session.views.base.DialogView] when outlined.
+             * Derived from the backdrop rather than a theme key so the card reads as a raised
+             * surface in every theme while staying distinct from [Colors.codeBlockBackground],
+             * which the code/diff bodies nested inside these cards paint.
+             */
+            fun bgColor(): Color = JBColor.lazy {
+                UiStyle.Colors.contrast(Colors.sessionBackground(), DIALOG_DELTA)
+            }
+
+            /**
+             * Card border: the midpoint between the backdrop and [bgColor], so the edge reads as a
+             * soft transition between the two surfaces instead of the hard line
+             * [Outline.brightColor] draws for a card that has no fill of its own.
+             */
+            fun outlineColor(): Color = JBColor.lazy {
+                UiStyle.Colors.blend(Colors.sessionBackground(), bgColor(), OUTLINE_BLEND)
+            }
         }
 
         /** Prompt input dimensions and chrome inside the session view. */

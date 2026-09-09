@@ -15,6 +15,7 @@ import {
   ToolRegistry,
   ToolApprovalProvider,
   resolveToolApproval,
+  useGrowIn,
 } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
@@ -52,7 +53,7 @@ function planExitInfo(part: SDKPart): { plan: string } | undefined {
   return { plan }
 }
 
-function PlanExitCard(props: { part: ToolPart }) {
+function PlanExitCard(props: { part: ToolPart; sessionID: string }) {
   const language = useLanguage()
   const server = useServer()
   const data = useData()
@@ -70,7 +71,7 @@ function PlanExitCard(props: { part: ToolPart }) {
     e.preventDefault()
     const i = info()
     if (!i || !data.openFile) return
-    data.openFile(i.plan)
+    data.openFile(i.plan, undefined, undefined, props.sessionID)
   }
   return (
     <Show when={info()}>
@@ -275,6 +276,16 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return part as unknown as ToolPart
           })
           const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
+          // Reasoning blocks are excluded: they animate their own height and
+          // their header and body bleed 6px past this wrapper, so the grow-in
+          // clip would trim their sides for the whole stream and then release
+          // them when the text stops growing, resizing the block at the end.
+          const live =
+            part.type === "tool"
+              ? part.state.status === "pending" || part.state.status === "running"
+              : part.type === "text" && !!part.time && !part.time.end
+          let el: HTMLDivElement | undefined
+          useGrowIn(() => el, live)
 
           // Lights up when this part is behind the hovered/focused task-timeline
           // bar, using that bar's own color so the two stay easy to correlate.
@@ -307,6 +318,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               }
             >
               <div
+                ref={el}
                 data-component="tool-part-wrapper"
                 data-part-type={part.type}
                 data-part-id={part.id}
@@ -363,7 +375,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                             </Show>
                           }
                         >
-                          {(tp) => <PlanExitCard part={tp()} />}
+                          {(tp) => <PlanExitCard part={tp()} sessionID={props.message.sessionID} />}
                         </Show>
                       }
                     >

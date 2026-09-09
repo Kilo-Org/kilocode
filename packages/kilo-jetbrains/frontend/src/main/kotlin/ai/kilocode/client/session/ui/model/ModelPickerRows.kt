@@ -48,6 +48,25 @@ internal fun modelPickerRows(
     return out
 }
 
+/**
+ * Ordered list of models the Ctrl+2 cycle shortcut steps through: favorites (in favorites order) when
+ * any exist, otherwise the picker's Recommended section (sorted by [ModelPicker.Item.recommendedIndex]).
+ * Empty when neither is available.
+ */
+internal fun modelCycle(
+    items: List<ModelPicker.Item>,
+    favorites: List<ModelSelectionDto>,
+    includeSmall: Boolean = false,
+): List<ModelPicker.Item> {
+    val all = if (includeSmall) items else items.filterNot(ModelText::small)
+    val byKey = all.associateBy { it.key }
+    val fav = favorites.map { "${it.providerID}/${it.modelID}" }.mapNotNull(byKey::get)
+    if (fav.isNotEmpty()) return fav
+    return all
+        .filter { it.recommendedIndex != null }
+        .sortedWith(compareBy<ModelPicker.Item> { it.recommendedIndex }.thenBy { it.display.lowercase() }.thenBy { it.id })
+}
+
 internal fun modelPickerIndex(rows: List<ModelPickerRow>, key: String?): Int {
     if (key == null) return rows.indexOfFirst { it.item == null }
     return rows.indexOfFirst { it.item?.key == key }

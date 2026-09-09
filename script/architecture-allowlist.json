@@ -8,7 +8,8 @@
       "allowed": {
         "packages/opencode/src/kilo-sessions/kilo-sessions.ts": { "count": 1, "owner": "session-runtime", "reason": "Kilo session coordination state" },
         "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" },
-        "packages/opencode/src/kilocode/session/control.ts": { "count": 1, "owner": "session-runtime", "reason": "SessionPrompt-owned pause gates must remain isolated by directory and session in the shared backend" }
+        "packages/opencode/src/kilocode/session/control.ts": { "count": 1, "owner": "session-runtime", "reason": "SessionPrompt-owned pause gates must remain isolated by directory and session in the shared backend" },
+        "packages/opencode/src/kilocode/session/goal/runner.ts": { "count": 1, "owner": "session-runtime", "reason": "SessionPrompt-owned goal worker scopes must remain isolated by directory in the shared backend and close on instance disposal" }
       }
     },
     "kilo-database-constructors": {

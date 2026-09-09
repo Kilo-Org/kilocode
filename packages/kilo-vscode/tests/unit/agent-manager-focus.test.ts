@@ -29,6 +29,7 @@ describe("Agent Manager focus", () => {
     dock.setAttribute("data-component", "question-dock")
     const option = document.createElement("button")
     option.setAttribute("data-slot", "question-option")
+    option.setAttribute("data-picked", "true")
     dock.append(option)
     document.body.append(prompt, dock)
     const focus = createChatFocus({ term: () => undefined, history: () => false, review: () => false })
@@ -43,6 +44,25 @@ describe("Agent Manager focus", () => {
       expect(document.activeElement).toBe(prompt)
       flush()
       expect(document.activeElement).toBe(prompt)
+
+      const popup = document.createElement("div")
+      popup.className = "popup-selector"
+      popup.setAttribute("data-expanded", "")
+      const choice = document.createElement("div")
+      choice.tabIndex = 0
+      choice.setAttribute("role", "option")
+      popup.append(choice)
+      document.body.append(popup)
+      focus()
+      await Promise.resolve()
+      choice.focus()
+      flush()
+      expect(document.activeElement).toBe(choice)
+      focus()
+      await Promise.resolve()
+      flush()
+      expect(document.activeElement).toBe(choice)
+      popup.remove()
 
       prompt.blur()
       focus()
@@ -81,6 +101,22 @@ describe("Agent Manager focus", () => {
 
     expect(focusQuestionOption(root)).toBe(true)
     expect(root.ownerDocument.activeElement).toBe(option)
+  })
+
+  it("focuses the selected answer before the first option", () => {
+    const window = new Window()
+    const dock = window.document.createElement("div")
+    dock.setAttribute("data-component", "question-dock")
+    const first = window.document.createElement("button")
+    const selected = window.document.createElement("button")
+    first.setAttribute("data-slot", "question-option")
+    selected.setAttribute("data-slot", "question-option")
+    selected.setAttribute("data-picked", "true")
+    dock.append(first, selected)
+    window.document.body.append(dock)
+
+    expect(focusQuestionOption(dock)).toBe(true)
+    expect(window.document.activeElement).toBe(selected)
   })
 
   it("ignores collapsed question bodies", () => {

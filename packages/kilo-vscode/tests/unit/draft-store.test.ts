@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test"
 import {
   beginPendingSend,
   clearSessionDraftDiscarded,
+  deletePendingDraft,
   deleteDraftsForSession,
   discardPendingDraft,
   drafts,
@@ -16,10 +17,14 @@ import {
   scrollDrafts,
   finishPendingSend,
 } from "../../webview-ui/src/utils/draft-store"
+import { clearPromptDraftRoutes, promotePromptDraft, promptDraftKey } from "../../webview-ui/src/utils/prompt-drafts"
 
 const stores = [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts]
 
-beforeEach(() => stores.forEach((store) => store.clear()))
+beforeEach(() => {
+  stores.forEach((store) => store.clear())
+  clearPromptDraftRoutes()
+})
 
 describe("prompt draft storage", () => {
   it("stores and clears all prompt artifacts together", () => {
@@ -72,5 +77,19 @@ describe("prompt draft storage", () => {
     deleteDraftsForSession("s1")
     expect(drafts.size).toBe(0)
     expect(scrollDrafts.size).toBe(0)
+  })
+
+  it("keeps aliases when an empty pending id is deleted", () => {
+    promotePromptDraft("prompt:default", "pending:1", "s1")
+    deletePendingDraft("")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:session:s1")
+  })
+
+  it("clears a pending alias when its draft is deleted", () => {
+    promotePromptDraft("prompt:default", "pending:1", "s1")
+    deletePendingDraft("pending:1")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:pending:1")
   })
 })

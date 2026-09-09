@@ -214,6 +214,20 @@ describe("buildSidebarOrder", () => {
     ])
   })
 
+  it.each(["visible", "hidden"])("keeps only the %s deletion anchor and visible worktrees", (anchor) => {
+    const section = sec("s1", 0, { collapsed: true })
+    const hidden = wt("hidden", { sectionId: "s1" })
+    const sibling = wt("sibling", { sectionId: "s1" })
+    const visible = wt("visible")
+    const sorted = [hidden, sibling, visible]
+    const items = buildTopLevelItems([section], [visible], sorted, [])
+    const result = buildSidebarOrder(items, sorted, [section], () => [hidden, sibling], anchor)
+    expect(result.map((item) => item.id)).toEqual(
+      anchor === "hidden" ? ["local", "visible", "hidden"] : ["local", "visible"],
+    )
+    expect(section.collapsed).toBe(true)
+  })
+
   it("respects section order after ungrouped worktrees", () => {
     const s1 = sec("s1", 0)
     const s2 = sec("s2", 1)

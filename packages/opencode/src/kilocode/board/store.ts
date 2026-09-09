@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import { Database } from "@opencode-ai/core/database/database"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { SessionID } from "@/session/schema"
 
 type DB = Database.Interface["db"]
@@ -33,6 +34,7 @@ type BoardRow = {
   objective: string
   objective_message_id: string | null
   next_seq: number
+  cleared_seq: number
   message_count: number
   message_bytes: number
 }
@@ -45,7 +47,7 @@ const MAX_ROSTER = 50
 const READ_RESERVE = MAX_MESSAGE + 2048
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
-const MAX_LABEL = 128
+const MAX_LABEL = 512
 const ALL = "ALL"
 const TRUNCATED = "[truncated]"
 const WHITESPACE =
@@ -55,14 +57,45 @@ export namespace BoardStore {
   export const Kind = Schema.Literals(["INFO", "ASK", "RESULT", "HOLD", "VETO"])
   export type Kind = typeof Kind.Type
 
-  export type Message = {
+  const Integer = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
+
+  export const Message = Schema.Struct({
+    id: Schema.String,
+    timestamp: Integer,
+    from: Schema.String,
+    to: Schema.String,
+    fromLabel: Schema.optional(Schema.String),
+    toLabel: Schema.optional(Schema.String),
+    type: Kind,
+    body: Schema.String,
+    reply_to: Schema.optional(Schema.String),
+  }).annotate({ identifier: "BoardMessage" })
+  export type Message = typeof Message.Type
+
+  export type Execution = {
+    state: "running" | "busy" | "retry" | "offline" | "completed" | "error" | "cancelled" | "unknown"
+    updated?: number
+  }
+
+  export type Participant = {
     id: string
-    timestamp: number
-    from: string
-    to: string
-    type: Kind
-    body: string
-    reply_to?: string
+    sessionID: string
+    label: string
+    agent?: string
+    state: Execution["state"]
+  }
+
+  export const SessionBoard = Schema.Struct({
+    ownerSessionID: SessionID,
+    revision: Integer,
+    messages: Schema.Array(Message),
+    cursor: Schema.optional(Schema.String),
+    hasMore: Schema.Boolean,
+  }).annotate({ identifier: "SessionBoard" })
+
+  export type Snapshot = {
+    observedAt: number
+    sessions: ReadonlyMap<string, Execution>
   }
 
   export type Scope = {
@@ -74,7 +107,58 @@ export namespace BoardStore {
 
   export class Error extends Schema.TaggedErrorClass<Error>()("BoardStore.Error", {
     message: Schema.String,
+    kind: Schema.optional(Schema.Literal("storage")),
   }) {}
+
+  export class Conflict extends Schema.TaggedErrorClass<Conflict>()("BoardStore.Conflict", {
+    message: Schema.String,
+  }) {}
+
+  type View = {
+    sessionID: SessionID
+    directory: string
+    before?: string
+    limit?: number
+  }
+
+  export const observe = Effect.fn("BoardStore.observe")(function* (input: View) {
+    const { db } = yield* Database.Service
+    return yield* db.transaction((tx) => view(tx, input)).pipe(Effect.mapError(mapError))
+  })
+
+  export const reset = Effect.fn("BoardStore.reset")(function* (
+    input: Omit<View, "before" | "limit"> & { revision: number },
+  ) {
+    if (!Number.isSafeInteger(input.revision) || input.revision < 0) return yield* fail("Board revision is invalid")
+    const { db } = yield* Database.Service
+    return yield* db
+      .transaction(
+        (tx) =>
+          Effect.gen(function* () {
+            const line = yield* walk(tx, input.sessionID)
+            if (line.root !== input.sessionID) return yield* fail("Only the owning session can reset this board")
+            if (
+              !line.current.directory ||
+              !input.directory ||
+              FSUtil.resolve(line.current.directory) !== FSUtil.resolve(input.directory)
+            )
+              return yield* fail("Session is not in the routed directory")
+            const board = yield* get(tx, line.root)
+            if (input.revision !== (board ? board.next_seq - 1 : 0))
+              return yield* new Conflict({ message: "The board changed. Refresh it before clearing messages." })
+            if (board) {
+              yield* tx.run(sql`
+                UPDATE kilo_board
+                SET cleared_seq = ${input.revision}, message_count = 0, message_bytes = 0, time_updated = ${Date.now()}
+                WHERE root_session_id = ${line.root}
+              `)
+            }
+            return yield* view(tx, input)
+          }),
+        { behavior: "immediate" },
+      )
+      .pipe(Effect.mapError(mapError))
+  })
 
   export const scope = Effect.fn("BoardStore.scope")(function* (sessionID: SessionID) {
     const { db } = yield* Database.Service
@@ -90,58 +174,46 @@ export namespace BoardStore {
     sessionID: SessionID
     since?: string
     limit?: number
+    snapshot?: Snapshot
   }) {
     const { db } = yield* Database.Service
     const limit = yield* checkLimit(input.limit)
     const current = yield* scope(input.sessionID)
-    const board = yield* db
-      .get<BoardRow>(
-        sql`
-        SELECT root_session_id, objective, objective_message_id, next_seq, message_count, message_bytes
-        FROM kilo_board
-        WHERE root_session_id = ${current.root}
-      `,
-      )
-      .pipe(Effect.mapError((error) => mapError(error)))
-    if (!board) return yield* fail("Board was not initialized")
-
-    const anchor =
-      input.since !== undefined
-        ? yield* db
-            .get<{ seq: number }>(
-              sql`
-            SELECT seq
+    return yield* db
+      .transaction((tx) =>
+        Effect.gen(function* () {
+          const board = yield* get(tx, current.root)
+          if (!board) return yield* fail("Board was not initialized")
+          const since = yield* cursor(tx, current.root, input.since)
+          const rows = yield* tx.all<MessageRow>(sql`
+            SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
+              source_message_id, source_call_id
             FROM kilo_board_message
-            WHERE board_root_session_id = ${current.root} AND id = ${input.since}
-          `,
-            )
-            .pipe(Effect.mapError((error) => mapError(error)))
-        : undefined
-    if (input.since !== undefined && !anchor)
-      return yield* fail(`Board cursor is not valid for session ${current.root}`)
-
-    const rows = yield* db
-      .all<MessageRow>(
-        sql`
-        SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
-          source_message_id, source_call_id
-        FROM kilo_board_message
-        WHERE board_root_session_id = ${current.root} ${anchor ? sql`AND seq > ${anchor.seq}` : sql``}
-        ORDER BY seq ASC
-        LIMIT ${limit + 1}
-      `,
+            WHERE board_root_session_id = ${current.root}
+              AND seq > ${Math.max(since ?? 0, board.cleared_seq)} AND seq < ${board.next_seq}
+            ORDER BY seq ASC
+            LIMIT ${limit + 1}
+          `)
+          const labels = yield* titles(
+            tx,
+            current.root,
+            rows.flatMap((row) => [row.sender_session_id, row.recipient]),
+          )
+          const messages = rows.map((row) => enrich(message(row, current.root), labels))
+          const snapshot = input.snapshot ?? { observedAt: Date.now(), sessions: new Map<string, Execution>() }
+          const members = yield* participants(tx, current.root, input.sessionID, snapshot)
+          return yield* pack({
+            observedAt: snapshot.observedAt,
+            agent: current.agent,
+            participants: members.rows,
+            participantsTruncated: members.truncated,
+            messages,
+            limit,
+            since: input.since,
+          })
+        }),
       )
-      .pipe(Effect.mapError((error) => mapError(error)))
-    const messages = rows.map((row) => message(row, current.root))
-    const members = yield* participants(db, current.root)
-    return yield* pack({
-      agent: current.agent,
-      participants: members.rows,
-      participantsTruncated: members.truncated,
-      messages,
-      limit,
-      since: input.since,
-    })
+      .pipe(Effect.mapError(mapError))
   })
 
   export const post = Effect.fn("BoardStore.post")(function* (input: {
@@ -162,6 +234,10 @@ export namespace BoardStore {
           Effect.gen(function* () {
             const current = yield* ensure(tx, input.sessionID)
             const target = yield* recipient(input.to, current.root, tx)
+            if (target !== ALL && target === input.sessionID)
+              return yield* fail("Board messages cannot be sent to yourself")
+            const ids = target === ALL ? [input.sessionID] : [input.sessionID, target]
+            const labels = yield* titles(tx, current.root, ids, true)
             const call = input.callID ?? ""
             const existing = yield* tx.get<MessageRow>(sql`
                 SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
@@ -180,7 +256,7 @@ export namespace BoardStore {
                 (existing.reply_to ?? undefined) !== input.reply_to
               )
                 return yield* fail("The trusted board tool call was retried with different arguments")
-              return message(existing, current.root)
+              return enrich(message(existing, current.root), labels)
             }
 
             const reply = input.reply_to
@@ -238,7 +314,7 @@ export namespace BoardStore {
                 message_bytes = ${board.message_bytes + bytes}, time_updated = ${timestamp}
               WHERE root_session_id = ${current.root}
             `)
-            return { ...value }
+            return enrich(value, labels)
           }),
         { behavior: "immediate" },
       )
@@ -261,7 +337,7 @@ export namespace BoardStore {
           SELECT MAX(seq)
           FROM kilo_board_message
           WHERE board_root_session_id = board.root_session_id
-            AND seq > ${input.after} AND seq < board.next_seq
+            AND seq > ${input.after} AND seq > board.cleared_seq AND seq < board.next_seq
             ${
               input.read === undefined
                 ? sql``
@@ -379,11 +455,67 @@ export namespace BoardStore {
     })
   }
 
+  function cursor(tx: DB | TX, root: string, id: string | undefined) {
+    return Effect.gen(function* () {
+      if (id === undefined) return undefined
+      const row = yield* tx.get<{ seq: number }>(sql`
+        SELECT seq FROM kilo_board_message WHERE board_root_session_id = ${root} AND id = ${id}
+      `)
+      if (!row) return yield* fail(`Board cursor is not valid for session ${root}`)
+      return row.seq
+    })
+  }
+
+  function view(tx: TX, input: View) {
+    return Effect.gen(function* () {
+      const limit = yield* checkLimit(input.limit)
+      const line = yield* walk(tx, input.sessionID)
+      if (
+        !line.current.directory ||
+        !input.directory ||
+        FSUtil.resolve(line.current.directory) !== FSUtil.resolve(input.directory)
+      )
+        return yield* fail("Session is not in the routed directory")
+      const root = SessionID.make(line.root)
+      const board = yield* get(tx, root)
+      const before = yield* cursor(tx, root, input.before)
+      const rows = yield* tx.all<MessageRow>(sql`
+        SELECT id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, reply_to,
+          source_message_id, source_call_id
+        FROM kilo_board_message
+        WHERE board_root_session_id = ${root} AND seq > ${board?.cleared_seq ?? 0}
+          AND seq < ${Math.min(before ?? Infinity, board?.next_seq ?? 1)}
+        ORDER BY seq DESC
+        LIMIT ${limit + 1}
+      `)
+      const labels = yield* titles(
+        tx,
+        root,
+        rows.flatMap((row) => [row.sender_session_id, row.recipient]),
+      )
+      const page = yield* pack({
+        observedAt: Date.now(),
+        agent: root,
+        participants: [],
+        participantsTruncated: false,
+        messages: rows.map((row) => enrich(message(row, root), labels)),
+        limit,
+      })
+      return {
+        ownerSessionID: root,
+        revision: board ? board.next_seq - 1 : 0,
+        messages: page.messages.toReversed(),
+        hasMore: page.hasMore,
+        ...(page.hasMore && page.cursor ? { cursor: page.cursor } : {}),
+      }
+    })
+  }
+
   function get(tx: DB | TX, root: string) {
     return tx
       .get<BoardRow>(
         sql`
-        SELECT root_session_id, objective, objective_message_id, next_seq, message_count, message_bytes
+        SELECT root_session_id, objective, objective_message_id, next_seq, cleared_seq, message_count, message_bytes
         FROM kilo_board
         WHERE root_session_id = ${root}
       `,
@@ -493,42 +625,113 @@ export namespace BoardStore {
     })
   }
 
-  function participants(db: DB, root: string) {
-    return db
-      .transaction((tx) =>
-        Effect.gen(function* () {
-          const current = yield* row(tx, root)
-          const rows = current ? [current] : []
-          const seen = new Set(rows.map((row) => row.id))
-          let budget = MAX_ROSTER
-          for (const parent of rows) {
-            if (!budget) break
-            const children = yield* tx.all<Row>(sql`
-              SELECT id, project_id, parent_id, directory, agent, title, time_created
-              FROM session INDEXED BY session_parent_idx
-              WHERE parent_id = ${parent.id}
-              ORDER BY rowid ASC
-              LIMIT ${budget}
-            `)
-            budget -= children.length
-            for (const child of children) {
-              if (child.project_id !== parent.project_id || child.directory !== parent.directory || seen.has(child.id))
-                continue
-              seen.add(child.id)
-              rows.push(child)
-            }
-          }
-          rows.sort((a, b) => a.time_created - b.time_created || Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)))
-          return {
-            rows: rows.slice(0, MAX_ROSTER).map((row) => ({
-              id: row.id === root ? "main" : row.id,
-              label: excerpt(row.id === root ? "main" : (row.agent ?? row.title), MAX_LABEL),
-            })),
-            truncated: budget === 0,
-          }
-        }),
+  function lineage(root: string) {
+    return sql`WITH RECURSIVE members(id, project_id, directory) AS (
+      SELECT id, project_id, directory FROM session WHERE id = ${root}
+      UNION
+      SELECT child.id, child.project_id, child.directory
+      FROM session child JOIN members parent ON child.parent_id = parent.id
+      WHERE child.project_id = parent.project_id AND child.directory = parent.directory
+    )`
+  }
+
+  function available(state: Execution["state"]) {
+    return state === "running" || state === "busy" || state === "retry" || state === "offline"
+  }
+
+  export const availability = Effect.fn("BoardStore.availability")(function* (input: {
+    sessionID: SessionID
+    to: string
+    snapshot: Snapshot
+  }) {
+    const { db } = yield* Database.Service
+    const current = yield* scope(input.sessionID)
+    const known = [...input.snapshot.sessions].filter(([, value]) => value.state !== "unknown")
+    const running = JSON.stringify(known.filter(([, value]) => available(value.state)).map(([id]) => id))
+    const stopped = JSON.stringify(known.filter(([, value]) => !available(value.state)).map(([id]) => id))
+    const target = input.to === "main" ? current.root : input.to
+    const counts = yield* db
+      .get<{ total: number; active: number; inactive: number }>(
+        sql`
+      ${lineage(current.root)}
+      SELECT COUNT(*) AS total,
+        COALESCE(SUM(id IN (SELECT value FROM json_each(${running}))), 0) AS active,
+        COALESCE(SUM(id IN (SELECT value FROM json_each(${stopped}))), 0) AS inactive
+      FROM members
+      WHERE id <> ${input.sessionID} ${target === ALL ? sql`` : sql`AND id = ${target}`}
+    `,
       )
       .pipe(Effect.mapError((error) => mapError(error)))
+    const total = counts?.total ?? 0
+    const active = counts?.active ?? 0
+    const inactive = counts?.inactive ?? 0
+    return { observedAt: input.snapshot.observedAt, total, active, inactive, unknown: total - active - inactive }
+  })
+
+  function titles(tx: DB | TX, root: string, ids: string[], verified = false) {
+    if (!ids.length) return Effect.succeed(new Map<string, string>())
+    return tx
+      .all<Pick<Row, "id" | "title">>(
+        sql`
+        ${verified ? sql`` : lineage(root)}
+        SELECT session.id, session.title
+        FROM session ${verified ? sql`` : sql`JOIN members ON members.id = session.id`}
+        WHERE session.id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))
+      `,
+      )
+      .pipe(
+        Effect.map(
+          (rows) => new Map(rows.map((row) => [row.id === root ? "main" : row.id, excerpt(row.title, MAX_LABEL)])),
+        ),
+        Effect.mapError((error) => mapError(error)),
+      )
+  }
+
+  function enrich(value: Message, labels: ReadonlyMap<string, string>): Message {
+    const from = labels.get(value.from)
+    const to = value.to === ALL ? undefined : labels.get(value.to)
+    return {
+      ...value,
+      ...(from === undefined ? {} : { fromLabel: from }),
+      ...(to === undefined ? {} : { toLabel: to }),
+    }
+  }
+
+  function participants(db: DB | TX, root: string, self: string, snapshot: Snapshot) {
+    return Effect.gen(function* () {
+      const running = JSON.stringify(
+        Object.fromEntries(
+          [...snapshot.sessions]
+            .filter(([, value]) => available(value.state))
+            .map(([id, value]) => [id, value.updated ?? 0]),
+        ),
+      )
+      const rows = yield* db.all<Pick<Row, "id" | "agent" | "title">>(sql`
+        ${lineage(root)},
+        active AS MATERIALIZED (
+          SELECT key AS id, value AS updated FROM json_each(${running})
+        )
+        SELECT session.id, session.agent, session.title
+        FROM session JOIN members ON members.id = session.id
+        LEFT JOIN active ON active.id = session.id
+        ORDER BY CASE WHEN session.id = ${root} THEN 0 WHEN session.id = ${self} THEN 1 ELSE 2 END,
+          COALESCE(active.updated, -1) DESC,
+          session.time_created DESC, session.id DESC
+        LIMIT ${MAX_ROSTER + 1}
+      `)
+      return {
+        rows: rows.slice(0, MAX_ROSTER).map(
+          (row): Participant => ({
+            id: row.id === root ? "main" : row.id,
+            sessionID: row.id,
+            label: excerpt(row.title, MAX_LABEL),
+            ...(row.agent ? { agent: excerpt(row.agent, 128) } : {}),
+            state: snapshot.sessions.get(row.id)?.state ?? "unknown",
+          }),
+        ),
+        truncated: rows.length > MAX_ROSTER,
+      }
+    }).pipe(Effect.mapError((error) => mapError(error)))
   }
   function message(row: MessageRow, root: string): Message {
     if (!Schema.is(Kind)(row.type)) throw new globalThis.Error(`Invalid board message type in ${root}`)
@@ -544,16 +747,18 @@ export namespace BoardStore {
   }
 
   function pack(input: {
+    observedAt: number
     agent: "main" | SessionID
-    participants: Array<{ id: string; label: string }>
+    participants: Participant[]
     participantsTruncated: boolean
     messages: Message[]
     limit: number
     since?: string
   }): Effect.Effect<
     {
+      observedAt: number
       agent: string
-      participants: Array<{ id: string; label: string }>
+      participants: Participant[]
       messages: Message[]
       cursor?: string
       hasMore: boolean
@@ -562,10 +767,11 @@ export namespace BoardStore {
     Error
   > {
     const all = input.participants
-    const chosen: Array<{ id: string; label: string }> = []
+    const chosen: Participant[] = []
     const base = (messages: Message[], more: boolean, truncated: boolean) => {
       const cursor = messages.at(-1)?.id ?? input.since
       return {
+        observedAt: input.observedAt,
         agent: input.agent,
         participants: chosen,
         messages,
@@ -575,9 +781,10 @@ export namespace BoardStore {
       }
     }
     const size = (value: ReturnType<typeof base>) => Buffer.byteLength(JSON.stringify(value))
+    const reserve = Math.max(READ_RESERVE, Buffer.byteLength(JSON.stringify(input.messages.at(0) ?? {})) + 2048)
     for (const participant of all) {
       chosen.push(participant)
-      if (size(base([], input.messages.length > 0, true)) + READ_RESERVE > MAX_READ) {
+      if (size(base([], input.messages.length > 0, true)) + reserve > MAX_READ) {
         chosen.pop()
         break
       }
@@ -606,6 +813,8 @@ export namespace BoardStore {
   }
 
   function mapError(error: unknown) {
-    return error instanceof Error ? error : new Error({ message: "Board storage operation failed" })
+    return error instanceof Error || error instanceof Conflict
+      ? error
+      : new Error({ message: "Board storage operation failed", kind: "storage" })
   }
 }

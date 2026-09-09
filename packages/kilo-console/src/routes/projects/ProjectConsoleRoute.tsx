@@ -1,14 +1,25 @@
 import { A, useLocation, useParams } from "@solidjs/router"
-import { createEffect, createMemo, createResource, createSignal, For, on, onCleanup, onMount, Show } from "solid-js"
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  lazy,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+  Suspense,
+} from "solid-js"
 import { Badge } from "@kilocode/kilo-web-ui/badge"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { Icon } from "@kilocode/kilo-web-ui/icon"
 import { ResizeHandle } from "@kilocode/kilo-web-ui/resize-handle"
 import { Spinner } from "@kilocode/kilo-web-ui/spinner"
-import { File } from "@kilocode/kilo-web-ui/file"
 import { FileComponentProvider } from "@kilocode/kilo-web-ui/context/file"
-import { SessionReview, type SessionReviewDiffStyle } from "@kilocode/kilo-web-ui/session-review"
+import type { SessionReviewDiffStyle } from "@kilocode/kilo-web-ui/session-review"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { LoadingScreen } from "../../components/LoadingScreen"
 import { PromptDialog } from "../../components/PromptDialog"
@@ -36,11 +47,7 @@ import {
   type Query,
 } from "../../client"
 import { clean, errMsg, friendly } from "../../shared/utils"
-import {
-  markUnread as storeMarkUnread,
-  clearUnread as storeClearUnread,
-  sessionHasUnread,
-} from "../../shared/terminal-status"
+import { markUnread as storeMarkUnread, clearUnread as storeClearUnread } from "../../shared/terminal-status"
 import {
   DEFAULT_CONSOLE_DIFF_STYLE,
   DEFAULT_CONTEXT_SIDEBAR_WIDTH,
@@ -50,7 +57,16 @@ import {
   normalizeContextSidebarWidth,
 } from "../config/state/console"
 import { sender } from "./project-console-presence-sender"
-import { GhosttyTerminal } from "./terminal/GhosttyTerminal"
+import "../../styles/project-console.css"
+import "../../styles/dialogs.css"
+
+const GhosttyTerminal = lazy(() =>
+  import("./terminal/GhosttyTerminal").then((mod) => ({ default: mod.GhosttyTerminal })),
+)
+const SessionReview = lazy(() =>
+  import("@kilocode/kilo-web-ui/session-review").then((mod) => ({ default: mod.SessionReview })),
+)
+const File = lazy(() => import("@kilocode/kilo-web-ui/file").then((mod) => ({ default: mod.File })))
 
 const ui = new Set(["3017", "3018"])
 
@@ -945,15 +961,17 @@ export function ProjectConsoleRoute() {
                       classList={{ active: terminal() === key }}
                       aria-hidden={terminal() !== key}
                     >
-                      <GhosttyTerminal
-                        query={target()}
-                        pty={item.id}
-                        active={terminal() === key}
-                        onExit={() => {
-                          const next = pty()
-                          if (next) dropTerminal(next.id)
-                        }}
-                      />
+                      <Suspense fallback={<span class="project-terminal-loading">Starting terminal...</span>}>
+                        <GhosttyTerminal
+                          query={target()}
+                          pty={item.id}
+                          active={terminal() === key}
+                          onExit={() => {
+                            const next = pty()
+                            if (next) dropTerminal(next.id)
+                          }}
+                        />
+                      </Suspense>
                     </div>
                   )
                 }}
@@ -1013,17 +1031,19 @@ export function ProjectConsoleRoute() {
                 </div>
               }
             >
-              <FileComponentProvider component={File}>
-                <SessionReview
-                  diffs={reviewDiffs()}
-                  title={<span>Changes</span>}
-                  diffStyle={diffStyle()}
-                  onDiffStyleChange={changeDiffStyle}
-                  open={openFiles()}
-                  onOpenChange={openReviewFiles}
-                  empty={<div class="project-review-empty">No changes detected.</div>}
-                />
-              </FileComponentProvider>
+              <Suspense fallback={<div class="project-review-state">Loading changes...</div>}>
+                <FileComponentProvider component={File}>
+                  <SessionReview
+                    diffs={reviewDiffs()}
+                    title={<span>Changes</span>}
+                    diffStyle={diffStyle()}
+                    onDiffStyleChange={changeDiffStyle}
+                    open={openFiles()}
+                    onOpenChange={openReviewFiles}
+                    empty={<div class="project-review-empty">No changes detected.</div>}
+                  />
+                </FileComponentProvider>
+              </Suspense>
             </Show>
           </Show>
         </div>

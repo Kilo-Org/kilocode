@@ -1,10 +1,13 @@
 import { describe, it, expect } from "bun:test"
 import { fetchMessagePage } from "../../src/kilo-provider/message-page"
 
-type Message = { info: { id: string; role: "user" | "assistant"; time: { created: number } }; parts: unknown[] }
+type Message = {
+  info: { id: string; role: "user" | "assistant"; parentID?: string; summary?: boolean; time: { created: number } }
+  parts: unknown[]
+}
 
-function message(id: string, role: "user" | "assistant", time: number): Message {
-  return { info: { id, role, time: { created: time } }, parts: [] }
+function message(id: string, role: "user" | "assistant", time: number, parentID?: string): Message {
+  return { info: { id, role, parentID, time: { created: time } }, parts: [] }
 }
 
 function mockClient(pages: { items: Message[]; cursor?: string }[]) {
@@ -32,6 +35,138 @@ function mockClient(pages: { items: Message[]; cursor?: string }[]) {
 }
 
 describe("fetchMessagePage / cursor fallback", () => {
+  it("shows only the latest complete turn and keeps every earlier turn pageable", async () => {
+    const items = [
+      message("m1", "user", 10),
+      message("m2", "assistant", 20, "m1"),
+      message("m3", "user", 30),
+      message("m4", "assistant", 40, "m3"),
+      message("m5", "user", 50),
+    ]
+    const calls: string[] = []
+    const client = {
+      session: {
+        messages: async (params: { before?: string }) => {
+          const cursor = params.before ? JSON.parse(Buffer.from(params.before, "base64url").toString()) : undefined
+          calls.push(cursor?.id ?? "tail")
+          return {
+            data: items.filter((item) => !cursor || item.info.time.created < cursor.time),
+            response: new Response(),
+          }
+        },
+      },
+    }
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 80,
+      tail: true,
+    })
+    expect(page.items.map((item) => item.info.id)).toEqual(["m3", "m4", "m5"])
+    const older = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 80,
+      before: page.cursor,
+    })
+    expect([...older.items, ...page.items]).toEqual(items)
+    expect(calls).toEqual(["tail", "m3"])
+  })
+
+  it("returns complete recent turns without waiting for older pages on a cold load", async () => {
+    const { client, calls } = mockClient([
+      {
+        items: [message("m2", "assistant", 30, "m1"), message("m3", "user", 30), message("m4", "assistant", 30, "m3")],
+        cursor: "c1",
+      },
+      { items: [message("m1", "user", 10), message("m2", "assistant", 30, "m1")] },
+    ])
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 3,
+      tail: true,
+    })
+
+    expect(calls).toHaveLength(1)
+    expect(page.items.map((item) => item.info.id)).toEqual(["m3", "m4"])
+    expect(JSON.parse(Buffer.from(page.cursor!, "base64url").toString())).toEqual({ id: "m3", time: 30 })
+
+    const older = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 3,
+      before: page.cursor,
+    })
+    expect([...older.items, ...page.items].map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4"])
+    expect(calls.at(1)?.before).toBe(page.cursor)
+  })
+
+  it("does not trim replies interleaved with queued prompts whose parent is missing", async () => {
+    const { client, calls } = mockClient([
+      {
+        items: [message("m2", "assistant", 20, "m1"), message("m3", "user", 30), message("m4", "assistant", 40, "m1")],
+        cursor: "c1",
+      },
+      { items: [message("m1", "user", 10)] },
+    ])
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 3,
+      tail: true,
+    })
+    expect(calls).toHaveLength(2)
+    expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4"])
+  })
+
+  it("retains a compaction summary together with its compaction parent", async () => {
+    const parent = message("m3", "user", 30)
+    parent.parts = [{ type: "compaction", auto: true }]
+    const summary = message("m4", "assistant", 40, "m3")
+    summary.info.summary = true
+    const { client, calls } = mockClient([
+      { items: [message("m2", "assistant", 20, "m1"), parent, summary], cursor: "c1" },
+    ])
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 3,
+      tail: true,
+    })
+    expect(calls).toHaveLength(1)
+    expect(page.items).toEqual([parent, summary])
+  })
+
+  it("still fills a cold page containing only a partial turn and queued prompts", async () => {
+    const { client, calls } = mockClient([
+      { items: [message("m2", "assistant", 20), message("m3", "user", 30)], cursor: "c1" },
+      { items: [message("m1", "user", 10)] },
+    ])
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 2,
+      tail: true,
+    })
+    expect(calls).toHaveLength(2)
+    expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3"])
+    expect(page.cursor).toBeUndefined()
+  })
+
+  it("does not trim full-history exports even when tail is requested", async () => {
+    const items = [message("m1", "assistant", 10), message("m2", "user", 20), message("m3", "assistant", 30)]
+    const { client } = mockClient([{ items }])
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 0,
+      tail: true,
+    })
+    expect(page.items).toEqual(items)
+    expect(page.cursor).toBeUndefined()
+  })
+
   it("returns server cursor when X-Next-Cursor header is present", async () => {
     const { client } = mockClient([
       {

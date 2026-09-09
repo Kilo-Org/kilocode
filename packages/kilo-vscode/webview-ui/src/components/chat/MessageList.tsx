@@ -18,6 +18,7 @@ import {
   on,
   onCleanup,
 } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
@@ -83,10 +84,12 @@ import {
 import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
-  onSelectSession?: (id: string) => void
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   onEditMessage?: (sessionID: string, messageID: string) => void
+  onScrollToBottomReady?: (handler: (() => void) | undefined) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
@@ -97,6 +100,7 @@ interface MessageListProps {
   editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
+  introduction?: boolean
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
   sessionID?: Accessor<string | undefined>
@@ -123,6 +127,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
   })
+  props.onScrollToBottomReady?.(() => autoScroll.resume())
+  onCleanup(() => props.onScrollToBottomReady?.(undefined))
   const [announcement, setAnnouncement] = createSignal("")
   createEffect(
     (prev: { sid?: string; working: boolean }) => {
@@ -164,6 +170,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     ),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
+  const introduction = createMemo(() => isEmpty() && !props.readonly && props.introduction)
 
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(
@@ -862,9 +869,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
-    const container = range.startContainer
-    const target = container instanceof Element ? container : container?.parentElement
-    target?.scrollIntoView({ block: "center", inline: "nearest" })
+    // Scroll only the transcript, not VS Code's outer webview container.
+    el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
   // Two frames of margin so the virtualizer has settled the DOM for the new
@@ -953,7 +959,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
   // the virtualizer; direct/live/queued rows are mounted, so they use
-  // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
+  // the transcript scroller. Pauses auto-follow first so the jump isn't snapped back.
   const jump = (key: string) => {
     autoScroll.pause()
     const index = indexes().get(key)
@@ -970,9 +976,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
-    if (target) {
+    if (el && target) {
       setPending(undefined)
-      target.scrollIntoView({ block: "start" })
+      el.scrollBy({ top: target.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
       return
     }
     const sid = session.currentSessionID()
@@ -999,10 +1005,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const el = scrollEl()
     const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
-    if (!row) return
+    if (!el || !row) return
     setPending(undefined)
     autoScroll.pause()
-    row.scrollIntoView({ block: "start" })
+    el.scrollBy({ top: row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
   })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.
@@ -1193,7 +1199,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const setScrollRef = (el: HTMLElement | undefined) => {
     resize?.disconnect()
     setScrollEl(el)
-    autoScroll.scrollRef(el)
     if (!el) return
     refreshLayout()
     resize = new ResizeObserver(refreshLayout)
@@ -1207,6 +1212,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
     document.fonts?.removeEventListener("loadingdone", refreshLayout)
   })
 
+  createEffect(() => {
+    const el = scrollEl()
+    autoScroll.scrollRef(introduction() ? undefined : el)
+    if (introduction() && el) el.scrollTop = 0
+  })
+
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
   createEffect(
@@ -1214,6 +1225,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
       save(prev)
       active = { id, keys: [], fingerprint: rowFingerprint([]) }
       setPendingRestore(id)
+    }),
+  )
+
+  // Clicking Show on the session that is already selected leaves
+  // currentSessionID untouched, so the effect above never re-arms. Arm the same
+  // restore pass from the request itself; it resolves to a scroll-to-bottom.
+  createEffect(
+    on(session.scrollBottomID, (id) => {
+      if (id && id === session.currentSessionID()) setPendingRestore(id)
     }),
   )
 
@@ -1225,6 +1245,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
       if (pendingRestore() !== id) return
       const el = scrollEl()
       if (!el) return
+      if (session.consumeScrollBottom(id)) {
+        autoScroll.forceScrollToBottom()
+        setPendingRestore(undefined)
+        return
+      }
       const state = getScroll(id)
       const anchor = resolveAnchor(state, keys())
       const handle = virtualizer()
@@ -1242,27 +1267,34 @@ export const MessageList: Component<MessageListProps> = (props) => {
   onCleanup(() => save(session.currentSessionID()))
 
   return (
-    <div class="message-list-container">
+    <div class="message-list-container" classList={{ "am-intro-layout": introduction() }}>
       <Show when={props.announce === false}>
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {announcement()}
         </div>
       </Show>
       <Show when={isEmpty()}>
-        <div class="welcome-header">
+        <div class="welcome-header" data-slot="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications sessionID={props.sessionID} />
+          <Show when={!props.introduction || props.readonly}>
+            <KiloNotifications sessionID={props.sessionID} />
+          </Show>
         </div>
       </Show>
       <div
         ref={setScrollRef}
         onScroll={handleScroll}
         class="message-list"
+        data-slot="message-list"
         role={props.announce === false ? undefined : "log"}
         aria-live={props.announce === false ? undefined : "polite"}
         aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}
       >
-        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
+        <div
+          ref={autoScroll.contentRef}
+          data-slot="message-list-content"
+          class={isEmpty() ? "message-list-content-empty" : "message-list-content"}
+        >
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
@@ -1315,6 +1347,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       <TranscriptRowView
                         row={row}
                         index={index()}
+                        onSelectSession={props.onSelectSession}
+                        isSessionOpen={props.isSessionOpen}
                         onForkMessage={props.onForkMessage}
                         onEditMessage={props.onEditMessage}
                         queuedDisabled={props.queuedDisabled}
@@ -1332,6 +1366,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   {(key) => (
                     <TranscriptRowView
                       row={lookup().get(key)!}
+                      onSelectSession={props.onSelectSession}
+                      isSessionOpen={props.isSessionOpen}
                       onForkMessage={props.onForkMessage}
                       onEditMessage={props.onEditMessage}
                       queuedDisabled={props.queuedDisabled}
@@ -1353,6 +1389,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onSelectSession={props.onSelectSession}
+                  isSessionOpen={props.isSessionOpen}
                   onEditMessage={props.onEditMessage}
                   queuedDisabled={props.queuedDisabled}
                   editDisabled={props.editDisabled}
@@ -1396,14 +1434,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
         seeking={() => Boolean(seek())}
       />
 
-      <Show when={autoScroll.userScrolled()}>
-        <button
+      <Show when={!introduction() && autoScroll.userScrolled()}>
+        <IconButton
+          icon="arrow-down-to-line"
+          variant="ghost"
+          size="small"
           class="scroll-to-bottom-button"
           onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
-        >
-          <Icon name="arrow-down-to-line" />
-        </button>
+        />
       </Show>
     </div>
   )
