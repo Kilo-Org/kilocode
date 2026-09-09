@@ -50,6 +50,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
     <div
       class="vscode-session-turn"
       data-message={props.row.message.id}
+      data-session={props.row.message.sessionID}
       data-row={props.row.type}
       data-row-key={props.row.key}
       data-row-index={props.index}

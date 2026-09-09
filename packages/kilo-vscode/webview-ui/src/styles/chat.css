@@ -27,6 +27,7 @@
 @import "./suggest-bar.css";
 @import "./settings.css";
 @import "./provider-usage.css";
+@import "./annotations.css";
 @import "./high-contrast.css";
 
 .agent-manager-attribution {

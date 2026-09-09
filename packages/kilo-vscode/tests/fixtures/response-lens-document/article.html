@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <title>HEAD_SENTINEL</title>
+    <script>
+      throw new Error("SCRIPT_SENTINEL")
+    </script>
+    <style>
+      STYLE_SENTINEL
+    </style>
+  </head>
+  <body>
+    <nav>NAV_SENTINEL</nav>
+    <main>
+      <p>Opening paragraph &amp; useful context.</p>
+      <section id="chosen section">
+        <h2>Selected heading</h2>
+        <p>First <strong>important</strong> paragraph.</p>
+        <p>Second paragraph.</p>
+      </section>
+      <pre>
+one line
+another line</pre
+      >
+      <script>
+        fetch("https://example.invalid/SCRIPT_SENTINEL")
+      </script>
+      <iframe src="https://example.invalid/IFRAME_SENTINEL">IFRAME_SENTINEL</iframe>
+      <object>OBJECT_SENTINEL</object><template>TEMPLATE_SENTINEL</template>
+      <aside>ASIDE_SENTINEL</aside>
+      <p hidden>HIDDEN_SENTINEL</p>
+      <p aria-hidden="true">ARIA_SENTINEL</p>
+      <a href="https://example.invalid/resource">Visible link label</a>
+      <img src="https://example.invalid/image" alt="Image not fetched" />
+    </main>
+    <footer>FOOTER_SENTINEL</footer>
+  </body>
+</html>

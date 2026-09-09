@@ -8,6 +8,7 @@ import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
 import type { CodeEditDisplay, McpToolDisplay, TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import { ResponseLensSettings } from "../shared/ResponseLensSettings"
 
 interface LayoutOption {
   value: string
@@ -37,6 +38,9 @@ const DisplayTab: Component = () => {
   return (
     <div>
       <Card>
+        <SettingsRow title="Response Lens" description={language.t("responseLens.description")}>
+          <ResponseLensSettings />
+        </SettingsRow>
         <SettingsRow
           title={language.t("settings.display.username.title")}
           description={language.t("settings.display.username.description")}

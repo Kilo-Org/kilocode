@@ -33,6 +33,7 @@ import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-messag
 import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
 import { ConfigConsoleApi } from "@/kilocode/server/httpapi/groups/config-console"
 import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
+import { ResponseLensApi } from "@/kilocode/server/httpapi/groups/response-lens"
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
 import { InstanceReloadApi } from "@/kilocode/server/httpapi/groups/instance-reload"
 import { InteractiveTerminalApi } from "@/kilocode/server/httpapi/groups/interactive-terminal"
@@ -104,6 +105,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(CommitMessageApi)
   .addHttpApi(ConfigConsoleApi)
   .addHttpApi(EnhancePromptApi)
+  .addHttpApi(ResponseLensApi)
   .addHttpApi(IndexingApi)
   .addHttpApi(InstanceReloadApi)
   .addHttpApi(InteractiveTerminalApi)

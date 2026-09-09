@@ -24,6 +24,7 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
+const packaged = Script.release || process.env.KILO_LOCAL_PACKAGE === "1"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -307,7 +308,7 @@ for (const item of targets) {
     tsconfig: "./tsconfig.json",
     plugins: [plugin],
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
-    sourcemap: Script.release ? "none" : "external",
+    sourcemap: packaged ? "none" : "external",
     external: ["node-gyp", ...LanceDBRuntime.external],
     // kilocode_change end
     format: "esm",
@@ -354,7 +355,7 @@ for (const item of targets) {
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
       // kilocode_change start
       KILO_BWRAP_SHA256: bwrap ? `'${bwrap}'` : "undefined",
-      KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`,
+      KILO_BUILD_KIND: packaged ? `'release'` : `'source'`,
       // kilocode_change end
       ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),
     },

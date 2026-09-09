@@ -17,6 +17,7 @@ import { branchNameHandlers } from "./handlers/branch-name"
 import { commitMessageHandlers } from "./handlers/commit-message"
 import { configConsoleHandlers } from "./handlers/config-console"
 import { enhancePromptHandlers } from "./handlers/enhance-prompt"
+import { responseLensHandlers } from "./handlers/response-lens"
 import { indexingHandlers } from "./handlers/indexing"
 import { instanceReloadHandlers } from "./handlers/instance-reload"
 import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
@@ -39,6 +40,7 @@ export const provide = Layer.provide([
   commitMessageHandlers,
   configConsoleHandlers,
   enhancePromptHandlers,
+  responseLensHandlers,
   indexingHandlers,
   instanceReloadHandlers,
   interactiveTerminalHandlers,

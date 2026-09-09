@@ -19,7 +19,7 @@ export namespace MemoryRedact {
     /AIza[0-9A-Za-z_-]{30,}/,
     /xox[baprs]-[A-Za-z0-9-]{20,}/,
     /AKIA[0-9A-Z]{16}/,
-    /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/,
+    /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/,
     /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/i,
     /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/,
     // Assignment secrets. Shared guard: keyword boundaries (`(?<![a-z0-9])keywords?(?![a-z0-9])`) so a
@@ -30,16 +30,16 @@ export namespace MemoryRedact {
     //     unquoted spaceless run with entropy (>=6 chars with a digit/special, or >=16 letters). This
     //     keeps prose clean — `auth_mode=none`, "token expiry is 1h" don't trip it (see (b) for the
     //     stricter low-entropy check on the strong keyword subset).
-    /["']?[\w.-]*(?<![a-z0-9])(?:password|passphrase|api[_ -]?key|secret|token|credential|authorization|auth|private[_ -]?key|access[_ -]?key)s?(?![a-z0-9])[\w.-]*["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|(?=[^\s,}\r\n]{6})[^\s,}\r\n]*[^A-Za-z\s,}\r\n][^\s,}\r\n]*|[A-Za-z]{16,}[^\s,}\r\n]*)/i,
+    /(?<![\w.-])["']?[\w.-]*(?<![a-z0-9])(?:password|passphrase|api[_ -]?key|secret|token|credential|authorization|auth|private[_ -]?key|access[_ -]?key)s?(?![a-z0-9])[\w.-]*["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|(?=[^\s,}\r\n]{6})[^\s,}\r\n]*[^A-Za-z\s,}\r\n][^\s,}\r\n]*|[A-Za-z]{16,}[^\s,}\r\n]*)/i,
     // (b) A STRONG keyword assigned with `:` or `=` redacts ANY non-empty value, catching low-entropy
     //     secrets like `password=hunterx` / `password: hunterx`. This deliberately also redacts prose
     //     like `secret: enabled` / `password: required` — favoring catching a real low-entropy
     //     colon-separated secret over avoiding that false positive. `auth` stays excluded as too
     //     ambiguous (would trip on ordinary "auth: none"-style config far more often).
-    /["']?[\w.-]*(?<![a-z0-9])(?:password|passphrase|api[_ -]?key|secret|token|credential|private[_ -]?key|access[_ -]?key)s?(?![a-z0-9])[\w.-]*["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,}\r\n]+)/i,
+    /(?<![\w.-])["']?[\w.-]*(?<![a-z0-9])(?:password|passphrase|api[_ -]?key|secret|token|credential|private[_ -]?key|access[_ -]?key)s?(?![a-z0-9])[\w.-]*["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,}\r\n]+)/i,
   ]
   // Loosely find URL-like spans; the parser (not this pattern) decides whether they carry credentials.
-  const candidate = /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi
+  const candidate = /(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*:\/\/\S+/gi
 
   // Pull the raw userinfo segment out of a candidate without normalizing it, so redaction preserves
   // the original shape (encoding, ports, path/query untouched). Any non-empty userinfo counts — a bare
@@ -100,6 +100,30 @@ export namespace MemoryRedact {
       const flags = item.flags.includes("g") ? item.flags : `${item.flags}g`
       return next.replace(new RegExp(item.source, flags), "[redacted]")
     }, redactUri(input))
+  }
+
+  export function lines(input: string) {
+    const masked = secret.reduce((next, item) => {
+      const flags = item.flags.includes("g") ? item.flags : `${item.flags}g`
+      return next.replace(new RegExp(item.source, flags), (match) => match.replace(/[^\r\n\f]+/g, "[redacted]"))
+    }, redactUri(input))
+    return masked.replace(
+      /([?&#])([^=?&#\s"'<>]+)=([^&#\s"'<>]*)/g,
+      (match: string, separator: string, key: string, value: string) => {
+        let name: string
+        try {
+          name = decodeURIComponent(key).replace(/^amp;/i, "")
+        } catch {
+          return match
+        }
+        return value &&
+          /^(?:access_token|token|api[_-]?key|key|secret|password|sig|signature|code|auth|authorization|credential|x-amz-.+|x-goog-.+|googleaccessid)$/i.test(
+            name,
+          )
+          ? `${separator}${key}=[redacted]`
+          : match
+      },
+    )
   }
 
   export function value(input: unknown, name?: string): unknown {

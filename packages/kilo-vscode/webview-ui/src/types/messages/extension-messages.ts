@@ -19,6 +19,11 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type {
+  ExplainBrieflyResult,
+  ExplainBrieflyError,
+  ResponseLensSettings,
+} from "../../../../src/shared/response-lens"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -342,6 +347,8 @@ export interface RestoredImage {
 
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
+  /** Session whose prompt draft is being replaced. Omitted by legacy callers. */
+  sessionID?: string
   text: string
   /**
    * Exact relative paths of the file attachments carried by the restored
@@ -491,6 +498,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    responseLens: ResponseLensSettings
   }
 }
 
@@ -1529,6 +1537,7 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | import("../../../../src/shared/annotations").AnnotationReply
   | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
   | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
@@ -1687,6 +1696,8 @@ export type ExtensionMessage =
   | MigrationCompleteMessage
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | ExplainBrieflyResult
+  | ExplainBrieflyError
   | ViewSubAgentSessionMessage
   | DiffViewerContextMessage
   | DiffViewerPRCommentsMessage

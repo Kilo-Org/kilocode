@@ -2,6 +2,8 @@ import type { BrowserReference, ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
 import type { RevertPromptState } from "../context/session-utils"
 import { clearPromptDraftRoutes, pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
+import type { Annotation } from "./annotations"
+import type { AnnotationEditorDraft } from "./annotation-state"
 
 export const mentionDrafts = new Map<string, Pick<RevertPromptState, "paths" | "sessions">>()
 export const drafts = new Map<string, string>()
@@ -9,6 +11,8 @@ export const browserDrafts = new Map<string, BrowserReference[]>()
 export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 export const imageDrafts = new Map<string, ImageAttachment[]>()
 export const scrollDrafts = new Map<string, number>()
+export const annotationDrafts = new Map<string, Annotation[]>()
+export const annotationEditorDrafts = new Map<string, AnnotationEditorDraft>()
 const discarded = new Set<string>()
 const discardedSessions = new Set<string>()
 const sending = new Set<string>()
@@ -37,7 +41,16 @@ export function savePromptDraft(
 function remove(raw: string | undefined) {
   if (!raw) return
   const suffix = `:${raw}`
-  for (const map of [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts, mentionDrafts]) {
+  for (const map of [
+    drafts,
+    browserDrafts,
+    reviewDrafts,
+    imageDrafts,
+    scrollDrafts,
+    mentionDrafts,
+    annotationDrafts,
+    annotationEditorDrafts,
+  ]) {
     for (const key of map.keys()) {
       if (typeof key === "string" && key.endsWith(suffix)) map.delete(key)
     }

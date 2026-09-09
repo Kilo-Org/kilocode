@@ -335,6 +335,23 @@ function getMarkdownShikiWorkerConfig() {
   }
 }
 
+function getDocumentWorkerConfig() {
+  return {
+    entryPoints: ["src/kilo-provider/response-lens-document-worker.ts"],
+    bundle: true,
+    // unpdf's serverless PDF.js uses import.meta. Keep it out of the CJS host bundle.
+    format: "esm",
+    target: "node22",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "node",
+    outfile: "dist/response-lens-document-worker.mjs",
+    logLevel: "silent",
+    plugins: watch ? [esbuildProblemMatcherPlugin] : [],
+  }
+}
+
 function notices() {
   const deps = {
     "playwright-core": ["LICENSE", "NOTICE", "ThirdPartyNotices.txt"],
@@ -346,6 +363,26 @@ function notices() {
     fs.mkdirSync(dir, { recursive: true })
     for (const file of files) fs.copyFileSync(path.join(root, file), path.join(dir, file))
   }
+  for (const name of ["unpdf", "htmlparser2", "ipaddr.js", "fflate"]) {
+    const root = path.join(__dirname, "node_modules", name)
+    const out = path.join(__dirname, "dist", "licenses", name)
+    fs.mkdirSync(out, { recursive: true })
+    fs.copyFileSync(path.join(root, "LICENSE"), path.join(out, "LICENSE"))
+  }
+  const pdf = path.join(__dirname, "dist", "licenses", "pdfjs")
+  fs.mkdirSync(pdf, { recursive: true })
+  fs.copyFileSync(
+    path.join(path.dirname(require.resolve("playwright-core/package.json")), "LICENSE"),
+    path.join(pdf, "APACHE-2.0.txt"),
+  )
+  fs.writeFileSync(
+    path.join(pdf, "NOTICE.txt"),
+    "PDF.js, Mozilla Foundation and contributors, is licensed under Apache-2.0.\n" +
+      "It is included through unpdf's serverless build, with its compatibility adaptations,\n" +
+      "and bundled/minified for Response Lens text extraction.\n" +
+      "Project and source license: https://github.com/mozilla/pdf.js\n" +
+      "Unpdf's separate MIT license is included in the adjacent unpdf directory.\n",
+  )
 }
 
 async function main() {
@@ -354,13 +391,15 @@ async function main() {
   const webviewsConfig = getWebviewsConfig()
   const shikiWorkerConfig = getShikiWorkerConfig()
   const markdownShikiWorkerConfig = getMarkdownShikiWorkerConfig()
+  const documentWorkerConfig = getDocumentWorkerConfig()
 
   if (watch) {
-    const [extensionCtx, webviewsCtx, shikiWorkerCtx, markdownShikiWorkerCtx] = await Promise.all([
+    const [extensionCtx, webviewsCtx, shikiWorkerCtx, markdownShikiWorkerCtx, documentWorkerCtx] = await Promise.all([
       esbuild.context(extensionConfig),
       esbuild.context(webviewsConfig),
       esbuild.context(shikiWorkerConfig),
       esbuild.context(markdownShikiWorkerConfig),
+      esbuild.context(documentWorkerConfig),
     ])
 
     await Promise.all([
@@ -368,6 +407,7 @@ async function main() {
       webviewsCtx.watch(),
       shikiWorkerCtx.watch(),
       markdownShikiWorkerCtx.watch(),
+      documentWorkerCtx.watch(),
     ])
   } else {
     await Promise.all([
@@ -375,11 +415,15 @@ async function main() {
       esbuild.build(webviewsConfig),
       esbuild.build(shikiWorkerConfig),
       esbuild.build(markdownShikiWorkerConfig),
+      esbuild.build(documentWorkerConfig),
     ])
   }
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(1)
-})
+module.exports = { getDocumentWorkerConfig }
+
+if (require.main === module)
+  main().catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })

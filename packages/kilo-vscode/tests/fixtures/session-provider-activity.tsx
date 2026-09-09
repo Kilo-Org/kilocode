@@ -29,6 +29,7 @@ Object.assign(globalThis, {
   HTMLHeadElement: window.HTMLHeadElement,
   HTMLInputElement: window.HTMLInputElement,
   HTMLTextAreaElement: window.HTMLTextAreaElement,
+  DOMRect: window.DOMRect,
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   IntersectionObserver: window.IntersectionObserver,
@@ -67,7 +68,10 @@ const { PromptInput } = await import("../../webview-ui/src/components/chat/Promp
 const { IndexingProvider } = await import("../../webview-ui/src/context/indexing")
 const { MemoryProvider } = await import("../../webview-ui/src/context/memory")
 const { SpeechToTextModelsProvider } = await import("../../webview-ui/src/context/speech-to-text-models")
-const { drafts, imageDrafts, savePromptDraft } = await import("../../webview-ui/src/utils/draft-store")
+const { drafts, imageDrafts, savePromptDraft, annotationDrafts } = await import(
+  "../../webview-ui/src/utils/draft-store"
+)
+const { newAnnotation } = await import("../../webview-ui/src/utils/annotations")
 
 const [settings, setSettings] = createSignal<{
   model?: string
@@ -109,6 +113,21 @@ const [run, setRun] = createSignal(false)
 const [inspected, setInspected] = createSignal(["task-child", "task-grand"])
 const [inspector, setInspector] = createSignal(false)
 const [composer, setComposer] = createSignal(false)
+const transcript = document.createElement("div")
+transcript.dataset.transcriptRoot = ""
+transcript.dataset.session = "composer"
+const row = document.createElement("div")
+row.dataset.row = "assistant"
+row.dataset.session = "composer"
+row.dataset.message = "lens-answer"
+const paragraph = document.createElement("p")
+paragraph.textContent = "Precision measures correct positive predictions."
+const part = document.createElement("div")
+part.dataset.component = "text-part"
+part.append(paragraph)
+row.append(part)
+transcript.append(row)
+document.body.append(transcript)
 const [active, setActive] = createSignal("task-child")
 const [review, setReview] = createSignal(false)
 const [sharing, setSharing] = createSignal(false)
@@ -202,7 +221,7 @@ const Probe = () => {
         <IndexingProvider>
           <MemoryProvider>
             <SpeechToTextModelsProvider>
-              <PromptInput boxId="acceptance" />
+              <PromptInput boxId="acceptance" transcript={() => transcript} />
             </SpeechToTextModelsProvider>
           </MemoryProvider>
         </IndexingProvider>
@@ -969,6 +988,137 @@ try {
     await emit({ type: "terminalContextResult", requestId: request.requestId, content: "terminal output" })
     retained(text, count)
   }
+  await catalog("org-a", [recommended.modelID], recommended.modelID)
+  const note = newAnnotation({
+    sessionID: "composer",
+    messageID: "lens-answer",
+    selectedText: "Precision",
+    comment: "Original saved comment",
+  })
+  setComposer(false)
+  await settle()
+  annotationDrafts.set(key, [note])
+  await seed("Response Lens must not edit this draft")
+  await emit({
+    type: "messagesLoaded",
+    sessionID: "composer",
+    mode: "replace",
+    messages: [
+      {
+        id: "lens-user",
+        sessionID: "composer",
+        role: "user",
+        createdAt: "2026-01-01T00:00:00Z",
+        parts: [{ id: "lens-request", type: "text", text: "What is precision?" }],
+      },
+      {
+        id: "lens-answer",
+        sessionID: "composer",
+        role: "assistant",
+        createdAt: "2026-01-01T00:00:01Z",
+        time: { created: 1, completed: 2 },
+        parts: [{ id: "lens-text", type: "text", text: paragraph.textContent }],
+      },
+    ],
+  })
+  const range = document.createRange()
+  range.selectNodeContents(paragraph)
+  Object.defineProperty(range, "getBoundingClientRect", { value: () => new window.DOMRect(20, 20, 80, 20) })
+  window.getSelection()!.removeAllRanges()
+  window.getSelection()!.addRange(range)
+  document.dispatchEvent(new window.Event("selectionchange"))
+  const explain = Array.from(document.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "responseLens.explain",
+  )
+  assert(explain)
+  explain.click()
+  await settle()
+  const explanation = sent.findLast((message) => message.type === "explainBriefly")
+  assert(explanation?.type === "explainBriefly")
+  assert(document.querySelector('[data-component="response-lens"]'))
+  const edit = host.querySelector<HTMLButtonElement>('[aria-label="common.edit"]')
+  assert(edit)
+  edit.click()
+  await settle()
+  assert.equal(
+    document.querySelector('[data-component="response-lens"]'),
+    null,
+    "list Edit must close Response Lens without moving focus",
+  )
+  assert(sent.some((message) => message.type === "cancelExplainBriefly" && message.requestId === explanation.requestId))
+  const editor = document.querySelector<HTMLTextAreaElement>('[data-component="annotation-popover"] textarea')
+  assert(editor)
+  assert.equal(document.activeElement, editor)
+  editor.value = "This change must be cancelled"
+  editor.dispatchEvent(new window.InputEvent("input", { bubbles: true, inputType: "insertText", data: "d" }))
+  await settle()
+  assert.equal(
+    document.querySelector('[data-component="annotation-popover"] textarea'),
+    editor,
+    "typing keeps the keyed editor",
+  )
+  window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+  await settle()
+  assert.equal(document.querySelector('[data-component="annotation-popover"]'), null)
+  assert.equal(
+    annotationDrafts.get(key)?.[0]?.comment,
+    "Original saved comment",
+    "Escape cancels instead of triggering focus-out save",
+  )
+  assert.equal(input().value, "Response Lens must not edit this draft")
+  await emit({
+    type: "explainBrieflyResult",
+    requestId: explanation.requestId,
+    text: "STALE_ANNOTATION_HANDOFF",
+    truncated: false,
+    model: recommended,
+  })
+  assert.equal(document.querySelector('[data-component="response-lens"]'), null)
+
+  const reopen = host.querySelector<HTMLButtonElement>('[aria-label="common.edit"]')
+  assert(reopen)
+  reopen.click()
+  await settle()
+  const draft = document.querySelector<HTMLTextAreaElement>('[data-component="annotation-popover"] textarea')
+  assert(draft)
+  draft.value = "Restored editor draft"
+  draft.dispatchEvent(new window.InputEvent("input", { bubbles: true, inputType: "insertText", data: "t" }))
+  value.setCurrentSessionID("root")
+  await settle()
+  value.setCurrentSessionID("composer")
+  await settle()
+  const restored = document.querySelector<HTMLTextAreaElement>('[data-component="annotation-popover"] textarea')
+  assert(restored)
+  assert.equal(restored.value, "Restored editor draft")
+  assert.equal(
+    document.querySelector('[data-component="response-lens"]'),
+    null,
+    "restored editors also exclude Response Lens",
+  )
+  assert.equal(document.activeElement, restored)
+  window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+  await settle()
+  assert.equal(annotationDrafts.get(key)?.[0]?.comment, "Original saved comment")
+
+  window.getSelection()!.removeAllRanges()
+  window.getSelection()!.addRange(range)
+  document.dispatchEvent(new window.Event("selectionchange"))
+  const annotate = Array.from(document.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "annotations.annotate",
+  )
+  assert(annotate)
+  annotate.click()
+  await settle()
+  assert(document.querySelector('[data-component="annotation-popover"]'))
+  assert.equal(
+    document.querySelector('[data-component="response-lens"]'),
+    null,
+    "toolbar Annotate keeps exclusive editor focus",
+  )
+  window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+  await settle()
+  assert.equal(annotationDrafts.get(key)?.length, 1)
+  assert.equal(annotationDrafts.get(key)?.[0]?.comment, "Original saved comment")
   setComposer(false)
   await settle()
   await catalog("org-a", [recommended.modelID], recommended.modelID)

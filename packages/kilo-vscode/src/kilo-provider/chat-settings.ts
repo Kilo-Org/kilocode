@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { responseLensSettings, validResponseLensSettings } from "../shared/response-lens"
 
 type Post = (msg: unknown) => void
 
@@ -8,6 +9,7 @@ export function buildChatSettingsMessage() {
     type: "chatSettingsLoaded" as const,
     settings: {
       shiftTabCyclesVariant: config.get<boolean>("shiftTabCyclesVariant", true),
+      responseLens: responseLensSettings(config.get("responseLens")),
     },
   }
 }
@@ -32,5 +34,6 @@ export function watchChatConfig(post: Post): vscode.Disposable {
 }
 
 export function validChatSetting(key: string, value: unknown) {
+  if (key === "responseLens") return validResponseLensSettings(value)
   return key === "shiftTabCyclesVariant" && typeof value === "boolean"
 }

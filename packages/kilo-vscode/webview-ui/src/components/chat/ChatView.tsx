@@ -29,6 +29,8 @@ import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
+import { AnnotationSourceMarkers } from "./AnnotationMarkers"
+import { ResponseLensBoundary } from "./ResponseLens"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -81,6 +83,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
   let worktreeRef: HTMLDivElement | undefined
+  let transcriptRef: HTMLDivElement | undefined
 
   // Permissions and questions scoped to this session's family (self + subagents).
   // Each ChatView only sees its own session tree — no cross-session leakage.
@@ -358,7 +361,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <SessionTabStrip />
         </Show>
         <TaskHeader readonly={props.readonly} />
-        <div class="chat-messages-wrapper">
+        <div class="chat-messages-wrapper" ref={transcriptRef} data-transcript-root="" data-session={id()}>
           <div class="chat-messages">
             <MessageList
               onSelectSession={props.onSelectSession}
@@ -378,6 +381,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             />
           </div>
         </div>
+
+        <ResponseLensBoundary>
+          <AnnotationSourceMarkers transcript={() => transcriptRef} sessionID={id} />
+        </ResponseLensBoundary>
 
         <Show when={dock()}>
           <div class="chat-input">
@@ -416,6 +423,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 focusOnDraftChange={props.focusOnDraftChange}
                 onFocusChange={props.onFocusChange}
                 resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                transcript={() => transcriptRef}
               />
             </Show>
           </div>

@@ -26,6 +26,7 @@ type Ctx = {
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
   promoteBackgroundJob: (jobID: string, sessionID: string) => Promise<void>
+  responseLens: (message: { type: string; requestId?: unknown }) => boolean
 }
 
 async function routeBackgroundMessage(
@@ -71,6 +72,7 @@ export async function routeEarlyMessage(
   message: { type: string; id?: unknown; text?: unknown; state?: unknown },
   ctx: Ctx,
 ): Promise<boolean> {
+  if (ctx.responseLens(message)) return true
   if (message.type === "resumeSession") {
     const input = message as { sessionID?: unknown; messageID?: unknown; requestID?: unknown }
     if (isResume(input)) {
@@ -96,7 +98,7 @@ export async function routeEarlyMessage(
     )
     return true
   }
-  if (message.type === "recordModelUsage" || message.type === "requestModelUsage") {
+  if (["recordModelUsage", "requestModelUsage"].includes(message.type)) {
     await ctx.modelUsage(message as ModelUsageMessage)
     return true
   }
