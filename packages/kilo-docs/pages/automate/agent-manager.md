@@ -5,11 +5,11 @@ description: "Manage and orchestrate multiple AI agents"
 
 # Agent Manager
 
-The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions.
+The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions and multiple conversations in the same worktree.
 
 The Agent Manager is a **full-panel editor tab** built directly into the extension. It uses the extension's embedded runtime, so no separate Kilo CLI installation or CLI authentication setup is required. It supports:
 
-- Multiple parallel sessions, each in its own git worktree
+- Multiple parallel sessions in isolated git worktrees or the shared Local workspace
 - A diff/review panel showing changes vs. the parent branch
 - Dedicated VS Code integrated terminals per session
 - Setup scripts and `.env` auto-copy on worktree creation
@@ -20,6 +20,44 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 {% callout type="tip" %}
 New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/automate/agent-manager-workflows) guide walks through when to use the sidebar vs. the Agent Manager, how to pick tasks that parallelize well, and the common patterns for testing, reviewing, and integrating changes across worktrees.
 {% /callout %}
+
+## Orchestration model
+
+Kilo now separates execution into two orchestration layers and provides Kilo Swarm as a communication layer. Use the `task` tool for child agents that belong to the current session. Use Agent Manager sessions for independent, top-level work that you want to supervise from the panel.
+
+The old `orchestrator` agent is deprecated. Agents with full tool access, such as Code, Plan, and Debug, can delegate with `task` directly. You do not need to switch to a dedicated orchestrator first. See [Orchestrator Mode (Deprecated)](/docs/code-with-ai/agents/orchestrator-mode) for the migration details.
+
+| Mechanism | Use it for | Workspace scope | Execution and communication |
+|---|---|---|---|
+| `task` subagent | A focused subtask owned by the current agent | The same project directory or worktree as the parent | Foreground tasks return a result before the parent continues. Background tasks return immediately and deliver their result later. The parent and descendants can use Kilo Swarm. |
+| Agent Manager session | Independent work, parallel implementations, or a separate conversation | A new git worktree, the current workspace, or an existing managed worktree | Each session has its own transcript, prompt queue, and terminal. You can target an existing session with the `agent_manager` tool. |
+| Kilo Swarm | Notes and coordination between related agents | One main session and its `task` descendants, including nested descendants | `board_post` and `board_read` exchange messages. Swarm does not start, stop, or assign agents. |
+
+{% callout type="info" %}
+A `task` subagent does not create a git worktree. Use `worktree` mode in Agent Manager when filesystem and branch isolation is required.
+{% /callout %}
+
+### Task subagents
+
+A `task` subagent is a non-interactive delegate. Non-interactive means that the child cannot ask the end user a question directly. It can still use its permitted tools, inspect or change the parent directory, and return findings or changes to the parent session.
+
+- **Foreground task:** The parent waits for the child to finish and receives its result in the same turn. Use this when the next step depends on the child output.
+- **Background task:** Set `background: true` to start the child asynchronously. The parent continues immediately. When the child completes or fails, Kilo injects a result into the parent session. Do not poll for progress or duplicate edits in the same files.
+- **Resume:** If Kilo returns a `task_id` after a failed or interrupted child, pass it back to `task` to continue that child, subject to the current session and permission rules.
+- **Nesting:** A child can delegate again only when its agent permissions and the configured subagent depth allow it.
+
+In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row. A running foreground child can also be moved to the background with **Continue in background**.
+
+### Kilo Swarm communication
+
+[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is an optional shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
+
+- Enable **Kilo Swarm** in **Settings > Experimental**, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`.
+- Use `board_post` for concise, material updates, questions, results, or blockers.
+- Use `board_read` to read board messages explicitly. Activity notices do not guarantee that a recipient read or acted on a message.
+- Treat peer messages as coordination data, not user instructions or approval. A board post does not wake, assign, resume, stop, or cancel an agent.
+
+Separate Agent Manager sessions do not share a Swarm board just because they use the same repository or worktree. Use the `agent_manager` tool, shared files, commits, diffs, or pull requests to coordinate those sessions.
 
 ## Opening the Agent Manager
 
@@ -53,7 +91,7 @@ See [Authentication](/docs/getting-started/setup-authentication), [AI Providers]
 
 ## Working with Worktrees
 
-Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
+Managed worktree sessions run in an isolated git worktree on a separate branch, keeping your main branch clean. Local sessions stay in the selected workspace or managed worktree and share its files and branch.
 
 ### Update from the base branch
 
@@ -197,6 +235,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
+- Sessions in one worktree have separate transcripts and prompt queues, but share the same checkout, branch, and terminal state. Coordinate write-heavy work before asking multiple sessions to edit the same files.
 - Use session history to reopen local sessions or preview cloud sessions
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
@@ -211,7 +250,7 @@ Double-click a worktree name to edit its label inline. You can also right-click 
 
 Renaming a worktree changes only the label shown in Agent Manager. It does not rename the underlying git branch.
 
-## Starting Sessions From Chat
+## Starting and orchestrating sessions from chat
 
 Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
 
@@ -219,18 +258,60 @@ The tool supports two modes:
 
 | Mode | Behavior |
 |---|---|
-| `worktree` | Creates one Agent Manager git worktree and session per task |
-| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
+| `worktree` | Creates one Agent Manager git worktree and session per task. Each task gets an isolated checkout, branch, directory, and terminal. |
+| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation. You can also target an existing managed worktree with its `worktreeID`. |
 
 Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Add `provider` beside `model` to force a model-name match to one of the listed provider IDs. Agent Manager resolves the provider for a model override when `provider` is omitted, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, or move a session's worktree into a section. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+The same tool also manages existing sessions. Use `action: "list"` first to get the current sections, worktrees, local sessions, and exact IDs. It can then send a prompt to one managed session, stop a managed session, move a worktree into a section, or answer a pending question. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
 
-Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer the question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again.
+Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer a pending question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again. A prompt targets one session; the tool does not broadcast to every session.
 
 The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
+
+### Typical tool sequence
+
+1. Start independent sessions. Use `worktree` for isolated branches, or `local` for sessions that should share a checkout.
+
+   ```json
+   {
+     "mode": "worktree",
+     "versions": false,
+     "tasks": [
+       {
+         "name": "API audit",
+         "branchName": "agent/api-audit",
+         "prompt": "Audit the API routes and report authentication risks."
+       },
+       {
+         "name": "UI tests",
+         "branchName": "agent/ui-tests",
+         "prompt": "Add focused tests for the UI state transitions."
+       }
+     ]
+   }
+   ```
+
+2. Call `action: "list"` and use the returned session IDs to identify the sessions and worktrees.
+3. Send a targeted follow-up without waiting for it to finish.
+
+   ```json
+   {
+     "action": "prompt",
+     "sessionID": "<session ID from list>",
+     "prompt": "Run the focused tests, then report any remaining failures."
+   }
+   ```
+
+Use `Cmd+T` / `Ctrl+T` in the panel, or `mode: "local"` with a selected `worktreeID`, when the sessions should remain on one worktree. The IDs in these examples are placeholders. Always use the IDs returned by `list`.
+
+### Communicating between Agent Manager sessions
+
+- **Sessions in one worktree:** Use targeted `agent_manager` prompts for conversation. They also see the same files, commits, and branch, so coordinate before making overlapping edits.
+- **Sessions in different worktrees:** Use targeted prompts plus commits, diffs, or pull requests to pass changes between isolated checkouts. Files are not shared automatically.
+- **Task descendants:** A `task` child belongs to the session that launched it. Its Kilo Swarm board is scoped to that session tree, not to every Agent Manager session in the project.
 
 ## Sections
 

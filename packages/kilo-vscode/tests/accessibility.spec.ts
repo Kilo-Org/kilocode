@@ -18,6 +18,7 @@ const STORIES = [
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
   { id: "agentmanager--side-terminal-panel-empty", name: "Agent Manager / side terminal" },
   { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
+  { id: "iconbutton--states", name: "IconButton / shared states" },
 ]
 
 function url(id: string) {
@@ -53,6 +54,40 @@ test.describe("webview accessibility ratchet", () => {
     })
   }
 
+  test("IconButton states expose labels, keyboard state, disabled state, and tooltips", async ({ page }) => {
+    await open(page, "iconbutton--states")
+
+    const create = page.getByRole("button", { name: "Create item", exact: true })
+    const disabled = page.getByRole("button", { name: "Delete item", exact: true })
+    const loading = page.getByRole("button", { name: "Refresh item", exact: true })
+    const toggle = page.getByRole("button", { name: "Toggle changes", exact: true })
+    const content = page.getByTestId("icon-button-with-content")
+    const indexing = page.getByRole("button", { name: "Indexing", exact: true })
+
+    await expect(create).toBeVisible()
+    await expect(disabled).toBeDisabled()
+    await expect(disabled).toHaveAttribute("aria-label", "Delete item")
+    await expect(loading).toBeDisabled()
+    await expect(loading).toHaveAttribute("aria-busy", "true")
+    const contentBox = await content.boundingBox()
+    const iconBox = await content.locator('[data-slot="icon-svg"]').boundingBox()
+    expect(contentBox?.width).toBeGreaterThan(20)
+    expect(iconBox?.x).toBeGreaterThanOrEqual((contentBox?.x ?? 0) - 1)
+    await expect(indexing.locator('[data-slot="icon-svg"]')).toHaveAttribute("viewBox", "0 0 24 24")
+    expect(await indexing.locator('[data-slot="icon-svg"]').evaluate((el) => getComputedStyle(el).strokeWidth)).toBe(
+      "1.5px",
+    )
+    await expect(toggle).toHaveAttribute("aria-pressed", "false")
+
+    await reach(page, toggle)
+    await expect(toggle).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(toggle).toHaveAttribute("aria-pressed", "true")
+
+    await create.hover()
+    await expect(page.locator('[data-component="tooltip"]')).toContainText("Create item")
+  })
+
   test("Background agent summary and visible agents remain pointer-accessible", async ({ page }) => {
     await page.setViewportSize({ width: 200, height: 720 })
     await open(page, "chat--task-header-background-agents-200")
@@ -73,7 +108,7 @@ test.describe("webview accessibility ratchet", () => {
     await expect(list).toBeHidden()
   })
 
-  test("Background agents preserve running spinners and collapse after completion", async ({ page }) => {
+  test("Background agents preserve running avatars and collapse after completion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" })
     await page.clock.install()
     await page.clock.pauseAt(new Date())
@@ -117,15 +152,15 @@ test.describe("webview accessibility ratchet", () => {
     const row = list.locator('[data-slot="task-header-agent"]')
     await expect(row).toContainText("Background agent 1")
     const node = await row.elementHandle()
-    const spinner = await row.locator('[data-component="spinner"]').elementHandle()
-    expect(spinner).not.toBeNull()
+    const avatar = await row.locator('[data-component="agent-avatar"]').elementHandle()
+    expect(avatar).not.toBeNull()
 
     for (const revision of [2, 3]) {
       await page.clock.runFor(1000)
       await expect(row).toContainText(`Background agent ${revision}`)
       await expect(row).toHaveAttribute("data-status", "running")
       expect(await node!.evaluate((node) => node.isConnected)).toBe(true)
-      expect(await spinner!.evaluate((node) => node.isConnected)).toBe(true)
+      expect(await avatar!.evaluate((node) => node.isConnected)).toBe(true)
     }
 
     await row.locator('[data-slot="task-header-agent-main"]').focus()
@@ -138,8 +173,7 @@ test.describe("webview accessibility ratchet", () => {
     await expect(preview).toHaveAttribute("aria-hidden", "false")
     await expect(preview).toHaveAccessibleName("Open background agent: Background agent 4 (Done)")
     await expect(preview).toHaveAttribute("title", "Open background agent: Background agent 4 (Done)")
-    await expect(preview.locator('[data-component="icon"]')).toBeVisible()
-    await expect(preview.locator('[data-component="icon"] use')).toHaveAttribute("href", "#opencode-icon-circle-check")
+    await expect(preview.locator('[data-component="agent-avatar"]')).toBeVisible()
     await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
 
     await toggle.click()
@@ -204,10 +238,10 @@ test.describe("webview accessibility ratchet", () => {
     const clear = agents.getByRole("button", { name: "Clear finished", exact: true })
     await expect(clear).toHaveText("")
     await expect(clear).toHaveAttribute("title", "Clear finished")
-    for (const [status, label, icon] of [
-      ["completed", "Done", "circle-check"],
-      ["cancelled", "Cancelled", "circle-ban-sign"],
-      ["error", "Error", "warning"],
+    for (const [status, label] of [
+      ["completed", "Done"],
+      ["cancelled", "Cancelled"],
+      ["error", "Error"],
     ] as const) {
       const item = agents.locator(`[data-slot="task-header-agents-item"][data-status="${status}"]`)
       const name = `Open background agent: Background agent ${status} (${label})`
@@ -215,8 +249,7 @@ test.describe("webview accessibility ratchet", () => {
       await expect(item).toHaveText(`Background agent ${status}`)
       await expect(item).toHaveAccessibleName(name)
       await expect(item).toHaveAttribute("title", name)
-      await expect(item.locator('[data-component="icon"]')).toBeVisible()
-      await expect(item.locator('[data-component="icon"] use')).toHaveAttribute("href", `#opencode-icon-${icon}`)
+      await expect(item.locator('[data-component="agent-avatar"]')).toBeVisible()
     }
     await expect(agents.locator('[data-component="spinner"]')).toHaveCount(0)
 
@@ -239,7 +272,7 @@ test.describe("webview accessibility ratchet", () => {
     await expect(items).toHaveCount(4)
     await expect(items.first()).toHaveAttribute("data-status", "running")
     await expect(items.first()).toHaveAttribute("aria-hidden", "false")
-    await expect(items.first().locator('[data-component="spinner"]')).toBeVisible()
+    await expect(items.first().locator('[data-component="agent-avatar"]')).toHaveAttribute("data-status", "running")
     await expect(agents.locator('[data-slot="task-header-agents-overflow"]')).toHaveAttribute("aria-hidden", "false")
   })
 

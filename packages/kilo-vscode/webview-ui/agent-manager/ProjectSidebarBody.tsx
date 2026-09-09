@@ -43,6 +43,7 @@ import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
+import { createWorktreeCompletion } from "./worktree-completion"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -65,6 +66,7 @@ interface Props {
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -113,7 +115,12 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sections = () => store.sections()
   const worktrees = () => store.worktrees()
   const order = () => store.worktreeOrder()
-  const sorted = createMemo(() => sortWorktrees(worktrees(), order()))
+  const completion = createWorktreeCompletion(
+    () => sortWorktrees(worktrees(), order()),
+    () => props.project.id,
+    (wt) => wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
+  )
+  const sorted = completion.rows
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
@@ -125,7 +132,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const selectAfterDelete = (id: string) => {
     if (!active() || props.selection !== id) return
     const ids = new Set(store.managedSessions().map((item) => item.worktreeId))
-    const order = buildSidebarOrder(top(), sorted(), sections(), members, true)
+    const order = buildSidebarOrder(top(), sorted(), sections(), members, id)
       .filter((item) => item.type === "wt")
       .map((item) => item.id)
     const next = nextSelectionAfterDelete(
@@ -134,8 +141,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       (id) => ids.has(id) && !props.busy(id) && !store.staleWorktreeIds().has(id),
     )
     if (next === LOCAL) return props.onSelectLocal(props.project.id)
-    const section = sections().find((item) => item.id === worktrees().find((wt) => wt.id === next)?.sectionId)
-    if (section?.collapsed) post({ type: "agentManager.toggleSectionCollapsed", sectionId: section.id })
     props.onSelectWorktree(props.project.id, next)
   }
 
@@ -263,6 +268,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     return (
       <div use:sortable class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}>
         <WorktreeItem
+          completed={completion.completed(worktree.id)}
+          onCompletionEnd={() => completion.release(worktree.id)}
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
           label={worktree.label || label()}
@@ -293,10 +300,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
           }
           onMoveToNewSection={() => createSection([worktree.id])}
-          onClick={() => {
-            if (pending() === worktree.id) return confirmDelete(worktree.id)
-            props.onSelectWorktree(props.project.id, worktree.id)
-          }}
+          onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
+          onCancelDelete={() => setPending(undefined)}
           onDelete={(event) => {
             event.stopPropagation()
             confirmDelete(worktree.id)
@@ -324,10 +329,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
-          onOpenPR={() => {
-            const url = props.prs?.[worktree.id]?.url
-            post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })
-          }}
+          onOpenPR={() => props.onOpenPR?.(props.project.id, worktree.id)}
         />
       </div>
     )

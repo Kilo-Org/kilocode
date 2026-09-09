@@ -216,6 +216,15 @@
   font-weight: 600;
 }
 
+.am-intro-command {
+  padding: 1px 4px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset-base);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 400;
+}
+
 .am-intro-detail p {
   margin: 0;
 }

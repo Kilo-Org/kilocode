@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -204,7 +203,6 @@ export const guarded = [
   "write",
   "agent_manager",
   "repo_clone",
-  "interactive_terminal",
 ]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
@@ -316,6 +314,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    open_plan: "allow",
     task: {
       "*": "allow",
       general: "deny",
@@ -532,6 +531,7 @@ export function patchAgents(
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({

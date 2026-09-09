@@ -11,7 +11,7 @@ import type { BaseUpdateRequest } from "../../webview-ui/src/types/messages/agen
 type Host = Pick<LifecycleHost, "client" | "metadata" | "register" | "sessions" | "push" | "notify" | "log">
 const pending = new WeakSet<Worktree>()
 
-export function baseUpdatePrompt(worktree: Worktree): string {
+export function baseUpdatePrompt(worktree: Worktree, push = false): string {
   return [
     `Update the current branch in worktree ${JSON.stringify(worktree.path)} from its saved base branch ${JSON.stringify(worktree.parentBranch)}. Do not use today's project default or the worktree's own upstream.`,
     worktree.remote
@@ -19,12 +19,25 @@ export function baseUpdatePrompt(worktree: Worktree): string {
       : `Resolve the upstream of the saved base branch ${JSON.stringify(worktree.parentBranch)} to its remote and exact branch ref. If the base is local-only or cannot be resolved, stop and ask me which source to use. Do not guess a remote or silently use a local branch.`,
     "Check the worktree's current branch and Git status first. Do not switch branches. If HEAD is detached or a merge or rebase is already in progress, stop and ask rather than starting a competing operation.",
     "Fetch the exact remote base, then resolve FETCH_HEAD^{commit} and merge that freshly fetched commit ID. If fetch or ref resolution fails, stop. Never merge a stale tracking ref, switch sources silently, or use git pull.",
-    "Never use git stash, --autostash, or automatic stashing. Disable merge.autoStash for the merge. Do not discard, overwrite, stage, or commit pre-existing edits. If uncommitted changes in this worktree block the merge, stop and ask how to preserve them.",
-    "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not push, merge a PR, or apply this worktree into the base.",
+    "Do not use the shared stash stack or --autostash to preserve edits. Disable merge.autoStash for the merge. Git's internal temporary merge state is allowed if it does not change the shared stash stack.",
+    "Preserve all staged, unstaged, and untracked changes in a verified recovery copy unique to this worktree and this update before changing them. Never restore or remove another worktree's recovery data. If preservation cannot be verified, stop and ask before clearing any edits. You may temporarily clear backed-up edits to merge the base. Resolve conflicts, restore local changes and their staging state, and leave unfinished work uncommitted. Keep pre-existing edits out of the merge commit. Keep the recovery copy until restoration is verified. Do not ask me to choose a preservation method.",
+    ...(push
+      ? [
+          "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not merge or apply this worktree into the base.",
+          "When the merge is clean and checks pass, push this branch so its pull request updates, if it has one. Do not force-push.",
+        ]
+      : [
+          "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not push, merge a PR, or apply this worktree into the base.",
+        ]),
   ].join("\n\n")
 }
 
-export async function handleBaseUpdate(msg: BaseUpdateRequest, ctx: ProjectContext, host: Host): Promise<null> {
+export async function handleBaseUpdate(
+  msg: BaseUpdateRequest,
+  ctx: ProjectContext,
+  host: Host,
+  push = false,
+): Promise<null> {
   const state = ctx.peekState()
   const worktree = state?.getWorktree(msg.worktreeId)
   if (!state || !worktree || (msg.projectId && msg.projectId !== ctx.id)) {
@@ -88,8 +101,12 @@ export async function handleBaseUpdate(msg: BaseUpdateRequest, ctx: ProjectConte
       root: ctx.root,
       state,
       sessionID: id,
-      text: baseUpdatePrompt(worktree),
+      text: baseUpdatePrompt(worktree, push),
       messageID: randomUUID(),
+      questions: "dismiss",
+      model: msg.model,
+      variant: msg.variant,
+      agent: msg.agent,
     })
   } catch (err) {
     host.log("Update from base failed:", err)

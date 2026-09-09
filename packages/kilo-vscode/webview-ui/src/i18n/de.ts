@@ -60,8 +60,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Abgeschlossen (vom Modell gemeldet)",
+  "session.goal.blocked": "Blockiert",
+  "session.goal.restart": "Ziel neu starten",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Board",
+  "task.swarm.refresh": "Aktualisieren",
+  "task.swarm.reset": "Board zurücksetzen",
+  "task.swarm.resetTitle": "Dieses Board zurücksetzen?",
+  "task.swarm.resetDescription":
+    "Sichtbare Nachrichten löschen? Unterhaltungen und laufende Aufgaben bleiben unverändert. Agenten können neue Nachrichten veröffentlichen.",
+  "task.swarm.loading": "Board wird geladen...",
+  "task.swarm.failed": "Das Board konnte nicht geladen oder zurückgesetzt werden. Versuchen Sie, es zu aktualisieren.",
 
   "command.provider.connect": "Anbieter verbinden",
 
@@ -762,6 +773,14 @@ export const dict = {
   "session.outcome.interrupted": "Zug unterbrochen",
   "session.outcome.error": "Zug fehlgeschlagen",
   "session.outcome.finish": "Abschlussgrund: {{reason}}",
+  "session.goal.label": "Ziel",
+  "prompt.goal.set": "Ziel festlegen",
+  "prompt.goal.start": "Ziel starten",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Pausiert",
+  "session.goal.pause": "Pausieren",
+  "session.goal.resume": "Fortsetzen",
+  "session.goal.clear": "Ziel löschen",
   "session.costAlert.header": "Sitzungskostenwarnung",
   "session.costAlert.continue": "Fortfahren",
   "session.costAlert.question":
@@ -866,7 +885,17 @@ export const dict = {
   "settings.notifications.enable.title": "Tonbenachrichtigungen aktivieren",
   "settings.notifications.enable.description":
     "Töne wiedergeben, wenn Sitzungen abgeschlossen werden, ein Fehler auftritt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.workbench.title": "VS Code-Benachrichtigungen aktivieren",
+  "settings.notifications.workbench.description":
+    "VS Code-Benachrichtigungen anzeigen, wenn Kilo eine Aufgabe abschließt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.os.title": "Betriebssystem-Benachrichtigungen aktivieren",
+  "settings.notifications.os.description":
+    "Systemeigene Betriebssystem-Benachrichtigungen anzeigen, wenn Kilo eine Aufgabe abschließt oder Ihre Eingabe erforderlich ist, während VS Code nicht aktiv ist.",
   "settings.notifications.testSound": "Testen",
+  "settings.notifications.testOS": "Testen",
+  "settings.notifications.testOS.testing": "Testbenachrichtigung wird gesendet…",
+  "settings.notifications.testOS.success": "Testbenachrichtigung gesendet.",
+  "settings.notifications.testOS.error": "Testbenachrichtigung fehlgeschlagen",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -914,6 +943,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude-Code-Migration (Experimentell)",
+  "settings.experimental.claudeMigration.description":
+    "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.taskModelSelection.title": "Task-Subagent-Modellauswahl",
@@ -1032,6 +1064,9 @@ export const dict = {
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.pushFixes.title": "Pull-Request-Fixes pushen",
+  "settings.agentBehaviour.pushFixes.description":
+    "Wenn du CI-Fehler oder Review-Kommentare eines Pull Requests an den Agenten sendest oder einen Worktree von seiner Basis aktualisierst, wird der Agent gebeten, zu committen und zu pushen, damit der Pull Request aktualisiert wird. Berechtigungsabfragen gelten weiterhin. Deaktivieren, um manuell zu committen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-Kompatibilität",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-Dateien laden",
   "settings.agentBehaviour.claudeCompat.description":

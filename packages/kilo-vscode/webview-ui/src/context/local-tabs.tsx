@@ -44,7 +44,7 @@ interface LocalTabsValue {
   active: Accessor<string | undefined>
   pending: Accessor<string | undefined>
   add: () => string
-  open: (id: string) => void
+  open: (id: string, options?: { scrollToBottom?: boolean }) => void
   openAfter: (source: string, id: string) => void
   select: (id: string) => void
   close: (id: string) => void
@@ -75,13 +75,13 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     if (!same(ids(), next.ids)) setIds(next.ids)
     if (active() !== next.active) setActive(next.active)
   }
-  const focus = (id: string | undefined) => {
+  const focus = (id: string | undefined, options: { scrollToBottom?: boolean } = {}) => {
     setCloud(undefined)
     if (!id || isPendingTab(id)) {
       session.clearCurrentSession()
       return
     }
-    session.selectSession(id)
+    session.selectSession(id, options)
   }
   const real = createMemo(() => ids().filter((id) => !isPendingTab(id)))
   const activePending = createMemo(() => {
@@ -95,9 +95,9 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     focus(id)
   }
 
-  const open = (id: string) => {
+  const open = (id: string, options: { scrollToBottom?: boolean } = {}) => {
     apply(openSessionTab(current(), id))
-    focus(id)
+    focus(id, options)
   }
 
   const openAfter = (source: string, id: string) => {

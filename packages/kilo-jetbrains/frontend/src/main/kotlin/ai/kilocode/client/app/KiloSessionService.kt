@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
@@ -29,6 +30,7 @@ import com.intellij.openapi.project.Project
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +41,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -55,12 +58,14 @@ class KiloSessionService internal constructor(
     private val cs: CoroutineScope,
     private val rpc: KiloSessionRpcApi?,
     private val log: KiloLog = LOG,
+    private val grace: Long = ATTENTION_GRACE_MS,
 ) {
     /** Platform constructor — resolves RPC from the service container. */
     constructor(project: Project, cs: CoroutineScope) : this(project, cs, null)
 
     companion object {
         private val LOG = KiloLog.create(KiloSessionService::class.java)
+        private const val ATTENTION_GRACE_MS = 400L
     }
 
     // Reflects the sessions from the most recent tracking [list]/[renameSession] call, which is
@@ -81,10 +86,63 @@ class KiloSessionService internal constructor(
         combine(stream { statuses() }, removed) { map, gone -> map - gone }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
-    /** Live session activity map from backend global events, minus sessions deleted this run. */
+    // Last snapshot published downstream, and per session the moment the attention still being held
+    // back was first seen. Touched only from the single upstream collector below, so no
+    // synchronisation.
+    private var shown = emptyMap<String, SessionActivityDto>()
+    private val since = mutableMapOf<String, Long>()
+
+    /**
+     * Live session activity map from backend global events, minus sessions deleted this run.
+     *
+     * A permission the client answers itself (auto-approve) still goes through a real
+     * `permission.asked`/`permission.replied` pair, so every auto-approved edit would otherwise swap
+     * every badge to the attention glyph and straight back. A session that newly enters an attention
+     * state therefore keeps its previously published kind for [ATTENTION_GRACE_MS]; a machine-answered
+     * permission resolves inside that window and is never published.
+     *
+     * The hold is per session, not per snapshot: every other session in the same snapshot — and every
+     * clearing, RUNNING or ERROR transition — is published immediately. [since] is keyed per session
+     * and survives further snapshots, so churn cannot starve a real prompt.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val activity: StateFlow<Map<String, SessionActivityDto>> =
         combine(stream { activity() }, removed) { map, gone -> map - gone }
+            .transformLatest { next ->
+                // Publish what is ready now, then wait out the earliest held session and re-settle
+                // the same snapshot. A newer snapshot cancels the wait, which is why [since] is kept.
+                while (true) {
+                    emit(settle(next))
+                    val first = since.values.minOrNull() ?: return@transformLatest
+                    delay((first + grace - System.currentTimeMillis()).coerceAtLeast(1))
+                }
+            }
             .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * The snapshot to publish for [next]: every entry as it arrived, except sessions that just
+     * entered an attention state and have not held it for [grace] yet, which keep the kind they were
+     * last published with (or stay absent when they had none). Records the held sessions in [since]
+     * and updates [shown].
+     */
+    private fun settle(next: Map<String, SessionActivityDto>): Map<String, SessionActivityDto> {
+        val now = System.currentTimeMillis()
+        val rising = next.filterValues { waiting(it.kind) }.keys.filterTo(mutableSetOf()) { !waiting(shown[it]?.kind) }
+        // The first sighting starts the clock; a later snapshot still holding the attention keeps the
+        // original deadline instead of extending it.
+        val held = rising.filterTo(mutableSetOf()) { now - since.getOrPut(it) { now } < grace }
+        since.keys.retainAll(held)
+        val settled = if (held.isEmpty()) next else buildMap {
+            next.forEach { (id, dto) -> if (id in held) shown[id]?.let { put(id, it) } else put(id, dto) }
+        }
+        shown = settled
+        return settled
+    }
+
+    private fun waiting(kind: SessionActivityKindDto?): Boolean =
+        kind == SessionActivityKindDto.PERMISSION ||
+            kind == SessionActivityKindDto.QUESTION ||
+            kind == SessionActivityKindDto.PLAN
 
     /**
      * Session create/update/delete across every directory the CLI serves, including sessions
@@ -160,6 +218,23 @@ class KiloSessionService internal constructor(
         val session = call { create(dir) }
         log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
+        return session
+    }
+
+    /**
+     * Fork session [id] into [dir], copying its history into a new session. With [messageId] the
+     * fork truncates at that message. Caller awaits the result.
+     *
+     * Deliberately does not refresh the shared [sessions] flow: forking is only offered from
+     * directory-scoped worktree surfaces, which keep their own model, so refreshing here would
+     * replace the primary workspace's snapshot with a worktree's listing (the same hazard
+     * [sessionsFor] exists for). The caller inserts the returned session itself, and the CLI's
+     * `session.created` reaches every directory-scoped list through [changes].
+     */
+    suspend fun fork(id: String, dir: String, messageId: String? = null): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session fork=true message=${messageId != null} dir=${ChatLogSummary.dir(dir)}")
+        val session = call { fork(id, dir, messageId) }
+        log.info("${ChatLogSummary.sid(session.id)} kind=session fork=true ok=true forkedFrom=${ChatLogSummary.sid(id)}")
         return session
     }
 

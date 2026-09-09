@@ -38,6 +38,33 @@ function setup(
 }
 
 describe("worktree update slash action", () => {
+  it("activates a composer selection without turning the goal shortcut into a client action", () => {
+    let active = false
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "goal",
+          hints: [],
+          select: () => {
+            active = true
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: "/goal\nKeep this objective",
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(textarea.value, 5)
+    const entry = ctx.slash.results().find((item) => item.name === "goal")!
+    expect(entry.action).toBeUndefined()
+    ctx.slash.select(entry, textarea, () => {})
+    expect(active).toBe(true)
+    expect(textarea.value).toBe("\nKeep this objective")
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("uses the current worktree selection and preserves text after the action", () => {
     const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
     const ctx = setup(() => {}, {
@@ -370,6 +397,48 @@ describe("useSlashCommand sandbox action", () => {
 })
 
 describe("slash command keyboard selection", () => {
+  it.each(["sandbox", "verify"])("leaves Shift+Tab unhandled with /%s selected", (name) => {
+    const draft = `/${name} keep this draft`
+    const state = { text: draft, prevented: 0, selected: 0, toggles: 0 }
+    const ctx = setup(() => state.toggles++)
+    const cursor = name.length + 1
+    const textarea = {
+      value: draft,
+      selectionStart: cursor,
+      setSelectionRange: (start: number) => (textarea.selectionStart = start),
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Tab",
+      shiftKey: true,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "verify", description: "Verify changes", hints: [] }],
+    })
+    ctx.slash.onInput(draft, cursor)
+    expect(ctx.slash.results()[0]?.name).toBe(name)
+
+    const handled = ctx.slash.onKeyDown(
+      event,
+      textarea,
+      (text) => (state.text = text),
+      () => state.selected++,
+    )
+
+    expect(handled).toBe(false)
+    expect(state).toEqual({ text: draft, prevented: 0, selected: 0, toggles: 0 })
+    expect(textarea.value).toBe(draft)
+    expect(textarea.selectionStart).toBe(cursor)
+    expect(ctx.slash.show()).toBe(true)
+    expect(ctx.slash.index()).toBe(0)
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
   it.each(["Enter", "Tab"] as const)("keeps %s selection aligned with the action-first menu", (key) => {
     const state = { text: "/refresh", prevented: 0 }
     const ctx = setup(() => {})

@@ -1,28 +1,53 @@
 import { createHash } from "node:crypto"
 import { serialize } from "../../util/serialize"
-import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
+import type {
+  CheckStatus,
+  PRCheck,
+  PRComment,
+  PRCommentReply,
+  PRConversationComment,
+  PRMergeability,
+  PRMergeMethod,
+  PRMergeState,
+  PRReaction,
+  PRReactionContent,
+  PRReviewer,
+  PRStatus,
+  ReviewDecision,
+  ReviewerState,
+} from "../types"
+import { PR_REACTION_CONTENT, isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import type {
+  PRResult,
+  GhAuthor,
+  GhComment,
+  GhReactionGroup,
+  GhThread,
+  GhReviewRequest,
+  GhReview,
+  GhConversationComment,
+  GhReviewWithBody,
+} from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
   const data = JSON.parse(json)
   if (!data.number) return null
   const state = data.isDraft ? "draft" : (data.state?.toLowerCase() ?? "open")
-  const decision = data.reviewDecision as string | undefined
-  const review =
-    decision === "APPROVED"
-      ? "approved"
-      : decision === "CHANGES_REQUESTED"
-        ? "changes_requested"
-        : decision === "REVIEW_REQUIRED"
-          ? "pending"
-          : null
+  const review = reviewValue(data.reviewDecision)
+  const merge = parseMerge(data)
   const result: PRResult = {
+    id: data.id,
     number: data.number,
+    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
+    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
     title: data.title ?? "",
     body: data.body ?? "",
+    ...(typeof data.author?.login === "string" ? { author: data.author.login } : {}),
+    ...(typeof data.createdAt === "string" ? { createdAt: data.createdAt } : {}),
     url: data.url ?? "",
     state,
     review,
+    ...(merge ? { merge } : {}),
     additions: data.additions ?? 0,
     deletions: data.deletions ?? 0,
     files: data.changedFiles ?? 0,
@@ -34,27 +59,99 @@ export function parsePRResult(json: string): PRResult | null {
   return result
 }
 
+function parseMerge(data: Record<string, unknown>): PRResult["merge"] {
+  const mergeable = mergeability(data.mergeable)
+  const state = mergeState(data.mergeStateStatus)
+  const auto = mergeMethod((data.autoMergeRequest as Record<string, unknown> | undefined)?.mergeMethod)
+  if (!mergeable && !state && auto === undefined) return undefined
+  return {
+    mergeable: mergeable ?? "unknown",
+    state: state ?? "unknown",
+    auto: auto ?? null,
+  }
+}
+
+function mergeability(value: unknown): PRMergeability | undefined {
+  if (value === "MERGEABLE") return "mergeable"
+  if (value === "CONFLICTING") return "conflicting"
+  if (value === "UNKNOWN") return "unknown"
+  return undefined
+}
+
+function mergeState(value: unknown): PRMergeState | undefined {
+  if (typeof value !== "string") return undefined
+  const values: Record<string, PRMergeState> = {
+    CLEAN: "clean",
+    BEHIND: "behind",
+    BLOCKED: "blocked",
+    DIRTY: "dirty",
+    UNSTABLE: "unstable",
+    DRAFT: "draft",
+    HAS_HOOKS: "has_hooks",
+    UNKNOWN: "unknown",
+  }
+  return values[value]
+}
+
+function mergeMethod(value: unknown): PRMergeMethod | undefined {
+  if (value === "MERGE") return "merge"
+  if (value === "SQUASH") return "squash"
+  if (value === "REBASE") return "rebase"
+  return undefined
+}
+
+function reviewValue(value: unknown): ReviewDecision | null {
+  if (value === "APPROVED") return "approved"
+  if (value === "CHANGES_REQUESTED") return "changes_requested"
+  if (value === "REVIEW_REQUIRED") return "pending"
+  return null
+}
+
 function checks(items: unknown[]): PRStatus["checks"] {
-  const values = items.map((item): PRCheck => {
+  const latest = new Map<string, { item: unknown; index: number; started: number }>()
+  items.forEach((item, index) => {
     const check = item as {
       name?: string
       context?: string
+      workflowName?: string
+      event?: string
+      startedAt?: string
       state?: string
       status?: string
       conclusion?: string | null
-      link?: string
-      detailsUrl?: string
-      targetUrl?: string
-      startedAt?: string
-      completedAt?: string
     }
-    return {
-      name: check.name ?? check.context ?? "Unknown check",
-      status: checkStatus(check.conclusion ?? check.state ?? check.status ?? "PENDING"),
-      url: check.detailsUrl ?? check.targetUrl ?? check.link,
-      duration: formatCheckDuration(check.startedAt, check.completedAt),
-    }
+    const key = check.context
+      ? `status:${check.context}`
+      : `run:${check.name ?? "Unknown check"}:${check.workflowName ?? ""}:${check.event ?? ""}`
+    const state = check.conclusion ?? check.state ?? check.status
+    const active = ["PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING", "EXPECTED"].includes(state ?? "")
+    const date = check.startedAt ? new Date(check.startedAt).getTime() : Number.NaN
+    const started = Number.isFinite(date) ? date : active ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+    const current = latest.get(key)
+    if (!current || started >= current.started) latest.set(key, { item, index, started })
   })
+  const values = [...latest.values()]
+    .sort((a, b) => a.index - b.index)
+    .map(({ item }) => {
+      const check = item as {
+        name?: string
+        context?: string
+        state?: string
+        status?: string
+        conclusion?: string | null
+        link?: string
+        detailsUrl?: string
+        targetUrl?: string
+        startedAt?: string
+        completedAt?: string
+      }
+      return {
+        name: check.name ?? check.context ?? "Unknown check",
+        status: checkStatus(check.conclusion ?? check.state ?? check.status ?? "PENDING"),
+        url: check.detailsUrl ?? check.targetUrl ?? check.link,
+        duration: formatCheckDuration(check.startedAt, check.completedAt),
+      }
+    })
   return summarize(values)
 }
 
@@ -77,19 +174,20 @@ export function checkStatus(state: string): CheckStatus {
     case "FAILURE":
     case "ERROR":
     case "ACTION_REQUIRED":
+    case "TIMED_OUT":
+    case "STARTUP_FAILURE":
       return "failure"
     case "PENDING":
     case "QUEUED":
     case "IN_PROGRESS":
     case "REQUESTED":
     case "WAITING":
+    case "EXPECTED":
       return "pending"
     case "SKIPPED":
       return "skipped"
     case "CANCELLED":
-    case "TIMED_OUT":
     case "STALE":
-    case "STARTUP_FAILURE":
       return "cancelled"
     default:
       return "pending"
@@ -111,29 +209,96 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
   COMMENTED: "commented",
 }
 
+const REACTION_CONTENT = new Set<string>(PR_REACTION_CONTENT)
+
+export function parseReactions(groups?: GhReactionGroup[]): PRReaction[] {
+  return (groups ?? []).flatMap((group) => {
+    const content = group.content
+    const count = group.reactors?.totalCount ?? group.users?.totalCount
+    if (
+      !content ||
+      !REACTION_CONTENT.has(content) ||
+      typeof count !== "number" ||
+      !Number.isSafeInteger(count) ||
+      count < 1
+    ) {
+      return []
+    }
+    return [{ content: content as PRReactionContent, count, viewerHasReacted: group.viewerHasReacted === true }]
+  })
+}
+
+function location(
+  thread: GhThread,
+  first: GhComment,
+): Pick<PRComment, "file" | "side" | "line" | "originalLine" | "startLine"> {
+  const originalLine = thread.originalLine ?? first.originalLine ?? undefined
+  const line = thread.line ?? first.line ?? originalLine
+  const side = thread.diffSide === "LEFT" ? "deletions" : thread.diffSide === "RIGHT" ? "additions" : undefined
+  const startLine = side && thread.startDiffSide === thread.diffSide ? (thread.startLine ?? undefined) : undefined
+  return {
+    file: thread.path ?? first.path,
+    ...(side ? { side } : {}),
+    ...(line === undefined ? {} : { line }),
+    ...(originalLine === undefined ? {} : { originalLine }),
+    ...(startLine === undefined ? {} : { startLine }),
+  }
+}
+
+function parseReply(node: GhComment): PRCommentReply {
+  const reactions = parseReactions(node.reactionGroups)
+  return {
+    id: node.id,
+    canEdit: node.viewerDidAuthor === true && node.viewerCanUpdate === true,
+    canDelete: node.viewerDidAuthor === true && node.viewerCanDelete === true,
+    author: node.author?.login ?? "unknown",
+    body: node.body ?? "",
+    ...(node.author?.avatarUrl ? { avatar: node.author.avatarUrl } : {}),
+    ...(node.createdAt ? { createdAt: new Date(node.createdAt).getTime() } : {}),
+    ...(node.url ? { url: node.url } : {}),
+    ...(reactions.length > 0 ? { reactions } : {}),
+  }
+}
+
+function parseReplies(nodes: GhComment[]): PRComment["replies"] {
+  const list = nodes.slice(1).map(parseReply)
+  return list.length > 0 ? list : undefined
+}
+
+function parseThread(thread: GhThread): PRComment | undefined {
+  // Keep the root and include recent replies beyond the first page.
+  const original = thread.comments?.nodes ?? []
+  const ids = new Set(original.map((node) => node.id))
+  const nodes = [...original, ...(thread.latest?.nodes ?? []).filter((node) => !ids.has(node.id))]
+  const first = nodes.at(0)
+  if (!first) return undefined
+  const current = thread.line === undefined ? first.line : thread.line
+  const reactions = parseReactions(first.reactionGroups)
+  return {
+    id: first.id,
+    canEdit: first.viewerDidAuthor === true && first.viewerCanUpdate === true,
+    canDelete: first.viewerDidAuthor === true && first.viewerCanDelete === true,
+    threadId: thread.id ?? first.id,
+    author: first.author?.login ?? "unknown",
+    avatar: first.author?.avatarUrl,
+    body: first.body ?? "",
+    ...location(thread, first),
+    url: first.url,
+    resolved: thread.isResolved ?? false,
+    outdated: thread.isOutdated ?? false,
+    createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
+    diffHunk: first.diffHunk,
+    ...(typeof current === "number" ? {} : { unmapped: true, previewUnavailable: true }),
+    replies: parseReplies(nodes),
+    ...(reactions.length > 0 ? { reactions } : {}),
+  }
+}
+
 export function parseComments(threads: GhThread[]): PRComment[] {
   const items: PRComment[] = []
   for (const thread of threads) {
-    const nodes = thread.comments?.nodes ?? []
-    const first = nodes[0]
-    if (!first) continue
-    const replies = nodes.slice(1).map((node) => ({ author: node.author?.login ?? "unknown", body: node.body ?? "" }))
-    items.push({
-      id: first.id,
-      threadId: thread.id ?? first.id,
-      author: first.author?.login ?? "unknown",
-      avatar: first.author?.avatarUrl,
-      body: first.body ?? "",
-      file: first.path,
-      // An outdated thread has no current line, so fall back to the line it was written against.
-      line: first.line ?? first.originalLine,
-      url: first.url,
-      resolved: thread.isResolved ?? false,
-      outdated: thread.isOutdated ?? false,
-      createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-      diffHunk: first.diffHunk,
-      replies: replies.length > 0 ? replies : undefined,
-    })
+    const item = parseThread(thread)
+    if (item) items.push(item)
   }
   return items
 }
@@ -156,6 +321,52 @@ export function parseReviewers(requests: GhReviewRequest[], reviews: GhReview[])
   return [...map.values()]
 }
 
+function bot(author?: GhAuthor & { __typename?: string }): boolean {
+  if (!author?.login) return false
+  return author.__typename === "Bot" || author.login.endsWith("[bot]") || author.login === "kilo-code-bot"
+}
+
+export function commentItem(node: GhConversationComment): PRConversationComment | null {
+  if (!node.id || !node.body?.trim()) return null
+  const reactions = parseReactions(node.reactionGroups)
+  return {
+    id: node.id,
+    kind: "issue",
+    canEdit: node.viewerDidAuthor === true && node.viewerCanUpdate === true,
+    canDelete: node.viewerDidAuthor === true && node.viewerCanDelete === true,
+    author: node.author?.login ?? "unknown",
+    avatar: node.author?.avatarUrl,
+    body: node.body,
+    createdAt: node.createdAt ? new Date(node.createdAt).getTime() : undefined,
+    url: node.url,
+    isBot: bot(node.author) || undefined,
+    ...(reactions.length > 0 ? { reactions } : {}),
+  }
+}
+
+export function reviewItem(node: GhReviewWithBody): PRConversationComment | null {
+  // A review without text is still an event: an approval or a change request
+  // has to show in the conversation even when the reviewer wrote nothing.
+  if (!node.id) return null
+  const state = REVIEWER_STATE[node.state ?? ""]
+  if (!node.body?.trim() && !state) return null
+  const reactions = parseReactions(node.reactionGroups)
+  return {
+    id: node.id,
+    kind: "review",
+    canEdit: false,
+    canDelete: false,
+    author: node.author?.login ?? "unknown",
+    avatar: node.author?.avatarUrl,
+    body: node.body ?? "",
+    createdAt: node.submittedAt ? new Date(node.submittedAt).getTime() : undefined,
+    url: node.url,
+    state,
+    isBot: bot(node.author) || undefined,
+    ...(reactions.length > 0 ? { reactions } : {}),
+  }
+}
+
 /**
  * Short, user-facing reason from a failed `gh` invocation. The raw message
  * repeats the whole command line, which is useless inside a comment card.
@@ -176,25 +387,74 @@ export function ghErrorReason(message: string): string {
  */
 export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
   if (!prev || prev.number !== next.number || prev.url !== next.url) return next
+  const current = prev.baseRefOid === next.baseRefOid && prev.headRefOid === next.headRefOid ? prev : undefined
   return {
     ...next,
-    comments: next.comments ?? prev.comments,
-    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? prev.unresolvedThreads,
+    viewerDidAuthor: next.viewerDidAuthor ?? prev.viewerDidAuthor,
+    id: next.id ?? prev.id,
+    comments: next.comments ?? current?.comments,
+    unresolvedThreads: next.unresolvedThreads ?? next.comments?.unresolved ?? current?.unresolvedThreads,
+    conversation: next.conversation ?? prev.conversation,
+    conversationHasEarlier: next.conversationHasEarlier ?? prev.conversationHasEarlier,
   }
 }
 
 export function signature(pr: PRStatus): string {
   return serialize([
+    pr.viewerDidAuthor,
+    pr.id,
     pr.url,
     pr.number,
+    pr.baseRefOid ?? null,
+    pr.headRefOid ?? null,
     pr.title,
     pr.state,
     pr.review,
-    [pr.checks.status, pr.checks.passed, pr.checks.total],
-    pr.reviewers.map((r) => [r.login, r.state]),
+    [
+      pr.checks.status,
+      pr.checks.passed,
+      pr.checks.total,
+      pr.checks.checks.map((check) => [check.name, check.status, check.url ?? "", check.duration ?? ""]),
+    ],
+    pr.reviewers.map((r) => [r.login, r.state, r.avatar ?? ""]),
     pr.body ?? "",
-    [pr.comments?.total ?? null, pr.unresolvedThreads ?? null, commentsSig(pr.comments?.comments)],
+    [
+      pr.comments?.total ?? null,
+      pr.comments?.unresolved ?? null,
+      pr.unresolvedThreads ?? null,
+      commentsSig(pr.comments?.comments),
+    ],
+    pr.conversation?.map((item) =>
+      isConversationComment(item)
+        ? [
+            item.id,
+            item.author,
+            item.body,
+            item.state ?? "",
+            item.isBot ? 1 : 0,
+            item.reactions?.map((reaction) => [reaction.content, reaction.count, reaction.viewerHasReacted]) ?? [],
+            item.kind,
+            item.canEdit,
+            item.canDelete,
+          ]
+        : [
+            item.kind,
+            item.id,
+            item.createdAt ?? null,
+            item.kind === "commit" ? item.sha : item.event,
+            item.kind === "event" ? (item.detail ?? "") : "",
+          ],
+    ) ?? [],
   ])
+}
+
+export function retainPRStatus(
+  prev: PRStatus | undefined,
+  prevBranch: string | undefined,
+  branch: string | undefined,
+  next: PRStatus | null,
+): boolean {
+  return !next && prev !== undefined && branch !== undefined && branch === prevBranch
 }
 
 /**

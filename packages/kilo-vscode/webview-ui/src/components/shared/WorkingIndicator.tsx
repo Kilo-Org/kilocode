@@ -3,9 +3,9 @@
  * Shows a spinner, status text, and elapsed time counter while the agent is active.
  * Matches the v1.0.25 working indicator UX.
  *
- * Purely visual: `SessionDock` decides when this renders (see `showsWorking`).
- * Keeping the decision in one place is what stops the dock from resizing when
- * a turn starts or ends.
+ * `SessionDock` decides when this renders (see `showsWorking`). Keeping the
+ * decision in one place is what stops the dock from resizing when a turn starts
+ * or ends.
  */
 
 import { type Component, Show, createSignal, createEffect, createMemo, onCleanup } from "solid-js"
@@ -17,7 +17,11 @@ import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
 import { tracksElapsed } from "./working-indicator-utils"
 
-export const WorkingIndicator: Component = () => {
+interface WorkingIndicatorProps {
+  onScrollToBottom?: () => void
+}
+
+export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -95,20 +99,23 @@ export const WorkingIndicator: Component = () => {
 
   return (
     <div class="working-indicator">
-      <Spinner />
-      <StatusText text={statusText()} />
-      {/* Kept out of the label: a countdown inside the morphing text would swap it
-          once a second, and every tick would read as a new status. */}
-      <Show when={isRetrying() && retryCountdown() > 0}>
-        <span class="working-count">({retryCountdown()}s)</span>
-      </Show>
-      {/* Laid out for the whole turn and only faded until the first tick: mounting
-          the counter a second in shifted the whole cluster sideways. */}
-      <Show when={timing()}>
-        <span class="working-elapsed" data-empty={elapsed() > 0 ? undefined : ""}>
-          {formatElapsed()}
-        </span>
-      </Show>
+      <Button variant="ghost" size="small" class="working-indicator-scroll" onClick={() => props.onScrollToBottom?.()}>
+        <Spinner />
+        <StatusText text={statusText()} />
+        {/* Kept out of the label: a countdown inside the morphing text would swap it
+            once a second, and every tick would read as a new status. */}
+        <Show when={isRetrying() && retryCountdown() > 0}>
+          <span class="working-count">({retryCountdown()}s)</span>
+        </Show>
+        {/* Laid out for the whole turn and only faded until the first tick: mounting
+            the counter a second in shifted the whole cluster sideways. */}
+        <Show when={timing()}>
+          <span class="working-elapsed" data-empty={elapsed() > 0 ? undefined : ""}>
+            {formatElapsed()}
+          </span>
+        </Show>
+        <span class="sr-only">{language.t("session.messages.scrollToBottom")}</span>
+      </Button>
       <Show when={isRetrying()}>
         <Button
           variant="secondary"

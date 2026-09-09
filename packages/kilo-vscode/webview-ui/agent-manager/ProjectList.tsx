@@ -1,6 +1,6 @@
 import { createMemo, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
   AgentManagerSidebarTarget,
   AgentManagerStateMessage,
@@ -23,6 +23,7 @@ import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
 
 const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
@@ -49,6 +50,7 @@ interface Props {
   onCreate?: (projectId: string) => void
   onSelect?: (target: AgentManagerSidebarTarget, restore?: boolean) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
@@ -57,7 +59,6 @@ interface Props {
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
-  onHelp: () => void
   onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -191,6 +192,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}
@@ -204,15 +206,6 @@ export const ProjectList: Component<Props> = (props) => {
               onClick={props.onShortcuts}
             />
           </TooltipKeybind>
-          <Tooltip value={props.t("agentManager.intro.reopen")} placement="bottom">
-            <IconButton
-              icon="help"
-              size="small"
-              variant="ghost"
-              aria-label={props.t("agentManager.intro.reopen")}
-              onClick={props.onHelp}
-            />
-          </Tooltip>
         </>
       }
       onAdd={() => vscode.postMessage({ type: "agentManager.addProject" })}
@@ -250,6 +243,7 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
           onOpenComments={props.onOpenComments}
+          onOpenPR={props.onOpenPR}
           onNewWorktree={newWorktree}
           shortcutMap={props.shortcutMap}
         />

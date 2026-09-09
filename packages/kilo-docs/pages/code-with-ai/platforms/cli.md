@@ -39,6 +39,14 @@ kilo --help
 
 After installation, run `kilo` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
 
+## Opening Links
+
+Links in agent responses use terminal hyperlink metadata when the terminal supports it. Kilo also handles links inside the TUI, so mouse capture does not make supported HTTP(S) links inactive. Move the pointer over a link to see the hover underline, then click it to open the default browser.
+
+Ghostty sends native link clicks through the TUI when mouse capture is enabled. Use `Ctrl+Shift+click` on Linux or `Cmd+Shift+click` on macOS for terminal-native activation. The application click handler does not depend on those modifiers.
+
+If a link cannot open, select and copy its visible URL. Links are opened on the machine running Kilo, so use the copy fallback when Kilo runs over SSH and the browser is on your local machine. `KILO_DISABLE_MOUSE=1` can help diagnose terminal-native link behavior, but it also disables TUI mouse controls and is not required for normal link activation.
+
 ## Update
 
 Upgrade the Kilo CLI:

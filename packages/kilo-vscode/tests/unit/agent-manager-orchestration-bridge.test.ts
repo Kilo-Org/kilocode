@@ -48,7 +48,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
     } = {}
     const status = { failList: "", failReply: false }
-    const managed = new Set(["ses_target"])
+    const managed = new Set(["ses_caller", "ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
     const push = mock(() => undefined)
@@ -58,6 +58,7 @@ describe("AgentManagerOrchestrationBridge", () => {
         get: mock(async ({ sessionID, directory }: { sessionID?: string; directory?: string }) => ({
           data: { id: sessionID ?? "ses_target", directory: directory ?? dir, title: "Target" } as Session,
         })),
+        messages: mock(async () => ({ data: [] })),
         status: mock(async () => ({ data: {} })),
         promptAsync,
       },
@@ -172,7 +173,24 @@ describe("AgentManagerOrchestrationBridge", () => {
         sessionID: "ses_target",
         directory: dir,
         messageID: "msg_agent_manager_amr_prompt",
-        parts: [{ type: "text", text: "Continue" }],
+        parts: [
+          {
+            type: "text",
+            text: expect.stringContaining(
+              "[Agent Manager peer request]\nRequest ID: amr_prompt\nFrom session: ses_caller",
+            ),
+            metadata: {
+              agentManager: {
+                kind: "request",
+                requestID: "amr_prompt",
+                sourceSessionID: "ses_caller",
+                sourceDirectory: root,
+                targetSessionID: "ses_target",
+                prompt: "Continue",
+              },
+            },
+          },
+        ],
       }),
       { throwOnError: true },
     )
@@ -188,6 +206,132 @@ describe("AgentManagerOrchestrationBridge", () => {
         result: { operation: "prompt", sessionID: "ses_target", delivered: true },
       },
     ])
+    test.bridge.dispose()
+  })
+
+  it("routes a peer reply to the original session and rejects the wrong recipient", async () => {
+    const test = harness()
+    test.request(request)
+    await waitFor(() => test.replies.length === 1)
+
+    test.request({
+      id: "amr_reply",
+      sessionID: "ses_target",
+      operation: "prompt",
+      targetSessionID: "ses_caller",
+      prompt: "The change is complete.",
+      replyTo: "amr_prompt",
+    })
+    await waitFor(() => test.replies.length === 2)
+
+    expect(test.promptAsync).toHaveBeenCalledTimes(2)
+    expect(test.promptAsync).toHaveBeenLastCalledWith(
+      {
+        sessionID: "ses_caller",
+        directory: root,
+        messageID: "msg_agent_manager_amr_reply",
+        parts: [{ type: "text", text: expect.stringContaining("[Agent Manager peer reply]") }],
+        snapshotInitialization: "wait",
+      },
+      { throwOnError: true },
+    )
+    expect(test.replies[1]).toEqual({
+      requestID: "amr_reply",
+      directory: root,
+      result: { operation: "prompt", sessionID: "ses_caller", delivered: true },
+    })
+
+    test.request({
+      id: "amr_wrong_reply",
+      sessionID: "ses_other",
+      operation: "prompt",
+      targetSessionID: "ses_caller",
+      prompt: "This must not be delivered.",
+      replyTo: "amr_prompt",
+    })
+    await waitFor(() => test.rejections.length === 1)
+
+    expect(test.rejections[0]).toMatchObject({ error: { code: "unknown_session" } })
+    expect(test.promptAsync).toHaveBeenCalledTimes(2)
+    test.bridge.dispose()
+  })
+
+  it("recovers a reply route from the persisted peer request", async () => {
+    const test = harness()
+    test.request(request)
+    await waitFor(() => test.replies.length === 1)
+
+    const body = test.promptAsync.mock.calls[0]?.[0] as { parts: Array<{ metadata?: unknown }> }
+    test.client.session.messages.mockResolvedValue({
+      data: [{ parts: [{ type: "text" }, { type: "text", metadata: body.parts[0]?.metadata }] }],
+    })
+    ;(test.bridge as unknown as { replyRoutes: Map<string, unknown> }).replyRoutes.clear()
+
+    test.request({
+      id: "amr_recovered_reply",
+      sessionID: "ses_target",
+      operation: "prompt",
+      targetSessionID: "ses_caller",
+      prompt: "The recovered route works.",
+      replyTo: "amr_prompt",
+    })
+    await waitFor(() => test.replies.length === 2)
+
+    expect(test.client.session.messages).toHaveBeenCalledWith({
+      sessionID: "ses_target",
+      directory: root,
+      limit: 0,
+    })
+    expect(test.promptAsync).toHaveBeenCalledTimes(2)
+    expect(test.replies[1]).toEqual({
+      requestID: "amr_recovered_reply",
+      directory: root,
+      result: { operation: "prompt", sessionID: "ses_caller", delivered: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("rejects a reply after the original session is closed", async () => {
+    const test = harness()
+    test.request({ ...request, id: "amr_closed" })
+    await waitFor(() => test.replies.length === 1)
+    test.managed.delete("ses_caller")
+
+    test.request({
+      id: "amr_closed_reply",
+      sessionID: "ses_target",
+      operation: "prompt",
+      targetSessionID: "ses_caller",
+      prompt: "This must not be delivered.",
+      replyTo: "amr_closed",
+    })
+    await waitFor(() => test.rejections.length === 1)
+
+    expect(test.rejections[0]).toMatchObject({
+      error: { code: "unknown_session", message: "The original Agent Manager sender is no longer available" },
+    })
+    expect(test.promptAsync).toHaveBeenCalledTimes(1)
+    test.bridge.dispose()
+  })
+
+  it("adds source-session attribution to prompts sent by another agent", async () => {
+    const test = harness()
+    test.request({ ...request, id: "amr_attributed", sourceSessionID: "ses_caller" } as AgentManagerRequest & {
+      sourceSessionID: string
+    })
+    await waitFor(() => test.promptAsync.mock.calls.length === 1)
+
+    expect(test.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parts: [
+          expect.objectContaining({
+            type: "text",
+            text: expect.stringContaining("Continue\n\n<!-- kilo-agent-manager source=ses_caller -->"),
+          }),
+        ],
+      }),
+      { throwOnError: true },
+    )
     test.bridge.dispose()
   })
 

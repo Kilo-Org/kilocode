@@ -111,7 +111,7 @@ describe("model network boundaries", () => {
     }),
   )
 
-  for (const id of ["interactive_terminal", "notebook_execute", "background_process"]) {
+  for (const id of ["notebook_execute", "background_process"]) {
     for (const mode of ["allow", "deny"] as const) {
       it.effect(`fails closed before ${id} can execute outside the ${mode} sandbox`, () =>
         Effect.gen(function* () {

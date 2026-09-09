@@ -46,6 +46,12 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+  goal?: {
+    text: string
+    active: boolean
+    status?: "active" | "complete" | "blocked" | "paused"
+    reason?: string
+  } | null
   revert?: {
     messageID: string
     partID?: string

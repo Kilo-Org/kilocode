@@ -1,21 +1,124 @@
-/* Kilo Icon Button overrides – sized to match @vscode/webview-ui-toolkit */
-
 [data-component="icon-button"] {
-  cursor: pointer;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
   border-radius: 5px;
-  padding: 3px;
-  border: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  user-select: none;
   transition:
-    background 120ms,
-    color 120ms,
-    opacity 120ms;
+    background-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease,
+    box-shadow 120ms ease;
 
-  &[data-variant="ghost"]:hover:not(:disabled) {
+  &[data-variant="ghost"]:hover:not(:disabled):not([aria-disabled="true"]),
+  &[data-variant="ghost"]:focus-visible:not(:disabled):not([aria-disabled="true"]) {
     background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
   }
 
-  &:active:not([data-disabled]) {
+  &:active:not(:disabled):not([aria-disabled="true"]) {
     opacity: 0.8;
+  }
+
+  &[data-variant="ghost"][aria-expanded="true"],
+  &[data-variant="ghost"][data-expanded],
+  &[data-variant="ghost"][data-active],
+  &[data-variant="ghost"][data-selected] {
+    background: var(--surface-interactive-base, var(--surface-base-active));
+  }
+
+  &[data-tone="danger"] {
+    color: var(--icon-critical, var(--vscode-errorForeground, #f48771));
+  }
+
+  &[data-tone="success"] {
+    color: var(--icon-success, var(--vscode-testing-iconPassed, #73c991));
+  }
+
+  &[data-tone="danger"]:not(:disabled):not([aria-disabled="true"])[data-active],
+  &[data-tone="danger"]:not(:disabled):not([aria-disabled="true"])[data-selected] {
+    background: color-mix(in srgb, var(--vscode-errorForeground, #f48771) 15%, transparent);
+  }
+
+  &[data-tone="success"]:not(:disabled):not([aria-disabled="true"])[data-active],
+  &[data-tone="success"]:not(:disabled):not([aria-disabled="true"])[data-selected] {
+    background: color-mix(in srgb, var(--vscode-testing-iconPassed, #73c991) 15%, transparent);
+  }
+
+  &[data-size="small"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  &[data-size="large"] {
+    width: 32px;
+    height: 32px;
+  }
+
+  &[data-content="true"] {
+    aspect-ratio: auto;
+    width: auto;
+    min-width: 20px;
+    gap: 5px;
+    padding-inline: 6px;
+  }
+
+  &[data-shape="circle"] {
+    border-radius: 999px;
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible:not(:disabled):not([aria-disabled="true"]) {
+    outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+    outline-offset: 1px;
+  }
+
+  &[data-loading] {
+    cursor: progress;
+    opacity: 1;
+  }
+
+  [data-component="icon"] {
+    pointer-events: none;
+  }
+
+  [data-component="icon"] [data-slot="icon-svg"] {
+    color: currentColor;
+  }
+
+  [data-slot="icon-svg"] {
+    width: 100%;
+    height: auto;
+  }
+
+  &[data-icon="thumbs-up"]:hover [data-slot="icon-svg"] path,
+  &[data-icon="thumbs-down"]:hover [data-slot="icon-svg"] path {
+    fill: currentColor;
+  }
+
+  .icon-button-spinner {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--icon-base, var(--text-base));
   }
 }

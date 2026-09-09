@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.5.9",
+  "version": "7.5.16",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -204,6 +204,11 @@
       {
         "command": "kilo-code.new.toggleMemory",
         "title": "Toggle Project Memory",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleCaffeination",
+        "title": "Toggle Keep Awake",
         "category": "Kilo Code"
       },
       {
@@ -1077,6 +1082,12 @@
           "scope": "application",
           "description": "Enable the experimental Agent Manager browser panel and browser_open tool."
         },
+        "kilo-code.new.experimental.claudeMigration": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Experimental one-time import of supported global Claude Code instructions, simple skills, and disabled MCP definitions into Kilo. The original Claude files are never changed."
+        },
         "kilo-code.new.agentManager.terminalButtonDestination": {
           "type": "string",
           "scope": "application",
@@ -1134,6 +1145,16 @@
           "type": "boolean",
           "default": false,
           "description": "Play sounds when sessions complete, error, or need input"
+        },
+        "kilo-code.new.attention.notifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show VS Code notifications when Kilo completes a task or needs input. Notifications are suppressed while a Kilo panel is active."
+        },
+        "kilo-code.new.attention.OSNotifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show native OS notification alerts when Kilo completes a task or needs input while VS Code is not active."
         },
         "kilo-code.new.attention.sound": {
           "type": "string",
@@ -1208,6 +1229,11 @@
           "type": "boolean",
           "default": true,
           "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
+        },
+        "kilo-code.new.agentManager.pushFixes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Agent Manager: when you send pull request CI failures or review comments to the agent, or update a worktree from its base, ask the agent to commit and push so the pull request updates. Permission prompts still apply. Disable to keep commits manual."
         },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",

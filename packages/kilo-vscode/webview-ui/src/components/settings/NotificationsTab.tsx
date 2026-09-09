@@ -1,4 +1,4 @@
-import { Component, createSignal, onCleanup } from "solid-js"
+import { Component, createSignal, onCleanup, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
@@ -39,16 +39,30 @@ const NotificationsTab: Component = () => {
   const vscode = useVSCode()
   const language = useLanguage()
   const [enabled, setEnabled] = createSignal(false)
+  const [notifications, setNotifications] = createSignal(false)
+  const [os, setOs] = createSignal(false)
+  const [available, setAvailable] = createSignal(false)
   const [sound, setSound] = createSignal("default")
+  const [testState, setTestState] = createSignal<"idle" | "testing" | "success" | "error">("idle")
+  const [testError, setTestError] = createSignal<string>()
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "notificationSettingsLoaded") return
-    setEnabled(message.settings.attentionEnabled)
-    setSound(
-      SOUND_OPTIONS.some((option) => option.value === message.settings.attentionSound)
-        ? message.settings.attentionSound
-        : "default",
-    )
+    if (message.type === "notificationSettingsLoaded") {
+      setEnabled(message.settings.attentionEnabled)
+      setNotifications(message.settings.attentionNotifications)
+      setOs(message.settings.attentionOSNotifications)
+      setAvailable(message.settings.osNotificationsAvailable)
+      setSound(
+        SOUND_OPTIONS.some((option) => option.value === message.settings.attentionSound)
+          ? message.settings.attentionSound
+          : "default",
+      )
+      return
+    }
+    if (message.type === "osNotificationTestResult") {
+      setTestState(message.ok ? "success" : "error")
+      setTestError(message.error)
+    }
   })
 
   onCleanup(unsubscribe)
@@ -71,36 +85,106 @@ const NotificationsTab: Component = () => {
           {language.t("settings.notifications.enable.title")}
         </Switch>
       </SettingsRow>
+      <Show when={enabled()}>
+        <SettingsRow
+          title={language.t("settings.notifications.sounds")}
+          description={language.t("settings.notifications.sound.description")}
+        >
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+            <Select
+              options={SOUND_OPTIONS}
+              current={SOUND_OPTIONS.find((option) => option.value === sound())}
+              value={(option) => option.value}
+              label={(option) => language.t(option.labelKey)}
+              onSelect={(option) => {
+                if (!option) return
+                setSound(option.value)
+                vscode.postMessage({ type: "updateSetting", key: "attention.sound", value: option.value })
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => vscode.postMessage({ type: "testNotification", sound: sound() })}
+            >
+              {language.t("settings.notifications.testSound")}
+            </Button>
+          </div>
+        </SettingsRow>
+      </Show>
+      <Show when={available()}>
+        <SettingsRow
+          title={language.t("settings.notifications.os.title")}
+          description={language.t("settings.notifications.os.description")}
+        >
+          <div style={{ display: "flex", "flex-direction": "column", gap: "8px", "align-items": "flex-end" }}>
+            <Switch
+              checked={os()}
+              onChange={(checked) => {
+                setOs(checked)
+                if (!checked) {
+                  setTestState("idle")
+                  setTestError(undefined)
+                }
+                vscode.postMessage({ type: "updateSetting", key: "attention.OSNotifications", value: checked })
+              }}
+              hideLabel
+            >
+              {language.t("settings.notifications.os.title")}
+            </Switch>
+            <Show when={os()}>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => {
+                  setTestState("testing")
+                  setTestError(undefined)
+                  vscode.postMessage({ type: "testOSNotification" })
+                }}
+              >
+                {language.t("settings.notifications.testOS")}
+              </Button>
+              <Show when={testState() !== "idle"}>
+                <div
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color:
+                      testState() === "error"
+                        ? "var(--vscode-errorForeground)"
+                        : testState() === "success"
+                          ? "var(--vscode-testing-iconPassed, #89d185)"
+                          : undefined,
+                  }}
+                >
+                  {testState() === "testing"
+                    ? language.t("settings.notifications.testOS.testing")
+                    : testState() === "success"
+                      ? language.t("settings.notifications.testOS.success")
+                      : `${language.t("settings.notifications.testOS.error")}${testError() ? `: ${testError()}` : ""}`}
+                </div>
+              </Show>
+            </Show>
+          </div>
+        </SettingsRow>
+      </Show>
       <SettingsRow
-        title={language.t("settings.notifications.sounds")}
-        description={language.t("settings.notifications.sound.description")}
+        title={language.t("settings.notifications.workbench.title")}
+        description={language.t("settings.notifications.workbench.description")}
         last
       >
-        <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((option) => option.value === sound())}
-            value={(option) => option.value}
-            label={(option) => language.t(option.labelKey)}
-            onSelect={(option) => {
-              if (!option) return
-              setSound(option.value)
-              vscode.postMessage({ type: "updateSetting", key: "attention.sound", value: option.value })
-            }}
-            disabled={!enabled()}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-          <Button
-            variant="ghost"
-            size="small"
-            disabled={!enabled()}
-            onClick={() => vscode.postMessage({ type: "testNotification", sound: sound() })}
-          >
-            {language.t("settings.notifications.testSound")}
-          </Button>
-        </div>
+        <Switch
+          checked={notifications()}
+          onChange={(checked) => {
+            setNotifications(checked)
+            vscode.postMessage({ type: "updateSetting", key: "attention.notifications", value: checked })
+          }}
+          hideLabel
+        >
+          {language.t("settings.notifications.workbench.title")}
+        </Switch>
       </SettingsRow>
     </Card>
   )

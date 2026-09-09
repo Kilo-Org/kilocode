@@ -45,6 +45,25 @@ describe("Agent Manager focus", () => {
       flush()
       expect(document.activeElement).toBe(prompt)
 
+      const popup = document.createElement("div")
+      popup.className = "popup-selector"
+      popup.setAttribute("data-expanded", "")
+      const choice = document.createElement("div")
+      choice.tabIndex = 0
+      choice.setAttribute("role", "option")
+      popup.append(choice)
+      document.body.append(popup)
+      focus()
+      await Promise.resolve()
+      choice.focus()
+      flush()
+      expect(document.activeElement).toBe(choice)
+      focus()
+      await Promise.resolve()
+      flush()
+      expect(document.activeElement).toBe(choice)
+      popup.remove()
+
       prompt.blur()
       focus()
       await Promise.resolve()

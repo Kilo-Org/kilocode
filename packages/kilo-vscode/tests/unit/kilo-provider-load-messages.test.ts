@@ -6,6 +6,7 @@ import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-m
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
+const { ProjectRouteService } = await import("../../src/agent-manager/project/route")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
 
@@ -25,12 +26,13 @@ function defer<T>(): Deferred<T> {
   return { promise, resolve, reject }
 }
 
-function mkMessage(id: string, role: "user" | "assistant", time = 0) {
+function mkMessage(id: string, role: "user" | "assistant", time = 0, parentID?: string) {
   return {
     info: {
       id,
       sessionID: "s1",
       role,
+      parentID,
       time: { created: time },
     },
     parts: [],
@@ -235,12 +237,15 @@ function createConnection(client: ReturnType<typeof createClient> | null) {
 
 type ProviderInternals = {
   connectionState: State
+  loadMessagesAbort: AbortController | null
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   sessionStatusMap: Map<string, string>
+  owners: Map<string, { dir: string; project: string }>
   trackedSessionIds: Set<string>
+  syncedChildSessions: Set<string>
   removedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
@@ -265,14 +270,22 @@ type ProviderInternals = {
   handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
-  handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
+  handleLoadMessages: (
+    sid: string,
+    opts?: { mode?: string; before?: string; limit?: number; focus?: boolean },
+  ) => Promise<void>
+  handleSyncSession: (sid: string, parent?: string) => Promise<void>
+  releaseChildSession: (sid: string) => void
   handleDeleteSession: (sid: string) => Promise<void>
   handleDeleteMessage: (sid: string, mid: string, rid?: string) => Promise<void>
 }
 
-function makeProvider(client: ReturnType<typeof createClient> | null) {
+function makeProvider(
+  client: ReturnType<typeof createClient> | null,
+  opts?: ConstructorParameters<typeof KiloProvider>[3],
+) {
   const connection = createConnection(client)
-  const provider = new KiloProvider({} as never, connection as never)
+  const provider = new KiloProvider({} as never, connection as never, undefined, opts)
   const internal = provider as unknown as ProviderInternals
   internal.connectionState = client ? "connected" : "disconnected"
   const sent: unknown[] = []
@@ -577,6 +590,44 @@ describe("KiloProvider session status reconciliation", () => {
     await internal.seedSessionStatusMap()
 
     expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("reconciles a released child from its owning directory snapshot", async () => {
+    const client = createClient({ sessionData: { ...mkSession(), id: "child" } })
+    const routes = new ProjectRouteService()
+    const { internal, sent } = makeProvider(client, {
+      rootDirectory: () => "/repo",
+      projectQualifier: () => ({ projectId: "project" }),
+      routeService: routes,
+    })
+    internal.sessionDirectories.set("parent", "/repo/worktree")
+    await internal.handleSyncSession("child", "parent")
+    internal.sessionStatusMap.set("child", "busy")
+    internal.releaseChildSession("child")
+
+    internal.refreshSessionDetails("parent", "/repo")
+    await Bun.sleep(0)
+    expect(internal.sessionStatusMap.get("child")).toBe("busy")
+
+    internal.refreshSessionDetails("parent", "/repo/worktree")
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("child")).toBe("idle")
+    expect(["busy", "retry", "waiting"].includes(internal.sessionStatusMap.get("child") ?? "idle")).toBe(false)
+    expect(internal.owners.has("child")).toBe(false)
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: "child", status: "idle" })
+  })
+
+  it("does not retain child ownership outside multi-project providers", async () => {
+    const client = createClient({ sessionData: { ...mkSession(), id: "child" } })
+    const { internal } = makeProvider(client)
+    internal.sessionDirectories.set("parent", "/repo/worktree")
+    await internal.handleSyncSession("child", "parent")
+    internal.sessionStatusMap.set("child", "busy")
+
+    internal.releaseChildSession("child")
+
+    expect(internal.owners.has("child")).toBe(false)
   })
 })
 
@@ -1224,6 +1275,115 @@ describe("KiloProvider.handleDeleteMessage", () => {
     })
     expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: false })
     error.mockRestore()
+  })
+})
+
+describe("KiloProvider.handleLoadMessages / cold tail", () => {
+  const items = [
+    mkMessage("m2", "assistant", 20, "m1"),
+    mkMessage("m3", "user", 30),
+    mkMessage("m4", "assistant", 40, "m3"),
+  ]
+
+  it.each([false, true, "error"] as const)(
+    "waits for authoritative metadata (%s) without delaying messages",
+    async (revert) => {
+      const details = Promise.withResolvers<{ data: unknown }>()
+      const requested = Promise.withResolvers<void>()
+      let gets = 0
+      const client = createClient({
+        sessionGet: () => {
+          gets++
+          return details.promise
+        },
+      })
+      client.session.messages = async (params) => {
+        client.calls.push(params)
+        requested.resolve()
+        return params.before
+          ? mkResult([mkMessage("m1", "user", 10)])
+          : { ...mkResult(items), response: { headers: new Headers({ "X-Next-Cursor": "older" }) } }
+      }
+      const { provider, internal, sent } = makeProvider(client)
+      internal.currentSession = mkSession()
+      const load = internal.handleLoadMessages("s1")
+      await requested.promise
+      expect(gets).toBe(1)
+      expect(client.calls).toHaveLength(1)
+      expect(sent.some((msg) => (msg as { type: string }).type === "messagesLoaded")).toBe(false)
+      if (revert === "error") details.reject(new Error("metadata unavailable"))
+      else details.resolve({ data: mkSession(revert ? { messageID: "m3" } : undefined) })
+      await load
+      const loaded = sent.find((msg) => (msg as { type: string }).type === "messagesLoaded") as {
+        messages: { id: string }[]
+      }
+      expect(loaded.messages.map((msg) => msg.id)).toEqual(revert ? ["m1", "m2", "m3", "m4"] : ["m3", "m4"])
+      expect(client.calls).toHaveLength(revert ? 2 : 1)
+      expect(gets).toBe(1)
+      expect(sent.some((msg) => (msg as { type: string }).type === "error")).toBe(false)
+      provider.dispose()
+    },
+  )
+
+  it("disables trimming for non-focused loads without fetching metadata", async () => {
+    let gets = 0
+    const client = createClient({
+      sessionGet: async () => {
+        gets++
+        return { data: mkSession() }
+      },
+    })
+    client.session.messages = async (params) =>
+      params.before
+        ? mkResult([mkMessage("m1", "user", 10)])
+        : { ...mkResult(items), response: { headers: new Headers({ "X-Next-Cursor": "older" }) } }
+    const { provider, internal, sent } = makeProvider(client)
+    await internal.handleLoadMessages("s1", { focus: false })
+    const loaded = sent.find((msg) => (msg as { type: string }).type === "messagesLoaded") as {
+      messages: { id: string }[]
+    }
+    expect(loaded.messages.map((msg) => msg.id)).toEqual(["m1", "m2", "m3", "m4"])
+    expect(gets).toBe(0)
+    provider.dispose()
+  })
+
+  it("does not trim after metadata is superseded while messages are pending", async () => {
+    const pending = Promise.withResolvers<ReturnType<typeof mkResult>>()
+    const client = createClient({ sessionData: mkSession() })
+    client.session.messages = async (params) =>
+      params.before ? mkResult([mkMessage("m1", "user", 10)]) : pending.promise
+    const { provider, internal, sent } = makeProvider(client)
+    const load = internal.handleLoadMessages("s1")
+    await Promise.resolve()
+    await Promise.resolve()
+    internal.revisions.set("s1", { id: "newer", seq: 1 })
+    pending.resolve({ ...mkResult(items), response: { headers: new Headers({ "X-Next-Cursor": "older" }) } })
+    await load
+    const loaded = sent.find((msg) => (msg as { type: string }).type === "messagesLoaded") as {
+      messages: { id: string }[]
+    }
+    expect(loaded.messages.map((msg) => msg.id)).toEqual(["m1", "m2", "m3", "m4"])
+    provider.dispose()
+  })
+
+  it("drops a cancelled load waiting for metadata without backfilling", async () => {
+    const details = Promise.withResolvers<{ data: unknown }>()
+    const requested = Promise.withResolvers<void>()
+    const client = createClient({ sessionGet: () => details.promise })
+    client.session.messages = async (params) => {
+      client.calls.push(params)
+      requested.resolve()
+      return { ...mkResult(items), response: { headers: new Headers({ "X-Next-Cursor": "older" }) } }
+    }
+    const { provider, internal, sent } = makeProvider(client)
+    const load = internal.handleLoadMessages("s1")
+    await requested.promise
+    internal.loadMessagesAbort?.abort()
+    details.resolve({ data: mkSession() })
+    await load
+    expect(client.calls).toHaveLength(1)
+    expect(sent.some((msg) => (msg as { type: string }).type === "messagesLoaded")).toBe(false)
+    provider.dispose()
   })
 })
 

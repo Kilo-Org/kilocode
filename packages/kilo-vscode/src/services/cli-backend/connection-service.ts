@@ -663,6 +663,16 @@ export class KiloConnectionService {
   /**
    * Unregister a provider's visible sessions (e.g. on hide, clear, or dispose).
    */
+  /**
+   * Whether any surface is currently displaying this session. Registrations are
+   * already gated on their panel's visibility, so a retained-but-hidden webview
+   * does not count.
+   */
+  isVisible(sessionID: string): boolean {
+    for (const ids of this.visible.values()) if (ids.has(sessionID)) return true
+    return false
+  }
+
   unregisterVisible(key: string): void {
     if (!this.visible.has(key)) return
     this.visible.delete(key)

@@ -1,5 +1,6 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
+import type { PRComment, PRReactionContent } from "../../../agent-manager/pr/pr-types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
@@ -18,6 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { PRMergeResult } from "../../../../src/shared/pr-comment-actions"
 
 export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
@@ -61,6 +63,7 @@ import type { ProviderUsageLoadedMessage } from "./provider-usage"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
+  AgentManagerCaffeinationMessage,
   BranchInfo,
   ContinueInWorktreeStatus,
   LocalGitStats,
@@ -84,6 +87,7 @@ import type {
   MigrationSessionProgressMessage,
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
+import type { SessionBoardLoadedMessage } from "./board"
 
 // ============================================
 // Messages FROM extension TO webview
@@ -320,6 +324,11 @@ export interface OpenCloudSessionMessage {
   sessionId: string
 }
 
+export interface OpenSessionMessage {
+  type: "openSession"
+  sessionID: string
+}
+
 export interface SelectKiloModelMessage {
   type: "selectKiloModel"
   modelID?: string
@@ -371,6 +380,7 @@ export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewCommentEntry[]
   autoSend?: boolean
+  sessionID?: string
 }
 
 export interface DocumentResultMessage {
@@ -692,6 +702,7 @@ export interface ClaudeCompatSettingLoadedMessage {
 export interface ExtensionSettings {
   maxCost?: number
   multiProject?: boolean
+  claudeMigration?: boolean
   [key: string]: unknown
 }
 
@@ -756,8 +767,17 @@ export interface NotificationSettingsLoadedMessage {
   type: "notificationSettingsLoaded"
   settings: {
     attentionEnabled: boolean
+    attentionNotifications: boolean
+    attentionOSNotifications: boolean
     attentionSound: string
+    osNotificationsAvailable: boolean
   }
+}
+
+export interface OSNotificationTestResultMessage {
+  type: "osNotificationTestResult"
+  ok: boolean
+  error?: string
 }
 
 export interface TimelineSettingLoadedMessage {
@@ -773,6 +793,11 @@ export interface ThroughputSettingLoadedMessage {
 export interface AutoApprovalReasonSettingLoadedMessage {
   type: "autoApprovalReasonSettingLoaded"
   visible: boolean
+}
+
+export interface PushFixesSettingLoadedMessage {
+  type: "pushFixesSettingLoaded"
+  enabled: boolean
 }
 
 export interface WorkStyleLoadedMessage {
@@ -846,6 +871,12 @@ export interface AgentManagerSessionClosedMessage {
   sessionId: string
 }
 
+export interface AgentManagerWorktreeDeletedMessage {
+  type: "agentManager.worktreeDeleted"
+  projectId: string
+  worktreeId: string
+}
+
 // Full state push from extension to webview
 export interface AgentManagerStateMessage {
   type: "agentManager.state"
@@ -871,6 +902,7 @@ export interface AgentManagerStateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   browserAutomation?: boolean
+  restricted?: boolean
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -1117,6 +1149,7 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   projectId?: string
   sessionId: string
   loading: boolean
+  reset?: boolean
 }
 
 // Agent Manager: Source-level diff notice (extension → webview)
@@ -1191,6 +1224,17 @@ export interface AgentManagerPRErrorMessage {
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+export interface AgentManagerCommentReactionResultMessage {
+  type: "agentManager.commentReactionResult"
+  projectId?: string
+  worktreeId: string
+  commentId: string
+  reaction: PRReactionContent
+  add: boolean
+  success: boolean
+  error?: string
+}
+
 // Sidebar: Live worktree diff stats (extension → webview)
 export interface WorktreeStatsLoadedMessage {
   type: "worktreeStatsLoaded"
@@ -1243,6 +1287,24 @@ export interface EnhancePromptErrorMessage {
 export interface ViewSubAgentSessionMessage {
   type: "viewSubAgentSession"
   sessionID: string
+}
+
+export interface DiffViewerContextMessage {
+  type: "diffViewer.context"
+  key: string
+}
+
+export interface DiffViewerPRCommentsMessage {
+  type: "diffViewer.prComments"
+  comments: PRComment[]
+  target?: import("../../../../src/shared/pr-comment-actions").PRTarget
+  threads?: string[]
+}
+
+export interface DiffViewerFocusCommentMessage {
+  type: "diffViewer.focusComment"
+  id: string
+  file: string
 }
 
 export interface DiffViewerDiffsMessage {
@@ -1492,6 +1554,14 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | {
+      type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+      projectId?: string
+      worktreeId: string
+      threadId: string
+      success: boolean
+      error?: string
+    }
   | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
   | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
@@ -1582,9 +1652,11 @@ export type ExtensionMessage =
   | ConfigBindingExpiredMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
+  | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
+  | PushFixesSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1596,10 +1668,12 @@ export type ExtensionMessage =
   | AgentManagerSessionClosedMessage
   | AgentManagerWorktreeActivityMessage
   | AgentManagerStateMessage
+  | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
   | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
+  | AgentManagerCaffeinationMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
   | SandboxStatusMessage
@@ -1618,6 +1692,7 @@ export type ExtensionMessage =
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
   | OpenCloudSessionMessage
+  | OpenSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
   | AgentManagerImportResultMessage
@@ -1634,6 +1709,8 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerPRErrorMessage
+  | AgentManagerCommentReactionResultMessage
+  | PRMergeResult
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
@@ -1648,6 +1725,9 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
+  | DiffViewerContextMessage
+  | DiffViewerPRCommentsMessage
+  | DiffViewerFocusCommentMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
@@ -1687,3 +1767,4 @@ export type ExtensionMessage =
   | MemoryEventMessage
   | MemoryOperationResultMessage
   | BackgroundJobsLoadedMessage
+  | SessionBoardLoadedMessage
