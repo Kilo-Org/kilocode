@@ -1271,7 +1271,9 @@ const cleanup = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        <ConfigProvider>
+          <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),
@@ -1294,7 +1296,9 @@ const remount = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        <ConfigProvider>
+          <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),

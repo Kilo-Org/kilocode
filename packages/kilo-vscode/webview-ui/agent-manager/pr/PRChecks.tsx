@@ -9,6 +9,7 @@ import type { PRCheck, CheckStatus } from "./pr-types"
 import type { CheckBucket } from "./pr-check-groups"
 import { counts, expands, groups } from "./pr-check-groups"
 import { SectionHeading } from "./SectionHeading"
+import { useConfig } from "../../src/context/config"
 import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
@@ -84,6 +85,7 @@ const TALLY_KEYS: Record<CheckBucket, { one: string; other: string }> = {
 export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTerminalId?: string }) {
   const vscode = useVSCode()
   const { t } = useLanguage()
+  const { settings } = useConfig()
   const [localOpen, setLocalOpen] = createSignal(true)
   const [localGroups, setLocalGroups] = createSignal<Partial<Record<CheckBucket, boolean>>>({})
   const state = () => (props.worktreeId ? commentState(props.worktreeId) : undefined)
@@ -102,7 +104,13 @@ export function PRChecks(props: { pr: PRStatus; worktreeId?: string; activeTermi
       .map((item) => tallyLabel(item.bucket, item.count))
       .join(` ${t("agentManager.pr.checks.separator")} `)
   })
-  const feedback = createMemo(() => checkFeedback(props.pr, t("agentManager.pr.checks.feedback")))
+  const feedback = createMemo(() =>
+    checkFeedback(
+      props.pr,
+      t("agentManager.pr.checks.feedback"),
+      !props.activeTerminalId && settings()["agentManager.pushFixes"] !== false,
+    ),
+  )
   const groupOpen = (bucket: CheckBucket) => state()?.checkGroups[bucket] ?? localGroups()[bucket] ?? expands(bucket)
   const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${CHECK[status]}`)
   const send = () => {

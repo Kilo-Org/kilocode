@@ -21,12 +21,14 @@ export function baseUpdatePrompt(worktree: Worktree, push = false): string {
     "Fetch the exact remote base, then resolve FETCH_HEAD^{commit} and merge that freshly fetched commit ID. If fetch or ref resolution fails, stop. Never merge a stale tracking ref, switch sources silently, or use git pull.",
     "Do not use the shared stash stack or --autostash to preserve edits. Disable merge.autoStash for the merge. Git's internal temporary merge state is allowed if it does not change the shared stash stack.",
     "Preserve all staged, unstaged, and untracked changes in a verified recovery copy unique to this worktree and this update before changing them. Never restore or remove another worktree's recovery data. If preservation cannot be verified, stop and ask before clearing any edits. You may temporarily clear backed-up edits to merge the base. Resolve conflicts, restore local changes and their staging state, and leave unfinished work uncommitted. Keep pre-existing edits out of the merge commit. Keep the recovery copy until restoration is verified. Do not ask me to choose a preservation method.",
-    "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not merge or apply this worktree into the base.",
     ...(push
       ? [
+          "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not merge or apply this worktree into the base.",
           "When the merge is clean and checks pass, push this branch so its pull request updates, if it has one. Do not force-push.",
         ]
-      : []),
+      : [
+          "Resolve conflicts while preserving both branches' intent. If the intended resolution is unclear, stop and ask. Then run relevant tests, lint, and type checks. Keep normal tool permissions and approvals. Do not push, merge a PR, or apply this worktree into the base.",
+        ]),
   ].join("\n\n")
 }
 
