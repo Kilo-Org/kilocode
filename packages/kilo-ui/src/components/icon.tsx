@@ -17,23 +17,31 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   },
   memory: {
     viewBox: "0 0 24 24",
-    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="1.5"/>`,
   },
   database: {
     viewBox: "0 0 24 24",
-    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="2"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  extensions: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M8.5 2.5h3v3h3v3h3v3h-3v3h-3v3h-3v-3h-3v-3h-3v-3h3v-3h3v-3Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>`,
   },
   "book-open-check": {
     viewBox: "0 0 24 24",
-    path: `<path d="M12 21V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    path: `<path d="M12 21V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
   coffee: {
     viewBox: "0 0 24 24",
-    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
   },
   "coffee-filled": {
     viewBox: "0 0 24 24",
-    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" fill="currentColor"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+    path: `<path d="M17 8h1a4 4 0 1 1 0 8h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" fill="currentColor"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 2v2M10 2v2M14 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  },
+  microphone: {
+    viewBox: "0 0 24 24",
+    path: `<rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4M8.5 21h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
   },
   "circuit-board": {
     viewBox: "0 0 16 16",
@@ -41,7 +49,7 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   },
   globe: {
     viewBox: "0 0 20 20",
-    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2"/><path d="M3.25 10H16.75M10 3C12 4.875 13 7.2 13 10C13 12.8 12 15.125 10 17M10 3C8 4.875 7 7.2 7 10C7 12.8 8 15.125 10 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.25"/><path d="M3.25 10H16.75M10 3C12 4.875 13 7.2 13 10C13 12.8 12 15.125 10 17M10 3C8 4.875 7 7.2 7 10C7 12.8 8 15.125 10 17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
   },
   organization: {
     viewBox: "0 0 16 16",
@@ -77,7 +85,7 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   },
   gauge: {
     viewBox: "0 0 24 24",
-    path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
   target: {
     viewBox: "0 0 20 20",
@@ -86,6 +94,26 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   local: {
     viewBox: "0 0 20 20",
     path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
+  },
+  user: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.25"/><path d="M4 17c.5-3 2.5-4.5 6-4.5s5.5 1.5 6 4.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
+  "wand-sparkles": {
+    viewBox: "0 0 24 24",
+    path: `<path d="m15 4 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3ZM19 13l.7 2.3L22 16l-2.3.7L19 19l-.7-2.3L16 16l2.3-.7L19 13ZM4 20 14 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  send: {
+    viewBox: "0 0 16 16",
+    path: `<path d="M1.5 1.5 14.5 8 1.5 14.5V9L10 8 1.5 7V1.5Z" fill="currentColor"/>`,
+  },
+  reply: {
+    viewBox: "0 0 20 20",
+    path: `<path d="m9 16-5-5 5-5M4 11h10a4 4 0 0 1 4 4v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  smile: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><path d="M7 8h.01M13 8h.01M7 12c.9 1.2 2 1.8 3 1.8s2.1-.6 3-1.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
   },
 }
 

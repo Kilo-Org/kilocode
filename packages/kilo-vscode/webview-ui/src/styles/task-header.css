@@ -152,17 +152,21 @@
     gap: 4px;
     box-sizing: border-box;
 
-    > [data-component="button"] {
+    > [data-component="button"],
+    > [data-component="icon-button"] {
       margin: 0;
     }
   }
 
-  [data-slot="task-header-agents-toggle"][data-component="button"],
-  [data-slot="task-header-agents-open-all"][data-component="button"] {
+  [data-slot="task-header-agents-toggle"][data-component="button"] {
     width: auto;
     min-width: 24px;
     height: 24px;
     padding: 3px;
+    margin: 0;
+  }
+
+  [data-slot="task-header-agents-open-all"][data-component="icon-button"] {
     margin: 0;
   }
 
@@ -482,11 +486,6 @@
    Transcript Search
    ============================================ */
 
-.task-header-search-toggle[data-active] {
-  background: var(--vscode-toolbar-hoverBackground);
-  color: var(--vscode-foreground);
-}
-
 [data-component="task-header-search"] {
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-weak-base);
@@ -697,21 +696,11 @@
 
 /* Expand toggle */
 [data-slot="task-header-expand"] {
-  all: unset;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 3px;
-  color: var(--vscode-descriptionForeground);
-  transition:
-    color 0.15s,
-    background 0.15s;
+  flex-shrink: 0;
 }
 
-[data-slot="task-header-expand"]:hover {
-  color: var(--vscode-foreground);
-  background: var(--vscode-toolbar-hoverBackground);
+[data-slot="task-header-expand"][aria-expanded="true"] [data-slot="icon-svg"] {
+  transform: rotate(180deg);
 }
 
 .task-board[data-slot="dialog-content"] {

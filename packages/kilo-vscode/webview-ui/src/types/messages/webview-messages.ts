@@ -748,7 +748,6 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
-  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -1362,6 +1361,10 @@ export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
 
+export interface ToggleCaffeinationMessage {
+  type: "toggleCaffeination"
+}
+
 export interface SetRemoteEnabledMessage {
   type: "setRemoteEnabled"
   enabled: boolean
@@ -1791,6 +1794,7 @@ export type WebviewMessage =
   | PersistModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
+  | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
   | ContinueInWorktreeRequest

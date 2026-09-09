@@ -55,7 +55,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "مكتمل (حسب تقرير النموذج)",
   "session.goal.blocked": "محظور",
-  "session.goal.restart": "إعادة بدء الهدف (تستهلك أرصدة النموذج)",
+  "session.goal.restart": "إعادة بدء الهدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "اللوحة",
@@ -899,6 +899,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
+  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.multiProject.description":
+    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
   "settings.experimental.taskModelSelection.description":
     "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",

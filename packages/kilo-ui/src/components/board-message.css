@@ -31,6 +31,16 @@
   [data-slot="board-route-recipient-icon"] {
     display: inline-flex;
   }
+
+  /* Parent session marker: the spinner grid, static, in the avatar slot size. */
+  .board-route-parent {
+    width: 18px;
+    color: var(--text-weak);
+
+    > rect {
+      animation: none !important;
+    }
+  }
 }
 
 [data-component="board-messages"] {
@@ -66,7 +76,7 @@
 @container (max-width: 260px) {
   [data-component="board-route"] {
     display: grid;
-    grid-template-columns: 16px auto minmax(0, 1fr);
+    grid-template-columns: 18px auto minmax(0, 1fr);
     gap: 4px 6px;
 
     .board-route-member {

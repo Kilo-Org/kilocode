@@ -26,6 +26,7 @@
     "./tabs": "./src/components/tabs.tsx",
     "./card": "./src/components/card.tsx",
     "./avatar": "./src/components/avatar.tsx",
+    "./agent-avatar": "./src/components/agent-avatar.tsx",
     "./logo": "./src/components/logo.tsx",
     "./favicon": "./src/components/favicon.tsx",
     "./file-icon": "./src/components/file-icon.tsx",

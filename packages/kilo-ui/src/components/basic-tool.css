@@ -4,6 +4,11 @@
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
+
+    /* Variant B status badges intentionally extend into the existing gap. */
+    &:has([data-component="agent-avatar"]) {
+      overflow: visible;
+    }
   }
 
   [data-slot="basic-tool-tool-info"] {
@@ -36,6 +41,14 @@
 
   [data-slot="basic-tool-icon"] {
     display: none;
+
+    &:has([data-component="agent-avatar"]) {
+      display: inline-flex;
+      flex: 0 0 18px;
+      width: 18px;
+      height: 18px;
+      overflow: visible;
+    }
   }
 
   [data-slot="basic-tool-tool-subtitle"] {

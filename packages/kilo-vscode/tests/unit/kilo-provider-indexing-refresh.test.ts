@@ -157,6 +157,7 @@ describe("KiloProvider indexing refresh", () => {
     const settings = () => ({
       maxCost: 0,
       languageCommitMessage: "sync",
+      multiProject: false,
       browserAutomation: false,
       "agentManager.autoBranchNaming": true,
       "agentManager.branchPrefix": "",

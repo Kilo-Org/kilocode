@@ -8,6 +8,7 @@ import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
 import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { useMcpSettings } from "./state/mcp"
+import "../../styles/mcp.css"
 
 type StatusFilter = "all" | "installed" | "notInstalled"
 

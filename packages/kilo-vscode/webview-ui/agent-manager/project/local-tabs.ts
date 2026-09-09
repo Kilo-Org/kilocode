@@ -1,27 +1,6 @@
 import { createEffect, createMemo, onCleanup } from "solid-js"
 import type { ProjectSessionInfo, SessionInfo } from "../../src/types/messages/sessions"
 import type { AgentManagerStateMessage } from "../../src/types/messages"
-import type { SessionCreatedMessage } from "../../src/types/messages"
-import type { ProjectStore } from "./store"
-import { replacePendingTab, openSessionTab } from "../../src/utils/local-tabs"
-import { replaceInTabOrder } from "../tab-order"
-
-/** Retain a background creation without selecting it in the foreground project. */
-export function backgroundCreated(store: ProjectStore, created: SessionCreatedMessage): boolean {
-  const id = created.session.id
-  if (store.managedSessions().some((session) => session.id === id && session.worktreeId !== null)) return false
-  const ids = store.tabs.ids()
-  const pending = created.draftID && ids.includes(created.draftID) ? created.draftID : undefined
-  if (!pending && ids.includes(id)) return false
-  store.tabs.set((pending ? replacePendingTab({ ids }, pending, id) : openSessionTab({ ids }, id)).ids)
-  const order = store.tabOrder().local ?? []
-  const next = (pending ? replaceInTabOrder(order, pending, id) : undefined) ?? [
-    ...order.filter((value) => value !== id),
-    id,
-  ]
-  store.setTabOrder((prev) => ({ ...prev, local: next }))
-  return true
-}
 
 /**
  * Persist open tabs and panel widths to webview state for recovery.

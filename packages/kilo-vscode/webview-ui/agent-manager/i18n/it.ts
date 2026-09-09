@@ -55,6 +55,9 @@ export const dict = {
   "agentManager.project.add": "Aggiungi progetto",
   "agentManager.project.remove": "Rimuovi da Agent Manager",
   "agentManager.project.missing": "Repository non trovata",
+  "agentManager.project.restricted":
+    "L'area di lavoro VS Code corrente è la cartella home o la radice del file system. Apri una cartella di progetto specifica in VS Code per usare Agent Manager.",
+  "agentManager.notGitRepo": "Non è una repository git",
 
   "agentManager.updateBase.title": "Aggiorna dalla base",
   "agentManager.updateBase.selectWorktree": "Seleziona prima un worktree gestito.",
@@ -163,6 +166,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Modalità agente successiva",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modalità agente precedente",
   "agentManager.shortcuts.showShortcuts": "Mostra scorciatoie da tastiera",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Rimuovi worktree obsoleto",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Rimuovere il worktree obsoleto ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Questo rimuove solo la mappatura dell'Agent Manager e lascia invariati i file su disco.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Annulla",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Rimuovi worktree obsoleto",
 
   "agentManager.dialog.project.select": "Seleziona progetto",
   "agentManager.dialog.project.missing": "Repository non trovata",

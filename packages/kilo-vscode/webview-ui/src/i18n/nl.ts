@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "Voltooid (gemeld door het model)",
   "session.goal.blocked": "Geblokkeerd",
-  "session.goal.restart": "Doel opnieuw starten (gebruikt modeltegoed)",
+  "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bord",
@@ -921,6 +921,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
+  "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
   "settings.experimental.taskModelSelection.description":
     "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",

@@ -13,13 +13,14 @@ function stored(id: string): StoredProject {
   return { id, root: `/repo/${id}`, order: 1, addedAt: new Date().toISOString() }
 }
 
-function setup(projects: StoredProject[]) {
+function setup(projects: StoredProject[], opts: { enabled?: boolean } = {}) {
   const contexts = new ProjectContexts({
     workspaceRoot: () => WORKSPACE,
     registry: {
       list: () => projects,
       get: (id) => projects.find((p) => p.id === id),
     },
+    enabled: () => opts.enabled ?? true,
     deps: {
       log: () => {},
       exists: () => true,

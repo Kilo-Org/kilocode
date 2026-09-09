@@ -57,11 +57,7 @@ export namespace GoalPrompt {
                 }
                 options={[
                   {
-                    title: props.goal?.active
-                      ? "Pause"
-                      : props.goal?.status === "complete"
-                        ? "Restart goal (uses model credits)"
-                        : "Resume",
+                    title: props.goal?.active ? "Pause" : props.goal?.status === "complete" ? "Restart goal" : "Resume",
                     value: props.goal?.active ? "pause" : "resume",
                   },
                   { title: "Clear", value: "clear" },

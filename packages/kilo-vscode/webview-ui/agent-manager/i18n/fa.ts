@@ -52,6 +52,9 @@ export const dict = {
   "agentManager.project.add": "افزودن پروژه",
   "agentManager.project.remove": "حذف از Agent Manager",
   "agentManager.project.missing": "مخزن یافت نشد",
+  "agentManager.project.restricted":
+    "فضای کاری فعلی VS Code شما پوشه اصلی یا ریشه سیستم فایل است. برای استفاده از Agent Manager، یک پوشه پروژه مشخص را در VS Code باز کنید.",
+  "agentManager.notGitRepo": "این یک مخزن git نیست",
 
   "agentManager.updateBase.title": "به‌روزرسانی از پایه",
   "agentManager.updateBase.selectWorktree": "ابتدا یک worktree تحت مدیریت انتخاب کنید.",
@@ -158,6 +161,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "حالت عامل بعدی",
   "agentManager.shortcuts.cyclePreviousAgentMode": "حالت عامل قبلی",
   "agentManager.shortcuts.showShortcuts": "نمایش میانبرهای صفحه‌کلید",
+
+  "agentManager.dialog.removeStaleWorktree.title": "حذف Worktree قدیمی",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "حذف Worktree قدیمی ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "؟ این عملیات فقط نگاشت Agent Manager را حذف می‌کند و فایل‌های روی دیسک دست‌نخورده باقی می‌مانند.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "لغو",
+  "agentManager.dialog.removeStaleWorktree.confirm": "حذف Worktree قدیمی",
 
   "agentManager.dialog.project.select": "انتخاب پروژه",
   "agentManager.dialog.project.missing": "مخزن یافت نشد",

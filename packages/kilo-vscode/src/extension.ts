@@ -185,6 +185,20 @@ export async function activate(context: vscode.ExtensionContext) {
   const reason = vscode.env.remoteName ? "Keep Awake is only available in a local VS Code window." : undefined
   const awake = new CaffeinationService(connectionService, createCaffeinationDriver({ reason }))
   caffeination = awake
+  let previous = awake.getState()
+  const unsubscribeCaffeination = awake.onChange((state) => {
+    const prior = previous
+    previous = state
+    if (state.error && state.error !== prior.error) {
+      void vscode.window.showErrorMessage(`Keep Awake stopped: ${state.error}`)
+      return
+    }
+    if (state.enabled === prior.enabled) return
+    void vscode.window.showInformationMessage(
+      state.enabled ? "Keep Awake enabled. Kilo will prevent system sleep while agents work." : "Keep Awake disabled.",
+    )
+  })
+  context.subscriptions.push({ dispose: unsubscribeCaffeination })
   const toggle = confirmCaffeination(awake, async () => {
     if (!vscode.workspace.isTrusted) {
       await vscode.window.showWarningMessage("Trust this workspace before enabling Keep Awake.")
@@ -307,7 +321,6 @@ export async function activate(context: vscode.ExtensionContext) {
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
           workspaceRoot: () => agentManagerProvider.workspaceRoot(),
           projectId: () => agentManagerProvider.projectId(),
-          sessionProject: () => agentManagerProvider.sessionProject(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()

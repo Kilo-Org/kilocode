@@ -6,6 +6,7 @@
  */
 
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -27,6 +28,7 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
+import { children } from "./background-agents"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
@@ -360,77 +362,82 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     </Show>
   )
 
-  return (
-    <TranscriptSearchProvider>
-      <div class="chat-view">
-        <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
-          <SessionTabStrip />
-        </Show>
-        <TaskHeader readonly={props.readonly} projectId={props.projectId} />
-        <div class="chat-messages-wrapper">
-          <div class="chat-messages">
-            <MessageList
-              onSelectSession={props.onSelectSession}
-              isSessionOpen={props.isSessionOpen}
-              onShowHistory={props.onShowHistory}
-              onForkMessage={props.onForkMessage}
-              onEditMessage={edit}
-              queuedDisabled={editing()?.sessionID === id() && !!editing()}
-              editDisabled={!editable() || !!editing()}
-              questions={standaloneQuestions}
-              suggestions={standaloneSuggestions}
-              readonly={props.readonly}
-              emptyState={props.emptyState}
-              introduction={props.introduction}
-              announce={isSidebar()}
-              sessionID={pendingSessionID}
-            />
-          </div>
-        </div>
+  // Sibling-aware avatar colors for every subagent spawned by this session.
+  const siblings = createMemo(() => (id() ? children(session.getSessionToolParts(id()!)) : []))
 
-        <Show when={dock()}>
-          <div class="chat-input">
-            <Show when={server.connectionState() === "error" && server.errorMessage()}>
-              <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
-            </Show>
-            <Show when={permissionRequest()} keyed>
-              {(perm) => (
-                <PermissionDock
-                  request={perm}
-                  responding={session.respondingPermissions().has(perm.id)}
-                  onDecide={decide}
-                />
-              )}
-            </Show>
-            <SessionDock
-              blocked={dockBlocked()}
-              hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-              actions={(control) => renderActions(hasMessages(), control)}
-              readonly={props.readonly}
-            />
-            <Show when={!props.readonly}>
-              <PromptInput
-                blocked={blocked}
-                edit={editing()}
-                onEditComplete={() => setEditing(undefined)}
-                onEditReady={setEditable}
-                suggesting={suggesting}
-                questioning={questioning}
-                worktree={props.worktree}
-                onUpdateBase={props.onUpdateBase}
-                boxId={props.promptBoxId}
-                terminalContext={props.terminalContext}
-                worktrees={props.worktrees}
-                deferFocusToQuestion={props.deferFocusToQuestion}
-                pendingSessionID={pendingSessionID()}
-                focusOnDraftChange={props.focusOnDraftChange}
-                onFocusChange={props.onFocusChange}
-                resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+  return (
+    <AgentAvatarPalette ids={siblings()}>
+      <TranscriptSearchProvider>
+        <div class="chat-view">
+          <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
+            <SessionTabStrip />
+          </Show>
+          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <div class="chat-messages-wrapper">
+            <div class="chat-messages">
+              <MessageList
+                onSelectSession={props.onSelectSession}
+                isSessionOpen={props.isSessionOpen}
+                onShowHistory={props.onShowHistory}
+                onForkMessage={props.onForkMessage}
+                onEditMessage={edit}
+                queuedDisabled={editing()?.sessionID === id() && !!editing()}
+                editDisabled={!editable() || !!editing()}
+                questions={standaloneQuestions}
+                suggestions={standaloneSuggestions}
+                readonly={props.readonly}
+                emptyState={props.emptyState}
+                introduction={props.introduction}
+                announce={isSidebar()}
+                sessionID={pendingSessionID}
               />
-            </Show>
+            </div>
           </div>
-        </Show>
-      </div>
-    </TranscriptSearchProvider>
+
+          <Show when={dock()}>
+            <div class="chat-input">
+              <Show when={server.connectionState() === "error" && server.errorMessage()}>
+                <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
+              </Show>
+              <Show when={permissionRequest()} keyed>
+                {(perm) => (
+                  <PermissionDock
+                    request={perm}
+                    responding={session.respondingPermissions().has(perm.id)}
+                    onDecide={decide}
+                  />
+                )}
+              </Show>
+              <SessionDock
+                blocked={dockBlocked()}
+                hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
+                actions={(control) => renderActions(hasMessages(), control)}
+                readonly={props.readonly}
+              />
+              <Show when={!props.readonly}>
+                <PromptInput
+                  blocked={blocked}
+                  edit={editing()}
+                  onEditComplete={() => setEditing(undefined)}
+                  onEditReady={setEditable}
+                  suggesting={suggesting}
+                  questioning={questioning}
+                  worktree={props.worktree}
+                  onUpdateBase={props.onUpdateBase}
+                  boxId={props.promptBoxId}
+                  terminalContext={props.terminalContext}
+                  worktrees={props.worktrees}
+                  deferFocusToQuestion={props.deferFocusToQuestion}
+                  pendingSessionID={pendingSessionID()}
+                  focusOnDraftChange={props.focusOnDraftChange}
+                  onFocusChange={props.onFocusChange}
+                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                />
+              </Show>
+            </div>
+          </Show>
+        </div>
+      </TranscriptSearchProvider>
+    </AgentAvatarPalette>
   )
 }

@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "Completato (segnalato dal modello)",
   "session.goal.blocked": "Bloccato",
-  "session.goal.restart": "Riavvia obiettivo (consuma crediti)",
+  "session.goal.restart": "Riavvia obiettivo",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bacheca",
@@ -785,6 +785,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
+  "settings.experimental.multiProject.description":
+    "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.taskModelSelection.title": "Selezione del modello del sub-agent Task",
   "settings.experimental.taskModelSelection.description":
     "Consente di selezionare esplicitamente modello, provider e sforzo di ragionamento per i sub-agent Task.",

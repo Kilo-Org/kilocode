@@ -280,29 +280,8 @@
 }
 
 .prompt-review-row-remove {
-  width: 16px;
-  height: 16px;
   flex-shrink: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--surface-inset-base, rgba(127, 127, 127, 0.16));
-  color: var(--text-weak, var(--vscode-descriptionForeground));
-  font-size: var(--kilo-font-size-11);
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.prompt-review-row-remove:hover {
-  color: var(--vscode-foreground);
-  background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.24));
-}
-
-.prompt-review-row-remove:focus-visible {
-  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  margin-inline-start: 4px;
 }
 
 .prompt-review-more {
@@ -353,25 +332,11 @@
   position: absolute;
   top: -6px;
   right: -6px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--vscode-badge-background, #4d4d4d);
-  color: var(--vscode-badge-foreground, #fff);
-  border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.15));
-  font-size: var(--kilo-font-size-11);
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s;
-  padding: 0;
 
-  &:hover {
-    background: var(--vscode-errorForeground, #f48771);
-    color: #fff;
+  &:focus-visible {
+    opacity: 1;
   }
 }
 
@@ -564,18 +529,31 @@
   gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
-
-  [data-component="button"] {
-    padding: 4px;
-  }
 }
 
 .prompt-indexing-button {
   position: relative;
+}
 
-  [data-slot="icon-svg"] {
-    color: currentColor;
-  }
+/* Shared status dot for prompt hint controls. Pin it to the icon corner and
+   give it a surface-colored ring so it reads as a badge instead of sitting on
+   the glyph. The same size, ring, and corner offset are used for the indexing,
+   auto-approve, sandbox, and speech controls. */
+.prompt-indexing-button::after,
+.prompt-status-button--active::after,
+.prompt-speech-button--recording::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-indexing-button::after {
+  top: 1px;
+  right: 1px;
 }
 
 .prompt-indexing-button--muted {
@@ -642,22 +620,11 @@
 
 .prompt-status-button--active {
   color: var(--vscode-testing-iconPassed, #73c991);
-
-  [data-slot="icon-svg"] {
-    color: currentColor !important;
-  }
 }
 
 .prompt-status-button--active::after {
-  content: "";
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--vscode-testing-iconPassed, #73c991);
-  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+  right: 1px;
+  bottom: 1px;
 }
 
 .prompt-speech-button {
@@ -667,11 +634,7 @@
 .prompt-speech-button--recording {
   color: var(--vscode-errorForeground, #f48771);
 
-  [data-slot="icon-svg"] {
-    color: currentColor !important;
-  }
-
-  .prompt-speech-icon {
+  [data-component="icon"] {
     animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
   }
 }
@@ -682,23 +645,12 @@
 }
 
 .prompt-speech-button--recording::after {
-  content: "";
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 2px var(--surface-base, var(--vscode-editor-background));
+  right: 1px;
+  top: 1px;
 }
 
 .prompt-speech-button--error {
   color: var(--vscode-charts-yellow, #cca700);
-
-  [data-slot="icon-svg"] {
-    color: currentColor !important;
-  }
 }
 
 @keyframes prompt-speech-recording-pulse {
@@ -711,21 +663,4 @@
     opacity: 0.72;
     transform: scale(0.94);
   }
-}
-
-/* ============================================
-   Enhance Prompt Spinner
-   ============================================ */
-
-@keyframes enhance-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.enhance-spinner {
-  animation: enhance-spin 1s linear infinite;
 }

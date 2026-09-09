@@ -18,7 +18,7 @@ function gitRepo(): string {
   return fs.realpathSync(dir)
 }
 
-function setup(opts: { workspace?: string | null; git?: GitOps } = {}) {
+function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {
@@ -29,15 +29,15 @@ function setup(opts: { workspace?: string | null; git?: GitOps } = {}) {
   }
   const registry = new ProjectRegistry(storage)
   const contexts = new ProjectContexts({
-    workspaceRoot: () => (opts.workspace === null ? undefined : (opts.workspace ?? WORKSPACE)),
+    workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
+    enabled: () => opts.enabled ?? true,
     deps: { log: () => {}, exists: (dir) => fs.existsSync(dir) },
   })
   const calls = {
     activate: [] as string[],
     expand: [] as string[],
     push: 0,
-    empty: 0,
     error: [] as string[],
     pick: 0,
     ready: [] as string[],
@@ -46,12 +46,12 @@ function setup(opts: { workspace?: string | null; git?: GitOps } = {}) {
   const deps: ProjectMessageDeps = {
     registry,
     contexts,
+    enabled: () => opts.enabled ?? true,
     pickFolder: async () => {
       calls.pick++
       return pickResult
     },
     activate: (ctx) => calls.activate.push(ctx.id),
-    empty: () => calls.empty++,
     expand: (ctx) => calls.expand.push(ctx.id),
     push: () => calls.push++,
     error: (message) => calls.error.push(message),
@@ -84,9 +84,11 @@ describe("handleProjectMessage", () => {
     expect(calls.push).toBe(1)
   })
 
-  it("rejects unknown project selection and expansion", async () => {
-    const { deps, calls, registry, contexts } = setup()
+  it("rejects every mutation while the experiment is disabled", async () => {
+    const { deps, calls } = setup({ enabled: false })
     for (const m of [
+      msg("agentManager.addProject"),
+      msg("agentManager.removeProject", { projectId: "prj-x" }),
       msg("agentManager.selectProject", { projectId: "prj-x" }),
       msg("agentManager.setProjectExpanded", { projectId: "prj-x", expanded: true }),
     ]) {
@@ -94,10 +96,7 @@ describe("handleProjectMessage", () => {
     }
     expect(calls.pick).toBe(0)
     expect(calls.activate).toEqual([])
-    expect(calls.expand).toEqual([])
-    expect(calls.error).toEqual(["The project is unavailable. Check that the repository still exists."])
-    expect(registry.list()).toEqual([])
-    expect(contexts.active()?.root).toBe(WORKSPACE)
+    expect(calls.error.length).toBe(4)
   })
 
   it("adds a picked git repository to the registry", async () => {
@@ -216,7 +215,7 @@ describe("handleProjectMessage", () => {
     expect(calls.expand).toEqual([id])
   })
 
-  it("activates the pinned fallback when removing the active project", async () => {
+  it("removes projects without touching the pinned fallback", async () => {
     const repo = gitRepo()
     const { deps, registry, contexts, calls } = setup()
     const id = projectIdFor(repo)
@@ -226,24 +225,6 @@ describe("handleProjectMessage", () => {
     expect(registry.get(id)).toBeUndefined()
     expect(contexts.get(id)).toBeUndefined()
     expect(contexts.active()?.root).toBe(WORKSPACE)
-    expect(calls.activate).toEqual([id, projectIdFor(WORKSPACE)])
-  })
-
-  it("clears applied state after removing the last project without a workspace", async () => {
-    const { deps, registry, contexts, calls } = setup({ workspace: null })
-    await registry.add({ id: "extra", root: "/extra" })
-    contexts.activate("extra")
-    await handleProjectMessage(msg("agentManager.removeProject", { projectId: "extra" }), deps)
-    expect(contexts.active()).toBeUndefined()
-    expect(calls.empty).toBe(1)
-  })
-
-  it("does not reactivate the foreground when removing a background project", async () => {
-    const { deps, registry, contexts, calls } = setup()
-    await registry.add({ id: "extra", root: "/extra" })
-    contexts.resolve("extra")
-    await handleProjectMessage(msg("agentManager.removeProject", { projectId: "extra" }), deps)
-    expect(calls.activate).toEqual([])
-    expect(calls.empty).toBe(0)
+    expect(calls.activate).toEqual([id])
   })
 })

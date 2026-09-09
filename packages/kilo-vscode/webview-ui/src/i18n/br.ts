@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "Concluído (informado pelo modelo)",
   "session.goal.blocked": "Bloqueado",
-  "session.goal.restart": "Reiniciar objetivo (consome créditos)",
+  "session.goal.restart": "Reiniciar objetivo",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Quadro",
@@ -929,6 +929,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
+  "settings.experimental.multiProject.description":
+    "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
   "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
   "settings.experimental.taskModelSelection.description":
     "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",

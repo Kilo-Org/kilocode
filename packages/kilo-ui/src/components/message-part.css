@@ -1,17 +1,5 @@
 /* Kilo Message Part overrides */
 
-/* Message action rows (copy, fork, revert, feedback, delete queued)
-   share one compact icon-button size. */
-[data-component="text-part"] [data-slot="text-part-copy-wrapper"][data-is-turn-copy],
-[data-component="text-part"] [data-slot="assistant-copy-wrapper"],
-[data-component="user-message"] [data-slot="user-message-copy-wrapper"],
-[data-component="user-message"] [data-slot="user-message-queued-indicator"] {
-  [data-component="icon-button"] {
-    width: 20px;
-    height: 20px;
-  }
-}
-
 [data-component="text-part"] {
   margin-top: 8px;
 
@@ -33,12 +21,6 @@
     justify-content: flex-start;
     gap: 2px;
     margin-top: 2px;
-
-    /* Thumbs up/down: fill the outline on hover to preview the rated state. */
-    [data-component="icon-button"][data-icon="thumbs-up"]:hover [data-slot="icon-svg"] path,
-    [data-component="icon-button"][data-icon="thumbs-down"]:hover [data-slot="icon-svg"] path {
-      fill: currentColor;
-    }
 
     /* Throughput badge sits to the right of the copy/feedback buttons,
        beside them rather than beneath the message. */

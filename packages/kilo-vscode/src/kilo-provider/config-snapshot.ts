@@ -7,6 +7,7 @@ type Client = Pick<KiloClient, "config" | "global" | "experimental">
 type Settings = {
   maxCost: number
   languageCommitMessage: string
+  multiProject: boolean
   "agentManager.autoBranchNaming": boolean
   "agentManager.branchPrefix": string
 }

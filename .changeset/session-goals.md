@@ -13,3 +13,5 @@ Keep the current goal running when replacement attachments are invalid. Make pen
 Disable clarification questions during active goals and delegated work while keeping permission approvals unchanged. Make safe, reversible decisions autonomously and report completion or blockers.
 
 Retain Active, Complete, Blocked, and Paused goals with their objective and reason until explicitly cleared. Let the working model explicitly report completion or a blocker with the Goal-only reporting tool, without a separate evaluator or independent verification claim. Pause no-action turns that have no explicit report. Keep complete goals complete after a backend restart and label their resume action as Restart.
+
+Starting a Goal while a response is running replaces that response after the Goal request is validated.

@@ -51,6 +51,9 @@ export const dict = {
   "agentManager.project.add": "เพิ่มโปรเจกต์",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
   "agentManager.project.missing": "ไม่พบ Repository",
+  "agentManager.project.restricted":
+    "พื้นที่ทำงาน VS Code ปัจจุบันของคุณคือโฟลเดอร์บ้านหรือรากของระบบไฟล์ เปิดโฟลเดอร์โครงการที่เจาะจงใน VS Code เพื่อใช้ Agent Manager",
+  "agentManager.notGitRepo": "ไม่ใช่ git repository",
 
   "agentManager.updateBase.title": "อัปเดตจากฐาน",
   "agentManager.updateBase.selectWorktree": "เลือก worktree ที่มีการจัดการก่อน",
@@ -150,6 +153,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "โหมดเอเจนต์ถัดไป",
   "agentManager.shortcuts.cyclePreviousAgentMode": "โหมดเอเจนต์ก่อนหน้า",
   "agentManager.shortcuts.showShortcuts": "แสดงปุ่มลัดแป้นพิมพ์",
+  "agentManager.dialog.removeStaleWorktree.title": "ลบ Worktree ที่ล้าสมัย",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "ลบ Worktree ที่ล้าสมัย ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? การดำเนินการนี้จะลบเฉพาะการแมปใน Agent Manager และจะไม่แตะไฟล์บนดิสก์",
+  "agentManager.dialog.removeStaleWorktree.cancel": "ยกเลิก",
+  "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
+
   "agentManager.dialog.project.select": "เลือกโปรเจกต์",
   "agentManager.dialog.project.missing": "ไม่พบ Repository",
   "agentManager.dialog.openWorktree": "Worktree ใหม่",

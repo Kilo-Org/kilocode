@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "完了（モデルによる報告）",
   "session.goal.blocked": "ブロック中",
-  "session.goal.restart": "目標を再開（モデルクレジットを消費）",
+  "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "ボード",
@@ -916,6 +916,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
+  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
   "settings.experimental.taskModelSelection.description":
     "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",

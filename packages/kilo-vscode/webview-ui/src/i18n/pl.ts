@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "Ukończony (według modelu)",
   "session.goal.blocked": "Zablokowany",
-  "session.goal.restart": "Uruchom cel ponownie (zużywa kredyty modelu)",
+  "session.goal.restart": "Uruchom cel ponownie",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablica",
@@ -880,6 +880,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
+  "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
   "settings.experimental.taskModelSelection.description":
     "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",

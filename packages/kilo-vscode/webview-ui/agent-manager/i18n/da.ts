@@ -51,6 +51,9 @@ export const dict = {
   "agentManager.project.add": "Tilføj projekt",
   "agentManager.project.remove": "Fjern fra Agent Manager",
   "agentManager.project.missing": "Repository ikke fundet",
+  "agentManager.project.restricted":
+    "Dit aktuelle VS Code-arbejdsområde er din hjemmemappe eller filsystemets rod. Åbn en specifik projektmappe i VS Code for at bruge Agent Manager.",
+  "agentManager.notGitRepo": "Ikke et git-repository",
 
   "agentManager.updateBase.title": "Opdater fra base",
   "agentManager.updateBase.selectWorktree": "Vælg først et administreret worktree.",
@@ -155,6 +158,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Næste agenttilstand",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Forrige agenttilstand",
   "agentManager.shortcuts.showShortcuts": "Vis tastaturgenveje",
+  "agentManager.dialog.removeStaleWorktree.title": "Fjern forældet Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern forældet Worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Dette fjerner kun tilknytningen i Agent Manager og efterlader filer på disken urørt.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Annuller",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Fjern forældet Worktree",
+
   "agentManager.dialog.project.select": "Vælg projekt",
   "agentManager.dialog.project.missing": "Repository ikke fundet",
   "agentManager.dialog.openWorktree": "Ny Worktree",

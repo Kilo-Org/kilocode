@@ -276,9 +276,16 @@ const check = async (id: string, expected: string) => {
   const actual = state(id)
   if (id === "root") card(expected)
   const tab = host.querySelector(`[data-tab-id="${id}"] [data-activity]`)
-  if (id === "root" || id === "background" || (inspector() && (id === "task-child" || id === "task-grand"))) {
+  if (id === "root" || id === "background") {
     assert(tab, `Missing rendered tab for ${id}`)
     assert.equal(!!tab.querySelector('[data-component="spinner"]'), expected === "busy" || expected === "retry")
+  }
+  if (inspector() && (id === "task-child" || id === "task-grand")) {
+    assert(tab, `Missing rendered subagent tab for ${id}`)
+    assert.equal(
+      !!tab.querySelector('[data-component="agent-avatar"]')?.getAttribute("data-status"),
+      expected === "busy" || expected === "retry",
+    )
   }
   if (tab && (id === "task-child" || id === "task-grand")) {
     assert.equal(tab.querySelector(".am-tab-icon")?.getAttribute("data-activity"), expected)

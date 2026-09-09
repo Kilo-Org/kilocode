@@ -18,6 +18,7 @@ import {
   on,
   onCleanup,
 } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { relativizeProjectPath } from "@kilocode/kilo-ui/message-part"
@@ -1431,13 +1432,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
       />
 
       <Show when={!introduction() && autoScroll.userScrolled()}>
-        <button
+        <IconButton
+          icon="arrow-down-to-line"
+          variant="ghost"
+          size="small"
           class="scroll-to-bottom-button"
           onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
-        >
-          <Icon name="arrow-down-to-line" />
-        </button>
+        />
       </Show>
     </div>
   )

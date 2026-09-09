@@ -29,6 +29,7 @@ function fakeState(persisted?: { current?: unknown }) {
 
 function setup(
   opts: {
+    enabled?: boolean
     workspace?: string
     ready?: (ctx: ProjectContext) => Promise<ProjectInitResult>
     state?: () => WorktreeStateManager
@@ -43,6 +44,7 @@ function setup(
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
+    enabled: () => opts.enabled ?? true,
     deps: {
       log: () => {},
       exists: () => true,
@@ -69,6 +71,7 @@ function setup(
   const deps: ProjectMessageDeps = {
     registry: registry as never,
     contexts,
+    enabled: () => opts.enabled ?? true,
     pickFolder: async () => undefined,
     activate: (ctx) => calls.activate.push(ctx.id),
     expand: (ctx) => calls.expand.push(ctx.id),

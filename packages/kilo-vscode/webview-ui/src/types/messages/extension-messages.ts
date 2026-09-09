@@ -700,6 +700,7 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
+  multiProject?: boolean
   [key: string]: unknown
 }
 
@@ -894,6 +895,7 @@ export interface AgentManagerStateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   browserAutomation?: boolean
+  restricted?: boolean
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -911,6 +913,7 @@ export interface AgentProjectSnapshot {
 // Project catalog push from extension to webview
 export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
+  multiProject: boolean
   projects: AgentProjectSnapshot[]
 }
 

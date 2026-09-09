@@ -56,7 +56,7 @@ export const anacondaDesktopDict = {
 export const dict = {
   "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
   "session.goal.blocked": "مسدود",
-  "session.goal.restart": "شروع مجدد هدف (مصرف اعتبار مدل)",
+  "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "برد",
@@ -908,6 +908,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
+  "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.multiProject.description":
+    "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
   "settings.experimental.taskModelSelection.description":
     "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",

@@ -54,6 +54,9 @@ export const dict = {
   "agentManager.project.add": "Project toevoegen",
   "agentManager.project.remove": "Verwijderen uit Agent Manager",
   "agentManager.project.missing": "Repository niet gevonden",
+  "agentManager.project.restricted":
+    "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",
+  "agentManager.notGitRepo": "Geen git repository",
 
   "agentManager.updateBase.title": "Bijwerken vanuit de basis",
   "agentManager.updateBase.selectWorktree": "Selecteer eerst een beheerde worktree.",
@@ -161,6 +164,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",
   "agentManager.shortcuts.showShortcuts": "Sneltoetsen tonen",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Verouderde worktree verwijderen",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Verouderde worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Dit verwijdert alleen de Agent Manager koppeling en laat bestanden op de schijf ongemoeid.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
   "agentManager.dialog.project.select": "Project selecteren",
   "agentManager.dialog.project.missing": "Repository niet gevonden",

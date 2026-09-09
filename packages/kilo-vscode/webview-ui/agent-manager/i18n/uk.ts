@@ -55,6 +55,9 @@ export const dict = {
   "agentManager.project.add": "Додати проєкт",
   "agentManager.project.remove": "Видалити з Agent Manager",
   "agentManager.project.missing": "Репозиторій не знайдено",
+  "agentManager.project.restricted":
+    "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",
+  "agentManager.notGitRepo": "Не є git-репозиторієм",
 
   "agentManager.updateBase.title": "Оновити з базової гілки",
   "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
@@ -164,6 +167,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Наступний режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Попередній режим агента",
   "agentManager.shortcuts.showShortcuts": "Показати клавіатурні скорочення",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Видалити застаріле робоче дерево",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Видалити застаріле робоче дерево ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Це лише видалить відображення в Agent Manager і не торкнеться файлів на диску.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.project.select": "Вибрати проєкт",
   "agentManager.dialog.project.missing": "Репозиторій не знайдено",

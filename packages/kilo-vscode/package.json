@@ -1070,6 +1070,12 @@
           "scope": "application",
           "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
         },
+        "kilo-code.new.experimental.multiProject": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Allow Agent Manager to manage sessions and worktrees across multiple repositories as projects. The current workspace repository is always the default project; additional projects can be added and persist across restarts."
+        },
         "kilo-code.new.experimental.browserAutomation": {
           "type": "boolean",
           "default": false,

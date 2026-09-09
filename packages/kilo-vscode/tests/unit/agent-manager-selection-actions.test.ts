@@ -60,11 +60,12 @@ describe("selectWorktreeAction", () => {
 })
 
 describe("selectLocalAction", () => {
-  it.each(["ses-a2", "pending:draft", "review", "terminal:1"])("remembers Local %s for its project", (tab) => {
+  it.each(["ses-a2", "pending:draft", "review", "terminal:1"])("remembers Local %s in multi-project mode", (tab) => {
     const memory: Record<string, string> = {}
     const save = createTabMemory({
       selection: () => "local",
       tab: () => tab,
+      multi: () => true,
       applied: () => "project-a",
       active: () => "project-a",
       owns: () => false,
@@ -92,29 +93,6 @@ describe("selectLocalAction", () => {
     selectLocalAction(result.value, [{ id: "ses-a1" }, { id: "ses-a2" }])
 
     expect(result.calls).toContain("local:ses-a2")
-  })
-
-  it("does not remember another project's selection during or after a switch", () => {
-    const state = { active: "project-b", selection: "local" }
-    const memory: Record<string, string> = {}
-    const save = createTabMemory({
-      selection: () => state.selection,
-      tab: () => "ses-b",
-      applied: () => "project-a",
-      active: () => state.active,
-      owns: () => false,
-      pending: () => false,
-      locals: () => ["ses-a"],
-      set: (key, id) => {
-        memory[key] = id
-      },
-    })
-    save()
-    state.active = "project-a"
-    save()
-    state.selection = "wt-b"
-    save()
-    expect(memory).toEqual({})
   })
 
   it("focuses a project session when shared session metadata is stale", () => {

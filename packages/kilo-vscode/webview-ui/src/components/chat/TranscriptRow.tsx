@@ -67,6 +67,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
             <VscodeUserMessage
               message={row().message}
               parts={row().parts}
+              revertDisabled={row().answered && session.status() !== "idle"}
               onSelectSession={props.onSelectSession}
               isSessionOpen={props.isSessionOpen}
               interrupted={row().interrupted}

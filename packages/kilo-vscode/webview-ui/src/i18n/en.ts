@@ -710,7 +710,7 @@ export const dict = {
   "session.goal.active": "Active",
   "session.goal.complete": "Complete (model-reported)",
   "session.goal.blocked": "Blocked",
-  "session.goal.restart": "Restart goal (uses model credits)",
+  "session.goal.restart": "Restart goal",
   "session.goal.paused": "Paused",
   "session.goal.pause": "Pause",
   "session.goal.resume": "Resume",
@@ -903,6 +903,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
+  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
   "settings.experimental.taskModelSelection.description":
     "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",

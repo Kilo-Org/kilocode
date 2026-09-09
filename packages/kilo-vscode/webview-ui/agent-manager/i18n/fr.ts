@@ -57,6 +57,9 @@ export const dict = {
   "agentManager.project.add": "Ajouter un projet",
   "agentManager.project.remove": "Retirer d'Agent Manager",
   "agentManager.project.missing": "Dépôt introuvable",
+  "agentManager.project.restricted":
+    "Votre espace de travail VS Code actuel est votre dossier personnel ou la racine du système de fichiers. Ouvrez un dossier de projet spécifique dans VS Code pour utiliser Agent Manager.",
+  "agentManager.notGitRepo": "Ce n'est pas un dépôt git",
 
   "agentManager.updateBase.title": "Mettre à jour depuis la base",
   "agentManager.updateBase.selectWorktree": "Sélectionnez d'abord un worktree géré.",
@@ -161,6 +164,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Mode d'agent suivant",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Mode d'agent précédent",
   "agentManager.shortcuts.showShortcuts": "Afficher les raccourcis clavier",
+  "agentManager.dialog.removeStaleWorktree.title": "Supprimer le Worktree obsolète",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Supprimer le Worktree obsolète ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    " ? Cela supprime uniquement l'association dans Agent Manager et laisse les fichiers du disque inchangés.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Annuler",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Supprimer le Worktree obsolète",
+
   "agentManager.dialog.project.select": "Sélectionner un projet",
   "agentManager.dialog.project.missing": "Dépôt introuvable",
   "agentManager.dialog.openWorktree": "Nouveau worktree",

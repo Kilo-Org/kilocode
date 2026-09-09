@@ -51,6 +51,9 @@ export const dict = {
   "agentManager.project.add": "プロジェクトを追加",
   "agentManager.project.remove": "Agent Managerから削除",
   "agentManager.project.missing": "リポジトリが見つかりません",
+  "agentManager.project.restricted":
+    "現在の VS Code ワークスペースはホームフォルダーまたはファイルシステムのルートです。Agent Manager を使用するには、VS Code で特定のプロジェクトフォルダーを開いてください。",
+  "agentManager.notGitRepo": "gitリポジトリではありません",
 
   "agentManager.updateBase.title": "ベースから更新",
   "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
@@ -155,6 +158,13 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "次のエージェントモード",
   "agentManager.shortcuts.cyclePreviousAgentMode": "前のエージェントモード",
   "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
+  "agentManager.dialog.removeStaleWorktree.title": "無効な Worktree を削除",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "無効な Worktree を削除 ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "？ これは Agent Manager の関連付けのみを削除し、ディスク上のファイルは変更しません。",
+  "agentManager.dialog.removeStaleWorktree.cancel": "キャンセル",
+  "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
+
   "agentManager.dialog.project.select": "プロジェクトを選択",
   "agentManager.dialog.project.missing": "リポジトリが見つかりません",
   "agentManager.dialog.openWorktree": "新規ワークツリー",

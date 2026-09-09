@@ -254,15 +254,6 @@
   pointer-events: auto;
 }
 
-.session-tab-bar .am-tab-close[data-component="icon-button"] {
-  width: 20px;
-  height: 20px;
-}
-
-.session-tab-bar .am-tab-close[data-component="icon-button"] [data-slot="icon-svg"] {
-  color: var(--text-base);
-}
-
 .session-tab-switcher-wrap {
   display: flex;
   align-items: center;
@@ -326,10 +317,6 @@
 .session-tab-switcher-item:focus-within .session-tab-switcher-close[data-component="icon-button"] {
   opacity: 1;
   pointer-events: auto;
-}
-
-.session-tab-switcher-close[data-component="icon-button"] [data-slot="icon-svg"] {
-  color: var(--text-base);
 }
 
 /* Match tab context menus to dropdown-menu visuals on every tab surface. */

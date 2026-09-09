@@ -20,6 +20,7 @@ describe("project session live state", () => {
       const live = createProjectSessionsLive({
         base,
         pid: () => "project",
+        enabled: () => true,
         store,
         managed: () => [{ id: "session-1", worktreeId: "worktree-1", createdAt: "2026-08-26T10:00:00.000Z" }],
         locals: () => new Set(),
@@ -35,14 +36,15 @@ describe("project session live state", () => {
     })
   })
 
-  it("returns only the active project and does not expose unscoped sessions", () => {
+  it("returns only the active project and keeps the legacy source when disabled", () => {
     createRoot((dispose) => {
-      const state = { pid: "second" as string | undefined, store: [] as SessionInfo[] }
+      const state = { pid: "second" as string | undefined, enabled: true, store: [] as SessionInfo[] }
       const first = { ...session("same"), title: "First project" }
       const second = { ...session("same"), title: "Second project" }
       const live = createProjectSessionsLive({
         base: () => ({ first: [first], second: [second] }),
         pid: () => state.pid,
+        enabled: () => state.enabled,
         store: () => state.store,
         managed: () => [],
         locals: () => new Set(),
@@ -52,8 +54,9 @@ describe("project session live state", () => {
       expect(live.current()).toEqual([first])
       state.pid = undefined
       expect(live.current()).toEqual([])
+      state.enabled = false
       state.store = [first]
-      expect(live.current()).toEqual([])
+      expect(live.current()).toEqual([first])
       dispose()
     })
   })
