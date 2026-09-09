@@ -12,6 +12,7 @@ import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, 
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { For } from "solid-js"
+import { createStore } from "solid-js/store"
 import { TranscriptRowView } from "../components/chat/TranscriptRow"
 import { messageTurns } from "../context/session-queue"
 import { transcriptRows } from "../context/transcript-rows"
@@ -725,6 +726,41 @@ export const TitleOnlyReasoning: Story = {
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const StreamingReasoning: Story = {
+  name: "Reasoning - streaming then finished",
+  render: () => {
+    const [part, setPart] = createStore<ReasoningPart>({
+      id: "part-reasoning-stream",
+      sessionID: SESSION_ID,
+      messageID: ASST_MSG_ID,
+      type: "reasoning",
+      text: "**Checking the streaming layout**\n\nInspect how the block behaves while the text grows.",
+      time: { start: now - 1000 },
+    })
+    return (
+      <StoryProviders data={dataWith([part])} sessionID={SESSION_ID} status="busy">
+        <div data-testid="reasoning-stream-host">
+          <button
+            type="button"
+            data-testid="reasoning-append"
+            onClick={() => setPart("text", (value) => `${value} ${"More reasoning output. ".repeat(6)}`)}
+          >
+            Append reasoning
+          </button>
+          <button
+            type="button"
+            data-testid="reasoning-finish"
+            onClick={() => setPart("time", { start: now - 1000, end: now })}
+          >
+            Finish reasoning
+          </button>
+          <AssistantMessage message={baseAssistantMessage} />
+        </div>
       </StoryProviders>
     )
   },

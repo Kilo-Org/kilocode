@@ -640,8 +640,11 @@
 }
 
 .prompt-speech-button--starting {
-  cursor: progress;
   opacity: 0.7;
+}
+
+.prompt-speech-button[data-loading] {
+  cursor: pointer;
 }
 
 .prompt-speech-button--recording::after {

@@ -795,6 +795,11 @@ export interface AutoApprovalReasonSettingLoadedMessage {
   visible: boolean
 }
 
+export interface PushFixesSettingLoadedMessage {
+  type: "pushFixesSettingLoaded"
+  enabled: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -1651,6 +1656,7 @@ export type ExtensionMessage =
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
+  | PushFixesSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

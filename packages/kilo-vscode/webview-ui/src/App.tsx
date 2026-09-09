@@ -20,7 +20,7 @@ import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
 import { strongest } from "./utils/session-activity"
-import { planOpens } from "./utils/open-plan"
+import { createPlanOpener } from "./utils/open-plan"
 import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
@@ -36,7 +36,6 @@ import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
 const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
-const opened = new Set<string>()
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -151,14 +150,11 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
-  const unsubscribePlans = vscode.onMessage((message) => {
-    for (const plan of planOpens(message, session.currentSessionID())) {
-      const id = `${plan.sessionID}:${plan.id}`
-      if (opened.has(id)) continue
-      opened.add(id)
-      queueMicrotask(() => open(plan.path, undefined, undefined, plan.sessionID))
-    }
-  })
+  const opener = createPlanOpener(session.currentSessionID, (plan) =>
+    open(plan.path, undefined, undefined, plan.sessionID),
+  )
+  const unsubscribePlans = vscode.onMessage(opener.accept)
+  createEffect(() => opener.flush(session.currentSessionID()))
   onCleanup(unsubscribePlans)
 
   const openDiff = (diff: PermissionFileDiff) => {

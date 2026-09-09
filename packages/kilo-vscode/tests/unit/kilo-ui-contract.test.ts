@@ -397,6 +397,15 @@ describe("AssistantMessage visible row contract (source)", () => {
     expect(src).toContain("if (!planExitInfo(part)) return")
   })
 
+  it("keeps reasoning parts out of the wrapper grow-in clip", () => {
+    // The reasoning header and body bleed 6px past the wrapper, so a grow-in
+    // clip trims their sides while the text streams and releases them when it
+    // stops, resizing the block at the end of the stream.
+    const live = src.match(/const live =[\s\S]*?useGrowIn\(/)?.[0] ?? ""
+    expect(live).toContain('part.type === "text" && !!part.time && !part.time.end')
+    expect(live).not.toContain('part.type === "reasoning"')
+  })
+
   it("uses the native recall tool without a separate memory badge", () => {
     const tools = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
     expect(src).not.toContain("assistant-memory-badge")
