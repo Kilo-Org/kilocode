@@ -182,14 +182,60 @@ export const {
           if (processes?.length) draft.background_process[sessionID] = processes
           else delete draft.background_process[sessionID]
           delete draft.interactive_terminal[sessionID]
-          delete draft.permission[sessionID]
-          delete draft.question[sessionID]
+          // pending asks are one-shot events; an unanswered ask hangs its session forever, so
+          // eviction keeps them and permission.replied/question.replied remove them
           delete draft.suggestion[sessionID]
           delete draft.network[sessionID]
         }),
       )
       fullSyncedSessions.delete(sessionID)
       for (const child of children) evict(child)
+    }
+
+    // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
+    function mergePending<T extends PermissionRequest | QuestionRequest>(
+      list: T[],
+      current: Record<string, T[]>,
+      before: Set<string>,
+    ): Record<string, T[]> {
+      const fresh: Record<string, T[]> = {}
+      for (const request of list) (fresh[request.sessionID] ??= []).push(request)
+      const next: Record<string, T[]> = {}
+      for (const sessionID of new Set([...Object.keys(current), ...Object.keys(fresh)])) {
+        const merged = new Map<string, T>()
+        for (const request of fresh[sessionID] ?? []) {
+          // skip entries the store already dropped (replied mid-fetch): the stale list resurrects answered asks
+          if (before.has(request.id) && !(current[sessionID] ?? []).some((r) => r.id === request.id)) continue
+          merged.set(request.id, request)
+        }
+        for (const request of current[sessionID] ?? []) {
+          if (merged.has(request.id)) continue
+          if (before.has(request.id)) continue // the server list no longer holds it
+          merged.set(request.id, request)
+        }
+        if (merged.size) next[sessionID] = [...merged.values()].sort((a, b) => a.id.localeCompare(b.id))
+      }
+      return next
+    }
+
+    async function syncPending() {
+      const workspace = project.workspace.current()
+      const before = {
+        permission: new Set(Object.values(store.permission).flatMap((list) => list.map((r) => r.id))),
+        question: new Set(Object.values(store.question).flatMap((list) => list.map((r) => r.id))),
+      }
+      const [permissions, questions] = await Promise.all([
+        sdk.client.permission.list({ workspace }).then((x) => x.data ?? []),
+        sdk.client.question.list({ workspace }).then((x) => x.data ?? []),
+      ])
+      if (permission.mode === "auto") {
+        for (const request of permissions)
+          void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
+        setStore("permission", reconcile({}))
+      } else {
+        setStore("permission", reconcile(mergePending(permissions, store.permission, before.permission)))
+      }
+      setStore("question", reconcile(mergePending(questions, store.question, before.question)))
     }
 
     function strip(message: Message): Message {
@@ -912,7 +958,7 @@ export const {
             sdk.client.indexing
               .status()
               .then((result) => setStore("indexing", reconcile(result.data ?? store.indexing))),
-            // kilocode_change end
+            syncPending().catch(() => {}), // kilocode_change - recover pending asks missed while disconnected
           ]).then(() => {
             setStore("status", "complete")
           })
@@ -1053,6 +1099,8 @@ export const {
               }),
             )
             fullSyncedSessions.add(sessionID)
+            // a failed pending-ask recovery must not fail the session load; the next visit retries it
+            await syncPending().catch(() => {}) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
           })().finally(() => {
             syncingSessions.delete(sessionID)
             hydratingSessions.delete(sessionID)
