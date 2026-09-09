@@ -248,7 +248,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
               class="am-pr-panel-mode"
               aria-label={t("settings.agentBehaviour.pushFixes.title")}
               aria-pressed={push()}
-              data-active={push()}
+              data-active={push() ? "" : undefined}
               onClick={() => applySetting("agentManager.pushFixes", !push())}
             />
           </Tooltip>

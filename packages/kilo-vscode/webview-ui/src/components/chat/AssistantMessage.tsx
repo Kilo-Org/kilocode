@@ -276,10 +276,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return part as unknown as ToolPart
           })
           const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
+          // Reasoning blocks are excluded: they animate their own height and
+          // their header and body bleed 6px past this wrapper, so the grow-in
+          // clip would trim their sides for the whole stream and then release
+          // them when the text stops growing, resizing the block at the end.
           const live =
             part.type === "tool"
               ? part.state.status === "pending" || part.state.status === "running"
-              : (part.type === "reasoning" || part.type === "text") && !!part.time && !part.time.end
+              : part.type === "text" && !!part.time && !part.time.end
           let el: HTMLDivElement | undefined
           useGrowIn(() => el, live)
 

@@ -190,7 +190,7 @@ import {
   buildAutoApprovalReasonSettingMessage,
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
-import { pushFixes } from "./kilo-provider/push-fixes-settings"
+import { buildPushFixesSettingMessage, pushFixes, watchPushFixesConfig } from "./kilo-provider/push-fixes-settings"
 
 type ReviewCommentsHandler = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) => void
 
@@ -463,6 +463,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatConfigDisposable: vscode.Disposable | null = null
   private throughputConfigDisposable: vscode.Disposable | null = null
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
+  private pushFixesConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1075,6 +1076,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable = watchAutoApprovalReasonConfig((msg) => this.postMessage(msg))
+    this.pushFixesConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable = watchPushFixesConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -4702,6 +4705,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
     this.postMessage(buildAutoApprovalReasonSettingMessage())
+    this.postMessage(buildPushFixesSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -5705,6 +5709,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.chatConfigDisposable?.dispose()
     this.throughputConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()

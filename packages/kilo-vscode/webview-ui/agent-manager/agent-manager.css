@@ -2769,9 +2769,8 @@ body.am-wt-dragging-active * {
 }
 
 /* Split button: a main action with an attached dropdown chevron. The segments
-   sit flush inside one rounded outline; hovering a segment highlights exactly
-   the action that will trigger, and the segment divider makes the two click
-   targets distinguishable. */
+   sit flush inside one rounded outline, and hovering a segment highlights the
+   action that will trigger. */
 .am-split-button {
   display: inline-flex;
   align-items: center;
@@ -2793,38 +2792,70 @@ body.am-wt-dragging-active * {
   gap: 0;
   align-items: stretch;
   border-radius: 2px;
-  background: var(--surface-brand-base);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--surface-brand-base) 88%, var(--vscode-editor-background));
+  color: var(--text-on-brand-base, var(--vscode-button-foreground, #ffffff));
 }
 
 .am-split-button[data-variant="primary"] > [data-component="button"] {
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 26px;
   border: 0;
   border-radius: 2px 0 0 2px;
   background: transparent;
   color: inherit;
+  justify-content: center;
+  text-align: center;
+  transition: background-color 160ms ease;
 }
 
 .am-split-button[data-variant="primary"] > .am-split-arrow {
-  width: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  min-width: 32px;
   height: auto;
   min-height: 26px;
-  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 0;
+  border: 0;
   border-radius: 0 2px 2px 0;
   background: transparent;
   color: inherit;
   opacity: 1;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 160ms ease;
 }
 
 .am-split-button[data-variant="primary"] > .am-split-arrow [data-component="icon"],
 .am-split-button[data-variant="primary"] > .am-split-arrow [data-slot="icon-svg"] {
-  color: #ffffff;
+  color: color-mix(in srgb, var(--text-on-brand-base, var(--vscode-button-foreground, #ffffff)) 64%, transparent);
+  fill: none;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
 }
 
-.am-split-button[data-variant="primary"] > [data-component="button"]:hover:not(:disabled),
+.am-split-button[data-variant="primary"] > .am-split-arrow[data-expanded] [data-slot="icon-svg"] {
+  transform: rotate(180deg);
+}
+
+.am-split-button[data-variant="primary"] > [data-component="button"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-brand-hover) 88%, var(--vscode-editor-background));
+}
+
 .am-split-button[data-variant="primary"] > .am-split-arrow:hover:not(:disabled),
 .am-split-button[data-variant="primary"] > .am-split-arrow[data-expanded] {
-  background: var(--surface-brand-hover);
+  background: color-mix(in srgb, var(--surface-brand-hover) 72%, var(--surface-brand-base));
+}
+
+.am-split-button[data-variant="primary"] > .am-split-arrow:hover:not(:disabled) [data-component="icon"],
+.am-split-button[data-variant="primary"] > .am-split-arrow:hover:not(:disabled) [data-slot="icon-svg"],
+.am-split-button[data-variant="primary"] > .am-split-arrow[data-expanded] [data-component="icon"],
+.am-split-button[data-variant="primary"] > .am-split-arrow[data-expanded] [data-slot="icon-svg"] {
+  color: color-mix(in srgb, var(--text-on-brand-base, var(--vscode-button-foreground, #ffffff)) 76%, transparent);
 }
 
 .am-split-button[data-variant="primary"][data-disabled] {
@@ -2837,6 +2868,20 @@ body.am-wt-dragging-active * {
   color: inherit;
   opacity: 1;
   cursor: not-allowed;
+}
+
+.am-split-button[data-variant="primary"] > .am-split-arrow:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-split-button[data-variant="primary"] > [data-component="button"],
+  .am-split-button[data-variant="primary"] > .am-split-arrow,
+  .am-split-button[data-variant="primary"] > .am-split-arrow [data-component="icon"],
+  .am-split-button[data-variant="primary"] > .am-split-arrow [data-slot="icon-svg"] {
+    transition: none;
+  }
 }
 
 .am-split-menu {
