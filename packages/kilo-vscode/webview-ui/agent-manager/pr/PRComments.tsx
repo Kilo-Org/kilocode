@@ -4,9 +4,9 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
 import type { PRStatus } from "../../src/types/messages"
-import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { PRCommentCard } from "./PRCommentCard"
-import { SEND_LIMIT, githubUrl, prPayload } from "./pr-comment-payload"
+import { resolvedFor, sendThreads, unsentThreads } from "./pr-actions"
+import { SEND_LIMIT, githubUrl } from "./pr-comment-payload"
 import { commentState, createReactionController, omit, patchCommentState } from "./pr-comment-state"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
@@ -15,6 +15,8 @@ interface Props {
   comments: NonNullable<PRStatus["comments"]>
   projectId?: string
   worktreeId: string
+  prNumber: number
+  prUrl: string
   activeTerminalId?: string
   onOpenFile?: (file: string, line?: number) => void
   onOpenDiff?: (comment: PRComment) => void
@@ -37,7 +39,7 @@ export function PRComments(props: Props) {
   const state = () => commentState(props.worktreeId)
   const patch = (value: Parameters<typeof patchCommentState>[1]) => patchCommentState(props.worktreeId, value)
 
-  const resolved = (comment: PRComment) => state().pending[comment.threadId] ?? comment.resolved
+  const resolved = (comment: PRComment) => resolvedFor(comment, state())
   const expandedFor = (comment: PRComment) =>
     state().expanded[comment.threadId] ?? (!resolved(comment) && !comment.outdated)
 
@@ -54,7 +56,7 @@ export function PRComments(props: Props) {
     }
   })
 
-  const unsent = createMemo(() => groups().todo.filter((id) => !state().sent[id]))
+  const unsent = createMemo(() => unsentThreads(props.comments.comments, state()))
 
   // Drop the optimistic state once a poll reports the state the user asked for.
   createEffect(() => {
@@ -117,19 +119,7 @@ export function PRComments(props: Props) {
   }
 
   function send(ids: string[]) {
-    const batch = ids
-      .flatMap((id) => {
-        const comment = index().get(id)
-        return comment && !state().sent[id] ? [comment] : []
-      })
-      .slice(0, SEND_LIMIT)
-    if (batch.length === 0) return
-    sendReviewComments(batch.map(prPayload), props.activeTerminalId)
-    patch((prev) => {
-      const sent = { ...prev.sent }
-      for (const item of batch) sent[item.threadId] = true
-      return { sent }
-    })
+    sendThreads(props.worktreeId, props.comments.comments, ids, state(), props.activeTerminalId)
   }
 
   // `For` over stable thread ids: the DOM survives a poll, so Pierre and
@@ -138,6 +128,10 @@ export function PRComments(props: Props) {
     <Show when={index().get(id)}>
       {(comment) => (
         <PRCommentCard
+          projectId={props.projectId}
+          worktreeId={props.worktreeId}
+          prNumber={props.prNumber}
+          prUrl={props.prUrl}
           comment={comment()}
           preview={comment().outdated ? undefined : comment().preview}
           resolved={resolved(comment())}
@@ -149,6 +143,10 @@ export function PRComments(props: Props) {
           reactions={reactions.list(comment().id, comment().reactions)}
           reactionPending={(content) => reactions.pending(comment().id, content)}
           onReaction={(content, add) => reactions.toggle(comment().id, content, add)}
+          replyReactionError={(id) => reactions.error(id)}
+          replyReactions={(id, values) => reactions.list(id, values)}
+          replyReactionPending={(id, content) => reactions.pending(id, content)}
+          onReplyReaction={(id, content, add) => reactions.toggle(id, content, add)}
           onToggleOpen={() => {
             const next = !expandedFor(comment())
             patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))

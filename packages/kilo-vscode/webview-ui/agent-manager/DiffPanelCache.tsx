@@ -28,6 +28,7 @@ interface Props {
   notice: (key: string) => string | undefined
   comments: (ctx: string) => ReviewComment[]
   remoteComments?: (ctx: string) => PRComment[]
+  remoteTarget?: (ctx: string, comment: PRComment) => import("../../src/shared/pr-comment-actions").PRTarget | undefined
   focusedComment?: (key: string) => { id: string; file: string } | undefined
   setComments: (ctx: string, comments: ReviewComment[]) => void
   composer: (key: string) => ReviewComposer
@@ -115,6 +116,11 @@ export const DiffPanelCache: Component<Props> = (props) => {
               onMarkdownRenderChange={props.onMarkdownRenderChange}
               comments={props.comments(entry.key)}
               remoteComments={props.remoteComments?.(entry.ctx)}
+              remoteTarget={(comment) =>
+                entry.cacheKey === `${props.project() ?? "single"}\0${entry.key}`
+                  ? props.remoteTarget?.(entry.ctx, comment)
+                  : undefined
+              }
               focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
               onCommentsChange={(comments) => props.setComments(entry.key, comments)}
               composer={props.composer(entry.cacheKey)}

@@ -448,6 +448,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
                 agents = KiloWorkspaceDtoMapper.agents(state.agents),
                 commands = state.commands.map(KiloWorkspaceDtoMapper::command),
                 skills = state.skills.map(KiloWorkspaceDtoMapper::skill),
+                warnings = state.warnings.map(KiloWorkspaceDtoMapper::warning),
             )
             is KiloWorkspaceState.Unsupported -> KiloWorkspaceStateDto(
                 status = KiloWorkspaceStatusDto.UNSUPPORTED,

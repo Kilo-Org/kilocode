@@ -55,6 +55,14 @@ export const anacondaDesktopDict = {
 export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Board",
+  "task.swarm.refresh": "Refresh",
+  "task.swarm.reset": "Reset board",
+  "task.swarm.resetTitle": "Reset this board?",
+  "task.swarm.resetDescription":
+    "Clear visible messages? Conversations and running tasks stay unchanged. Agents can post new messages.",
+  "task.swarm.loading": "Loading board...",
+  "task.swarm.failed": "Could not load or reset the board. Try refreshing it.",
 
   "command.provider.connect": "Connect provider",
 
@@ -696,6 +704,17 @@ export const dict = {
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",
+  "session.goal.label": "Goal",
+  "prompt.goal.set": "Set goal",
+  "prompt.goal.start": "Start goal",
+  "session.goal.active": "Active",
+  "session.goal.complete": "Complete (model-reported)",
+  "session.goal.blocked": "Blocked",
+  "session.goal.restart": "Restart goal (uses model credits)",
+  "session.goal.paused": "Paused",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Resume",
+  "session.goal.clear": "Clear goal",
   "session.costAlert.header": "Session Cost Alert",
   "session.costAlert.continue": "Continue",
   "session.costAlert.question":
@@ -826,7 +845,17 @@ export const dict = {
   "settings.notifications.enable.title": "Enable Sound Notifications",
   "settings.notifications.enable.description":
     "Play sounds when sessions complete, encounter an error, or need your input",
+  "settings.notifications.workbench.title": "Enable VS Code Notifications",
+  "settings.notifications.workbench.description":
+    "Show VS Code notifications when Kilo completes a task or needs your input",
+  "settings.notifications.os.title": "Enable OS Notifications",
+  "settings.notifications.os.description":
+    "Show native OS notification alerts when Kilo completes a task or needs your input while VS Code is not active.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sending test notification…",
+  "settings.notifications.testOS.success": "Test notification sent.",
+  "settings.notifications.testOS.error": "Test notification failed",
   "settings.notifications.sound.default": "Default",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -874,9 +903,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
-  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
-  "settings.experimental.multiProject.description":
-    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
   "settings.experimental.taskModelSelection.description":
     "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",

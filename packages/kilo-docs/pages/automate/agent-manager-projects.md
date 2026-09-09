@@ -5,19 +5,11 @@ description: "Manage Agent Manager sessions across multiple Git repositories"
 
 # Multi-project Agent Manager
 
-Multi-project Agent Manager lets you manage sessions and worktrees from multiple Git repositories in one Agent Manager panel. The feature is experimental and disabled by default. When it is disabled, Agent Manager keeps its existing single-project behavior.
-
-## Enable multi-project mode
-
-1. Open [Kilo Code Settings](/docs/getting-started/settings#experimental-features).
-2. Open the **Experimental** tab.
-3. Enable **Multi-Project Agent Manager**.
-
-The setting is also available as `kilo-code.new.experimental.multiProject`. It is an application-scoped VS Code setting and defaults to `false`.
+Agent Manager lets you manage sessions and worktrees from multiple Git repositories in one panel. Multi-project support is always available, with no experimental setting required.
 
 ## Add Git repositories
 
-The repository in your current VS Code workspace is always the **default project**. You cannot remove it from Agent Manager.
+The repository in your current VS Code workspace is always the **default project** and appears first in the project list. You cannot remove it from Agent Manager. Its existing sessions, worktrees, and sections remain available.
 
 To add another repository:
 

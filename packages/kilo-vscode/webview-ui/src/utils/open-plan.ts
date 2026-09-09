@@ -10,7 +10,7 @@ export type PlanOpen = {
   sessionID: string
 }
 
-export function planOpens(message: ExtensionMessage): PlanOpen[] {
+export function planOpens(message: ExtensionMessage, activeSessionID: string | undefined): PlanOpen[] {
   const updates: Update[] =
     message.type === "partUpdated" ? [message] : message.type === "partsUpdated" ? message.updates : []
 
@@ -19,7 +19,7 @@ export function planOpens(message: ExtensionMessage): PlanOpen[] {
     if (part.type !== "tool" || part.tool !== "open_plan" || part.state.status !== "completed") return []
     if (part.state.metadata?.open !== true) return []
     const path = part.state.metadata.plan
-    if (typeof path !== "string" || !path || !update.sessionID) return []
+    if (typeof path !== "string" || !path || update.sessionID !== activeSessionID) return []
     return [{ id: part.id, path, sessionID: update.sessionID }]
   })
 }

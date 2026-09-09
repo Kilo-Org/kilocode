@@ -1,5 +1,31 @@
 # @kilocode/cli
 
+## 7.5.16
+
+### Minor Changes
+
+- [#13861](https://github.com/Kilo-Org/kilocode/pull/13861) [`e207b42`](https://github.com/Kilo-Org/kilocode/commit/e207b423518f170ac716ae68d6900964c57fae15) - Support starting Agent Manager sessions in an explicitly selected existing managed worktree.
+
+- [#13877](https://github.com/Kilo-Org/kilocode/pull/13877) [`a1c674a`](https://github.com/Kilo-Org/kilocode/commit/a1c674adacdea502870aeba79ae77f2cdc661e11) - Allow Agent Manager sessions to reply to the session that sent them a prompt.
+
+- [#13851](https://github.com/Kilo-Org/kilocode/pull/13851) [`251f280`](https://github.com/Kilo-Org/kilocode/commit/251f2809ba85f15f995f8b8c645e359729fc1980) - Add an explicit --prompt-stdin option to Cloud start and send commands.
+
+### Patch Changes
+
+- [#13848](https://github.com/Kilo-Org/kilocode/pull/13848) [`261edcd`](https://github.com/Kilo-Org/kilocode/commit/261edcde55a3fcee8fb94a51f4698a8013b0bd8a) - Show shared agent board messages in the CLI with sender and recipient names, message bodies, and storage status.
+
+- [#13868](https://github.com/Kilo-Org/kilocode/pull/13868) [`66053ef`](https://github.com/Kilo-Org/kilocode/commit/66053ef651ad70747a8b9313b50dfa7a68b5d514) - Load recent messages faster when opening large sessions, speed up token-usage totals across child sessions, and keep older history available on demand.
+
+- [#13896](https://github.com/Kilo-Org/kilocode/pull/13896) [`6275016`](https://github.com/Kilo-Org/kilocode/commit/627501673a4df40708e4b9e7384cf5f9e850860a) Thanks [@esc](https://github.com/esc)! - Fix `kilo session list --all` crashing with "undefined is not an object" instead of listing sessions across all projects.
+
+- [#13855](https://github.com/Kilo-Org/kilocode/pull/13855) [`d75ae54`](https://github.com/Kilo-Org/kilocode/commit/d75ae546bcee5f484cece2a7a59bb723de77e569) - Restore Home and End cursor movement while editing session prompts.
+
+- [#13883](https://github.com/Kilo-Org/kilocode/pull/13883) [`6024a76`](https://github.com/Kilo-Org/kilocode/commit/6024a76db57dc0b5f1d3e904eea426a299bcf653) - Open saved plan files automatically when an agent requests user review in VS Code.
+
+- [#13882](https://github.com/Kilo-Org/kilocode/pull/13882) [`4e2b7a0`](https://github.com/Kilo-Org/kilocode/commit/4e2b7a0358e51457e77155e14c88a1776cd2c34d) - Prevent swarm agents from sending shared board messages to themselves.
+
+- [#13854](https://github.com/Kilo-Org/kilocode/pull/13854) [`8ae6197`](https://github.com/Kilo-Org/kilocode/commit/8ae61973bfc2825639bf89bdb29a2d2c839079cd) - Speed up Windows CLI startup by reusing CPU compatibility checks and skipping detection for explicitly selected or cached binaries.
+
 ## 7.5.15
 
 ### Patch Changes

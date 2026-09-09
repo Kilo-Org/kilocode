@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Terminé (signalé par le modèle)",
+  "session.goal.blocked": "Bloqué",
+  "session.goal.restart": "Relancer l'objectif (consomme des crédits)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tableau",
+  "task.swarm.refresh": "Actualiser",
+  "task.swarm.reset": "Réinitialiser le tableau",
+  "task.swarm.resetTitle": "Réinitialiser ce tableau ?",
+  "task.swarm.resetDescription":
+    "Effacer les messages visibles ? Les conversations et les tâches en cours restent inchangées. Les agents peuvent publier de nouveaux messages.",
+  "task.swarm.loading": "Chargement du tableau...",
+  "task.swarm.failed": "Impossible de charger ou de réinitialiser le tableau. Essayez de l’actualiser.",
 
   "command.provider.connect": "Connecter un fournisseur",
 
@@ -764,6 +775,14 @@ export const dict = {
   "session.outcome.interrupted": "Tour interrompu",
   "session.outcome.error": "Échec du tour",
   "session.outcome.finish": "Motif de fin : {{reason}}",
+  "session.goal.label": "Objectif",
+  "prompt.goal.set": "Définir un objectif",
+  "prompt.goal.start": "Démarrer l'objectif",
+  "session.goal.active": "Actif",
+  "session.goal.paused": "En pause",
+  "session.goal.pause": "Mettre en pause",
+  "session.goal.resume": "Reprendre",
+  "session.goal.clear": "Effacer l'objectif",
   "session.costAlert.header": "Alerte de coût de session",
   "session.costAlert.continue": "Continuer",
   "session.costAlert.question":
@@ -868,7 +887,17 @@ export const dict = {
   "settings.notifications.enable.title": "Activer les notifications sonores",
   "settings.notifications.enable.description":
     "Lire des sons lorsque les sessions se terminent, rencontrent une erreur ou nécessitent votre intervention",
+  "settings.notifications.workbench.title": "Activer les notifications VS Code",
+  "settings.notifications.workbench.description":
+    "Afficher des notifications VS Code lorsque Kilo termine une tâche ou nécessite votre intervention",
+  "settings.notifications.os.title": "Activer les notifications du système d'exploitation",
+  "settings.notifications.os.description":
+    "Afficher des alertes de notification natives du système d'exploitation lorsque Kilo termine une tâche ou nécessite votre intervention alors que VS Code n'est pas actif.",
   "settings.notifications.testSound": "Tester",
+  "settings.notifications.testOS": "Tester",
+  "settings.notifications.testOS.testing": "Envoi de la notification de test…",
+  "settings.notifications.testOS.success": "Notification de test envoyée.",
+  "settings.notifications.testOS.error": "Échec de l'envoi de la notification de test",
   "settings.notifications.sound.default": "Par défaut",
   "settings.notifications.sound.system": "Système",
   "settings.notifications.sound.description":
@@ -915,9 +944,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
-  "settings.experimental.multiProject.description":
-    "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
   "settings.experimental.taskModelSelection.description":
     "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",

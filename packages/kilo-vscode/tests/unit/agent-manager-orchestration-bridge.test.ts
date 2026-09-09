@@ -467,7 +467,6 @@ describe("AgentManagerOrchestrationBridge", () => {
     const contexts = new ProjectContexts({
       workspaceRoot: () => root,
       registry: { list: () => [], get: () => undefined },
-      enabled: () => false,
       deps: { log: () => undefined, state: () => state },
     })
     const ctx = contexts.active()!
@@ -589,7 +588,6 @@ describe("AgentManagerOrchestrationBridge", () => {
     const contexts = new ProjectContexts({
       workspaceRoot: () => root,
       registry: { list: () => [], get: () => undefined },
-      enabled: () => false,
       deps: { log: () => undefined, state: () => restored },
     })
     const ctx = contexts.active()!

@@ -12,6 +12,7 @@ import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from ".
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { RequestSessionBoardMessage, ResetSessionBoardMessage } from "./board"
 import type { Activity } from "../../utils/session-activity"
 import type { PRReactionContent } from "../../../agent-manager/pr/pr-types"
 
@@ -618,6 +619,10 @@ export interface TestNotificationMessage {
   sound: string
 }
 
+export interface TestOSNotificationMessage {
+  type: "testOSNotification"
+}
+
 export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
 }
@@ -743,6 +748,7 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -1561,6 +1567,8 @@ export type WebviewMessage =
   | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
+  | RequestSessionBoardMessage
+  | ResetSessionBoardMessage
   | CancelBackgroundJobMessage
   | PromoteBackgroundJobMessage
   | RevertSessionRequest
@@ -1655,6 +1663,7 @@ export type WebviewMessage =
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | TestNotificationMessage
+  | TestOSNotificationMessage
   | ResetAllSettingsRequest
   | ResetReadNotificationsRequest
   | SettingsTabChangedMessage

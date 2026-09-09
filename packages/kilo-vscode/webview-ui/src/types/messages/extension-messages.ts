@@ -86,6 +86,7 @@ import type {
   MigrationSessionProgressMessage,
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
+import type { SessionBoardLoadedMessage } from "./board"
 
 // ============================================
 // Messages FROM extension TO webview
@@ -320,6 +321,11 @@ export interface CloudSessionImportFailedMessage {
 export interface OpenCloudSessionMessage {
   type: "openCloudSession"
   sessionId: string
+}
+
+export interface OpenSessionMessage {
+  type: "openSession"
+  sessionID: string
 }
 
 export interface SelectKiloModelMessage {
@@ -694,7 +700,6 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
-  multiProject?: boolean
   [key: string]: unknown
 }
 
@@ -759,8 +764,17 @@ export interface NotificationSettingsLoadedMessage {
   type: "notificationSettingsLoaded"
   settings: {
     attentionEnabled: boolean
+    attentionNotifications: boolean
+    attentionOSNotifications: boolean
     attentionSound: string
+    osNotificationsAvailable: boolean
   }
+}
+
+export interface OSNotificationTestResultMessage {
+  type: "osNotificationTestResult"
+  ok: boolean
+  error?: string
 }
 
 export interface TimelineSettingLoadedMessage {
@@ -897,7 +911,6 @@ export interface AgentProjectSnapshot {
 // Project catalog push from extension to webview
 export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
-  multiProject: boolean
   projects: AgentProjectSnapshot[]
 }
 
@@ -1274,6 +1287,8 @@ export interface DiffViewerContextMessage {
 export interface DiffViewerPRCommentsMessage {
   type: "diffViewer.prComments"
   comments: PRComment[]
+  target?: import("../../../../src/shared/pr-comment-actions").PRTarget
+  threads?: string[]
 }
 
 export interface DiffViewerFocusCommentMessage {
@@ -1529,6 +1544,14 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | {
+      type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+      projectId?: string
+      worktreeId: string
+      threadId: string
+      success: boolean
+      error?: string
+    }
   | { type: "sessionAcknowledged"; sessionID: string; eventID: string }
   | { type: "webviewActiveChanged"; active: boolean }
   | DocumentResultMessage
@@ -1619,6 +1642,7 @@ export type ExtensionMessage =
   | ConfigBindingExpiredMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
+  | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
@@ -1657,6 +1681,7 @@ export type ExtensionMessage =
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
   | OpenCloudSessionMessage
+  | OpenSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
   | AgentManagerImportResultMessage
@@ -1730,3 +1755,4 @@ export type ExtensionMessage =
   | MemoryEventMessage
   | MemoryOperationResultMessage
   | BackgroundJobsLoadedMessage
+  | SessionBoardLoadedMessage

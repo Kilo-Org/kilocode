@@ -74,6 +74,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -86,6 +87,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -175,7 +177,7 @@ export class VscodeHost implements Host {
       listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
-      registerSession: (s) => provider.registerSession(s),
+      registerSession: (s) => provider.registerSession(s, false, opts.sessionProject?.()),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
@@ -257,6 +259,12 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  dirtyFiles(): string[] {
+    return vscode.workspace.textDocuments
+      .filter((doc) => doc.isDirty && doc.uri.scheme === "file")
+      .map((doc) => doc.uri.fsPath)
+  }
+
   async pickFolder(): Promise<string | undefined> {
     const uris = await vscode.window.showOpenDialog({
       canSelectFiles: false,
@@ -266,10 +274,6 @@ export class VscodeHost implements Host {
       title: "Add Project to Agent Manager",
     })
     return uris?.[0]?.fsPath
-  }
-
-  multiProject(): boolean {
-    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
   }
 
   browserAutomation(): boolean {
@@ -290,12 +294,6 @@ export class VscodeHost implements Host {
 
   onDidChangeWorkspaceFolders(cb: () => void): Disposable {
     return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
-  }
-
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
-    return vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
-    })
   }
 
   isTrusted(): boolean {

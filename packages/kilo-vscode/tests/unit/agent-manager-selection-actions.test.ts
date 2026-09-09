@@ -3,6 +3,7 @@ import { createRoot, createSignal } from "solid-js"
 import { needsLocalDraft } from "../../webview-ui/agent-manager/project/local-tabs"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
 import {
+  createTabMemory,
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
@@ -59,6 +60,31 @@ describe("selectWorktreeAction", () => {
 })
 
 describe("selectLocalAction", () => {
+  it.each(["ses-a2", "pending:draft", "review", "terminal:1"])("remembers Local %s for its project", (tab) => {
+    const memory: Record<string, string> = {}
+    const save = createTabMemory({
+      selection: () => "local",
+      tab: () => tab,
+      applied: () => "project-a",
+      active: () => "project-a",
+      owns: () => false,
+      pending: (id) => id.startsWith("pending:"),
+      locals: () => ["ses-a1", "ses-a2"],
+      localTab: (id) => id === "review" || id.startsWith("terminal:"),
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+
+    save()
+    expect(memory.local).toBe(tab)
+    if (tab !== "ses-a2") return
+    const result = deps()
+    result.value.tabMemory = () => memory
+    selectLocalAction(result.value, [{ id: "ses-a1" }, { id: "ses-a2" }])
+    expect(result.calls).toEqual(["local:ses-a2"])
+  })
+
   it("restores the remembered second local tab", () => {
     const result = deps()
     result.value.tabMemory = () => ({ local: "ses-a2" })
@@ -66,6 +92,29 @@ describe("selectLocalAction", () => {
     selectLocalAction(result.value, [{ id: "ses-a1" }, { id: "ses-a2" }])
 
     expect(result.calls).toContain("local:ses-a2")
+  })
+
+  it("does not remember another project's selection during or after a switch", () => {
+    const state = { active: "project-b", selection: "local" }
+    const memory: Record<string, string> = {}
+    const save = createTabMemory({
+      selection: () => state.selection,
+      tab: () => "ses-b",
+      applied: () => "project-a",
+      active: () => state.active,
+      owns: () => false,
+      pending: () => false,
+      locals: () => ["ses-a"],
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+    save()
+    state.active = "project-a"
+    save()
+    state.selection = "wt-b"
+    save()
+    expect(memory).toEqual({})
   })
 
   it("focuses a project session when shared session metadata is stale", () => {

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Ukończony (według modelu)",
+  "session.goal.blocked": "Zablokowany",
+  "session.goal.restart": "Uruchom cel ponownie (zużywa kredyty modelu)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablica",
+  "task.swarm.refresh": "Odśwież",
+  "task.swarm.reset": "Zresetuj tablicę",
+  "task.swarm.resetTitle": "Zresetować tę tablicę?",
+  "task.swarm.resetDescription":
+    "Wyczyścić widoczne wiadomości? Rozmowy i trwające zadania pozostaną bez zmian. Agenci mogą publikować nowe wiadomości.",
+  "task.swarm.loading": "Ładowanie tablicy...",
+  "task.swarm.failed": "Nie udało się załadować lub zresetować tablicy. Spróbuj ją odświeżyć.",
 
   "command.provider.connect": "Połącz dostawcę",
 
@@ -708,6 +719,14 @@ export const dict = {
   "session.outcome.interrupted": "Tura przerwana",
   "session.outcome.error": "Tura nie powiodła się",
   "session.outcome.finish": "Powód zakończenia: {{reason}}",
+  "session.goal.label": "Cel",
+  "prompt.goal.set": "Ustaw cel",
+  "prompt.goal.start": "Rozpocznij cel",
+  "session.goal.active": "Aktywny",
+  "session.goal.paused": "Wstrzymany",
+  "session.goal.pause": "Wstrzymaj",
+  "session.goal.resume": "Wznów",
+  "session.goal.clear": "Wyczyść cel",
   "session.costAlert.header": "Alert kosztu sesji",
   "session.costAlert.continue": "Kontynuuj",
   "session.costAlert.question":
@@ -805,7 +824,17 @@ export const dict = {
   "settings.notifications.enable.title": "Włącz powiadomienia dźwiękowe",
   "settings.notifications.enable.description":
     "Odtwarzaj dźwięki, gdy sesje się zakończą, wystąpi błąd lub będzie potrzebna Twoja reakcja",
+  "settings.notifications.workbench.title": "Włącz powiadomienia VS Code",
+  "settings.notifications.workbench.description":
+    "Pokazuj powiadomienia VS Code, gdy Kilo ukończy zadanie lub będzie potrzebna Twoja reakcja",
+  "settings.notifications.os.title": "Włącz powiadomienia systemu operacyjnego",
+  "settings.notifications.os.description":
+    "Pokazuj natywne alerty powiadomień systemu operacyjnego, gdy Kilo ukończy zadanie lub będzie potrzebna Twoja reakcja, a VS Code nie jest aktywny.",
   "settings.notifications.testSound": "Testuj",
+  "settings.notifications.testOS": "Testuj",
+  "settings.notifications.testOS.testing": "Wysyłanie powiadomienia testowego…",
+  "settings.notifications.testOS.success": "Wysłano powiadomienie testowe.",
+  "settings.notifications.testOS.error": "Nie udało się wysłać powiadomienia testowego",
   "settings.notifications.sound.default": "Domyślny",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -851,9 +880,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
-  "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
-  "settings.experimental.multiProject.description":
-    "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
   "settings.experimental.taskModelSelection.description":
     "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",

@@ -58,6 +58,11 @@ describe("Agent Manager settings navigation", () => {
 })
 
 describe("Agent Manager application settings", () => {
+  it("does not register a multi-project opt-in setting", async () => {
+    const manifest = await Bun.file(join(ROOT, "package.json")).json()
+    expect(manifest.contributes.configuration.properties).not.toHaveProperty("kilo-code.new.experimental.multiProject")
+  })
+
   it.each([
     [undefined, undefined, true, ""],
     [false, "team/", false, "team/"],
@@ -85,6 +90,7 @@ describe("Agent Manager application settings", () => {
       }
       expect(provider.configSettings()["agentManager.autoBranchNaming"]).toBe(expected)
       expect(provider.configSettings()["agentManager.branchPrefix"]).toBe(text)
+      expect(provider.configSettings()).not.toHaveProperty("multiProject")
       await provider.handleUpdateSetting("agentManager.autoBranchNaming", !expected)
       await provider.handleUpdateSetting("agentManager.branchPrefix", "")
       expect(writes).toEqual([

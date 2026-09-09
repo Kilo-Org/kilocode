@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -204,7 +203,6 @@ export const guarded = [
   "write",
   "agent_manager",
   "repo_clone",
-  "interactive_terminal",
 ]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules

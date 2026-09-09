@@ -53,9 +53,10 @@ const SubagentContent: Component<Props & { activity: (id: string) => Activity }>
   const language = useLanguage()
   const ids = () => props.tabs().map((tab) => tab.id)
   const title = (id: string) => props.tabs().find((tab) => tab.id === id)?.title ?? "Sub-agent"
-  const close = (id: string, focus: { restore: () => void }) => {
+  const close = (id: string, focus: { restore: () => void }, release: () => void) => {
     props.onClose(id)
     session.releaseSession(id)
+    requestAnimationFrame(release)
     if (ids().length > 0) focus.restore()
   }
   const closeOthers = (id: string) => {
@@ -120,9 +121,9 @@ const SubagentContent: Component<Props & { activity: (id: string) => Activity }>
                 if (event.button !== 1) return
                 event.preventDefault()
                 event.stopPropagation()
-                close(id, api.focus)
+                close(id, api.focus, api.release)
               }}
-              onClose={() => close(id, api.focus)}
+              onClose={() => close(id, api.focus, api.release)}
               onCloseOthers={() => closeOthers(id)}
             />
           )

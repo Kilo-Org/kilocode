@@ -57,8 +57,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.blocked": "Blokkert",
+  "session.goal.restart": "Start mål på nytt (bruker modellkreditter)",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Oppdater",
+  "task.swarm.reset": "Nullstill tavle",
+  "task.swarm.resetTitle": "Nullstille denne tavlen?",
+  "task.swarm.resetDescription":
+    "Tømme synlige meldinger? Samtaler og kjørende oppgaver endres ikke. Agenter kan sende nye meldinger.",
+  "task.swarm.loading": "Laster tavle...",
+  "task.swarm.failed": "Kunne ikke laste eller nullstille tavlen. Prøv å oppdatere den.",
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -712,6 +723,14 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angi mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Satt på pause",
+  "session.goal.pause": "Pause",
+  "session.goal.resume": "Fortsett",
+  "session.goal.clear": "Fjern mål",
   "session.costAlert.header": "Varsel om øktkostnad",
   "session.costAlert.continue": "Fortsett",
   "session.costAlert.question":
@@ -809,7 +828,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktiver lydvarsler",
   "settings.notifications.enable.description":
     "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.workbench.title": "Aktiver VS Code-varsler",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-varsler når Kilo fullfører en oppgave eller trenger innspill fra deg",
+  "settings.notifications.os.title": "Aktiver OS-varsler",
+  "settings.notifications.os.description":
+    "Vis opprinnelige operativsystemvarsler når Kilo fullfører en oppgave eller trenger innspill fra deg mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testvarsel…",
+  "settings.notifications.testOS.success": "Testvarsel sendt.",
+  "settings.notifications.testOS.error": "Testvarsel mislyktes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -854,9 +883,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
-  "settings.experimental.multiProject.description":
-    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
   "settings.experimental.taskModelSelection.description":
     "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",

@@ -187,7 +187,7 @@ export interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
-    overrides?: { agent?: string; model?: string; variant?: string },
+    overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
   ) => boolean
   abort: () => void
   compact: () => void
@@ -206,7 +206,9 @@ export interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string, options?: { focus?: boolean }) => void
+  selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
+  scrollBottomID: Accessor<string | undefined>
+  consumeScrollBottom: (id: string) => boolean
   releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void

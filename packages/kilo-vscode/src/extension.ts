@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -16,7 +17,7 @@ import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
-import { AttentionService } from "./services/attention"
+import { AttentionService, showOSNotification } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
@@ -266,6 +267,25 @@ export async function activate(context: vscode.ExtensionContext) {
   )
   const attention = new AttentionService(connectionService, {
     approve: (event, directory) => autoApprove.approve(event, directory),
+    details: async (sessionID, directory) => {
+      provider.rememberSession(sessionID, directory)
+      const session = await provider.getSessionInfo(sessionID)
+      const dir = directory ?? session?.directory
+      const workspace = dir
+        ? (vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dir))?.name ?? basename(dir))
+        : (vscode.workspace.name ?? "Workspace")
+      return { workspace, session: session?.title ?? session?.slug ?? sessionID }
+    },
+    focused: () => vscode.window.state.focused,
+    // Every surface already reports the session it displays, gated on its own
+    // visibility, so this covers the sidebar, Kilo editor tabs, and Agent
+    // Manager without each one needing its own accessor.
+    visible: (sessionID) => connectionService.isVisible(sessionID),
+    os: showOSNotification,
+    show: async (sessionID, directory) => {
+      await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await provider.openSession(sessionID, directory)
+    },
   })
 
   // Prewarm only after all global event consumers are ready.
@@ -287,6 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
           workspaceRoot: () => agentManagerProvider.workspaceRoot(),
           projectId: () => agentManagerProvider.projectId(),
+          sessionProject: () => agentManagerProvider.sessionProject(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()

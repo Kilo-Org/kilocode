@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型报告）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新开始目标（消耗模型额度）",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "刷新",
+  "task.swarm.reset": "重置看板",
+  "task.swarm.resetTitle": "重置此看板？",
+  "task.swarm.resetDescription": "清除可见消息？对话和正在运行的任务不会改变。智能体可以发布新消息。",
+  "task.swarm.loading": "正在加载看板...",
+  "task.swarm.failed": "无法加载或重置看板。请尝试刷新。",
 
   "command.provider.connect": "连接提供商",
 
@@ -725,6 +735,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",
+  "session.goal.label": "目标",
+  "prompt.goal.set": "设置目标",
+  "prompt.goal.start": "开始目标",
+  "session.goal.active": "运行中",
+  "session.goal.paused": "已暂停",
+  "session.goal.pause": "暂停",
+  "session.goal.resume": "继续",
+  "session.goal.clear": "清除目标",
   "session.costAlert.header": "会话费用提醒",
   "session.costAlert.continue": "继续",
   "session.costAlert.question": "此会话刚刚超过每会话提醒阈值 {{limit}}，当前费用为 {{cost}}。是否继续？",
@@ -814,7 +832,16 @@ export const dict = {
   "settings.notifications.sounds": "声音",
   "settings.notifications.enable.title": "启用声音通知",
   "settings.notifications.enable.description": "在会话完成、遇到错误或需要你输入时播放声音",
+  "settings.notifications.workbench.title": "启用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成任务或需要你输入时显示 VS Code 通知",
+  "settings.notifications.os.title": "启用操作系统通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未处于活动状态时，如果 Kilo 完成任务或需要你输入，则显示原生操作系统通知提醒。",
   "settings.notifications.testSound": "测试",
+  "settings.notifications.testOS": "测试",
+  "settings.notifications.testOS.testing": "正在发送测试通知…",
+  "settings.notifications.testOS.success": "测试通知已发送。",
+  "settings.notifications.testOS.error": "测试通知发送失败",
   "settings.notifications.sound.default": "默认",
   "settings.notifications.sound.system": "系统",
   "settings.notifications.sound.description":
@@ -858,9 +885,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.multiProject.title": "多项目 Agent Manager",
-  "settings.experimental.multiProject.description":
-    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
   "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
