@@ -4,6 +4,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { WorktreeState } from "../../src/types/messages"
 import type { PRStatus } from "../../src/types/messages"
+import { useConfig } from "../../src/context/config"
 import { useLanguage } from "../../src/context/language"
 import { PRBadge } from "./PRBadge"
 import { PROverview } from "./PROverview"
@@ -38,6 +39,8 @@ interface PRPanelProps {
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
   const { t } = useLanguage()
+  const { settings, applySetting } = useConfig()
+  const push = () => settings()["agentManager.pushFixes"] !== false
   let checksRef: HTMLDivElement | undefined
   let commentsRef: HTMLDivElement | undefined
   let conversationRef: HTMLDivElement | undefined
@@ -221,6 +224,20 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          {/* Fix mode: whether "Fix with Kilo" also commits and pushes so the PR updates. */}
+          <Tooltip value={t("settings.agentBehaviour.pushFixes.description")} placement="bottom">
+            <IconButton
+              icon="cloud-upload"
+              size="small"
+              variant="ghost"
+              class="am-pr-panel-mode"
+              aria-label={t("settings.agentBehaviour.pushFixes.title")}
+              aria-pressed={push()}
+              data-active={push()}
+              onClick={() => applySetting("agentManager.pushFixes", !push())}
+            />
+          </Tooltip>
+          <span class="am-pr-panel-actions-sep" />
           <Tooltip value={t("common.refresh")} placement="bottom">
             <IconButton
               icon="refresh"

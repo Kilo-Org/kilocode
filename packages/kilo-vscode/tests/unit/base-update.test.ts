@@ -119,9 +119,16 @@ it("asks the agent to resolve the saved base upstream and stop for local-only or
     "both branches' intent",
     "tests, lint, and type checks",
     "normal tool permissions",
-    "Do not push",
+    "Do not merge or apply this worktree into the base",
   ])
     expect(text).toContain(safeguard)
+})
+
+it("asks to push the branch only when the push setting is on", () => {
+  expect(baseUpdatePrompt(wt)).not.toContain("push this branch")
+  const text = baseUpdatePrompt(wt, true)
+  expect(text).toContain("push this branch so its pull request updates, if it has one")
+  expect(text).toContain("Do not force-push")
 })
 
 it("asks the agent to preserve local work without asking the user to choose a method", () => {

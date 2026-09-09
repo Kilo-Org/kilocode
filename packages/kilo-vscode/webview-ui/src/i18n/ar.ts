@@ -1012,6 +1012,9 @@ export const dict = {
     "القواعد هي ملفات تعليمات توجه سلوك الوكيل. يتم تضمينها في موجه النظام لكل محادثة. أضف مسارات الملفات أدناه لتضمين قواعد إضافية.",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
+  "settings.agentBehaviour.pushFixes.title": "دفع إصلاحات طلب السحب",
+  "settings.agentBehaviour.pushFixes.description":
+    "عند إرسال حالات فشل CI أو تعليقات المراجعة من طلب سحب إلى الوكيل، أو تحديث worktree من فرعه الأساسي، اطلب منه إنشاء التزام ودفع التغييرات حتى يتم تحديث طلب السحب. تظل مطالبات الأذونات سارية. أوقف هذا الخيار للاحتفاظ بالالتزامات يدوية.",
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

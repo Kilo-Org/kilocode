@@ -23,6 +23,7 @@ import {
 } from "./provider-lifecycle"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
+import { pushFixes } from "../kilo-provider/push-fixes-settings"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { GitOps } from "./GitOps"
@@ -520,7 +521,7 @@ export class AgentManagerProvider implements Disposable {
       }
     }
     this.onBranchPrompt(m)
-    if (m.type === "agentManager.updateFromBase") return handleBaseUpdate(m, ctx, this.lifecycleHost)
+    if (m.type === "agentManager.updateFromBase") return handleBaseUpdate(m, ctx, this.lifecycleHost, pushFixes())
 
     const worktree = await this.onWorktreeMessage(m)
     if (worktree !== undefined) return worktree

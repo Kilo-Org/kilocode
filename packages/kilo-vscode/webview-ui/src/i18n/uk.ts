@@ -980,6 +980,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Додаткові файли інструкцій",
   "settings.agentBehaviour.instructionFiles.description":
     "Шляхи до додаткових файлів інструкцій, що включаються до системного запиту",
+  "settings.agentBehaviour.pushFixes.title": "Надсилати виправлення запиту на злиття",
+  "settings.agentBehaviour.pushFixes.description":
+    "Коли ви надсилаєте агенту помилки CI або коментарі ревʼю із запиту на злиття або оновлюєте робоче дерево з базової гілки, попросити його зробити коміт і push, щоб запит на злиття оновився. Запити дозволів і далі діють. Вимкніть, щоб робити коміти вручну.",
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

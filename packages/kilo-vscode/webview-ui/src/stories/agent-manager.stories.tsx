@@ -33,6 +33,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
+import { PRPanel } from "../../agent-manager/pr/PRPanel"
 import type { PRComment } from "../../agent-manager/pr/pr-types"
 import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
@@ -2097,6 +2098,55 @@ export const PRPanelComments200: Story = {
           worktreeId="wt-a1"
           prNumber={8594}
           prUrl="https://github.com/org/repo/pull/8594"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const summaryPR: PRStatus = {
+  ...basePR,
+  review: "changes_requested",
+  checks: {
+    status: "failure",
+    total: 5,
+    passed: 3,
+    failed: 2,
+    pending: 0,
+    checks: [
+      { name: "Typecheck", status: "failure", url: "https://github.com/org/repo/actions/runs/100/job/200" },
+      { name: "Tests", status: "failure" },
+      { name: "Lint", status: "success" },
+      { name: "Build", status: "success" },
+      { name: "Docs", status: "success" },
+    ],
+  },
+  comments: prComments,
+  conversation: [
+    {
+      id: "IC_1",
+      author: "octocat",
+      body: "Ship it once CI is green.",
+      createdAt: Date.now() - 60_000,
+      isBot: false,
+    },
+  ],
+}
+
+export const PRPanelSummary: Story = {
+  name: "PR panel — header and summary",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)", height: "680px" }}>
+        <PRPanel
+          pr={summaryPR}
+          worktreeId="wt-a1"
+          onClose={() => {}}
+          onRefresh={() => {}}
+          onOpenExternal={() => {}}
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}

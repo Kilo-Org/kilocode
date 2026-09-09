@@ -1062,6 +1062,9 @@ export const dict = {
     "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.pushFixes.title": "Pousser les correctifs de la pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Lorsque vous envoyez à l'agent des échecs de CI ou des commentaires de revue d'une pull request, ou que vous mettez à jour un worktree depuis sa base, lui demander de commiter et de pousser pour que la pull request soit mise à jour. Les demandes d'autorisation restent actives. Désactivez pour commiter manuellement.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

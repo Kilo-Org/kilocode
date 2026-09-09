@@ -697,7 +697,7 @@ describe("browser element reference contract", () => {
   it("includes browser reference content only when the user sends the prompt", () => {
     expect(source).toContain("browserFeedbackData(browsers())")
     expect(source).toContain("formatBrowserFeedback(browserData.references)")
-    expect(source).toContain('const message = [review, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain('const message = [review, push, browserText, draft].filter(Boolean).join("\\n\\n")')
     expect(source).toContain("references.delete(key)")
   })
 

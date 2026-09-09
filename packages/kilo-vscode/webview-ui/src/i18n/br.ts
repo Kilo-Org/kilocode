@@ -1046,6 +1046,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
   "settings.agentBehaviour.instructionFiles.description":
     "Caminhos para arquivos de instruções adicionais no prompt do sistema",
+  "settings.agentBehaviour.pushFixes.title": "Enviar correções do pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Ao enviar falhas de CI ou comentários de revisão de um pull request para o agente, ou ao atualizar uma worktree a partir da base, pedir que ele faça commit e push para que o pull request seja atualizado. As solicitações de permissão continuam valendo. Desative para manter os commits manuais.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilidade com Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carregar Arquivos do Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

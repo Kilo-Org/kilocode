@@ -1218,6 +1218,11 @@
           "default": true,
           "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
         },
+        "kilo-code.new.agentManager.pushFixes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Agent Manager: when you send pull request CI failures or review comments to the agent, or update a worktree from its base, ask the agent to commit and push so the pull request updates. Permission prompts still apply. Disable to keep commits manual."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",

@@ -980,6 +980,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.pushFixes.title": "Çekme isteği düzeltmelerini push'la",
+  "settings.agentBehaviour.pushFixes.description":
+    "Bir çekme isteğinin CI hatalarını veya inceleme yorumlarını ajana gönderdiğinizde ya da bir worktree'yi tabanından güncellediğinizde, çekme isteğinin güncellenmesi için ajandan commit ve push yapmasını isteyin. İzin istemleri geçerli kalır. Commit'leri elle yapmak için kapatın.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":

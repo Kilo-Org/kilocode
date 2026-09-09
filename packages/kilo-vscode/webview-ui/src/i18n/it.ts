@@ -858,6 +858,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "File istruzioni aggiuntivi",
   "settings.agentBehaviour.instructionFiles.description":
     "Percorsi ai file istruzioni aggiuntivi inclusi nel prompt di sistema",
+  "settings.agentBehaviour.pushFixes.title": "Esegui il push delle correzioni della pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Quando invii all'agente errori CI o commenti di revisione di una pull request, o aggiorni un worktree dalla sua base, chiedigli di eseguire commit e push così che la pull request si aggiorni. Le richieste di autorizzazione restano attive. Disattiva per eseguire i commit manualmente.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

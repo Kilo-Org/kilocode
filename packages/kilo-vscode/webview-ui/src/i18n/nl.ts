@@ -989,6 +989,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.pushFixes.title": "Pull request-fixes pushen",
+  "settings.agentBehaviour.pushFixes.description":
+    "Wanneer je CI-fouten of reviewopmerkingen van een pull request naar de agent stuurt, of een worktree bijwerkt vanaf de basis, vraag de agent dan te committen en te pushen zodat de pull request wordt bijgewerkt. Toestemmingsvragen blijven gelden. Schakel uit om handmatig te committen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":

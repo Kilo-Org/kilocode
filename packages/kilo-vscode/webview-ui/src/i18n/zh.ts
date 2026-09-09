@@ -988,6 +988,9 @@ export const dict = {
     "规则是指导代理行为的指令文件。它们会被包含在每次对话的系统提示词中。在下方添加文件路径以包含额外的规则。",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
+  "settings.agentBehaviour.pushFixes.title": "推送拉取请求修复",
+  "settings.agentBehaviour.pushFixes.description":
+    "当你将拉取请求的 CI 失败或评审评论发送给智能体，或从基础分支更新 worktree 时，请求智能体提交并推送，以便更新拉取请求。权限确认仍然适用。关闭后可手动提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
   "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
   "settings.agentBehaviour.claudeCompat.description":

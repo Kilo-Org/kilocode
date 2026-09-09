@@ -6,6 +6,7 @@ const refreshed: WebviewMessage[] = []
 const reactions: WebviewMessage[] = []
 const replies: Record<string, unknown>[] = []
 const mutations: Record<string, unknown>[] = []
+const settings: Record<string, unknown>[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -60,6 +61,7 @@ Object.assign(globalThis, {
       if (message.type === "agentManager.commentReaction") reactions.push(message)
       if ((message as { type: string }).type === "agentManager.replyComment") replies.push(message)
       if ((message as { type: string }).type === "agentManager.mutateComment") mutations.push(message)
+      if (message.type === "updateSetting") settings.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -72,6 +74,7 @@ const { MarkedProvider } = await import("@kilocode/kilo-ui/context/marked")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { useVSCode } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
+const { ConfigProvider } = await import("../../webview-ui/src/context/config")
 const { PRComments } = await import("../../webview-ui/agent-manager/pr/PRComments")
 const { Diff } = await import("@kilocode/kilo-ui/diff")
 const { Show, createRoot, createSignal } = await import("solid-js")
@@ -945,14 +948,16 @@ const release = render(
             onOpen={noop}
           />
           <Show when={visible()}>
-            <PRPanelHost
-              pr={badge()}
-              projectId={project()}
-              worktreeId={target.worktreeId}
-              jump={navigation.jump()}
-              onJump={navigation.complete}
-              onClose={() => setVisible(false)}
-            />
+            <ConfigProvider>
+              <PRPanelHost
+                pr={badge()}
+                projectId={project()}
+                worktreeId={target.worktreeId}
+                jump={navigation.jump()}
+                onJump={navigation.complete}
+                onClose={() => setVisible(false)}
+              />
+            </ConfigProvider>
           </Show>
         </MarkedProvider>
       </LanguageProvider>
@@ -972,6 +977,17 @@ await window.happyDOM.waitUntilComplete()
 assert.equal(visible(), true)
 assert.deepEqual(clicked, ["select", "refresh"])
 assert.equal(jumps, 0)
+// Fix mode lives in the panel header: a pressed icon toggle for push-on-fix.
+const pushButton = second.querySelector<HTMLButtonElement>(".am-pr-panel-mode")
+assert.ok(pushButton)
+assert.equal(pushButton.getAttribute("aria-pressed"), "true")
+pushButton.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: false })
+assert.equal(pushButton.getAttribute("aria-pressed"), "false")
+pushButton.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(pushButton.getAttribute("aria-pressed"), "true")
 const snippet = {
   patch:
     '@@ -396,0 +414,7 @@\n+                      size="small"\n+                      class="session-goal-trigger"\n+                      disabled={props.readonly}\n+                      aria-label={language.t("session.goal.label")}\n+                    >\n+                      <Icon name="chevron-down" size="small" />\n+                      <span>',
@@ -1382,12 +1398,14 @@ const disposeSummary = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRSummary
-          pr={summaryPR()}
-          worktreeId={summaryWorktree}
-          activeTerminalId={terminal()}
-          onJump={(id) => jumped.push(id)}
-        />
+        <ConfigProvider>
+          <PRSummary
+            pr={summaryPR()}
+            worktreeId={summaryWorktree}
+            activeTerminalId={terminal()}
+            onJump={(id) => jumped.push(id)}
+          />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),
@@ -1400,14 +1418,16 @@ render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRSummary
-          pr={{
-            ...base,
-            review: "pending",
-            checks: summarize([{ name: "Lint", status: "pending" }]),
-          }}
-          worktreeId="wt-pending-summary"
-        />
+        <ConfigProvider>
+          <PRSummary
+            pr={{
+              ...base,
+              review: "pending",
+              checks: summarize([{ name: "Lint", status: "pending" }]),
+            }}
+            worktreeId="wt-pending-summary"
+          />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),

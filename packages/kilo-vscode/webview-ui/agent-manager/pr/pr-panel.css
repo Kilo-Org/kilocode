@@ -67,6 +67,21 @@
   flex-shrink: 0;
 }
 
+/* Separates the fix-mode toggle from the panel navigation actions. */
+.am-pr-panel-actions-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--vscode-panel-border);
+}
+
+/* Fix mode is on: the VS Code toggled-control look, distinct from ghost hover. */
+.am-pr-panel-actions [data-active="true"] {
+  background: var(--vscode-inputOption-activeBackground, color-mix(in srgb, var(--vscode-foreground) 14%, transparent));
+  color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground));
+  box-shadow: inset 0 0 0 1px var(--vscode-inputOption-activeBorder, transparent);
+}
+
 .am-pr-panel-body-wrap {
   flex: 1;
   position: relative;

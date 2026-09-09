@@ -965,6 +965,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "فایل‌های دستورالعمل اضافی",
   "settings.agentBehaviour.instructionFiles.description":
     "مسیرهای فایل‌های دستورالعمل اضافی که در پرامپت سیستم گنجانده می‌شوند",
+  "settings.agentBehaviour.pushFixes.title": "پوش کردن اصلاحات درخواست ادغام",
+  "settings.agentBehaviour.pushFixes.description":
+    "وقتی خطاهای CI یا نظرات بازبینی یک درخواست ادغام را برای عامل می‌فرستید، یا یک worktree را از شاخه پایه به‌روز می‌کنید، از عامل بخواهید کامیت و پوش کند تا درخواست ادغام به‌روز شود. درخواست‌های مجوز همچنان اعمال می‌شوند. برای کامیت دستی این گزینه را خاموش کنید.",
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
