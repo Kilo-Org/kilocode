@@ -210,3 +210,33 @@ test("an ask answered while the pending refetch is in flight is not resurrected"
     app.renderer.destroy()
   }
 })
+
+test("a failed pending list fetch keeps existing asks", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  let seen = 0
+  const { app, sync } = await mount(
+    (url) => {
+      if (url.pathname === "/permission") {
+        seen += 1
+        // bootstrap consumes the first list call; the session sync gets a 500
+        return seen === 1 ? json([]) : json({ message: "boom" }, { status: 500 })
+      }
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+  )
+
+  try {
+    // A live ask is in the store; the refetch then fails.
+    sync.set("permission", { [childID]: [permission("per_1")] })
+    const hydrate = sync.session.sync(childID)
+    await wait(() => seen === 2)
+    await hydrate
+
+    // The failed fetch must not merge an empty list over the live ask.
+    expect(sync.data.permission[childID]).toHaveLength(1)
+  } finally {
+    app.renderer.destroy()
+  }
+})

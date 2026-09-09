@@ -220,8 +220,10 @@ export const {
         question: new Set(Object.values(store.question).flatMap((list) => list.map((r) => r.id))),
       }
       const [permissions, questions] = await Promise.all([
-        sdk.client.permission.list({ workspace }).then((x) => x.data ?? []),
-        sdk.client.question.list({ workspace }).then((x) => x.data ?? []),
+        // throwOnError so a failed list fetch rejects into the caller's catch instead of
+        // merging an empty list, which would drop live asks and re-hang the session
+        sdk.client.permission.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
+        sdk.client.question.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
       ])
       if (permission.mode === "auto") {
         for (const request of permissions)
