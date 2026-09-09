@@ -291,6 +291,36 @@ describe("PRStatusPoller batched GitHub queries", () => {
     bridge.poller.refresh("wt1")
     expect(fetch).toHaveBeenCalledWith("wt1", internal.generation, true)
   })
+
+  it("upgrades an in-flight summary request before starting full details", async () => {
+    const tree = { id: "wt1", path: "/repo/wt1", branch: "feature" }
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [tree] as never,
+      getWorkspaceRoot: () => "/repo",
+      onStatus: () => undefined,
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      active: boolean
+      visible: boolean
+      generation: number
+      request: (id: string, generation: number, full: boolean, force?: boolean) => Promise<void>
+      fetchOne: (id: string, generation: number, full: boolean) => Promise<void>
+    }
+    internal.active = true
+    internal.visible = true
+    const done = Promise.withResolvers<void>()
+    const fetch = spyOn(internal, "fetchOne").mockImplementation(() => done.promise)
+
+    const summary = internal.request("wt1", 0, false, true)
+    const full = internal.request("wt1", 0, true, true)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    done.resolve()
+    await summary
+    await full
+    expect(fetch).toHaveBeenCalledTimes(2)
+    poller.stop()
+  })
   it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
     let root = "/alpha"
     const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }

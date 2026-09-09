@@ -26,6 +26,7 @@ import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
 import { createPollers, type ProjectPollers } from "./project/pollers"
+import { validInterest } from "./project/interest"
 import { GitOps } from "./GitOps"
 import type { GitExecutable } from "../util/git-executable"
 import { versionedName } from "./branch-name"
@@ -488,7 +489,8 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
-    if (this.prBridge.handleMessage(msg)) return null
+    if (!validInterest(msg, (id) => this.contexts.usable(id) !== undefined) || this.prBridge.handleMessage(msg))
+      return null
     if (this.projectPollers.handleInterest(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }

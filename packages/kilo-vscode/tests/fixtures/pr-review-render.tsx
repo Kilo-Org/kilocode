@@ -34,11 +34,10 @@ const snapshot: PRDiffSnapshot = {
 const [visible, setVisible] = createSignal(true)
 const [own, setOwn] = createSignal(false)
 const [closed, setClosed] = createSignal(false)
-let refreshed = 0
 const release = mount(() => (
   <>
     <Show when={visible()}>
-      <PRFiles {...target} own={own()} closed={closed()} onRefresh={() => refreshed++} />
+      <PRFiles {...target} own={own()} closed={closed()} />
     </Show>
     <div id="published">
       <PRCommentMarkdown
@@ -141,7 +140,6 @@ assert.match(node('[data-slot="review-head"]').textContent ?? "", new RegExp(sna
 button("submit", composer()).click()
 assert.equal((last() as { snapshotId?: string }).snapshotId, snapshot.id)
 respond(last(), {})
-assert.equal(refreshed, 1)
 assert.equal(files().querySelector('[data-action="line"]'), null)
 node<HTMLButtonElement>('button[data-path="src/second.ts"]').click()
 await wait()

@@ -33,7 +33,7 @@ type Props = { projectId?: string; worktreeId: string } & (
       source?: string
       closed?: boolean
       onCancel: () => void
-      onSuccess: () => void
+      onSuccess?: () => void
     })
   | (PRTarget & {
       action: "review"
@@ -42,7 +42,7 @@ type Props = { projectId?: string; worktreeId: string } & (
       own?: boolean
       closed?: boolean
       blocked?: boolean
-      onSuccess: () => void
+      onSuccess?: () => void
     })
   | {
       action: "edit"

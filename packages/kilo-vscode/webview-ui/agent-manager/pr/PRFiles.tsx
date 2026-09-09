@@ -209,7 +209,6 @@ export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean }) {
                 head={snapshot().head}
                 own={props.own}
                 closed={props.closed}
-                onSuccess={() => undefined}
               />
             </Show>
           </>

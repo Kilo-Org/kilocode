@@ -115,6 +115,19 @@ describe("ProjectPollers", () => {
     expect(made.get(extra.id)!.detail).toBe("wt-1")
   })
 
+  it("drops interest for projects outside the current registry", () => {
+    const contexts = setup([stored("prj-extra")])
+    expand(contexts, "prj-extra")
+    const { made, create, deps } = fakes()
+    const pollers = new ProjectPollers(deps, (ctx) => create(ctx))
+    pollers.sync(contexts)
+
+    expect(
+      pollers.handleInterest({ type: "agentManager.prInterest", projectId: "unknown", worktreeIds: ["wt-1"] }),
+    ).toBe(true)
+    expect(made.has("unknown")).toBe(false)
+  })
+
   it("does not start pollers for the active project", () => {
     const contexts = setup([])
     contexts.active()

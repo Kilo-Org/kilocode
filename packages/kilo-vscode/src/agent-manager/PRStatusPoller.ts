@@ -37,6 +37,14 @@ interface PRStatusPollerOptions {
   getBranch?: (worktree: Worktree) => Promise<string | undefined>
 }
 
+interface RequestEntry {
+  full: boolean
+  generation: number
+  promise: Promise<void>
+  upgrade?: Promise<void>
+  next?: Promise<void>
+}
+
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
 const GH_PROBE_FAILURE_TTL = 30_000 // 30 seconds — retry faster after a failed probe
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
@@ -60,7 +68,7 @@ export class PRStatusPoller {
   private rich = true
   private activeWorktreeId: string | undefined
   private cachedRepo: { owner: string; name: string; root: string } | undefined
-  private repoRequest: Promise<{ owner: string; name: string; root: string }> | undefined
+  private readonly repoRequests = new Map<string, Promise<{ owner: string; name: string; root: string }>>()
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
   /** Reviewer avatars are stable, so look them up once per login and reuse them. */
   private readonly avatars = new Map<string, string>()
@@ -68,8 +76,9 @@ export class PRStatusPoller {
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private interests: Set<string> | undefined
   private readonly details = new Set<string>()
-  private readonly requests = new RequestGate()
+  private readonly requests = new Map<string, RequestEntry>()
   private readonly polls = new Map<string, number>()
+  private readonly branches = new Map<string, string>()
   private readonly intervalMs: number
   private readonly semaphore: Semaphore | undefined
   private generation = 0
@@ -99,7 +108,8 @@ export class PRStatusPoller {
     options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
   ): Promise<{ stdout: string; stderr: string }> {
     const invoke = () => execGhRead(args, options)
-    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+    const key = JSON.stringify([options?.cwd ?? "", "github", args])
+    return reads.run(key, () => (this.semaphore ? this.semaphore.run(invoke) : invoke()))
   }
 
   setEnabled(enabled: boolean): void {
@@ -131,7 +141,7 @@ export class PRStatusPoller {
     }
   }
 
-  stop(): void {
+  stop(preserveDemand = false): void {
     this.generation++
     this.active = false
     if (this.timer) {
@@ -146,25 +156,26 @@ export class PRStatusPoller {
     this.ghProbeTime = 0
     this.rich = true
     this.cachedRepo = undefined
-    this.repoRequest = undefined
-    this.activeWorktreeId = undefined
+    if (!preserveDemand) this.activeWorktreeId = undefined
     this.prCache.clear()
     this.avatars.clear()
     this.resolvedAvatars.clear()
     this.lastFullSync = 0
-    this.interests = undefined
-    this.details.clear()
-    this.requests.clear()
+    if (!preserveDemand) {
+      this.interests = undefined
+      this.details.clear()
+    }
     this.polls.clear()
+    this.branches.clear()
   }
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
-    if (!this.active || !this.visible) return
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
     if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
     this.lastHash.delete(worktreeId)
-    void this.request(worktreeId, this.generation, true)
+    if (!this.active || !this.visible) return
+    this.fire(this.request(worktreeId, this.generation, true, true))
   }
 
   setActiveWorktreeId(id: string | undefined): void {
@@ -173,25 +184,24 @@ export class PRStatusPoller {
     // When switching to a different worktree, fetch it immediately so the
     // badge updates without waiting for the next poll cycle.
     if (id && id !== prev && this.active && this.visible) {
-      void this.request(id, this.generation, this.full(id), true)
+      this.fire(this.request(id, this.generation, this.full(id), true))
     }
   }
 
   setWorktreeInterest(ids: Iterable<string>): void {
-    const next = new Set(ids)
+    const valid = new Set(this.options.getWorktrees().map((wt) => wt.id))
+    const next = new Set([...ids].filter((id) => valid.has(id)))
+    if (next.size === this.interests?.size && [...next].every((id) => this.interests?.has(id))) return
     this.interests = next
   }
 
   setDetailInterest(id: string | undefined): void {
-    const previous = this.details.values().next().value as string | undefined
     this.details.clear()
-    if (id) this.details.add(id)
-    if (!id || id === previous || !this.active || !this.visible) return
-    void this.request(id, this.generation, true, true)
+    if (id && this.options.getWorktrees().some((wt) => wt.id === id)) this.details.add(id)
   }
 
   private start(): void {
-    this.stop()
+    this.stop(true)
     this.active = true
     // Don't override this.visible — it may already be set to false by
     // setVisible() before setEnabled(true) is called.
@@ -262,6 +272,12 @@ export class PRStatusPoller {
     // for sessions that aren't selected (e.g. CI results changing).
     // The very first poll (lastHash empty) also fetches everything.
     const worktrees = this.options.getWorktrees()
+    for (const key of this.polls.keys()) {
+      if (!worktrees.some((wt) => key === `${wt.id}:full` || key === `${wt.id}:summary`)) this.polls.delete(key)
+    }
+    for (const id of this.branches.keys()) {
+      if (!worktrees.some((wt) => wt.id === id)) this.branches.delete(id)
+    }
     const now = Date.now()
     const initial = this.lastHash.size === 0
     const full = initial || now - this.lastFullSync >= FULL_SYNC_INTERVAL
@@ -301,13 +317,11 @@ export class PRStatusPoller {
     try {
       branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
       if (this.stale(generation)) return
+      this.branches.set(worktreeId, branch ?? wt.branch)
       const pr = await this.cachedFetchPR(branch ?? wt.branch, wt.path)
       if (this.stale(generation)) return
       if (!pr) {
-        const hash = `${worktreeId}:${branch ?? wt.branch}:none`
-        if (this.lastHash.get(worktreeId) === hash) return
-        this.lastHash.set(worktreeId, hash)
-        this.options.onStatus(worktreeId, null, undefined, branch)
+        this.empty(worktreeId, branch ?? wt.branch, branch)
         return
       }
 
@@ -351,24 +365,61 @@ export class PRStatusPoller {
     }
   }
 
+  private empty(worktreeId: string, branch: string, name?: string): void {
+    const hash = `${worktreeId}:${branch}:none`
+    if (this.lastHash.get(worktreeId) === hash) return
+    this.lastHash.set(worktreeId, hash)
+    this.options.onStatus(worktreeId, null, undefined, name)
+  }
+
   private request(worktreeId: string, generation: number, full: boolean, force = false): Promise<void> {
     if (!this.active || !this.visible) return Promise.resolve()
-    const key = `${worktreeId}:${full ? "full" : "summary"}`
-    if (!full) {
-      const detail = this.requests.get(`${worktreeId}:full`)
-      if (detail) {
-        // The full request is already represented by the gate. The summary
-        // caller should not start a second request while it is in flight.
-        return detail
-      }
-    }
+    const key = worktreeId
     const current = this.requests.get(key)
-    if (current) return current
-    if (!force && !this.due(worktreeId, full, key)) return Promise.resolve()
-    return this.requests.run(key, async () => {
-      this.polls.set(key, Date.now())
+    if (current) {
+      if (current.generation !== generation) {
+        if (current.next) return current.next
+        const next = current.promise.then(
+          () => {
+            if (this.requests.get(key) === current) this.requests.delete(key)
+            return this.request(worktreeId, generation, full, force)
+          },
+          () => {
+            if (this.requests.get(key) === current) this.requests.delete(key)
+            return this.request(worktreeId, generation, full, force)
+          },
+        )
+        current.next = next
+        return next
+      }
+      if (!full || current.full) return current.promise
+      if (current.upgrade) return current.upgrade
+      const upgrade = current.promise.then(
+        () => {
+          if (this.requests.get(key) === current) this.requests.delete(key)
+          return this.request(worktreeId, generation, true, force)
+        },
+        () => {
+          if (this.requests.get(key) === current) this.requests.delete(key)
+          return this.request(worktreeId, generation, true, force)
+        },
+      )
+      current.upgrade = upgrade
+      return upgrade
+    }
+    if (!force && !this.due(worktreeId, full)) return Promise.resolve()
+    const entry = {} as RequestEntry
+    entry.full = full
+    entry.generation = generation
+    const run = async () => {
+      this.polls.set(`${worktreeId}:${full ? "full" : "summary"}`, Date.now())
       await this.fetchOne(worktreeId, generation, full)
+    }
+    entry.promise = run().finally(() => {
+      if (this.requests.get(key) === entry) this.requests.delete(key)
     })
+    this.requests.set(key, entry)
+    return entry.promise
   }
 
   private interested(worktreeId: string): boolean {
@@ -380,13 +431,24 @@ export class PRStatusPoller {
     return this.details.has(worktreeId)
   }
 
-  private due(worktreeId: string, full: boolean, key: string): boolean {
+  private fire(promise: Promise<void>): void {
+    void promise.catch((err) => this.options.log("PR polling request failed", err))
+  }
+
+  private due(worktreeId: string, full: boolean): boolean {
     const wt = this.target(worktreeId)
     if (!wt) return false
-    const result = this.prCache.get(this.key(wt.branch, wt.path))?.result
-    if (!result || result.state === "open") return true
-    if (result.state === "merged" && !full) return false
-    const last = this.polls.get(key)
+    const branch = this.branches.get(worktreeId) ?? wt.branch
+    const cached = this.prCache.get(this.key(branch, wt.path))
+    if (!cached) return true
+    if (cached.result === null) {
+      const last = this.polls.get(`${worktreeId}:${full ? "full" : "summary"}`)
+      return last === undefined || Date.now() - last >= TERMINAL_INTERVAL
+    }
+    const result = cached.result
+    if (result.state === "open" || result.state === "draft") return true
+    if (full) return true
+    const last = this.polls.get(`${worktreeId}:${full ? "full" : "summary"}`)
     return last === undefined || Date.now() - last >= TERMINAL_INTERVAL
   }
 
@@ -544,7 +606,9 @@ export class PRStatusPoller {
   private async getRepoInfo(cwd: string): Promise<{ owner: string; name: string }> {
     const root = this.options.getWorkspaceRoot() ?? cwd
     if (this.cachedRepo?.root === root) return this.cachedRepo
-    if (this.repoRequest) return this.repoRequest
+    const key = `${root}\0${cwd}`
+    const current = this.repoRequests.get(key)
+    if (current) return current
     const request = this.gh(["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
@@ -556,9 +620,9 @@ export class PRStatusPoller {
         return info
       })
       .finally(() => {
-        if (this.repoRequest === request) this.repoRequest = undefined
+        if (this.repoRequests.get(key) === request) this.repoRequests.delete(key)
       })
-    this.repoRequest = request
+    this.repoRequests.set(key, request)
     return request
   }
 

@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Component } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, type Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import {
   DragDropProvider,
@@ -123,7 +123,12 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           .filter((wt) => !wt.sectionId || !sections().find((section) => section.id === wt.sectionId)?.collapsed)
           .map((wt) => wt.id),
   )
-  createEffect(() => props.onPRInterest?.(props.project.id, interest()))
+  createEffect(
+    on(
+      () => [props.selectedProject, interest()] as const,
+      ([, ids]) => props.onPRInterest?.(props.project.id, ids),
+    ),
+  )
   onCleanup(() => props.onPRInterest?.(props.project.id, []))
   const completion = createWorktreeCompletion(
     () => sortWorktrees(worktrees(), order()),

@@ -98,6 +98,7 @@ export class ProjectPollers {
   private readonly cache = new Map<string, { worktrees?: StatsOutMessage; local?: StatsOutMessage }>()
   private readonly interests = new Map<string, string[]>()
   private readonly details = new Map<string, string | undefined>()
+  private known: Set<string> | undefined
 
   constructor(
     private readonly deps: PollerDeps,
@@ -138,8 +139,10 @@ export class ProjectPollers {
    * stop pollers for projects that were collapsed, removed, or activated.
    */
   sync(contexts: ProjectContexts): void {
+    const snapshots = contexts.snapshots()
+    this.known = new Set(snapshots.map((snap) => snap.id))
     const wanted = new Set<string>()
-    for (const snap of contexts.snapshots()) {
+    for (const snap of snapshots) {
       if (snap.active || !snap.expanded || snap.missing) continue
       const ctx = contexts.get(snap.id)
       if (!ctx?.peekState()) continue
@@ -161,8 +164,10 @@ export class ProjectPollers {
       pair.pr.poller.stop()
       this.pollers.delete(id)
       this.cache.delete(id)
-      this.interests.delete(id)
-      this.details.delete(id)
+      if (!this.known.has(id)) {
+        this.interests.delete(id)
+        this.details.delete(id)
+      }
     }
   }
 
@@ -174,7 +179,10 @@ export class ProjectPollers {
   }
 
   setInterest(projectId: string, ids: Iterable<string>): boolean {
+    if (this.known && !this.known.has(projectId)) return true
     const next = [...ids]
+    const current = this.interests.get(projectId)
+    if (current?.length === next.length && current.every((id, i) => id === next[i])) return true
     this.interests.set(projectId, next)
     const pair = this.pollers.get(projectId)
     if (!pair) return true
@@ -183,6 +191,7 @@ export class ProjectPollers {
   }
 
   setDetailInterest(projectId: string, id: string | undefined): boolean {
+    if (this.known && !this.known.has(projectId)) return true
     this.details.set(projectId, id)
     const pair = this.pollers.get(projectId)
     if (!pair) return true
@@ -211,6 +220,7 @@ export class ProjectPollers {
     this.cache.clear()
     this.interests.clear()
     this.details.clear()
+    this.known = undefined
   }
 }
 
