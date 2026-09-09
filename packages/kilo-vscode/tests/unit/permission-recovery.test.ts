@@ -6,6 +6,7 @@ import {
   recoveryDirs,
   type RecoverablePermission,
   type PermissionContext,
+  type PermissionResponseResult,
 } from "../../src/kilo-provider/handlers/permission-handler"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
@@ -128,6 +129,52 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
+  it("rejects an unknown route without using a workspace fallback", async () => {
+    const { fake, messages, replies } = ctx({ tracked: ["s1"] })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "missing", "s1", "once", [], [])
+    log.mockRestore()
+
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "missing" }])
+  })
+
+  it("shares one save/reply sequence across concurrent callers", async () => {
+    const { fake, sdk, messages, replies, permDirs } = ctx({ tracked: ["s1"] })
+    const gate = Promise.withResolvers<{ data: true }>()
+    const records = new Map<string, Promise<PermissionResponseResult>>()
+    fake.runPermissionResponse = (id, _sessionID, action) => {
+      const current = records.get(id)
+      if (current) return current
+      const promise = action()
+      records.set(id, promise)
+      void promise.then((result) => {
+        if (result.kind === "error") records.delete(id)
+      })
+      return promise
+    }
+    fake.clearPermissionResponse = (id) => records.delete(id)
+    permDirs.set("p1", "/workspace")
+    spyOn(sdk.permission, "reply").mockImplementation(async (args) => {
+      replies.push(args)
+      return gate.promise
+    })
+
+    const first = handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    const second = handlePermissionResponse(fake, "p1", "s1", "reject", ["npm *"], [])
+    await Promise.resolve()
+    gate.resolve({ data: true })
+    await Promise.all([first, second])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace", interactive: true }])
+    expect(messages).toEqual([
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+    ])
+    expect(messages.some((message) => (message as { type: string }).type === "permissionError")).toBe(false)
+  })
+
   it.each(["once", "always", "reject"] as const)(
     "acknowledges %s for an untracked child without an SSE event",
     async (response) => {
@@ -240,6 +287,14 @@ describe("recoverablePermissions", () => {
     const seen = new Set<string>()
     expect(recoverablePermissions([pending("p1", "s1"), pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(1)
     expect(recoverablePermissions([pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(0)
+  })
+
+  it("skips permissions already claimed by a response", () => {
+    const seen = new Set<string>()
+    expect(
+      recoverablePermissions([pending("p1", "s1"), pending("p2", "s1")], new Set(["s1"]), seen, (id) => id === "p1"),
+    ).toEqual([pending("p2", "s1")])
+    expect(seen).toEqual(new Set(["p1", "p2"]))
   })
 })
 

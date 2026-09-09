@@ -116,6 +116,7 @@ interface AssistantMessageProps {
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
   readonly?: boolean
+  interactivePrompts?: boolean
 }
 
 type ToolStateProps = {
@@ -233,7 +234,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       if (!isRenderable(part, props.message)) return false
       if (part.type !== "tool" || part.tool !== "question") return true
       if (part.state.status !== "pending" && part.state.status !== "running") return true
-      return !!matchToolRequest(part, "question", session.questions())
+      return props.interactivePrompts === false || !!matchToolRequest(part, "question", session.questions())
     })
   })
   // Pull the weighted generation rate across the turn's step-finish parts
@@ -260,10 +261,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
           // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          const activeQuestion = createMemo(() =>
+            props.interactivePrompts === false ? undefined : matchToolRequest(part, "question", session.questions()),
+          )
 
           // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+          const activeSuggestion = createMemo(() =>
+            props.interactivePrompts === false ? undefined : matchToolRequest(part, "suggest", session.suggestions()),
+          )
           const bash = createMemo(() => {
             if (part.type !== "tool") return
             const tool = part as unknown as ToolPart

@@ -162,9 +162,20 @@ export const SessionProvider: ParentComponent = (props) => {
   const pendingSubmissions = new Map<string, string>()
   const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
+  const terminalPermissions = new Map<string, string | undefined>()
   const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
+
+  function markTerminalPermission(permissionID: string, sessionID?: string) {
+    terminalPermissions.delete(permissionID)
+    terminalPermissions.set(permissionID, sessionID)
+    while (terminalPermissions.size > 256) {
+      const id = terminalPermissions.keys().next().value
+      if (id == null) return
+      terminalPermissions.delete(id)
+    }
+  }
 
   // Derived accessors for the current session (backwards compatible)
   const statusInfo = () => {
@@ -928,6 +939,7 @@ export const SessionProvider: ParentComponent = (props) => {
         setQuestions([])
         setSuggestions([])
         setRespondingPermissions(new Set<string>())
+        terminalPermissions.clear()
         setSuggestionErrors(new Set<string>())
         setRespondingSuggestions(new Set<string>())
         break
@@ -1554,10 +1566,12 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handlePermissionRequest(permission: PermissionRequest) {
     if (removedSessions.has(permission.sessionID)) return
+    if (terminalPermissions.has(permission.id)) return
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
   function handlePermissionResolved(permissionID: string) {
+    markTerminalPermission(permissionID, permissions().find((p) => p.id === permissionID)?.sessionID)
     setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
@@ -1575,6 +1589,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return next
     })
     if (stale) {
+      markTerminalPermission(permissionID, permissions().find((p) => p.id === permissionID)?.sessionID)
       setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
       return
     }
@@ -1917,6 +1932,10 @@ export const SessionProvider: ParentComponent = (props) => {
       setPermissions((prev) => removeSessionPermissions(prev, sessionID))
       if (staleResponding.length > 0) {
         setRespondingPermissions((prev) => dropSet(prev, staleResponding))
+        for (const id of staleResponding) terminalPermissions.delete(id)
+      }
+      for (const [id, owner] of terminalPermissions) {
+        if (owner === sessionID) terminalPermissions.delete(id)
       }
       // prettier-ignore
       setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
@@ -2383,10 +2402,13 @@ export const SessionProvider: ParentComponent = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
-  ) {
-    // Resolve sessionID from the stored permission request
+  ): boolean {
+    // The rendered request must still exist in this provider. Never fall back to
+    // the currently selected session for a stale callback.
     const permission = permissions().find((p) => p.id === permissionId)
-    const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
+    if (!permission) return false
+    if (terminalPermissions.has(permissionId)) return false
+    if (respondingPermissions().has(permissionId)) return false
 
     // Mark as responding so the UI disables the buttons.
     // The permission is removed when the server confirms via permission.replied SSE.
@@ -2395,11 +2417,12 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
-      sessionID,
+      sessionID: permission.sessionID,
       response,
       approvedAlways,
       deniedAlways,
     })
+    return true
   }
 
   function clearQuestionError(requestID: string) {
