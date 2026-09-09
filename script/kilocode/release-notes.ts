@@ -40,11 +40,36 @@ export function buildNotes(input: { version: string; prerelease: boolean; releas
   return notes.join("\n\n") || fallback
 }
 
+export function buildReleaseNotes(input: {
+  version: string
+  prerelease: boolean
+  releases: Release[]
+  vscode: string
+  cli: string
+}) {
+  const notes = (
+    [
+      ["VS Code", input.vscode],
+      ["CLI", input.cli],
+    ] as const
+  ).flatMap(([name, changelog]) => {
+    const body = buildNotes({ ...input, changelog })
+    if (body === fallback) return []
+    return [`## ${name}\n\n${input.prerelease ? body : body.replace(/^(#+) /gm, "#$1 ")}`]
+  })
+  return notes.join("\n\n") || fallback
+}
+
 export async function publishNotes(input: { version: string; prerelease: boolean; repo?: string; temp?: string }) {
   const repo = input.repo ? ["--repo", input.repo] : []
   const releases: Release[] = await $`gh release list --limit 1000 --json tagName,isDraft,isPrerelease ${repo}`.json()
-  const changelog = await Bun.file(new URL("../../packages/kilo-vscode/CHANGELOG.md", import.meta.url)).text()
-  const body = buildNotes({ ...input, releases, changelog })
+  const [vscode, cli] = await Promise.all([
+    Bun.file(new URL("../../packages/kilo-vscode/CHANGELOG.md", import.meta.url)).text(),
+    // The inherited "opencode" folder contains Kilo's CLI (@kilocode/cli), not upstream release notes.
+    // Read Kilo's changelog, including compact upstream summaries added when those changes are merged into Kilo.
+    Bun.file(new URL("../../packages/opencode/CHANGELOG.md", import.meta.url)).text(),
+  ])
+  const body = buildReleaseNotes({ ...input, releases, vscode, cli })
   const notes = `${input.temp ?? "/tmp"}/release-notes.txt`
   const target = input.version.startsWith("v") ? input.version : `v${input.version}`
   const flags = input.prerelease ? ["--draft=false", "--prerelease"] : ["--draft=false"]

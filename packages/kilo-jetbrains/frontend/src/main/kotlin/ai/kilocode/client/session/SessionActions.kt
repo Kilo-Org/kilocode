@@ -30,7 +30,13 @@ internal interface SessionActions {
     /** App-wide auto-approve state (IDE-level, not per session). */
     val auto: Boolean
 
+    /** Whether this session can be forked; false in the sidebar and in read-only hosts. */
+    val forkable: Boolean
+
     fun setAuto(value: Boolean)
+
+    /** Copies this session's history into a new session and opens it. */
+    fun fork()
 
     /** Opens the branch diff (merge-base to working tree) editor for the session directory. */
     fun compare()

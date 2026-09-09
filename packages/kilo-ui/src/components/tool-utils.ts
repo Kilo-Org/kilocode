@@ -105,14 +105,21 @@ export function useCollapsible(options: {
   open: () => boolean
   measure?: () => number
   onOpen?: () => void
+  // Skip the mount run so content rendered in its initial state does not
+  // animate in; the caller renders the matching inline styles itself.
+  defer?: boolean
 }) {
   const reduce = useReducedMotion()
   let heightAnim: AnimationPlaybackControls | undefined
   let fadeAnim: AnimationPlaybackControls | undefined
   let gen = 0
+  let first = true
 
   createEffect(
     on(options.open, (isOpen) => {
+      const skip = first && options.defer
+      first = false
+      if (skip) return
       const content = options.content()
       const body = options.body()
       if (!content || !body) return
@@ -173,6 +180,68 @@ export function useCollapsible(options: {
     ++gen
     heightAnim?.stop()
     fadeAnim?.stop()
+  })
+}
+
+export function useGrowIn(el: () => HTMLElement | undefined, enabled: boolean) {
+  const reduce = useReducedMotion()
+  let height: AnimationPlaybackControls | undefined
+  let obs: ResizeObserver | undefined
+  let gen = 0
+
+  // Height only: the parts reveal their own text with useToolFade, and a
+  // wrapper fade would hide that wipe.
+  const clear = (node: HTMLElement) => {
+    node.style.height = ""
+    node.style.overflow = ""
+  }
+
+  onMount(() => {
+    if (!enabled || reduce()) return
+    const node = el()
+    if (!node) return
+    const id = ++gen
+    node.style.overflow = "clip"
+    node.style.height = "0px"
+
+    queueMicrotask(() => {
+      if (gen !== id) return
+      const value = el()
+      if (!value) return
+      const child = value.firstElementChild ?? value
+      let target = Math.ceil(value.scrollHeight || child.getBoundingClientRect().height)
+      const done = (anim: AnimationPlaybackControls) => {
+        if (gen !== id || height !== anim) return
+        obs?.disconnect()
+        height = undefined
+        clear(value)
+      }
+      const start = (from: number, to: number) => {
+        const anim = animate(value, { height: [`${from}px`, `${to}px`] }, COLLAPSIBLE_SPRING)
+        height = anim
+        void anim.finished.then(() => done(anim)).catch(() => undefined)
+      }
+
+      start(0, target)
+      obs = new ResizeObserver(() => {
+        if (gen !== id || !height) return
+        const next = Math.ceil(child.getBoundingClientRect().height)
+        if (Math.abs(next - target) <= 1) return
+        const from = value.getBoundingClientRect().height
+        height.stop()
+        target = next
+        start(from, next)
+      })
+      obs.observe(child)
+    })
+  })
+
+  onCleanup(() => {
+    ++gen
+    obs?.disconnect()
+    height?.stop()
+    const node = el()
+    if (node) clear(node)
   })
 }
 

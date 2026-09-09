@@ -1210,6 +1210,123 @@ it.live("active tool calls use permissions changed after model streaming starts"
   ),
 )
 
+it.live(
+  "subagent continues exploration and returns findings after a rejected read",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir, llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const permission = yield* Permission.Service
+        const secret = "DENIED_ENV_SENTINEL"
+        yield* Effect.promise(() =>
+          Promise.all([
+            Bun.write(path.join(dir, ".env"), secret),
+            Bun.write(path.join(dir, "before.txt"), "Earlier findings"),
+            Bun.write(path.join(dir, "after.txt"), "Later findings"),
+          ]),
+        )
+        yield* llm.tool("task", {
+          description: "Explore project",
+          prompt: "Read before.txt, .env, and after.txt, then report the available findings.",
+          subagent_type: "explore",
+        })
+        yield* llm.tool("read", { filePath: path.join(dir, "before.txt") })
+        yield* llm.tool("read", { filePath: path.join(dir, ".env") })
+        yield* llm.tool("read", { filePath: path.join(dir, "after.txt") })
+        yield* llm.text("Earlier findings and later findings. Skipped the denied .env read.")
+        yield* llm.text("Received the exploration findings.")
+        const root = yield* sessions.create({ title: "Explore" })
+        const fiber = yield* prompt
+          .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Explore with a subagent." }] })
+          .pipe(Effect.forkScoped)
+        const pending = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            return (yield* permission.list()).find((item) => item.permission === "read")
+          }),
+          "subagent never requested read permission",
+        )
+        expect(pending.sessionID).not.toBe(root.id)
+        expect(pending.patterns).toEqual([".env"])
+        yield* permission.reply({ requestID: pending.id, reply: "reject" })
+        yield* awaitWithTimeout(Fiber.join(fiber), "exploration did not finish", "10 seconds")
+
+        const child = yield* sessions.messages({ sessionID: pending.sessionID })
+        const tools = child.flatMap((msg) => msg.parts).filter((part) => part.type === "tool")
+        expect(tools.map((part) => part.state.status)).toEqual(["completed", "error", "completed"])
+        expect(tools.at(1)?.state).toMatchObject({
+          error: "The user rejected permission to use this specific tool call.",
+        })
+        const parent = yield* sessions.messages({ sessionID: root.id })
+        const task = parent
+          .flatMap((msg) => msg.parts)
+          .filter((part) => part.type === "tool")
+          .find((part) => part.tool === "task")
+        expect(task?.state).toMatchObject({
+          status: "completed",
+          output: expect.stringContaining("Earlier findings and later findings."),
+        })
+        const inputs = JSON.stringify(yield* llm.inputs)
+        expect(inputs).toContain("The user rejected permission")
+        expect(inputs).not.toContain(secret)
+        expect(yield* permission.list()).toEqual([])
+      }),
+      {
+        git: true,
+        config: (url) => ({
+          ...providerCfg(url),
+          model: "test/test-model",
+          permission: { read: { "*": "allow", ".env": "ask" }, task: "allow" },
+        }),
+      },
+    ),
+  30_000,
+)
+
+for (const continued of [false, true]) {
+  it.live(
+    `root permission rejection respects continue_loop_on_deny=${continued}`,
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ dir, llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const permission = yield* Permission.Service
+          yield* Effect.promise(() => Bun.write(path.join(dir, ".env"), "DENIED_ROOT_SENTINEL"))
+          yield* llm.tool("read", { filePath: path.join(dir, ".env") })
+          yield* llm.text("Skipped the denied read.")
+          const root = yield* sessions.create({ title: "Root" })
+          const fiber = yield* prompt
+            .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Read .env" }] })
+            .pipe(Effect.forkScoped)
+          const pending = yield* pollWithTimeout(
+            Effect.gen(function* () {
+              return (yield* permission.list()).find((item) => item.sessionID === root.id)
+            }),
+            "root never requested read permission",
+          )
+          yield* permission.reply({ requestID: pending.id, reply: "reject" })
+          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish")
+          expect(result.parts.some((part) => part.type === "text" && part.text === "Skipped the denied read.")).toBe(
+            continued,
+          )
+          expect(yield* llm.pending).toBe(continued ? 0 : 1)
+          expect(JSON.stringify(yield* llm.inputs)).not.toContain("DENIED_ROOT_SENTINEL")
+        }),
+        {
+          git: true,
+          config: (url) => ({
+            ...providerCfg(url),
+            model: "test/test-model",
+            permission: { read: { "*": "allow", ".env": "ask" } },
+            experimental: { continue_loop_on_deny: continued },
+          }),
+        },
+      ),
+    30_000,
+  )
+}
+
 const worker = (mode: "subagent" | "all"): AgentSvc.Info => ({
   name: "worker",
   mode,

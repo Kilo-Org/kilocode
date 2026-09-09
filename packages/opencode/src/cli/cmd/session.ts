@@ -99,7 +99,7 @@ export const SessionListCommand = effectCmd({
   handler: Effect.fn("Cli.session.list")(function* (args) {
     // kilocode_change start
     const sessions = args.all
-      ? [...Session.listGlobal({ roots: true, limit: args.maxCount, search: args.search })]
+      ? yield* Session.Service.use((svc) => svc.listGlobal({ roots: true, limit: args.maxCount, search: args.search }))
       : yield* Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount, search: args.search }))
     // kilocode_change end
 

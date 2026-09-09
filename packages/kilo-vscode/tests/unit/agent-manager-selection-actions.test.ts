@@ -3,6 +3,7 @@ import { createRoot, createSignal } from "solid-js"
 import { needsLocalDraft } from "../../webview-ui/agent-manager/project/local-tabs"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
 import {
+  createTabMemory,
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
@@ -59,6 +60,32 @@ describe("selectWorktreeAction", () => {
 })
 
 describe("selectLocalAction", () => {
+  it.each(["ses-a2", "pending:draft", "review", "terminal:1"])("remembers Local %s in multi-project mode", (tab) => {
+    const memory: Record<string, string> = {}
+    const save = createTabMemory({
+      selection: () => "local",
+      tab: () => tab,
+      multi: () => true,
+      applied: () => "project-a",
+      active: () => "project-a",
+      owns: () => false,
+      pending: (id) => id.startsWith("pending:"),
+      locals: () => ["ses-a1", "ses-a2"],
+      localTab: (id) => id === "review" || id.startsWith("terminal:"),
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+
+    save()
+    expect(memory.local).toBe(tab)
+    if (tab !== "ses-a2") return
+    const result = deps()
+    result.value.tabMemory = () => memory
+    selectLocalAction(result.value, [{ id: "ses-a1" }, { id: "ses-a2" }])
+    expect(result.calls).toEqual(["local:ses-a2"])
+  })
+
   it("restores the remembered second local tab", () => {
     const result = deps()
     result.value.tabMemory = () => ({ local: "ses-a2" })
@@ -79,7 +106,12 @@ describe("selectLocalAction", () => {
 
 for (const target of ["local", "wt-b"]) {
   describe(`${target} terminal restoration`, () => {
-    it.each([undefined, "terminal:closed", "terminal:second"])("restores a terminal with memory %s", (remembered) => {
+    it.each([
+      { remembered: undefined, ids: [] },
+      { remembered: "terminal:closed", ids: [] },
+      { remembered: "terminal:second", ids: [] },
+      { remembered: "terminal:second", ids: ["ses-1"] },
+    ])("restores a terminal with %j", (entry) => {
       createRoot((dispose) => {
         const result = deps()
         const [selection, select] = createSignal("prj-a:other")
@@ -96,16 +128,17 @@ for (const target of ["local", "wt-b"]) {
         result.value.terms = terms
         result.value.nsKey = (id) => `prj-a:${id}`
         result.value.setSelection = (id) => select(`prj-a:${id}`)
-        result.value.tabMemory = () => (remembered ? { [target]: remembered } : {})
+        result.value.tabMemory = () => (entry.remembered ? { [target]: entry.remembered } : {})
         result.value.activateTerminal = (id) => {
           terms.setActiveId(id)
           result.calls.push(`terminal:${id}`)
         }
 
-        if (target === "local") selectLocalAction(result.value, [])
-        else selectWorktreeAction(result.value, target, [])
+        const sessions = entry.ids.map((id) => ({ id }))
+        if (target === "local") selectLocalAction(result.value, sessions, entry.ids)
+        else selectWorktreeAction(result.value, target, sessions, entry.ids)
 
-        const expected = remembered === "terminal:second" ? remembered : "terminal:first"
+        const expected = entry.remembered === "terminal:second" ? entry.remembered : "terminal:first"
         expect(terms.activeId()).toBe(expected)
         expect(result.calls).toEqual([`terminal:${expected}`])
         expect(terms.current()).toHaveLength(2)

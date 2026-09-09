@@ -8,8 +8,9 @@ import {
   VirtualizedFileDiff,
 } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
-import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
-import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
+import { createComputed, createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
+import { createDefaultOptions, type DiffHandle, type DiffProps, styleVariables } from "../pierre"
+import { capture } from "../pierre/scroll"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 import { attachLineSelectionListeners, readSelectedLineRange } from "../pierre/selection"
@@ -200,6 +201,8 @@ export function Diff<T>(props: DiffProps<T>) {
     "commentedLines",
     "onRendered",
     "visible",
+    "handle",
+    "scrollTo",
     "virtualized",
     "sizeKey",
   ])
@@ -273,6 +276,34 @@ export function Diff<T>(props: DiffProps<T>) {
     sharedVirtualizer = result
     return result.virtualizer
   }
+
+  const scroller = () => {
+    let node = container.parentElement
+    while (node) {
+      const style = getComputedStyle(node)
+      if (style.overflowY === "auto" || style.overflowY === "scroll" || style.overflowY === "overlay") return node
+      node = node.parentElement
+    }
+  }
+
+  const move = (root: HTMLElement, top: number) => {
+    if (local.scrollTo) return local.scrollTo(top)
+    root.scrollTo({ top, behavior: "instant" })
+  }
+
+  const scrollToLine = (line: number, side: "additions" | "deletions") => {
+    if (!(instance instanceof VirtualizedFileDiff)) return true
+    const position = instance.getLinePosition(line, side)
+    const root = scroller()
+    if (!position || !root) return false
+    const box = container.getBoundingClientRect()
+    const viewport = root.getBoundingClientRect()
+    const top = root.scrollTop + box.top - viewport.top + position.top
+    move(root, top - root.clientHeight / 2 + position.height / 2)
+    return true
+  }
+
+  const handle: DiffHandle = { scrollToLine }
 
   createEffect(() => {
     if (visible()) return
@@ -664,6 +695,7 @@ export function Diff<T>(props: DiffProps<T>) {
         containerWrapper: container,
       })
     }
+    untrack(() => local.handle?.(handle))
 
     applyScheme()
     patchSeparatorLayout()
@@ -671,6 +703,22 @@ export function Diff<T>(props: DiffProps<T>) {
     setRendered((value) => value + 1)
     notifyRendered()
   })
+
+  let restore: { instance: FileDiff<T>; apply: () => void } | undefined
+  createComputed(
+    on(
+      () => local.annotations,
+      () => {
+        restore = undefined
+        if (!instance || instance instanceof VirtualizedFileDiff) return
+        const root = scroller()
+        if (!root) return
+        const apply = capture(container, root, (offset) => move(root, offset))
+        if (apply) restore = { instance, apply }
+      },
+      { defer: true },
+    ),
+  )
 
   // Separate effect for annotation-only updates. When annotations change but
   // file contents / options stay the same, this avoids the full teardown+rebuild
@@ -681,9 +729,16 @@ export function Diff<T>(props: DiffProps<T>) {
     on(
       () => local.annotations,
       (annotations) => {
+        const saved = restore
+        restore = undefined
         if (!instance) return
         instance.setLineAnnotations(annotations ?? [])
         instance.rerender()
+        if (saved) {
+          requestAnimationFrame(() => {
+            if (instance === saved.instance) saved.apply()
+          })
+        }
         notifyRendered()
       },
       { defer: true },
@@ -747,6 +802,7 @@ export function Diff<T>(props: DiffProps<T>) {
     pendingSelectionEnd = false
 
     instance?.cleanUp()
+    local.handle?.(undefined)
     setCurrent(undefined)
     sharedVirtualizer?.release()
     sharedVirtualizer = undefined

@@ -25,7 +25,11 @@ describe("nativeTitle", () => {
     const listener: { current?: (message: { type: string; state: unknown }) => Promise<void> } = {}
     const provider = new KiloProvider(
       { fsPath: "/extension" } as never,
-      { unregisterVisible: () => {}, unregisterAttached: () => {} } as never,
+      {
+        unregisterVisible: () => {},
+        unregisterAttached: () => {},
+        onSessionAcknowledged: () => () => {},
+      } as never,
       undefined,
       { tabTitle: (title) => titles.push(title) },
     )

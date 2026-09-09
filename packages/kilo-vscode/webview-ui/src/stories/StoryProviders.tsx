@@ -281,6 +281,11 @@ export function mockSessionValue(overrides?: {
     loadSessions: noop,
     loadOlderMessages: () => false,
     selectSession: noop,
+    // MessageList reads both on mount: `scrollBottomID` must be an accessor
+    // because it is passed to `on(...)`. Omitting it throws and takes down
+    // every chat story in the visual regression suite.
+    scrollBottomID: () => undefined,
+    consumeScrollBottom: () => false,
     deleteSession: noop,
     renameSession: noop,
     syncSession: noop,
