@@ -18,6 +18,7 @@ import type {
   SessionStatus,
   SessionStatusInfo,
   SkillInfo,
+  SendMessageRequest,
   SuggestionRequest,
   TodoItem,
   ToolPart,
@@ -68,6 +69,7 @@ export interface SessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
 
   activityFor: (sessionID: string | undefined) => Activity
+  acknowledge: (sessionID: string) => void
   inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
@@ -133,6 +135,7 @@ export interface SessionContextValue {
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
   selectedAgent: (sessionID?: string) => string
+  submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
@@ -163,6 +166,7 @@ export interface SessionContextValue {
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
   deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
+  submit: (input: SendMessageRequest) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -183,7 +187,7 @@ export interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
-    overrides?: { agent?: string; model?: string; variant?: string },
+    overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
   ) => boolean
   abort: () => void
   compact: () => void
@@ -202,7 +206,9 @@ export interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string, options?: { focus?: boolean }) => void
+  selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
+  scrollBottomID: Accessor<string | undefined>
+  consumeScrollBottom: (id: string) => boolean
   releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void

@@ -103,6 +103,15 @@ export const dict = {
   "ui.messagePart.diagnostic.error": "Fejl",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Læs beskeder fra agenter",
+  "ui.messagePart.board.all": "Alle agenter",
+  "ui.messagePart.board.primary": "Hovedagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} til {{to}}",
+  "ui.messagePart.board.empty": "Ingen beskeder fra agenter",
+  "ui.messagePart.board.stored": "Kun gemt. Levering og læsning er ikke bekræftet.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",

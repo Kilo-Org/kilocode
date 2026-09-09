@@ -1,4 +1,4 @@
-import { isTextControl } from "../src/utils/focus"
+import { hasPopup, isTextControl } from "../src/utils/focus"
 
 const OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
 
@@ -55,6 +55,7 @@ export function createChatFocus(deps: {
 }) {
   const focus = (force: boolean) => {
     if ((!force && (!document.hasFocus() || deps.term())) || deps.history() || deps.review()) return
+    if (hasPopup()) return
     if (preservesTextFocus(document.activeElement) || (!force && isTextControl(document.activeElement))) return
     if (!force && document.activeElement?.matches('[role="tab"]')) return
     if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
@@ -105,10 +106,11 @@ export function hasQuestionOption(root: ParentNode = document): boolean {
 
 /** Focus the first enabled option in the visible question dock, if one exists. */
 export function focusQuestionOption(root: ParentNode = document): boolean {
-  for (const option of root.querySelectorAll<HTMLButtonElement>(OPTION)) {
-    if (option.disabled || option.closest("[inert]")) continue
-    option.focus({ preventScroll: true })
-    return true
-  }
-  return false
+  const options = [...root.querySelectorAll<HTMLButtonElement>(OPTION)].filter(
+    (option) => !option.disabled && !option.closest("[inert]"),
+  )
+  const option = options.find((option) => option.dataset.picked === "true") ?? options.at(0)
+  if (!option) return false
+  option.focus({ preventScroll: true })
+  return true
 }

@@ -219,9 +219,6 @@ async function renderFooter(
           onLayout={() => {}}
           onStatus={() => {}}
           onQueuedRemove={async () => true}
-          onTerminalWrite={async () => {}}
-          onTerminalResize={async () => {}}
-          onTerminalClose={async () => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -1013,9 +1010,6 @@ test("direct footer shows editable prompts and additional queued work while runn
           onRows={() => {}}
           onLayout={() => {}}
           onStatus={() => {}}
-          onTerminalWrite={async () => {}} // kilocode_change
-          onTerminalResize={async () => {}} // kilocode_change
-          onTerminalClose={async () => {}} // kilocode_change
           onQueuedRemove={async () => true}
         />
       </OpencodeKeymapProvider>

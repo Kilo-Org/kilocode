@@ -12,11 +12,13 @@ import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, 
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { For } from "solid-js"
+import { createStore } from "solid-js/store"
 import { TranscriptRowView } from "../components/chat/TranscriptRow"
 import { messageTurns } from "../context/session-queue"
 import { transcriptRows } from "../context/transcript-rows"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
+import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
@@ -729,6 +731,41 @@ export const TitleOnlyReasoning: Story = {
   },
 }
 
+export const StreamingReasoning: Story = {
+  name: "Reasoning - streaming then finished",
+  render: () => {
+    const [part, setPart] = createStore<ReasoningPart>({
+      id: "part-reasoning-stream",
+      sessionID: SESSION_ID,
+      messageID: ASST_MSG_ID,
+      type: "reasoning",
+      text: "**Checking the streaming layout**\n\nInspect how the block behaves while the text grows.",
+      time: { start: now - 1000 },
+    })
+    return (
+      <StoryProviders data={dataWith([part])} sessionID={SESSION_ID} status="busy">
+        <div data-testid="reasoning-stream-host">
+          <button
+            type="button"
+            data-testid="reasoning-append"
+            onClick={() => setPart("text", (value) => `${value} ${"More reasoning output. ".repeat(6)}`)}
+          >
+            Append reasoning
+          </button>
+          <button
+            type="button"
+            data-testid="reasoning-finish"
+            onClick={() => setPart("time", { start: now - 1000, end: now })}
+          >
+            Finish reasoning
+          </button>
+          <AssistantMessage message={baseAssistantMessage} />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
 export const BackgroundProcessToolCards: Story = {
   name: "Tool Cards — background process",
   render: () => {
@@ -1326,6 +1363,131 @@ export const ToolErrors200: Story = {
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+function board(): ToolPart[] {
+  const fromLabel =
+    "Inspect parser edge cases (legacy compatibility) and preserve legitimate parenthesized task descriptions"
+  const toLabel =
+    "Check serializer compatibility with nested collections, Unicode identifiers, and long unbroken values"
+  const rows = [
+    {
+      id: "board_direct",
+      from: "main",
+      to: "ses_serializer",
+      fromLabel: "main",
+      toLabel,
+      type: "INFO",
+      body: "The parser accepts empty input. Check whether the serializer preserves it.",
+    },
+    {
+      id: "board_broadcast",
+      from: "ses_parser",
+      to: "ALL",
+      fromLabel,
+      type: "RESULT",
+      body: "Parser checks are complete. The compatibility notes are available to all agents.",
+    },
+  ]
+  const parts: ToolPart[] = rows.map((row, index) => ({
+    id: `part_board_${index}`,
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: `call_board_${index}`,
+    tool: "board_post",
+    state: {
+      status: "completed",
+      input: { to: row.to, type: row.type, body: row.body },
+      output: JSON.stringify(row),
+      title: "Post agent message",
+      metadata: { from: row.from, to: row.to, fromLabel: row.fromLabel, toLabel: row.toLabel },
+      time: { start: now - 2000, end: now - 1000 },
+    },
+  }))
+  parts.push({
+    id: "part_board_read",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call_board_read",
+    tool: "board_read",
+    state: {
+      status: "completed",
+      input: {},
+      output: JSON.stringify({ messages: rows, hasMore: false }),
+      title: "Read agent messages",
+      metadata: {},
+      time: { start: now - 1000, end: now },
+    },
+  })
+  return parts
+}
+
+export const AgentMessages: Story = {
+  name: "Agent messages",
+  render: () => {
+    const parts = board()
+    return (
+      <StoryProviders data={dataWith(parts)} sessionID={SESSION_ID}>
+        <AgentAvatarPalette ids={["ses_serializer", "ses_parser"]}>
+          <For each={parts}>{(part) => <Part part={part} message={baseAssistantMessage} defaultOpen />}</For>
+        </AgentAvatarPalette>
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentMessages200: Story = {
+  ...AgentMessages,
+  name: "Agent messages with long titles (200px)",
+}
+
+// A post that is still streaming: the route is derived from the session store
+// (sender title, recipient resolved to main) and the arrow animates.
+export const AgentMessagePending: Story = {
+  name: "Agent message, sending",
+  render: () => {
+    const parts: ToolPart[] = [
+      {
+        id: "part_board_pending",
+        sessionID: SESSION_ID,
+        messageID: ASST_MSG_ID,
+        type: "tool",
+        callID: "call_board_pending",
+        tool: "board_post",
+        state: {
+          status: "running",
+          input: { to: "main", type: "RESULT", body: "Parser checks are complete." },
+          title: "Post agent message",
+          metadata: {},
+          time: { start: now - 1000 },
+        },
+      },
+      {
+        id: "part_board_partial",
+        sessionID: SESSION_ID,
+        messageID: ASST_MSG_ID,
+        type: "tool",
+        callID: "call_board_partial",
+        tool: "board_post",
+        state: { status: "pending", input: { to: "ses_ser" }, raw: "" },
+      },
+    ]
+    const data = {
+      ...dataWith(parts),
+      session: [
+        { id: "ses_root", title: "Fix comment UI cutoff issue" },
+        { id: SESSION_ID, parentID: "ses_root", title: "Find PR comment overflow (@explore subagent)" },
+        { id: "ses_serializer", parentID: "ses_root", title: "Check serializer compatibility" },
+      ],
+    }
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <For each={parts}>{(part) => <Part part={part} message={baseAssistantMessage} />}</For>
       </StoryProviders>
     )
   },

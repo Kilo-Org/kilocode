@@ -73,9 +73,39 @@ function byType(items: unknown[], type: string) {
   })
 }
 
+describe("WorktreeDiffController.setVisible", () => {
+  it("defers hidden watches and resumes the latest base when shown", async () => {
+    let fetches = 0
+    const { controller, builds } = make({
+      fetch: async () => {
+        fetches++
+      },
+    })
+    try {
+      await controller.setVisible(false)
+      controller.start("w1#branch")
+      await waitFor(() => builds.length === 1)
+      expect(fetches).toBe(0)
+      await controller.setBase("w1#branch", "feature-x")
+      expect(fetches).toBe(0)
+      await controller.setVisible(true)
+      expect(fetches).toBe(1)
+      expect(builds.at(-1)?.ctx.baseBranch).toBe("feature-x")
+      await controller.setVisible(false)
+      await controller.request("w1#branch")
+      expect(fetches).toBe(1)
+      await controller.setVisible(true)
+      expect(fetches).toBe(2)
+    } finally {
+      controller.stop()
+    }
+  })
+})
+
 describe("WorktreeDiffController.setBase", () => {
   it("rebuilds the active source against the overridden base branch", async () => {
-    const { controller, builds } = make()
+    const { controller, builds, posted } = make()
+    const resets = () => byType(posted, "agentManager.worktreeDiffLoading").filter((msg) => Object.hasOwn(msg, "reset"))
     controller.start("w1#branch")
     await waitFor(() => builds.length === 1)
     expect(builds[0]!.ctx.dir).toBe("/wt")
@@ -90,6 +120,11 @@ describe("WorktreeDiffController.setBase", () => {
     await controller.setBase("w1#branch", undefined)
     expect(builds.length).toBe(3)
     expect(builds[2]!.ctx.baseBranch).toBe("origin/main")
+    expect(resets()).toHaveLength(3)
+    await controller.request("w1#branch")
+    expect(resets()).toHaveLength(3)
+    await controller.requestFile("w2#branch", "a.ts")
+    expect(byType(posted, "agentManager.worktreeDiffFile")).toHaveLength(0)
 
     controller.stop()
   })

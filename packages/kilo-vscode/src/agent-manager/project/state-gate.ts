@@ -4,6 +4,7 @@
  */
 export const STATE_GATED = new Set<string>([
   "agentManager.createWorktree",
+  "agentManager.updateFromBase",
   "agentManager.promoteSession",
   "agentManager.createMultiVersion",
   "agentManager.deleteWorktree",

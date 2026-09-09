@@ -1,7 +1,8 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeHttpServer } from "@effect/platform-node"
 import { Database } from "@opencode-ai/core/database/database"
-import { describe, expect } from "bun:test"
+import * as Log from "@opencode-ai/core/util/log"
+import { describe, expect, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
@@ -73,7 +74,7 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (url: string) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
@@ -83,7 +84,7 @@ function stub(run: () => Response | Promise<Response>) {
       if (url.startsWith("http://127.0.0.1:") && headers.get("authorization") !== "Bearer test-token") {
         return original(input, init)
       }
-      return run()
+      return run(url)
     },
     { preconnect: original.preconnect },
   )
@@ -103,6 +104,66 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  const error = new Error("ConnectionRefused")
+  for (const failure of [
+    {
+      name: "network error",
+      run: () => Promise.reject(error),
+      message: "Error fetching balance",
+      extra: { error },
+    },
+    {
+      name: "HTTP error",
+      run: () => new Response(null, { status: 503 }),
+      message: "Failed to fetch balance",
+      extra: { status: 503 },
+    },
+    {
+      name: "invalid JSON",
+      run: () => new Response("invalid"),
+      message: "Error fetching balance",
+      extra: { error: expect.any(SyntaxError) },
+    },
+  ]) {
+    it.live(`keeps balance failures out of the terminal: ${failure.name}`, () =>
+      Effect.gen(function* () {
+        const previous = state.info
+        const spies = yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            state.info = new Auth.Oauth({ type: "oauth", access: "test-token", refresh: "", expires: 0 })
+            return {
+              console: spyOn(console, "warn").mockImplementation(() => {}),
+              log: spyOn(Log.create({ service: "kilo-gateway" }), "warn").mockImplementation(() => {}),
+            }
+          }),
+          (spies) =>
+            Effect.sync(() => {
+              state.info = previous
+              spies.console.mockRestore()
+              spies.log.mockRestore()
+            }),
+        )
+        yield* stub((url) => {
+          if (new URL(url).pathname === "/api/profile/balance") return failure.run()
+          if (new URL(url).pathname === "/api/profile") return Response.json({ email: "test@example.com" })
+          return Response.json({ subscription: null })
+        })
+
+        const response = yield* HttpClient.get(KiloGatewayPaths.profile)
+
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toMatchObject({
+          profile: { email: "test@example.com" },
+          balance: null,
+          kiloPass: null,
+          currentOrgId: null,
+        })
+        expect(spies.console).not.toHaveBeenCalled()
+        expect(spies.log.mock.calls).toEqual([[failure.message, failure.extra]])
+      }),
+    )
+  }
+
   it.live("reports locally stored API authentication without a Gateway request", () =>
     Effect.gen(function* () {
       yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))

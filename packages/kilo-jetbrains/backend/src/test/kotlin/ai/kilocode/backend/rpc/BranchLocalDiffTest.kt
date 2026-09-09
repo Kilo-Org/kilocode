@@ -80,11 +80,11 @@ class BranchLocalDiffTest {
         git(dir, "push", "-u", "origin", "feature")
 
         assertEquals(listOf("feature.txt"), parity(dir).first.map { it.file })
-        assertEquals(0, trees.dirty(repo.toString()).items.single().unpushed)
+        assertEquals(0, unpushed(dir))
         Files.writeString(dir.resolve("feature.txt"), "one\ntwo\n")
         commit(dir)
         assertEquals(2, parity(dir).first.single().additions)
-        assertEquals(1, trees.dirty(repo.toString()).items.single().unpushed)
+        assertEquals(1, unpushed(dir))
     }
 
     @Test
@@ -295,7 +295,7 @@ class BranchLocalDiffTest {
     }
 
     @Test
-    fun `bulk stats and dirty retain managed-only scope excluding primary`() = runBlocking {
+    fun `bulk stats and dirty retain managed-only scope`() = runBlocking {
         init()
         val dir = worktree()
         val outside = root.resolve("outside")
@@ -304,8 +304,12 @@ class BranchLocalDiffTest {
         Files.writeString(outside.resolve("outside.txt"), "outside\n")
         Files.writeString(dir.resolve("managed.txt"), "managed\n")
 
+        // The primary checkout holds the branch the worktrees are compared against, so it has no base
+        // stats of its own but does have uncommitted counts, which its session editor tab reports. A
+        // worktree nobody manages stays out of both.
         assertEquals(listOf(dir.toString()), trees.stats(outside.toString()).items.map { it.path })
-        assertEquals(listOf(dir.toString()), trees.dirty(outside.toString()).items.map { it.path })
+        assertEquals(listOf(repo.toString(), dir.toString()), trees.dirty(outside.toString()).items.map { it.path })
+        assertEquals(1, trees.dirty(outside.toString()).items.single { it.path == repo.toString() }.untracked)
         assertEquals(listOf("managed.txt"), parity(dir).second.map { it.file })
         assertEquals(listOf("outside.txt"), api.localDiff(outside.toString(), false).map { it.file })
     }
@@ -370,6 +374,9 @@ class BranchLocalDiffTest {
         Files.writeString(repo.resolve("net.txt"), "same\n")
         commit(repo)
     }
+
+    private suspend fun unpushed(dir: Path): Int =
+        trees.dirty(repo.toString()).items.single { it.path == dir.toString() }.unpushed
 
     private fun worktree(): Path {
         val dir = repo.resolve(".kilo/worktrees/feature")

@@ -1,9 +1,5 @@
 /* Shared searchable popovers */
 
-.search-menu-trigger[data-component="icon-button"][data-expanded] {
-  background: var(--surface-base-hover);
-}
-
 .search-menu-popover[data-component="popover-content"] {
   width: min(320px, calc(100vw - 24px));
 }

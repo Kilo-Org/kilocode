@@ -59,6 +59,79 @@ test("scopes requests without losing the transport or cancellation signal", asyn
   expect(signals.map((signal) => signal.aborted)).toEqual([true, true, true, false])
 })
 
+test("headless goal controls use direct commands without draining", async () => {
+  const calls: unknown[] = []
+  const events: unknown[] = []
+  const part = { id: "part_goal", messageID: "msg_goal", sessionID: "ses_goal", type: "text", text: "Goal paused" }
+  const sdk = KiloRunDrain.scope(
+    client(async (request) => {
+      const url = new URL(request.url)
+      calls.push({ path: url.pathname, directory: request.headers.get("x-kilo-directory"), body: await request.json() })
+      return Response.json({ parts: [part] })
+    }),
+    "/goal owner",
+  )
+
+  for (const action of ["", " pause ", "clear"]) {
+    await KiloRun.goal(sdk, "ses_goal", action, (type, data) => {
+      events.push({ type, ...data })
+      return true
+    })
+  }
+
+  expect(calls).toEqual(
+    ["", "pause", "clear"].map((action) => ({
+      path: "/prefix/session/ses_goal/command",
+      directory: encodeURIComponent("/goal owner"),
+      body: { command: "goal", arguments: action },
+    })),
+  )
+  expect(events).toEqual(Array.from({ length: 3 }, () => ({ type: "text", part })))
+})
+
+test("headless goal start and resume fail before dispatch", async () => {
+  const code = process.exitCode
+  const errors: unknown[] = []
+  const calls: string[] = []
+  const sdk = client(async (request) => {
+    calls.push(request.url)
+    return Response.json({ parts: [] })
+  })
+
+  try {
+    for (const action of ["Fix failing tests", "resume"]) {
+      await KiloRun.goal(sdk, "ses_goal", action, (type, data) => {
+        expect(type).toBe("error")
+        errors.push(data.error)
+        return true
+      })
+    }
+    expect(calls).toEqual([])
+    expect(errors).toHaveLength(2)
+    for (const error of errors) expect(error).toContain("Run kilo, then use /goal <text> or /goal resume")
+    expect(process.exitCode).toBe(1)
+  } finally {
+    process.exitCode = code ?? 0
+  }
+})
+
+test("headless goal command failures set a nonzero exit code", async () => {
+  const code = process.exitCode
+  const events: string[] = []
+  const sdk = client(async () => Response.json({ message: "Goal unavailable" }, { status: 400 }))
+
+  try {
+    await KiloRun.goal(sdk, "ses_goal", "pause", (type) => {
+      events.push(type)
+      return true
+    })
+    expect(events).toEqual(["error"])
+    expect(process.exitCode).toBe(1)
+  } finally {
+    process.exitCode = code ?? 0
+  }
+})
+
 test.each([
   () => new Response("<html>old server</html>", { headers: { "content-type": "text/html" } }),
   () => Response.json({ paths: {} }),

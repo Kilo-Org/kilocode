@@ -145,7 +145,6 @@ export namespace KiloTask {
       ...(task ? [] : [{ permission: "task", pattern: "*", action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
       { permission: "suggest", pattern: "*", action: "deny" },
-      { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
     ]
   }

@@ -55,6 +55,24 @@ describe("createTurnDiffSource.fetch", () => {
     expect(result.diffs[0]!.after).toBe("new\n")
   })
 
+  it("uses repository generated-file classifications", async () => {
+    const { fetch } = recording([
+      { file: "i18n/en.ts", patch: samplePatch, additions: 1, deletions: 1, status: "modified" },
+      { file: "i18n/fr.ts", patch: samplePatch, additions: 1, deletions: 1, status: "modified" },
+      { file: "dist/bundle.js", patch: samplePatch, additions: 1, deletions: 1, status: "modified" },
+    ])
+    const generated = async (files: readonly string[]) =>
+      new Map(files.filter((file) => file === "i18n/fr.ts").map((file) => [file, true]))
+
+    const result = await createTurnDiffSource("sess", "msg", fetch, "/repo", generated).fetch()
+
+    expect(result.diffs.map((diff) => [diff.file, diff.generatedLike])).toEqual([
+      ["i18n/en.ts", false],
+      ["i18n/fr.ts", true],
+      ["dist/bundle.js", true],
+    ])
+  })
+
   it("propagates underlying fetch errors", async () => {
     const { fetch } = recording(new Error("backend unavailable"))
     const source = createTurnDiffSource("sess", "msg", fetch)

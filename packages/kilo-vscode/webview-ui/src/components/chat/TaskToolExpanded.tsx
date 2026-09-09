@@ -11,6 +11,7 @@ import { Component, createEffect, createMemo, createSignal, Index, Show, on, onC
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { AgentAvatar } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -23,7 +24,7 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID, latestTaskPart } from "../../context/session-utils"
 import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
-import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { showChildPromotion, taskAvatarStatus, taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -58,6 +59,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   )
 
   const running = createMemo(() => taskRunning(props.status))
+  const avatar = createMemo(() => {
+    const id = childSessionId()
+    return taskAvatarStatus(id, props.status, session.allStatusMap())
+  })
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
@@ -161,14 +166,14 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   }
 
   const trigger = () => (
-    <div data-slot="basic-tool-tool-info-structured">
+    <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
       <div data-slot="basic-tool-tool-info-main">
-        <span data-slot="basic-tool-tool-title" class="capitalize">
-          {title()}
+        <span data-slot="basic-tool-tool-title" title={description() || title()}>
+          {description() || title()}
         </span>
         <Show when={description() || childToolCount() > 0}>
           <span data-slot="basic-tool-tool-subtitle">
-            {description()}
+            {description() ? title() : undefined}
             <Show when={childToolCount() > 0}>
               {description() ? " " : ""}({childToolCount()})
             </Show>
@@ -202,6 +207,20 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     <div data-component="tool-part-wrapper">
       <BasicTool
         icon="task"
+        iconNode={
+          <Show when={childSessionId()} fallback={<AgentAvatar id="" status={avatar()} />}>
+            {(id) => (
+              <span
+                data-slot="task-agent-avatar"
+                data-clickable="true"
+                title={worktree ? "Open sub-agent in panel" : "Open sub-agent in tab"}
+                onClick={openInTab}
+              >
+                <AgentAvatar id={id()} status={avatar()} />
+              </span>
+            )}
+          </Show>
+        }
         status={props.status}
         tool={props.tool}
         partID={props.partID}

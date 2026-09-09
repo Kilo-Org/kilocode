@@ -295,10 +295,32 @@ class SessionUi(
 
     override val auto: Boolean get() = controller.autoApprove
 
+    /**
+     * Whether this surface offers forking at all. Decided per surface rather than per session, so the
+     * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
+     * "has a session yet" part that the action menus need.
+     */
+    private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
+
+    override val forkable: Boolean get() = forkSurface && controller.id != null
+
     @RequiresEdt
     override fun setAuto(value: Boolean) {
         controller.setAutoApprove(value)
         prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun fork() {
+        forkMessage(null, "session_menu")
+    }
+
+    /** Single fork entry point for this session: the action menus pass no message, a prompt bubble does. */
+    @RequiresEdt
+    private fun forkMessage(messageId: String?, surface: String) {
+        if (!forkable) return
+        val session = controller.id ?: return
+        manager?.forkSession(session, messageId, surface)
     }
 
     @RequiresEdt
@@ -348,7 +370,10 @@ class SessionUi(
         // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
         // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
         // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
-        if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
+        if (this::prompt.isInitialized) {
+            sink[PromptDataKeys.SEND] = prompt
+            sink[PromptDataKeys.SELECTORS] = prompt
+        }
     }
 
     @RequiresEdt
@@ -489,6 +514,7 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = if (readonly) null else ::revert,
+            fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
             banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
@@ -503,7 +529,15 @@ class SessionUi(
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
             val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
-            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+            // Editor-tab hosts that show the dock (the worktree editor) report the branch, its PR, and
+            // its changes in their own header at the top of the tab, so their dock is the action row
+            // alone rather than a second place those counts appear.
+            dock = BranchDock(
+                openDiff = ::openBranchChanges,
+                onMove = move,
+                onNewWorktree = newWorktree,
+                header = owner?.hostedInEditorTab != true,
+            )
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -584,8 +618,10 @@ class SessionUi(
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
             // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
-            // readable-width centering used across the transcript.
-            val aligned = if (manager?.hostedInEditorTab == true) {
+            // readable-width centering used across the transcript — for the dock as much as the
+            // prompt, so the strip above the prompt does not run wider than the session it belongs to.
+            val tab = manager?.hostedInEditorTab == true
+            val aligned = if (tab) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
@@ -595,7 +631,18 @@ class SessionUi(
                 prompt.align(HAlign.FIT, VAlign.FIT)
             }
             val container = Stack.vertical()
-            dock?.let { container.next(it) }
+            dock?.let {
+                val row = if (tab) {
+                    it.align(
+                        HAlign.CENTER,
+                        VAlign.FIT,
+                        maxW = { SessionUiStyle.SessionLayout.readableWidth(it, style.transcriptFont) },
+                    )
+                } else {
+                    it
+                }
+                container.next(row)
+            }
             container.next(aligned)
             bottom = container
             root.content.add(container, BorderLayout.SOUTH)

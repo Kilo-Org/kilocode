@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -204,7 +203,6 @@ export const guarded = [
   "write",
   "agent_manager",
   "repo_clone",
-  "interactive_terminal",
 ]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
@@ -279,11 +277,18 @@ function planEditGuard(worktree: string) {
 
 export function hardenPlan(
   key: string,
-  item: { permission: Permission.Ruleset },
+  item: { native?: boolean; permission: Permission.Ruleset },
   worktree: string,
   ...explicit: Permission.Ruleset[]
 ) {
-  if (key !== "plan" && key !== "architect") return
+  // Plan-mode edit restrictions are a ceiling for the built-in plan agent only.
+  // Custom agents named `architect` are governed by their own permission config;
+  // the previous name check appended the guard after their rules, so last-match-
+  // wins made their edit allows unreachable with no opt-out (#13581). A custom
+  // `agent.plan` config reuses the built-in object, so `native` stays true and
+  // the ceiling still applies there.
+  if (key !== "plan") return
+  if (item.native !== true) return
   const edit = explicit.map(editRestrictions)
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
@@ -309,6 +314,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    open_plan: "allow",
     task: {
       "*": "allow",
       general: "deny",
@@ -525,6 +531,7 @@ export function patchAgents(
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
+      description: `${agents.explore.description} Bash is limited to an allowlist of read-only commands. For required scripts, tests, or binary-analysis commands outside that allowlist, select an available agent whose permissions allow them while preserving the requested no-change scope.`,
       permission: Permission.merge(
         defaults,
         Permission.fromConfig({

@@ -13,6 +13,8 @@ import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge }
 import { ActionSelect, label as actionLabel, tone as actionTone } from "./PermissionsRoute"
 import { agentEditable, agentTitle, snippets, useAgentBuilder, type AgentEntry, type AgentItem } from "./state/agents"
 import type { PermissionAction } from "./state/permissions"
+import "../../styles/agents-tools.css"
+import "../../styles/permissions.css"
 
 type Row = { item: AgentItem; entry?: AgentEntry; rank: number }
 

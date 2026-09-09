@@ -151,6 +151,133 @@ test("the indicator stays a centered lane on a wide surface", async ({ page }) =
   expect(Math.abs(lane.leftGap - lane.rightGap)).toBeLessThanOrEqual(2)
 })
 
+for (const width of [340, 532, 720, 1400]) {
+  test(`goal preserves session actions and spinner geometry at ${width}px`, async ({ page }) => {
+    await openStory(page)
+    await page.setViewportSize({ width, height: 640 })
+    const spinner = page.locator('.working-indicator [data-component="spinner"]')
+    await page.getByTestId("toggle-busy").click()
+    await expect(spinner).toBeVisible()
+    // CSS motion overrides do not clear StatusText's JavaScript width lock.
+    await expect(page.locator(".working-status")).not.toHaveAttribute("data-swap")
+    const baseline = await spinner.boundingBox()
+    await page.getByTestId("toggle-busy").click()
+    await page.getByTestId("toggle-goal").click()
+
+    const actions = page.locator(".session-actions-row")
+    const goal = actions.locator(".session-goal-action")
+    const status = page.getByRole("img", { name: "Goal: Active" })
+    await expect(goal).toBeVisible()
+    await expect(goal.locator("svg").first()).toHaveAttribute("viewBox", "0 0 20 20")
+    await expect(goal.locator("svg").first().locator("circle")).toHaveCount(3)
+    await expect(status).toBeHidden()
+    for (const name of ["New Session", "Fork Session", "Move to Worktree"]) {
+      await expect(actions.getByRole("button", { name, exact: true })).toBeVisible()
+    }
+    const style = (el: Element) => {
+      const css = getComputedStyle(el)
+      return {
+        height: el.getBoundingClientRect().height,
+        font: css.fontSize,
+        padding: css.padding,
+        background: css.backgroundColor,
+      }
+    }
+    expect(await goal.evaluate(style)).toEqual(
+      await actions.getByRole("button", { name: "Fork Session", exact: true }).evaluate(style),
+    )
+    const anchor = await goal.boundingBox()
+    const dock = await page.locator(".session-dock").boundingBox()
+    if (!anchor || !dock) throw new Error("Goal or session dock missing")
+    for (const button of await actions.locator("button:not(.session-goal-action)").all()) {
+      const box = await button.boundingBox()
+      if (!box) throw new Error("Session action missing")
+      expect(box.x).toBeGreaterThanOrEqual(dock.x)
+      expect(box.x + box.width).toBeLessThanOrEqual(dock.x + dock.width)
+      expect(box.y + box.height).toBeLessThanOrEqual(dock.y + dock.height)
+      expect(box.x + box.width <= anchor.x || box.y + box.height <= anchor.y || box.y >= anchor.y + anchor.height).toBe(
+        true,
+      )
+    }
+
+    const idle = await geometry(page)
+    await goal.click()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeVisible()
+    await page.getByTestId("toggle-busy").evaluate((el) => {
+      if (!(el instanceof HTMLElement)) throw new Error("Status control missing")
+      el.click()
+    })
+    await expect(spinner).toBeVisible()
+    await expect(status).toBeVisible()
+    await expect(goal).toBeHidden()
+    await expect(actions).toBeHidden()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+    await expect(page.locator(".working-status")).not.toHaveAttribute("data-swap")
+    const bounds = await spinner.boundingBox()
+    if (!bounds || !baseline) throw new Error("Spinner missing")
+    expect(bounds.x).toBe(baseline.x)
+    expect(bounds.width).toBe(baseline.width)
+    expect(bounds.height).toBe(baseline.height)
+    expect(await geometry(page)).toEqual(idle)
+    await expect(status.locator("svg circle")).toHaveCount(3)
+    if (width >= 532) {
+      await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+      await expect(status.locator(".session-goal-status-label")).toBeVisible()
+    }
+    await status.hover()
+    await expect(page.getByRole("tooltip")).toContainText("Keep the session controls available")
+    await page.getByTestId("toggle-busy").hover()
+    await page.keyboard.press("Tab")
+    await status.focus()
+    await expect(page.getByRole("tooltip")).toContainText("Goal: Active")
+    await status.click()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+    await page.getByTestId("toggle-busy").click()
+    await expect(actions).toBeVisible()
+    await expect(goal).toBeVisible()
+    await expect(status).toBeHidden()
+    await expect(page.getByRole("menuitem", { name: "Clear goal" })).toBeHidden()
+  })
+}
+
+test("goal label fits the remaining space and recovers after compaction", async ({ page }) => {
+  await openStory(page)
+  await page.setViewportSize({ width: 380, height: 640 })
+  await page.getByTestId("toggle-goal").click()
+  await page.getByTestId("toggle-busy").click()
+  const status = page.getByRole("img", { name: "Goal: Active" })
+  const label = status.locator(".session-goal-status-label")
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+
+  await page.getByTestId("next-status").click()
+  await expect(status.locator(".session-goal-status-content")).toHaveAttribute("data-compact", "")
+  await expect(status.locator("svg")).toBeVisible()
+  await status.hover()
+  await expect(page.getByRole("tooltip")).toContainText("Keep the session controls available")
+
+  await page.setViewportSize({ width: 660, height: 640 })
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+  await page.setViewportSize({ width: 380, height: 640 })
+  await expect(status.locator(".session-goal-status-content")).toHaveAttribute("data-compact", "")
+  await page.getByTestId("next-status").click()
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+
+  await page.locator(".chat-view").evaluate((el) => {
+    if (!(el instanceof HTMLElement)) throw new Error("Chat missing")
+    el.style.display = "none"
+  })
+  await expect(status).toBeHidden()
+  await page.locator(".chat-view").evaluate((el) => {
+    if (!(el instanceof HTMLElement)) throw new Error("Chat missing")
+    el.style.removeProperty("display")
+  })
+  await expect(status).toBeVisible()
+  await expect(status.locator(".session-goal-status-content")).not.toHaveAttribute("data-compact")
+  await expect(label).toBeVisible()
+})
+
 test("the counter keeps its width as it ticks", async ({ page }) => {
   await openStory(page)
   await page.getByTestId("toggle-busy").click()

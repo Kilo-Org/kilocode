@@ -10,13 +10,24 @@ import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/u
 
 export { styleVariables }
 
+export interface DiffHandle {
+  scrollToLine: (line: number, side: "additions" | "deletions") => boolean
+}
+
 // Character matching fragments inserted identifiers when they share letters with
 // existing symbols. Word-alt keeps those logical additions visually intact.
 export const LINE_DIFF_TYPE = "word-alt" as const
 
-// Pierre 1.1 treats its changed-line override properties as tint targets. Apply
-// Kilo semantic surfaces at the computed row level so host diff colors stay final.
+// Keep Kilo semantic surfaces at the computed row level. Pierre's dedicated
+// number override keeps deletion bars red without tinting line-number text.
 const css = `
+:host {
+  --diffs-fg-number-deletion-override: var(--diffs-fg-number-override, var(--diffs-fg));
+  --diffs-bg-deletion-override: var(--surface-diff-delete-base, var(--diffs-deletion-base));
+}
+[data-indicators='bars'] [data-column-number][data-line-type='change-deletion'] {
+  --diffs-deletion-base: var(--surface-diff-delete-strong, #ff6762);
+}
 [data-diff][data-background] [data-line][data-line-type='change-addition'] {
   --diffs-computed-diff-line-bg: var(--surface-diff-add-base, var(--diffs-bg-addition));
   --diffs-computed-selected-line-bg: var(--surface-diff-add-base, var(--diffs-bg-addition));
@@ -39,6 +50,7 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
   const opts = defaults<T>(style)
   return {
     ...opts,
+    diffIndicators: "bars" as const,
     lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }
@@ -54,6 +66,8 @@ type DiffShared<T> = FileDiffOptions<T> & {
   onLineNumberSelectionEnd?: (selection: SelectedLineRange | null) => void
   onRendered?: () => void
   visible?: boolean
+  handle?: (handle: DiffHandle | undefined) => void
+  scrollTo?: (offset: number) => void
   // When false, render the supplied diff once instead of row-virtualizing it.
   // Callers should supply hunk-bounded `fileDiff`/`patch` data for large source
   // files so eager rendering does not expand full before/after content.
