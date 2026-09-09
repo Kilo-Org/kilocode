@@ -35,6 +35,8 @@ You can review or change your decision at any time in **Settings**. Declining op
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
+On Android, you can buy, restore, and change Kilo Pass tiers directly through Google Play. Tier changes take effect at the next renewal, matching monthly web subscriptions. The app keeps the current tier and credits until renewal. Google manages cancellation and payment methods.
+
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}
 

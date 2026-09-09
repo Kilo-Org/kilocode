@@ -165,7 +165,13 @@ Use the actions on an expanded thread to:
 - **Open file** at the comment location in the selected worktree
 - **Open on GitHub** at the comment
 
-The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context; it does not post a reply to GitHub.
+
+##### Replying to and managing comments
+
+You can reply to a review thread or PR discussion comment directly from the panel. On your own comments, you can also edit the body or delete the comment. Replies, edits, and deletions post to GitHub immediately.
+
+Drafts are preserved through panel refreshes, so an in-progress reply is not lost when the panel updates.
 
 ##### Reactions
 
@@ -173,11 +179,21 @@ Add or remove GitHub reactions on review threads, PR discussion comments, and re
 
 ##### Inline threads in the diff
 
-Review threads also appear inline in the Agent Manager diff panel and in the Changes diff view, in unified and split layouts. A thread shows on the file, side, and line it was left on, with the reviewer's avatar, and stays read-only. **Show in diff** from the PR panel or from a review comment in chat jumps to the thread's location, including inside large files.
+Review threads also appear inline in the Agent Manager diff panel and in the Changes diff view, in unified and split layouts. A thread shows on the file, side, and line it was left on, with the reviewer's avatar. **Show in diff** from the PR panel or from a review comment in chat jumps to the thread's location, including inside large files.
 
 Threads are placed against the current diff content. A thread whose location no longer matches — for example an outdated thread — is not guessed onto a nearby line; it appears in the **Comments outside the current diff** group below the files instead. Remote threads stay separate from your local draft comments in the diff.
 
-Remote threads support the same reactions as the PR panel: toggle a reaction pill or pick a reaction, and the change posts to GitHub immediately.
+From the diff view you can reply to a thread, edit or delete your own comments, and toggle reactions. All of these actions post to GitHub immediately.
+
+##### Submitting a review
+
+From the PR panel's **Files and review** section, you can add line comments on the PR diff and submit a formal review. Select a line or drag across lines in the diff gutter to open a comment composer. Comments support Markdown preview and GitHub suggestion blocks.
+
+After adding line comments, submit the review as **Comment**, **Approve**, or **Request changes**. Reviews post to GitHub and are visible to all PR participants. You cannot approve or request changes on your own pull request.
+
+##### Code suggestions
+
+When a review comment contains a GitHub suggestion block, you can preview the suggested change and apply it to the local worktree. Applying a suggestion modifies files in the worktree without staging, committing, or pushing. The GitHub thread is not resolved or modified.
 
 #### PR comments
 
@@ -186,6 +202,8 @@ Below the review threads, the **PR Comments** section shows top-level pull reque
 Use the actions on each comment to:
 
 - **Send** the comment to the current agent, or to the active terminal when one is focused. Sent comments are marked so they are not sent again.
+- **Add comment** to post a new top-level comment on the pull request.
+- **Edit** or **delete** your own comments.
 - **Dismiss** a comment locally to hide it from the actionable list. Dismissed comments can be restored at any time; dismissal is local only and does not affect GitHub.
 - **Copy** the comment as Markdown
 - **Open on GitHub** at the comment

@@ -103,6 +103,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/diff` | - | Open the diff viewer |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
+| `/goal` | - | Set a continuous session goal that keeps the agent working toward an objective |
 
 #### Agent & Model Commands
 
@@ -169,6 +170,31 @@ Review your code locally before pushing — catch issues early without waiting f
 | `/review branch [base] [guidance]` | Review the current branch against its detected or specified base, with optional guidance |
 | `/review <commit-hash>` | Review a specific commit |
 | `/review <PR URL or number>` | Review a pull request |
+
+## Session Goals
+
+The `/goal` command keeps the agent working toward a continuous objective in the current session. Instead of prompting after each turn, you set a goal and the agent takes the next useful step each time it finishes.
+
+### Starting a goal
+
+| Command | Description |
+|---|---|
+| `/goal` | Open the full composer to enter a multiline objective with attachments |
+| `/goal <objective>` | Set a goal directly from the command line |
+
+### Controlling a goal
+
+| Command | Description |
+|---|---|
+| `/goal pause` | Pause the active goal |
+| `/goal resume` | Resume a paused goal, or restart a completed goal |
+| `/goal clear` | Remove the saved goal and its outcome |
+
+Goal state persists across backend restarts. Active goals pause on Stop, a new message, or a backend restart. Completed goals stay completed and can be restarted with `/goal resume`.
+
+During an active goal, the agent works autonomously and makes safe, reversible decisions. The clarification tool is disabled so the agent does not wait for input. Normal permission approvals still apply.
+
+The agent reports completion or blockers through the `goal_report` tool. Completion is reported by the working model, not independently verified. Goals use model credits and have no spending cap.
 
 ## Config Reference
 
