@@ -286,7 +286,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
 
     for (const m of filtered()) {
-      if (isAuto(m)) {
+      if (isAuto(m) && m.recommendedIndex !== undefined) {
         autos.push(m)
         continue
       }
