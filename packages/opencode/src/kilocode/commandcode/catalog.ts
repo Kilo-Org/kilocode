@@ -22,6 +22,12 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//
+// NOTE: models with `reasoning: true` and no `reasoning_options`
+// (Kimi-K2.7-Code(-Highspeed), Qwen3.7-*, Qwen3.6-*, LongCat, Step,
+// hy3-paid, nemotron, inkling, laguna, ling) mirror upstream
+// MODEL_EFFORTS @ 9817183a, which defines no efforts for them.
+// Do not invent effort levels; re-verify against upstream on regen.
 import type { Provider } from "@opencode-ai/core/models-dev"
 
 export const PROVIDER_ID = "commandcode"
