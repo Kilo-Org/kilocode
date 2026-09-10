@@ -101,6 +101,7 @@ import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { activities, type Activity } from "../utils/session-activity"
+import { active as activeTiming, hold, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
@@ -157,7 +158,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
   const [closeMap, setCloseMap] = createStore<Record<string, CloseState | undefined>>({})
-  const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
+  const [timingMap, setTimingMap] = createStore<Record<string, Timing>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
   const recoveries = new Map<string, Set<string>>()
@@ -208,9 +209,9 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
   }
-  const busySince = () => {
+  const busyTiming = () => {
     const id = currentSessionID() ?? draftSessionID()
-    return id ? busySinceMap[id] : undefined
+    return id ? timingMap[id] : undefined
   }
   const submitting = () => {
     const id = currentSessionID() ?? draftSessionID()
@@ -341,7 +342,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const startSubmission = (sid: string, messageID: string) => {
     pendingSubmissions.set(messageID, sid)
     setSubmissionMap(sid, (count = 0) => count + 1)
-    if (!busySinceMap[sid]) setBusySinceMap(sid, Date.now())
+    startTiming(sid)
   }
   const finishSubmission = (messageID: string) => {
     aborts.finish(messageID)
@@ -359,7 +360,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
     if ((statusMap[sid] ?? idle).type !== "idle") return
-    setBusySinceMap(
+    setTimingMap(
       produce((map) => {
         delete map[sid]
       }),
@@ -1093,10 +1094,10 @@ export const SessionProvider: ParentComponent = (props) => {
             delete map[draftID]
           }),
         )
-        if (busySinceMap[draftID] && !busySinceMap[session.id]) {
-          setBusySinceMap(session.id, busySinceMap[draftID])
+        if (timingMap[draftID] && !timingMap[session.id]) {
+          setTimingMap(session.id, timingMap[draftID])
         }
-        setBusySinceMap(
+        setTimingMap(
           produce((map) => {
             delete map[draftID]
           }),
@@ -1557,11 +1558,9 @@ export const SessionProvider: ParentComponent = (props) => {
           : { type: newStatus }
     setStatusMap(sessionID, info)
     if (newStatus === "busy" || newStatus === "retry") clearClose(sessionID)
-    if (prev === "idle" && newStatus !== "idle") {
-      if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
-    }
+    if (prev === "idle" && newStatus !== "idle") startTiming(sessionID)
     if (newStatus === "idle") {
-      setBusySinceMap(
+      setTimingMap(
         produce((map) => {
           delete map[sessionID]
         }),
@@ -1812,6 +1811,40 @@ export const SessionProvider: ParentComponent = (props) => {
     return suggestions().filter((item) => family.has(item.sessionID))
   }
 
+  /** Session IDs directly holding a permission or blocking question. */
+  const parkedIds = createMemo(() => {
+    const ids = new Set<string>()
+    for (const p of permissions()) ids.add(p.sessionID)
+    for (const q of questions()) if (q.blocking !== false) ids.add(q.sessionID)
+    return ids
+  })
+
+  /** Whether sid's family (self + subagents) is parked on a user prompt — the
+   *  working timer must pause for as long as this is true. */
+  const parked = (sid: string) => {
+    const family = sessionFamily(sid)
+    for (const id of parkedIds()) if (family.has(id)) return true
+    return false
+  }
+
+  /** Ensure sid has a timing entry and, unless parked, start (or continue) its clock. */
+  const startTiming = (sid: string) => {
+    if (!timingMap[sid]) setTimingMap(sid, { active: 0 })
+    if (parked(sid)) return
+    setTimingMap(sid, "since", (v) => v ?? Date.now())
+  }
+
+  // Pauses every running timing entry whose family is parked on a user prompt,
+  // and resumes any parked entry whose family has been cleared. Reads the map
+  // keys under `untrack` so writing the map here cannot re-trigger this computed.
+  createComputed(() => {
+    const now = Date.now()
+    for (const sid of untrack(() => Object.keys(timingMap))) {
+      if (parked(sid)) setTimingMap(sid, (t) => hold(t, now))
+      else setTimingMap(sid, "since", (v) => v ?? now)
+    }
+  })
+
   const disconnected = createMemo<boolean>((previous) => {
     const state = server.connectionState()
     return state === "connecting" ? previous : state !== "connected"
@@ -1963,7 +1996,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setStatusMap(produce((map) => { delete map[sessionID] }))
       clearClose(sessionID)
       // prettier-ignore
-      setBusySinceMap(produce((map) => { delete map[sessionID] }))
+      setTimingMap(produce((map) => { delete map[sessionID] }))
       if (currentSessionID() === sessionID) {
         setCurrentSessionID(undefined)
         setLoading(false)
@@ -2922,7 +2955,7 @@ export const SessionProvider: ParentComponent = (props) => {
     statusInfo,
     closeReason,
     statusText,
-    busySince,
+    busyTiming,
     submitting,
     canResume: () => !!resumable(),
     resume,
