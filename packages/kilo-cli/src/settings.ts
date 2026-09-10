@@ -23,6 +23,10 @@ import {
   SETTINGS_UNSUPPORTED_NOTE,
   SettingsRpc,
   type SettingsChange,
+  type SettingsCollection,
+  type SettingsCollectionChange,
+  type SettingsCollectionSnapshot,
+  type SettingsDiagnostic,
   type SettingsExpected,
   type SettingsFieldKey,
   type SettingsFieldState,
@@ -76,6 +80,26 @@ export interface SettingsStore {
     readonly key: SettingsFieldKey
     readonly expected?: SettingsExpected
   }): Promise<SettingsChange>
+  collections: {
+    get(input: {
+      readonly collection: SettingsCollection
+      readonly scope: SettingsScope
+    }): Promise<SettingsCollectionSnapshot>
+    set(input: {
+      readonly scope: SettingsScope
+      readonly collection: SettingsCollection
+      readonly key?: string
+      readonly value: unknown
+      readonly expected?: SettingsExpected
+    }): Promise<SettingsCollectionChange>
+    unset(input: {
+      readonly scope: SettingsScope
+      readonly collection: SettingsCollection
+      readonly key?: string
+      readonly expected?: SettingsExpected
+    }): Promise<SettingsCollectionChange>
+  }
+  warnings(): Promise<ReadonlyArray<SettingsDiagnostic>>
 }
 
 interface FieldDefinition {
@@ -106,6 +130,8 @@ interface ScopeProjection {
    * documents were actually loaded.
    */
   readonly raw: readonly Record<string, unknown>[]
+  /** Source paths of the `raw` documents, for per-document diagnostics. */
+  readonly rawSources: readonly string[]
 }
 
 // Every field below is a native v2 Config.Info field with a verified consumer.
@@ -207,11 +233,60 @@ const definitions: readonly FieldDefinition[] = [
     decode: Schema.decodeUnknownOption(PositiveInt),
   },
   {
+    key: "media.image.auto_resize",
+    path: ["media", "image", "auto_resize"],
+    title: "Auto-resize images",
+    description: "Resize images that exceed the width, height, or byte limits instead of refusing them",
+    kind: "boolean",
+    decode: Schema.decodeUnknownOption(Schema.Boolean),
+  },
+  {
+    key: "media.image.max_width",
+    path: ["media", "image", "max_width"],
+    title: "Image width limit",
+    description: "Maximum image width in pixels before images are resized or refused",
+    kind: "integer",
+    decode: Schema.decodeUnknownOption(PositiveInt),
+  },
+  {
+    key: "media.image.max_height",
+    path: ["media", "image", "max_height"],
+    title: "Image height limit",
+    description: "Maximum image height in pixels before images are resized or refused",
+    kind: "integer",
+    decode: Schema.decodeUnknownOption(PositiveInt),
+  },
+  {
+    key: "media.image.max_base64_bytes",
+    path: ["media", "image", "max_base64_bytes"],
+    title: "Image byte limit",
+    description: "Maximum inline image size in bytes before images are resized or refused",
+    kind: "integer",
+    decode: Schema.decodeUnknownOption(PositiveInt),
+  },
+  {
+    key: "experimental.subagent_depth",
+    path: ["experimental", "subagent_depth"],
+    title: "Subagent nesting depth (experimental)",
+    description: "Maximum subagent nesting depth. Defaults to 1",
+    kind: "integer",
+    minimum: 0,
+    decode: Schema.decodeUnknownOption(NonNegativeInt),
+  },
+  {
+    key: "experimental.portable_shell_scanner",
+    path: ["experimental", "portable_shell_scanner"],
+    title: "Portable shell scanner (experimental)",
+    description: "Use the experimental portable shell permission scanner for shell commands",
+    kind: "boolean",
+    decode: Schema.decodeUnknownOption(Schema.Boolean),
+  },
+  {
     key: "hide_prompt_training_models",
     path: ["hide_prompt_training_models"],
     title: "Hide prompt-training models",
     description:
-      "Hide Kilo Gateway models whose metadata says they may train on your prompts. A presentation filter for listings, not a data-collection guarantee",
+      "Hide Kilo Gateway models whose metadata says they may train on your prompts, and send a data-collection deny request with every Kilo Gateway request. A request to the Gateway, not a guarantee that providers honor it",
     kind: "boolean",
     kiloOnly: true,
     decode: Schema.decodeUnknownOption(Schema.Boolean),
@@ -238,6 +313,18 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
       ),
     reset: (input) =>
       serializeConfigWrite(options.layout.config, () => apply(input.scope, input.key, { reset: true }, input.expected)),
+    collections: {
+      get: (input) => collectionGet(input.collection, input.scope),
+      set: (input) =>
+        serializeConfigWrite(options.layout.config, () =>
+          applyCollection(input.scope, input.collection, input.key, { set: input.value }, input.expected),
+        ),
+      unset: (input) =>
+        serializeConfigWrite(options.layout.config, () =>
+          applyCollection(input.scope, input.collection, input.key, { reset: true }, input.expected),
+        ),
+    },
+    warnings: collectDiagnostics,
   }
 
   async function read(): Promise<SettingsSnapshot> {
@@ -307,9 +394,15 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
         state: { scope: "profile", path: file, exists: false, writable: false, reason: failure },
         documents: [],
         raw: [],
+        rawSources: [],
       }
     if (!(await isFile(file)))
-      return { state: { scope: "profile", path: file, exists: false, writable: true }, documents: [], raw: [] }
+      return {
+        state: { scope: "profile", path: file, exists: false, writable: true },
+        documents: [],
+        raw: [],
+        rawSources: [],
+      }
     const raw = await rawDocument(file)
     const rawDocuments = raw ? [raw] : []
     const document = await load(file).catch(() => undefined)
@@ -320,12 +413,21 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
           path: file,
           exists: true,
           writable: true,
-          reason: "The profile document is not valid configuration and the host ignores it",
+          // Blanket honesty: native configuration from this document is ignored by the host,
+          // while separately parsed Kilo-only values may still apply (and are reported below).
+          reason:
+            "The profile document is not valid native configuration and the host ignores it; separately parsed Kilo-only values may still apply",
         },
         documents: [],
         raw: rawDocuments,
+        rawSources: [file],
       }
-    return { state: { scope: "profile", path: file, exists: true, writable: true }, documents: [document], raw: rawDocuments }
+    return {
+      state: { scope: "profile", path: file, exists: true, writable: true },
+      documents: [document],
+      raw: rawDocuments,
+      rawSources: [file],
+    }
   }
 
   /**
@@ -348,6 +450,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
         },
         documents: [],
         raw: [],
+        rawSources: [],
       }
     if (!options.project.enabled)
       return {
@@ -360,6 +463,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
         },
         documents: [],
         raw: [],
+        rawSources: [],
       }
     const entries = await Effect.runPromise(
       ProjectConfig.readProjectEntries(directory, boundary).pipe(Effect.provide(filesystem)),
@@ -375,6 +479,7 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
         },
         documents: [],
         raw: [],
+        rawSources: [],
       }
     const loaded = entries.flatMap((entry) =>
       entry.type === "document" && entry.path !== undefined ? [{ path: entry.path, info: entry.info }] : [],
@@ -391,8 +496,159 @@ export function createSettingsStore(options: SettingsStoreOptions): SettingsStor
     const target = loaded.at(-1)?.path ?? fallback
     const eligible = await eligibleTarget(target, boundary)
     if (eligible)
-      return { state: { scope: "project", path: target, exists: true, writable: false, reason: eligible }, documents, raw }
-    return { state: { scope: "project", path: target, exists: await isFile(target), writable: true }, documents, raw }
+      return {
+        state: { scope: "project", path: target, exists: true, writable: false, reason: eligible },
+        documents,
+        raw,
+        rawSources: loaded.map((entry) => entry.path),
+      }
+    return {
+      state: { scope: "project", path: target, exists: await isFile(target), writable: true },
+      documents,
+      raw,
+      rawSources: loaded.map((entry) => entry.path),
+    }
+  }
+
+  /** Declared collection leaves over the native `Config.Info` field names. */
+  function collectionDef(collection: SettingsCollection): {
+    readonly path: readonly string[]
+    readonly kind: "record" | "value"
+  } {
+    switch (collection) {
+      case "providers":
+        return { path: ["providers"], kind: "record" }
+      case "agents":
+        return { path: ["agents"], kind: "record" }
+      case "permissions":
+        return { path: ["permissions"], kind: "value" }
+      case "policies":
+        return { path: ["experimental", "policies"], kind: "value" }
+    }
+  }
+
+  async function collectionDocuments(scope: SettingsScope) {
+    const projections = [await profileProjection(), await projectProjection()]
+    const ordered = [
+      ...projections[0].documents.map((document) => ({ document, source: "profile" as const })),
+      ...projections[1].documents.map((document) => ({ document, source: "project" as const })),
+    ]
+    return { ordered, scoped: scope === "profile" ? projections[0] : projections[1] }
+  }
+
+  async function collectionGet(
+    collection: SettingsCollection,
+    scope: SettingsScope,
+  ): Promise<SettingsCollectionSnapshot> {
+    const def = collectionDef(collection)
+    const { ordered, scoped } = await collectionDocuments(scope)
+    const entries: Record<string, unknown> = {}
+    const provenance: Record<
+      string,
+      { source: "profile" | "project"; inherited: boolean; overridden: boolean; editable: boolean; reason?: string }
+    > = {}
+    for (const { document, source } of ordered) {
+      const value = at(document, def.path)
+      if (value === undefined) continue
+      const provenanceFor = (key: string, overridden: boolean) => ({
+        source,
+        inherited: source === "profile",
+        overridden,
+        editable: scoped.state.writable,
+        ...(scoped.state.writable ? {} : { reason: scoped.state.reason }),
+      })
+      if (def.kind === "record") {
+        if (!isObject(value)) continue
+        for (const [key, entry] of Object.entries(value)) {
+          const previous = provenance[key] !== undefined
+          entries[key] = entry
+          provenance[key] = provenanceFor(key, previous)
+        }
+        continue
+      }
+      if (!Array.isArray(value)) continue
+      const merged = Array.isArray(entries[""]) ? (entries[""] as ReadonlyArray<unknown>) : []
+      entries[""] = [...merged, ...value]
+      provenance[""] = provenanceFor("", source === "project")
+    }
+    const diagnostics: Array<SettingsDiagnostic> = []
+    for (const source of scoped.rawSources) {
+      const normalized = await normalizeDocument(source)
+      for (const diagnostic of normalized.diagnostics) {
+        if (diagnostic.path[0] !== def.path[0]) continue
+        diagnostics.push({
+          source,
+          kind: diagnostic.kind,
+          path: diagnostic.path.join("."),
+          message: diagnostic.message,
+        })
+      }
+    }
+    return { scopes: (await read()).scopes, entries, provenance, diagnostics }
+  }
+
+  async function applyCollection(
+    scope: SettingsScope,
+    collection: SettingsCollection,
+    key: string | undefined,
+    value: { readonly set: unknown } | { readonly reset: true },
+    expected?: SettingsExpected,
+  ): Promise<SettingsCollectionChange> {
+    const def = collectionDef(collection)
+    if (def.kind === "record" && (key === undefined || key === ""))
+      throw new Error(`A ${collection} entry key is required`)
+    if (def.kind === "value" && key !== undefined)
+      throw new Error(`${collection} is a whole-value collection and takes no entry key`)
+    if ("set" in value && def.kind === "value" && !Array.isArray(value.set))
+      throw new Error(`The supplied value is not a valid ${collection} list`)
+    const target = (scope === "profile" ? await profileProjection() : await projectProjection()).state
+    if (!target.writable) throw new Error(target.reason ?? `The ${scope} configuration target is not writable`)
+    const before = target.exists ? await text(target.path) : ""
+    if (expected && (expected.path !== target.path || expected.revision !== (target.exists ? revision(before) : null)))
+      throw new Error("Configuration changed since this dialog was opened. Reopen Kilo settings and try again.")
+    const parsed = before === "" ? {} : json(before, target.path)
+    const leaf: string[] = def.kind === "record" ? [...def.path, key as string] : [...def.path]
+    const existing = at(parsed, leaf)
+    if ("reset" in value && existing === undefined)
+      return { scope, collection, key: key ?? "", path: target.path, changed: false, snapshot: await read() }
+    for (const parent of leaf.slice(0, -1)) {
+      const node = at(parsed, [parent])
+      if (node !== undefined && !isObject(node))
+        throw new Error(`Existing "${parent}" value in ${target.path} is not an object`)
+    }
+    const source = before === "" ? "{}" : before
+    const updated = applyEdits(
+      source,
+      modify(source, leaf, "set" in value ? value.set : undefined, { formattingOptions }),
+    )
+    if (updated !== source) {
+      verify(updated, parsed, target.path)
+      // An invalid collection entry refuses the write with its diagnostic path
+      // instead of relying on the host decode to silently drop it. Pre-existing
+      // diagnostics elsewhere in the document do not block the write.
+      const normalized = ConfigNormalize.normalize(json(updated, target.path))
+      const own = normalized.diagnostics.filter((diagnostic) => diagnostic.path[0] === def.path[0])
+      if (own.length > 0) {
+        const [first] = own
+        throw new Error(`The supplied ${collection} entry is not valid: ${first.path.join(".")} (${first.kind})`)
+      }
+    }
+    if (updated !== before) await write(target, updated)
+    return { scope, collection, key: key ?? "", path: target.path, changed: updated !== before, snapshot: await read() }
+  }
+
+  async function collectDiagnostics(): Promise<ReadonlyArray<SettingsDiagnostic>> {
+    const out: Array<SettingsDiagnostic> = []
+    for (const scope of ["profile", "project"] as const) {
+      const projection = scope === "profile" ? await profileProjection() : await projectProjection()
+      for (const source of projection.rawSources) {
+        const normalized = await normalizeDocument(source)
+        for (const diagnostic of normalized.diagnostics) {
+          out.push({ source, kind: diagnostic.kind, path: diagnostic.path.join("."), message: diagnostic.message })
+        }
+      }
+    }
+    return out
   }
 
   function guard() {
@@ -435,7 +691,13 @@ function state(field: FieldDefinition, scopes: readonly ScopeProjection[]): Sett
       // the canonical values the host resolves. Higher-priority documents win
       // inside a scope, matching Config.latest.
       const documents = field.kiloOnly ? scope.raw : scope.documents
-      const value = documents.reduce<unknown>((result, document) => at(document, field.path) ?? result, undefined)
+      const value = documents.reduce<unknown>((result, document) => {
+        const candidate = at(document, field.path)
+        // A raw Kilo-only null is a stored value, not an absent one: it fails
+        // decode below and is reported invalid. Undefined alone means absent.
+        if (field.kiloOnly) return candidate === undefined ? result : candidate
+        return candidate ?? result
+      }, undefined)
       if (value === undefined) return []
       // A Kilo-only key is read raw, so a stored value can have any JSON type:
       // the snapshot explains the invalid state instead of carrying the value.
@@ -487,6 +749,23 @@ async function load(filepath: string) {
   if (Option.isNone(info)) return undefined
   const encoded = encodeInfo(info.value)
   return Option.isSome(encoded) && isObject(encoded.value) ? encoded.value : undefined
+}
+
+/**
+ * The host config pipeline's normalize step, keeping the per-document
+ * diagnostics that the write verifier and the warnings surface both need.
+ */
+async function normalizeDocument(filepath: string) {
+  try {
+    const substituted = await Effect.runPromise(
+      ConfigVariable.substitute({ type: "path", path: filepath, text: await text(filepath) }).pipe(
+        Effect.provide(filesystem),
+      ),
+    )
+    return ConfigNormalize.normalize(json(substituted, filepath))
+  } catch {
+    return { type: "rejected", diagnostics: [] } as const
+  }
 }
 
 /**
@@ -559,6 +838,12 @@ async function isFile(filepath: string) {
 }
 
 export interface SettingsPluginOptions {
+  /**
+   * Host-provided config reload (the native Config.reload seam). Absent means
+   * refresh is unavailable. The host provides its location-scoped services
+   * inside the callback, so the handler runs it with no further requirements.
+   */
+  readonly refresh?: (location: Location.Info) => Effect.Effect<void, unknown, unknown>
   readonly layout: Layout
   /** Mirrors the host's --project-config opt-in. */
   readonly project?: boolean
@@ -593,6 +878,37 @@ export function createSettingsRpcHandlers(
     reset: (input, call) =>
       Effect.tryPromise({
         try: () => store.reset(input),
+        catch: (error) => call.error("kilocode.settings", message(error)),
+      }),
+    collectionGet: (input, call) =>
+      Effect.tryPromise({
+        try: () => store.collections.get(input),
+        catch: (error) => call.error("kilocode.settings", message(error)),
+      }),
+    collectionSet: (input, call) =>
+      Effect.tryPromise({
+        try: () => store.collections.set(input),
+        catch: (error) => call.error("kilocode.settings", message(error)),
+      }),
+    collectionUnset: (input, call) =>
+      Effect.tryPromise({
+        try: () => store.collections.unset(input),
+        catch: (error) => call.error("kilocode.settings", message(error)),
+      }),
+    warnings: (_input, call) =>
+      Effect.tryPromise({
+        try: () => store.warnings(),
+        catch: (error) => call.error("kilocode.settings", message(error)),
+      }),
+    refresh: (_input, call) =>
+      Effect.tryPromise({
+        try: () => {
+          if (!options.refresh) throw new Error("Configuration refresh is not available for this location")
+          // The host callback provides its own location services; the unknown
+          // requirement type is satisfied by that provide at runtime.
+          const run = options.refresh(location) as Effect.Effect<void, unknown>
+          return Effect.runPromise(run).then(() => true)
+        },
         catch: (error) => call.error("kilocode.settings", message(error)),
       }),
   }

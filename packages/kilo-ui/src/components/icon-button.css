@@ -1,0 +1,21 @@
+/* Kilo Icon Button overrides – sized to match @vscode/webview-ui-toolkit */
+
+[data-component="icon-button"] {
+  cursor: pointer;
+  background: transparent;
+  border-radius: 5px;
+  padding: 3px;
+  border: none;
+  transition:
+    background 120ms,
+    color 120ms,
+    opacity 120ms;
+
+  &[data-variant="ghost"]:hover:not(:disabled) {
+    background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+  }
+
+  &:active:not([data-disabled]) {
+    opacity: 0.8;
+  }
+}

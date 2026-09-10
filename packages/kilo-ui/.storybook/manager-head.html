@@ -1,0 +1,11 @@
+<style>
+  /* Hide Color Scheme toolbar when kilo-vscode theme is active */
+  html[data-kilo-theme="kilo-vscode"] [aria-label^="Color Scheme"] {
+    display: none !important;
+  }
+
+  /* Hide VS Code Theme toolbar by default and when kilo theme is active */
+  html:not([data-kilo-theme="kilo-vscode"]) [aria-label^="VSCode Theme"] {
+    display: none !important;
+  }
+</style>

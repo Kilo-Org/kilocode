@@ -33,6 +33,8 @@ export function latest<K extends keyof Info>(entries: readonly Entry[], key: K):
 }
 
 export interface Interface {
+  // kilocode_change - expose native refresh for hosts without filesystem watchers.
+  readonly reload?: () => Effect.Effect<void, unknown>
   /** Returns location config documents and discovery sources from lowest to highest priority. */
   readonly entries: () => Effect.Effect<Entry[]>
   /**
@@ -317,7 +319,11 @@ export const layer = (options?: Options) =>
       )
       yield* reloadLock.withPermit(reconcile(initial))
 
+      // kilocode_change - retain location dependencies when refresh is invoked by a host RPC.
+      const refreshContext = yield* Effect.context<FSUtil.Service | Global.Service | Location.Service>()
       return Service.of({
+        // kilocode_change - reuse the serialized native loader for explicit refresh.
+        reload: () => reload().pipe(Effect.provide(refreshContext)),
         entries: Effect.fnUntraced(function* () {
           return configs
         }),

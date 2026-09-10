@@ -16,7 +16,7 @@ try {
     Effect.scoped(
       Effect.gen(function* () {
         const daemon = yield* serve(layout("interactive"), {
-          gateway: { server: process.env.KILO_API_URL },
+          gateway: { server: process.env.KILO_API_URL, backgroundRefresh: true },
           persistedTelemetry: true,
         })
         // The supervising client discovers the endpoint through the registration file; a detached

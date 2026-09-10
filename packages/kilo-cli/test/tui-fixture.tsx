@@ -3,11 +3,13 @@ import { OpenCode } from "@opencode-ai/client"
 import { Service } from "@opencode-ai/client/effect/service"
 import { run } from "@opencode-ai/tui"
 import { Global } from "@opencode-ai/util/global"
+import { MouseButton, TextareaRenderable } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { Effect, Fiber } from "effect"
 import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
 import path from "node:path"
+import manifest from "../package.json"
 import { launch } from "../src/interactive-server"
 import { layout } from "../src/paths"
 import { runTui } from "../src/tui"
@@ -15,18 +17,36 @@ import { runTui } from "../src/tui"
 const mode = process.argv[2]
 assert(mode === "conversation" || mode === "discovery-control")
 process.stderr.write(`TUI fixture: ${mode} imports ready\n`)
-const setup = await createTestRenderer({ width: 120, height: 40, useThread: false, kittyKeyboard: true })
+const setup = await createTestRenderer({
+  width: 120,
+  height: 40,
+  useThread: false,
+  kittyKeyboard: process.env.KILO_FIXTURE_KITTY !== "false",
+})
 setup.renderer.start()
 const defaultListenerLimit = EventEmitter.defaultMaxListeners
 const initialResizeListeners = setup.renderer.listenerCount("resize")
 const ready = Promise.withResolvers<void>()
 const closed = Promise.withResolvers<void>()
 const terminalHandoff = async () => ({ renderer: setup.renderer, mode: "dark" as const, complete: ready.resolve })
+const catalog = Promise.withResolvers<void>()
+const gateway = Bun.serve({
+  hostname: "127.0.0.1",
+  port: 0,
+  async fetch() {
+    await catalog.promise
+    return Response.json({ data: [] })
+  },
+})
 const task = Effect.runPromise(
   Effect.scoped(
     Effect.gen(function* () {
       const input = layout("interactive")
-      const endpoint = yield* launch(input, { models: false, content: process.env.KILO_FIXTURE_CONFIG })
+      const endpoint = yield* launch(input, {
+        models: false,
+        content: process.env.KILO_FIXTURE_CONFIG,
+        gateway: mode === "conversation" ? { server: gateway.url.origin, backgroundRefresh: true } : undefined,
+      })
       process.stderr.write("TUI fixture: backend listening\n")
       const tui =
         mode === "conversation"
@@ -68,6 +88,9 @@ const task = Effect.runPromise(
         )
         assert(footer.includes("isolated interactive store"))
         assert(footer.includes("Connect Kilo to sign in"))
+        assert(!footer.includes("Starting Kilo"))
+        // The full home screen must render before the catalog response is released.
+        catalog.resolve()
         assert.equal(setup.renderer.getMaxListeners(), 32)
         assert.equal(EventEmitter.defaultMaxListeners, defaultListenerLimit)
         assert.equal(new EventEmitter().getMaxListeners(), defaultListenerLimit)
@@ -110,6 +133,58 @@ const task = Effect.runPromise(
         const session = (await api.session.list({ directory: process.cwd() })).data[0]!
         const history = await api.message.list({ sessionID: session.id })
         assert(history.data.some((message) => message.type === "assistant" && message.agent === "build"))
+        await setup.mockInput.typeText("Hold this reply while I queue another prompt")
+        setup.mockInput.pressEnter()
+        await setup.waitFor(async () => Object.keys(await api.session.active()).length > 0, { maxPasses: 600 })
+        await fetch(`${process.env.KILO_FIXTURE_MODEL_URL}/fixture/started`)
+        process.stderr.write("TUI fixture: held model request started\n")
+        await setup.waitFor(
+          () => {
+            const editor = setup.renderer.currentFocusedEditor
+            return editor instanceof TextareaRenderable && editor.plainText === ""
+          },
+          { maxPasses: 600 },
+        )
+        await setup.mockInput.typeText("Run this queued prompt after the current reply")
+        await setup.waitForFrame((frame) => frame.includes("Run this queued prompt after the current reply"), {
+          maxPasses: 600,
+        })
+        setup.mockInput.pressKey("x", { ctrl: true })
+        setup.mockInput.pressEnter()
+        await setup.waitFor(async () => (await api.session.inbox.list({ sessionID: session.id })).length === 1, {
+          maxPasses: 600,
+        })
+        const queued = await api.session.inbox.list({ sessionID: session.id })
+        assert.equal(queued[0]?.delivery, "queue")
+        await setup.waitForFrame((frame) => frame.includes("1 queued"), { maxPasses: 600 })
+        process.stderr.write("TUI fixture: queued dock visible\n")
+        setup.mockInput.pressKey("x", { ctrl: true })
+        setup.mockInput.pressKey("q")
+        await setup.waitForFrame((frame) => frame.includes("Queued prompts"), { maxPasses: 600 })
+        process.stderr.write("TUI fixture: queue manager open\n")
+        setup.mockInput.pressEscape()
+        await setup.waitForFrame((frame) => !frame.includes("Queued prompts"), { maxPasses: 600 })
+        await fetch(`${process.env.KILO_FIXTURE_MODEL_URL}/fixture/release`)
+        await setup.waitFor(async () => Object.keys(await api.session.active()).length === 0, { maxPasses: 600 })
+        assert.equal((await api.session.inbox.list({ sessionID: session.id })).length, 0)
+        const delivered = await api.message.list({ sessionID: session.id })
+        assert.equal(delivered.data.filter((message) => message.type === "user").length, 3)
+        assert.equal(delivered.data.filter((message) => message.type === "assistant").length, 3)
+        process.stderr.write("TUI fixture: queued shortcut persisted and drained after the active reply\n")
+        await setup.mockInput.typeText("Queue on idle starts immediately")
+        setup.mockInput.pressKey("x", { ctrl: true })
+        setup.mockInput.pressEnter()
+        await setup.waitFor(
+          async () => {
+            const messages = await api.message.list({ sessionID: session.id })
+            return (
+              messages.data.filter((message) => message.type === "assistant").length === 4 &&
+              Object.keys(await api.session.active()).length === 0
+            )
+          },
+          { maxPasses: 600 },
+        )
+        assert.equal((await api.session.inbox.list({ sessionID: session.id })).length, 0)
         await setup.waitForFrame(
           (frame) =>
             frame.split("\n").filter((line) => /Code\s+· fixture-selected/.test(line)).length >= 2 &&
@@ -124,15 +199,78 @@ const task = Effect.runPromise(
           maxPasses: 600,
         })
         assert(!/\bBuild\b/.test(switched))
+        setup.resize(160, 48)
+        const sidebar = await setup.waitForFrame(
+          (frame) => frame.includes("Session family usage") && frame.includes(`Kilo ${manifest.version}`),
+          { maxPasses: 600 },
+        )
+        const sidebarText = sidebar
+          .split("\n")
+          .map((line) => line.slice(120))
+          .join("\n")
+        assert(sidebarText.indexOf("Context") < sidebarText.indexOf("Session family usage"))
+        assert(sidebarText.indexOf("Session family usage") < sidebarText.indexOf("Memory"))
+        assert(sidebarText.indexOf("Memory") < sidebarText.indexOf("Code Indexing"))
+        assert(sidebarText.indexOf("Credits") < sidebarText.indexOf(`Kilo ${manifest.version}`))
+        for (const title of ["Context", "Session family usage", "Memory", "Code Indexing"]) {
+          for (const [before, after] of [
+            ["▼", "▶"],
+            ["▶", "▼"],
+          ]) {
+            const frame = await setup.waitForFrame((frame) => frame.includes(`${before} ${title}`), { maxPasses: 600 })
+            const lines = frame.split("\n")
+            const row = lines.findIndex((line) => line.slice(120).includes(`${before} ${title}`))
+            assert(row >= 0)
+            await setup.mockMouse.click(lines[row]!.indexOf(`${before} ${title}`, 120), row)
+            await setup.waitForFrame((frame) => frame.includes(`${after} ${title}`), { maxPasses: 600 })
+          }
+        }
         assert.equal(setup.renderer.isDestroyed, false)
         process.stderr.write(`TUI fixture: session idle; resize listeners=${setup.renderer.listenerCount("resize")}\n`)
+        const composerRow = setup
+          .captureCharFrame()
+          .split("\n")
+          .findLastIndex((line) => /Code\s+· fixture-selected/.test(line.slice(0, 120)))
+        await setup.mockMouse.click(8, composerRow - 2)
+        await api.session.rename({ sessionID: session.id, title: "First tab fixture" })
+        await api.session.create({ location: { directory: process.cwd() }, title: "Second tab fixture" })
+        await setup.mockInput.typeText("/sessions")
+        setup.mockInput.pressEnter()
+        await setup.waitForFrame((frame) => frame.includes("Second tab fixture"), { maxPasses: 600 })
+        await setup.mockInput.typeText("Second tab fixture")
+        setup.mockInput.pressEnter()
+        await setup.waitForFrame((frame) => frame.split("\n")[0]?.includes("Second tab fixture"), { maxPasses: 600 })
+        const firstTab = setup.captureCharFrame().split("\n")[0]!.indexOf("First tab fixture")
+        const secondTab = setup.captureCharFrame().split("\n")[0]!.indexOf("Second tab fixture")
+        assert(firstTab >= 0 && secondTab >= 0)
+        await setup.mockMouse.click(firstTab, 0, MouseButton.RIGHT)
+        const menu = await setup.waitForFrame((frame) => frame.includes("Rename"), { maxPasses: 600 })
+        const menuRows = menu.split("\n")
+        const renameRow = menuRows.findIndex((line) => line.includes("Rename"))
+        await setup.mockMouse.click(menuRows[renameRow]!.indexOf("Rename"), renameRow)
+        await setup.waitForFrame((frame) => frame.includes("Rename session"), { maxPasses: 600 })
+        setup.mockInput.pressEscape()
+        await setup.waitForFrame((frame) => !frame.includes("Rename session"), { maxPasses: 600 })
+        await setup.mockMouse.click(firstTab, 0)
+        await setup.waitForFrame((frame) => frame.includes("Greet the isolated TUI fixture"), { maxPasses: 600 })
+        await setup.mockMouse.click(secondTab, 0)
+        await setup.waitForFrame((frame) => !frame.includes("Greet the isolated TUI fixture"), { maxPasses: 600 })
+        await setup.mockMouse.click(firstTab, 0)
+        await setup.waitForFrame((frame) => frame.includes("Greet the isolated TUI fixture"), { maxPasses: 600 })
+        await setup.mockMouse.click(8, composerRow - 2)
         await setup.mockInput.typeText("/exit")
         setup.mockInput.pressEnter()
         await closed.promise
         assert.equal(setup.renderer.isDestroyed, true)
         assert(setup.renderer.listenerCount("resize") <= initialResizeListeners)
         assert.equal(EventEmitter.defaultMaxListeners, defaultListenerLimit)
-      })
+      }).pipe(
+        Effect.tapError(() =>
+          Effect.sync(() => {
+            if (!setup.renderer.isDestroyed) console.error("TUI failure frame:", setup.captureCharFrame())
+          }),
+        ),
+      )
       yield* Fiber.join(fiber)
     }),
   ).pipe(Effect.provide(NodeHttpServer.layerHttpServices)),
@@ -146,5 +284,7 @@ try {
   if (!setup.renderer.isDestroyed) console.error(setup.captureCharFrame())
   process.exitCode = 1
 } finally {
+  catalog.resolve()
+  gateway.stop(true)
   if (!setup.renderer.isDestroyed) setup.renderer.destroy()
 }

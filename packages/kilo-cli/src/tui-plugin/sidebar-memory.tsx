@@ -1,7 +1,9 @@
 import { Plugin } from "@opencode-ai/plugin/tui"
 import { createClient } from "@kilocode/client"
+import type { RpcClient } from "@opencode-ai/client"
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { MemoryRpc, type MemoryRpcStatus } from "../memory-rpc"
+import { SidebarSection } from "./sidebar-section"
 import { memoryUiRequestOptions, subscribeMemoryUiRefresh } from "./memory"
 
 export type MemorySidebarClient = Pick<ReturnType<typeof createClient>, "rpc">
@@ -11,21 +13,22 @@ export type MemorySidebarOptions = {
   readonly signal?: AbortSignal
 }
 
-type MemoryRpcClient = ReturnType<MemorySidebarClient["rpc"]>
+type MemoryRpcClient = RpcClient<typeof MemoryRpc.Definition>
 
 /**
  * Compact status row, matching the current-main sidebar row contract. v1 tones
  * Enabled by per-session activity (durable message markers or a 5s save pulse);
- * v2 has no per-session evidence seam, so Enabled honestly stays muted.
+ * the host persists actual nonempty context injection separately from the
+ * transcript, and the save event adds its temporary activity pulse.
  */
-export function memoryRow(input: { enabled?: boolean; loading?: boolean }) {
+export function memoryRow(input: { enabled?: boolean; loading?: boolean; active?: boolean }) {
   if (input.enabled === undefined) {
     return input.loading
       ? ({ label: "Loading", tone: "muted" } as const)
       : ({ label: "Unavailable", tone: "error" } as const)
   }
   if (!input.enabled) return { label: "Disabled", tone: "muted" } as const
-  return { label: "Enabled", tone: "muted" } as const
+  return { label: "Enabled", tone: input.active ? "success" : "muted" } as const
 }
 
 /** Render the current project-memory state in the native session sidebar. */
@@ -41,6 +44,8 @@ export function MemorySidebar(props: {
   const [status, setStatus] = createSignal<MemoryRpcStatus>()
   const [loading, setLoading] = createSignal(Boolean(props.rpc))
   const [unavailable, setUnavailable] = createSignal(!props.rpc)
+  const [saved, setSaved] = createSignal(false)
+  let pulse: ReturnType<typeof setTimeout> | undefined
   let revision = 0
 
   const refresh = async () => {
@@ -64,7 +69,10 @@ export function MemorySidebar(props: {
     setLoading(status() === undefined)
     setUnavailable(false)
     try {
-      const value = await rpc.status({}, memoryUiRequestOptions(props.context, props.signal, ref))
+      const value = await rpc.status(
+        { sessionID: props.sessionID },
+        memoryUiRequestOptions(props.context, props.signal, ref),
+      )
       if (current !== revision || props.signal?.aborted) return
       setStatus(value)
       setUnavailable(false)
@@ -85,6 +93,9 @@ export function MemorySidebar(props: {
       },
       () => {
         setStatus(undefined)
+        setSaved(false)
+        if (pulse) clearTimeout(pulse)
+        pulse = undefined
         void refresh()
       },
     ),
@@ -110,27 +121,57 @@ export function MemorySidebar(props: {
       return
     void refresh()
   })
+
+  // Current-main save pulse: 5s of per-session activity after the host reports
+  // a real saved memory operation attributed to this session.
+  const stopSavedEvents =
+    props.rpc?.events.on(
+      "saved",
+      (event) => {
+        if (event.data.sessionID !== props.sessionID) return
+        setSaved(true)
+        if (pulse) clearTimeout(pulse)
+        pulse = setTimeout(() => {
+          setSaved(false)
+          pulse = undefined
+        }, 5_000)
+      },
+      { signal: props.signal },
+    ) ?? (() => {})
+
   onCleanup(() => {
     revision++
     unsubscribe()
     stopExecutionEvents()
+    stopSavedEvents()
+    if (pulse) clearTimeout(pulse)
   })
 
   const row = createMemo(() =>
-    memoryRow({ enabled: unavailable() ? undefined : status()?.state.enabled, loading: loading() }),
+    memoryRow({
+      enabled: unavailable() ? undefined : status()?.state.enabled,
+      loading: loading(),
+      active: saved() || status()?.session?.injected === true,
+    }),
   )
 
-  // Sidebar slot roots must be stable; a conditional root never mounts.
   return (
-    <box>
-      <text fg={theme.text.default}>
-        <b>Memory</b>
-      </text>
+    <SidebarSection theme={theme} title="Memory">
       <box flexDirection="row" gap={1}>
-        <text fg={row().tone === "error" ? theme.text.feedback.error.default : theme.text.subdued}>•</text>
+        <text
+          fg={
+            row().tone === "error"
+              ? theme.text.feedback.error.default
+              : row().tone === "success"
+                ? theme.text.feedback.success.default
+                : theme.text.subdued
+          }
+        >
+          •
+        </text>
         <text fg={theme.text.default}>{row().label}</text>
       </box>
-    </box>
+    </SidebarSection>
   )
 }
 

@@ -2,12 +2,13 @@ import { NodeHttpServer } from "@effect/platform-node"
 import { createClient } from "@kilocode/client"
 import { Service } from "@opencode-ai/client/effect/service"
 import { createTestRenderer } from "@opentui/core/testing"
-import { Effect, Fiber } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import assert from "node:assert/strict"
 import { mkdir } from "node:fs/promises"
 import path from "node:path"
 import { launch } from "../src/interactive-server"
-import { layout, type Layout } from "../src/paths"
+import type { Layout } from "../src/paths"
+import { guardedFixtureLayout } from "./fixture"
 import { Session } from "@opencode-ai/schema/session"
 import { SessionUsageRpc } from "../src/session-usage-rpc"
 import { runTui } from "../src/tui"
@@ -61,32 +62,41 @@ const terminalHandoff = async () => ({ renderer: setup.renderer, mode: "dark" as
 const task = Effect.runPromise(
   Effect.scoped(
     Effect.gen(function* () {
-      const input = layout("interactive")
+      const input = guardedFixtureLayout()
       yield* Effect.promise(async () => {
         await mkdir(path.dirname(input.config), { recursive: true })
         await Bun.write(input.config, '{ "privacy_mode": true }\n')
       })
       const sourceDirectory = path.join(process.cwd(), "usage-source")
       yield* Effect.promise(() => mkdir(sourceDirectory, { recursive: true }))
-      const source = yield* launch(interactiveLayout(path.join(process.cwd(), "usage-source-host"), input.paths.home), {
-        models: false,
-        recover: false,
-        content: modelConfig(),
-      })
-      const sourceClient = createClient({
-        baseUrl: source.url,
-        headers: Object.fromEntries(new Headers(Service.headers(source))),
-      })
-      const sourceLocation = { directory: sourceDirectory }
-      yield* Effect.promise(() => sourceClient.plugin.awaitActivation({ location: sourceLocation }))
-      const sourceSession = yield* Effect.promise(() =>
-        sourceClient.session.create({ location: sourceLocation, model: { providerID: "fixture", id: "child" } }),
+      const childData = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const source = yield* launch(
+            interactiveLayout(path.join(process.cwd(), "usage-source-host"), input.paths.home),
+            {
+              models: false,
+              recover: false,
+              content: modelConfig(),
+            },
+          )
+          const sourceClient = createClient({
+            baseUrl: source.url,
+            headers: Object.fromEntries(new Headers(Service.headers(source))),
+          })
+          const sourceLocation = { directory: sourceDirectory }
+          yield* Effect.promise(() => sourceClient.plugin.awaitActivation({ location: sourceLocation }))
+          const sourceSession = yield* Effect.promise(() =>
+            sourceClient.session.create({ location: sourceLocation, model: { providerID: "fixture", id: "child" } }),
+          )
+          yield* Effect.promise(() =>
+            sourceClient.session.prompt({ sessionID: sourceSession.id, text: "Count the child" }),
+          )
+          yield* Effect.promise(() =>
+            sourceClient.session.wait({ sessionID: sourceSession.id }, { signal: AbortSignal.timeout(10000) }),
+          )
+          return yield* Effect.promise(() => sourceClient.session.export({ sessionID: sourceSession.id }))
+        }),
       )
-      yield* Effect.promise(() => sourceClient.session.prompt({ sessionID: sourceSession.id, text: "Count the child" }))
-      yield* Effect.promise(() =>
-        sourceClient.session.wait({ sessionID: sourceSession.id }, { signal: AbortSignal.timeout(10000) }),
-      )
-      const childData = yield* Effect.promise(() => sourceClient.session.export({ sessionID: sourceSession.id }))
       const endpoint = yield* launch(input, {
         models: false,
         recover: false,
@@ -121,6 +131,13 @@ const task = Effect.runPromise(
       yield* Effect.tryPromise(async () => {
         await Promise.race([
           ready.promise,
+          new Promise<never>((_, reject) => {
+            AbortSignal.timeout(15_000).addEventListener(
+              "abort",
+              () => reject(new Error("TUI handoff timed out\n" + setup.captureCharFrame())),
+              { once: true },
+            )
+          }),
           closed.promise.then(async () => {
             await Effect.runPromise(Fiber.join(fiber))
             throw new Error("TUI closed before terminal handoff")
@@ -138,7 +155,10 @@ const task = Effect.runPromise(
         const beforeInteraction = requests
         assert(beforeInteraction > 0)
 
-        await client.session.prompt({ sessionID: root.id, text: "Refresh the root" })
+        await client.session.prompt(
+          { sessionID: root.id, text: "Refresh the root" },
+          { signal: AbortSignal.timeout(10_000) },
+        )
         await client.session.wait({ sessionID: root.id }, { signal: AbortSignal.timeout(10000) })
         assert.equal((await client.session.get({ sessionID: root.id })).parentID, undefined)
         const refreshed = await rpc.get({ sessionID: root.id }, { location })
@@ -150,6 +170,44 @@ const task = Effect.runPromise(
           { maxPasses: 600 },
         )
         assert(requests > beforeInteraction)
+
+        // Per-model rows expand locally: clicking one reveals that model's
+        // token breakdown without any new usage request, and clicking it
+        // again collapses the block. The sidebar runs with privacy on, so
+        // identifiers and costs stay masked while the expanded counts render.
+        const expandModelRow = async (steps: number) => {
+          const lines = setup.captureCharFrame().split("\n")
+          const row = lines.findIndex((line) => line.includes(`${steps} steps ·`))
+          assert(row >= 0, `a per-model row with ${steps} steps is rendered`)
+          await setup.mockMouse.click(lines[row]!.indexOf("steps"), row)
+        }
+        const chat = refreshed.models.find((model) => model.modelID === "chat")
+        const other = refreshed.models.find((model) => model.modelID !== "chat")
+        assert(chat && other, "both model rows exist in the aggregate")
+        assert.notEqual(chat.steps, other.steps, "model rows are distinguishable by their step counts")
+        const beforeExpand = requests
+        await expandModelRow(chat.steps)
+        const expanded = await setup.waitForFrame(
+          (frame) =>
+            (frame.match(/Cache rate/g) ?? []).length === 2 &&
+            frame.includes("▼ •••") &&
+            frame.includes("▶ •••") &&
+            new RegExp(`Input\\s+${chat.tokens.input}\\b`).test(frame) &&
+            new RegExp(`Output\\s+${chat.tokens.output}\\b`).test(frame),
+          { maxPasses: 600 },
+        )
+        assert(expanded.includes("•••"), "masked identifiers stay masked while expanded")
+        assert.equal(requests, beforeExpand, "expanding a model row makes no usage request")
+        await expandModelRow(chat.steps)
+        await setup.waitForFrame(
+          (frame) =>
+            (frame.match(/Cache rate/g) ?? []).length === 1 &&
+            !frame.includes("▼ •••") &&
+            !new RegExp(`Input\\s+${chat.tokens.input}\\b`).test(frame),
+          { maxPasses: 600 },
+        )
+        assert.equal(requests, beforeExpand)
+
         const beforeResize = requests
         setup.resize(100, 45)
         await setup.waitForFrame((frame) => !frame.includes("Session family usage"), { maxPasses: 600 })
@@ -163,12 +221,25 @@ const task = Effect.runPromise(
         assert.equal(requests, beforeResize)
       })
       yield* Effect.promise(async () => {
+        // Sidebar clicks move focus away from the composer; refocus before typing a command.
+        const composer = setup
+          .captureCharFrame()
+          .split("\n")
+          .findIndex((line) => line.includes("Code · chat fixture"))
+        assert(composer >= 2, "composer is visible after sidebar clicks")
+        await setup.mockMouse.click(5, composer - 2)
         await setup.mockInput.typeText("/exit")
         setup.mockInput.pressEnter()
         await closed.promise
       })
       yield* Fiber.join(fiber)
-    }),
+    }).pipe(
+      Effect.onExit((exit) =>
+        Effect.sync(() => {
+          if (Exit.isFailure(exit)) console.error(Cause.pretty(exit.cause))
+        }),
+      ),
+    ),
   ).pipe(Effect.provide(NodeHttpServer.layerHttpServices)),
 )
 

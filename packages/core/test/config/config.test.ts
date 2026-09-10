@@ -76,6 +76,28 @@ const provider = {
 }
 
 describe("Config", () => {
+  // kilocode_change - explicit refresh must retain dependencies outside the caller's Effect context.
+  it.live("refreshes from disk without watcher events or caller services", () =>
+    Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const file = path.join(tmp.path, "opencode.json")
+          yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ shell: "before" })))
+          yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            expect(Config.latest(yield* config.entries(), "shell")).toBe("before")
+            yield* Effect.promise(() => fs.writeFile(file, JSON.stringify({ shell: "after" })))
+            expect(Config.latest(yield* config.entries(), "shell")).toBe("before")
+            const reload = config.reload
+            if (!reload) throw new Error("Production config has no refresh capability")
+            yield* Effect.promise(() => Effect.runPromise(reload()))
+            expect(Config.latest(yield* config.entries(), "shell")).toBe("after")
+          }).pipe(Effect.provide(testLayer(tmp.path)))
+        }),
+      ),
+    ),
+  )
+
   it.live("excludes home-level claude and agents directories when global is disabled", () =>
     Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
       Effect.flatMap((tmp) => {

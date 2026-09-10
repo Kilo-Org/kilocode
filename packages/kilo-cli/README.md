@@ -7,6 +7,8 @@ gates, exact source comparisons, and remaining gaps.
 
 ## Run and check
 
+From the repository root, `bun dev` or `bun run dev` opens the interactive Kilo CLI in the current directory. Arguments are forwarded, for example `bun dev /path/to/project` or `bun dev --help`. If the system Bun is older than 1.4, the command uses the existing bundled runtime automatically. The package's own `dev` command uses the same launcher; `dev:headless` retains the admission-only development entrypoint.
+
 Run from this package with **Bun 1.4 or newer**. The locally bundled runtime
 can be used without changing the system Bun installation:
 

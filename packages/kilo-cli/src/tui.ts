@@ -11,6 +11,8 @@ import { createTuiConfig } from "./tui-config"
 import { sessionEpilogue } from "./tui-plugin/epilogue"
 import { createModelPicker } from "./model-picker"
 
+export { parseTuiArgs } from "./tui-args"
+
 const rendererListenerBudget = 32
 
 export function runTui(
@@ -33,8 +35,10 @@ export function runTui(
   })
   const client = OpenCode.make({ baseUrl: endpoint.url, headers: Service.headers(endpoint) })
   return Effect.gen(function* () {
-    yield* Effect.promise((signal) =>
-      client.plugin.awaitActivation({ location: { directory: process.cwd() } }, { signal }),
+    // The server gates prompt execution and recovery on activation. Rendering the client
+    // must not wait for a cold Gateway catalog to finish loading.
+    yield* Effect.forkScoped(
+      Effect.promise((signal) => client.plugin.awaitActivation({ location: { directory: process.cwd() } }, { signal })),
     )
     const handoff = options.terminalHandoff ? yield* Effect.promise(options.terminalHandoff) : undefined
     const terminal = handoff ?? (yield* nativeTerminal())
@@ -61,31 +65,6 @@ export function runTui(
       terminalHandoff: async () => terminal,
     })
   }).pipe(Effect.provide(Global.layerWith(input.paths)))
-}
-
-export function parseTuiArgs(args: string[]): {
-  directory?: string
-  sessionID?: string
-  sandbox?: boolean
-  swarm?: boolean
-  projectConfig?: boolean
-  indexingConfig?: string
-} {
-  if (args[0] === "--sandbox") return { ...parseTuiArgs(args.slice(1)), sandbox: true }
-  if (args[0] === "--swarm") return { ...parseTuiArgs(args.slice(1)), swarm: true }
-  if (args[0] === "--project-config") return { ...parseTuiArgs(args.slice(1)), projectConfig: true }
-  if (args[0] === "--indexing-config") {
-    if (!args[1]?.trim() || args[1].startsWith("-") || URL.canParse(args[1]))
-      throw new Error("--indexing-config requires an explicit local configuration file")
-    return { ...parseTuiArgs(args.slice(2)), indexingConfig: path.resolve(args[1]) }
-  }
-  if (!args.length) return {}
-  if (args[0] === "-s" || args[0] === "--session") {
-    if (args.length !== 2 || !args[1]) throw new Error("Usage: kilo2 [-s session-id] [project-directory]")
-    return { sessionID: args[1] }
-  }
-  if (args.length === 1 && !args[0].startsWith("-")) return { directory: args[0] }
-  throw new Error("Usage: kilo2 [-s session-id] [project-directory]")
 }
 
 function nativeTerminal() {

@@ -6,7 +6,11 @@ import { KiloLogo } from "./logo"
 import { installMemoryUi } from "./memory"
 import { installMemorySidebar } from "./sidebar-memory"
 import { installIndexingSidebar } from "./sidebar-indexing"
+import { installPrSidebar } from "./sidebar-pr"
+import { installProcessSidebar } from "./sidebar-processes"
 import { installRoutedModelSidebar } from "./sidebar-routed-model"
+import { installBenchSidebar } from "./sidebar-bench"
+import { installModelInfoDialog } from "./model-info-dialog"
 import { installUsageSidebar } from "./sidebar-usage"
 import { installAccountSidebar } from "./sidebar-account"
 import { installSettingsUi } from "./settings"
@@ -66,28 +70,41 @@ export default Plugin.define({
         <text fg={ctx.theme.text.default}>Kilo internal preview · isolated interactive store · {label()}</text>
       ),
     })
+    // Sidebar claims belong to plugin activation, not a remountable app contribution.
+    installUsageSidebar(ctx, {
+      client,
+      privacy: () => privacy()?.enabled() ?? true,
+      signal: controller.signal,
+    })
+    installMemorySidebar(ctx, { client, signal: controller.signal })
+    installIndexingSidebar(ctx, { client, signal: controller.signal })
+    installPrSidebar(ctx, { signal: controller.signal })
+    installProcessSidebar(ctx, { signal: controller.signal })
+    installBenchSidebar(ctx, { client, account, revision, signal: controller.signal })
+    installRoutedModelSidebar(ctx)
+    installAccountSidebar(ctx, {
+      client,
+      account,
+      privacy: () => privacy()?.enabled() ?? true,
+      revision,
+      signal: controller.signal,
+    })
+    ctx.ui.slot({
+      append: "sidebar.footer",
+      render: () => (
+        <text fg={ctx.theme.text.subdued}>
+          <b>Kilo</b> {ctx.app.version}
+        </text>
+      ),
+    })
     ctx.ui.slot({
       append: "app",
       render: () => {
         installMemoryUi(ctx, { client, signal: controller.signal })
-        installMemorySidebar(ctx, { client, signal: controller.signal })
-        installIndexingSidebar(ctx, { client, signal: controller.signal })
-        installRoutedModelSidebar(ctx)
+        installModelInfoDialog(ctx, { client, account, revision, signal: controller.signal })
         installSettingsUi(ctx, { client, signal: controller.signal })
         installRemoteUi(ctx, { client, signal: controller.signal })
         setPrivacy(installPrivacyUi(ctx, { client, signal: controller.signal }))
-        installUsageSidebar(ctx, {
-          client,
-          privacy: () => privacy()?.enabled() ?? true,
-          signal: controller.signal,
-        })
-        installAccountSidebar(ctx, {
-          client,
-          account,
-          privacy: () => privacy()?.enabled() ?? true,
-          revision,
-          signal: controller.signal,
-        })
         ctx.keymap.layer(() => ({
           mode: "global",
           // Upstream registers placeholder sharing commands at the default priority.

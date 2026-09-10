@@ -13,6 +13,7 @@ Usage: kilo2 [--sandbox] [--project-config] [project-directory]
        kilo2 --help | --version
        kilo2 serve [--sandbox] [--project-config]
        kilo2 service start|status|stop
+       kilo2 update [--check|--apply|--rollback]
        kilo2 telemetry status|disable
        kilo2 telemetry enable --endpoint <collector-url>
        kilo2 attach [--directory path] [--session id]
@@ -56,7 +57,11 @@ Sources are never changed; reports omit credential material and config values.
 Run --agent code uses a registered custom Code agent when present, otherwise native build.
 /privacy on|off hides Kilo account labels in the TUI and asks before /teams or
 /profile reveals them. It does not hide upstream paths, session text, or tool output.
-All commands use the isolated kilo2 interactive store. One-shot commands require
+Update operates on the explicitly configured preview installation without opening
+the session store. Set KILO_PREVIEW_INSTALL_ROOT and KILO_UPDATE_MANIFEST_URL;
+only local directory artifacts are supported. --check inspects, --apply (the default)
+switches the launcher for future starts, and --rollback restores the previous build.
+Conversation commands use the isolated kilo2 interactive store. One-shot commands require
 exclusive ownership; stop the TUI or daemon before running them.
 Serve runs the authenticated execution API in the foreground on a loopback ephemeral
 port, printing its URL and password-file path. Service manages that host in the background;
@@ -84,9 +89,10 @@ grants, delivery guarantees, or coordination locks. Board tools obey native perm
 Telemetry enable/disable saves consent in the isolated profile. Stop the TUI or daemon
 before changing it; saved disable overrides environment opt-in. Status describes the
 next host startup and never prints collector credentials.
---sandbox explicitly confines shell-tool writes to the selected project directory
-and denies shell network access. Requires sandbox-exec (macOS) or bubblewrap (Linux).
-It is not a read-access sandbox and does not cover PTY, MCP, or separate git spawns.
+--sandbox confines shell-tool and local MCP-server writes to the selected project
+directory and denies their network access. Requires sandbox-exec (macOS) or bubblewrap (Linux).
+It is not a read-access sandbox. Session terminals are refused while the sandbox is active;
+remote MCP servers and separate git spawns are not covered.
 Managed service/attach do not accept this flag; they cannot change a running host's policy.
 --project-config explicitly trusts Kilo JSON/JSONC project configuration and skill
 sources inside the project boundary. This can configure providers, MCP and permissions;
@@ -113,6 +119,23 @@ function indexingFile(value: string | undefined) {
 }
 
 export function parseCommand(args: string[]) {
+  if (args[0] === "update") {
+    const parsed = parseArgs({
+      args: args.slice(1),
+      options: { check: { type: "boolean" }, apply: { type: "boolean" }, rollback: { type: "boolean" } },
+      allowPositionals: false,
+    })
+    if (Object.values(parsed.values).filter(Boolean).length > 1)
+      throw new Error("Usage: kilo2 update [--check|--apply|--rollback]")
+    return {
+      type: "update" as const,
+      action: parsed.values.check
+        ? ("check" as const)
+        : parsed.values.rollback
+          ? ("rollback" as const)
+          : ("apply" as const),
+    }
+  }
   if (args[0] === "cloud") {
     const action = args[1]
     if (action === "start") {
@@ -391,6 +414,7 @@ export async function executeCommand(
     command.type === "service" ||
     command.type === "attach" ||
     command.type === "telemetry" ||
+    command.type === "update" ||
     command.type === "acp" ||
     command.type === "external-sessions" ||
     command.type === "cloud" ||

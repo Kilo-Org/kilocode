@@ -9,6 +9,13 @@ export const Entry = Schema.Struct({
   autoRouting: Schema.optionalKey(Schema.Struct({ models: Schema.Array(Schema.String) })),
   hasUserByokAvailable: Schema.optionalKey(Schema.Boolean),
   mayTrainOnYourPrompts: Schema.optionalKey(Schema.Boolean),
+  // Source contract: origin/main ecccd1f, kilo-gateway/src/api/models.ts:48 — optional
+  // per-model Terminal Bench 2.0 metadata. Display-only: absent or malformed means
+  // no section, never a model drop or an invented value.
+  terminalBench: Schema.optionalKey(Schema.Struct({ overallScore: Schema.Finite, avgAttemptCostUsd: Schema.Finite })),
+  description: Schema.optionalKey(Schema.String),
+  reasoning: Schema.optionalKey(Schema.Boolean),
+  family: Schema.optionalKey(Schema.String),
 })
 export type Entry = typeof Entry.Type
 

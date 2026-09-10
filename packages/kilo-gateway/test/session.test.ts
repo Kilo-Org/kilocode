@@ -9,7 +9,14 @@ import { AbsolutePath } from "@opencode-ai/schema/schema"
 import { Session } from "@opencode-ai/schema/session"
 import { SessionTransfer } from "@opencode-ai/schema/session-transfer"
 import { Effect, Schema } from "effect"
-import { registerSessions, type SessionContext, type SessionServices } from "../src/session.js"
+import {
+  buildIngestBatch,
+  isUuid,
+  registerSessions,
+  type AuthorizeShare,
+  type SessionContext,
+  type SessionServices,
+} from "../src/session.js"
 
 const decodeTransfer = Schema.decodeUnknownSync(SessionTransfer.Data)
 const encodeTransfer = Schema.encodeSync(SessionTransfer.Data)
@@ -46,9 +53,10 @@ function transfer() {
   })
 }
 
-function harness(services?: SessionServices) {
+function harness(services?: SessionServices, authorizeShare?: AuthorizeShare) {
   const storage = new Map<string, Schema.Json>()
   const rpc: { handlers?: RpcHandlers<typeof KiloSession.Definition> } = {}
+  const connectionID = Credential.ID.create()
   const credential = Credential.OAuth.make({
     type: "oauth",
     methodID,
@@ -64,7 +72,7 @@ function harness(services?: SessionServices) {
     }),
     integration: {
       connection: {
-        active: () => Effect.succeed({ type: "credential", id: Credential.ID.create(), label: "Kilo" }),
+        active: () => Effect.succeed({ type: "credential", id: connectionID, label: "Kilo" }),
         resolve: () => Effect.succeed(credential),
       },
     },
@@ -86,9 +94,12 @@ function harness(services?: SessionServices) {
   return {
     ctx,
     storage,
+    connectionID,
     register: (options: { sessions: string; shareApp?: string }) =>
       Effect.runPromise(
-        Effect.scoped(registerSessions(ctx, { ...options, server: "https://api.kilo.ai" }, methodID, services)),
+        Effect.scoped(
+          registerSessions(ctx, { ...options, server: "https://api.kilo.ai" }, methodID, services, authorizeShare),
+        ),
       ),
     rpc: () => {
       if (!rpc.handlers) throw new Error("Kilo session RPC was not registered")
@@ -142,6 +153,7 @@ test("share bootstraps, uploads a v2 snapshot, and returns the Kilo public URL",
   expect(requests.every((item) => item.authorization === "Bearer secret-token")).toBe(true)
   expect(requests[1]?.body).toEqual({
     data: [
+      { type: "kilo_meta", data: { platform: "cli" } },
       { type: "session", data: encodeTransfer(transfer()).info },
       { type: "message", data: encodeTransfer(transfer()).messages[0] },
       { type: "message", data: encodeTransfer(transfer()).messages[1] },
@@ -341,5 +353,172 @@ test("fork rejects a share URL from another origin before fetching", async () =>
       ),
   )
   expect(result).toEqual({ type: "kilocode.session", message: "Invalid Kilo share URL or token" })
+  expect(requests).toBe(0)
+})
+
+const UUID_PATTERN =
+  /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/
+
+const CloudIngestBatchSchema = Schema.Array(
+  Schema.Union([
+    Schema.Struct({
+      type: Schema.Literal("kilo_meta"),
+      data: Schema.Struct({
+        platform: Schema.String.check(Schema.isMinLength(1)),
+        orgId: Schema.optional(Schema.String.check(Schema.isPattern(UUID_PATTERN))),
+      }),
+    }),
+    Schema.Struct({
+      type: Schema.Literal("session"),
+      data: Schema.Record(Schema.String, Schema.Unknown),
+    }),
+    Schema.Struct({
+      type: Schema.Literal("message"),
+      data: Schema.Struct({
+        id: Schema.String.check(Schema.isMinLength(1)),
+      }),
+    }),
+  ]),
+)
+const decodeCloudIngestBatch = Schema.decodeUnknownSync(CloudIngestBatchSchema)
+
+test("buildIngestBatch emits validated organization kilo_meta and serializes to cloud ingester contract", () => {
+  const validOrg = "11111111-1111-4111-8111-111111111111"
+  expect(isUuid(validOrg)).toBe(true)
+  expect(isUuid("not-a-uuid")).toBe(false)
+  const batch = buildIngestBatch(transfer(), { platform: "cli", orgId: validOrg })
+  expect(batch[0]).toEqual({
+    type: "kilo_meta",
+    data: { platform: "cli", orgId: validOrg },
+  })
+
+  // Real serialization round-trip against cloud origin/main SessionItemSchema
+  const serialized = JSON.stringify(batch)
+  const parsed = JSON.parse(serialized)
+  const decoded = decodeCloudIngestBatch(parsed)
+  expect(decoded).toHaveLength(4)
+  expect(decoded[0]).toEqual({
+    type: "kilo_meta",
+    data: { platform: "cli", orgId: validOrg },
+  })
+
+  // Personal session omits orgId
+  const personalBatch = buildIngestBatch(transfer(), { platform: "cli", orgId: null })
+  expect(personalBatch[0]).toEqual({
+    type: "kilo_meta",
+    data: { platform: "cli" },
+  })
+  expect(decodeCloudIngestBatch(JSON.parse(JSON.stringify(personalBatch)))[0]).toEqual({
+    type: "kilo_meta",
+    data: { platform: "cli" },
+  })
+
+  // Custom platform
+  const vscodeBatch = buildIngestBatch(transfer(), { platform: "vscode" })
+  expect(vscodeBatch[0]).toEqual({
+    type: "kilo_meta",
+    data: { platform: "vscode" },
+  })
+
+  // Rejection of invalid non-UUID orgId
+  expect(() => buildIngestBatch(transfer(), { orgId: "not-a-uuid" })).toThrow(
+    "Invalid organization ID: must be a valid UUID",
+  )
+})
+
+test("share refuses stale or invalid organization selection before contacting backend", async () => {
+  let requests = 0
+  using backend = Bun.serve({
+    port: 0,
+    fetch: () => {
+      requests++
+      return new Response(null, { status: 500 })
+    },
+  })
+  const host = harness()
+  host.storage.set(`organization:${host.connectionID}`, { organizationID: "stale-org" })
+  await host.register({ sessions: backend.url.href })
+
+  const result = await Effect.runPromise(
+    host
+      .rpc()
+      .share({ sessionID: Session.ID.make("ses_source"), data: transfer() }, call())
+      .pipe(
+        Effect.match({
+          onFailure: (error) => ({ type: error.type, message: error.message }),
+          onSuccess: () => undefined,
+        }),
+      ),
+  )
+
+  expect(result).toEqual({
+    type: "kilocode.session",
+    message: "The selected Kilo account is not available",
+  })
+  expect(requests).toBe(0)
+})
+
+test("share preserves team sharing refusal and never unlocks real team upload", async () => {
+  let requests = 0
+  using backend = Bun.serve({
+    port: 0,
+    fetch: () => {
+      requests++
+      return new Response(null, { status: 500 })
+    },
+  })
+  const host = harness()
+  host.storage.set(`organization:${host.connectionID}`, {
+    organizationID: "11111111-1111-4111-8111-111111111111",
+  })
+  await host.register({ sessions: backend.url.href })
+
+  const result = await Effect.runPromise(
+    host
+      .rpc()
+      .share({ sessionID: Session.ID.make("ses_source"), data: transfer() }, call())
+      .pipe(
+        Effect.match({
+          onFailure: (error) => ({ type: error.type, message: error.message }),
+          onSuccess: () => undefined,
+        }),
+      ),
+  )
+
+  expect(result).toEqual({
+    type: "kilocode.session",
+    message: "Team session sharing is not supported in this preview yet",
+  })
+  expect(requests).toBe(0)
+})
+
+test("share preserves team sharing refusal through authorizeShare", async () => {
+  let requests = 0
+  using backend = Bun.serve({
+    port: 0,
+    fetch: () => {
+      requests++
+      return new Response(null, { status: 500 })
+    },
+  })
+  const host = harness(undefined, Effect.fail("Team session sharing is not supported in this preview yet"))
+  await host.register({ sessions: backend.url.href })
+
+  const result = await Effect.runPromise(
+    host
+      .rpc()
+      .share({ sessionID: Session.ID.make("ses_source"), data: transfer() }, call())
+      .pipe(
+        Effect.match({
+          onFailure: (error) => ({ type: error.type, message: error.message }),
+          onSuccess: () => undefined,
+        }),
+      ),
+  )
+
+  expect(result).toEqual({
+    type: "kilocode.session",
+    message: "Team session sharing is not supported in this preview yet",
+  })
   expect(requests).toBe(0)
 })

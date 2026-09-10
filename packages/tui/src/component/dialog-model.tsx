@@ -1,4 +1,5 @@
-import { createEffect, createMemo, createSignal, onCleanup } from "solid-js" // kilocode_change - scoped display metadata lifecycle
+import { createRenderEffect, createMemo, createSignal, onCleanup } from "solid-js" // kilocode_change - scoped display metadata lifecycle
+import { useTerminalDimensions } from "@opentui/solid" // kilocode_change - stable picker bounds during metadata loading
 import { useLocal } from "../context/local"
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
@@ -19,6 +20,7 @@ export function DialogModel(props: { providerID?: string }) {
   const location = useLocation()
   const theme = useTheme("elevated")
   const presentation = useTuiApp().modelPicker // kilocode_change - do not fork native picker/preferences
+  const dimensions = useTerminalDimensions() // kilocode_change
   const [query, setQuery] = createSignal("")
   const favoritePriority = new Set(local.model.favorite().map(modelPreferenceKey))
 
@@ -31,7 +33,7 @@ export function DialogModel(props: { providerID?: string }) {
   // kilocode_change - metadata is display-only but must not reorder an actionable cold list
   const [groups, setGroups] = createSignal<ReadonlyArray<TuiModelGroup>>([])
   const [groupState, setGroupState] = createSignal<"loading" | "ready" | "fallback">("ready")
-  createEffect(() => {
+  createRenderEffect(() => {
     const input = {
       location: location.ref,
       models: models().map((model) => ({ providerID: model.providerID, modelID: model.id })),
@@ -193,57 +195,60 @@ export function DialogModel(props: { providerID?: string }) {
   }
 
   return (
-    <DialogSelect<ReturnType<typeof options>[number]["value"]>
-      options={options()}
-      actions={
-        groupState() === "loading"
-          ? []
-          : [
-              {
-                command: "model.dialog.provider",
-                title: connected() ? "Connect an integration" : "View all integrations",
-                selection: "none",
-                onTrigger() {
-                  dialog.replace(() => (
-                    <DialogIntegration
-                      onConnected={(providerID) => dialog.replace(() => <DialogModel providerID={providerID} />)}
-                    />
-                  ))
+    // kilocode_change - reserve the native list viewport plus search/footer chrome before metadata arrives
+    <box height={presentation?.groups ? Math.max(8, Math.floor(dimensions().height / 2) + 1) : undefined}>
+      <DialogSelect<ReturnType<typeof options>[number]["value"]>
+        options={options()}
+        actions={
+          groupState() === "loading"
+            ? []
+            : [
+                {
+                  command: "model.dialog.provider",
+                  title: connected() ? "Connect an integration" : "View all integrations",
+                  selection: "none",
+                  onTrigger() {
+                    dialog.replace(() => (
+                      <DialogIntegration
+                        onConnected={(providerID) => dialog.replace(() => <DialogModel providerID={providerID} />)}
+                      />
+                    ))
+                  },
                 },
-              },
-              {
-                command: "model.dialog.favorite",
-                title: "Favorite",
-                hidden: !connected(),
-                onTrigger: (option) => {
-                  local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+                {
+                  command: "model.dialog.favorite",
+                  title: "Favorite",
+                  hidden: !connected(),
+                  onTrigger: (option) => {
+                    local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+                  },
                 },
-              },
-            ]
-      }
-      onFilter={setQuery}
-      flat={true}
-      skipFilter={true}
-      renderFilter={groupState() !== "loading"}
-      locked={groupState() === "loading"}
-      emptyView={
-        groupState() === "loading" ? (
-          <box paddingLeft={4} paddingRight={4}>
-            <text>Loading Kilo model metadata…</text>
-          </box>
-        ) : undefined
-      }
-      footer={
-        groupState() === "fallback" ? (
-          <text fg={theme.text.feedback.warning.default}>
-            Could not load Kilo model metadata; showing available models.
-          </text>
-        ) : undefined
-      }
-      title={title()}
-      current={local.model.current()}
-      focusCurrent={false}
-    />
+              ]
+        }
+        onFilter={setQuery}
+        flat={true}
+        skipFilter={true}
+        renderFilter={groupState() !== "loading"}
+        locked={groupState() === "loading"}
+        emptyView={
+          groupState() === "loading" ? (
+            <box paddingLeft={4} paddingRight={4}>
+              <text>Loading Kilo model metadata…</text>
+            </box>
+          ) : undefined
+        }
+        footer={
+          groupState() === "fallback" ? (
+            <text fg={theme.text.feedback.warning.default}>
+              Could not load Kilo model metadata; showing available models.
+            </text>
+          ) : undefined
+        }
+        title={title()}
+        current={local.model.current()}
+        focusCurrent={false}
+      />
+    </box>
   )
 }
 

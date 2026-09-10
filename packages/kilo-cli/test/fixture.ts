@@ -1,8 +1,10 @@
-import { existsSync } from "node:fs"
+import { existsSync, realpathSync } from "node:fs"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import type { Layout } from "../src/paths"
+import { layout, type Layout } from "../src/paths"
+
+export const FIXTURE_ROOT_ENV = "KILO_TEST_FIXTURE_ROOT"
 
 export const entry = path.resolve(import.meta.dir, "../src/index.ts")
 
@@ -14,6 +16,7 @@ export async function fixture(binary?: string) {
     const tmp = path.join(directory, "tmp")
     await Promise.all([home, cwd, tmp].map((directory) => mkdir(directory, { recursive: true })))
     const env = {
+      [FIXTURE_ROOT_ENV]: directory,
       PATH: process.env.PATH,
       SystemRoot: process.env.SystemRoot,
       HOME: home,
@@ -43,6 +46,65 @@ export async function fixture(binary?: string) {
 }
 
 export type Fixture = Awaited<ReturnType<typeof fixture>>
+
+// Canonical containment including symlinks: realpath the deepest existing
+// ancestor of the candidate and rejoin the not-yet-existing tail.
+function contained(root: string, candidate: string): boolean {
+  const rootReal = realpathSync(root)
+  let current = candidate
+  const tail: string[] = []
+  while (true) {
+    let real: string
+    try {
+      real = realpathSync(current)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+      tail.unshift(path.basename(current))
+      const parent = path.dirname(current)
+      if (parent === current) return false
+      current = parent
+      continue
+    }
+    const resolved = tail.length > 0 ? path.join(real, ...tail) : real
+    const relative = path.relative(rootReal, resolved)
+    return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
+  }
+}
+
+// Fail-closed guard for fixture entrypoints that launch hosts and write
+// credentials: the wrapper sets KILO_TEST_FIXTURE_ROOT to its temp root, and the
+// guard refuses unless every resolved interactive-store path (database, config,
+// data, state, cache, tmp) is canonically contained in that root. Call before
+// any launcher or credential write; direct `bun run <fixture>` invocations
+// refuse here because the marker is absent.
+export function guardedFixtureLayout(): Layout {
+  const root = process.env[FIXTURE_ROOT_ENV]
+  if (!root) {
+    throw new Error(
+      "fixture entry invoked outside the test wrapper: refusing to touch the real user store; run the wrapper test instead",
+    )
+  }
+  const resolved = layout("interactive")
+  const candidates = [
+    resolved.database,
+    resolved.config,
+    resolved.tuiConfig,
+    resolved.telemetryConfig,
+    resolved.password,
+    resolved.pty,
+    resolved.paths.data,
+    resolved.paths.config,
+    resolved.paths.cache,
+    resolved.paths.state,
+    resolved.paths.tmp,
+  ]
+  for (const candidate of candidates) {
+    if (!contained(root, candidate)) {
+      throw new Error(`refusing: resolved store path ${candidate} escapes the fixture root ${root}`)
+    }
+  }
+  return resolved
+}
 
 export function testArtifactDir() {
   const directory = process.env.KILO_CLI_TEST_ARTIFACT_DIR

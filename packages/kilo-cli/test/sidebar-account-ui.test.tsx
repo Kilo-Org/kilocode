@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url"
 import path from "node:path"
 import { fixture } from "./fixture"
 
-test("Kilo TUI account sidebar shows genuine zero credits and hides Pass details in privacy mode", async () => {
+test("Kilo TUI account sidebar renders genuine zero and funded Pass rows, masks in privacy, and switches scope", async () => {
   await using input = await fixture()
   const bundledBun = path.resolve(import.meta.dir, "../dist/interactive/bun")
   expect(await Bun.file(bundledBun).exists(), "Build the bundled Bun runtime before the live TUI proof").toBe(true)
@@ -21,7 +21,7 @@ test("Kilo TUI account sidebar shows genuine zero credits and hides Pass details
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      timeout: 30000,
+      timeout: 90000,
       killSignal: "SIGKILL",
     },
   )
@@ -37,4 +37,4 @@ test("Kilo TUI account sidebar shows genuine zero credits and hides Pass details
     child.kill()
     await child.exited
   }
-}, 60000)
+}, 150000)

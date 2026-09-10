@@ -1,12 +1,15 @@
 import { define, type Context } from "@opencode-ai/plugin/effect/plugin"
 import type { Plugin } from "@opencode-ai/plugin/effect/plugin"
-import type { RpcHandlers } from "@opencode-ai/plugin/effect/rpc"
+import type { RpcHandlers, RpcRegistration } from "@opencode-ai/plugin/effect/rpc"
 import { Tool } from "@opencode-ai/schema/tool"
+import { Session } from "@opencode-ai/schema/session"
 import { Memory } from "@kilocode/kilo-memory/memory"
+import { MemorySchema } from "@kilocode/kilo-memory/schema"
 import { MemoryRecall } from "@kilocode/kilo-memory/recall"
 import { MemoryPaths } from "@kilocode/kilo-memory/paths"
 import { MemoryFiles } from "@kilocode/kilo-memory/store"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { MemoryEvents } from "@kilocode/kilo-memory/effect/events"
 import { MemoryTimers } from "@kilocode/kilo-memory/effect/timers"
 import type { Info } from "@opencode-ai/schema/location"
 import { Effect, Schema } from "effect"
@@ -316,11 +319,17 @@ export namespace MemoryStore {
     return [root, ...sources.map((source) => MemoryPaths.source(root, source)), files.state, files.index]
   }
   export const rebuild = async (root: string) => visibleIndex((await Memory.rebuild({ root })).index)
-  export const remember = async (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
-    visibleChange(await Memory.remember(input), "project.md")
-  export const correct = async (input: { readonly root: string; readonly text: string; readonly key?: string }) =>
+  export const remember = async (input: {
+    readonly root: string
+    readonly text: string
+    readonly key?: string
+    readonly file?: MemorySchema.Source
+    readonly section?: string
+    readonly sessionID?: string
+  }) => visibleChange(await Memory.remember(input), input.file ?? "project.md")
+  export const correct = async (input: { readonly root: string; readonly text: string; readonly key?: string; readonly sessionID?: string }) =>
     visibleChange(await Memory.correct(input), "corrections.md")
-  export const forget = async (input: { readonly root: string; readonly query: string }) =>
+  export const forget = async (input: { readonly root: string; readonly query: string; readonly sessionID?: string }) =>
     visibleChange(await Memory.forget(input), "project.md")
   export const recall = (input: { readonly root: string; readonly query: string; readonly limit?: number }) =>
     recallRoot(input.root, input.query, input.limit)
@@ -360,22 +369,73 @@ function rootFor(options: MemoryPluginOptions, location: Info) {
   throw new Error("Memory plugin requires an isolated data root or explicit memory root")
 }
 
+type MemoryEventPayload = Parameters<Parameters<typeof MemoryEvents.subscribe>[0]>[0]["payload"]
+
+/**
+ * Emit the public saved event only for a real per-session save owned by this
+ * host Location. Root and the session's actual Location are both validated, so
+ * a shared memory root across locations or hosts cannot misattribute activity,
+ * and an unscoped save without a session never lights an arbitrary session.
+ */
+function forwardSaved(
+  ctx: Context,
+  options: MemoryPluginOptions,
+  registration: RpcRegistration<typeof MemoryRpc.Definition>,
+  payload: MemoryEventPayload,
+): Promise<void> | void {
+  if (payload.detail?.type !== "saved") return
+  const sessionID = payload.sessionID
+  if (!sessionID) return
+  if (payload.directory !== rootFor(options, ctx.location)) return
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const session = yield* ctx.session.get({ sessionID: Session.ID.make(sessionID) })
+      if (
+        session.location.directory !== ctx.location.directory ||
+        session.location.workspaceID !== ctx.location.workspaceID
+      )
+        return
+      yield* registration.events.emit("saved", { sessionID })
+    }).pipe(Effect.orDie),
+  )
+}
+
 /** Registerable handlers for the public RPC definition. Failures stay in the declared RPC error channel. */
 export function createMemoryRpcHandlers(
   options: MemoryPluginOptions,
   location: Info,
   resetCapture?: (root: string) => void,
+  context?: Pick<Context, "session" | "storage">,
 ) {
   const root = () => rootFor(options, location)
   return {
-    status: (_input, call) =>
-      Effect.tryPromise({
-        try: () => MemoryStore.status(root()),
-        catch: (error) => call.error("kilocode.memory", errorMessage(error)),
+    status: (input, call) =>
+      Effect.gen(function* () {
+        const status = yield* Effect.tryPromise({
+          try: () => MemoryStore.status(root()),
+          catch: (error) => call.error("kilocode.memory", errorMessage(error)),
+        })
+        if (!input.sessionID || !context) return status
+        const session = yield* context.session
+          .get({ sessionID: input.sessionID })
+          .pipe(Effect.mapError(() => call.error("kilocode.memory", "Memory session is unavailable")))
+        if (session.location.directory !== location.directory || session.location.workspaceID !== location.workspaceID)
+          return yield* Effect.fail(call.error("kilocode.memory", "Memory session belongs to another location"))
+        const marker = yield* context.storage.get(`injected:v1:${input.sessionID}`)
+        return { ...status, session: { id: input.sessionID, injected: marker === status.root } }
       }),
     show: (_input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.show(root()),
+        try: async () => {
+          const memoryRoot = root()
+          const shown = await MemoryStore.show(memoryRoot)
+          // Stored-memory lines in the original client's marker format, sourced
+          // from the same inventory the recall path reads.
+          const items = Object.values((await MemoryFiles.deriveInventory(memoryRoot)).items).map(
+            (entry) => `${entry.key} :: ${entry.text}`,
+          )
+          return { ...shown, items }
+        },
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     enable: (_input, call) =>
@@ -417,17 +477,36 @@ export function createMemoryRpcHandlers(
       }),
     remember: (input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.remember({ root: root(), text: input.text, key: input.key }),
+        try: () =>
+          MemoryStore.remember({
+            root: root(),
+            text: input.text,
+            key: input.key,
+            file: input.file,
+            section: input.section,
+            ...(input.sessionID === undefined ? {} : { sessionID: input.sessionID }),
+          }),
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     correct: (input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.correct({ root: root(), text: input.text, key: input.key }),
+        try: () =>
+          MemoryStore.correct({
+            root: root(),
+            text: input.text,
+            key: input.key,
+            ...(input.sessionID === undefined ? {} : { sessionID: input.sessionID }),
+          }),
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     forget: (input, call) =>
       Effect.tryPromise({
-        try: () => MemoryStore.forget({ root: root(), query: input.query }),
+        try: () =>
+          MemoryStore.forget({
+            root: root(),
+            query: input.query,
+            ...(input.sessionID === undefined ? {} : { sessionID: input.sessionID }),
+          }),
         catch: (error) => call.error("kilocode.memory", errorMessage(error)),
       }),
     purge: (_input, call) =>
@@ -542,7 +621,17 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
     effect: (ctx) =>
       Effect.fn("KiloMemoryPlugin.effect")(function* (ctx: Context) {
         const capture = createMemoryCaptureGate()
-        yield* ctx.rpc.register(MemoryRpc.Definition, createMemoryRpcHandlers(options, ctx.location, capture.clear))
+        const registration = yield* ctx.rpc.register(
+          MemoryRpc.Definition,
+          createMemoryRpcHandlers(options, ctx.location, capture.clear, ctx),
+        )
+        // Forward real per-session save evidence to RPC clients. The engine
+        // publishes saved details only when a producer actually attributed the
+        // save to a session, so an unscoped explicit save pulses nothing.
+        yield* Effect.acquireRelease(
+          Effect.sync(() => MemoryEvents.subscribe((input) => forwardSaved(ctx, options, registration, input.payload))),
+          (dispose) => Effect.sync(dispose),
+        )
         yield* ctx.command.transform((editor) =>
           editor.add({
             name: "memory",
@@ -570,16 +659,18 @@ export function createMemoryPlugin(options: MemoryPluginOptions): Plugin {
         )
 
         // This public request seam appends only bounded local reference context. A nonempty enabled
-        // injection records its real stats, but never admits a durable synthetic message.
+        // injection records its real stats and a session-scoped activity fact,
+        // but never admits a durable synthetic message or stores memory content twice.
         yield* ctx.session.hook("context", (event) =>
           Effect.tryPromise({
             try: () => MemoryStore.context(rootFor(options, ctx.location)),
             catch: () => undefined,
           }).pipe(
             Effect.tap((memory) =>
-              Effect.sync(() => {
+              Effect.gen(function* () {
                 if (!memory.text) return
                 event.system.push({ type: "text", text: memory.text })
+                yield* ctx.storage.set(`injected:v1:${event.sessionID}`, rootFor(options, ctx.location))
               }),
             ),
             Effect.catch(() => Effect.void),

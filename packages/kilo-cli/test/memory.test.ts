@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { createClient } from "@kilocode/client"
 import { Memory } from "@kilocode/kilo-memory/memory"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryFiles } from "@kilocode/kilo-memory/store"
 import type { OpenCodeEvent } from "@opencode-ai/client"
 import { AbsolutePath } from "@opencode-ai/schema/schema"
@@ -1575,6 +1576,186 @@ test("cancels an in-flight auxiliary capture before an isolated host restart", a
     await model.stop(true)
   }
 }, 30_000)
+
+test("publishes the saved RPC event only for real per-session saves owned by the host location", async () => {
+  await using input = await fixture()
+  const model = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
+      const body: { messages?: Array<{ content?: string }> } = await request.json()
+      const contents = JSON.stringify(body.messages)
+      const content = contents.includes("typed memory consolidation step")
+        ? JSON.stringify({
+            operations: [{ op: "upsert_project_fact", key: "event_note", value: "saved event fixture" }],
+            skipped: [],
+          })
+        : "Primary fixture response"
+      return new Response(
+        [
+          {
+            id: "memory-saved-event",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "chat",
+            choices: [{ index: 0, delta: { role: "assistant", content }, finish_reason: null }],
+          },
+          {
+            id: "memory-saved-event",
+            object: "chat.completion.chunk",
+            created: 1,
+            model: "chat",
+            choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+          },
+        ]
+          .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
+          .join("") + "data: [DONE]\n\n",
+        { headers: { "content-type": "text/event-stream" } },
+      )
+    },
+  })
+  const layout = makeInteractiveLayout(path.join(input.directory, "memory-saved-event-interactive"), input.home)
+  const content = JSON.stringify({
+    snapshots: true,
+    model: "fixture/chat",
+    providers: {
+      fixture: {
+        package: "aisdk:@ai-sdk/openai-compatible",
+        settings: { baseURL: `http://127.0.0.1:${model.port}/v1`, apiKey: "fixture" },
+        models: { chat: {} },
+      },
+    },
+  })
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* launch(layout, { models: false, recover: false, content })
+          const client = createClient({
+            baseUrl: server.url,
+            headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
+          })
+          const location = { location: { directory: input.cwd } }
+          yield* Effect.promise(() => client.plugin.awaitActivation(location))
+          const rpc = client.rpc(MemoryRpc.Definition)
+          const events: string[] = []
+          const stop = rpc.events.on("saved", (event) => {
+            events.push(event.data.sessionID)
+          })
+          const enabled = yield* Effect.promise(() => rpc.enable({}, location))
+          expect(enabled.enabled).toBe(true)
+          yield* Effect.promise(() => rpc.auto({ mode: "on" }, location))
+          const session = yield* Effect.promise(() =>
+            client.session.create({
+              title: "Memory saved event fixture",
+              location: location.location,
+              model: { providerID: "fixture", id: "chat" },
+            }),
+          )
+
+          // Explicit RPC saves are unscoped: they persist but attribute no session.
+          yield* Effect.promise(() => rpc.remember({ text: "unscoped explicit save" }, location))
+          yield* Effect.promise(() => Bun.sleep(200))
+          expect(events).toEqual([])
+
+          // Producer events without a session or for a foreign root forward nothing.
+          const status = yield* Effect.promise(() => rpc.status({}, location))
+          yield* Effect.promise(() =>
+            KiloMemory.apply({ root: status.root, ops: [{ action: "add", key: "no_session", text: "no session" }] }),
+          )
+          const foreign = path.join(input.directory, "foreign-memory-root")
+          yield* Effect.promise(() => Memory.enable({ root: foreign }))
+          yield* Effect.promise(() =>
+            KiloMemory.apply({
+              root: foreign,
+              ops: [{ action: "add", key: "foreign", text: "foreign root" }],
+              sessionID: session.id,
+            }),
+          )
+          yield* Effect.promise(() => Bun.sleep(200))
+          expect(events).toEqual([])
+
+          // The real capture path publishes saved activity for its own session.
+          yield* Effect.promise(() =>
+            client.session.prompt({ sessionID: session.id, text: "trigger the saved event turn" }),
+          )
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(15_000) }),
+          )
+          yield* Effect.tryPromise({
+            try: async () => {
+              for (let attempt = 0; attempt < 200; attempt++) {
+                if (events.length > 0) return
+                await Bun.sleep(50)
+              }
+              throw new Error("Timed out waiting for the real capture saved event")
+            },
+            catch: (error) => error,
+          })
+          expect(events).toEqual([session.id])
+
+          // A second session's own save forwards with its own session ID, never
+          // the first session's. The engine's typed-consolidation interval
+          // (300s per root) suppresses a second model consolidation, so drive
+          // the other session through the same real producer the capture path
+          // uses.
+          const other = yield* Effect.promise(() =>
+            client.session.create({
+              title: "Memory saved event other session",
+              location: location.location,
+              model: { providerID: "fixture", id: "chat" },
+            }),
+          )
+          yield* Effect.promise(() =>
+            KiloMemory.apply({
+              root: status.root,
+              ops: [{ action: "add", key: "other_note", text: "other session save" }],
+              sessionID: other.id,
+            }),
+          )
+          yield* Effect.tryPromise({
+            try: async () => {
+              for (let attempt = 0; attempt < 200; attempt++) {
+                if (events.length > 1) return
+                await Bun.sleep(50)
+              }
+              throw new Error("Timed out waiting for the other session saved event")
+            },
+            catch: (error) => error,
+          })
+          expect(events).toEqual([session.id, other.id])
+
+          // The first session's digest-phase publish carries no saved detail,
+          // so a turn inside the consolidation interval adds nothing.
+          yield* Effect.promise(() =>
+            client.session.prompt({ sessionID: session.id, text: "trigger the interval-throttled turn" }),
+          )
+          yield* Effect.promise(() =>
+            client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(15_000) }),
+          )
+          yield* Effect.promise(() => Bun.sleep(500))
+          expect(events).toEqual([session.id, other.id])
+
+          // Listener disposal stops delivery without breaking the host.
+          stop()
+          yield* Effect.promise(() =>
+            KiloMemory.apply({
+              root: status.root,
+              ops: [{ action: "add", key: "post_disposal", text: "post disposal save" }],
+              sessionID: session.id,
+            }),
+          )
+          yield* Effect.promise(() => Bun.sleep(300))
+          expect(events).toEqual([session.id, other.id])
+        }),
+      ),
+    )
+  } finally {
+    await model.stop(true)
+  }
+}, 60_000)
 
 function makeInteractiveLayout(root: string, home: string): Layout {
   const paths = {

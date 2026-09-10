@@ -541,7 +541,6 @@
       "name": "@kilocode/cli",
       "version": "0.0.0-internal",
       "dependencies": {
-        "@ai-sdk/openai-compatible": "2.0.41",
         "@effect/platform-node": "catalog:",
         "@kilocode/client": "workspace:*",
         "@kilocode/gateway": "workspace:*",
@@ -638,6 +637,28 @@
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
       },
+    },
+    "packages/kilo-vscode": {
+      "name": "kilo-code-v2-preview",
+      "version": "0.0.1",
+      "dependencies": {
+        "@opencode-ai/app": "workspace:*",
+        "@opencode-ai/client": "workspace:*",
+        "@opencode-ai/protocol": "workspace:*",
+        "@opencode-ai/schema": "workspace:*",
+        "@solidjs/router": "catalog:",
+        "effect": "catalog:",
+        "solid-js": "catalog:"
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@types/vscode": "1.125.0",
+        "@typescript/native-preview": "catalog:",
+        "playwright": "1.59.1",
+        "vite": "8.2.2"
+      }
     },
     "packages/latex": {
       "name": "@opencode-ai/latex",
@@ -3328,6 +3349,8 @@
 
     "@types/unist": ["@types/unist@3.0.3", "", {}, "sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q=="],
 
+    "@types/vscode": ["@types/vscode@1.125.0", "", {}, "sha512-0icm/ZQAaism87P0ekHqi4/Ju9du+Tm0RUW+y7vqRsxY2cY0FNRX1nAnaW7nT6npPt2tfHiheZ55Zm9UhqonFA=="],
+
     "@types/whatwg-mimetype": ["@types/whatwg-mimetype@3.0.2", "", {}, "sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA=="],
 
     "@types/which": ["@types/which@3.0.4", "", {}, "sha512-liyfuo/106JdlgSchJzXEQCVArk0CvevqPote8F8HgWgJ3dRCcTHgJIsLDuee0kxk/mhbInzIZk3QWSZJ8R+2w=="],
@@ -4623,6 +4646,8 @@
     "keyv": ["keyv@4.5.4", "", { "dependencies": { "json-buffer": "3.0.1" } }, "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw=="],
 
     "khroma": ["khroma@2.1.0", "", {}, "sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw=="],
+
+    "kilo-code-v2-preview": ["kilo-code-v2-preview@workspace:packages/kilo-vscode"],
 
     "kind-of": ["kind-of@6.0.3", "", {}, "sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw=="],
 

@@ -1,0 +1,28 @@
+{
+  "extends": "@tsconfig/bun/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@kilocode/ide-ui": ["../kilo-ide-ui/src/index.ts"],
+      "@kilocode/ide-ui/*": [
+        "../kilo-ide-ui/src/*",
+        "../kilo-ide-ui/src/components/*",
+        "../kilo-ide-ui/src/components/*/types.ts",
+        "../kilo-ide-ui/src/*.ts"
+      ],
+      "@kilocode/client/*": ["../kilo-client/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

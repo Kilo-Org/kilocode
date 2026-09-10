@@ -16,8 +16,8 @@ import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
 import { Location } from "@opencode-ai/core/location"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { ConfigAgent } from "@opencode-ai/schema/config/agent"
-import { AgentsDirectory, Document, Info, type Entry } from "@opencode-ai/schema/config"
-import { Effect, Layer, Option, Schema } from "effect"
+import { AgentsDirectory, Document, Event, Info, type Entry } from "@opencode-ai/schema/config"
+import { Effect, Layer, Option, Ref, Schema, Semaphore } from "effect"
 import { lstat, realpath, readdir } from "node:fs/promises"
 import path from "node:path"
 import { parse, type ParseError } from "jsonc-parser"
@@ -40,7 +40,7 @@ const agentKeys = new Set(["variant", ...Object.keys(ConfigAgent.Info.fields)])
 /**
  * Extend the isolated config service, not the plugin loader. Project documents
  * are opt-in; never emit generic Directory entries, which also execute plugins.
- * File changes are picked up on location restart (the preview disables watchers).
+ * File changes are picked up by explicit refresh (the preview disables watchers).
  * Agent maps use the native schema, and markdown agents are decoded through the
  * same current/v1 compatibility schemas as the core config-agent plugin.
  * Legacy trust provenance and trusted skill shell expansion remain unsupported.
@@ -56,12 +56,31 @@ export function configured(options: Options = {}) {
       Effect.gen(function* () {
         const upstream = yield* Config.Service
         const location = yield* Location.Service
-        const entries = yield* readProjectEntries(location.directory, location.project.directory).pipe(Effect.orDie)
+        const bus = yield* Bus.Service
+        const fs = yield* FSUtil.Service
+        const lock = Semaphore.makeUnsafe(1)
+        const entries = yield* readProjectEntries(location.directory, location.project.directory).pipe(
+          Effect.flatMap(Ref.make),
+          Effect.orDie,
+        )
         return Config.Service.of({
           entries: Effect.fnUntraced(function* () {
-            return [...(yield* upstream.entries()), ...entries]
+            return [...(yield* upstream.entries()), ...(yield* Ref.get(entries))]
           }),
           changes: upstream.changes,
+          reload: Effect.fn("ProjectConfig.reload")(
+            function* () {
+              if (!upstream.reload) return yield* Effect.fail(new Error("Configuration refresh is unavailable"))
+              const next = yield* readProjectEntries(location.directory, location.project.directory).pipe(
+                Effect.provideService(FSUtil.Service, fs),
+              )
+              // Commit project entries before native reload can notify consumers.
+              const previous = yield* Ref.getAndSet(entries, next)
+              yield* upstream.reload().pipe(Effect.onError(() => Ref.set(entries, previous)))
+              yield* bus.publish(Event.Updated, {})
+            },
+            (effect) => lock.withPermit(effect),
+          ),
         })
       }),
     ).pipe(

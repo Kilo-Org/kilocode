@@ -35,6 +35,12 @@ export const MetaPlugin = make(
 
 export const Plugins = [OpenAIPlugin, AnthropicPlugin, KimiPlugin, ArceePlugin, MetaPlugin] as const
 
+// kilocode_change - Public exports of the maintained Anthropic/Trinity assets so the Kilo CLI
+// model-prompt policy can reuse them for catalog-tag dispatch without copying the text.
+// Root-approved narrow shared-file exception; the native plugins above are unchanged.
+export const AnthropicPrompt = PROMPT_ANTHROPIC
+export const TrinityPrompt = PROMPT_TRINITY
+
 function make(
   id: string,
   getPrompt: (modelID: string) => string | undefined,

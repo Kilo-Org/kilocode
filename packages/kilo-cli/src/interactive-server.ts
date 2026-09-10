@@ -3,8 +3,11 @@ import { createGatewayPlugin, type GatewayOptions } from "@kilocode/gateway"
 import type { Plugin } from "@opencode-ai/plugin/effect/plugin"
 import { SdkPlugins } from "@opencode-ai/core/plugin/sdk"
 import { Config } from "@opencode-ai/core/config"
+import { Bus } from "@opencode-ai/core/bus"
+import { Event } from "@opencode-ai/schema/config"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
+import { Location } from "@opencode-ai/core/location"
 import { LocationServiceMap } from "@opencode-ai/core/location-service-map"
 import { Session } from "@opencode-ai/core/session"
 import { Instance } from "@opencode-ai/core/instance/service"
@@ -26,18 +29,22 @@ import { credential } from "./auth"
 import { createCredentialImporter } from "./credential-import"
 import { createBoardNoticeGuard, createToolAuthorizer } from "./tool-authorization"
 import { profile } from "./host"
-import { type Layout } from "./paths"
+import { preflight, type Layout } from "./paths"
 import { prepare } from "./storage"
 import { createReviewPolicy } from "./review-policy"
-import { createAgentPolicy, agentPolicyPhase } from "./agent-policy"
+import { createAgentPolicy, createExplorePolicy, agentPolicyPhase } from "./agent-policy"
 import { createPlanPolicy } from "./plan-policy"
 import { createRoutedModelPlugin } from "./routed-model-plugin"
+import { createModelPromptPolicy } from "./model-prompt-policy"
+import { readDataCollectionPolicy } from "./request-policy"
 import { createMemoryPlugin } from "./memory-plugin"
 import { createMemoryDiffReader } from "./memory-diff"
 import { createSessionFamilyUsageReader } from "./session-usage"
 import { createSessionUsagePlugin } from "./session-usage-plugin"
 import { createDisabledIndexingPlugin } from "./indexing-disabled"
 import { createSettingsPlugin } from "./settings"
+import { createGenerationPlugin } from "./generation-plugin"
+import { createModelStatePlugin } from "./model-state-plugin"
 import { createPrivacyPlugin } from "./privacy"
 import { createSkillPolicy } from "./skill-policy"
 import { createSkillShell } from "./skill-shell"
@@ -69,7 +76,7 @@ export function launch(
   return Effect.gen(function* () {
     if (input.channel !== "interactive")
       throw new Error("The conversation host requires the isolated interactive profile")
-    prepare(input)
+    preflight(input)
     Flock.setGlobal({ state: input.paths.state })
     yield* Flock.effect("kilo2-interactive", {
       dir: path.join(input.paths.state, "locks"),
@@ -82,6 +89,7 @@ export function launch(
           )
       },
     })
+    prepare(input)
     process.env.OPENCODE_PTY_RUNTIME_DIR = input.pty
     const password = credential(input.password)
     const auth = { username: "opencode", password: Option.some(password) }
@@ -89,6 +97,7 @@ export function launch(
       models: options.models ?? true,
       content: options.content,
       projectConfig: options.projectConfig,
+      sandbox: options.sandbox,
     })
     const listener = createServer({ requestTimeout: 10000, headersTimeout: 5000, connectionsCheckingInterval: 1000 })
     const urls = () => {
@@ -114,6 +123,8 @@ export function launch(
     )
     const skillFiles = yield* FSUtil.Service.pipe(Effect.provide(FSUtil.layer), Effect.provide(NodeFileSystem.layer))
     yield* plugins.register(createReviewPolicy())
+    // Default SDK phase follows native agents and precedes user config overlays.
+    yield* plugins.register(createExplorePolicy())
     yield* plugins.register(
       createMemoryPlugin({
         data: input.paths.data,
@@ -122,7 +133,26 @@ export function launch(
       }),
     )
     if (!options.indexing) yield* plugins.register(createDisabledIndexingPlugin())
-    yield* plugins.register(createSettingsPlugin({ layout: input, project: options.projectConfig }))
+    const configLocations = Context.get(context, LocationServiceMap.Service)
+    yield* plugins.register(
+      createSettingsPlugin({
+        layout: input,
+        project: options.projectConfig,
+        refresh: (location) =>
+          Effect.gen(function* () {
+            const config = yield* Config.Service
+            if (!config.reload) return yield* Effect.fail(new Error("Configuration refresh is unavailable"))
+            yield* config.reload()
+            // Skill/agent files can change without changing their config discovery roots.
+            if (!options.projectConfig) {
+              const bus = yield* Bus.Service
+              yield* bus.publish(Event.Updated, {})
+            }
+          }).pipe(Effect.provide(configLocations.get(location))),
+      }),
+    )
+    yield* plugins.register(createGenerationPlugin())
+    yield* plugins.register(createModelStatePlugin(input.paths.state))
     yield* plugins.register(createPrivacyPlugin({ layout: input }))
     if (options.swarm) {
       const { OpenCode } = yield* Effect.promise(() => import("@opencode-ai/client"))
@@ -160,6 +190,9 @@ export function launch(
       { phase: "post" },
     )
     if (options.gateway) {
+      const promptReaders = new Map<string, (modelID: string) => string | undefined>()
+      const promptLocationKey = (location: Location.Ref) =>
+        JSON.stringify([location.directory, location.workspaceID ?? null])
       const transfer = Context.get(context, SessionTransfer.Service)
       const locations = Context.get(context, LocationServiceMap.Service)
       const { registerCloud } = yield* Effect.promise(() => import("./cloud-plugin"))
@@ -172,12 +205,31 @@ export function launch(
         createGatewayPlugin(
           {
             ...options.gateway,
+            promptSelector: {
+              register: (location, read) =>
+                Effect.gen(function* () {
+                  const key = promptLocationKey(location)
+                  promptReaders.set(key, read)
+                  yield* Effect.addFinalizer(() =>
+                    Effect.sync(() => {
+                      if (promptReaders.get(key) === read) promptReaders.delete(key)
+                    }),
+                  )
+                }),
+            },
             // Bridge the location-scoped Config service to the Gateway so explicit configured
             // model fields win over API catalog enrichment (the plugin Context cannot reach it).
             configEntries: (location) =>
               Effect.flatMap(Config.Service, (config) => config.entries()).pipe(
                 Effect.provide(locations.get(location)),
               ),
+            // Bridge the raw Kilo-only settings fold so an explicit
+            // `hide_prompt_training_models: true` requests data-collection denial on Gateway
+            // request bodies. False, unset, invalid, or unreadable values request nothing.
+            dataCollectionPolicy: (location) =>
+              Effect.flatMap(Location.Service, (resolved) =>
+                readDataCollectionPolicy({ layout: input, project: options.projectConfig === true }, resolved),
+              ).pipe(Effect.provide(locations.get(location))),
           },
           { import: transfer.import },
           (ctx, account) =>
@@ -202,6 +254,12 @@ export function launch(
               })(ctx, account)
             }),
         ),
+        { phase: "post" },
+      )
+      yield* plugins.register(
+        createModelPromptPolicy({
+          selector: (location, model) => promptReaders.get(promptLocationKey(location))?.(model.id),
+        }),
         { phase: "post" },
       )
     }

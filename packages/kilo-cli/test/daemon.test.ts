@@ -128,7 +128,8 @@ test("the managed daemon starts, is discoverable and authenticated, and keeps se
     }),
   }
   try {
-    const endpoint = await started(input, env)
+    const [endpoint, concurrent] = await Promise.all([started(input, env), started(input, env)])
+    expect(concurrent).toEqual(endpoint)
     expect(endpoint.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
     const running = await reported(input)
     if (running.state !== "running") throw new Error(`Expected a running daemon: ${JSON.stringify(running)}`)

@@ -3,8 +3,10 @@ import { createClient } from "@kilocode/client"
 import { Service } from "@opencode-ai/client/effect/service"
 import { Effect } from "effect"
 import assert from "node:assert/strict"
+import { mkdir } from "node:fs/promises"
+import path from "node:path"
 import { launch } from "../src/interactive-server"
-import { layout } from "../src/paths"
+import { guardedFixtureLayout } from "./fixture"
 
 // Deliberately opaque IDs: dispatch must use the catalog tag, never a model-name heuristic.
 const protocols = [
@@ -155,7 +157,8 @@ try {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const endpoint = yield* launch(layout("interactive"), {
+        const input = guardedFixtureLayout()
+        const endpoint = yield* launch(input, {
           models: false,
           recover: false,
           gateway: { server: gateway.url.origin },
@@ -277,6 +280,10 @@ try {
           ]) {
             assert(!wire.includes(leaked), `Credential metadata must stay out of request bodies: ${leaked}`)
           }
+          assert(
+            !wire.includes("data_collection"),
+            `An unset hide_prompt_training_models must never invent a data-collection restriction: ${wire}`,
+          )
           if (protocol.provider === "openai") {
             assert.equal(sent[1].body.store, false)
             assert(Array.isArray(sent[1].body.input))
@@ -291,6 +298,12 @@ try {
             )
           }
         }
+        // Opt the profile in, then let the account switch drive the refresh that re-reads it.
+        // The personal-scope request below must carry the deny marker on the wire.
+        yield* Effect.promise(async () => {
+          await mkdir(path.dirname(input.config), { recursive: true })
+          await Bun.write(input.config, '{ "hide_prompt_training_models": true }\n')
+        })
         yield* Effect.promise(() => client.kilocode.organization.set({ organizationID: null }, { location }))
         const personal = yield* Effect.promise(() =>
           client.session.create({
@@ -309,6 +322,7 @@ try {
         assert.equal(last?.path, "/api/gateway/chat/completions", "Same model ID must adopt the new account's protocol")
         assert.equal(last.organization, null, "Old team header must not survive switching to personal")
         assert.equal(last.authorization, "Bearer fixture-only")
+        assert.deepEqual(last?.body.provider, { data_collection: "deny" }, "An explicit opt-in must reach the wire")
       }),
     ).pipe(Effect.provide(NodeHttpServer.layerHttpServices)),
   )

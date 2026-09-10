@@ -111,15 +111,32 @@ export namespace MemoryEvents {
     sink = next
   }
 
-  export async function publish(input: { event?: Event; payload: Status }) {
-    // Event wiring is best-effort: a failing host sink must not fail a memory op that already
-    // persisted, so swallow and log instead of propagating to callers.
+  // Scoped observers (e.g. one per host plugin activation). Additive with the legacy
+  // single sink so hosts cannot overwrite each other across locations or processes.
+  const listeners = new Set<Sink>()
+
+  /** Observe published memory events until the returned disposer runs. */
+  export function subscribe(listener: Sink) {
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }
+
+  async function deliver(input: { event?: Event; payload: Status }, target: Sink) {
+    // Event wiring is best-effort: a failing host sink or listener must not fail a memory op
+    // that already persisted, so swallow and log instead of propagating to callers.
     try {
-      await sink(input)
+      await target(input)
     } catch (err) {
       MemoryLog.warn("memory event publish failed", {
         err: (err instanceof Error ? err.message : String(err)).slice(0, 200),
       })
     }
+  }
+
+  export async function publish(input: { event?: Event; payload: Status }) {
+    await deliver(input, sink)
+    for (const listener of [...listeners]) await deliver(input, listener)
   }
 }

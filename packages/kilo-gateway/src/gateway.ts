@@ -3,9 +3,11 @@ import type { Config } from "@opencode-ai/schema/config"
 import { Credential } from "@opencode-ai/schema/credential"
 import { IntegrationMethodID } from "@opencode-ai/schema/integration-id"
 import type { Location } from "@opencode-ai/schema/location"
-import { Clock, Effect, Schema } from "effect"
+import { Clock, Effect, Schema, type Scope } from "effect"
 
 export interface GatewayOptions {
+  /** Interactive hosts can activate from a scoped snapshot and refresh over the network afterward. */
+  readonly backgroundRefresh?: boolean
   readonly server?: string
   readonly pollIntervalMs?: number
   readonly sessions?: string
@@ -17,6 +19,32 @@ export interface GatewayOptions {
    * enrichment. Absent means no configuration is treated as explicit.
    */
   readonly configEntries?: (location: Location.Ref) => Effect.Effect<readonly Config.Entry[], unknown>
+  /**
+   * Host-injected reader for the effective Kilo data-collection policy of a location. The
+   * plugin Context cannot reach the host's raw settings fold, so the embedding host bridges it.
+   * `"deny"` requests `provider.data_collection: "deny"` on every serialized Gateway request
+   * body, mirroring v1 `patchKiloProviderPrivacy` (`origin/main` `ecccd1f`,
+   * `packages/opencode/src/kilocode/provider/provider.ts`). `undefined` means no restriction is
+   * requested — an unset, explicitly false, invalid, or unreadable setting never invents one.
+   */
+  readonly dataCollectionPolicy?: (location: Location.Ref) => Effect.Effect<"deny" | undefined, unknown>
+  /**
+   * Host-owned registry for the catalog `opencode.prompt` selector. `createGatewayPlugin`
+   * activates per Location and each activation owns its own account-scoped catalog cache, so a
+   * single host variable read overwritten by the last setup would be wrong. The Gateway calls
+   * `register` once per activation with that Location's identity and a reader over *its* live
+   * cache; the host keys readers by Location and attaches cleanup to the registration scope so
+   * a torn-down Location's reader is removed (and an obsolete scope cannot remove a successor's
+   * reader). The reader reads the in-memory cache only — no per-request fetch — and returns
+   * `undefined` whenever that cache is absent (failed or revoked scope) or the model carries no
+   * tag. The Gateway never writes the tag into model family, settings, or credentials.
+   */
+  readonly promptSelector?: {
+    readonly register: (
+      location: Location.Ref,
+      read: (modelID: string) => string | undefined,
+    ) => Effect.Effect<void, never, Scope.Scope>
+  }
 }
 
 const NonEmpty = Schema.String.check(Schema.isMinLength(1))
@@ -88,9 +116,15 @@ function json<A>(response: Response, schema: Schema.Decoder<A>) {
   )
 }
 
-export function fetchAuthenticatedJSON<A>(
+/**
+ * Reads a Gateway JSON endpoint, sending `Authorization` only when a token
+ * exists. The unauthenticated form is the signed-out catalog read: source
+ * contract origin/main ecccd1f, kilo-gateway/src/api/models.ts:229-235, where
+ * the header is spread in only `if (token)`.
+ */
+export function fetchGatewayJSON<A>(
   server: string,
-  token: string,
+  token: string | undefined,
   path: string,
   schema: Schema.Decoder<A>,
   headers: Record<string, string> = {},
@@ -98,13 +132,27 @@ export function fetchAuthenticatedJSON<A>(
   return Effect.gen(function* () {
     const base = yield* Effect.try({ try: () => serverUrl(server), catch: (cause) => cause })
     const response = yield* request(`${base}${path}`, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${token}`, ...headers },
+      headers: {
+        Accept: "application/json",
+        ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
+        ...headers,
+      },
     })
     if (response.status === 401 || response.status === 403) {
       return yield* Effect.fail(new Error("Kilo authentication expired"))
     }
     return yield* json(response, schema)
   })
+}
+
+export function fetchAuthenticatedJSON<A>(
+  server: string,
+  token: string,
+  path: string,
+  schema: Schema.Decoder<A>,
+  headers: Record<string, string> = {},
+) {
+  return fetchGatewayJSON(server, token, path, schema, headers)
 }
 
 export const fetchProfile = Effect.fn(function* (server: string, token: string) {

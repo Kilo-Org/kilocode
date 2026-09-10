@@ -1,0 +1,411 @@
+import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import Settings from "./components/settings/Settings"
+import ProfileView from "./components/profile/ProfileView"
+import { useVSCode } from "./context/vscode"
+import { useServer } from "./context/server"
+import { useProvider } from "./context/provider"
+import { WorkStyleProvider } from "./context/work-style"
+import { useSession } from "./context/session"
+import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
+import { ProviderShell } from "./context/provider-shell"
+import { ChatView } from "./components/chat"
+import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
+import { SidebarTopBar } from "./components/chat/SidebarTopBar"
+import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
+import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+
+// Override the upstream "task" tool renderer with the fully-expanded version
+// that shows child session parts inline in the VS Code sidebar.
+registerExpandedTaskTool()
+// Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
+registerVscodeToolOverrides()
+import HistoryView from "./components/history/HistoryView"
+import { MigrationWizard } from "./components/migration" // legacy-migration
+import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/client/ide-types"
+import { cycleAgent as cycle } from "./context/session-agent"
+import "./styles/chat.css"
+
+type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
+const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
+
+/**
+ * Bridge our session store to the DataProvider's expected Data shape.
+ *
+ * CRITICAL: `data` is a plain object with getters — NOT a createMemo wrapping
+ * the whole shape. Wrapping the shape in a memo defeats Solid's fine-grained
+ * reactivity: any single `store.parts[X]` mutation would re-run the outer
+ * memo, producing a fresh POJO, which invalidates every downstream consumer
+ * that reads `data.store.*` — including all mounted SessionTurn memos that
+ * scan all messages in the session. With hundreds of messages and a dozen
+ * visible turns, per-token streaming ends up doing O(N × visible_turns) work
+ * per delta, which is why long sessions stream slowly.
+ *
+ * By exposing the underlying Solid store directly via getters, consumers
+ * reading `data.store.message[X]` or `data.store.part[Y]` subscribe to only
+ * that specific key. A text-delta on message Y only invalidates consumers
+ * that actually read `part[Y]`, not the whole tree.
+ */
+export const DataBridge: Component<{ children: any }> = (props) => {
+  const session = useSession()
+  const vscode = useVSCode()
+  const prov = useProvider()
+  const server = useServer()
+
+  // Memos for fields that change infrequently (not per-token) — cheap and
+  // avoids allocating a fresh array/object on every consumer read.
+  const sessionList = createMemo(
+    () => session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
+  )
+
+  const permissionsBySession = createMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    for (const p of session.permissions()) {
+      const sid = p.sessionID
+      if (!sid) continue
+      ;(grouped[sid] ??= []).push(p)
+    }
+    return grouped
+  })
+
+  const providerData = createMemo(() => ({
+    all: new Map(Object.entries(prov.providers())),
+    connected: prov.connected(),
+    default: prov.defaults(),
+  }))
+
+  // Stable object with reactive getters — passes through to Solid stores so
+  // consumers keep per-key reactivity. The family-filter previously done here
+  // was counter-productive: consumers only ever do per-session-id / per-
+  // message-id lookups, so they never see unrelated entries in practice, and
+  // the filter pass itself was the source of the O(N) cascade.
+  const data = {
+    get session() {
+      return sessionList()
+    },
+    get session_status() {
+      return session.allStatusMap() as unknown as Record<string, any>
+    },
+    get session_diff() {
+      return {} as Record<string, any[]>
+    },
+    get message() {
+      return session.allMessages() as unknown as Record<string, SDKMessage[]>
+    },
+    get part() {
+      return session.allParts() as unknown as Record<string, SDKPart[]>
+    },
+    get permission() {
+      return permissionsBySession()
+    },
+    // Questions are handled directly by QuestionDock via session.questions(),
+    // not through DataProvider. The DataProvider's question field is unused here.
+    get question() {
+      return {}
+    },
+    get provider() {
+      return providerData() as unknown as any
+    },
+  }
+
+  const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
+    session.respondToPermission(input.permissionID, input.response, [], [])
+  }
+
+  const reply = (input: { requestID: string; answers: string[][] }) => {
+    session.replyToQuestion(input.requestID, input.answers)
+  }
+
+  const reject = (input: { requestID: string }) => {
+    session.rejectQuestion(input.requestID)
+  }
+
+  const open = (filePath: string, line?: number, column?: number) => {
+    vscode.postMessage({ type: "openFile", filePath, line, column })
+  }
+
+  const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
+    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
+  }
+
+  const openUrl = (url: string) => {
+    vscode.postMessage({ type: "openExternal", url })
+  }
+
+  const openContent = (content: string, language?: string) => {
+    vscode.postMessage({ type: "openContent", content, language })
+  }
+
+  // File existence validation for code span candidates
+  const pending = new Map<string, (existing: string[]) => void>()
+  const counter = { n: 0 }
+  const validateFiles = (paths: string[]): Promise<string[]> => {
+    const id = `vf-${++counter.n}`
+    return new Promise((resolve) => {
+      pending.set(id, resolve)
+      vscode.postMessage({ type: "validateFiles", id, paths })
+      setTimeout(() => {
+        if (pending.has(id)) {
+          pending.delete(id)
+          resolve([])
+        }
+      }, 3000)
+    })
+  }
+  const handler = (event: MessageEvent) => {
+    const msg = event.data
+    if (msg?.type === "validateFilesResult" && msg.id) {
+      const cb = pending.get(msg.id)
+      if (cb) {
+        pending.delete(msg.id)
+        cb(msg.existing ?? [])
+      }
+    }
+  }
+  onMount(() => window.addEventListener("message", handler))
+  onCleanup(() => window.removeEventListener("message", handler))
+
+  const directory = () => {
+    const dir = server.workspaceDirectory()
+    if (!dir) return ""
+    return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
+  }
+
+  return (
+    <DataProvider
+      data={data}
+      directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
+      onPermissionRespond={respond}
+      onQuestionReply={reply}
+      onQuestionReject={reject}
+      onOpenFile={open}
+      onOpenDiff={openDiff}
+      onOpenUrl={openUrl}
+      onOpenContent={openContent}
+      onValidateFiles={validateFiles}
+      onNavigateToSession={(id) => session.selectSession(id)}
+    >
+      {props.children}
+    </DataProvider>
+  )
+}
+
+// Inner app component that uses the contexts
+const AppContent: Component = () => {
+  const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  // legacy-migration: state-driven flag independent of currentView to avoid
+  // race conditions with SettingsEditorProvider's navigate messages.
+  const [migrationNeeded, setMigrationNeeded] = createSignal(false)
+  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
+  const session = useSession()
+  const tabs = useLocalTabs()
+  const server = useServer()
+  const vscode = useVSCode()
+
+  const handleViewAction = (action: string) => {
+    switch (action) {
+      case "plusButtonClicked": {
+        const chat = currentView() === "newTask"
+        if (chat) window.dispatchEvent(new CustomEvent("newTaskRequest"))
+        if (!chat && tabs) tabs.add()
+        if (!chat && !tabs) session.clearCurrentSession()
+        setCurrentView("newTask")
+        break
+      }
+      case "historyButtonClicked":
+        setCurrentView("history")
+        break
+      case "profileButtonClicked":
+        setCurrentView("profile")
+        break
+      case "settingsButtonClicked":
+        setCurrentView("settings")
+        break
+      case "cycleAgentMode":
+        if (document.hasFocus()) cycleAgent(1)
+        break
+      case "cyclePreviousAgentMode":
+        if (document.hasFocus()) cycleAgent(-1)
+        break
+      case "focusSearch":
+        setCurrentView("newTask")
+        window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
+        break
+    }
+  }
+
+  const cycleAgent = (direction: 1 | -1) => {
+    const id = session.currentSessionID() ?? tabs?.pending() ?? session.draftSessionID()
+    cycle({
+      agents: session.agents(),
+      scope: id,
+      direction,
+      selected: session.selectedAgent,
+      select: session.selectAgent,
+    })
+  }
+
+  const handleForked = (message: { type?: string; sessionID?: string; forkedFromID?: string }) => {
+    if (message.type !== "sessionForked" || !message.sessionID) return
+    if (tabs && message.forkedFromID) tabs.openAfter(message.forkedFromID, message.sessionID)
+    if (tabs && !message.forkedFromID) tabs.open(message.sessionID)
+    if (!tabs) session.selectSession(message.sessionID)
+    setCurrentView("newTask")
+  }
+
+  const handleKiloModel = (message: { type?: string }) => {
+    if (message.type === "selectKiloModel") setCurrentView("newTask")
+  }
+
+  onMount(() => {
+    const handler = (event: MessageEvent) => {
+      const message = event.data
+      if (message?.type === "action" && message.action) {
+        console.log("[Kilo New] App: 🎬 action:", message.action)
+        handleViewAction(message.action)
+      }
+      if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
+        console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        if (message.tab) setSettingsTab(message.tab)
+        setCurrentView(message.view as ViewType)
+        vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
+      }
+      if (message?.type === "openCloudSession" && message.sessionId) {
+        console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
+        session.selectCloudSession(message.sessionId)
+        setCurrentView("newTask")
+      }
+      handleKiloModel(message)
+      handleForked(message)
+      if (message?.type === "viewSubAgentSession" && message.sessionID) {
+        console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        session.setCurrentSessionID(message.sessionID)
+        setCurrentView("subAgentViewer")
+      }
+      // legacy-migration: state-driven migration wizard
+      if (message?.type === "migrationState") {
+        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        setMigrationSource(message.source)
+        setMigrationNeeded(message.needed)
+      }
+    }
+    window.addEventListener("message", handler)
+    onCleanup(() => window.removeEventListener("message", handler))
+  })
+
+  const handleSelectSession = (id: string) => {
+    if (tabs) tabs.open(id)
+    if (!tabs) session.selectSession(id)
+    setCurrentView("newTask")
+  }
+
+  const handleForkMessage = (sessionId: string, messageId: string) => {
+    vscode.postMessage({ type: "forkSession", sessionId, messageId })
+  }
+
+  const emptyState = () => (
+    <SidebarEmptyState onSelectSession={handleSelectSession} onShowHistory={() => setCurrentView("history")} />
+  )
+
+  // Set synchronously in the webview HTML by KiloProvider so it's available
+  // before this component ever mounts (see buildWebviewHtml/_getHtmlForWebview).
+  // False for dedicated single-purpose panels (Settings, Profile, Sub-Agent
+  // Viewer) always, and for the Sidebar/"Open in Tab" outside Cursor — real
+  // VS Code's native title bar toolbar already covers those. Defaults to
+  // true only when unset entirely (e.g. Storybook, which doesn't render the
+  // real page HTML).
+  const host = window as { KILO_TOP_BAR?: boolean; KILO_TOP_BAR_SURFACE?: string }
+  const showTopBar = host.KILO_TOP_BAR !== false
+  const topBarSurface = host.KILO_TOP_BAR_SURFACE ?? "sidebar_title"
+
+  return (
+    <div class="container">
+      <Show when={showTopBar}>
+        <SidebarTopBar
+          onNewTask={() => handleViewAction("plusButtonClicked")}
+          onHistory={() => handleViewAction("historyButtonClicked")}
+          surface={topBarSurface}
+        />
+      </Show>
+      {/* legacy-migration start — state-driven overlay, independent of currentView */}
+      <Show
+        when={migrationNeeded()}
+        fallback={
+          <Switch
+            fallback={
+              <ChatView
+                continueInWorktree
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                promptBoxId="sidebar:fallback"
+                emptyState={emptyState}
+              />
+            }
+          >
+            <Match when={currentView() === "newTask"}>
+              <ChatView
+                onSelectSession={handleSelectSession}
+                onShowHistory={() => setCurrentView("history")}
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                continueInWorktree
+                promptBoxId="sidebar:new-task"
+                emptyState={emptyState}
+              />
+            </Match>
+            <Match when={currentView() === "history"}>
+              <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
+            </Match>
+            <Match when={currentView() === "profile"}>
+              <ProfileView
+                profileData={server.profileData()}
+                deviceAuth={server.deviceAuth()}
+                onLogin={server.startLogin}
+              />
+            </Match>
+            <Match when={currentView() === "settings"}>
+              <Settings
+                tab={settingsTab()}
+                onTabChange={setSettingsTab}
+                onMigrationClick={(source) => {
+                  setMigrationSource(source)
+                  setMigrationNeeded(true)
+                }}
+              />
+            </Match>
+            <Match when={currentView() === "subAgentViewer"}>
+              <ChatView readonly />
+            </Match>
+          </Switch>
+        }
+      >
+        <MigrationWizard
+          source={migrationSource()}
+          onBack={() => setMigrationNeeded(false)}
+          onComplete={() => setMigrationNeeded(false)}
+        />
+      </Show>
+      {/* legacy-migration end */}
+    </div>
+  )
+}
+
+const App: Component = () => {
+  return (
+    <ProviderShell.Root>
+      <WorkStyleProvider>
+        <ProviderShell.Session>
+          <LocalTabsProvider>
+            <ProviderShell.Chat>
+              <DataBridge>
+                <AppContent />
+              </DataBridge>
+            </ProviderShell.Chat>
+          </LocalTabsProvider>
+        </ProviderShell.Session>
+      </WorkStyleProvider>
+    </ProviderShell.Root>
+  )
+}
+
+export default App

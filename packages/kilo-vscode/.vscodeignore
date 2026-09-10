@@ -1,0 +1,24 @@
+# Source, build, and test assets
+src/**
+web/**
+webview-ui/**
+dist/web/**
+test/**
+script/**
+
+# Configuration and tooling files
+tsconfig*.json
+vite.config.mjs
+.turbo/**
+.vscode/**
+.git/**
+*.log
+**/*.map
+
+# Test-only bundles
+dist/*-host.cjs
+
+# Dependencies and packaging artifacts
+node_modules/**
+*.vsix
+.vsix-stage*/**

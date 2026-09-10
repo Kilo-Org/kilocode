@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url"
 import path from "node:path"
 import { fixture } from "./fixture"
 
-test("Kilo TUI memory sidebar follows local enable/disable without session work", async () => {
+test("Kilo TUI memory sidebar preserves scoped injection activity and save pulses", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
@@ -19,7 +19,7 @@ test("Kilo TUI memory sidebar follows local enable/disable without session work"
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      timeout: 30000,
+      timeout: 60000,
       killSignal: "SIGKILL",
     },
   )
@@ -35,4 +35,4 @@ test("Kilo TUI memory sidebar follows local enable/disable without session work"
     child.kill()
     await child.exited
   }
-}, 60000)
+}, 90000)

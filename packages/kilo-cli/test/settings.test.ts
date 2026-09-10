@@ -2,8 +2,15 @@ import { expect, test } from "bun:test"
 import { chmod, mkdir, mkdtemp, realpath, rm, stat, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { Effect } from "effect"
 import type { Layout } from "../src/paths"
-import { createSettingsStore, SETTINGS_FIELD_KEYS, type SettingsFieldKey, type SettingsSnapshot } from "../src/settings"
+import {
+  createSettingsRpcHandlers,
+  createSettingsStore,
+  SETTINGS_FIELD_KEYS,
+  type SettingsFieldKey,
+  type SettingsSnapshot,
+} from "../src/settings"
 import { createPrivacyStore } from "../src/privacy-settings"
 
 const secret = "sk-planted-provider-secret"
@@ -119,6 +126,45 @@ test("reports both scopes and leaves the project scope unwritable without the ex
   expect(snapshot.fields.every((field) => field.values.profile === undefined)).toBe(true)
   await expect(store.set({ scope: "project", key: "snapshots", value: true })).rejects.toThrow(/--project-config/)
   expect(await Bun.file(path.join(host.directory, ".kilo", "kilo.jsonc")).exists()).toBe(false)
+})
+
+test("manages media.image and experimental leaves the host resolves last-wins", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+
+  await store.set({ scope: "profile", key: "media.image.auto_resize", value: false })
+  await store.set({ scope: "profile", key: "media.image.max_width", value: 1024 })
+  await store.set({ scope: "profile", key: "experimental.subagent_depth", value: 3 })
+  await store.set({ scope: "profile", key: "experimental.portable_shell_scanner", value: true })
+
+  expect(await Bun.file(host.layout.config).json()).toEqual({
+    media: { image: { auto_resize: false, max_width: 1024 } },
+    experimental: { subagent_depth: 3, portable_shell_scanner: true },
+  })
+  expect(profileValues(await store.read())).toMatchObject({
+    "media.image.auto_resize": false,
+    "media.image.max_width": 1024,
+    "experimental.subagent_depth": 3,
+    "experimental.portable_shell_scanner": true,
+  })
+
+  await expect(store.set({ scope: "profile", key: "media.image.max_width", value: 0 })).rejects.toThrow(
+    "The supplied value is not valid for media.image.max_width",
+  )
+  await expect(store.set({ scope: "profile", key: "experimental.subagent_depth", value: -1 })).rejects.toThrow(
+    "The supplied value is not valid for experimental.subagent_depth",
+  )
+  expect(await Bun.file(host.layout.config).json()).toEqual({
+    media: { image: { auto_resize: false, max_width: 1024 } },
+    experimental: { subagent_depth: 3, portable_shell_scanner: true },
+  })
+
+  await store.reset({ scope: "profile", key: "media.image.max_width" })
+  await store.reset({ scope: "profile", key: "experimental.portable_shell_scanner" })
+  expect(await Bun.file(host.layout.config).json()).toEqual({
+    media: { image: { auto_resize: false } },
+    experimental: { subagent_depth: 3 },
+  })
 })
 
 test("writes profile fields while preserving comments, unrelated keys, and the file mode", async () => {
@@ -396,6 +442,82 @@ test("the Kilo-only training-model key reads raw, edits, resets, and never echoe
   expect(await Bun.file(host.layout.config).json()).toEqual({ shell: "/bin/dash" })
 })
 
+test("Kilo-only raw fold distinguishes absent from a stored null, which is invalid", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(true) })
+  const readField = async () => fieldOf(await store.read(), "hide_prompt_training_models")
+  const writeProject = async (relative: string, text: string) => {
+    const target = path.join(host.directory, relative)
+    await mkdir(path.dirname(target), { recursive: true })
+    await Bun.write(target, text)
+  }
+
+  // A sole stored null is not absent: it is an invalid stored value, explained
+  // with the same fixed content-free text as any other wrong type.
+  await host.writeProfile('{ "hide_prompt_training_models": null }\n')
+  const sole = await readField()
+  expect(sole.values).toEqual({})
+  expect(sole.source).toBe("unset")
+  expect(sole.invalid).toBe("The stored hide_prompt_training_models value is not a boolean and is ignored")
+
+  // An invalid profile value does not shadow a valid project value; the notice stays.
+  await writeProject(".kilo/kilo.jsonc", '{ "hide_prompt_training_models": true }\n')
+  const projectWins = await readField()
+  expect(projectWins.values).toEqual({ project: true })
+  expect(projectWins.source).toBe("project")
+  expect(projectWins.invalid).toBeDefined()
+
+  // An invalid project value falls back to a valid profile value per the
+  // existing invalid-scope semantics; no reset is invented.
+  await host.writeProfile('{ "hide_prompt_training_models": false }\n')
+  await writeProject(".kilo/kilo.jsonc", '{ "hide_prompt_training_models": null }\n')
+  const profileFallback = await readField()
+  expect(profileFallback.values).toEqual({ profile: false })
+  expect(profileFallback.source).toBe("profile")
+  expect(profileFallback.invalid).toBeDefined()
+
+  // An ancestor null shadowed by the write target's valid value is not the
+  // scope's winning value, so nothing invalid is reported for it.
+  await writeProject("kilo.jsonc", '{ "hide_prompt_training_models": null }\n')
+  await writeProject(".kilo/kilo.jsonc", '{ "hide_prompt_training_models": true }\n')
+  const ancestorShadowed = await readField()
+  expect(ancestorShadowed.values).toEqual({ profile: false, project: true })
+  expect(ancestorShadowed.source).toBe("project")
+  expect(ancestorShadowed.invalid).toBeUndefined()
+
+  // An ancestor null remains the winning project value when the target does
+  // not define the key: invalid, and the valid profile still wins overall.
+  await writeProject(".kilo/kilo.jsonc", '{ "shell": "/bin/target" }\n')
+  const ancestorWins = await readField()
+  expect(ancestorWins.values).toEqual({ profile: false })
+  expect(ancestorWins.source).toBe("profile")
+  expect(ancestorWins.invalid).toBeDefined()
+})
+
+test("a natively ignored profile document still supplies raw Kilo-only values", async () => {
+  await using host = await isolated()
+  // A missing {file:...} reference fails the host's substitution pipeline, so the document
+  // contributes no native configuration at all. (Missing env and wrong-typed fields are
+  // field-level: env becomes empty, invalid fields drop — neither rejects the document.)
+  await host.writeProfile(
+    '{ "hide_prompt_training_models": true, "shell": "{file:/nonexistent/kilo-settings-test-missing.json}" }\n',
+  )
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+  const snapshot = await store.read()
+  const profile = snapshot.scopes[0]
+  expect(profile.exists).toBe(true)
+  expect(profile.reason).toContain("the host ignores it")
+  expect(profile.reason).toContain("Kilo-only values may still apply")
+  // No native field resolves from the ignored document.
+  expect(fieldOf(snapshot, "shell").values).toEqual({})
+  // The separately parsed raw Kilo-only value still applies — the same behavior the
+  // picker and the Gateway request policy consume.
+  const field = fieldOf(snapshot, "hide_prompt_training_models")
+  expect(field.values).toEqual({ profile: true })
+  expect(field.source).toBe("profile")
+  expect(field.invalid).toBeUndefined()
+})
+
 test("project Kilo-only values fold ancestor documents and reset falls back across scopes", async () => {
   await using host = await isolated()
   const nested = path.join(host.directory, "nested")
@@ -443,6 +565,117 @@ function fieldOf(snapshot: SettingsSnapshot, key: SettingsFieldKey) {
   if (!field) throw new Error(`Missing settings field: ${key}`)
   return field
 }
+
+test("collection writes carry provenance, refuse invalid entries before write, and surface diagnostics", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(true) })
+  const projectFile = path.join(host.directory, ".kilo", "kilo.jsonc")
+  await host.writeProfile(`{ "provider": { "gateway": { "name": "Gateway" } } }\n`)
+
+  // A project-scope permission ruleset lands in the project document with the
+  // native Rule shape (action/resource/effect wildcards).
+  await store.collections.set({
+    scope: "project",
+    collection: "permissions",
+    value: [{ action: "shell", resource: "git push *", effect: "deny" }],
+  })
+  const permissions = await store.collections.get({ collection: "permissions", scope: "project" })
+  expect(permissions.entries[""]).toEqual([{ action: "shell", resource: "git push *", effect: "deny" }])
+  expect(permissions.provenance[""]).toMatchObject({ source: "project", editable: true })
+  expect(await Bun.file(projectFile).json()).toEqual({
+    permissions: [{ action: "shell", resource: "git push *", effect: "deny" }],
+  })
+
+  // Provider entries merge across scopes with the project scope winning.
+  await store.collections.set({
+    scope: "project",
+    collection: "providers",
+    key: "custom",
+    value: { name: "Custom", settings: { baseURL: "https://fixture.test/v1" } },
+  })
+  const providers = await store.collections.get({ collection: "providers", scope: "project" })
+  expect(providers.provenance.gateway).toMatchObject({ source: "profile", inherited: true })
+  expect(providers.provenance.custom).toMatchObject({ source: "project", editable: true })
+
+  // The generated provider policy list rides experimental.policies as a
+  // whole-array collection.
+  await store.collections.set({
+    scope: "profile",
+    collection: "policies",
+    value: [{ action: "provider.use", resource: "legacy", effect: "deny" }],
+  })
+  const policies = await store.collections.get({ collection: "policies", scope: "profile" })
+  expect(policies.entries[""]).toEqual([{ action: "provider.use", resource: "legacy", effect: "deny" }])
+
+  // An entry the host schema rejects refuses the write with its diagnostic
+  // path before anything lands, and never partially applies. Excess fields the
+  // native decode tolerates are preserved on disk but ignored host-side.
+  const before = await Bun.file(projectFile).text()
+  await expect(
+    store.collections.set({
+      scope: "project",
+      collection: "providers",
+      key: "broken",
+      value: { models: "not-a-record" },
+    }),
+  ).rejects.toThrow("The resulting configuration is not valid")
+  expect(await Bun.file(projectFile).text()).not.toContain("broken")
+
+  // A stale revision refuses the whole write.
+  const snapshot = await store.collections.get({ collection: "providers", scope: "project" })
+  const target = snapshot.scopes.find((scope) => scope.scope === "project")!
+  await expect(
+    store.collections.set({
+      scope: "project",
+      collection: "providers",
+      key: "other",
+      value: { name: "Other" },
+      expected: { path: target.path, revision: null },
+    }),
+  ).rejects.toThrow("Configuration changed")
+
+  // Undeclared collections refuse.
+  await expect(
+    store.collections.set({ scope: "project", collection: "mcp" as never, key: "x", value: {} }),
+  ).rejects.toThrow()
+
+  // Clean documents carry no collection diagnostics.
+  const warnings = await store.warnings()
+  expect(warnings).toEqual([])
+})
+
+test("settings refresh is an explicit failure when the host supplies no reload callback", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+  const handlers = createSettingsRpcHandlers(
+    { layout: host.layout, project: false },
+    {
+      directory: host.directory as never,
+      project: { id: "fixture" as never, directory: host.directory as never, canonical: host.directory as never },
+    },
+  )
+  const outcome = await Effect.runPromise(
+    Effect.catch(
+      handlers.refresh({}, { error: (tag: string, message: string) => new Error(message) } as never),
+      (error: unknown) => Effect.succeed(error instanceof Error ? error.message : String(error)),
+    ),
+  )
+  expect(outcome).toBe("Configuration refresh is not available for this location")
+  void store
+})
+
+test("collection warnings surface unsupported keys with their document and path", async () => {
+  await using host = await isolated()
+  const store = createSettingsStore({ layout: host.layout, project: host.project(false) })
+  await host.writeProfile(`{ "experimental": { "openTelemetry": true } }\n`)
+  const warnings = await store.warnings()
+  expect(warnings.length).toBeGreaterThan(0)
+  expect(warnings[0]).toMatchObject({
+    source: host.layout.config,
+    kind: "unsupported",
+    path: "experimental.openTelemetry",
+  })
+})
 
 async function isolated() {
   const created = await mkdtemp(path.join(os.tmpdir(), "kilo2-settings-test-"))

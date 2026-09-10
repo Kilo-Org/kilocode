@@ -7,7 +7,6 @@ import { lstatSync } from "node:fs"
 import { readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 import manifest from "../package.json"
-import { launch } from "./interactive-server"
 import { preflight, type Layout } from "./paths"
 import type { TelemetryConfig } from "./telemetry"
 
@@ -45,6 +44,7 @@ export function serve(
 ) {
   return Effect.gen(function* () {
     const file = registration(input)
+    const { launch } = yield* Effect.promise(() => import("./interactive-server"))
     const endpoint = yield* launch(input, {
       models: options.models,
       content: options.content,
@@ -99,7 +99,11 @@ export async function start(
     file,
     version: manifest.version,
     // Compiled distributions pass their own launcher; the source runtime runs the entry directly.
-    command: options.command ?? [process.execPath, "--no-env-file", path.join(import.meta.dir, "daemon-entry.ts")],
+    command: options.command ?? [
+      process.execPath,
+      "--no-env-file",
+      path.join(import.meta.dir, import.meta.path.endsWith(".ts") ? "daemon-entry.ts" : "daemon-entry.js"),
+    ],
     env: options.env,
     onStart: options.onStart,
   })

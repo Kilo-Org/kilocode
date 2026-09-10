@@ -67,87 +67,109 @@ test("releasing a transcript selection over tab controls does not activate them"
   }
 })
 
-test("the horizontal tab context menu keeps preview tabs open without selecting them", async () => {
-  const [active, setActive] = createSignal("first")
-  const promoted: string[] = []
-  const calls = createFetch()
-  const controller = {
-    tabs: () => [
-      { sessionID: "first", title: "First" },
-      { sessionID: "second", title: "Second" },
-    ],
-    current: active,
-    select: setActive,
-    close() {},
-    move() {},
-    isPreview: (sessionID: string) => sessionID === "second",
-    promote: (sessionID: string) => promoted.push(sessionID),
-    status: () => EMPTY_SESSION_TAB_STATUS,
-  } satisfies SessionTabsController
-  const app = await testRender(
-    () => (
-      <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
-          <Keymap.Provider>
-            <ClientProvider api={createApi(calls.fetch)}>
-              <ThemeProvider mode="dark" source={emptyThemeSource}>
-                <ToastProvider>
-                  <DialogProvider>
-                    <SessionTabs controller={controller} animations={false} />
-                  </DialogProvider>
-                </ToastProvider>
-              </ThemeProvider>
-            </ClientProvider>
-          </Keymap.Provider>
-        </ConfigProvider>
-      </TestTuiContexts>
-    ),
-    { width: 60, height: 8 },
-  )
+// kilocode_change - a terminal context menu can consume the right-button release.
+for (const releaseRight of [true, false]) {
+  test(`the horizontal tab context menu restores tab clicks (right release: ${releaseRight})`, async () => {
+    const [active, setActive] = createSignal("first")
+    const promoted: string[] = []
+    const calls = createFetch()
+    const controller = {
+      tabs: () => [
+        { sessionID: "first", title: "First" },
+        { sessionID: "second", title: "Second" },
+      ],
+      current: active,
+      select: setActive,
+      close() {},
+      move() {},
+      isPreview: (sessionID: string) => sessionID === "second",
+      promote: (sessionID: string) => promoted.push(sessionID),
+      status: () => EMPTY_SESSION_TAB_STATUS,
+    } satisfies SessionTabsController
+    const app = await testRender(
+      () => (
+        <TestTuiContexts>
+          <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
+            <Keymap.Provider>
+              <ClientProvider api={createApi(calls.fetch)}>
+                <ThemeProvider mode="dark" source={emptyThemeSource}>
+                  <ToastProvider>
+                    <DialogProvider>
+                      <SessionTabs controller={controller} animations={false} />
+                    </DialogProvider>
+                  </ToastProvider>
+                </ThemeProvider>
+              </ClientProvider>
+            </Keymap.Provider>
+          </ConfigProvider>
+        </TestTuiContexts>
+      ),
+      { width: 60, height: 8 },
+    )
 
-  try {
-    app.renderer.start()
-    await app.waitForFrame((frame) => frame.includes("Second"))
+    try {
+      app.renderer.start()
+      await app.waitForFrame((frame) => frame.includes("Second"))
 
-    const first = app
-      .captureCharFrame()
-      .split("\n")
-      .findIndex((line) => line.includes("First"))
-    await app.mockMouse.click(app.captureCharFrame().split("\n")[first]!.indexOf("First"), first, MouseButton.RIGHT)
-    await app.waitForFrame((frame) => frame.includes("Rename"))
-    expect(app.captureCharFrame()).toContain("Close")
-    expect(app.captureCharFrame()).not.toContain("Keep open")
+      const first = app
+        .captureCharFrame()
+        .split("\n")
+        .findIndex((line) => line.includes("First"))
+      const firstColumn = app.captureCharFrame().split("\n")[first]!.indexOf("First")
+      await app.mockMouse.pressDown(firstColumn, first, MouseButton.RIGHT)
+      if (releaseRight) await app.mockMouse.release(firstColumn, first, MouseButton.RIGHT)
+      await app.waitForFrame((frame) => frame.includes("Rename"))
+      expect(app.captureCharFrame()).toContain("Close")
+      expect(app.captureCharFrame()).not.toContain("Keep open")
 
-    const rename = app
-      .captureCharFrame()
-      .split("\n")
-      .findIndex((line) => line.includes("Rename"))
-    await app.mockMouse.click(app.captureCharFrame().split("\n")[rename]!.indexOf("Rename"), rename)
-    await app.waitForFrame((frame) => frame.includes("Rename session"))
+      const rename = app
+        .captureCharFrame()
+        .split("\n")
+        .findIndex((line) => line.includes("Rename"))
+      await app.mockMouse.click(app.captureCharFrame().split("\n")[rename]!.indexOf("Rename"), rename)
+      await app.waitForFrame((frame) => frame.includes("Rename session"))
 
-    app.mockInput.pressKey("ESCAPE")
-    await app.waitForFrame((frame) => !frame.includes("Rename session"))
+      app.mockInput.pressKey("ESCAPE")
+      await app.waitForFrame((frame) => !frame.includes("Rename session"))
 
-    const second = app
-      .captureCharFrame()
-      .split("\n")
-      .findIndex((line) => line.includes("Second"))
-    await app.mockMouse.click(app.captureCharFrame().split("\n")[second]!.indexOf("Second"), second, MouseButton.RIGHT)
-    await app.waitForFrame((frame) => frame.includes("Keep open"))
-    expect(app.captureCharFrame()).toContain("Rename")
-    expect(app.captureCharFrame()).toContain("Close")
-    expect(active()).toBe("first")
-    const frame = app.captureCharFrame().split("\n")
-    const row = frame.findIndex((line) => line.includes("Keep open"))
-    await app.mockMouse.click(frame[row]!.indexOf("Keep open"), row)
-    await app.waitForFrame((frame) => !frame.includes("Rename"))
+      // kilocode_change - dismissing rename must release the tab menu's mouse capture.
+      const afterRename = app.captureCharFrame().split("\n")
+      const tabRow = afterRename.findIndex((line) => line.includes("Second"))
+      await app.mockMouse.click(afterRename[tabRow]!.indexOf("Second"), tabRow)
+      expect(active()).toBe("second")
+      await app.mockMouse.click(afterRename[tabRow]!.indexOf("First"), tabRow)
+      expect(active()).toBe("first")
 
-    expect(promoted).toEqual(["second"])
-    expect(active()).toBe("first")
-  } finally {
-    app.renderer.destroy()
-  }
-})
+      const second = app
+        .captureCharFrame()
+        .split("\n")
+        .findIndex((line) => line.includes("Second"))
+      await app.mockMouse.click(
+        app.captureCharFrame().split("\n")[second]!.indexOf("Second"),
+        second,
+        MouseButton.RIGHT,
+      )
+      await app.waitForFrame((frame) => frame.includes("Keep open"))
+      expect(app.captureCharFrame()).toContain("Rename")
+      expect(app.captureCharFrame()).toContain("Close")
+      expect(active()).toBe("first")
+      const frame = app.captureCharFrame().split("\n")
+      const row = frame.findIndex((line) => line.includes("Keep open"))
+      await app.mockMouse.click(frame[row]!.indexOf("Keep open"), row)
+      await app.waitForFrame((frame) => !frame.includes("Rename"))
+
+      expect(promoted).toEqual(["second"])
+      expect(active()).toBe("first")
+      // kilocode_change - closing the context menu must leave ordinary tab clicks functional.
+      const afterMenu = app.captureCharFrame().split("\n")
+      const secondRow = afterMenu.findIndex((line) => line.includes("Second"))
+      await app.mockMouse.click(afterMenu[secondRow]!.indexOf("Second"), secondRow)
+      expect(active()).toBe("second")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+}
 
 test("double-clicking a preview tab keeps it open without promoting permanent tabs", async () => {
   const [active, setActive] = createSignal("first")

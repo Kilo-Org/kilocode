@@ -6,11 +6,13 @@ import { createTestRenderer } from "@opentui/core/testing"
 import { Effect, Fiber } from "effect"
 import assert from "node:assert/strict"
 import { launch } from "../src/interactive-server"
-import { layout } from "../src/paths"
+import { guardedFixtureLayout } from "./fixture"
 import { createSettingsStore, SettingsRpc, type SettingsFieldKey, type SettingsSnapshot } from "../src/settings"
 import { runTui } from "../src/tui"
 
 const setup = await createTestRenderer({ width: 120, height: 40, useThread: false, kittyKeyboard: true })
+const input = guardedFixtureLayout()
+const project = process.env.TUI_SETTINGS_SCOPE === "project"
 setup.renderer.start()
 
 const ready = Promise.withResolvers<void>()
@@ -20,21 +22,21 @@ const terminalHandoff = async () => ({ renderer: setup.renderer, mode: "dark" as
 const task = Effect.runPromise(
   Effect.scoped(
     Effect.gen(function* () {
-      const input = layout("interactive")
       const directory = process.cwd()
 
       // Written before the host starts, so the host's own config load is what
       // proves these values reach a real consumer.
       const store = createSettingsStore({
         layout: input,
-        project: { enabled: false, directory, boundary: directory },
+        project: { enabled: project, directory, boundary: directory },
       })
       yield* Effect.promise(() => store.set({ scope: "profile", key: "default_agent", value: "build" }))
       yield* Effect.promise(() => store.set({ scope: "profile", key: "tool_output.max_lines", value: 123 }))
       yield* Effect.promise(() => store.set({ scope: "profile", key: "compaction.auto", value: false }))
       yield* Effect.promise(() => store.set({ scope: "profile", key: "compaction.keep.tokens", value: 512 }))
+      yield* Effect.promise(() => store.set({ scope: "profile", key: "media.image.max_width", value: 1024 }))
 
-      const endpoint = yield* launch(input, { models: false, recover: false })
+      const endpoint = yield* launch(input, { models: false, recover: false, projectConfig: project })
       const client = createClient({
         baseUrl: endpoint.url,
         headers: Object.fromEntries(new Headers(Service.headers(endpoint))),
@@ -56,8 +58,8 @@ const task = Effect.runPromise(
       assert.equal(field(initial, "tool_output.max_lines").source, "profile")
       assert.equal(initial.scopes[0].path, input.config)
       assert.equal(initial.scopes[0].writable, true)
-      assert.equal(initial.scopes[1].writable, false)
-      assert(initial.scopes[1].reason?.includes("--project-config"))
+      assert.equal(initial.scopes[1].writable, project)
+      if (!project) assert(initial.scopes[1].reason?.includes("--project-config"))
       assert.equal(initial.restartRequired, true)
 
       const before = yield* Effect.promise(() => client.session.list({ directory }))
@@ -111,19 +113,21 @@ const task = Effect.runPromise(
             maxPasses: 600,
           })
         }
-        const scope = async () => {
+        const scope = async (title = "Profile") => {
           await command()
-          await select("Profile", (frame) => frame.includes("Select a setting"))
+          await select(title, (frame) => frame.includes("Select a setting"))
         }
         const settled = async (message: string) => {
           await setup.waitForFrame((frame) => frame.includes(message), { maxPasses: 600 })
         }
 
         // 1. An unwritable scope is offered and explains itself instead of hiding.
-        await command()
-        await select("Project", (frame) => frame.includes("Project configuration is disabled"))
-        setup.mockInput.pressEnter()
-        await setup.waitForFrame((frame) => !frame.includes("Project configuration is disabled"), { maxPasses: 600 })
+        if (!project) {
+          await command()
+          await select("Project", (frame) => frame.includes("Project configuration is disabled"))
+          setup.mockInput.pressEnter()
+          await setup.waitForFrame((frame) => !frame.includes("Project configuration is disabled"), { maxPasses: 600 })
+        }
 
         // 2. Prompt-driven integer edit of a field the profile does not define.
         await scope()
@@ -175,8 +179,27 @@ const task = Effect.runPromise(
         assert.deepEqual(stored["compaction"], { auto: false, keep: { tokens: 512 }, buffer: 0 })
         assert.equal(stored["hide_prompt_training_models"], true)
 
-        // Project writes stay refused without the host opt-in.
-        await assert.rejects(rpc.set({ scope: "project", key: "snapshots", value: true }, { location }))
+        if (!project) {
+          // Project writes stay refused without the host opt-in.
+          await assert.rejects(rpc.set({ scope: "project", key: "snapshots", value: true }, { location }))
+        }
+        if (project) {
+          // The same field editor targets the selected scope, then reset reveals
+          // the untouched profile value. Leave a project override for restart.
+          for (const value of ["640", "", "768"]) {
+            await scope("Project")
+            await prompt("Image width limit")
+            setup.mockInput.pressKey("a", { ctrl: true })
+            setup.mockInput.pressKey("k", { ctrl: true })
+            await setup.mockInput.typeText(value)
+            await setup.waitFor(() => setup.renderer.currentFocusedEditor?.plainText === value, { maxPasses: 600 })
+            setup.mockInput.pressEnter()
+            await settled(`Image width limit ${value ? "updated in" : "removed from"} the project scope.`)
+            const current = field(await rpc.read({}, { location }), "media.image.max_width")
+            assert.deepEqual(current.values, value ? { profile: 1024, project: Number(value) } : { profile: 1024 })
+            assert.equal(current.source, value ? "project" : "profile")
+          }
+        }
 
         const after = await client.session.list({ directory })
         assert.equal(after.data.length, 0)
@@ -205,6 +228,32 @@ function field(snapshot: SettingsSnapshot, key: SettingsFieldKey) {
 try {
   await task
   assert.equal(setup.renderer.isDestroyed, true)
+  if (project) {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const endpoint = yield* launch(input, { models: false, recover: false, projectConfig: true })
+          const client = createClient({
+            baseUrl: endpoint.url,
+            headers: Object.fromEntries(new Headers(Service.headers(endpoint))),
+          })
+          const location = { directory: process.cwd() }
+          yield* Effect.promise(() => client.plugin.awaitActivation({ location }))
+          const entries = yield* Effect.promise(() => client.config.get({ location }))
+          const widths = entries.flatMap((entry) =>
+            entry.type === "document" && entry.info.media?.image?.max_width !== undefined
+              ? [entry.info.media.image.max_width]
+              : [],
+          )
+          assert.deepEqual(widths, [1024, 768], "restarted host loads profile then project image settings")
+          const snapshot = yield* Effect.promise(() => client.rpc(SettingsRpc.Definition).read({}, { location }))
+          assert.deepEqual(field(snapshot, "media.image.max_width").values, { profile: 1024, project: 768 })
+          assert.equal(field(snapshot, "media.image.max_width").source, "project")
+          assert.equal((yield* Effect.promise(() => client.session.list(location))).data.length, 0)
+        }),
+      ).pipe(Effect.provide(NodeHttpServer.layerHttpServices)),
+    )
+  }
   console.log("TUI_SETTINGS_FIXTURE_OK")
 } catch (error) {
   console.error(error)

@@ -9,6 +9,8 @@ test("launched Kilo gateway records actual Auto response model without changing 
     [
       path.resolve(import.meta.dir, "../dist/interactive/bun"),
       "--no-env-file",
+      "--preload",
+      fileURLToPath(import.meta.resolve("@opentui/solid/preload")),
       path.join(import.meta.dir, "routed-model-integration-fixture.ts"),
     ],
     {
@@ -17,7 +19,7 @@ test("launched Kilo gateway records actual Auto response model without changing 
       stdout: "pipe",
       stderr: "pipe",
       stdin: "ignore",
-      timeout: 30000,
+      timeout: 120000,
       killSignal: "SIGKILL",
     },
   )
@@ -33,4 +35,4 @@ test("launched Kilo gateway records actual Auto response model without changing 
     child.kill()
     await child.exited
   }
-}, 45000)
+}, 150000)

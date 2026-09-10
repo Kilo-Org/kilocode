@@ -2,6 +2,7 @@ import type { GatewayExtension } from "@kilocode/gateway"
 import type { OpenCodeClient } from "@opencode-ai/client"
 import { Effect, Exit, Scope, Semaphore, Stream } from "effect"
 import { REMOTE_LIMITATION, RemoteRpc } from "./remote-rpc"
+import { createRemoteSuggestions } from "./remote-suggestions"
 import type { RemoteSessionHandle } from "./remote-session"
 
 export interface RemoteRegistrationOptions {
@@ -49,6 +50,19 @@ export function registerRemote(options: RemoteRegistrationOptions): GatewayExten
               )
               const { installRemoteSessionAdapter } = yield* Effect.promise(() => import("./remote-session"))
               const child = yield* Scope.fork(parent)
+              // The suggest tool exists only while this remote is enabled: it
+              // registers on the extension's optional tool domain inside the
+              // enabled child scope, so a disable removes the registration and
+              // a host without the capability exposes no suggestion surface.
+              const suggestions = ctx.tool ? createRemoteSuggestions() : undefined
+              if (suggestions && ctx.tool) {
+                const { suggestTool } = yield* Effect.promise(() => import("./remote-suggestions"))
+                yield* ctx.tool
+                  .transform((editor) => {
+                    editor.add(suggestTool({ suggestions, client: options.client() }))
+                  })
+                  .pipe(Scope.provide(child))
+              }
               const installed = yield* Effect.suspend(() =>
                 installRemoteSessionAdapter(
                   ctx,
@@ -58,6 +72,7 @@ export function registerRemote(options: RemoteRegistrationOptions): GatewayExten
                     allowHttpLoopback: options.allowHttpLoopback,
                   },
                   options.client(),
+                  suggestions,
                 ),
               ).pipe(Scope.provide(child), Effect.exit)
               if (Exit.isFailure(installed)) {

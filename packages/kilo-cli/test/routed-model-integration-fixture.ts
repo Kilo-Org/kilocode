@@ -1,15 +1,20 @@
 import { NodeHttpServer } from "@effect/platform-node"
 import { createClient } from "@kilocode/client"
 import { Service } from "@opencode-ai/client/effect/service"
+import { createTestRenderer } from "@opentui/core/testing"
 import { Effect } from "effect"
 import assert from "node:assert/strict"
+import { mkdir } from "node:fs/promises"
+import path from "node:path"
 import { launch } from "../src/interactive-server"
-import { layout } from "../src/paths"
+import { runTui } from "../src/tui"
+import { guardedFixtureLayout } from "./fixture"
 
 const requested: Array<{
   model: string
   reasoningEffort: unknown
   compatibleReasoningEffort: unknown
+  dataCollection: unknown
   raw: string
 }> = []
 const gateway = Bun.serve({
@@ -46,6 +51,7 @@ const gateway = Bun.serve({
     const text = await request.text()
     const body = JSON.parse(text) as {
       model?: string
+      provider?: { data_collection?: unknown }
       reasoning?: { effort?: unknown }
       reasoning_effort?: unknown
       stream?: boolean
@@ -54,6 +60,7 @@ const gateway = Bun.serve({
       model: body.model ?? "",
       reasoningEffort: body.reasoning?.effort,
       compatibleReasoningEffort: body.reasoning_effort,
+      dataCollection: body.provider?.data_collection,
       raw: text,
     })
     const responseModel = body.model === "kilo-auto/compatible" ? "provider/compatible-actual" : "provider/actual"
@@ -87,11 +94,20 @@ const gateway = Bun.serve({
   },
 })
 
+const setup = await createTestRenderer({ width: 160, height: 40, useThread: false, kittyKeyboard: true })
+setup.renderer.start()
+
 try {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const input = layout("interactive")
+        const input = guardedFixtureLayout()
+        // Explicit profile opt-in: every Kilo Gateway wire body below (title, both native Auto
+        // routes, and the ordinary model) must carry provider.data_collection deny.
+        yield* Effect.promise(async () => {
+          await mkdir(path.dirname(input.config), { recursive: true })
+          await Bun.write(input.config, '{ "hide_prompt_training_models": true }\n')
+        })
         const endpoint = yield* launch(input, {
           models: false,
           recover: false,
@@ -279,13 +295,61 @@ try {
           const offender = requested.find((item) => item.raw.includes(leaked))
           assert(!offender, `Credential metadata must stay out of request bodies: ${leaked} in ${offender?.raw}`)
         }
+        // The explicit hide_prompt_training_models opt-in applies the v1 wire policy on the same
+        // all-wire gate: title, both native Auto routes, and the ordinary model each carry
+        // provider.data_collection deny, while reasoning/reasoning_effort above stay intact.
+        for (const item of requested) {
+          assert.equal(item.dataCollection, "deny", `Every wire body must request data-collection denial: ${item.raw}`)
+        }
+
+        // Real-TUI proof in one mount: the sidebar row renders the actual response-selected
+        // model from the durable assistant provider state, and stays absent while the last
+        // settled assistant is the ordinary exchange that carries no routed metadata. The
+        // row appears only after a genuine switchModel + session prompt through the loopback
+        // Gateway — the rendering invents no model request of its own.
+        const ready = Promise.withResolvers<void>()
+        const closed = Promise.withResolvers<void>()
+        yield* Effect.forkScoped(
+          runTui(input, endpoint, {
+            args: { sessionID: ordinary.id },
+            terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark" as const, complete: ready.resolve }),
+          }).pipe(Effect.ensuring(Effect.sync(closed.resolve))),
+        )
+        yield* Effect.tryPromise(async () => {
+          await Promise.race([
+            ready.promise,
+            closed.promise.then(() => {
+              throw new Error("TUI stopped before terminal handoff")
+            }),
+          ])
+          await setup.waitForFrame((frame) => frame.includes("Leave this ordinary request alone"), { maxPasses: 600 })
+          const before = setup.captureCharFrame()
+          assert(!before.includes("Routed model"), before)
+          assert(!before.includes("provider/actual"), before)
+
+          await client.session.switchModel({
+            sessionID: ordinary.id,
+            model: { providerID: "kilo", id: "kilo-auto/free", variant: "high" },
+          })
+          await client.session.prompt({ sessionID: ordinary.id, text: "Route this TUI Auto request" })
+          await setup.waitForFrame(
+            (frame) =>
+              frame.includes("Routed model") &&
+              frame.includes("provider/actual") &&
+              frame.includes("Routed fixture response") &&
+              !frame.includes("provider/compatible-actual"),
+            { maxPasses: 600 },
+          )
+        })
       }),
     ).pipe(Effect.provide(NodeHttpServer.layerHttpServices)),
   )
   console.log("ROUTED_MODEL_INTEGRATION_OK")
 } catch (error) {
   console.error(error)
+  if (!setup.renderer.isDestroyed) console.error(setup.captureCharFrame())
   process.exitCode = 1
 } finally {
+  if (!setup.renderer.isDestroyed) setup.renderer.destroy()
   await gateway.stop(true)
 }

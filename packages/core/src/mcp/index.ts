@@ -182,7 +182,16 @@ export const Options = Schema.Struct({
 })
 export type Options = typeof Options.Type
 
-export const layer = (options?: Options) =>
+// kilocode_change — host spawn policy with resources owned by the MCP connection scope.
+export interface SpawnHooks {
+  readonly beforeSpawn?: (
+    config: Mcp.ServerConfig,
+    directory: string,
+  ) => Effect.Effect<Mcp.ServerConfig, unknown, Scope.Scope>
+}
+
+// kilocode_change — accept an optional host spawn policy.
+export const layer = (options?: Options, hooks?: SpawnHooks) =>
   Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -521,14 +530,14 @@ export const layer = (options?: Options) =>
           const { McpClient } = yield* Effect.promise(() => import("./client.js"))
           // List tools as part of connect so a failure here marks the server failed rather than
           // leaving it connected with a silently empty tool list and no path to recover.
-          const result = yield* McpClient.connect(
-            name,
-            entry.config,
-            location.directory,
-            authProvider,
-            elicitation,
-            options?.clientInfo,
+          // kilocode_change — run the host policy under the existing connection scope and
+          // failure handler, without changing the raw config used by reconciliation.
+          const result = yield* Effect.suspend(() =>
+            hooks?.beforeSpawn ? hooks.beforeSpawn(entry.config, location.directory) : Effect.succeed(entry.config),
           ).pipe(
+            Effect.flatMap((config) =>
+              McpClient.connect(name, config, location.directory, authProvider, elicitation, options?.clientInfo),
+            ),
             Effect.flatMap((connection) => connection.tools().pipe(Effect.map((tools) => ({ connection, tools })))),
             // A stdio server is spawned on this location's execution plane, not the host's.
             Effect.provideService(Environment.Service, environment),
@@ -866,10 +875,11 @@ export const layer = (options?: Options) =>
     }),
   )
 
-export function configured(options?: Options) {
+// kilocode_change — preserve the host spawn policy in Location node replacements.
+export function configured(options?: Options, hooks?: SpawnHooks) {
   return makeLocationNode({
     service: Service,
-    layer: layer(options),
+    layer: layer(options, hooks),
     deps: [Location.node, Environment.node, Bus.node, Form.node, Integration.node, Credential.node],
   })
 }

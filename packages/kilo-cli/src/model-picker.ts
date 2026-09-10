@@ -2,7 +2,7 @@ import type { OpenCode } from "@opencode-ai/client"
 import { KiloModels } from "@opencode-ai/schema/kilocode/models"
 import type { TuiModelGroup, TuiModelPicker } from "@opencode-ai/tui/context/runtime"
 import { isKiloAutoID } from "./routed-model"
-import { SettingsRpc, type SettingsSnapshot } from "./settings-rpc"
+import { hidePromptTrainingModels, SettingsRpc } from "./settings-rpc"
 
 export function createModelPicker(client: ReturnType<typeof OpenCode.make>): TuiModelPicker {
   return {
@@ -19,7 +19,7 @@ export function createModelPicker(client: ReturnType<typeof OpenCode.make>): Tui
         client.rpc(KiloModels.Definition).list({}, { location: input.location, signal }),
         client.rpc(SettingsRpc.Definition).read({}, { location, signal }),
       ])
-      return modelGroups(input.models, metadata, hideTrainingModels(settings))
+      return modelGroups(input.models, metadata, hidePromptTrainingModels(settings))
     },
   }
 }
@@ -55,10 +55,4 @@ export function modelGroups(
     if (rank >= 0) return [{ ...presentation, category: "Recommended", order: ranked.length + 1 + rank }]
     return footer ? [presentation] : []
   })
-}
-
-/** Project wins over profile, exactly like the dialog's displayed source. */
-function hideTrainingModels(snapshot: SettingsSnapshot) {
-  const field = snapshot.fields.find((item) => item.key === "hide_prompt_training_models")
-  return (field?.values.project ?? field?.values.profile) === true
 }

@@ -1,6 +1,7 @@
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { serverUrl } from "@kilocode/gateway"
+import { ConfigPolicy } from "@opencode-ai/schema/config/policy"
 import { NonNegativeInt } from "@opencode-ai/schema/schema"
 import { Schema } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
@@ -229,6 +230,37 @@ const nullableConfigKeys = ["model", "small_model", "default_agent"] as const
 // retained upstream v1 schema does not declare them, and the migration engine
 // drops them, so they are validated and patched at the raw level instead.
 const kiloOnlyBooleans = ["privacy_mode", "hide_prompt_training_models"] as const
+
+// v1 experimental.policies (Kilo main's ConfigExperimental.Policy: PolicyV2.Info
+// fields with action narrowed to Catalog.PolicyActions, exactly ["provider.use"]
+// at the pinned v1 source) has the same encoded shape as the v2 target
+// ConfigPolicy.Info, and the v2 runtime consumes authored experimental.policies
+// after the generated enabled/disabled-provider policies (last match wins).
+// The retained upstream v1 schema does not declare policies and the migration
+// engine only emits generated policies, so authored statements are validated
+// against the v2 contract and patched at the raw level, appended after any
+// generated statements to preserve the native precedence. Excess properties are
+// rejected so a field the v2 runtime does not consume cannot be silently
+// swallowed by the import.
+const decodePolicy = Schema.decodeUnknownSync(Schema.Array(ConfigPolicy.Info), {
+  ...decodeOptions,
+  onExcessProperty: "error",
+})
+
+function planAuthoredPolicies(filepath: string, parsed: Record<string, unknown>): ConfigPolicy.Info[] | undefined {
+  const experimental = parsed.experimental
+  if (experimental === undefined || experimental === null) return undefined
+  if (typeof experimental !== "object" || Array.isArray(experimental))
+    throw new Error(`${filepath} does not match the v1 configuration schema`)
+  const authored = (experimental as Record<string, unknown>).policies
+  if (authored === undefined) return undefined
+  try {
+    return [...decodePolicy(authored)]
+  } catch {
+    // Schema errors can echo the decoded input, which may carry secret values.
+    throw new Error(`${filepath} does not match the v1 configuration schema`)
+  }
+}
 
 // Matches the upstream v2 config parser options (jsonc parse with trailing commas).
 const IMPORT_SOURCE_MAX_BYTES = 10 * 1024 * 1024
@@ -790,6 +822,7 @@ function planConfig(
   for (const key of kiloOnlyBooleans)
     if (parsed[key] !== undefined && typeof parsed[key] !== "boolean")
       throw new Error(`${filepath} does not match the v1 configuration schema`)
+  const authoredPolicies = planAuthoredPolicies(filepath, parsed)
   let info: ConfigV1.Info
   let patch: MigratedConfig
   try {
@@ -801,11 +834,30 @@ function planConfig(
   }
   const recognized = Object.keys(ConfigV1.Info.fields)
   const baseline = JSON.stringify(patch)
+  // The pinned v1 runtime consumed only the top-level subagent_depth
+  // (origin/main packages/opencode/src/tool/task.ts:135), while the upstream
+  // migration engine reads only the experimental form. The retained v1 schema
+  // already validates the top-level value against the identical NonNegativeInt
+  // range, and the patch below carries it into the consumed v2 leaf.
+  const subagentDepth = info.subagent_depth
   const keys = Object.keys(parsed).map((key): ConfigKeyDecision => {
     if ((kiloOnlyBooleans as readonly string[]).includes(key)) return { key, supported: true }
     if (nulledKeys(parsed).includes(key)) return { key, supported: true }
-    const leaves = leafPaths(parsed[key], [key])
+    if (key === "subagent_depth" && subagentDepth !== undefined) return { key, supported: true }
+    // Authored policies are carried by the validated raw patch below, not by
+    // the upstream migration engine, so they are excluded from the drop probe.
+    const probed =
+      key === "experimental" &&
+      authoredPolicies !== undefined &&
+      typeof parsed[key] === "object" &&
+      parsed[key] !== null &&
+      !Array.isArray(parsed[key])
+        ? Object.fromEntries(Object.entries(parsed[key] as Record<string, unknown>).filter(([k]) => k !== "policies"))
+        : parsed[key]
+    const leaves = leafPaths(probed, [key])
     if (leaves.length === 0) {
+      if (key === "experimental" && authoredPolicies !== undefined && Object.keys(probed as object).length === 0)
+        return { key, supported: true }
       if (reduces(patch, info, key)) return { key, supported: true }
       if (recognized.includes(key))
         return { key, supported: false, reason: "Recognized v1 key that the upstream migration does not carry into v2" }
@@ -825,6 +877,19 @@ function planConfig(
     keys,
     patch: {
       ...patch,
+      ...(authoredPolicies !== undefined || subagentDepth !== undefined
+        ? {
+            experimental: {
+              ...patch.experimental,
+              ...(authoredPolicies
+                ? { policies: [...(patch.experimental?.policies ?? []), ...authoredPolicies] }
+                : {}),
+              // Top-level precedence reproduces the pinned v1 runtime, which
+              // never read the experimental form.
+              ...(subagentDepth !== undefined ? { subagent_depth: subagentDepth } : {}),
+            },
+          }
+        : {}),
       ...(typeof parsed.privacy_mode === "boolean" ? { privacy_mode: parsed.privacy_mode } : {}),
       ...(typeof parsed.hide_prompt_training_models === "boolean"
         ? { hide_prompt_training_models: parsed.hide_prompt_training_models }

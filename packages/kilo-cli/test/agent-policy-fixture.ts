@@ -17,18 +17,22 @@ const model = Bun.serve({
       ? "ask"
       : transcript.includes("Exercise debug permissions")
         ? "debug"
-        : undefined
+        : transcript.includes("file search specialist")
+          ? "explore"
+          : undefined
     const tool =
       body.messages.at(-1)?.role === "tool"
         ? undefined
         : agent === undefined
           ? undefined
-          : agent === "ask"
-            ? { name: "shell", arguments: JSON.stringify({ command: "git status" }) }
-            : { name: "read", arguments: JSON.stringify({ path: "secret.txt", offset: 0, limit: 10 }) }
+          : agent === "explore"
+            ? exploreTool(transcript)
+            : agent === "ask"
+              ? { name: "shell", arguments: JSON.stringify({ command: "git status" }) }
+              : { name: "read", arguments: JSON.stringify({ path: "secret.txt", offset: 0, limit: 10 }) }
     if (tool) calls.push(`${agent}:${tool.name}`)
     const delta = tool
-      ? { tool_calls: [{ index: 0, id: `call_${tool.name}`, type: "function", function: tool }] }
+      ? { tool_calls: [{ index: 0, id: `call_${tool.name}_${calls.length}`, type: "function", function: tool }] }
       : { role: "assistant", content: "Fixture complete" }
     const finish = tool ? "tool_calls" : "stop"
     return new Response(
@@ -45,6 +49,15 @@ const model = Bun.serve({
     )
   },
 })
+
+// The Explore prompt advertises the requested command in the user message; the fixture echoes it
+// back as the shell tool call so the real permission pipeline decides allow/deny per command.
+function exploreTool(transcript: string) {
+  const match = transcript.match(/Exercise explore permissions: (.+?)(?:\\n|")/)
+  const command = match?.[1]
+  if (!command) return undefined
+  return { name: "shell", arguments: JSON.stringify({ command }) }
+}
 
 try {
   const output = await Effect.runPromise(
@@ -69,7 +82,8 @@ try {
           baseUrl: server.url,
           headers: { authorization: `Basic ${btoa(`opencode:${server.auth.password}`)}` },
         })
-        const location = { location: { directory: process.env.KILO_AGENT_POLICY_CWD! } }
+        const cwd = process.env.KILO_AGENT_POLICY_CWD!
+        const location = { location: { directory: cwd } }
         yield* Effect.promise(() => client.plugin.awaitActivation(location))
         const agents = (yield* Effect.promise(() => client.agent.list(location))).data
         if (!exercise) {
@@ -81,20 +95,53 @@ try {
           const messages = yield* Effect.promise(() => client.message.list({ sessionID: session.id, order: "asc" }))
           return { agents, defaultAgent: messages.data.find((message) => message.type === "assistant")?.agent }
         }
-        const run = (agent: string) =>
+        const run = (agent: string, command?: string) =>
           Effect.promise(async () => {
             const session = await client.session.create({
               ...location,
               agent,
               model: { providerID: "fixture", id: "chat" },
             })
-            await client.session.prompt({ sessionID: session.id, text: `Exercise ${agent} permissions` })
+            const text =
+              command === undefined ? `Exercise ${agent} permissions` : `Exercise ${agent} permissions: ${command}`
+            await client.session.prompt({ sessionID: session.id, text })
             await client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
-            return (await client.permission.list({ sessionID: session.id })).length
+            const messages = (await client.message.list({ sessionID: session.id, order: "asc" })).data
+            return {
+              permissions: (await client.permission.list({ sessionID: session.id })).length,
+              toolError: messages.some(
+                (message) =>
+                  message.type === "assistant" &&
+                  message.content.some((part) => part.type === "tool" && part.state.status === "error"),
+              ),
+            }
           })
+        const explore = (command: string) => Effect.map(run("explore", command), (result) => result.toolError)
+        const redirectError = yield* explore("echo hi > out.txt")
+        // The redirect must be denied before spawn, so no child process may create out.txt.
+        const redirectWroteFile = yield* Effect.promise(() => Bun.file(`${cwd}/out.txt`).exists())
         return {
           agents,
-          runtime: { calls, askPermissions: yield* run("ask"), debugPermissions: yield* run("debug") },
+          runtime: {
+            calls,
+            askPermissions: (yield* run("ask")).permissions,
+            debugPermissions: (yield* run("debug")).permissions,
+            explore: {
+              cat: yield* explore("cat package.json"),
+              gitStatus: yield* explore("git status"),
+              gitPush: yield* explore("git push origin main"),
+              find: yield* explore("find . -name node_modules -delete"),
+              sortOutput: yield* explore("sort -o out.txt input.txt"),
+              sortCompress: yield* explore("sort --compress-program=gzip big.txt"),
+              rgPre: yield* explore("rg --pre cat secret"),
+              chain: yield* explore("cat a.txt; rm b.txt"),
+              pipe: yield* explore("cat a.txt | sh"),
+              substitution: yield* explore("echo $(whoami)"),
+              backtick: yield* explore("echo `whoami`"),
+              redirect: redirectError,
+              redirectWroteFile,
+            },
+          },
         }
       }),
     ),

@@ -35,3 +35,7 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# Local migration originals; curated copies live in migration-tracking/
+/plans/
+/kilocode/

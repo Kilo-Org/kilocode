@@ -11,10 +11,21 @@ export const RemoteSessionInfoSchema = z
   })
   .strict()
 
+// v1 heartbeat capabilities (ecccd1f remote-ws.ts stamps every heartbeat).
+// The deployed relay broadcasts them per session row and the consumer gates
+// its remote attachment path on attachments:true (cloud origin/main
+// cloud-agent-sdk activeSessionSchema + mobile fail-closed gate). protocolVersion
+// is omitted: no consumer reads it (protocol detection uses the list_models
+// probe), so there is no host consumer to source a version fact from.
+// sessionClone is deliberately never advertised: v1's contract is that the
+// flag is present only when the CLI accepts a cloud-session clone, and this
+// adapter refuses clone — its absence keeps the consumer's clone gate
+// fail-closed.
 export const RemoteHeartbeatSchema = z
   .object({
     type: z.literal("heartbeat"),
     sessions: z.array(RemoteSessionInfoSchema),
+    capabilities: z.object({ attachments: z.boolean() }).strict(),
   })
   .strict()
 
@@ -119,6 +130,20 @@ export const RemoteDirectoryListSchema = z
 
 export const RemoteDropQueuedMessageSchema = z.object({ messageID: z.string().startsWith("msg").max(2_000) }).strict()
 
+// v1 exit_cli data (ecccd1f remote-sender.ts RemoteCommand.ExitRequest). The
+// wire literal is the compatibility name for session-detach; the deployed
+// relay (cloud origin/main UserConnectionDO) forwards only when the data is
+// exactly { protocolVersion: 1 } alongside a sessionId.
+export const RemoteExitSchema = z.object({ protocolVersion: z.literal(1) }).strict()
+
+// v1 suggestion commands (ecccd1f remote-sender.ts:50-53): accept data is
+// { requestID, index } (zero-based action index) and dismiss data is
+// { requestID }, both routed by the deployed relay to the owning CLI.
+export const RemoteSuggestionAcceptSchema = z
+  .object({ requestID: z.string().min(1).max(2_000), index: z.number().int().nonnegative() })
+  .strict()
+export const RemoteSuggestionDismissSchema = z.object({ requestID: z.string().min(1).max(2_000) }).strict()
+
 export const RemoteSendCommandSchema = z
   .object({
     protocolVersion: z.literal(1),
@@ -134,3 +159,27 @@ export const RemoteSendCommandSchema = z
   .strict()
 
 export const RemoteRenameSchema = z.object({ sessionId: z.string().min(1), title: z.string().min(1) }).strict()
+
+// v1 permission_respond data (ecccd1f remote-sender.ts PermissionData). v1
+// parsed this shape non-strictly. `interactive` is the explicit human-reply
+// bit: the adapter refuses sensitive approvals without it and never infers it
+// from transport authentication.
+export const RemotePermissionRespondSchema = z.object({
+  requestID: z.string().min(1),
+  reply: z.enum(["once", "always", "reject"]),
+  message: z.string().optional(),
+  interactive: z.boolean().optional(),
+})
+export type RemotePermissionRespond = z.infer<typeof RemotePermissionRespondSchema>
+
+// v1 question_reply data (ecccd1f remote-sender.ts QuestionData): one array of
+// selected labels per question, in question order.
+export const RemoteQuestionReplySchema = z.object({
+  requestID: z.string().min(1),
+  answers: z.array(z.array(z.string())),
+})
+export type RemoteQuestionReply = z.infer<typeof RemoteQuestionReplySchema>
+
+// v1 question_reject data (ecccd1f remote-sender.ts).
+export const RemoteQuestionRejectSchema = z.object({ requestID: z.string().min(1) })
+export type RemoteQuestionReject = z.infer<typeof RemoteQuestionRejectSchema>

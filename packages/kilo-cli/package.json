@@ -7,7 +7,8 @@
     "bun": ">=1.4.0"
   },
   "scripts": {
-    "dev": "bun run --no-env-file src/index.ts",
+    "dev": "bun --no-env-file script/dev.ts",
+    "dev:headless": "bun run --no-env-file src/index.ts",
     "tui": "bun --no-env-file --preload @opentui/solid/preload src/tui-preview.ts",
     "build": "bun run script/build.ts",
     "build:tui": "bun run script/build-tui.ts",
@@ -17,7 +18,6 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "2.0.41",
     "@effect/platform-node": "catalog:",
     "@kilocode/gateway": "workspace:*",
     "@kilocode/client": "workspace:*",

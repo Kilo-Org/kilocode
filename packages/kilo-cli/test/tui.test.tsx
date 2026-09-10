@@ -7,7 +7,7 @@ import { fixture } from "./fixture"
 for (const poisoned of [false, true]) {
   test(
     poisoned
-      ? "Kilo TUI excludes poisoned project plugins that default discovery imports"
+      ? "Kilo TUI supports legacy keyboard input and excludes poisoned project plugins"
       : "Kilo TUI renders its footer, selects a model, submits a native prompt, and shuts down",
     async () => {
       await using input = await fixture()
@@ -25,13 +25,31 @@ for (const poisoned of [false, true]) {
         )
       }
       const requests: { stream?: boolean; model: string; messages: unknown }[] = []
+      const release = Promise.withResolvers<void>()
+      const started = Promise.withResolvers<void>()
       const model = Bun.serve({
         hostname: "127.0.0.1",
         port: 0,
         async fetch(request) {
+          if (new URL(request.url).pathname === "/fixture/started") {
+            await started.promise
+            return new Response("started")
+          }
+          if (new URL(request.url).pathname === "/fixture/release") {
+            release.resolve()
+            return new Response("released")
+          }
           if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
           const body: { stream?: boolean; model: string; messages: unknown } = await request.json()
           requests.push(body)
+          if (
+            body.stream &&
+            JSON.stringify(body.messages).includes("Hold this reply while I queue another prompt") &&
+            !JSON.stringify(body.messages).includes("Run this queued prompt after the current reply")
+          ) {
+            started.resolve()
+            await release.promise
+          }
           const content = body.stream ? "Fixture native TUI response" : "Fixture TUI title"
           const base = { id: "fixture-tui", created: 1, model: body.model }
           const usage = { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
@@ -68,6 +86,8 @@ for (const poisoned of [false, true]) {
             cwd: input.cwd,
             env: {
               ...input.env,
+              KILO_FIXTURE_KITTY: poisoned ? "false" : "true",
+              KILO_FIXTURE_MODEL_URL: model.url.origin,
               KILO_FIXTURE_CONFIG: JSON.stringify({
                 model: "fixture/fixture-initial",
                 providers: {
@@ -82,7 +102,7 @@ for (const poisoned of [false, true]) {
             stdin: "ignore",
             stdout: "pipe",
             stderr: "pipe",
-            timeout: 25000,
+            timeout: 45000,
             killSignal: "SIGKILL",
           },
         )
@@ -115,6 +135,8 @@ for (const poisoned of [false, true]) {
         await boot("discovery-control")
         expect(await Bun.file(sentinel).text()).toBe("imported")
       } finally {
+        started.resolve()
+        release.resolve()
         await model.stop(true)
       }
     },

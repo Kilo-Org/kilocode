@@ -46,12 +46,74 @@ const decodeShared = Schema.decodeUnknownEffect(
 )
 const encodeTransfer = Schema.encodeSync(SessionTransfer.Data)
 
+const UUID_PATTERN =
+  /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value)
+}
+
+const Selection = Schema.NullOr(Schema.String.check(Schema.isMinLength(1)))
+const StoredSelection = Schema.Struct({ organizationID: Selection })
+const Metadata = Schema.Struct({
+  server: Schema.optional(Schema.String),
+  organizationID: Schema.optional(Selection),
+})
+
+export interface KiloMetaItem {
+  readonly type: "kilo_meta"
+  readonly data: {
+    readonly platform: string
+    readonly orgId?: string
+  }
+}
+
+export interface SessionItem {
+  readonly type: "session"
+  readonly data: unknown
+}
+
+export interface MessageItem {
+  readonly type: "message"
+  readonly data: unknown
+}
+
+export type IngestBatchItem = KiloMetaItem | SessionItem | MessageItem
+
+export interface KiloMetaInput {
+  readonly platform?: string
+  readonly orgId?: string | null
+}
+
+export function buildIngestBatch(data: SessionTransfer.Data, meta?: KiloMetaInput): IngestBatchItem[] {
+  const platform = meta?.platform || process.env.KILO_PLATFORM || "cli"
+  const orgId = meta?.orgId ?? undefined
+  if (orgId && !isUuid(orgId)) {
+    throw new Error("Invalid organization ID: must be a valid UUID")
+  }
+  const metaItem: KiloMetaItem = {
+    type: "kilo_meta",
+    data: {
+      platform,
+      ...(orgId ? { orgId } : {}),
+    },
+  }
+  const encoded = encodeTransfer(data)
+  return [
+    metaItem,
+    { type: "session", data: encoded.info },
+    ...encoded.messages.map((message) => ({ type: "message" as const, data: message })),
+  ]
+}
+
+export type AuthorizeShare = Effect.Effect<void | { readonly organizationID?: string | null }, string>
+
 export const registerSessions = Effect.fn(function* (
   ctx: SessionContext,
   options: GatewayOptions,
   oauthMethodID: string,
   services?: SessionServices,
-  authorizeShare?: Effect.Effect<void, string>,
+  authorizeShare?: AuthorizeShare,
 ) {
   const base = sessionServerUrl(options.sessions)
   const app = shareAppUrl(options.shareApp)
@@ -64,7 +126,7 @@ function handlers(
   app: string,
   oauthMethodID: string,
   services?: SessionServices,
-  authorizeShare?: Effect.Effect<void, string>,
+  authorizeShare?: AuthorizeShare,
 ) {
   return {
     share: (input, call) =>
@@ -73,8 +135,24 @@ function handlers(
         if (input.data.info.id !== input.sessionID) {
           return yield* Effect.fail(call.error("kilocode.session", "The session export does not match the session ID"))
         }
+        let orgId: string | null | undefined
         if (authorizeShare) {
-          yield* authorizeShare.pipe(Effect.mapError((message) => call.error("kilocode.session", message)))
+          const authResult = yield* authorizeShare.pipe(
+            Effect.mapError((message) => call.error("kilocode.session", message)),
+          )
+          if (authResult && "organizationID" in authResult) {
+            orgId = authResult.organizationID
+          }
+        }
+        if (orgId === undefined) {
+          orgId = yield* resolveHostOrganization(ctx, oauthMethodID).pipe(
+            Effect.mapError((message) => call.error("kilocode.session", message)),
+          )
+        }
+        if (orgId) {
+          return yield* Effect.fail(
+            call.error("kilocode.session", "Team session sharing is not supported in this preview yet"),
+          )
         }
         const token = yield* credential(ctx, oauthMethodID).pipe(
           Effect.mapError((message) => call.error("kilocode.session", message)),
@@ -91,7 +169,10 @@ function handlers(
           stored._tag === "Some" && stored.value.server === base
             ? stored.value
             : { ...(yield* create(base, token, input.sessionID, call)), server: base }
-        yield* upload(base, token, bootstrap.ingestPath, input.data, call)
+        yield* upload(base, token, bootstrap.ingestPath, input.data, call, {
+          platform: process.env.KILO_PLATFORM ?? "cli",
+          orgId,
+        })
         const result = yield* post(
           `${base}/api/session/${encodeURIComponent(input.sessionID)}/share`,
           token,
@@ -198,24 +279,51 @@ function upload(
   ingestPath: string,
   data: SessionTransfer.Data,
   call: RpcCallContext<(typeof KiloSession.Definition.methods)["share"]>,
+  meta?: KiloMetaInput,
 ) {
   return Effect.gen(function* () {
     const url = yield* Effect.try({
       try: () => ingestUrl(base, ingestPath),
       catch: () => call.error("kilocode.session_unavailable", "Kilo returned an invalid session ingest path"),
     })
-    const encoded = encodeTransfer(data)
-    yield* postEmpty(
-      url,
-      token,
-      {
-        data: [
-          { type: "session", data: encoded.info },
-          ...encoded.messages.map((message) => ({ type: "message", data: message })),
-        ],
-      },
-      call,
+    const batch = yield* Effect.try({
+      try: () => buildIngestBatch(data, meta),
+      catch: (error) =>
+        call.error("kilocode.session", error instanceof Error ? error.message : "Failed to build session ingest batch"),
+    })
+    yield* postEmpty(url, token, { data: batch }, call)
+  })
+}
+
+function resolveHostOrganization(ctx: SessionContext, oauthMethodID: string) {
+  return Effect.gen(function* () {
+    const connection = yield* ctx.integration.connection.active("kilo")
+    if (connection?.type !== "credential") return null
+    const credential = yield* ctx.integration.connection
+      .resolve(connection)
+      .pipe(Effect.mapError(() => "Unable to read the active Kilo credential"))
+    if (!credential || (credential.type === "oauth" && credential.methodID !== oauthMethodID)) {
+      return null
+    }
+    const rawStored = yield* ctx.storage
+      .get(`organization:${connection.id}`)
+      .pipe(Effect.mapError(() => "Unable to read the Kilo account selection"))
+    const metadata = yield* Schema.decodeUnknownEffect(Metadata)(credential.metadata ?? {}).pipe(
+      Effect.mapError(() => "The Kilo credential metadata is invalid"),
     )
+    const selected =
+      rawStored === undefined
+        ? metadata.organizationID
+        : (yield* Schema.decodeUnknownEffect(StoredSelection)(rawStored).pipe(
+            Effect.mapError(() => "The selected Kilo account is not available"),
+          )).organizationID
+    if (!selected) {
+      return null
+    }
+    if (!isUuid(selected)) {
+      return yield* Effect.fail("The selected Kilo account is not available")
+    }
+    return selected
   })
 }
 

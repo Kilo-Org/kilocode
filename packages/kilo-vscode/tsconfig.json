@@ -1,0 +1,33 @@
+{
+  "extends": "@tsconfig/bun/tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "bun",
+      "node",
+      "vscode"
+    ],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "noUncheckedIndexedAccess": false,
+    "verbatimModuleSyntax": false,
+    "noImplicitOverride": false
+  },
+  "include": [
+    "src",
+    "test",
+    "script"
+  ],
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/test/**",
+    "src/**/vitest.setup.ts",
+    "src/**/testUtils.ts"
+  ]
+}

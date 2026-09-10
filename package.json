@@ -7,8 +7,10 @@
   "type": "module",
   "packageManager": "bun@1.4.0",
   "scripts": {
-    "dev": "bun run --cwd packages/cli --conditions=browser src/index.ts",
-    "dev:live": "sh -c 'OPENCODE_TUI_CHANNEL=dev OPENCODE_PASSWORD=\"$(opencode2 service get password)\" exec bun run dev \"$@\" --server \"$(opencode2 service status)\"' --",
+    "extension": "bun run --cwd packages/kilo-vscode extension",
+    "dev": "bun --no-env-file packages/kilo-cli/script/dev.ts",
+    "dev:opencode": "bun run --cwd packages/cli --conditions=browser src/index.ts",
+    "dev:live": "sh -c 'OPENCODE_TUI_CHANNEL=dev OPENCODE_PASSWORD=\"$(opencode2 service get password)\" exec bun run dev:opencode \"$@\" --server \"$(opencode2 service status)\"' --",
     "dev:desktop": "bun --cwd packages/desktop dev",
     "dev:web": "bun --cwd packages/app dev",
     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",

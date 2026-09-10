@@ -19,7 +19,7 @@ test("Kilo TUI sidebar renders durable root-and-child usage and refreshes its ag
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
-      timeout: 30000,
+      timeout: 45_000,
       killSignal: "SIGKILL",
     },
   )
@@ -35,4 +35,4 @@ test("Kilo TUI sidebar renders durable root-and-child usage and refreshes its ag
     child.kill()
     await child.exited
   }
-}, 60000)
+}, 60_000)

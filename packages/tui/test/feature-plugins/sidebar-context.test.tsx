@@ -8,7 +8,8 @@ import { SidebarContext } from "../../src/feature-plugins/sidebar/context"
 function context(options?: { cost?: number; tokens?: number }) {
   const color = RGBA.fromInts(200, 200, 200)
   return {
-    theme: { text: { default: color, subdued: color } },
+    // kilocode_change - provide semantic action token for collapsible heading
+    theme: { text: { default: color, subdued: color, action: { secondary: { default: color } } } },
     data: {
       session: {
         get: () => ({ location: { directory: "/workspace" } }),

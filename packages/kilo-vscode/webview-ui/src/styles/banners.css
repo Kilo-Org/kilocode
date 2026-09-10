@@ -1,0 +1,371 @@
+/* Startup Error Banner */
+.startup-error-banner {
+  margin: 8px 12px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  font-size: var(--kilo-font-size-12);
+}
+
+.startup-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.startup-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.startup-error-firstline {
+  font-weight: 400;
+}
+
+.startup-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.startup-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.startup-error-retry {
+  background: none;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font-size: var(--kilo-font-size-11);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.startup-error-retry:hover {
+  text-decoration: underline;
+}
+
+.startup-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--kilo-font-size-11);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ============================================
+   Revert Banner
+   ============================================ */
+
+.revert-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-base, var(--vscode-editorWidget-border, #454545));
+  font-size: var(--kilo-font-size-12);
+}
+
+.revert-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revert-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.revert-banner-count {
+  font-weight: 500;
+}
+
+.revert-banner-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-banner-files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.revert-banner-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  color: var(--text-base, var(--vscode-foreground));
+}
+
+.revert-banner-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+}
+
+.revert-banner-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
+  background: var(--vscode-editorWarning-background, rgba(204, 167, 0, 0.1));
+  color: var(--text-base, var(--vscode-foreground));
+  font-weight: 500;
+}
+
+.revert-banner-hint {
+  margin-top: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  font-style: italic;
+  font-size: var(--kilo-font-size-11);
+}
+
+/* ============================================
+   Diff Viewer Picker Header (source dropdown)
+   ============================================ */
+
+[data-component="diff-picker-header"] {
+  margin: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Compact base branch picker mounted next to the source select. Reuses the
+   am-selector styles from agent-manager.css for consistency. */
+.diff-base-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* ============================================
+   Inline diff toolbar controls (scope, base, diff style)
+   ============================================
+
+   These sit inside a toolbar row next to ghost buttons and a radio group, so
+   they must not carry header-band margins and must match the small control
+   height. `.am-selector-trigger` is a 32px full-width input-style control;
+   everything below shrinks it to a toolbar-sized chip. */
+
+.diff-scope-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Two-class selector on purpose: `.am-selector-trigger` (agent-manager.css) is
+   a 32px full-width input-style control and loads after this file, so a single
+   `.diff-inline-trigger` class would lose the cascade tie and keep the tall
+   size. */
+.am-selector-trigger.diff-inline-trigger {
+  width: auto;
+  height: 22px;
+  gap: 4px;
+  padding: 0 6px;
+  font-size: var(--kilo-font-size-12);
+  /* Tight line box: the inherited 19.5px line-height leaves no room inside a
+     22px chip and makes inline children look like they burst out of it. */
+  line-height: 20px;
+  /* Never squeeze: shrinking these to unreadable slivers looks broken. The
+     container queries below drop whole controls instead. */
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* The "Default" badge is sized for dropdown rows (19.5px line box + padding =
+   21.5px), which fills a 22px chip edge to edge. Shrink it so it reads as a
+   badge inside the control instead of overflowing it. */
+.am-selector-trigger.diff-inline-trigger .am-branch-badge {
+  padding: 0 4px;
+  line-height: 14px;
+  border-radius: 2px;
+}
+
+.am-selector-trigger.diff-inline-trigger .am-selector-right {
+  margin-left: 2px;
+}
+
+/* Long branch names ellipsize rather than pushing the row wider. The compact
+   variant (narrow side panel) caps tighter than the full-screen toolbar. */
+.am-selector-trigger.diff-inline-trigger .am-selector-value {
+  max-width: 160px;
+}
+
+.diff-scope-controls-compact .am-selector-trigger.diff-inline-trigger .am-selector-value {
+  max-width: 92px;
+}
+
+/* The shared `.am-dropdown` rule pins popover width to the anchor width, which
+   would make these narrow triggers open an unreadably narrow menu. */
+.diff-inline-menu[data-component="popover-content"] {
+  width: auto;
+  min-width: 200px;
+}
+
+.diff-inline-group {
+  padding: 6px 10px 2px;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-weaker);
+}
+
+/* Inline controls inside the two Agent Manager diff toolbars. They must not add
+   vertical margin: each toolbar's height is its own padding plus the tallest
+   control, so a header-band margin here would visibly grow the row (this is
+   why these rows do not reuse `[data-component="diff-picker-header"]`). */
+.am-review-toolbar-left > .diff-scope-controls,
+.am-diff-header-main > .diff-scope-controls {
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Narrow side panel: progressive disclosure
+   ============================================
+
+   The user can drag the diff side panel arbitrarily narrow. Flex shrinking
+   alone clips controls mid-glyph and slides them under the action buttons, so
+   whole controls are dropped instead, least important first. The scope select
+   always survives: it is the only way back out of an empty scope.
+
+   The container is declared on `.am-diff-header` in agent-manager.css (that
+   file only permits `am-`-prefixed selectors, so the `diff-`-prefixed rules
+   live here). */
+
+/* Diff style has a home in the full-screen review, so it goes before base. */
+@container am-diff-header (max-width: 470px) {
+  .am-diff-header-main .diff-style-select {
+    display: none;
+  }
+}
+
+@container am-diff-header (max-width: 390px) {
+  .am-diff-header-main .diff-base-picker {
+    display: none;
+  }
+}
+
+.diff-base-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+.diff-base-current-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.diff-base-arrow {
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+  line-height: 1;
+}
+
+/* ============================================
+   Diff Viewer Notice (e.g. snapshots disabled)
+   ============================================ */
+
+.diff-viewer-notice {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #b89500);
+  background: var(--vscode-inputValidation-warningBackground, rgba(184, 149, 0, 0.1));
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.4;
+}
+
+.diff-viewer-notice-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.diff-viewer-notice-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ============================================
+   Auth Prompt (sign in / sign up error displays)
+   ============================================ */
+
+[data-component="auth-prompt"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-header"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-icon"] {
+  font-size: var(--kilo-font-size-16);
+  line-height: 1;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-title"] {
+  font-weight: 600;
+  color: var(--text-strong, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-13);
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-description"] {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-12);
+  margin: 0;
+  line-height: 1.4;
+}

@@ -12,9 +12,12 @@ test("memoryRow maps disabled memory to muted Disabled", () => {
   expect(memoryRow({ enabled: false, loading: true })).toEqual({ label: "Disabled", tone: "muted" })
 })
 
-test("memoryRow keeps Enabled neutral without a per-session activity seam", () => {
-  // Current main tones Enabled success only with per-session evidence (durable
-  // message markers or a 5s save pulse). No v2 source exposes that, so the row
-  // must not claim activity: Enabled renders muted.
+test("memoryRow tones Enabled by per-session activity evidence", () => {
+  // Current main tones Enabled success only with per-session evidence. v2 has no
+  // durable per-session marker seam; the host-reported 5s save pulse is the only
+  // activity evidence, so Enabled without it stays muted.
   expect(memoryRow({ enabled: true, loading: false })).toEqual({ label: "Enabled", tone: "muted" })
+  expect(memoryRow({ enabled: true, loading: false, active: false })).toEqual({ label: "Enabled", tone: "muted" })
+  expect(memoryRow({ enabled: true, loading: false, active: true })).toEqual({ label: "Enabled", tone: "success" })
+  expect(memoryRow({ enabled: false, loading: false, active: true })).toEqual({ label: "Disabled", tone: "muted" })
 })

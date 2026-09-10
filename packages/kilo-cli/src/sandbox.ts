@@ -242,6 +242,57 @@ export async function prepareShell(invocation: ShellInvocation, config: SandboxC
   }
 }
 
+/**
+ * Build one argv-preserving launcher that runs any command and its full argv
+ * inside the OS sandbox. Unlike the shell hook launcher, the confined
+ * executable arrives as the first launcher argument, so commands without
+ * arguments work and one launcher can be shared by every caller with the same
+ * resolved configuration.
+ */
+export function createSandboxArgvLauncher(config: SandboxConfig, root: string): { path: string; dispose: () => void } {
+  const parsed = parseSandboxConfig(config, root)
+  const resolved = resolveConfig(parsed, root)
+  const backend = requireBackend(resolved)
+  const directory = mkdtempSync(path.join(os.tmpdir(), LAUNCHER_DIRECTORY))
+  const filename = path.join(directory, "command")
+  try {
+    writeFileSync(filename, sandboxArgvLauncherScript(backend, resolved), {
+      encoding: "utf8",
+      mode: 0o700,
+      flag: "wx",
+    })
+  } catch (cause) {
+    try {
+      rmdirSync(directory)
+    } catch {}
+    throw cause
+  }
+  return {
+    path: filename,
+    dispose: () => {
+      try {
+        unlinkSync(filename)
+      } catch {}
+      try {
+        rmdirSync(directory)
+      } catch {}
+    },
+  }
+}
+
+/**
+ * The launcher script for one backend and resolved configuration. Exported so
+ * regression tests can assert both backends' separator handling without a
+ * Linux runtime.
+ */
+export function sandboxArgvLauncherScript(
+  backend: { kind: "macos" | "linux"; executable: string },
+  config: Parameters<typeof resolveConfig>[0] & { root: string },
+): string {
+  const resolved = resolveConfig({ ...config, enabled: true }, config.root)
+  return backend.kind === "macos" ? macosArgvLauncher(backend, resolved) : linuxArgvLauncher(backend, resolved)
+}
+
 function resolveConfig(config: SandboxConfig, fallbackRoot: string): ResolvedConfig {
   if (config.enabled !== true) throw new Error("prepareShell requires sandbox.enabled: true")
   const root = canonicalDirectory(config.root ?? fallbackRoot, "sandbox.root")
@@ -398,6 +449,15 @@ function macosPersistentLauncher(backend: Backend, config: ResolvedConfig, shell
   ].join("\n")
 }
 
+function macosArgvLauncher(backend: Backend, config: ResolvedConfig) {
+  return [
+    "#!/bin/sh",
+    "if [ \"$#\" -lt 1 ]; then echo 'sandbox launcher requires a command' >&2; exit 64; fi",
+    `exec ${shellQuote(backend.executable)} -p ${shellQuote(macosProfile(config))} -- "$@"`,
+    "",
+  ].join("\n")
+}
+
 function linuxLauncher(backend: Backend, config: ResolvedConfig, cwd: string, shell: string) {
   const args = linuxArguments(backend, config, cwd, shell)
   return [
@@ -420,6 +480,17 @@ function linuxPersistentLauncher(backend: Backend, config: ResolvedConfig, shell
     "#!/bin/sh",
     "if [ \"$#\" -lt 2 ]; then echo 'sandbox launcher requires a shell command' >&2; exit 64; fi",
     `exec ${args.map(shellQuote).join(" ")} ${shellQuote(shell)} "$@"`,
+    "",
+  ].join("\n")
+}
+
+function linuxArgvLauncher(backend: Backend, config: ResolvedConfig) {
+  const args = linuxArguments(backend, config)
+  return [
+    "#!/bin/sh",
+    "if [ \"$#\" -lt 1 ]; then echo 'sandbox launcher requires a command' >&2; exit 64; fi",
+    // linuxArguments already ends with the `--` command separator; the launcher arguments follow.
+    `exec ${args.map(shellQuote).join(" ")} "$@"`,
     "",
   ].join("\n")
 }

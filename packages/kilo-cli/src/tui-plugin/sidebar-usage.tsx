@@ -14,6 +14,7 @@ import {
   type Accessor,
 } from "solid-js"
 import { SessionUsageRpc, type SessionUsage } from "../session-usage-rpc"
+import { SidebarSection } from "./sidebar-section"
 
 export type UsageSidebarOptions = {
   readonly client?: Pick<ReturnType<typeof createClient>, "rpc">
@@ -116,10 +117,7 @@ export function UsageSidebar(props: {
   const masked = createMemo(() => props.privacy())
   const tone = props.context.theme.text
   return (
-    <box gap={0}>
-      <text fg={tone.default}>
-        <b>Session family usage</b>
-      </text>
+    <SidebarSection theme={props.context.theme} title="Session family usage">
       <Switch>
         <Match when={state().kind === "loading"}>
           <text fg={tone.subdued}>Loading</text>
@@ -154,12 +152,12 @@ export function UsageSidebar(props: {
                       return (
                         <box>
                           <box flexDirection="row" justifyContent="space-between" gap={1} onMouseDown={toggle}>
-                            <text fg={tone.subdued} flexGrow={1} minWidth={0} wrapMode="none">
+                            <text fg={tone.subdued} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
                               {`${open() ? "▼" : "▶"} ${masked() ? "•••" : `${model.providerID}/${model.modelID}`}`}
                             </text>
-                            <text
-                              fg={tone.subdued}
-                            >{`${count(model.steps)} steps · ${masked() ? "•••" : cost(model.cost)}`}</text>
+                            <text fg={tone.subdued} wrapMode="none" flexShrink={0}>{`${count(model.steps)} steps · ${
+                              masked() ? "•••" : cost(model.cost)
+                            }`}</text>
                           </box>
                           <Show when={open()}>
                             <box paddingLeft={2}>
@@ -181,7 +179,7 @@ export function UsageSidebar(props: {
           </Show>
         </Match>
       </Switch>
-    </box>
+    </SidebarSection>
   )
 }
 

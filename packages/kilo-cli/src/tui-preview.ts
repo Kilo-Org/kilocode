@@ -4,22 +4,21 @@ import { requireRuntime } from "./runtime"
 
 requireRuntime()
 
-const { NodeHttpServer } = await import("@effect/platform-node")
-const { Effect } = await import("effect")
-const { launch } = await import("./interactive-server")
-const { layout } = await import("./paths")
-const { help, parseCommand, executeCommand } = await import("./commands")
 const args = process.argv.slice(2)
 if (args.length === 1 && args[0] === "--version") {
   console.log(`Kilo internal preview ${manifest.version}`)
   process.exit(0)
 }
+const { Effect } = await import("effect")
+const { layout } = await import("./paths")
+const { help, parseCommand, executeCommand } = await import("./commands")
 if (args.length === 1 && ["--help", "-h"].includes(args[0])) {
   console.log(help)
   process.exit(0)
 }
+const { NodeHttpServer } = await import("@effect/platform-node")
 const command = parseCommand(args)
-const { parseTuiArgs } = await import("./tui")
+const { parseTuiArgs } = await import("./tui-args")
 const options = command ? undefined : parseTuiArgs(args)
 const directory = command && "directory" in command ? command.directory : options?.directory
 if (directory) process.chdir(path.resolve(directory))
@@ -43,6 +42,18 @@ try {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
+        if (command?.type === "update") {
+          const updater = yield* Effect.promise(() => import("./updater"))
+          const result = yield* Effect.promise(async () =>
+            command.action === "check"
+              ? updater.checkForUpdate()
+              : command.action === "rollback"
+                ? updater.rollbackUpdate()
+                : updater.applyUpdate(),
+          )
+          console.log(JSON.stringify(result, null, 2))
+          return
+        }
         const input = layout("interactive")
         if (command?.type === "external-sessions") {
           const { listExternalSessions } = yield* Effect.promise(() => import("./external-sessions"))
@@ -101,8 +112,33 @@ try {
           })
           return
         }
+        if (
+          !command &&
+          !options?.sandbox &&
+          !options?.swarm &&
+          !options?.projectConfig &&
+          !options?.indexingConfig &&
+          !process.env.KILO_API_URL &&
+          !process.env.CLOUD_AGENT_NEXT_BASE_URL &&
+          !process.env.KILO_WEB_APP_URL
+        ) {
+          const { start } = yield* Effect.promise(() => import("./daemon"))
+          const endpoint = yield* Effect.promise(() => start(input))
+          const { runTui } = yield* Effect.promise(() => import("./tui"))
+          yield* runTui(input, endpoint, {
+            args: options?.sessionID ? { sessionID: options.sessionID } : undefined,
+          })
+          return
+        }
+        const { status } = yield* Effect.promise(() => import("./daemon"))
+        const daemon = yield* Effect.promise(() => status(input))
+        if (daemon.state === "running")
+          throw new Error(
+            "This command or custom configuration needs exclusive store access. Close attached clients and run kilo2 service stop, then retry.",
+          )
+        const { launch } = yield* Effect.promise(() => import("./interactive-server"))
         const endpoint = yield* launch(input, {
-          gateway: { server: process.env.KILO_API_URL },
+          gateway: { server: process.env.KILO_API_URL, backgroundRefresh: command === undefined },
           persistedTelemetry: true,
           cloud: yield* Effect.promise(async () => {
             const agent = process.env.CLOUD_AGENT_NEXT_BASE_URL

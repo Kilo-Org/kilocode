@@ -1,0 +1,14 @@
+[data-component="chart-container"] {
+  padding: 12px;
+}
+
+[data-slot="chart-render"] {
+  width: 100%;
+  max-height: 300px;
+}
+
+[data-slot="chart-error"] {
+  padding: 12px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12, 12px);
+}

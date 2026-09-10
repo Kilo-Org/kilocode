@@ -2,11 +2,12 @@ import { NodeHttpServer } from "@effect/platform-node"
 import { createClient } from "@kilocode/client"
 import { Service } from "@opencode-ai/client/effect/service"
 import { define } from "@opencode-ai/plugin/effect/plugin"
+import type { Renderable } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { Effect, Fiber } from "effect"
 import assert from "node:assert/strict"
 import { launch } from "../src/interactive-server"
-import { layout } from "../src/paths"
+import { guardedFixtureLayout } from "./fixture"
 import { SettingsRpc } from "../src/settings-rpc"
 import { runTui } from "../src/tui"
 
@@ -52,6 +53,8 @@ const gateway = Bun.serve({
         hasPersonalAccount: true,
       })
     if (path === "/api/openrouter/models" || path === "/api/organizations/team/models") {
+      if (path === "/api/openrouter/models" && request.headers.get("authorization") === null)
+        return Response.json({ data: [] })
       assert.equal(request.headers.get("authorization"), "Bearer fixture-only")
       if (path === "/api/organizations/team/models")
         assert.equal(request.headers.get("x-kilocode-organizationid"), "team")
@@ -75,7 +78,7 @@ try {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const input = layout("interactive")
+        const input = guardedFixtureLayout()
         const endpoint = yield* launch(input, {
           models: false,
           recover: false,
@@ -170,12 +173,19 @@ try {
           })
           assert(!loading.includes("Fixture Auto"))
           assert(!loading.includes("Connect an integration"))
+          const loadingBounds = pickerBounds(setup.renderer.root)
+          assert(loadingBounds)
           delayedMetadata.resolve(Response.json(catalog))
           await setup.waitForFrame(
             (frame) => frame.includes("Kilo Auto") && frame.includes("Recommended") && frame.includes("Fixture Zen"),
             { maxPasses: 600 },
           )
           const frame = setup.captureCharFrame()
+          assert.deepEqual(
+            pickerBounds(setup.renderer.root),
+            loadingBounds,
+            "metadata must not resize the model dialog",
+          )
           assert(frame.indexOf("Kilo Auto") < frame.indexOf("Fixture Recommended"))
           assert(frame.indexOf("Fixture Ordinary") < frame.indexOf("Fixture Zen"))
           assert(!frame.includes("Favorites"))
@@ -239,6 +249,7 @@ try {
           delayedMetadata = Promise.withResolvers<Response>()
           delayedRequested = Promise.withResolvers<void>()
           delayNext = true
+          setup.resize(80, 24)
           await setup.mockInput.typeText("/models")
           setup.mockInput.pressEnter()
           await Promise.race([
@@ -251,6 +262,9 @@ try {
             maxPasses: 600,
           })
           assert(!teamLoading.includes("Fixture Team Auto"))
+          const teamBounds = pickerBounds(setup.renderer.root)
+          assert(teamBounds)
+          assert(teamBounds.y + teamBounds.height <= setup.renderer.height)
           delayedMetadata.resolve(Response.json(teamCatalog))
           const team = await setup.waitForFrame(
             (frame) => frame.includes("Kilo Auto") && frame.includes("Fixture Team Auto"),
@@ -259,6 +273,7 @@ try {
           assert(!team.includes("Fixture Auto"))
           assert(!team.includes("BYOK"))
           assert(!team.includes("May train"))
+          assert.deepEqual(pickerBounds(setup.renderer.root), teamBounds)
           await setup.mockInput.pressEscape()
           assert.equal(calls, 9)
           assert.deepEqual(modelPaths, [
@@ -289,4 +304,13 @@ try {
 } finally {
   if (!setup.renderer.isDestroyed) setup.renderer.destroy()
   await gateway.stop(true)
+}
+
+function pickerBounds(root: Renderable): { x: number; y: number; width: number; height: number } | undefined {
+  if (root.width === 60 && root.x === Math.floor((setup.renderer.width - 60) / 2))
+    return { x: root.x, y: root.y, width: root.width, height: root.height }
+  return root
+    .getChildren()
+    .map(pickerBounds)
+    .find((value) => value !== undefined)
 }

@@ -529,6 +529,210 @@ test("reports silently dropped nested v1 paths instead of claiming key support",
   if (compaction && !compaction.supported) expect(compaction.paths).toContain("compaction.tail_turns")
 })
 
+test("carries authored v1 experimental policies into the migrated v2 config", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    experimental: {
+      policies: [
+        { action: "provider.use", resource: "fixture-blocked", effect: "deny" },
+        { action: "provider.use", resource: "fixture-*", effect: "allow" },
+      ],
+    },
+    username: "fixture-user",
+  })
+  const plan = await planV1Import({ config })
+  const experimental = plan.configKeys.find((key) => key.key === "experimental")
+  expect(experimental?.supported).toBe(true)
+  expect(plan.config.experimental?.policies).toEqual([
+    { action: "provider.use", resource: "fixture-blocked", effect: "deny" },
+    { action: "provider.use", resource: "fixture-*", effect: "allow" },
+  ])
+  const result = await applyV1Import({ layout: input.layout, plan })
+  expect(result.status).toBe("applied")
+  if (result.status !== "applied") return
+  expect(result.configKeys).toContain("experimental")
+  const written = await Bun.file(input.layout.config).json()
+  expect(written.experimental.policies).toEqual([
+    { action: "provider.use", resource: "fixture-blocked", effect: "deny" },
+    { action: "provider.use", resource: "fixture-*", effect: "allow" },
+  ])
+})
+
+test("orders authored policies after generated provider policies so authored statements win", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    disabled_providers: ["fixture-provider"],
+    experimental: {
+      policies: [{ action: "provider.use", resource: "fixture-provider", effect: "allow" }],
+    },
+  })
+  const plan = await planV1Import({ config })
+  expect(plan.configKeys.find((key) => key.key === "disabled_providers")?.supported).toBe(true)
+  expect(plan.configKeys.find((key) => key.key === "experimental")?.supported).toBe(true)
+  // The migration engine generates deny statements for disabled_providers; the
+  // authored allow must land after them, matching the v2 runtime's last-match
+  // evaluation of authored-over-generated policies.
+  expect(plan.config.experimental?.policies).toEqual([
+    { action: "provider.use", resource: "fixture-provider", effect: "deny" },
+    { action: "provider.use", resource: "fixture-provider", effect: "allow" },
+  ])
+})
+
+test("carries v1 top-level subagent_depth into the consumed v2 experimental leaf", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    subagent_depth: 3,
+    experimental: {
+      subagent_depth: 2,
+      policies: [{ action: "provider.use", resource: "fixture-*", effect: "allow" }],
+    },
+    username: "fixture-user",
+  })
+  const plan = await planV1Import({ config })
+  expect(plan.configKeys.find((key) => key.key === "subagent_depth")?.supported).toBe(true)
+  expect(plan.configKeys.find((key) => key.key === "experimental")?.supported).toBe(true)
+  // The pinned v1 runtime consumed only the top-level depth, so it wins over
+  // the migrated experimental value; authored policies are preserved.
+  expect(plan.config.experimental).toEqual({
+    subagent_depth: 3,
+    policies: [{ action: "provider.use", resource: "fixture-*", effect: "allow" }],
+  })
+  expect(plan.config.username).toBe("fixture-user")
+  const result = await applyV1Import({ layout: input.layout, plan })
+  expect(result.status).toBe("applied")
+  if (result.status !== "applied") return
+  expect(result.configKeys).toContain("experimental")
+  const written = await Bun.file(input.layout.config).json()
+  expect(written.experimental).toEqual({
+    subagent_depth: 3,
+    policies: [{ action: "provider.use", resource: "fixture-*", effect: "allow" }],
+  })
+})
+
+test("carries top-level v1 subagent_depth when the file has no experimental form", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", { subagent_depth: 2 })
+  const plan = await planV1Import({ config })
+  expect(plan.configKeys).toEqual([{ key: "subagent_depth", supported: true }])
+  expect(plan.config).toEqual({ experimental: { subagent_depth: 2 } })
+})
+
+test("refuses out-of-range v1 subagent_depth values without echoing them", async () => {
+  await using input = await sandbox()
+  for (const [index, value] of [-1, 1.5, "2", null].entries()) {
+    const config = await input.write(`bad-depth-${index}.json`, { subagent_depth: value })
+    await expect(planV1Import({ config })).rejects.toThrow("does not match the v1 configuration schema")
+  }
+})
+
+test("loads imported top-level subagent_depth through the real v2 config pipeline", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    subagent_depth: 3,
+    experimental: { policies: [{ action: "provider.use", resource: "fixture-*", effect: "allow" }] },
+  })
+  const depths = await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const plan = yield* Effect.promise(() => planV1Import({ config }))
+        const result = yield* Effect.promise(() => applyV1Import({ layout: input.layout, plan }))
+        expect(result.status).toBe("applied")
+        const endpoint = yield* launch(input.layout, { models: false, recover: false })
+        const client = createClient({
+          baseUrl: endpoint.url,
+          headers: { authorization: `Basic ${btoa(`opencode:${endpoint.auth.password}`)}` },
+        })
+        const location = { directory: input.root }
+        const entries = yield* Effect.promise(() => client.config.get({ location }))
+        return entries.flatMap((entry) =>
+          entry.type === "document" && entry.info.experimental?.subagent_depth !== undefined
+            ? [entry.info.experimental.subagent_depth]
+            : [],
+        )
+      }),
+    ),
+  )
+  // The host loaded the patched leaf through its real normalize and decode
+  // pipeline; the subagent tool plugin reads the same value via Config.latest.
+  expect(depths).toEqual([3])
+})
+
+test("refuses authored policies that do not match the v2 policy contract without echoing them", async () => {
+  await using input = await sandbox()
+  const cases: Array<Record<string, unknown>> = [
+    { action: "session.read", resource: "*", effect: "deny" },
+    { action: "provider.use", resource: "*", effect: "audit" },
+    { action: "provider.use", effect: "deny" },
+    { action: "provider.use", resource: "*", effect: "deny", note: "secret-adjacent-marker" },
+  ]
+  for (const [index, policy] of cases.entries()) {
+    const config = await input.write(`bad-policy-${index}.json`, { experimental: { policies: [policy] } })
+    await expect(planV1Import({ config })).rejects.toThrow("does not match the v1 configuration schema")
+    await expect(planV1Import({ config })).rejects.not.toThrow("secret-adjacent-marker")
+  }
+  const notArray = await input.write("bad-policy-shape.json", { experimental: { policies: { deny: "all" } } })
+  await expect(planV1Import({ config: notArray })).rejects.toThrow("does not match the v1 configuration schema")
+})
+
+test("reports v1 web_search and subagent model keys as unsupported instead of inventing mappings", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    web_search: true,
+    subagent_model: "anthropic/claude-x",
+    subagent_variant: "high",
+    subagent_variant_overrides: { "anthropic/claude-x": "low" },
+  })
+  const plan = await planV1Import({ config })
+  for (const key of ["web_search", "subagent_model", "subagent_variant", "subagent_variant_overrides"]) {
+    const decision = plan.configKeys.find((entry) => entry.key === key)
+    expect(decision?.supported).toBe(false)
+  }
+  expect(plan.config).not.toHaveProperty("websearch")
+  expect(plan.config.agents).toBeUndefined()
+  const disabled = await input.write("kilo-websearch-off.json", { web_search: false, username: "u" })
+  const off = await planV1Import({ config: disabled })
+  // v1 web_search: false means "not force-enabled" (provider-native search may
+  // still apply); v2 websearch: false forces search off. The values are not
+  // equivalent, so the import refuses instead of mapping either direction.
+  expect(off.configKeys.find((key) => key.key === "web_search")?.supported).toBe(false)
+  expect(off.config).not.toHaveProperty("websearch")
+  expect(off.config.username).toBe("u")
+})
+
+test("applies imported provider policies through the native v2 catalog", async () => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", {
+    provider: {
+      "fixture-blocked": { name: "Blocked fixture" },
+      "fixture-kept": { name: "Kept fixture" },
+    },
+    experimental: {
+      policies: [{ action: "provider.use", resource: "fixture-blocked", effect: "deny" }],
+    },
+  })
+  const observed = await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const plan = yield* Effect.promise(() => planV1Import({ config }))
+        const result = yield* Effect.promise(() => applyV1Import({ layout: input.layout, plan }))
+        expect(result.status).toBe("applied")
+        const endpoint = yield* launch(input.layout, { models: false, recover: false })
+        const client = createClient({
+          baseUrl: endpoint.url,
+          headers: { authorization: `Basic ${btoa(`opencode:${endpoint.auth.password}`)}` },
+        })
+        const location = { directory: input.root }
+        yield* Effect.promise(() => client.plugin.awaitActivation({ location }))
+        const providers = (yield* Effect.promise(() => client.provider.list({ location }))).data
+        return { result, ids: providers.map((provider) => provider.id) }
+      }),
+    ),
+  )
+  expect(observed.result.status).toBe("applied")
+  expect(observed.ids).toContain("fixture-kept")
+  expect(observed.ids).not.toContain("fixture-blocked")
+})
+
 test("projections expose no credential or config secret material", async () => {
   await using input = await sandbox()
   const auth = await input.write("auth.json", {
@@ -691,22 +895,19 @@ test("refuses an invalid privacy value without reflecting its contents", async (
   expect(await Bun.file(input.layout.config).exists()).toBe(false)
 })
 
-test.each([true, false])(
-  "imports the Kilo hide-prompt-training bit the model picker consumes (%s)",
-  async (hide) => {
-    await using input = await sandbox()
-    const config = await input.write("kilo.json", { hide_prompt_training_models: hide })
-    const before = await Bun.file(config).text()
-    const plan = await planV1Import({ config })
-    expect(plan.configKeys).toEqual([{ key: "hide_prompt_training_models", supported: true }])
-    expect(await applyV1Import({ layout: input.layout, plan })).toMatchObject({ status: "applied" })
-    expect(await Bun.file(input.layout.config).json()).toEqual({ hide_prompt_training_models: hide })
-    // The isolated settings store reads the imported key raw for the picker.
-    const store = createSettingsStore({ layout: input.layout, project: disabled(input.root) })
-    expect(fieldOf(await store.read(), "hide_prompt_training_models").values).toEqual({ profile: hide })
-    expect(await Bun.file(config).text()).toBe(before)
-  },
-)
+test.each([true, false])("imports the Kilo hide-prompt-training bit the model picker consumes (%s)", async (hide) => {
+  await using input = await sandbox()
+  const config = await input.write("kilo.json", { hide_prompt_training_models: hide })
+  const before = await Bun.file(config).text()
+  const plan = await planV1Import({ config })
+  expect(plan.configKeys).toEqual([{ key: "hide_prompt_training_models", supported: true }])
+  expect(await applyV1Import({ layout: input.layout, plan })).toMatchObject({ status: "applied" })
+  expect(await Bun.file(input.layout.config).json()).toEqual({ hide_prompt_training_models: hide })
+  // The isolated settings store reads the imported key raw for the picker.
+  const store = createSettingsStore({ layout: input.layout, project: disabled(input.root) })
+  expect(fieldOf(await store.read(), "hide_prompt_training_models").values).toEqual({ profile: hide })
+  expect(await Bun.file(config).text()).toBe(before)
+})
 
 test("refuses an invalid hide-prompt-training value without reflecting its contents", async () => {
   await using input = await sandbox()
