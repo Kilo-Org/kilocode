@@ -22,7 +22,7 @@ import { useRoute, useRouteData } from "../../context/route"
 import { createStore } from "solid-js/store"
 import { useData } from "../../context/data"
 import { SplitBorder } from "../../ui/border"
-import { useTuiApp, useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
+import { useTuiApp, useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime" // kilocode_change - host-owned epilogue
 import { Spinner, SPINNER_FRAMES } from "../../component/spinner"
 import { PatchDiff } from "../../component/patch-diff"
 import { createSyntaxStyleMemo, ThemeContextProvider, useTheme, useThemes } from "../../context/theme"
@@ -164,7 +164,7 @@ export function Session(props: {
   width?: number
 }) {
   const setEpilogue = useEpilogue()
-  const app = useTuiApp()
+  const app = useTuiApp() // kilocode_change - read the optional host epilogue renderer
   const clipboard = useClipboard()
   const writeExport = async (file: string, content: string) => {
     await mkdir(path.dirname(file), { recursive: true })

@@ -88,6 +88,7 @@ const resolve = Effect.fn("PluginSupervisor.resolve")(function* (
     enabled.add(plugin.id)
   }
 
+  // kilocode_change - config operations cannot disable host-enforced policy.
   enforced.forEach((id) => enabled.add(id))
 
   const ordered = [
@@ -96,7 +97,7 @@ const resolve = Effect.fn("PluginSupervisor.resolve")(function* (
     ...post.filter((plugin) => enabled.has(plugin.id)),
   ]
   // Registry activation dies on a duplicate ID, which would drop the whole generation including builtins.
-  // Host-enforced post definitions win their ID; otherwise the first occurrence in boot order wins.
+  // kilocode_change - host-enforced post definitions win their ID; otherwise the first occurrence wins.
   const duplicate = (plugin: Plugin.Generation, index: number) =>
     (enforced.has(plugin.id)
       ? ordered.findLastIndex((other) => other.id === plugin.id)
@@ -141,7 +142,7 @@ export const layer = Layer.effectDiscard(
     const activate = Effect.fn("PluginSupervisor.activate")(function* () {
       const current = ++generation
       // Combine internal plugins with host-contributed plugins in boot order.
-      // Instance-bound plugins override ordinary host contributions; enforced host policy remains last.
+      // kilocode_change - instance plugins override ordinary host contributions; enforced host policy remains last.
       const pre = [
         ...internal.pre.map((plugin) => ({ ...plugin, revision: "internal", source: { type: "builtin" as const } })),
         ...sdk.all(),

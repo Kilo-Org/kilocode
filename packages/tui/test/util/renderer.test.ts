@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
-import type { CliRenderer } from "@opentui/core"
+import type { CliRenderer } from "@opentui/core" // kilocode_change - type the screen-mode fixture
 import { destroyRenderer } from "../../src/util/renderer"
 
+// kilocode_change - verify main-screen restoration precedes renderer destruction.
 test("clears the terminal title before destroying the renderer", () => {
   const calls: string[] = []
   let screenMode: CliRenderer["screenMode"] = "alternate-screen"
@@ -24,6 +25,7 @@ test("clears the terminal title before destroying the renderer", () => {
   expect(calls).toEqual(["title:", "screen:main-screen", "destroy"])
 })
 
+// kilocode_change - an already destroyed renderer must not switch screen modes again.
 test("still clears the title after renderer destruction", () => {
   const calls: string[] = []
   let screenMode: CliRenderer["screenMode"] = "alternate-screen"

@@ -1,5 +1,6 @@
 import type { CliRenderer } from "@opentui/core"
 
+// kilocode_change - include screenMode so shutdown can restore the main screen before the epilogue.
 export function destroyRenderer(
   renderer: Pick<CliRenderer, "isDestroyed" | "screenMode" | "setTerminalTitle" | "destroy">,
 ) {

@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode-ai/plugin/tui"
-import { createMemo, createSignal, Show } from "solid-js"
+import { createMemo, createSignal, Show } from "solid-js" // kilocode_change - collapsible context state
 import { contextUsage } from "../../util/session"
 
 const money = new Intl.NumberFormat("en-US", {
@@ -21,6 +21,7 @@ export function SidebarContext(props: { context: Plugin.Context; sessionID: stri
 
   return (
     <Show when={state() || cost() > 0}>
+      {/* kilocode_change - group usage beneath the clickable collapse heading. */}
       <box gap={0}>
         <box flexDirection="row" gap={1} onMouseDown={() => setOpen((current) => !current)}>
           <text fg={theme.text.action.secondary.default}>{open() ? "▼" : "▶"}</text>

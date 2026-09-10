@@ -1,3 +1,5 @@
+> For current upstream v2 changes and marker links, use the [current shared-change inventory](v2-current-shared-change-inventory.md). This document preserves its original assessment scope and counts.
+
 > Historical snapshot: this inventory was captured before the 2026-09-08 cleanup of 350 redundant `kilocode_change` markers from 55 Kilo-owned files. Counts and line references below describe that pre-cleanup state, not the current checkout. Shared upstream markers were preserved.
 
 # Kilo override-marker inventory

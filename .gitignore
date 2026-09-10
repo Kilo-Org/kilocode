@@ -36,6 +36,6 @@ logs/
 *.bun-build
 tsconfig.tsbuildinfo
 
-# Local migration originals; curated copies live in migration-tracking/
+# kilocode_change - keep local migration originals out of commits; curated copies live in migration-tracking/
 /plans/
 /kilocode/

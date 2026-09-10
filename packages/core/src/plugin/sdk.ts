@@ -22,7 +22,7 @@ export interface Interface {
   // kilocode_change - Let an embedding host enforce policy after user config without making that policy a builtin.
   readonly register: (plugin: Plugin, options?: { readonly phase?: "pre" | "post" }) => Effect.Effect<void>
   readonly all: () => readonly Generation[]
-  /** Optional so older test and embedder replacements naturally expose no post policy. */
+  /** kilocode_change - optional so older test/embedder replacements expose no post policy. */
   readonly allPost?: () => readonly Generation[]
 }
 
@@ -37,6 +37,7 @@ export const layer = Layer.effect(
     const post = new Map<string, Generation>()
     let revision = 0
     return Service.of({
+      // kilocode_change - route each registration to exactly one phase, replacing prior registrations.
       register: (plugin, options) =>
         Effect.sync(() => {
           plugins.delete(plugin.id)
@@ -45,7 +46,7 @@ export const layer = Layer.effect(
           target.set(plugin.id, { ...plugin, revision: String(++revision), source: { type: "sdk" } })
         }).pipe(Effect.andThen(bus.publish(Updated, {})), Effect.asVoid),
       all: () => [...plugins.values()],
-      allPost: () => [...post.values()],
+      allPost: () => [...post.values()], // kilocode_change - expose the separate post-policy generation
     })
   }),
 )

@@ -1,3 +1,4 @@
+// kilocode_change - native Logo import removed; the host supplies the home.logo slot below.
 import { Prompt, type PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "solid-js"
 import { useArgs } from "../context/args"

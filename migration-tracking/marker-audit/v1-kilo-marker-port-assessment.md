@@ -1,3 +1,5 @@
+> For current upstream v2 changes and marker links, use the [current shared-change inventory](v2-current-shared-change-inventory.md). This document preserves its original assessment scope and counts.
+
 # V1 Kilo marker port assessment
 
 > Completed source-assessment inventory: all 816 rows have a disposition. This is a read-only port assessment, not implementation or runtime acceptance. Partial and needs-port rows retain the specific gaps described below; no capability completion credit is added.

@@ -8,7 +8,7 @@ import { DialogVariant } from "./dialog-variant"
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
 import { useData } from "../context/data"
-import { useTheme } from "../context/theme"
+import { useTheme } from "../context/theme" // kilocode_change - semantic warning color for metadata fallback
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
 import { useTuiApp, type TuiModelGroup } from "../context/runtime" // kilocode_change - host-owned picker presentation
@@ -18,7 +18,7 @@ export function DialogModel(props: { providerID?: string }) {
   const data = useData()
   const dialog = useDialog()
   const location = useLocation()
-  const theme = useTheme("elevated")
+  const theme = useTheme("elevated") // kilocode_change - match the picker surface for fallback feedback
   const presentation = useTuiApp().modelPicker // kilocode_change - do not fork native picker/preferences
   const dimensions = useTerminalDimensions() // kilocode_change
   const [query, setQuery] = createSignal("")
@@ -61,7 +61,7 @@ export function DialogModel(props: { providerID?: string }) {
   const showExtra = createMemo(() => connected() && !props.providerID)
 
   const options = createMemo(() => {
-    if (groupState() === "loading") return []
+    if (groupState() === "loading") return [] // kilocode_change - avoid selection before metadata ordering settles
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? local.model.favorite() : []
