@@ -39,6 +39,7 @@ export namespace MemoryPorts {
     readonly resolve: (input: { configured?: string; session: ModelRef }) => Effect.Effect<ModelResolution, MemoryError>
     readonly run: (input: {
       handle: ModelHandle
+      sessionID: string
       system: string
       prompt: string
       timeoutMs: number

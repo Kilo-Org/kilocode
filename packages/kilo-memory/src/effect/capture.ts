@@ -241,6 +241,7 @@ export namespace MemoryCapture {
             try: () =>
               input.model.run({
                 handle: model!,
+                sessionID: input.sessionID,
                 system: digestPrompt,
                 prompt: body,
                 timeoutMs: state.capture.timeoutMs,
@@ -360,6 +361,7 @@ export namespace MemoryCapture {
             try: () =>
               input.model.run({
                 handle: model!,
+                sessionID: input.sessionID,
                 system: typedPrompt,
                 prompt: body,
                 timeoutMs: state.capture.timeoutMs,
