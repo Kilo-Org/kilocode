@@ -89,6 +89,12 @@ export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
 
+/**
+ * Internal header carrying a request's provider routing preferences from the
+ * request preparation to the gateway fetch wrapper; never sent upstream.
+ */
+export const HEADER_PROVIDER_ROUTING = "X-KILOCODE-PROVIDER-ROUTING"
+
 export const PROMPTS = [
   "codex",
   "gemini",
@@ -100,9 +106,4 @@ export const PROMPTS = [
   "gpt55",
 ] as const
 
-export const AI_SDK_PROVIDERS = [
-  "anthropic",
-  "openai",
-  "openai-compatible",
-  "openrouter",
-] as const
+export const AI_SDK_PROVIDERS = ["anthropic", "openai", "openai-compatible", "openrouter"] as const

@@ -10,6 +10,7 @@ export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
 export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
+export { providerRoutingHeaders, takeProviderRouting } from "./provider-routing.js"
 
 // ============================================================================
 // Auth
@@ -45,6 +46,7 @@ export {
   type KiloTranscriptionModel,
   type KiloTranscriptionModelsResult,
 } from "./api/models.js"
+export { fetchKiloModelEndpoints, type KiloModelEndpoint, type KiloModelEndpointsResult } from "./api/endpoints.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
@@ -159,6 +161,7 @@ export {
   HEADER_EDITORNAME,
   HEADER_MACHINEID,
   HEADER_FEATURE,
+  HEADER_PROVIDER_ROUTING,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
   ENV_VERSION,

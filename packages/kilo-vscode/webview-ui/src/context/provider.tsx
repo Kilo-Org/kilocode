@@ -11,6 +11,8 @@ import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, Provide
 import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 import { KILO_AUTO } from "../../../src/shared/provider-model"
+import { handleEndpointsMessage } from "./routing-endpoints"
+import { handleWorkspaceConfigMessage } from "./workspace-config"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
@@ -55,6 +57,8 @@ export const ProviderProvider: ParentComponent = (props) => {
   // Register handler immediately (not in onMount) so we never miss
   // a providersLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+    handleEndpointsMessage(message)
+    handleWorkspaceConfigMessage(message)
     if (message.type === "providersLoading") {
       batch(() => {
         setReady(false)

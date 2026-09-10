@@ -13,7 +13,7 @@ import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kiloc
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
-type Options = { -readonly [K in keyof KiloOptions]?: KiloOptions[K] } & { apiKey?: string }
+export type Options = { -readonly [K in keyof KiloOptions]?: KiloOptions[K] } & { apiKey?: string }
 type Failure = NonNullable<KiloModelsResult["error"]>
 type Result = { readonly models: Models; readonly error?: Failure }
 type View = { models?: Models; timestamp?: number }
@@ -46,6 +46,8 @@ export interface Interface {
   readonly fetch: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly refresh: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly clear: (providerID: string) => Effect.Effect<void>
+  /** Credentials and gateway settings the provider's catalog requests resolve to. */
+  readonly options: (providerID: string) => Effect.Effect<Options>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@kilocode/ModelCache") {}
@@ -127,12 +129,14 @@ export const layer: Layer.Layer<
       if (providerID === "kilo") {
         const item = config.provider?.[providerID]
         const info = yield* auth.get(providerID)
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
         options.kilocodeOrganizationId = organization(item?.options, info)
         options.kilocodeToken = token(item?.options, info)
         log.debug("auth options resolved", {
           providerID,
           hasToken: !!options.kilocodeToken,
           hasOrganizationId: !!options.kilocodeOrganizationId,
+          hasBaseURL: !!options.baseURL,
         })
       }
 
@@ -162,18 +166,25 @@ export const layer: Layer.Layer<
       return Effect.succeed({ models: {} })
     }
 
-    const load = Effect.fn("ModelCache.load")(function* (providerID: string, options: Options) {
-      const resolved = yield* authOptions(providerID).pipe(
+    const resolveOptions = (providerID: string) =>
+      authOptions(providerID).pipe(
         Effect.catchCause((cause) =>
           Effect.sync(() => {
             log.warn("auth options failed", { providerID, cause })
-            return {}
+            return {} as Options
           }),
         ),
       )
+
+    const load = Effect.fn("ModelCache.load")(function* (providerID: string, options: Options) {
+      const resolved = yield* resolveOptions(providerID)
       const input = { ...resolved, ...options }
       if (providerID === "kilo" && !compatible(input)) return { models: {}, error: { kind: "schema" as const } }
       return yield* fetchModels(providerID, input)
+    })
+
+    const options = Effect.fn("ModelCache.options")(function* (providerID: string) {
+      return yield* resolveOptions(providerID)
     })
 
     const key = (providerID: string, options?: Options) => {
@@ -317,7 +328,7 @@ export const layer: Layer.Layer<
       log.debug("no cache to clear", { providerID })
     })
 
-    return Service.of({ getFailure, failedProviders, get, fetch, refresh, clear })
+    return Service.of({ getFailure, failedProviders, get, fetch, refresh, clear, options })
   }),
 )
 
