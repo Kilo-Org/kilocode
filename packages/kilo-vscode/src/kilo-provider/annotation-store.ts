@@ -6,6 +6,7 @@ import { type Annotation, copyAnnotation, validAnnotation } from "../shared/anno
 
 const BYTES = 16 * 1024 * 1024
 const SESSIONS = 4096
+const TOMBSTONES = 4096
 const IDENTITIES = 20_000
 const RECORDS = 1000
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -75,7 +76,9 @@ function validate(value: unknown): asserts value is State {
   const state = value as State
   if (state.version !== 1 || !state.sessions || typeof state.sessions !== "object" || Array.isArray(state.sessions))
     throw new Error("Unsupported annotation storage. Original data was not replaced.")
-  if (Object.keys(state.sessions).length > SESSIONS) throw new Error("Annotation conversation limit reached.")
+  const entries = Object.entries(state.sessions)
+  const live = entries.filter(([, record]) => !record.deleted)
+  if (live.length > SESSIONS) throw new Error("Annotation conversation limit reached.")
   for (const [id, record] of Object.entries(state.sessions)) {
     conversation(id, record)
     identities(id, record)
@@ -123,7 +126,7 @@ export class AnnotationStore {
     }
   }
 
-  private async change(id: string, mutate?: (record: Conversation) => boolean) {
+  private async change(id: string, mutate?: (record: Conversation) => boolean, mutateState?: (state: State) => boolean) {
     if (!id || id.length > 512 || ["__proto__", "constructor", "prototype"].includes(id))
       throw new Error("Invalid source conversation.")
     await mkdir(this.directory, { recursive: true, mode: 0o700 })
@@ -132,11 +135,13 @@ export class AnnotationStore {
       async () => {
         const state = await this.read()
         const record = Object.hasOwn(state.sessions, id) ? state.sessions[id]! : empty()
-        if (mutate?.(record)) {
+        const changed = mutate?.(record) ?? false
+        if (changed) {
           record.revision++
           state.sessions[id] = record
-          await this.write(state)
         }
+        const stateChanged = mutateState?.(state) ?? false
+        if (changed || stateChanged) await this.write(state)
         return { revision: record.revision, items: record.items.map(copyAnnotation) }
       },
       { dir: this.directory, timeoutMs: 10_000, baseDelayMs: 10, maxDelayMs: 100 },
@@ -196,12 +201,25 @@ export class AnnotationStore {
   }
 
   deleteSession(id: string) {
-    return this.change(id, (record) => {
-      if (record.deleted) return false
-      record.deleted = true
-      record.items = []
-      record.removed = {}
-      return true
-    })
+    return this.change(
+      id,
+      (record) => {
+        if (record.deleted) return false
+        record.deleted = true
+        record.items = []
+        record.removed = {}
+        return true
+      },
+      (state) => {
+        const tombstones = Object.entries(state.sessions).filter(([key, record]) => record.deleted && key !== id)
+        const excess = tombstones.length + 1 - TOMBSTONES
+        if (excess <= 0) return false
+        const oldest = tombstones
+          .sort((left, right) => left[1].revision - right[1].revision)
+          .slice(0, excess)
+        for (const [key] of oldest) delete state.sessions[key]
+        return true
+      },
+    )
   }
 }

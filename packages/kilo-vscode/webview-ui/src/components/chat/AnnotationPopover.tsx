@@ -55,7 +55,8 @@ export const AnnotationPopover: Component<AnnotationPopoverProps> = (props) => {
     const focusOutside = (event: FocusEvent) => {
       const target = event.target as Node | null
       if (!annotationFocusOutside(content, target)) return
-      save(false)
+      if (props.comment.trim()) save(false)
+      else if (!props.disabled) props.onCancel(false)
     }
     const escape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return

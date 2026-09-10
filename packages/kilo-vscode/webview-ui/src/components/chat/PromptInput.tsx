@@ -416,6 +416,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const addAnnotation = (capture: SelectionCapture) => {
     if (annotationSend.active()) return
     annotationSend.run(draftKey(), () => {
+      const open = annotationEditorState.editor()
+      if (open?.comment.trim()) {
+        if (!commitOpenAnnotation()) return
+      } else if (open) annotationEditorState.replace(undefined)
       if (annotations().length >= ANNOTATION_LIMIT) {
         showToast({ title: language.t("annotations.limitReached", { count: ANNOTATION_LIMIT }) })
         return
@@ -449,6 +453,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const editAnnotation = (annotation: Annotation, rect: DOMRect, trigger: HTMLElement, fallback: HTMLElement) => {
     annotationSend.run(draftKey(), () => {
+      const open = annotationEditorState.editor()
+      if (open?.comment.trim()) {
+        if (!commitOpenAnnotation()) return
+      } else if (open) annotationEditorState.replace(undefined)
       annotationFocus = trigger
       annotationFallback = fallback
       annotationEditorState.replace(openAnnotationEditor(annotation, rect))

@@ -61,6 +61,24 @@ describe("durable source annotation numbering", () => {
     expect((await store.load("ses_b")).items).toEqual([])
   })
 
+  it("reclaims the session quota for tombstones and garbage-collects the oldest", async () => {
+    const { root, store } = await setup()
+    const sessions: Record<string, unknown> = {}
+    for (let index = 0; index < 4100; index++)
+      sessions[`ses_old_${index}`] = { high: 1, revision: index, deleted: true, items: [], removed: {} }
+    await mkdir(path.join(root, "annotations"), { recursive: true })
+    await writeFile(path.join(root, "annotations", "records-v1.json"), JSON.stringify({ version: 1, sessions }))
+    await store.deleteSession("ses_new")
+    const state = JSON.parse(await readFile(path.join(root, "annotations", "records-v1.json"), "utf8"))
+    expect(Object.keys(state.sessions)).toHaveLength(4096)
+    expect(state.sessions["ses_new"]).toMatchObject({ deleted: true })
+    expect(state.sessions["ses_old_0"]).toBeUndefined()
+    expect(state.sessions["ses_old_4"]).toBeUndefined()
+    expect(state.sessions["ses_old_5"]).toBeDefined()
+    expect(state.sessions["ses_old_4099"]).toBeDefined()
+    expect((await store.save(note())).items[0]!.number).toBe(1)
+  })
+
   it("allocates without collisions across separate host processes and restarts", async () => {
     const { root, store } = await setup()
     const bundle = await build({

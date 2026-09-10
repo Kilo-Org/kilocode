@@ -78,7 +78,7 @@ export function createAnnotationHandler(options: {
       sessions.add(message.sessionID)
       if (!watcher) {
         watcher = watch(store.directory, (_event, file) => {
-          if (file?.toString() === "records-v1.json") void refresh()
+          if (!file || file.toString() === "records-v1.json") void refresh()
         })
         watcher.on("error", (cause) => {
           for (const id of sessions) error(id, cause)
