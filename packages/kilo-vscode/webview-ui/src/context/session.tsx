@@ -162,14 +162,26 @@ export const SessionProvider: ParentComponent = (props) => {
   const pendingSubmissions = new Map<string, string>()
   const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
-  const terminalPermissions = new Map<string, string | undefined>()
+  const terminalPermissions = new Map<string, undefined>()
   const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
 
+  function permissionKey(permissionID: string, sessionID?: string) {
+    return sessionID == null ? permissionID : `${permissionID}\u0000${sessionID}`
+  }
+
+  function isTerminalPermission(permissionID: string, sessionID: string) {
+    return (
+      terminalPermissions.has(permissionKey(permissionID, sessionID)) ||
+      terminalPermissions.has(permissionKey(permissionID))
+    )
+  }
+
   function markTerminalPermission(permissionID: string, sessionID?: string) {
-    terminalPermissions.delete(permissionID)
-    terminalPermissions.set(permissionID, sessionID)
+    const key = permissionKey(permissionID, sessionID)
+    terminalPermissions.delete(key)
+    terminalPermissions.set(key, undefined)
     while (terminalPermissions.size > 256) {
       const id = terminalPermissions.keys().next().value
       if (id == null) return
@@ -1566,7 +1578,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handlePermissionRequest(permission: PermissionRequest) {
     if (removedSessions.has(permission.sessionID)) return
-    if (terminalPermissions.has(permission.id)) return
+    if (isTerminalPermission(permission.id, permission.sessionID)) return
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
@@ -1928,14 +1940,22 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       const staleResponding = permissions()
         .filter((p) => p.sessionID === sessionID)
-        .map((p) => p.id)
+        .map((p) => ({ id: p.id, sessionID: p.sessionID }))
       setPermissions((prev) => removeSessionPermissions(prev, sessionID))
       if (staleResponding.length > 0) {
-        setRespondingPermissions((prev) => dropSet(prev, staleResponding))
-        for (const id of staleResponding) terminalPermissions.delete(id)
+        setRespondingPermissions((prev) =>
+          dropSet(
+            prev,
+            staleResponding.map((p) => p.id),
+          ),
+        )
+        for (const permission of staleResponding) {
+          terminalPermissions.delete(permissionKey(permission.id, permission.sessionID))
+        }
       }
-      for (const [id, owner] of terminalPermissions) {
-        if (owner === sessionID) terminalPermissions.delete(id)
+      const suffix = `\u0000${sessionID}`
+      for (const id of terminalPermissions.keys()) {
+        if (id.endsWith(suffix)) terminalPermissions.delete(id)
       }
       // prettier-ignore
       setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
@@ -2407,7 +2427,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // the currently selected session for a stale callback.
     const permission = permissions().find((p) => p.id === permissionId)
     if (!permission) return false
-    if (terminalPermissions.has(permissionId)) return false
+    if (isTerminalPermission(permissionId, permission.sessionID)) return false
     if (respondingPermissions().has(permissionId)) return false
 
     // Mark as responding so the UI disables the buttons.
