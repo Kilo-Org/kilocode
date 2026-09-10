@@ -879,7 +879,8 @@ export const CatalogProvider = {
       reasoning: true,
       temperature: false,
       tool_call: true,
-      reasoning_options: [{ type: "effort", values: ["low", "medium", "high", "xhigh", "max"] }],
+      // kilocode: xhigh dropped — anthropicAdaptiveEfforts allows only low/medium/high/max for 4.6 (upstream lists xhigh)
+      reasoning_options: [{ type: "effort", values: ["low", "medium", "high", "max"] }],
       cost: {
         input: 3,
         output: 15,
