@@ -37,7 +37,7 @@ Kilo alerts on these events:
 These rules apply to every channel:
 
 - Error notifications are held until the errored turn closes, so a retry that recovers reports completion instead of failure.
-- Alerts are suppressed while the session has an active goal.
+- Completion alerts are suppressed while the session has an active goal.
 - A repeated request for the same question or permission alerts only once.
 - Manual aborts and auto-approved permissions do not alert.
 - Completion and error alerts come from root sessions only. Subagent turns do not alert.
