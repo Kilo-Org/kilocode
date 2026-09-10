@@ -45,16 +45,19 @@ export function BasicTool(props: BasicToolProps) {
     props.onOpenChange?.(open)
   }
   // Renders after the body/tool list, not before — it's context about what
-  // happened, not part of the header. Memoized because Base reads its children
-  // getter several times while laying out the tool, and each bare read would
-  // otherwise rebuild this subtree (for a bash card, three BashHighlightedOutput
-  // instances per render). The memo returns one stable subtree for every read.
-  const details = createMemo(() => (
+  // happened, not part of the header.
+  const buildDetails = () => (
     <div data-slot="basic-tool-details">
       {props.children}
       <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
     </div>
-  ))
+  )
+  // Base reads its children getter several times while laying out the tool, and a
+  // bare accessor rebuilds this subtree on every read (for a bash card, three
+  // BashHighlightedOutput instances per render). Memoize eager tools so repeated
+  // reads reuse one subtree. Deferred tools must stay lazy: createMemo runs
+  // eagerly, which would build a collapsed body before the card opens.
+  const details = props.defer ? buildDetails : createMemo(buildDetails)
   // A <Show>, not a plain `if`: inBody() tracks the visibility toggle, which can
   // flip after mount (Settings), so the branch must stay reactive.
   return (
