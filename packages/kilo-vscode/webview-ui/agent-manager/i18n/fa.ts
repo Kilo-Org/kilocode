@@ -106,6 +106,7 @@ export const dict = {
   "agentManager.tab.forkSession": "انشعاب جلسه",
   "agentManager.tab.pin": "سنجاق کردن",
   "agentManager.tab.unpin": "برداشتن سنجاق",
+  "agentManager.tab.pinned": "سنجاق‌شده",
   "agentManager.tab.terminal": "ترمینال",
   "agentManager.tab.openTerminal": "باز کردن ترمینال",
   "agentManager.tab.newOptions": "گزینه‌های بیشتر برای تب جدید",

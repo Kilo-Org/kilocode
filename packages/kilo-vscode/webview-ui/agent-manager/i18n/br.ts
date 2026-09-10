@@ -104,6 +104,7 @@ export const dict = {
   "agentManager.tab.forkSession": "Bifurcar sessão",
   "agentManager.tab.pin": "Fixar",
   "agentManager.tab.unpin": "Desafixar",
+  "agentManager.tab.pinned": "Fixada",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Mais opções de nova aba",

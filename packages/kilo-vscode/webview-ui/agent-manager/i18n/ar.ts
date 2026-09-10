@@ -101,6 +101,7 @@ export const dict = {
   "agentManager.tab.forkSession": "تفريع الجلسة",
   "agentManager.tab.pin": "تثبيت",
   "agentManager.tab.unpin": "إلغاء التثبيت",
+  "agentManager.tab.pinned": "مثبتة",
   "agentManager.tab.terminal": "الطرفية",
   "agentManager.tab.openTerminal": "فتح الطرفية",
   "agentManager.tab.newOptions": "المزيد من خيارات علامات التبويب الجديدة",

@@ -103,6 +103,7 @@ export const dict = {
   "agentManager.tab.forkSession": "Forgrein økt",
   "agentManager.tab.pin": "Fest",
   "agentManager.tab.unpin": "Løsne",
+  "agentManager.tab.pinned": "Festet",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åpne Terminal",
   "agentManager.tab.newOptions": "Flere alternativer for ny fane",

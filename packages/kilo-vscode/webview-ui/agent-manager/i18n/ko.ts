@@ -102,6 +102,7 @@ export const dict = {
   "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.pin": "고정",
   "agentManager.tab.unpin": "고정 해제",
+  "agentManager.tab.pinned": "고정됨",
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
   "agentManager.tab.newOptions": "더 많은 새 탭 옵션",

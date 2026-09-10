@@ -100,6 +100,7 @@ export const dict = {
   "agentManager.tab.forkSession": "複製工作階段",
   "agentManager.tab.pin": "釘選",
   "agentManager.tab.unpin": "取消釘選",
+  "agentManager.tab.pinned": "已釘選",
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
   "agentManager.tab.newOptions": "更多新增分頁選項",

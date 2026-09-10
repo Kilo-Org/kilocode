@@ -1,4 +1,5 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Show, type Component, type JSX } from "solid-js"
 import { ActivityIcon } from "../shared/ActivityIcon"
@@ -9,8 +10,7 @@ export const SessionTab: Component<{
   title: string
   active: boolean
   pinned?: boolean
-  unpinLabel?: string
-  onTogglePin?: () => void
+  pinnedLabel?: string
   state: Activity
   stateLabel: string
   closeTitle: string
@@ -58,50 +58,38 @@ export const SessionTab: Component<{
                 <ActivityIcon state={props.state} />
               </span>
             </Show>
+            <Show when={props.pinned}>
+              <span class="am-tab-pin" aria-label={props.pinnedLabel}>
+                <Icon name="pin-filled" size="small" />
+              </span>
+            </Show>
             <span class="am-tab-label">{props.title}</span>
           </span>
         </TooltipKeybind>
       </div>
-      {/* A pinned tab shows the pin toggle where the close button would sit, so
-          the control under the cursor unpins instead of closing. Close stays on
-          the context menu. */}
-      <Show
-        when={props.pinned}
-        fallback={
-          <TooltipKeybind
-            title={props.closeTitle}
-            keybind={props.closeKeybind ?? ""}
-            placement="top"
-            gutter={8}
-            class="am-tab-close-wrap"
-            openDelay={0}
-          >
-            <IconButton
-              icon="close-small"
-              size="small"
-              variant="ghost"
-              aria-label={props.closeLabel}
-              tabIndex={props.closeTabIndex}
-              class="am-tab-close"
-              onClick={(event) => {
-                event.stopPropagation()
-                props.onClose()
-              }}
-            />
-          </TooltipKeybind>
-        }
-      >
-        <TooltipKeybind title={props.unpinLabel ?? ""} keybind="" placement="top" gutter={8} class="am-tab-close-wrap">
+      {/* A pinned tab has no close button. The click that needed guarding is the
+          one on a control already sitting under the cursor, so the control is
+          removed rather than replaced. Close and Unpin live on the context
+          menu, which is also the only place Pin lives. */}
+      <Show when={!props.pinned}>
+        <TooltipKeybind
+          title={props.closeTitle}
+          keybind={props.closeKeybind ?? ""}
+          placement="top"
+          gutter={8}
+          class="am-tab-close-wrap"
+          openDelay={0}
+        >
           <IconButton
-            icon="pin-filled"
+            icon="close-small"
             size="small"
             variant="ghost"
-            aria-label={props.unpinLabel}
+            aria-label={props.closeLabel}
             tabIndex={props.closeTabIndex}
-            class="am-tab-unpin"
+            class="am-tab-close"
             onClick={(event) => {
               event.stopPropagation()
-              props.onTogglePin?.()
+              props.onClose()
             }}
           />
         </TooltipKeybind>

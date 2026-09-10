@@ -102,6 +102,7 @@ export const dict = {
   "agentManager.tab.forkSession": "แยกเซสชัน",
   "agentManager.tab.pin": "ปักหมุด",
   "agentManager.tab.unpin": "เลิกปักหมุด",
+  "agentManager.tab.pinned": "ปักหมุดแล้ว",
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",

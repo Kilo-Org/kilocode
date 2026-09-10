@@ -108,6 +108,7 @@ export const dict = {
   "agentManager.tab.forkSession": "Sessie forken",
   "agentManager.tab.pin": "Vastmaken",
   "agentManager.tab.unpin": "Losmaken",
+  "agentManager.tab.pinned": "Vastgemaakt",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",

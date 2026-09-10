@@ -102,6 +102,7 @@ export const dict = {
   "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.pin": "Zakači",
   "agentManager.tab.unpin": "Otkači",
+  "agentManager.tab.pinned": "Zakačeno",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.tab.newOptions": "Više opcija nove kartice",
