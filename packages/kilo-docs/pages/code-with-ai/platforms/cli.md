@@ -153,6 +153,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
 | `/review` | Review code changes |
+| `/goal [objective \| pause \| resume \| clear]` | Start, pause, resume, or clear a [session goal](/docs/code-with-ai/agents/goals) |
 
 ### Importing Claude Code and Codex Sessions
 
