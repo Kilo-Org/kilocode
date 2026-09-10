@@ -230,6 +230,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "모두 채팅으로 보내기 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "로컬 댓글 ({{count}})",
   "agentManager.review.prCount": "PR 댓글 ({{count}})",
   "agentManager.review.fileCount": "{{count}}개 파일",

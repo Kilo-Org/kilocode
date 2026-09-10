@@ -285,6 +285,9 @@ describe("diff preview detail requests", () => {
                 export const useServer = () => ({})
                 export const FullScreenDiffView = (props) => { state.view = props; return "" }
                 export const Toast = { Region: () => "" }
+                export const reviewRequest = () => {}
+                export const createPRDiffs = () => []
+                export const createDiffCommentForms = () => ({ mount: () => () => {} })
                 ${[
                   "DialogProvider",
                   "CodeComponentProvider",
@@ -303,6 +306,9 @@ describe("diff preview detail requests", () => {
                   "Diff",
                   "File",
                   "Icon",
+                  "IconButton",
+                  "Button",
+                  "Spinner",
                   "DiffPickerHeader",
                   "BaseBranchPicker",
                 ]

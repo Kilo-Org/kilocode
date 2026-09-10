@@ -1316,6 +1316,18 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Save local",
+  "diffViewer.comment.sendToAgent": "Send to agent",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 

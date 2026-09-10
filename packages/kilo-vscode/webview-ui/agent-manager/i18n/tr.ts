@@ -240,6 +240,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Tümünü sohbete gönder ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "Yerel yorumlar ({{count}})",
   "agentManager.review.prCount": "PR yorumları ({{count}})",
   "agentManager.review.fileCount": "{{count}} dosya",

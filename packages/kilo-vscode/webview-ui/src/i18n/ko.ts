@@ -1280,6 +1280,18 @@ export const dict = {
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.saveLocal": "Save local",
+  "diffViewer.comment.sendToAgent": "Send to agent",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
   "diffViewer.notice.snapshotsDisabled":
     "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 

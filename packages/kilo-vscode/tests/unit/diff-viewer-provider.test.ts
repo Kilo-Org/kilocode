@@ -1,19 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
 import * as vscode from "vscode"
 import { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
+import * as gh from "../../src/agent-manager/gh"
+import * as shell from "../../src/agent-manager/shell-env"
 import type { DiffPRPoller, DiffPRPollerOptions } from "../../src/diff/pr-poller"
 import type { PRComment, PRStatus } from "../../src/agent-manager/types"
 import type { PRReviewCommentData } from "../../src/shared/review-comments"
 import type { PanelContext } from "../../src/diff/types"
+import type { PRTarget } from "../../src/shared/pr-comment-actions"
 
 const addCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
 const removeCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
+const execGhInput = mock(async () => ({ stdout: "{}", stderr: "" }))
 const isPRReactionContent = (value: unknown): value is string =>
   typeof value === "string" &&
   ["THUMBS_UP", "THUMBS_DOWN", "LAUGH", "HOORAY", "CONFUSED", "HEART", "ROCKET", "EYES"].includes(value)
 
 mock.module("../../src/agent-manager/pr/PRActions", () => ({
   addCommentReaction,
+  execGhInput,
   isPRReactionContent,
   removeCommentReaction,
 }))
@@ -39,6 +44,7 @@ afterEach(() => {
 beforeEach(() => {
   addCommentReaction.mockReset()
   removeCommentReaction.mockReset()
+  execGhInput.mockReset()
 })
 
 function event<T>() {
@@ -96,6 +102,8 @@ function harness() {
     add?: boolean
     success?: boolean
     error?: string
+    snapshot?: unknown
+    target?: PRTarget
   }> = []
   const received = event<unknown>()
   const disposed = event<void>()
@@ -220,6 +228,76 @@ describe("DiffViewerProvider.openFromCommand", () => {
 })
 
 describe("DiffViewerProvider remote PR comments", () => {
+  it("routes PR snapshot loading and new comment creation from the standalone panel", async () => {
+    const read = spyOn(gh, "execGhRead").mockImplementation(async (args) => {
+      if (args.some((arg) => arg.includes("/files?")))
+        return {
+          stdout: JSON.stringify([
+            {
+              filename: "src/app.ts",
+              status: "modified",
+              additions: 1,
+              deletions: 1,
+              patch: "@@ -1 +1 @@\n-old\n+new",
+            },
+          ]),
+          stderr: "",
+        }
+      return {
+        stdout: JSON.stringify({
+          number: 42,
+          html_url: "https://github.com/example/repo/pull/42",
+          head: { sha: "a".repeat(40) },
+          base: { sha: "b".repeat(40) },
+          changed_files: 1,
+          state: "open",
+          merged: false,
+        }),
+        stderr: "",
+      }
+    })
+    spyOn(shell, "execWithShellEnv").mockResolvedValue({ stdout: "feature\n", stderr: "" })
+    const h = harness()
+    h.pollers.at(0)!.onStatus("diff", status(), undefined, "feature")
+    const target = h.posted.findLast((message) => message.type === "diffViewer.prComments")?.target
+    if (!target) throw new Error("Missing PR target")
+
+    h.received.fire({ ...target, type: "agentManager.loadPRFiles", requestId: "load" })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const loaded = h.messages("agentManager.loadPRFilesResult").at(-1)
+    expect(loaded).toMatchObject({ success: true, requestId: "load" })
+    if (!loaded?.snapshot || typeof loaded.snapshot !== "object") throw new Error("Missing PR snapshot")
+
+    execGhInput.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        id: 11,
+        commit_id: "a".repeat(40),
+        path: "src/app.ts",
+        side: "RIGHT",
+        line: 1,
+      }),
+      stderr: "",
+    })
+    h.received.fire({
+      ...target,
+      type: "agentManager.createReviewComment",
+      requestId: "comment",
+      snapshotId: (loaded.snapshot as { id: string }).id,
+      path: "src/app.ts",
+      side: "RIGHT",
+      startLine: 1,
+      endLine: 1,
+      body: "Please update this.",
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(h.messages("agentManager.createReviewCommentResult").at(-1)).toMatchObject({
+      success: true,
+      requestId: "comment",
+    })
+    expect(h.pollers.at(0)!.refresh).toHaveBeenCalled()
+    read.mockRestore()
+  })
+
   it("adds and removes reactions on comments in the standalone diff", async () => {
     const h = harness()
     const item = comment()

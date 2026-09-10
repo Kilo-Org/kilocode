@@ -180,6 +180,7 @@ import { useTabScroll } from "./tab-scroll"
 import { DiffPanelCache } from "./DiffPanelCache"
 import { createPRNavigation, PRPanelHost } from "./pr/PRPanelHost"
 import { createPRReview } from "./pr/review"
+import { createPRDiffCommentState } from "./pr/diff-comment-state"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -1700,6 +1701,16 @@ const AgentManagerContent: Component = () => {
       panels.open(SidePanel.Diff)
     },
   })
+  const prDiffComments = createPRDiffCommentState({
+    post: vscode.postMessage,
+    project: activeProjectId,
+    statuses: prStatuses,
+  })
+  createEffect(() => {
+    const ctx = diffCtx()
+    if (!ctx || (!diffOpen() && !reviewActive())) return
+    prDiffComments.load(ctx)
+  })
   createEffect(() => {
     const panel = diffOpen()
     const active = reviewActive()
@@ -2600,6 +2611,10 @@ const AgentManagerContent: Component = () => {
                       }
                       remoteComments={remote.comments}
                       remoteTarget={remote.target}
+                      prTarget={prDiffComments.target}
+                      prSnapshot={prDiffComments.snapshot}
+                      prLoading={prDiffComments.loading}
+                      prError={prDiffComments.error}
                       focusedComment={remote.focus}
                       composer={composers.get}
                       lead={() => diffScopeControls(true)}
@@ -2709,6 +2724,10 @@ const AgentManagerContent: Component = () => {
                   sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
                   projectId={activeProjectId()}
                   worktreeId={diffCtx()}
+                  prTarget={prDiffComments.target(diffCtx())}
+                  prSnapshot={prDiffComments.snapshot(diffCtx())}
+                  prLoading={prDiffComments.loading(diffCtx())}
+                  prError={prDiffComments.error(diffCtx())}
                   notice={diffNotice()}
                   lead={diffScopeControls(false)}
                   canRevert={scopeCapabilities(review.scope()).revert}

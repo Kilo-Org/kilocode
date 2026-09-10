@@ -231,6 +231,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Pošalji sve u chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "Lokalni komentari ({{count}})",
   "agentManager.review.prCount": "PR komentari ({{count}})",
   "agentManager.review.fileCount": "{{count}} datoteka",

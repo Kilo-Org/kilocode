@@ -13,7 +13,6 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import {
@@ -31,6 +30,9 @@ import { RemoteCommentsOutside } from "./remote-comment-renderer"
 import { ReviewDiffItem } from "./ReviewDiffItem"
 import { createReviewView, type ReviewViewProps } from "./review-controller"
 import { notice, reviewSendAllKeybind } from "./review-setup"
+import { SendAllButton } from "./SendAllButton"
+import { createDiffCommentForms } from "../agent-manager/pr/diff-comment-forms"
+import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 
 type DiffStyle = "unified" | "split"
 
@@ -49,6 +51,10 @@ interface FullScreenDiffViewProps extends ReviewViewProps {
   canRevert?: boolean
   /** Optional leading content rendered first in the toolbar's left group. */
   lead?: JSXElement
+  prTarget?: PRTarget
+  prSnapshot?: PRDiffSnapshot
+  prLoading?: boolean
+  prError?: string
   onClose: () => void
 }
 
@@ -57,6 +63,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const noticeText = () => notice(t, props.notice)
   const sendAllKeybind = () => reviewSendAllKeybind(t)
   let rootRef: HTMLDivElement | undefined
+  const forms = createDiffCommentForms({
+    target: () => props.prTarget,
+    snapshot: () => props.prSnapshot,
+    diffs: () => props.diffs,
+    worktree: () => props.worktreeId ?? props.sessionId ?? "diff",
+  })
   const {
     open,
     setOpen,
@@ -77,7 +89,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     commentsByFile,
     handleGutterClick,
     sendAllClick,
-  } = createReviewView(props, () => rootRef)
+    sendAllToGithub,
+    sendAllGithubCount,
+    sendAllGithubAvailable,
+    sendAllPending,
+    sendAllError,
+  } = createReviewView(props, () => rootRef, {
+    commentForm: props.commentForm ?? forms.mount,
+    commentsGithub: props.commentsGithub ?? forms.github,
+  })
 
   const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
   const activeFile = createMemo(() => {
@@ -191,6 +211,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
           <Show when={props.lead}>{props.lead}</Show>
+          <Show when={props.prTarget}>
+            {(target) => (
+              <span class="am-review-pr-context" title={target().prUrl}>
+                {t("diffViewer.comment.prContext", { number: target().prNumber })}
+                <Show when={props.prLoading}>
+                  <Spinner />
+                </Show>
+              </span>
+            )}
+          </Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}
@@ -225,19 +255,33 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             {openLabel()}
           </Button>
           <Show when={comments().length > 0 && props.canComment !== false}>
-            <TooltipKeybind
-              title={t("agentManager.review.sendAllToChat")}
+            <SendAllButton
+              count={comments().length}
+              githubCount={sendAllGithubCount()}
+              githubNumber={sendAllGithubAvailable() ? props.prTarget?.prNumber : undefined}
+              pending={sendAllPending()}
+              onSendChat={sendAllClick}
+              onSendGithub={sendAllToGithub}
               keybind={sendAllKeybind()}
               placement="bottom"
-            >
-              <Button variant="primary" size="small" onClick={sendAllClick}>
-                {t("agentManager.review.sendAllToChatWithCount", { count: comments().length })}
-              </Button>
-            </TooltipKeybind>
+            />
+          </Show>
+          <Show when={sendAllError()}>
+            <span class="am-review-send-error" role="alert">
+              {sendAllError()}
+            </span>
           </Show>
           <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
+      <Show when={props.prError}>
+        <div class="diff-viewer-notice" role="alert">
+          <span class="diff-viewer-notice-icon">
+            <Icon name="warning" size="small" />
+          </span>
+          <span class="diff-viewer-notice-text">{props.prError}</span>
+        </div>
+      </Show>
 
       {/* Body: file tree + diff viewer */}
       <div class="am-review-body">
