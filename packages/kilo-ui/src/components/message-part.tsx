@@ -2774,7 +2774,11 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // A plain function, not `createMemo`: Solid evaluates a memo eagerly on
+    // render, which parsed the patch with Pierre even while the card stayed
+    // collapsed. This is only read when the deferred body mounts or the user
+    // opens the diff viewer, so collapsed cards do no parse work.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (diff?.patch) return normalize(diff)
       // Pending state: tool-part metadata.filediff is written only after the
@@ -2789,8 +2793,15 @@ ToolRegistry.register({
         additions: diff?.additions ?? 0,
         deletions: diff?.deletions ?? 0,
       })
-    })
-    const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
+    }
+    const canOpenDiff = () => {
+      if (!data.openDiff || !path()) return false
+      // Presence check instead of `view()` so the always-rendered trigger does
+      // not parse the patch while the card stays collapsed.
+      const diff = props.metadata?.filediff
+      if (diff?.patch) return true
+      return !!(props.input.oldString || props.input.newString)
+    }
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2886,12 +2897,16 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // Lazy like the edit card: only parsed when the deferred body mounts or the
+    // user opens the diff viewer, never while the card is collapsed.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (!diff?.patch) return
       return normalize(diff)
-    })
-    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
+    }
+    // Cheap presence check instead of `view()` so a collapsed card never
+    // parses its patch with Pierre just to decide whether to show the button.
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!props.metadata?.filediff?.patch
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -3001,6 +3016,8 @@ interface ApplyPatchFile {
   movePath?: string
 }
 
+const HUNK_MARKER = /^\s*@@/m
+
 ToolRegistry.register({
   name: "apply_patch",
   render(props) {
@@ -3053,8 +3070,11 @@ ToolRegistry.register({
       if (!data.openDiff || !first) return
       data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
     }
+    // Cheap `@@` marker check: keeps the trigger hidden for unparsable patches
+    // like the `view` guard did, without parsing every file while collapsed.
+    const hasHunk = (file: ApplyPatchFile) => HUNK_MARKER.test(file.patch ?? file.diff ?? "")
     const allDiffAction = () => (
-      <Show when={data.openDiff && files().some((file) => view(file))}>
+      <Show when={data.openDiff && files().some(hasHunk)}>
         <span data-slot="tool-trigger-actions">
           <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
             <IconButton
