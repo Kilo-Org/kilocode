@@ -5,6 +5,7 @@ import type { Snapshot } from "../../../client"
 import { authenticateMcp, connectMcp, disconnectMcp } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, errMsg, text, words, type McpMap } from "../../../shared/utils"
+import { slack, slackId } from "./slack"
 
 const market = "https://api.kilo.ai/api/marketplace/mcps"
 const pattern = /^[\w\-@.]+$/
@@ -12,7 +13,7 @@ const pattern = /^[\w\-@.]+$/
 type Resolved = Snapshot["overlay"]["collections"][string][number]
 type Dict = Record<string, unknown>
 type Config = McpLocalConfig | McpRemoteConfig | { enabled: boolean }
-type Mode = "closed" | "market" | "install" | "config"
+type Mode = "closed" | "market" | "install" | "config" | "slack"
 type Filter = "all" | "installed" | "notInstalled"
 
 export type McpParameter = {
@@ -347,6 +348,7 @@ export function useMcpSettings() {
   const [auth, setAuth] = createSignal("")
   const [limit, setLimit] = createSignal("")
   const [enabled, setEnabled] = createSignal(true)
+  const [slackClient, setSlackClient] = createSignal("")
   const [catalog, catalogActions] = createResource(fetchMarket)
 
   const rows = createMemo<McpRow[]>(() => {
@@ -444,6 +446,11 @@ export function useMcpSettings() {
     setMode("config")
   }
 
+  function openSlack() {
+    setSlackClient("")
+    setMode("slack")
+  }
+
   function openInstall(item: McpMarket) {
     setChoice(item)
     const list = Array.isArray(item.content) ? item.content : []
@@ -495,6 +502,20 @@ export function useMcpSettings() {
     const cfg = build(content, values(params()), ctx.fail)
     if (!cfg) return
     ctx.save({ mcp: { [item.id]: cfg } as McpMap })
+    close()
+  }
+
+  function installSlack() {
+    const client = clean(slackClient())
+    if (!client) {
+      ctx.fail("Enter the Slack app Client ID before connecting.")
+      return
+    }
+    if (installed().has(slackId)) {
+      ctx.fail("Slack is already configured. Remove it before connecting again.")
+      return
+    }
+    ctx.save({ mcp: { [slackId]: slack(client) } as McpMap })
     close()
   }
 
@@ -640,13 +661,17 @@ export function useMcpSettings() {
     setLimit,
     enabled,
     setEnabled,
+    slackClient,
+    setSlackClient,
     close,
     openMarket,
     openManual,
+    openSlack,
     openInstall,
     edit,
     toggleTag,
     install,
+    installSlack,
     save,
     toggle,
     connect,

@@ -111,6 +111,9 @@ const layer = Layer.effect(
       ) {
         const ctx = yield* InstanceState.context
         const cfg = yield* config.get()
+        const slack = Object.values(cfg.mcp ?? {})
+          .map(KilocodeSystemPrompt.slack)
+          .filter((item) => item !== undefined) // kilocode_change
         const references = yield* KiloReference.list(
           {
             references: cfg.references ?? cfg.reference ?? {},
@@ -121,6 +124,7 @@ const layer = Layer.effect(
         ).pipe(Effect.map((references) => references.filter((reference) => reference.description !== undefined)))
         return [
           ...KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext }),
+          ...slack, // kilocode_change
           references.length === 0
             ? undefined
             : [

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "slack": {
+      "type": "remote",
+      "url": "https://mcp.slack.com/mcp",
+      "enabled": false,
+      "timeout": 30000,
+      "oauth": {
+        "clientId": "REPLACE_WITH_STAGING_SLACK_CLIENT_ID",
+        "scope": "search:read.public search:read.private search:read.im search:read.mpim search:read.files search:read.users channels:history groups:history im:history mpim:history channels:read groups:read im:read mpim:read im:write mpim:write chat:write files:read users:read",
+        "redirectUri": "http://localhost:19876/mcp/oauth/callback"
+      }
+    }
+  },
+  "permission": {
+    "slack_*": "ask"
+  }
+}
