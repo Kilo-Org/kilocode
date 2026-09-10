@@ -54,11 +54,37 @@ const release = mount(() => (
         onDestinationChange={() => {}}
       />
     </div>
+    <div id="remote2">
+      <PRCommentForm
+        inline
+        action="diff"
+        worktreeId="diff-test"
+        file="other.ts"
+        side="RIGHT"
+        startLine={5}
+        endLine={5}
+        selectedText="old line"
+        destination="github"
+        github={{
+          prNumber: 2,
+          prUrl: "https://github.com/example/fixture/pull/2",
+          snapshotId: "snapshot-2",
+          label: "GitHub #2",
+          closed: false,
+        }}
+        onSave={() => {}}
+        onSendKilo={() => {}}
+        onGithubSuccess={() => completed++}
+        onCancel={() => cancelled++}
+        onDestinationChange={() => {}}
+      />
+    </div>
   </>
 ))
 await wait()
 const local = node("#local")
 const remote = node("#remote")
+const remote2 = node("#remote2")
 
 // Local-only destination exposes Kilo actions, never the GitHub split button.
 assert.equal(button("send-kilo", local).textContent, "Send to Kilo")
@@ -97,6 +123,7 @@ node('[aria-label="Choose destination"]', remote)
 type(remote, "Do not post")
 input(remote).dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
 assert.equal(messages.length, 0, "Enter never posts to GitHub")
+assert.equal(input(remote2).value, "", "a draft is scoped to its own PR identity")
 
 type(remote, "Post me")
 button("send-primary", remote).click()

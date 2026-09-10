@@ -2,7 +2,7 @@ import type { AnnotationMeta } from "./review-annotations"
 
 // Pierre can replace an annotation without invoking its button handlers.
 export function createAnnotationLifecycle() {
-  const mounts = new Map<AnnotationMeta, { host: HTMLElement; dispose: () => void; connected: boolean }>()
+  const mounts = new Map<AnnotationMeta, { host: HTMLElement; dispose: () => void }>()
   let observer: MutationObserver | undefined
   const release = (meta: AnnotationMeta) => {
     const entry = mounts.get(meta)
@@ -15,12 +15,14 @@ export function createAnnotationLifecycle() {
   }
   const track = (meta: AnnotationMeta, host: HTMLElement, dispose: () => void) => {
     release(meta)
-    mounts.set(meta, { host, dispose, connected: host.isConnected })
+    mounts.set(meta, { host, dispose })
     if (observer) return
     observer = new MutationObserver(() => {
+      // The wrapper is inserted synchronously after track returns, so any host
+      // still detached on an observer flush will never be shown. Releasing it
+      // keeps a dropped annotation from retaining its form for the session.
       for (const [meta, entry] of mounts) {
-        if (entry.host.isConnected) entry.connected = true
-        else if (entry.connected) release(meta)
+        if (!entry.host.isConnected) release(meta)
       }
     })
     observer.observe(document.body, { childList: true, subtree: true })

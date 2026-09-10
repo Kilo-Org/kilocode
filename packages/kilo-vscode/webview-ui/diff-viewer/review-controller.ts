@@ -328,7 +328,7 @@ export function createReviewController(props: Props) {
       props.preserveScroll(() => props.setComments(props.comments().filter((comment) => !ids.has(comment.id))))
     }
     setSendAllPending(false)
-    if (failure !== undefined) {
+    if (failure !== undefined || posted.length < pending.length) {
       setSendAllError(
         props.label("agentManager.review.sendAllToGithubFailed", {
           error: failure || props.label("common.requestFailed"),

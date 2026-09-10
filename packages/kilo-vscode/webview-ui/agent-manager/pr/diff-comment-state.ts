@@ -1,4 +1,4 @@
-import { createSignal, type Accessor } from "solid-js"
+import { createSignal, untrack, type Accessor } from "solid-js"
 import type { PRDiffSnapshot, PRTarget } from "../../../src/shared/pr-comment-actions"
 import type { PRStatus } from "../../src/types/messages"
 import { reviewRequest } from "./pr-review-request"
@@ -45,7 +45,9 @@ export function createPRDiffCommentState(opts: Options) {
     const route = target(ctx)
     if (!route) return
     const id = key(ctx)
-    if (snapshots()[id] || pending().has(id)) return
+    // Read the dedupe state untracked so a failed load does not re-trigger the
+    // effect that called this, which would immediately retry forever.
+    if (untrack(() => Boolean(snapshots()[id] || pending().has(id)))) return
     setPending((prev) => new Set(prev).add(id))
     setErrors((prev) => {
       const next = { ...prev }

@@ -6,6 +6,20 @@ import type { AnnotationMeta } from "../../webview-ui/diff-viewer/review-annotat
 const previous = { document: globalThis.document, MutationObserver: globalThis.MutationObserver }
 afterEach(() => Object.assign(globalThis, previous))
 
+it("releases a wrapper that is never inserted", async () => {
+  const window = new Window()
+  Object.assign(globalThis, { document: window.document, MutationObserver: window.MutationObserver })
+  const lifecycle = createAnnotationLifecycle()
+  const meta: AnnotationMeta = { type: "draft", comment: null, file: "never.ts", side: "additions", line: 1 }
+  let released = 0
+  lifecycle.track(meta, document.createElement("div"), () => released++)
+  document.body.append(document.createElement("span"))
+  await window.happyDOM.waitUntilComplete()
+  expect(released).toBe(1)
+  lifecycle.clear()
+  await window.happyDOM.close()
+})
+
 it("disposes detached and replaced annotation roots exactly once", async () => {
   const window = new Window()
   Object.assign(globalThis, { document: window.document, MutationObserver: window.MutationObserver })

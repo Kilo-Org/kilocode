@@ -28,6 +28,11 @@ import type { PRComment } from "../agent-manager/pr/pr-types"
 import { reviewRequest } from "../agent-manager/pr/pr-review-request"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { createPRDiffs } from "./pr-diff"
+
+// Compare only the PR identity. Ref-only refreshes must not clear local comments.
+function samePR(a: PRTarget | undefined, b: PRTarget | undefined) {
+  return a?.projectId === b?.projectId && a?.prNumber === b?.prNumber && a?.prUrl === b?.prUrl
+}
 import { createDiffCommentForms } from "../agent-manager/pr/diff-comment-forms"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
@@ -209,7 +214,9 @@ const DiffViewerContent: Component = () => {
       return
     }
     if (msg.type === "diffViewer.prComments") {
-      const changed = JSON.stringify(target()) !== JSON.stringify(msg.target)
+      // Only clear local comments when the PR identity changes. Ref-only
+      // refreshes (a push or rebase) must keep unsent comments.
+      const changed = !samePR(target(), msg.target)
       batch(() => {
         setRemote(msg.comments)
         setTarget(msg.target)

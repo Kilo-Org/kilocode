@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, untrack } from "solid-js"
+import { For, Show, createMemo, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
@@ -31,8 +31,6 @@ type Props = {
   submitOnEnter?: boolean
   /** Called when Escape is pressed in the editor. */
   onEscape?: () => void
-  /** Replace any stored draft with initialBody. Used when switching comment destination. */
-  replaceBody?: boolean
   inline?: boolean
 } & (
   | { action: "reply"; threadId: string }
@@ -145,6 +143,7 @@ export function PRCommentForm(props: Props) {
       props.action === "local" || props.action === "diff"
         ? [props.file, props.side, props.startLine, props.endLine]
         : undefined,
+      props.action === "diff" ? [props.github?.prNumber, props.github?.snapshotId] : undefined,
       props.action === "line" ? [props.snapshotId, props.path, props.side, props.startLine, props.endLine] : undefined,
       props.action === "review" ? [props.snapshotId, props.head] : undefined,
     ]),
@@ -166,15 +165,6 @@ export function PRCommentForm(props: Props) {
   const placeholder = () =>
     t(props.action === "reply" ? "agentManager.pr.comment.replyPlaceholder" : "agentManager.pr.comment.placeholder")
   const patch = (value: Partial<Draft>, id = key()) => setDrafts(id, (prev) => ({ ...(prev ?? blank), ...value }))
-  untrack(() => {
-    if (
-      props.replaceBody &&
-      (props.action === "line" || props.action === "local") &&
-      props.initialBody !== undefined &&
-      drafts[key()]?.body !== props.initialBody
-    )
-      patch({ body: props.initialBody, sent: undefined })
-  })
   const label = () =>
     props.action === "reply"
       ? t("agentManager.pr.comment.reply")
