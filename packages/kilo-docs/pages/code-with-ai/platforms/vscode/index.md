@@ -31,6 +31,7 @@ Key features include:
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **Keep Awake** — Optionally prevent system sleep while agents work
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
 - **Legacy Migration** — Automatic migration wizard for VSCode extension settings
@@ -56,6 +57,19 @@ Use these controls in the expanded strip:
 - **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
 - **Clear finished** hides all agents that are no longer running.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
+
+## Keep Awake
+
+Keep Awake prevents your computer from sleeping while Kilo sessions are busy or retrying. It is off by default and is available only in a local VS Code window (not in remote workspaces).
+
+Toggle it in either of these ways:
+
+- Run `/caffeinate` in the chat prompt
+- Run **Kilo Code: Toggle Keep Awake** from the Command Palette
+
+The first time you enable it, Kilo asks for confirmation and, in an untrusted workspace, asks you to trust the workspace first. Keep Awake prevents system sleep only — it does not keep the display on or disable screen locking, and agents may continue to access files, network services, and available credentials while the computer is locked. On Linux, it can also block manual suspend; turn Keep Awake off before suspending.
+
+The sleep inhibitor releases when sessions go idle, and it turns off when the VS Code window reloads. A notification explains enable, disable, and runtime failure states.
 
 ## Shared Settings
 

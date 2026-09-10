@@ -75,6 +75,17 @@ kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
+## Workspace Folders
+
+Group your Cloud Agent workspaces into folders in the sidebar. Folders are private to you and are not shared with your organization.
+
+- Create a folder with a name and an optional color, then move workspaces into it by dragging them onto the folder.
+- Rename, recolor, reorder, collapse, or delete folders from the folder menu. Deleting a folder does not delete the workspaces inside it — they move back to the ungrouped list.
+
+## Viewing Worktree Files
+
+Each Cloud Agent session saves the contents of the files it changed. Select a file from the session's change list to open it in a read-only file tab next to the chat and terminal tabs. The file pane shows the saved content or a diff of the change, and can reload the latest saved revision without starting the workspace.
+
 ## Agent Environment Profiles
 
 Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:

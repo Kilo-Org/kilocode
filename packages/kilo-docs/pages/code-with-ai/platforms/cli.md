@@ -137,6 +137,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/editor` | - | Open external editor |
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
+| `/caffeinate` | `/caffenate` | Toggle Keep Awake (prevent system sleep while agents work) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -237,6 +238,14 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
 There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
+
+## Keep Awake
+
+Keep Awake prevents your computer from sleeping while Kilo sessions are busy or retrying. It is off by default; toggle it with the `/caffeinate` command (also available as `/caffenate`) or the **Enable Keep Awake** command-palette action.
+
+- The first time you enable it, Kilo asks for confirmation. Keep Awake prevents system sleep only — it does not keep the display on or disable screen locking, and agents may continue to access files, network services, and available credentials while the computer is locked.
+- The sleep inhibitor activates when a session is busy or retrying and releases when sessions are idle.
+- The inhibitor is cleaned up when you exit the CLI. A toast message confirms enable and disable, and reports runtime failures.
 
 ## Slash Commands
 

@@ -99,7 +99,7 @@ In a managed worktree's chat, type `/update-from-base` and select the action to 
 
 The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
 
-The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing, discarding uncommitted work, and pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing and discarding uncommitted work. When [push fixes](#pushing-fixes-to-the-pull-request) is enabled (the default) and the worktree has a pull request, the agent pushes the branch after a clean merge so the pull request updates; otherwise the request prohibits pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
 
 ### Worktree Location
 
@@ -190,6 +190,35 @@ Use the actions on an expanded thread to:
 - **Open on GitHub** at the comment
 
 The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+
+#### Pushing fixes to the pull request
+
+When you send pull request CI failures or review comments to the agent from the PR panel — or update a worktree from its base while the worktree has a pull request — the agent is asked to validate its fix with local checks, then commit and push to the PR branch so the pull request updates and CI runs again. The agent is instructed never to force-push, and normal permission prompts still confirm each commit and push.
+
+This behavior is controlled by the **Push Pull Request Fixes** toggle under **Settings → Agent Behaviour** (the `kilo-code.new.agentManager.pushFixes` setting), and it is on by default. Turn it off to keep fixes local for manual commit and push. Local inline review comments you send from the diff panel stay manual either way.
+
+#### Merge readiness and merging
+
+The PR panel header shows the approval count with reviewer avatars, and a merge readiness section summarizes whether GitHub can merge the pull request:
+
+| State | Meaning |
+|---|---|
+| Ready to merge | GitHub reports a clean merge state |
+| Merging blocked | Branch protection requirements are not met yet |
+| Branch is behind the base branch | The base branch has newer commits |
+| Checks are failing | Required checks are failing |
+| Merge conflicts | The branch conflicts with the base branch |
+| Draft pull request | Mark the PR ready for review before merging |
+| Checking mergeability | GitHub has not computed mergeability yet |
+
+The available actions depend on the state:
+
+- **Merge method menu** — merge with a merge commit, squash, or rebase. Only the methods the repository allows are listed, and the last method you used is remembered per repository.
+- **Enable auto-merge / Disable auto-merge** — shown when the repository allows auto-merge. GitHub merges the pull request automatically once its requirements are met, with the selected method.
+- **Update branch** — merge the latest base branch changes into the PR branch via GitHub when the branch is behind.
+- **Fix with Kilo** — send the conflicting file list to the agent to resolve merge conflicts. Conflicting files are detected without changing your worktree and shown in a bounded list.
+
+Merges run remotely on GitHub. The panel refuses stale actions when the pull request changed since the data was loaded; refresh the panel and try again in that case.
 
 ### Creating a New Worktree Session
 

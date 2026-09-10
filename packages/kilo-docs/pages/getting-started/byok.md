@@ -24,6 +24,7 @@ Use your provider API key to route matching models through your account:
 
 - Anthropic
 - AWS Bedrock
+- Azure OpenAI (experimental)
 - DeepSeek
 - Fireworks
 - Google AI Studio
@@ -87,6 +88,37 @@ Your IAM user or role must have the following permissions:
 
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
+
+### Azure OpenAI configuration
+
+Azure OpenAI (listed as **Azure Foundry (experimental)**) requires structured JSON credentials instead of a single API key:
+
+```json
+{
+  "apiKey": "...",
+  "resourceName": "my-resource"
+}
+```
+
+| Field | Description |
+|---|---|
+| `apiKey` | Your Azure OpenAI API key |
+| `resourceName` | The subdomain of your Azure OpenAI endpoint, for example `my-resource` from `my-resource.openai.azure.com` |
+
+If your Azure deployments use custom names that differ from the gateway model slugs, add a `modelMappings` array that maps each gateway model slug to your deployment name:
+
+```json
+{
+  "apiKey": "...",
+  "resourceName": "my-resource",
+  "modelMappings": [
+    {
+      "gatewayModelSlug": "openai/gpt-5.4-nano",
+      "customModelId": "my-gpt-5-4-nano-deployment"
+    }
+  ]
+}
+```
 
 ## How Bring Your Own Key works
 
