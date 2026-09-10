@@ -49,14 +49,40 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
       ? ""
       : `(allow file-write*\n  (require-all\n    (require-any ${allow.join(" ")})\n    ${[...deny, ...names].join("\n    ")}\n  )\n)`
   return {
-    value: [
-      base,
-      networkPolicy(profile, proxy),
-      "; reads are not confined by the file-level sandbox\n(allow file-read*)",
-      write,
-    ].join("\n"),
+    value: [base, networkPolicy(profile, proxy), read(profile, params, names), write].join("\n"),
     params,
   }
+}
+
+/**
+ * Reads. Without `allowRead` the profile leaves them open, which is what every ordinary session uses.
+ * With it, only the listed subtrees are readable and everything else — the rest of the home directory,
+ * credential stores, unrelated checkouts — is not.
+ *
+ * Two details are load-bearing. Metadata stays readable everywhere: without it a confined process
+ * cannot even resolve a path through its own parents, and the runtime aborts before it starts. The
+ * root directory entry itself is always granted for the same reason. So existence and size of a file
+ * outside the allowed set remain observable; its contents do not.
+ */
+function read(profile: Profile, params: Array<Param>, names: ReadonlyArray<string>) {
+  const rules = profile.filesystem.allowRead
+  if (!rules) return "; reads are not confined by this profile\n(allow file-read*)"
+  const allow = rules.map((rule, index) => {
+    const key = `ALLOW_READ_${index}`
+    params.push({ key, value: rule.path })
+    return filter(rule, key)
+  })
+  const deny = (profile.filesystem.denyRead ?? []).flatMap((rule, index) => {
+    const key = `DENY_READ_${index}`
+    params.push({ key, value: rule.path })
+    return exclude(rule, key)
+  })
+  const clauses = [`(require-any (literal "/") ${allow.join(" ")})`, ...deny, ...names]
+  return [
+    "; path resolution needs metadata everywhere; file contents are confined to the allowed subtrees",
+    "(allow file-read-metadata)",
+    `(allow file-read*\n  (require-all\n    ${clauses.join("\n    ")}\n  )\n)`,
+  ].join("\n")
 }
 
 export function generate(profile: Profile, launch: Launch, proxy?: ProxyRuntime): Launch {

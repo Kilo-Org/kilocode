@@ -18,6 +18,8 @@ import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
+import { SecurityGate } from "@/kilocode/security/gate"
+import { SecurityDeniedError } from "@/kilocode/security/error"
 import { Question } from "@/question"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -357,7 +359,14 @@ export namespace KiloSessionPrompt {
     origins?: PermissionProvenance.Origins
     agent: Agent.Info
     session: Session.Info
-    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+    /**
+     * The permission request. `security` is Kilo's own field: it carries the tool-call identity and
+     * arguments to the security engine and is dropped again by `Permission.ask`, so it never reaches
+     * the stored permission record, client events or logs.
+     */
+    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset"> & { security?: SecurityGate.Request["security"] }
+    /** Security Auto Mode options; omitted or disabled keeps the historical behaviour byte for byte. */
+    security?: SecurityGate.Options
   }) {
     const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
     const session = yield* input.sessions
@@ -369,7 +378,26 @@ export namespace KiloSessionPrompt {
       session,
       origins: input.origins,
     })
-    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
+
+    // Security Auto Mode: adjudicate before the permission service sees the request. A DENY never
+    // reaches Permission.ask; a hard ASK forces an interactive prompt; ALLOW only lifts the default
+    // ask; a soft ASK leaves the existing rules in charge. Existing deny rules and hard vetoes still
+    // apply inside Permission.ask, so the engine can only tighten the outcome.
+    const decision = input.security?.enabled
+      ? yield* SecurityGate.evaluate({
+          request: input.request,
+          options: input.security,
+          sessionID: session.id,
+          agent: agent.name,
+        })
+      : undefined
+    if (decision?.action === "deny") {
+      return yield* Effect.fail(SecurityDeniedError.fromDecision(input.request.permission, decision))
+    }
+    const applied = decision
+      ? SecurityGate.apply({ request: input.request, ruleset, decision })
+      : { request: input.request, ruleset }
+    const outcome = yield* input.permission.ask({ ...applied.request, ruleset: applied.ruleset, hardRuleset })
 
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })

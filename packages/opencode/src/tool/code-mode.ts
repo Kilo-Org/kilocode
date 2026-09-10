@@ -10,6 +10,8 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
+import { SecurityGate } from "@/kilocode/security/gate" // kilocode_change
+import { ToolOrigin } from "@/kilocode/security/tool/origin" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -152,7 +154,30 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
         input.ctx.sessionID,
         input.entry.tool,
         Effect.gen(function* () {
-          yield* input.ctx.ask({ permission: input.entry.key, metadata: {}, patterns: ["*"], always: ["*"] })
+          // kilocode_change start - code mode is a second execution wrapper for MCP: name the real
+          // callee so the delegated-authority layer sees the same identity it sees on the normal path
+          const options = (input.ctx.extra as { security?: SecurityGate.Options } | undefined)?.security
+          const security = options
+            ? SecurityGate.describe({
+                tool: input.entry.key,
+                provenance: ToolOrigin.mcpProvenance(input.entry.tool),
+                args: input.args,
+                options,
+                mcp: {
+                  server: input.entry.tool.clientName,
+                  tool: input.entry.tool.def.name,
+                  remote: ToolOrigin.mcpProvenance(input.entry.tool) === "mcp-remote",
+                },
+              })
+            : undefined
+          yield* input.ctx.ask({
+            permission: input.entry.key,
+            metadata: {},
+            patterns: ["*"],
+            always: ["*"],
+            ...(security ? { security } : {}),
+          })
+          // kilocode_change end
           // Deliberately mirrors McpCatalog.convertTool's transport call so the MCP service stays free of tool-loop concerns.
           return yield* Effect.promise(async () => {
             const raw = await input.entry.tool.client.callTool(

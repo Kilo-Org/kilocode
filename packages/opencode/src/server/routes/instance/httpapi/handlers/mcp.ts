@@ -6,6 +6,8 @@ import { InstanceHttpApi } from "../api"
 import { McpServerNotFoundError } from "../errors"
 import { AddPayload, AuthCallbackPayload, StatusMap, UnsupportedOAuthError } from "../groups/mcp"
 import { McpApps } from "@/kilocode/mcp/apps" // kilocode_change
+import { Config } from "@/config/config" // kilocode_change
+import { SecurityFlag } from "@/kilocode/security/flag" // kilocode_change
 
 export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handlers) =>
   Effect.gen(function* () {
@@ -103,7 +105,16 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
 
     // kilocode_change start - MCP Apps experimental resource/tool endpoints; logic lives in @/kilocode/mcp/apps
     const readResource = McpApps.readResource(mcp, flags)
-    const callTool = McpApps.callTool(mcp, flags)
+    // kilocode_change start - widget-initiated MCP calls bypass the session gate; with Security Auto on
+    // they are refused unless the user explicitly opted back in from their global config.
+    const config = yield* Config.Service
+    const allowed = Effect.gen(function* () {
+      if (!(yield* SecurityFlag.enabled(config))) return true
+      const global = yield* SecurityFlag.globalConfig(config)
+      return global?.experimental?.security_auto_mcp_apps === true
+    }).pipe(Effect.catch(() => Effect.succeed(false)))
+    const callTool = McpApps.callTool(mcp, flags, allowed)
+    // kilocode_change end
     // kilocode_change end
 
     return handlers

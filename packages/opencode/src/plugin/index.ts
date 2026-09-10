@@ -33,6 +33,12 @@ import { AnacondaDesktopPlugin } from "@/kilocode/anaconda-desktop/provider" // 
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Global } from "@opencode-ai/core/global" // kilocode_change
+import path from "path" // kilocode_change
+// kilocode_change start
+// The security modules used below are imported lazily inside the layer; see the comment at their
+// import site for why importing them at module scope breaks the layer graph.
+// kilocode_change end
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstallationChannel } from "@opencode-ai/core/installation/version"
 
@@ -191,15 +197,96 @@ const layer = Layer.effect(
         }
         if (plugins.length) yield* config.waitForDependencies()
 
+        // kilocode_change start - classify repository-controlled plugin code before
+        // its module scope can run. Read from the global config only: a project must not trust itself.
+        //
+        // The four security modules are imported here rather than at module scope. The gate reuses the
+        // shell parser from `tool/shell.ts`, which reaches `tool/tool.ts` -> `agent/agent.ts` ->
+        // `provider/provider.ts`; provider declares `Plugin.node` among its layer dependencies, so a
+        // static import turns this module into a cycle and the dependency array observes an
+        // uninitialised node. Deferring the import to layer construction removes the edge entirely.
+        const [{ CodeTrust }, { ExtensionHost }, { SecurityGate }, { SecurityFlag }] = yield* Effect.promise(() =>
+          Promise.all([
+            import("@/kilocode/security/code/trust"),
+            import("@/kilocode/security/extension/host"),
+            import("@/kilocode/security/gate"),
+            import("@/kilocode/security/flag"),
+          ] as const),
+        )
+        const globalConfig = yield* SecurityFlag.globalConfig(config)
+        const codePolicy = CodeTrust.policy(globalConfig, yield* SecurityFlag.codeEnabled(config))
+        // An approved *project* plugin is evaluated in a permissioned host process,
+        // and its hooks are forwarded there. Approval decides that it may run, not with what authority.
+        const runtimeOn = yield* SecurityFlag.runtimeEnabled(config)
+        const instance = yield* InstanceState.context
+        const securityOptions = yield* SecurityGate.options({
+          config,
+          sandboxed: false,
+          workspace: { directory: instance.directory, worktree: instance.worktree },
+        })
+        const hostedSpecs = new Set<string>()
+        // Every host started here is a child process; the finalizer below is what ends it. Without
+        // one they outlive the instance that approved them.
+        const hostedHandles: Awaited<ReturnType<typeof ExtensionHost.start>>[] = []
+        const hostPlugin = (file: string, digest: string) =>
+          ExtensionHost.start({
+            identity: {
+              type: "plugin",
+              origin: "workspace",
+              source: file,
+              digest,
+              workspace: instance.directory,
+              granted: ExtensionHost.grantsFor(globalConfig, digest),
+            },
+            file,
+            scratch: path.join(Global.Path.state, "extension-host", digest.slice(0, 16)),
+            options: securityOptions,
+            allowUnconfinedReads: ExtensionHost.unconfinedReadsAllowed(globalConfig),
+          })
+        // kilocode_change end
         const loaded = yield* Effect.promise(() =>
           PluginLoader.loadExternal({
             items: plugins,
             kind: "server",
+            // kilocode_change start - the trust decision sits between resolve and import; an approved
+            // project plugin is then started in the host instead of being imported here
+            trust: (resolved, origin) => {
+              const decision = CodeTrust.guard({
+                file: resolved.entry,
+                kind: "plugin",
+                scope: origin.scope,
+                policy: codePolicy,
+              })
+              if (!decision.allow) return false
+              if (!runtimeOn || decision.origin !== "workspace" || !decision.digest) return true
+              hostedSpecs.add(resolved.spec)
+              const file = CodeTrust.fileFromUrl(resolved.entry)
+              const digest = decision.digest
+              void hostPlugin(file, digest)
+                .then((handle) => {
+                  hostedHandles.push(handle)
+                  // Hosted hooks observe events; they cannot mutate the main process's objects, which
+                  // is a deliberate reduction of what a project plugin used to be able to do.
+                  const forwarding: Record<string, (hookInput: unknown, output: unknown) => Promise<void>> = {}
+                  for (const name of handle.hooks) {
+                    forwarding[name] = async (hookInput, output) => {
+                      await handle.trigger(name, hookInput, output)
+                    }
+                  }
+                  hooks.push(forwarding as unknown as Hooks)
+                })
+                .catch(() => undefined)
+              return false
+            },
+            // kilocode_change end
             report: {
               start(candidate) {},
               missing(candidate, _retry, message) {},
               error(candidate, _retry, stage, error, resolved) {
                 const spec = candidate.plan.spec
+                // kilocode_change start - a plugin routed to the extension host is not a load failure
+                if (stage === "trust" && hostedSpecs.has(spec)) return
+                // kilocode_change end
                 const cause = error instanceof Error ? (error.cause ?? error) : error
                 const message = stage === "load" ? errorMessage(error) : errorMessage(cause)
 
@@ -269,6 +356,20 @@ const layer = Layer.effect(
           })
         })
         yield* Effect.addFinalizer(() => unsubscribe)
+
+        // kilocode_change start - stop the extension hosts with the instance that started them
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            for (const handle of hostedHandles.splice(0)) {
+              try {
+                handle.stop()
+              } catch {
+                // the child may already be gone
+              }
+            }
+          }),
+        )
+        // kilocode_change end
 
         yield* Effect.addFinalizer(() =>
           Effect.forEach(

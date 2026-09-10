@@ -283,6 +283,10 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
+// kilocode_change start - expose the tree-sitter scan primitives so the security normalizer reuses this parser
+export const ShellAst = { parse, parts, source, commands, unquote, home, expand, provider, dynamic, prefix, pathArgs }
+// kilocode_change end
+
 const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
@@ -427,7 +431,11 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
-        const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
+        const metadata = {
+          ...heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))),
+          cwd: input.cwd,
+          shell: input.shell,
+        } // kilocode_change - cwd/shell let the security engine re-normalize the command
         if (!containsPath(input.cwd, instance)) {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"

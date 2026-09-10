@@ -316,6 +316,62 @@ export const Info = Schema.Struct({
       shared_agent_board: Schema.optional(Schema.Boolean).annotate({
         description: "Share discoveries between the main agent and subagents within one session",
       }),
+      security_auto: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode: adjudicate side-effecting tool calls with a deterministic security policy (ALLOW / ASK / DENY) before the permission prompt. Honoured from the global config only.",
+      }),
+      security_auto_packages: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: evaluate package installs (npm/pnpm/yarn/bun, npx) against registry provenance and install-time scripts before they run. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_egress: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: track credential reads per session and block outbound actions that would carry that material. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_tools: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: classify the authority of MCP, plugin and workspace tools before they run, so a tool nothing vouches for cannot execute unattended. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_content: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: classify the content the agent actually obtains, so a credential living in an ordinary workspace file is recognised even though its path is not sensitive. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_code: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: repository-controlled executable code (.kilocode/tool files, project plugins) is classified before it is imported, so its module-level code cannot run just because Kilo discovered it. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_mcp_apps: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Allow MCP Apps widget-initiated tool calls (the HTTP route) while Security Auto Mode is on. That route has no session and no permission ask, so it is refused by default; set true to accept the risk. Global config only.",
+      }),
+      security_auto_code_trust: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description:
+          "SHA-256 digests of project tool/plugin files you have reviewed and allow Kilo to import. Approval is keyed by content, so editing an approved file revokes it. Global config only.",
+      }),
+      security_auto_extension_runtime: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: run approved project extensions (custom tools, project plugins) in a permissioned host process instead of the main Kilo process, so their privileged effects go through the security engine. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_extension_grants: Schema.optional(
+        Schema.Record(Schema.String, Schema.mutable(Schema.Array(Schema.String))),
+      ).annotate({
+        description:
+          'Capabilities granted per approved extension digest, e.g. {"<sha256>": ["filesystem-write","network"]}. Approving an extension\'s code does not grant these; without an entry an extension gets read-only capability. Global config only.',
+      }),
+      security_auto_extension_unconfined_reads: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Accept extension hosts with ambient read access to your files: it turns read confinement off where the platform supports it, and lets an approved extension run where it does not (by default the host refuses to start there rather than reading whatever you can). Global config only.",
+      }),
+      security_auto_classifier: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Security Auto Mode layer: send actions the deterministic layers left unsettled to a small model, which may raise them to an ask a person has to answer, and rewrite the reason into a plain sentence. It can only tighten a decision, never relax one, and it is never asked about a denial or an action the engine already settled. It uses the model you already configured and does nothing at all if none resolves. On by default when security_auto is on; set false to disable. Global config only.",
+      }),
+      security_auto_tool_capabilities: Schema.optional(
+        Schema.Record(Schema.String, Schema.mutable(Schema.Array(Schema.String))),
+      ).annotate({
+        description:
+          'Capabilities you vouch for, per tool id or glob, e.g. {"docs_*": ["readonly"]}. Recognised values: readonly, filesystem-read, filesystem-write, process, network, package, delegated-authority, security-control. Declared tools take the ordinary permission path instead of the unknown-authority prompt. Global config only.',
+      }),
       // kilocode_change end
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description: "Tools that should only be available to primary agents.",
