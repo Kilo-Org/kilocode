@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.6.1
+
+### Patch Changes
+
+- [#14003](https://github.com/Kilo-Org/kilocode/pull/14003) [`7c23a3e`](https://github.com/Kilo-Org/kilocode/commit/7c23a3e9380dcca59aec248c9e4e3058464e311d) - Fix the TUI question dialog so Enter submits and Escape cancels a custom answer while the prompt autocomplete mode is active.
+
 ## 7.6.0
 
 ### Major Changes
