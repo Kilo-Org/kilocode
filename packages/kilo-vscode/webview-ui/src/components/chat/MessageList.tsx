@@ -447,16 +447,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Matches TaskToolExpanded.tsx (the renderer this webview actually
   // registers for "task", overriding kilo-ui's default) exactly: title is
-  // always `i18n.t("ui.tool.agent", { type })` regardless of status — the
-  // "capitalize" CSS class only changes how it *looks*, the DOM text node
-  // itself is the raw, lowercase subagent_type. The "(N)" child-tool-count
-  // suffix shown there is a live value from session.getSessionToolCount(),
-  // not stored on the part at all, so it can't be indexed from a snapshot —
-  // searching for that count isn't meaningful content anyway.
+  // `i18n.t("ui.tool.agent", { type })` once subagent_type is known, and
+  // `ui.tool.agent.default` while it is still absent. The "capitalize" CSS
+  // class only changes how it *looks*, the DOM text node itself is the raw,
+  // lowercase subagent_type. The "(N)" child-tool-count suffix shown there is
+  // a live value from session.getSessionToolCount(), not stored on the part at
+  // all, so it can't be indexed from a snapshot — searching for that count
+  // isn't meaningful content anyway.
   function taskText(part: Part & { type: "tool" }, state: ToolState): string[] {
     const input = state.input as { subagent_type?: string; description?: string } | undefined
-    const type = input?.subagent_type || part.tool
-    const chunks = [i18n.t("ui.tool.agent", { type })]
+    const type = input?.subagent_type
+    const chunks = [type ? i18n.t("ui.tool.agent", { type }) : i18n.t("ui.tool.agent.default")]
     if (input?.description) chunks.push(input.description)
     // TaskToolExpanded.tsx only shows the raw <task_result> body when there's
     // no live child session to display instead (result() there resolves to
