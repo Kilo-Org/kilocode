@@ -1,5 +1,102 @@
 # kilo-code
 
+## 7.6.0
+
+### Minor Changes
+
+- [#13951](https://github.com/Kilo-Org/kilocode/pull/13951) [`492a2ff`](https://github.com/Kilo-Org/kilocode/commit/492a2ffa2609fcffa86471a46cbc0e5b8923130e) - Ask the agent to commit and push when you send pull request CI failures or review comments from the Agent Manager PR panel, or update a worktree from its base, so the pull request updates without a follow-up prompt. Permission prompts still confirm each commit and push. Turn off "Push Pull Request Fixes" in Settings, Agent Behaviour to keep commits manual.
+
+- [#13927](https://github.com/Kilo-Org/kilocode/pull/13927) [`ed3cdc6`](https://github.com/Kilo-Org/kilocode/commit/ed3cdc6a144c73215e3fa50bea0555130d6c5796) - Add the `/caffeinate` command and notifications that explain when Kilo keeps the computer awake while agents work.
+
+- [#13929](https://github.com/Kilo-Org/kilocode/pull/13929) [`9dae829`](https://github.com/Kilo-Org/kilocode/commit/9dae82992534ee7d91f221dc8fe6690b3e7ddc2a) Thanks [@WebReflection](https://github.com/WebReflection)! - Add an opt-in, one-time import of supported global Claude Code instructions, simple skills, and disabled MCP definitions into Kilo.
+
+- [#13965](https://github.com/Kilo-Org/kilocode/pull/13965) [`6bbe6ac`](https://github.com/Kilo-Org/kilocode/commit/6bbe6ac379c2651fbc957072393bc1adcd85bf00) - Click the thinking indicator to scroll the current chat to the latest message.
+
+- [#13903](https://github.com/Kilo-Org/kilocode/pull/13903) [`99eab84`](https://github.com/Kilo-Org/kilocode/commit/99eab84a23bef0ff003c4e71f9a50a699289ef6b) - Write and preview multiline PR comments and code suggestions, reply from the PR panel or diff view, and edit or delete your own comments directly in Agent Manager.
+
+  Comment on selected PR diff lines, submit reviews, and preview and apply suggested changes to the local worktree without staging, committing, or pushing.
+
+- [#13771](https://github.com/Kilo-Org/kilocode/pull/13771) [`3c28e7a`](https://github.com/Kilo-Org/kilocode/commit/3c28e7a9a3d837fdf16dcf72408a9a114450dd0f) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Alert you when Kilo finishes a task, needs your input, needs permission, or hits a terminal error. Enable VS Code notifications, native OS notifications (Windows, macOS, and Linux), or both — OS notifications reach you while the editor is in the background, and VS Code notifications wait for you with a **Show** action that opens the session and jumps to the latest message. Notifications are skipped for the session you are already looking at, they follow your selected language, and a **Test** button confirms native notifications work on your system.
+
+- [#13958](https://github.com/Kilo-Org/kilocode/pull/13958) [`4c2a6eb`](https://github.com/Kilo-Org/kilocode/commit/4c2a6eb69001c3ac7134bdb38f69609fbfd4681f) - Show commits, force pushes, merges, approvals, and the pull request description in the Agent Manager PR conversation, in the order they happened.
+
+- [#13953](https://github.com/Kilo-Org/kilocode/pull/13953) [`3c04a86`](https://github.com/Kilo-Org/kilocode/commit/3c04a86c59bda4e2e8c5a444c2390854859c4090) - Show pull request approvals and merge readiness in Agent Manager, with GitHub-backed branch updates, merge methods, auto-merge, and conflict resolution with Kilo.
+
+- [#13679](https://github.com/Kilo-Org/kilocode/pull/13679) [`e27ff0a`](https://github.com/Kilo-Org/kilocode/commit/e27ff0a6db3763de6170776eda552cfcb9340ba0) - Keep working toward a session goal with `/goal`, with shared pause, resume, and clear controls in the terminal and VS Code. Pause goals after no-action replies, terminal failures, Stop, new messages, and backend restarts. Rename custom commands or MCP prompts named `goal` to use this reserved command. Show a labeled Goal icon with hover details while work runs.
+
+  Compose multiline goals with images and file attachments in VS Code. Select `/goal` to enter goal mode, or cancel to keep the draft as ordinary chat. Keep drafts and attachments when submission fails.
+
+  Keep the current goal running when replacement attachments are invalid. Make pending Goal submissions read-only, and preserve the draft when Cancel exits Goal mode before acknowledgement.
+
+  Disable clarification questions during active goals and delegated work while keeping permission approvals unchanged. Make safe, reversible decisions autonomously and report completion or blockers.
+
+  Retain Active, Complete, Blocked, and Paused goals with their objective and reason until explicitly cleared. Let the working model explicitly report completion or a blocker with the Goal-only reporting tool, without a separate evaluator or independent verification claim. Pause no-action turns that have no explicit report. Keep complete goals complete after a backend restart and label their resume action as Restart.
+
+  Starting a Goal while a response is running replaces that response after the Goal request is validated.
+
+- [#13940](https://github.com/Kilo-Org/kilocode/pull/13940) [`b8fe009`](https://github.com/Kilo-Org/kilocode/commit/b8fe0095d14a08c36b5648fe3c957c81e402911c) - Identify subagents with consistent theme-colored avatars in Task cards, background agents, subagent tabs, and swarm messages. Show all participants in board message headers, and animate running avatars instead of showing a separate loading indicator.
+
+- [#13782](https://github.com/Kilo-Org/kilocode/pull/13782) [`4d2d800`](https://github.com/Kilo-Org/kilocode/commit/4d2d8001e550c39cfb871f83943b1d5411fd5234) - View and reset the shared agent board from its owning session without stopping agents or clearing conversations.
+
+### Patch Changes
+
+- [#13926](https://github.com/Kilo-Org/kilocode/pull/13926) [`818d31d`](https://github.com/Kilo-Org/kilocode/commit/818d31d0aa888bbea6f7da2660f1d74fbf1d02fd) - Explain that Agent Manager requires a specific project folder when the VS Code workspace is the home folder or a filesystem root.
+
+- [#13975](https://github.com/Kilo-Org/kilocode/pull/13975) [`e85805f`](https://github.com/Kilo-Org/kilocode/commit/e85805f30b7a3cf9adeb757d1f23d5ca307ae622) - Keep the Agent Manager PR push toggle synchronized with the Settings value across open Kilo views.
+
+- [#13916](https://github.com/Kilo-Org/kilocode/pull/13916) [`1ec6268`](https://github.com/Kilo-Org/kilocode/commit/1ec62684fcd82402b7e1628ce233117ccdee1092) - Regroup the Agent Manager toolbar: optional session panels (documents, subagents) sit left of a separator, and the fixed workbench (changes, PR, apply, open in VS Code, browser, run, terminal) keeps stable positions on the right. Toolbar icons render at a uniform 1px stroke and dim when disabled. Open the full-screen review from the changes panel header instead of a toolbar button.
+
+- [#13990](https://github.com/Kilo-Org/kilocode/pull/13990) [`7febec5`](https://github.com/Kilo-Org/kilocode/commit/7febec58fe96ffacc60592e5e94a0b800f9bdd2c) - Report the direct recipient execution state in board_post results and warn when that recipient stopped, failed, was cancelled, or is unknown, so agents do not assume a finished subagent will read the message.
+
+- [#13967](https://github.com/Kilo-Org/kilocode/pull/13967) [`0aad88e`](https://github.com/Kilo-Org/kilocode/commit/0aad88ec3034be8a62e0a2e9bad4d41162a1ef4e) - Resolve agent board route metadata from the session store while a message is still being written, so sender and recipient avatars and titles appear without waiting for the completed tool result.
+
+- [#13920](https://github.com/Kilo-Org/kilocode/pull/13920) [`05c763f`](https://github.com/Kilo-Org/kilocode/commit/05c763f12e9b387213939e5f2600c8e021bae113) - Show an actionable message when creating worktrees from a repository with no commits.
+
+- [#13925](https://github.com/Kilo-Org/kilocode/pull/13925) [`cdbb926`](https://github.com/Kilo-Org/kilocode/commit/cdbb9265536e440854b30c6f3f35d86cd5ac38f0) - Reduce Kilo Console startup time by loading project, terminal, diff, and configuration features on demand.
+
+- [#13970](https://github.com/Kilo-Org/kilocode/pull/13970) [`fa986a1`](https://github.com/Kilo-Org/kilocode/commit/fa986a115d82ae3efb02f5cae4600afc1743963f) - Defer automatic plan previews until their agent session is active.
+
+- [#13991](https://github.com/Kilo-Org/kilocode/pull/13991) [`448c821`](https://github.com/Kilo-Org/kilocode/commit/448c8214b741c29801b37d5b9bbd450b37772df0) - Keep disclosure chevron buttons unhighlighted when expanded, so Agent Manager section headers and chat task headers render consistently. Expanded and collapsed section headers now use the same chevron glyph.
+
+- [#13928](https://github.com/Kilo-Org/kilocode/pull/13928) [`3e05727`](https://github.com/Kilo-Org/kilocode/commit/3e057279b5011c886d68690434bb44faaf6c65cd) - Fix Agent Manager terminal tabs getting stuck at an expanded width after closing a tab.
+
+- [#13959](https://github.com/Kilo-Org/kilocode/pull/13959) [`29a16ff`](https://github.com/Kilo-Org/kilocode/commit/29a16ffd0ee89444e81428f84747afecf88ebf5f) - Keep expanded Agent Manager PR comments readable by hiding their duplicate header previews.
+
+- [#13943](https://github.com/Kilo-Org/kilocode/pull/13943) [`ada216a`](https://github.com/Kilo-Org/kilocode/commit/ada216a9020a6c4d36f3e3ef6dd2f374ee1e7c5c) - Keep multi-project Agent Manager behind its existing experimental setting while remaining state bugs and the project worktree-start control are addressed. The worktree-start control can currently scroll out of view, so this rollback does not introduce a sticky or replacement control.
+
+- [#13949](https://github.com/Kilo-Org/kilocode/pull/13949) [`a658942`](https://github.com/Kilo-Org/kilocode/commit/a6589426458fcbe9f30c2771b36508f3ae3deeed) - Fix a crash when session repository metadata is resolved without an instance context (e.g. the API fallback path): it now degrades to no git metadata instead of throwing.
+
+- [#13913](https://github.com/Kilo-Org/kilocode/pull/13913) [`2c99cd6`](https://github.com/Kilo-Org/kilocode/commit/2c99cd6f5115484c44bc9422ac1600fe8ba75714) - Keep deleted diff bars visible without coloring deleted line numbers.
+
+- [#13966](https://github.com/Kilo-Org/kilocode/pull/13966) [`8992b3c`](https://github.com/Kilo-Org/kilocode/commit/8992b3c25ce7e72aebca11b02496a9b8b54507d0) - Open Agent Manager worktree PR buttons in the internal PR sidebar instead of directly in GitHub.
+
+- [#13952](https://github.com/Kilo-Org/kilocode/pull/13952) [`19d6dbc`](https://github.com/Kilo-Org/kilocode/commit/19d6dbca6fefa305ae2b8c6caaa3c8020bc7cd51) - Show reviewer avatars and GitHub-style review states in the Agent Manager PR sidebar, and remove the redundant review decision row.
+
+- [#13971](https://github.com/Kilo-Org/kilocode/pull/13971) [`6d21b59`](https://github.com/Kilo-Org/kilocode/commit/6d21b591b165e653dd94e459986cf1e5c739dd4e) - Keep the speech-to-text button pointer stable while microphone capture or transcription is in progress.
+
+- [#13987](https://github.com/Kilo-Org/kilocode/pull/13987) [`5026f6d`](https://github.com/Kilo-Org/kilocode/commit/5026f6d451e09c607f047d68ca50a37c611c75c7) - Keep tool reveal animations from replaying when switching Agent Manager worktrees or sessions, and settle encrypted reasoning blocks as soon as the response moves on instead of pulsing until the whole reasoning item finishes.
+
+- [#13962](https://github.com/Kilo-Org/kilocode/pull/13962) [`b9433fc`](https://github.com/Kilo-Org/kilocode/commit/b9433fcf33205e2babf554754a0536f8fe1eb500) - Smooth out reasoning blocks with auto-collapse enabled: the streaming viewport scrolls smoothly without a flickering scrollbar, finished blocks rest in place instead of jumping and collapsing, and new tool calls grow in instead of popping.
+
+- [#13976](https://github.com/Kilo-Org/kilocode/pull/13976) [`df4bc06`](https://github.com/Kilo-Org/kilocode/commit/df4bc068ae6e9a754c19f02fe73531d8fd6e0be8) - Refine the Agent Manager auto-merge button with centered content, a muted blue split-button treatment, and a clean chevron hover state.
+
+- [#13949](https://github.com/Kilo-Org/kilocode/pull/13949) [`a658942`](https://github.com/Kilo-Org/kilocode/commit/a6589426458fcbe9f30c2771b36508f3ae3deeed) - Remote sessions started outside the selected repository now show the correct repository name and branch in the sessions list.
+
+- [#13973](https://github.com/Kilo-Org/kilocode/pull/13973) [`e67ea3c`](https://github.com/Kilo-Org/kilocode/commit/e67ea3c9526c2b8da711b0a793e1d6830d3052de) - Resize and right-align the Agent Manager Create Worktree button.
+
+- [#13974](https://github.com/Kilo-Org/kilocode/pull/13974) [`d3dfa36`](https://github.com/Kilo-Org/kilocode/commit/d3dfa365c1485a5e49067323f626051f2ae861f9) - Keep reasoning blocks at a steady width and stop them from flickering while the reasoning streams.
+
+- [#13948](https://github.com/Kilo-Org/kilocode/pull/13948) [`a5667d2`](https://github.com/Kilo-Org/kilocode/commit/a5667d23fc92856c8a1ef0ec67c8b5bed880c9da) - Unify icon-button sizing, states, accessibility, and split-button interactions across Kilo webviews.
+
+- Updated dependencies [[`448c821`](https://github.com/Kilo-Org/kilocode/commit/448c8214b741c29801b37d5b9bbd450b37772df0), [`2c99cd6`](https://github.com/Kilo-Org/kilocode/commit/2c99cd6f5115484c44bc9422ac1600fe8ba75714), [`b5cf426`](https://github.com/Kilo-Org/kilocode/commit/b5cf426158d86573eb0eeb08d754231d813f2d64), [`e27ff0a`](https://github.com/Kilo-Org/kilocode/commit/e27ff0a6db3763de6170776eda552cfcb9340ba0), [`4d2d800`](https://github.com/Kilo-Org/kilocode/commit/4d2d8001e550c39cfb871f83943b1d5411fd5234), [`a5667d2`](https://github.com/Kilo-Org/kilocode/commit/a5667d23fc92856c8a1ef0ec67c8b5bed880c9da)]:
+  - @kilocode/kilo-ui@7.6.0
+  - @kilocode/sdk@8.0.0
+  - @kilocode/plugin@7.5.17
+  - @opencode-ai/ui@7.5.17
+  - @opencode-ai/core@7.5.17
+  - @kilocode/kilo-gateway@7.5.17
+  - @kilocode/kilo-indexing@7.5.17
+
 ## 7.5.16
 
 ### Minor Changes
