@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.6.2
+
+### Patch Changes
+
+- [#14013](https://github.com/Kilo-Org/kilocode/pull/14013) [`d2381d7`](https://github.com/Kilo-Org/kilocode/commit/d2381d7ac0949226df5c05680de0c5c5e0a3b690) - Enable the experimental shared agent board (Kilo Swarm) with the `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD` environment variable, or the umbrella `KILO_EXPERIMENTAL`, in addition to the `experimental.shared_agent_board` config key.
+
 ## 7.6.1
 
 ### Patch Changes

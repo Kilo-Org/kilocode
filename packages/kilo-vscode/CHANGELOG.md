@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.6.2
+
 ## 7.6.1
 
 ### Minor Changes
