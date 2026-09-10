@@ -51,4 +51,36 @@ describe("createThrottledValue cadence", () => {
     const slow = await countRenders(interval, 30, 6)
     expect(fast).toBeGreaterThan(slow)
   })
+
+  test("flushes the pending tail immediately when the cadence slows", async () => {
+    const [source, setSource] = createSignal("a")
+    const [live, setLive] = createSignal(true)
+    let current = ""
+    let dispose = () => {}
+    createRoot((d) => {
+      dispose = d
+      const value = createThrottledValue(source, () =>
+        live() ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS,
+      )
+      createEffect(() => {
+        current = value()
+      })
+    })
+    await tick(20)
+
+    setSource("b")
+    await tick(0)
+    setSource("c")
+    await tick(0)
+    setSource("d")
+    await tick(0)
+    expect(current).toBe("b")
+
+    const start = Date.now()
+    setLive(false)
+    await tick(0)
+    expect(current).toBe("d")
+    expect(Date.now() - start).toBeLessThan(50)
+    dispose()
+  })
 })
