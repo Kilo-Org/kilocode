@@ -355,15 +355,13 @@ describe("Codex provider usage service", () => {
   it.live("prevents an old in-flight account request from overwriting its replacement", () =>
     Effect.gen(function* () {
       const started = yield* Deferred.make<void>()
-      const pending: { release?: (response: Response) => void } = {}
+      const pending = Promise.withResolvers<Response>()
 
       return yield* fixture(
         (input, init) => {
           if (new Headers(init?.headers).get("chatgpt-account-id") === "acct-old") {
             Effect.runSync(Deferred.succeed(started, undefined))
-            return new Promise((resolve) => {
-              pending.release = resolve
-            })
+            return pending.promise
           }
           return Promise.resolve(Response.json(payload({ rate_limit: { allowed: true, primary_window: window(70) } })))
         },
@@ -378,7 +376,7 @@ describe("Codex provider usage service", () => {
             expect(second.items[0]?.windows[0]).toMatchObject({ used: 70 })
             expect(requests).toHaveLength(2)
 
-            pending.release?.(Response.json(payload({ rate_limit: { allowed: true, primary_window: window(10) } })))
+            pending.resolve(Response.json(payload({ rate_limit: { allowed: true, primary_window: window(10) } })))
             expect((yield* Fiber.join(first)).items).toEqual([])
             expect((yield* usage.get()).items[0]?.windows[0]).toMatchObject({ used: 70 })
             expect(requests).toHaveLength(2)
@@ -474,9 +472,10 @@ describe("Codex provider usage service", () => {
     ),
   )
 
-  for (const status of [401, 403, 503]) {
+  for (const status of [200, 401, 403, 503]) {
     it.live(`handles HTTP ${status} without exposing private upstream errors or invalid quota`, () => {
-      const responses = [Response.json(payload()), new Response("private upstream secret", { status })]
+      const responses = [Response.json(payload()), Response.json({ error: "private upstream secret" }, { status })]
+      const retryable = status !== 401 && status !== 403
       return fixture(
         async () => responses.shift()!,
         ({ usage, credentials }) =>
@@ -489,10 +488,10 @@ describe("Codex provider usage service", () => {
             expect(ready.items[0]).toMatchObject({ fetchState: "ready", windows: [{ used: 20 }, { used: 35 }] })
             expect(item).toMatchObject({
               id: "codex-chatgpt",
-              fetchState: status === 503 ? "stale" : "unavailable",
-              error: { retryable: status === 503 },
+              fetchState: retryable ? "stale" : "unavailable",
+              error: { retryable },
             })
-            expect(item?.windows).toHaveLength(status === 503 ? 2 : 0)
+            expect(item?.windows).toEqual(retryable ? ready.items[0]?.windows : [])
             expect(JSON.stringify(failed)).not.toContain("private upstream secret")
             expect(JSON.stringify(failed)).not.toContain("codex-access-token")
           }),
@@ -502,6 +501,49 @@ describe("Codex provider usage service", () => {
 })
 
 describe("Codex usage normalization", () => {
+  test("distinguishes malformed responses from legitimately absent windows", () => {
+    for (const input of [
+      {},
+      { error: "private upstream failure" },
+      payload({ plan_type: " " }),
+      payload({ rate_limit: "invalid" }),
+      payload({ additional_rate_limits: {} }),
+      payload({ rate_limit: { primary_window: { used_percent: "invalid" } } }),
+      payload({ rate_limit: null, additional_rate_limits: [{ rate_limit: "invalid" }] }),
+    ])
+      expect(() => decode(input)).toThrow("Codex usage is unavailable.")
+    for (const rate_limit of [undefined, null, { primary_window: null, secondary_window: null }]) {
+      expect(normalize(decode(payload({ rate_limit })))).toMatchObject({ fetchState: "ready", windows: [] })
+    }
+  })
+
+  test("matches Codex plan labels without exposing unknown internal identifiers", () => {
+    for (const [plan, label] of [
+      ["self_serve_business_prolite", "ChatGPT Business Premium"],
+      ["self_serve_business_usage_based", "ChatGPT Business"],
+      ["team", "ChatGPT Business"],
+      ["business", "ChatGPT Enterprise"],
+      ["ent26", "ChatGPT Enterprise"],
+      ["enterprise_cbp_automation", "ChatGPT Enterprise (Automation)"],
+      ["enterprise_cbp_usage_based", "ChatGPT Enterprise"],
+      ["enterprise", "ChatGPT Enterprise"],
+      ["edu", "ChatGPT Edu"],
+      ["education", "ChatGPT Edu"],
+      ["edu_plus", "ChatGPT Edu Plus"],
+      ["edu_pro", "ChatGPT Edu Pro"],
+      ["prolite", "ChatGPT Pro Lite"],
+      ["pro", "ChatGPT Pro"],
+      ["PLUS", "ChatGPT Plus"],
+      ["free", "ChatGPT Free"],
+      ["go", "ChatGPT Go"],
+      ["unknown_internal_plan", "ChatGPT Codex"],
+      ["constructor", "ChatGPT Codex"],
+      ["__proto__", "ChatGPT Codex"],
+    ] as const) {
+      expect(normalize(decode(payload({ plan_type: plan }))).planLabel).toBe(label)
+    }
+  })
+
   test("preserves valid sibling windows when adjacent native windows are malformed", () => {
     const value = decode(
       payload({
@@ -529,41 +571,46 @@ describe("Codex usage normalization", () => {
     expect(JSON.stringify(item)).not.toContain("invalid private usage")
   })
 
-  test("clamps percentages, marks exhausted limits, and produces stable unique duplicate slugs", () => {
+  test("preserves independent window usage and native IDs when named quotas are reordered", () => {
     const value = decode(
       payload({
         rate_limit: {
-          allowed: true,
-          limit_reached: false,
-          primary_window: window(-10),
-          secondary_window: window(140, 604_800),
+          allowed: false,
+          limit_reached: true,
+          primary_window: window(140),
+          secondary_window: window(35, 604_800),
         },
         additional_rate_limits: [
           {
             limit_name: "Spark Fast",
-            metered_feature: "spark",
-            rate_limit: { allowed: false, limit_reached: true, primary_window: window(25) },
+            metered_feature: "spark-fast",
+            rate_limit: { allowed: false, limit_reached: true, primary_window: window(-10) },
           },
           {
             limit_name: "Spark-Fast",
-            metered_feature: "spark",
+            metered_feature: "spark_fast",
             rate_limit: { allowed: true, limit_reached: false, primary_window: window(60) },
           },
         ],
       }),
     )
     const first = normalize(value)
-    const second = normalize(value)
+    const second = normalize({
+      ...value,
+      additional: value.additional.toReversed().map((item) => ({ ...item, name: `${item.name} renamed` })),
+    })
     const ids = first.windows.map((entry) => entry.id)
 
     expect(first.fetchState).toBe("ready")
     expect(first.windows).toHaveLength(4)
-    expect(first.windows[0]).toMatchObject({ used: 0, remaining: 100, state: "active" })
-    expect(first.windows[1]).toMatchObject({ used: 100, remaining: 0, state: "exhausted" })
-    expect(first.windows[2]).toMatchObject({ used: 100, remaining: 0, state: "exhausted" })
+    expect(first.windows[0]).toMatchObject({ used: 100, remaining: 0, state: "exhausted" })
+    expect(first.windows[1]).toMatchObject({ used: 35, remaining: 65, state: "active" })
+    expect(first.windows[2]).toMatchObject({ used: 0, remaining: 100, state: "active" })
     expect(first.windows[3]).toMatchObject({ used: 60, remaining: 40, state: "active" })
     expect(new Set(ids).size).toBe(ids.length)
-    expect(second.windows.map((entry) => entry.id)).toEqual(ids)
+    expect(Object.fromEntries(second.windows.map((entry) => [entry.id, entry.used]))).toEqual(
+      Object.fromEntries(first.windows.map((entry) => [entry.id, entry.used])),
+    )
   })
 
   test("retains non-round durations without fabricating a named period", () => {
@@ -605,7 +652,7 @@ describe("Codex usage transport", () => {
   for (const mode of ["declared", "streamed"]) {
     test(`rejects oversized ${mode} bodies without exposing their contents`, async () => {
       const response = Response.json(
-        { private: mode === "declared" ? "secret" : "secret".padEnd(64 * 1024, "x") },
+        payload({ private: mode === "declared" ? "secret" : "secret".padEnd(64 * 1024, "x") }),
         { headers: mode === "declared" ? { "content-length": String(64 * 1024 + 1) } : undefined },
       )
       const item = await load(

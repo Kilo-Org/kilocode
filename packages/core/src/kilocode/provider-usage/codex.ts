@@ -10,11 +10,18 @@ const plans: Record<string, string> = {
   plus: "ChatGPT Plus",
   pro: "ChatGPT Pro",
   prolite: "ChatGPT Pro Lite",
-  business: "ChatGPT Business",
+  business: "ChatGPT Enterprise",
+  self_serve_business_prolite: "ChatGPT Business Premium",
+  self_serve_business_usage_based: "ChatGPT Business",
+  ent26: "ChatGPT Enterprise",
+  enterprise_cbp_automation: "ChatGPT Enterprise (Automation)",
+  enterprise_cbp_usage_based: "ChatGPT Enterprise",
   enterprise: "ChatGPT Enterprise",
   edu: "ChatGPT Edu",
-  education: "ChatGPT Education",
-  team: "ChatGPT Team",
+  education: "ChatGPT Edu",
+  edu_plus: "ChatGPT Edu Plus",
+  edu_pro: "ChatGPT Edu Pro",
+  team: "ChatGPT Business",
   free: "ChatGPT Free",
   go: "ChatGPT Go",
 }
@@ -33,8 +40,6 @@ interface Window {
 }
 
 interface Rate {
-  allowed?: boolean
-  reached?: boolean
   primary?: Window
   secondary?: Window
 }
@@ -42,7 +47,7 @@ interface Rate {
 interface Native {
   plan?: string
   rate?: Rate
-  additional: { name: string; rate: Rate }[]
+  additional: { id: string; name: string; rate: Rate }[]
 }
 
 class Failure extends Error {
@@ -74,32 +79,40 @@ function window(input: unknown): Window | undefined {
 function rate(input: unknown): Rate | undefined {
   if (!object(input)) return undefined
   return {
-    allowed: typeof input.allowed === "boolean" ? input.allowed : undefined,
-    reached: typeof input.limit_reached === "boolean" ? input.limit_reached : undefined,
     primary: window(input.primary_window),
     secondary: window(input.secondary_window),
   }
 }
 
 export function decode(input: unknown): Native {
-  if (!object(input)) throw new Failure("invalid")
-  const additional = Array.isArray(input.additional_rate_limits)
-    ? input.additional_rate_limits.flatMap((item) => {
-        if (!object(item)) return []
-        const limit = rate(item.rate_limit)
-        if (!limit) return []
-        const name =
-          typeof item.limit_name === "string" && item.limit_name.trim()
-            ? item.limit_name.trim()
-            : typeof item.metered_feature === "string" && item.metered_feature.trim()
-              ? item.metered_feature.trim()
-              : "Additional quota"
-        return [{ name, rate: limit }]
-      })
-    : []
+  if (!object(input) || typeof input.plan_type !== "string" || !input.plan_type.trim()) throw new Failure("invalid")
+  if (input.additional_rate_limits != null && !Array.isArray(input.additional_rate_limits)) throw new Failure("invalid")
+  const entries = input.additional_rate_limits ?? []
+  const main = rate(input.rate_limit)
+  const additional = entries.flatMap((item) => {
+    if (!object(item)) return []
+    const limit = rate(item.rate_limit)
+    if (!limit) return []
+    const feature = typeof item.metered_feature === "string" ? item.metered_feature.trim() : ""
+    const name =
+      typeof item.limit_name === "string" && item.limit_name.trim()
+        ? item.limit_name.trim()
+        : feature || "Additional quota"
+    return [{ id: feature || name, name, rate: limit }]
+  })
+  const supplied = [input.rate_limit, ...entries.map((item) => (object(item) ? item.rate_limit : item))]
+  if (
+    !main?.primary &&
+    !main?.secondary &&
+    !additional.some((item) => item.rate.primary || item.rate.secondary) &&
+    supplied.some(
+      (value) => value != null && (!object(value) || value.primary_window != null || value.secondary_window != null),
+    )
+  )
+    throw new Failure("invalid")
   return {
-    plan: typeof input.plan_type === "string" && input.plan_type ? input.plan_type : undefined,
-    rate: rate(input.rate_limit),
+    plan: input.plan_type,
+    rate: main,
     additional,
   }
 }
@@ -193,21 +206,8 @@ function period(duration: number): ProviderUsage.UsagePeriod | undefined {
   return undefined
 }
 
-function windows(name: string, rate: Rate | undefined, now: number, used: Map<string, number>) {
+function windows(id: string, name: string, rate: Rate | undefined, now: number) {
   if (!rate) return []
-  const clean =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "quota"
-  let count = (used.get(clean) ?? 0) + 1
-  let slug = count === 1 ? clean : `${clean}-${count}`
-  while (used.has(slug)) {
-    count++
-    slug = `${clean}-${count}`
-  }
-  used.set(clean, count)
-  used.set(slug, 1)
   return (
     [
       ["primary", rate.primary],
@@ -215,15 +215,14 @@ function windows(name: string, rate: Rate | undefined, now: number, used: Map<st
     ] as const
   ).flatMap(([slot, value]) => {
     if (!value) return []
-    const exhausted = rate.allowed === false || rate.reached === true || value.used >= 100
-    const percent = exhausted ? 100 : Math.min(100, Math.max(0, value.used))
+    const percent = Math.min(100, Math.max(0, value.used))
     const duration =
       value.duration !== undefined && value.duration > 0 && Number.isSafeInteger(value.duration * 1000)
         ? value.duration
         : undefined
     return [
       {
-        id: `${slug}-${slot}`,
+        id: `${id}-${slot}`,
         resource: name,
         unit: "percent",
         orientation: "used_percent",
@@ -233,7 +232,7 @@ function windows(name: string, rate: Rate | undefined, now: number, used: Map<st
         durationMs: duration === undefined ? undefined : duration * 1000,
         period: duration === undefined ? undefined : period(duration),
         resetAt: reset(value, now),
-        state: exhausted ? "exhausted" : "active",
+        state: percent === 100 ? "exhausted" : "active",
       } satisfies ProviderUsage.UsageWindow,
     ]
   })
@@ -242,14 +241,19 @@ function windows(name: string, rate: Rate | undefined, now: number, used: Map<st
 export function normalize(native: Native, label = "OpenAI"): ProviderUsage.UsageSnapshot {
   const now = Date.now()
   const seen = new Map<string, number>()
-  const main = windows("Codex", native.rate, now, seen)
-  const additional = native.additional.flatMap((item) => windows(item.name, item.rate, now, seen))
+  const main = windows("codex", "Codex", native.rate, now)
+  const additional = native.additional.flatMap((item) => {
+    const count = seen.get(item.id) ?? 0
+    seen.set(item.id, count + 1)
+    return windows(JSON.stringify(["additional", item.id, count]), item.name, item.rate, now)
+  })
+  const plan = plans[native.plan?.toLowerCase() ?? ""]
   return {
     id: "codex-chatgpt",
     providerID: "openai",
     sourceKind: "direct",
     providerLabel: label,
-    planLabel: native.plan ? (plans[native.plan.toLowerCase()] ?? `ChatGPT ${native.plan}`) : "ChatGPT Codex",
+    planLabel: typeof plan === "string" ? plan : "ChatGPT Codex",
     sourceLabel: "ChatGPT OAuth",
     fetchState: "ready",
     planState: "active",
