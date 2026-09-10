@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
 import * as gh from "../../src/agent-manager/gh"
 import * as shell from "../../src/agent-manager/shell-env"
+import { execGhInput as ghInput } from "../../src/agent-manager/pr/PRActions"
 import type { DiffPRPoller, DiffPRPollerOptions } from "../../src/diff/pr-poller"
 import type { PRComment, PRStatus } from "../../src/agent-manager/types"
 import type { PRReviewCommentData } from "../../src/shared/review-comments"
@@ -11,14 +12,15 @@ import type { PRTarget } from "../../src/shared/pr-comment-actions"
 
 const addCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
 const removeCommentReaction = mock(async (_commentId: string, _reaction: string, _cwd: string) => {})
-const execGhInput = mock(async () => ({ stdout: "{}", stderr: "" }))
 const isPRReactionContent = (value: unknown): value is string =>
   typeof value === "string" &&
   ["THUMBS_UP", "THUMBS_DOWN", "LAUGH", "HOORAY", "CONFUSED", "HEART", "ROCKET", "EYES"].includes(value)
 
+// Keep the real `execGhInput` so this process-wide module mock does not leak a
+// reset mock into other test files that post comments through `gh`.
 mock.module("../../src/agent-manager/pr/PRActions", () => ({
   addCommentReaction,
-  execGhInput,
+  execGhInput: ghInput,
   isPRReactionContent,
   removeCommentReaction,
 }))
@@ -44,7 +46,6 @@ afterEach(() => {
 beforeEach(() => {
   addCommentReaction.mockReset()
   removeCommentReaction.mockReset()
-  execGhInput.mockReset()
 })
 
 function event<T>() {
@@ -230,6 +231,17 @@ describe("DiffViewerProvider.openFromCommand", () => {
 describe("DiffViewerProvider remote PR comments", () => {
   it("routes PR snapshot loading and new comment creation from the standalone panel", async () => {
     const read = spyOn(gh, "execGhRead").mockImplementation(async (args) => {
+      if (args.includes("--input"))
+        return {
+          stdout: JSON.stringify({
+            id: 11,
+            commit_id: "a".repeat(40),
+            path: "src/app.ts",
+            side: "RIGHT",
+            line: 1,
+          }),
+          stderr: "",
+        }
       if (args.some((arg) => arg.includes("/files?")))
         return {
           stdout: JSON.stringify([
@@ -268,16 +280,6 @@ describe("DiffViewerProvider remote PR comments", () => {
     expect(loaded).toMatchObject({ success: true, requestId: "load" })
     if (!loaded?.snapshot || typeof loaded.snapshot !== "object") throw new Error("Missing PR snapshot")
 
-    execGhInput.mockResolvedValueOnce({
-      stdout: JSON.stringify({
-        id: 11,
-        commit_id: "a".repeat(40),
-        path: "src/app.ts",
-        side: "RIGHT",
-        line: 1,
-      }),
-      stderr: "",
-    })
     h.received.fire({
       ...target,
       type: "agentManager.createReviewComment",
@@ -290,6 +292,10 @@ describe("DiffViewerProvider remote PR comments", () => {
       body: "Please update this.",
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
+    // The real execGhInput writes its input to a temp file, so give the round
+    // trip a bounded amount of time instead of a single macrotask.
+    for (let i = 0; i < 100 && !h.messages("agentManager.createReviewCommentResult").length; i++)
+      await new Promise((resolve) => setTimeout(resolve, 2))
     expect(h.messages("agentManager.createReviewCommentResult").at(-1)).toMatchObject({
       success: true,
       requestId: "comment",
