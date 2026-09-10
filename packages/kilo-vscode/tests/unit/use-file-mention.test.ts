@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { useFileMention } from "../../webview-ui/src/hooks/useFileMention"
-import { FILE_PICKER_RESULT, TERMINAL_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
+import { FILE_PICKER_RESULT, MODEL_RESULT, TERMINAL_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 declare global {
@@ -335,6 +335,65 @@ describe("useFileMention", () => {
 
     expect(input.value).toBe("@Fix auth bug ")
     expect(mention.mentionedSessions().get("Fix auth bug")?.id).toBe("ses_a")
+
+    dispose.fn?.()
+  })
+
+  it("opens the model picker from the @ menu and inserts an inline model reference", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const input = editor("@mod")
+    mockDocument(input)
+    try {
+      mention.selectMention(MODEL_RESULT, input, () => {})
+      expect(mention.modelPicker()).toBe(true)
+      expect(mention.showMention()).toBe(false)
+
+      mention.selectModelReference("anthropic", "claude-sonnet-4", () => {})
+    } finally {
+      restoreDocument()
+    }
+
+    expect(mention.modelPicker()).toBe(false)
+    expect(input.value).toBe("@anthropic/claude-sonnet-4 ")
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    // Model references are inline text, never file attachments.
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments(input.value)).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("seeds known model references from restored text without treating them as files", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    const modelKeys = () => new Set(["anthropic/claude-sonnet-4"])
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    mention.seedFromText("use @anthropic/claude-sonnet-4 for the subagent")
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments("use @anthropic/claude-sonnet-4 for the subagent")).toEqual([])
 
     dispose.fn?.()
   })
@@ -1515,6 +1574,7 @@ describe("useFileMention", () => {
     }
 
     expect(mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,
@@ -1528,6 +1588,7 @@ describe("useFileMention", () => {
 
     mention.onInput("@", 1)
     expect(mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,
@@ -1675,6 +1736,7 @@ describe("useFileMention", () => {
     state.mention.onInput("@", 1)
 
     expect(state.mention.mentionResults()).toEqual([
+      MODEL_RESULT,
       { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
       { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
       FILE_PICKER_RESULT,

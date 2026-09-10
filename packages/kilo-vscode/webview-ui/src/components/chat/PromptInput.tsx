@@ -21,7 +21,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
-import { ModelSelector } from "../shared/ModelSelector"
+import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
@@ -150,6 +150,11 @@ interface PromptInputProps {
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
+// The `@` model entry reopens the shared model selector through its
+// programmatic-open event, keyed to this prompt scope so the chat model
+// selector and slash-command opens are unaffected.
+const MENTION_MODEL_TRIGGER = "mention-model"
+
 function MentionItemContent(props: { item: MentionResult }) {
   const item = props.item
   const language = useLanguage()
@@ -177,6 +182,14 @@ function MentionItemContent(props: { item: MentionResult }) {
     return (
       <>
         <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "model")
+    return (
+      <>
+        <Icon name="models" class="file-mention-icon" />
         <span class="file-mention-name">{item.label}</span>
         <span class="file-mention-dir">{item.description}</span>
       </>
@@ -231,7 +244,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const mention = useFileMention(vscode, sid, hasGit, props.worktrees)
+  const modelKeys = () => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`))
+  const mention = useFileMention(vscode, sid, hasGit, props.worktrees, modelKeys)
+  // Picking the `@` model entry reuses the shared model selector: it is
+  // mounted hidden and opened through its programmatic-open event. The mention
+  // latch resets immediately because the selector owns its own open state, so
+  // dismissing it by clicking outside cannot leave the latch stuck open.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: MENTION_MODEL_TRIGGER } }))
+  })
   const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
@@ -705,10 +728,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
     for (const token of mention.mentionedSessions().keys()) paths.add(token)
+    for (const token of mention.mentionedModels()) paths.add(token)
     if (hasTerminalMention(text())) paths.add("terminal")
     if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
   }
+  // Model references are inline text tokens, not files, so they must not be
+  // styled as or behave like clickable path mentions.
+  const isModelMention = (text: string) => mention.mentionedModels().has(text.replace(/^@/, ""))
   const placeholder = () => {
     switch (server.connectionState()) {
       case "connecting":
@@ -1653,6 +1680,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           />
         </div>
       </Show>
+      <div class="mention-model-anchor" aria-hidden="true">
+        <ModelSelectorBase
+          value={null}
+          trigger={MENTION_MODEL_TRIGGER}
+          collapsed
+          onSelect={(providerID, modelID) => {
+            if (providerID && modelID) mention.selectModelReference(providerID, modelID, adjustHeight)
+          }}
+          onCancel={() => {
+            mention.closeMention()
+            textareaRef?.focus()
+          }}
+        />
+      </div>
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
@@ -1813,9 +1854,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
                   <span
                     class="prompt-input-file-mention"
-                    classList={{ "prompt-input-file-mention--file": isPathMention(seg().text) }}
+                    classList={{
+                      "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
+                    }}
                     onClick={(e) => {
                       if (!isPathMention(seg().text)) return
+                      if (isModelMention(seg().text)) return
                       if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
                       e.preventDefault()
                       e.stopPropagation()
