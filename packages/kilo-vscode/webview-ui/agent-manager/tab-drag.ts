@@ -19,17 +19,30 @@ export function createTabDrag(opts: {
   persistPinned: (key: string, ids: string[]) => void
 }) {
   const [dragging, setDragging] = createSignal<string>()
-  const ids = createMemo(() => {
+  /**
+   * Tab sequence without the pinned grouping. This is what gets persisted as
+   * `tabOrder`, so it stays pin-independent: it feeds `firstOrderedTitle` for
+   * worktree labels and decides where a tab lands once it is unpinned.
+   */
+  const ordered = createMemo(() => {
     const sessions = opts.sessions().map((s) => s.id)
     const key = opts.selection()
     if (key === null) return sessions
     const review = opts.review.open() ? [...sessions, opts.review.id] : sessions
     const base = [...review, ...opts.terms.current().map((t) => t.id)]
-    const ordered = applyTabOrder(
+    return applyTabOrder(
       base.map((id) => ({ id })),
       opts.order()[key],
-    )
-    return applyPinnedTabs(ordered, opts.pinned()[key]).map((item) => item.id)
+    ).map((item) => item.id)
+  })
+  /** What the tab bar renders: pinned tabs first, everything else in `ordered`. */
+  const ids = createMemo(() => {
+    const key = opts.selection()
+    if (key === null) return ordered()
+    return applyPinnedTabs(
+      ordered().map((id) => ({ id })),
+      opts.pinned()[key],
+    ).map((item) => item.id)
   })
   const overlay = createMemo(() => {
     const id = dragging()
@@ -65,7 +78,9 @@ export function createTabDrag(opts: {
         opts.setPinned((prev) => ({ ...prev, [key]: next }))
         return
       }
-      const order = reorderTabs(ids(), from, to)
+      // Reorder the ungrouped sequence, never the rendered one, so a pinned
+      // tab keeps the slot it will return to when it is unpinned.
+      const order = reorderTabs(ordered(), from, to)
       if (!order) return
       opts.setOrder((prev) => ({ ...prev, [key]: order }))
       if (key === LOCAL) opts.setLocal(order.filter((id) => id !== opts.review.id && !isTerminalTabId(id)))
