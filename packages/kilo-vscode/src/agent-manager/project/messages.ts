@@ -246,8 +246,15 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
   if (disabled(deps)) return
+  const wasActive = deps.contexts.active()?.id === id
   await deps.contexts.remove(id)
   await deps.registry.remove(id)
+  if (wasActive) {
+    // Re-activate the fallback project so its PR poller drops the removed
+    // project's worktree interest and resumes polling the new active project.
+    const next = deps.contexts.active()
+    if (next) deps.activate(next)
+  }
   deps.push()
 }
 

@@ -870,6 +870,7 @@ interface PRDetailInterestIn {
   type: "agentManager.prDetailInterest"
   projectId?: string
   worktreeId?: string
+  activeWorktreeId?: string
 }
 
 interface OpenPRIn {

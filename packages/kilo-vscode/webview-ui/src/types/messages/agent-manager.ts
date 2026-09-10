@@ -20,6 +20,7 @@ export interface PRDetailInterestRequest {
   type: "agentManager.prDetailInterest"
   projectId?: string
   worktreeId?: string
+  activeWorktreeId?: string
 }
 
 export interface TerminalFont {

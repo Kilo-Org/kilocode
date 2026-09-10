@@ -321,6 +321,67 @@ describe("PRStatusPoller batched GitHub queries", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
     poller.stop()
   })
+
+  it("repeats a forced refresh that arrives during an in-flight request", async () => {
+    const tree = { id: "wt1", path: "/repo/wt1", branch: "feature" }
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [tree] as never,
+      getWorkspaceRoot: () => "/repo",
+      onStatus: () => undefined,
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      active: boolean
+      visible: boolean
+      generation: number
+      request: (id: string, generation: number, full: boolean, force?: boolean) => Promise<void>
+      fetchOne: (id: string, generation: number, full: boolean) => Promise<void>
+    }
+    internal.active = true
+    internal.visible = true
+    const first = Promise.withResolvers<void>()
+    const second = Promise.withResolvers<void>()
+    const fetch = spyOn(internal, "fetchOne")
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+
+    const run = internal.request("wt1", 0, true, true)
+    const forced = internal.request("wt1", 0, true, true)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    first.resolve()
+    await run
+    expect(fetch).toHaveBeenCalledTimes(2)
+    second.resolve()
+    await forced
+    poller.stop()
+  })
+
+  it("invalidates the resolved branch cache on refresh", () => {
+    const tree = { id: "diff", path: "/repo", branch: "HEAD" }
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [tree] as never,
+      getWorkspaceRoot: () => "/repo",
+      getBranch: async () => "feature",
+      onStatus: () => undefined,
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      branches: Map<string, string>
+      prCache: Map<string, unknown>
+      active: boolean
+      visible: boolean
+    }
+    internal.branches.set("diff", "feature")
+    internal.prCache.set("/repo\u0000feature", { result: pr, expires: Infinity })
+    internal.active = false
+    internal.visible = false
+
+    poller.refresh("diff")
+
+    expect(internal.prCache.size).toBe(0)
+    expect(internal.branches.has("diff")).toBe(false)
+    poller.stop()
+  })
   it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
     let root = "/alpha"
     const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }

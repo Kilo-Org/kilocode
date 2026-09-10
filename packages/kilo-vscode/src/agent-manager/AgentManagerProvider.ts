@@ -489,9 +489,8 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
-    if (!validInterest(msg, (id) => this.contexts.usable(id) !== undefined) || this.prBridge.handleMessage(msg))
-      return null
-    if (this.projectPollers.handleInterest(msg)) return null
+    const valid = validInterest(msg, (id) => this.contexts.usable(id) !== undefined)
+    if (!valid || this.prBridge.handleMessage(msg) || this.projectPollers.handleInterest(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
     }

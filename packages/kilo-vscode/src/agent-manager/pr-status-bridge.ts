@@ -176,7 +176,10 @@ export class PRStatusBridge {
     if (m.type !== "agentManager.prDetailInterest") return
     if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return false
     if (m.worktreeId !== undefined && typeof m.worktreeId !== "string") return true
+    if (m.activeWorktreeId !== undefined && typeof m.activeWorktreeId !== "string") return true
     this.poller.setDetailInterest(m.worktreeId as string | undefined)
+    // Track the selected worktree so it is discovered even before it has a PR.
+    this.poller.setActiveWorktreeId(m.activeWorktreeId as string | undefined)
     return true
   }
 

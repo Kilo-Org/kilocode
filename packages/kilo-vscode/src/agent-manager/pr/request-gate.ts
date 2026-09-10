@@ -11,12 +11,4 @@ export class RequestGate<T = void> {
     this.requests.set(key, promise)
     return promise
   }
-
-  get(key: string): Promise<T> | undefined {
-    return this.requests.get(key)
-  }
-
-  clear(): void {
-    this.requests.clear()
-  }
 }

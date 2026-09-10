@@ -42,7 +42,6 @@ interface FakePair {
   visible: { stats: boolean; pr: boolean }
   stopped: { stats: boolean; pr: boolean }
   interest: string[]
-  detail: string | undefined
 }
 
 function fakes() {
@@ -61,7 +60,6 @@ function fakes() {
             setEnabled: (v) => (rec.enabled.pr = v),
             setVisible: (v) => (rec.visible.pr = v),
             setWorktreeInterest: (v) => (rec.interest = [...v]),
-            setDetailInterest: (v) => (rec.detail = v),
             stop: () => (rec.stopped.pr = true),
           },
         },
@@ -70,7 +68,6 @@ function fakes() {
       visible: { stats: true, pr: true },
       stopped: { stats: false, pr: false },
       interest: [],
-      detail: undefined,
     }
     made.set(ctx.id, rec)
     return rec.pair
@@ -108,23 +105,24 @@ describe("ProjectPollers", () => {
     const pollers = new ProjectPollers(deps, (ctx) => create(ctx))
 
     pollers.setInterest(extra.id, ["wt-1"])
-    pollers.setDetailInterest(extra.id, "wt-1")
     pollers.sync(contexts)
 
     expect(made.get(extra.id)!.interest).toEqual(["wt-1"])
-    expect(made.get(extra.id)!.detail).toBe("wt-1")
   })
 
   it("drops interest for projects outside the current registry", () => {
-    const contexts = setup([stored("prj-extra")])
+    const extra = stored("prj-extra")
+    const contexts = setup([extra])
     expand(contexts, "prj-extra")
     const { made, create, deps } = fakes()
     const pollers = new ProjectPollers(deps, (ctx) => create(ctx))
     pollers.sync(contexts)
+    pollers.setInterest(extra.id, ["wt-1"])
 
-    expect(
-      pollers.handleInterest({ type: "agentManager.prInterest", projectId: "unknown", worktreeIds: ["wt-1"] }),
-    ).toBe(true)
+    pollers.handleInterest({ type: "agentManager.prInterest", projectId: "unknown", worktreeIds: ["wt-2"] })
+    pollers.sync(contexts)
+
+    expect(made.get(extra.id)!.interest).toEqual(["wt-1"])
     expect(made.has("unknown")).toBe(false)
   })
 
@@ -221,7 +219,6 @@ function recorder() {
           setEnabled: () => {},
           setVisible: () => {},
           setWorktreeInterest: () => {},
-          setDetailInterest: () => {},
           stop: () => {},
         },
         replay: () => replayed.push(ctx.id),

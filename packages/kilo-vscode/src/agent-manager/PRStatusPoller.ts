@@ -43,6 +43,7 @@ interface RequestEntry {
   promise: Promise<void>
   upgrade?: Promise<void>
   next?: Promise<void>
+  forced?: boolean
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
@@ -127,10 +128,11 @@ export class PRStatusPoller {
     this.visible = visible
     if (!this.active) return
     if (visible) {
-      // Resume without clearing useful cached data or creating an all-worktree burst.
+      // Resume without clearing useful cached data. Mark the full sync due so
+      // visible rows catch up through the bounded, interest-filtered sync.
       if (this.timer) clearTimeout(this.timer)
       this.timer = undefined
-      this.lastFullSync = Date.now()
+      this.lastFullSync = 0
       void this.poll()
       return
     }
@@ -172,8 +174,15 @@ export class PRStatusPoller {
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
-    if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
+    if (!wt) return
+    // The Changes editor reports `branch: "HEAD"` and resolves the real branch
+    // through getBranch, so invalidate the resolved-branch entry, not wt.branch.
+    const branch = this.branches.get(worktreeId) ?? wt.branch
+    this.prCache.delete(this.key(branch, wt.path))
+    this.branches.delete(worktreeId)
     this.lastHash.delete(worktreeId)
+    this.polls.delete(`${worktreeId}:full`)
+    this.polls.delete(`${worktreeId}:summary`)
     if (!this.active || !this.visible) return
     this.fire(this.request(worktreeId, this.generation, true, true))
   }
@@ -192,7 +201,11 @@ export class PRStatusPoller {
     const valid = new Set(this.options.getWorktrees().map((wt) => wt.id))
     const next = new Set([...ids].filter((id) => valid.has(id)))
     if (next.size === this.interests?.size && [...next].every((id) => this.interests?.has(id))) return
+    const added = [...next].filter((id) => !this.interests?.has(id))
     this.interests = next
+    if (!this.active || !this.visible) return
+    // Refresh rows that just became visible instead of waiting for a full sync.
+    for (const id of added) this.fire(this.request(id, this.generation, this.full(id)))
   }
 
   setDetailInterest(id: string | undefined): void {
@@ -379,21 +392,23 @@ export class PRStatusPoller {
     if (current) {
       if (current.generation !== generation) {
         if (current.next) return current.next
-        const next = current.promise.then(
-          () => {
-            if (this.requests.get(key) === current) this.requests.delete(key)
-            return this.request(worktreeId, generation, full, force)
-          },
-          () => {
-            if (this.requests.get(key) === current) this.requests.delete(key)
-            return this.request(worktreeId, generation, full, force)
-          },
-        )
+        // Retry with the latest generation so a rapid restart does not wait on
+        // an obsolete generation that fetchOne would reject as stale.
+        const retry = () => this.request(worktreeId, this.generation, full, force)
+        const next = current.promise.then(retry, retry)
         current.next = next
         return next
       }
-      if (!full || current.full) return current.promise
-      if (current.upgrade) return current.upgrade
+      if (current.full) {
+        // A forced refresh during an in-flight read must run again afterwards,
+        // otherwise the caller sees the pre-mutation result.
+        if (force) current.forced = true
+        return current.promise
+      }
+      if (current.upgrade) {
+        if (force) current.forced = true
+        return current.upgrade
+      }
       const upgrade = current.promise.then(
         () => {
           if (this.requests.get(key) === current) this.requests.delete(key)
@@ -417,6 +432,9 @@ export class PRStatusPoller {
     }
     entry.promise = run().finally(() => {
       if (this.requests.get(key) === entry) this.requests.delete(key)
+      if (entry.forced && this.active && this.visible) {
+        this.fire(this.request(worktreeId, this.generation, true, true))
+      }
     })
     this.requests.set(key, entry)
     return entry.promise
@@ -447,7 +465,6 @@ export class PRStatusPoller {
     }
     const result = cached.result
     if (result.state === "open" || result.state === "draft") return true
-    if (full) return true
     const last = this.polls.get(`${worktreeId}:${full ? "full" : "summary"}`)
     return last === undefined || Date.now() - last >= TERMINAL_INTERVAL
   }

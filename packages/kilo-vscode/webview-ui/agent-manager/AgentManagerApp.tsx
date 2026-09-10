@@ -369,15 +369,18 @@ const AgentManagerContent: Component = () => {
     if (!pr) return undefined
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
-  const prDetail = createMemo(() => {
-    if (!prOpen() || history() || reviewActive()) return
-    return activePR()?.selected
+  const prActive = createMemo(() => {
+    const selected = selection()
+    if (history() || reviewActive() || !selected || selected === LOCAL) return
+    return selected
   })
+  const prDetail = createMemo(() => (prOpen() ? prActive() : undefined))
   createEffect(() =>
     vscode.postMessage({
       type: "agentManager.prDetailInterest",
       projectId: activeProjectId(),
       worktreeId: prDetail(),
+      activeWorktreeId: prActive(),
     }),
   )
   const diffs = createWorktreeDiffs(vscode, activeProjectId)
