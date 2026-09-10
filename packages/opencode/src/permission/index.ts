@@ -20,6 +20,7 @@ import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 import { PermissionHumanOnly } from "@/kilocode/permission/human-only" // kilocode_change
+import { SecurityAsk } from "@/kilocode/security-decision/ask" // kilocode_change
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -161,6 +162,8 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  // kilocode_change - the rule that would cover a security ask is the very rule the layer overrode
+  if (SecurityAsk.is(entry.info.metadata)) return false
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -369,8 +372,12 @@ const layer = Layer.effect(
         }
       }
 
-      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, (data) =>
-        Effect.asVoid(events.publish(Event.Replied, data)),
+      yield* drainCovered(
+        pending as unknown as Map<string, PendingEntry>,
+        approved,
+        (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        undefined,
+        input.interactive === true, // kilocode_change - a drained sibling inherits the answerer of the rule that covered it
       ) // kilocode_change - drain publishes replies through the same EventV2Bridge channel
 
       if (!existing.saved) {
@@ -427,6 +434,7 @@ const layer = Layer.effect(
         s.approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
         input.requestID as unknown as string,
+        true, // kilocode_change - always-rules are chosen in the permission dialog, by a human
       )
     })
 

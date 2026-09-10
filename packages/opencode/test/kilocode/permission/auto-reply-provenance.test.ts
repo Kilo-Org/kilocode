@@ -87,3 +87,51 @@ it.instance("an auto-reply is attributed to auto mode, not to the user", () =>
     expect(PermissionProvenance.fromManual(outcome).source).toBe("auto")
   }),
 )
+
+/**
+ * A sibling ask resolved by the rule the user just approved was never shown to anyone, but it is
+ * still that human's decision — the covering rule is theirs. It must be attributed the same way the
+ * covering reply was, rather than reported as something the mode decided on its own.
+ */
+const drained = (interactive: boolean | undefined) =>
+  Effect.gen(function* () {
+    const permission = yield* Permission.Service
+    const covering = { ...request, always: ["git status"] }
+    const sibling = { ...covering, sessionID: SessionID.make("ses_auto_reply_sibling") }
+
+    const first = yield* Effect.forkScoped(permission.ask(covering))
+    const second = yield* Effect.forkScoped(permission.ask(sibling))
+
+    const pending = yield* Effect.gen(function* () {
+      while (true) {
+        const list = yield* permission.list()
+        if (list.length === 2) return list
+        yield* Effect.sleep("10 millis")
+      }
+    }).pipe(Effect.timeoutOrElse({ duration: "2 seconds", orElse: () => Effect.fail(new Error("timed out")) }))
+
+    const covered = pending.find((entry) => entry.sessionID === sessionID)!
+    yield* permission.reply({
+      requestID: covered.id,
+      reply: "always",
+      ...(interactive === undefined ? {} : { interactive }),
+    })
+
+    yield* Fiber.join(first)
+    // The sibling was drained by the rule the reply saved, never answered on its own.
+    return yield* Fiber.join(second)
+  })
+
+it.instance("a sibling drained by a human's always-rule is still attributed to the user", () =>
+  Effect.gen(function* () {
+    const outcome = yield* drained(true)
+    expect(PermissionProvenance.fromManual(outcome).source).toBe("manual")
+  }),
+)
+
+it.instance("a sibling drained by an auto-reply's always-rule is attributed to auto mode", () =>
+  Effect.gen(function* () {
+    const outcome = yield* drained(undefined)
+    expect(PermissionProvenance.fromManual(outcome).source).toBe("auto")
+  }),
+)
