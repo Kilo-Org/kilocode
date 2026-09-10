@@ -470,6 +470,30 @@ describe.skipIf(process.platform === "win32")("the agent's own control plane ins
   )
 
   test(
+    "a differently-cased spelling of the same file is the same file",
+    withTmp(async (cwd) => {
+      // On a case-insensitive volume — the macOS and Windows default — `.KILO/rules/x.md` is the
+      // inode the classifier already protects, so a case-sensitive test would have been a
+      // one-character bypass of the rule this commit adds. Folding can only over-match on a
+      // case-sensitive filesystem, and over-matching here costs an ask.
+      for (const file of [
+        ".KILO/rules/00-workspace.md",
+        ".Kilocode/rules/00-workspace.md",
+        ".OpenCode/rules/00-workspace.md",
+        "agents.md",
+        "AGENTS.MD",
+      ]) {
+        const out = await decide(`echo 'do something else' >> ${file}`, cwd)
+        expect({ file, decision: out.decision, rule: out.rule_id }).toEqual({
+          file,
+          decision: "ask",
+          rule: "SEC.V1.CONTROL_PLANE_WRITE",
+        })
+      }
+    }),
+  )
+
+  test(
     "every route to the same rule file lands in the same place",
     withTmp(async (cwd) => {
       // The write is what matters, not the verb that performs it: a redirect, a copy, a move and a

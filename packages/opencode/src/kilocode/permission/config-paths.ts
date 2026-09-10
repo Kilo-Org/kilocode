@@ -48,6 +48,17 @@ export namespace ConfigProtection {
   const CONTROL_DIRS = [...CONFIG_DIRS, ".opencode/"]
 
   /**
+   * The same root-level names, folded once.
+   *
+   * `isAgentControlPath` matches case-insensitively while `isRelative` does not, and the difference
+   * is deliberate: this one answers a security question on a filesystem that may well be
+   * case-insensitive, where `.KILO/rules/x.md` and `agents.md` are the very files Kilo reads back,
+   * so a case-sensitive test would be a one-character bypass. On a case-sensitive filesystem the
+   * fold can only over-match a differently-cased directory, which tightens the outcome to an ask.
+   */
+  const CONTROL_ROOT_FILES = new Set(Array.from(CONFIG_ROOT_FILES, (name) => name.toLowerCase()))
+
+  /**
    * True when a path names something this repository is read back to the agent as standing
    * instruction or configuration — rule files, agent and command definitions, and the config that
    * names them.
@@ -58,10 +69,11 @@ export namespace ConfigProtection {
    * root-level names are matched on the basename rather than on the whole path.
    *
    * `plans/` stays excluded for the same reason it is excluded there: a plan is written by the agent
-   * as ordinary work and is never read back as policy.
+   * as ordinary work and is never read back as policy. Matching is case-folded; see
+   * `CONTROL_ROOT_FILES`.
    */
   export function isAgentControlPath(target: string): boolean {
-    const normalized = normalize(target.replaceAll("\\", "/"))
+    const normalized = normalize(target.replaceAll("\\", "/")).toLowerCase()
     for (const dir of CONTROL_DIRS) {
       const bare = dir.slice(0, -1)
       if (normalized === bare || normalized.endsWith("/" + bare)) return true
@@ -69,7 +81,7 @@ export namespace ConfigProtection {
       const nested = normalized.indexOf("/" + dir)
       if (nested !== -1 && !excluded(normalized.slice(nested + 1 + dir.length))) return true
     }
-    return CONFIG_ROOT_FILES.has(path.posix.basename(normalized))
+    return CONTROL_ROOT_FILES.has(path.posix.basename(normalized))
   }
 
   /** Check if a project-relative path points to a config file or directory. */
