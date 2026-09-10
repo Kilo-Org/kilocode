@@ -1,4 +1,4 @@
-import { Show } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { BasicTool as Base, GenericTool } from "@opencode-ai/ui/basic-tool"
 import type { BasicToolProps as BaseProps, TriggerTitle } from "@opencode-ai/ui/basic-tool"
 import { toolOpenKey, readToolOpen, writeToolOpen } from "./tool-open-state"
@@ -45,13 +45,16 @@ export function BasicTool(props: BasicToolProps) {
     props.onOpenChange?.(open)
   }
   // Renders after the body/tool list, not before — it's context about what
-  // happened, not part of the header.
-  const details = () => (
+  // happened, not part of the header. Memoized because Base reads its children
+  // getter several times while laying out the tool, and each bare read would
+  // otherwise rebuild this subtree (for a bash card, three BashHighlightedOutput
+  // instances per render). The memo returns one stable subtree for every read.
+  const details = createMemo(() => (
     <div data-slot="basic-tool-details">
       {props.children}
       <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
     </div>
-  )
+  ))
   // A <Show>, not a plain `if`: inBody() tracks the visibility toggle, which can
   // flip after mount (Settings), so the branch must stay reactive.
   return (
