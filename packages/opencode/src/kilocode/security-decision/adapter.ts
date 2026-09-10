@@ -1,4 +1,5 @@
 import path from "path"
+import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { SecurityDecision } from "./core"
 import { SecurityManifest } from "./manifest"
 import { SecurityDecisionRules as R } from "./rules"
@@ -267,7 +268,13 @@ export namespace SecurityDecisionAdapter {
       /(^|\/)\.husky(\/|$)/i.test(target) ||
       /(^|\/)\.githooks(\/|$)/i.test(target) ||
       lower === ".gitattributes" ||
-      lower === ".envrc"
+      lower === ".envrc" ||
+      // The agent's own control plane. A rule file, an agent or command definition, or the config
+      // that names them is read into every later prompt for this repository, so a write there
+      // installs standing instructions exactly the way a write to `.git/hooks` installs code — and
+      // it needs no shell, no execute bit and no later `git` invocation to take effect. The
+      // predicate is the one the config-edit prompt already uses, so the two cannot drift.
+      ConfigProtection.isAgentControlPath(target)
     )
       return "control_plane"
     const segments = target.toLowerCase().split("/")

@@ -437,3 +437,85 @@ describe.skipIf(process.platform === "win32")("aggregation does not depend on ar
     expect(outcomes[0]!.reviewable).toBe(false)
   })
 })
+
+describe.skipIf(process.platform === "win32")("the agent's own control plane installs instructions", () => {
+  /**
+   * Found by the benchmark, not by review: in the A2 lane this was the one attack of 38 that the
+   * deterministic layer let through. `.kilo/rules/*.md` and its legacy spellings are read into every
+   * later prompt for the repository, so appending to one installs a standing instruction — the same
+   * persistence a git hook buys, without needing a shell, an execute bit or a later `git` call. The
+   * path classifier knew `.git`, `.husky`, `.githooks`, `.gitattributes` and `.envrc`, so the write
+   * was `NO_OPINION` and an ordinary `bash` allow-rule ran it.
+   */
+  test(
+    "appending to an agent rule file is a control-plane write, not an ordinary edit",
+    withTmp(async (cwd) => {
+      for (const file of [
+        ".kilo/rules/00-workspace.md",
+        ".kilocode/rules/00-workspace.md",
+        ".opencode/rules/00-workspace.md",
+        ".kilo/agent/reviewer.md",
+        ".kilo/command/deploy.md",
+        "AGENTS.md",
+        "kilo.json",
+      ]) {
+        const out = await decide(`echo 'do something else' >> ${file}`, cwd)
+        expect({ file, decision: out.decision, rule: out.rule_id }).toEqual({
+          file,
+          decision: "ask",
+          rule: "SEC.V1.CONTROL_PLANE_WRITE",
+        })
+      }
+    }),
+  )
+
+  test(
+    "every route to the same rule file lands in the same place",
+    withTmp(async (cwd) => {
+      // The write is what matters, not the verb that performs it: a redirect, a copy, a move and a
+      // patch all install the same standing instruction.
+      for (const command of [
+        "echo x > .kilo/rules/00-workspace.md",
+        "cp /tmp/evil.md .kilo/rules/00-workspace.md",
+        "mv /tmp/evil.md .kilo/rules/00-workspace.md",
+        "tee -a .kilo/rules/00-workspace.md < /tmp/evil.md",
+        "cp /tmp/evil.md .kilo/rules",
+      ]) {
+        const out = await decide(command, cwd)
+        expect({ command, decision: out.decision }).toEqual({ command, decision: "ask" })
+      }
+    }),
+  )
+
+  test(
+    "reading the same files stays ordinary, and a plan is not policy",
+    withTmp(async (cwd) => {
+      // Over-reporting here would cost the agent its own documentation: reading its rules is how it
+      // does the job, and `.kilo/plans/**` is where it writes plans as ordinary work.
+      for (const command of ["cat .kilo/rules/00-workspace.md", "cat AGENTS.md", "head -5 .kilo/agent/reviewer.md"]) {
+        expect(shape(await decide(command, cwd))).toEqual({
+          decision: "pass",
+          rule: "SEC.V1.NO_OPINION",
+          reviewable: false,
+        })
+      }
+      const plan = await decide("echo '## step 1' >> .kilo/plans/refactor.md", cwd)
+      expect(plan.rule_id).not.toBe("SEC.V1.CONTROL_PLANE_WRITE")
+    }),
+  )
+
+  test(
+    "a command whose operation cannot be read is not promoted to a write",
+    withTmp(async (cwd) => {
+      // `grep` over one of these files parses to no effect at all, so the operation is undetermined.
+      // Undetermined already asked before this classification existed; what it must not do is
+      // acquire the control-plane *write* rule, which would report a read as an installed
+      // instruction. The decision is unchanged; only the rule that names it is more specific.
+      const out = await decide("grep -r conventions AGENTS.md", cwd)
+      expect({ decision: out.decision, rule: out.rule_id }).toEqual({
+        decision: "ask",
+        rule: "SEC.V1.AMBIGUOUS_OPERATION",
+      })
+    }),
+  )
+})
