@@ -13,6 +13,7 @@ import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
+import { ShellOutputDecoder, withUtf8StdioEnv } from "@/kilocode/shell-output-encoding" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -539,7 +540,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
+      return withUtf8StdioEnv(modelEnv(extra.env)) // kilocode_change - strip backend credentials; set PYTHONIOENCODING unless already set
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
@@ -558,6 +559,7 @@ export const ShellTool = Tool.define(
       let full = ""
       let last = ""
       const list: Chunk[] = []
+      const decoder = new ShellOutputDecoder() // kilocode_change - lock UTF-8 vs GB18030 from stream start
       let used = 0
       let file = ""
       let sink: ReturnType<typeof createWriteStream> | undefined
@@ -603,9 +605,19 @@ export const ShellTool = Tool.define(
 
           const reader = yield* Effect.forkScoped(
             // kilocode_change - keep the fiber so trailing output can be drained
-            Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
-              const size = Buffer.byteLength(chunk, "utf-8")
-              list.push({ text: chunk, size })
+            Stream.runForEach(handle.all, (chunk) => {
+              // kilocode_change start - decode raw bytes as UTF-8 or GB18030
+              const text = decoder.push(chunk)
+              if (!text) {
+                return ctx.metadata({
+                  metadata: {
+                    output: last,
+                  },
+                })
+              }
+              // kilocode_change end
+              const size = Buffer.byteLength(text, "utf-8")
+              list.push({ text, size })
               used += size
               while (used > keep && list.length > 1) {
                 const item = list.shift()
@@ -614,12 +626,12 @@ export const ShellTool = Tool.define(
                 cut = true
               }
 
-              last = preview(last + chunk)
+              last = preview(last + text)
 
               if (file) {
-                sink?.write(chunk)
+                sink?.write(text)
               } else {
-                full += chunk
+                full += text
                 if (Buffer.byteLength(full, "utf-8") > limits.maxBytes) {
                   return trunc.write(full).pipe(
                     Effect.andThen((next) =>
@@ -677,6 +689,13 @@ export const ShellTool = Tool.define(
           // buffered output that arrived just before the process exited. Wait for the stream to
           // finish (it ends once stdio closes) so fast commands do not lose their final chunks.
           yield* Fiber.await(reader).pipe(Effect.timeout("3 seconds"), Effect.ignore)
+          const rest = decoder.flush()
+          if (rest) {
+            list.push({ text: rest, size: Buffer.byteLength(rest, "utf-8") })
+            last = preview(last + rest)
+            if (file) sink?.write(rest)
+            else full += rest
+          }
           // kilocode_change end
 
           return exit.kind === "exit" ? exit.code : null

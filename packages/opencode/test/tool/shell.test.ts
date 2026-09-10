@@ -194,6 +194,24 @@ describe("tool.shell", () => {
     ),
   )
 
+  // kilocode_change start - Windows Python often writes GBK; decode must not turn CJK into U+FFFD
+  it.live("decodes GBK Chinese stdout that is not valid UTF-8", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const text = `${bin} -e ${evalarg("process.stdout.write(Buffer.from([0xc4,0xe3,0xba,0xc3]))")}`
+        const result = yield* run({
+          command: PS.has(sh()) ? `& ${text}` : text,
+          description: "Write GBK hello",
+        })
+        expect(result.metadata.exit).toBe(0)
+        expect(result.output).toContain("你好")
+        expect(result.output).not.toContain("\uFFFD")
+      }),
+    ),
+  )
+  // kilocode_change end
+
   it.live("falls back from terminal-only configured shell", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped({ config: { shell: "fish" } })

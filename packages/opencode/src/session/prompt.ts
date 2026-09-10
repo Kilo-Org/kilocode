@@ -21,6 +21,7 @@ import { KiloReadObject } from "@/kilocode/tool/read-object" // kilocode_change
 import { isInterrupted } from "@/kilocode/effect/cause" // kilocode_change
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
+import { ShellOutputDecoder, withUtf8StdioEnv } from "@/kilocode/shell-output-encoding" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
@@ -763,17 +764,18 @@ export const layer = Layer.effect(
               const cmd = ChildProcess.make(sh, args, {
                 cwd,
                 extendEnv: true,
-                env: { ...shellEnv.env, TERM: "dumb" },
+                env: withUtf8StdioEnv({ ...shellEnv.env, TERM: "dumb" }), // kilocode_change
                 stdin: "ignore",
                 forceKillAfter: "3 seconds",
               })
               const handle = yield* spawner.spawn(cmd)
+              const decoder = new ShellOutputDecoder() // kilocode_change
               // kilocode_change start
               timeout = yield* CommandTimeout.drain(
                 handle,
-                Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                Stream.runForEach(handle.all, (chunk) =>
                   Effect.gen(function* () {
-                    output += chunk
+                    output += decoder.push(chunk)
                     if (part.state.status === "running") {
                       part.state.metadata = { output }
                       yield* sessions.updatePart(part)
@@ -782,6 +784,7 @@ export const layer = Layer.effect(
                 ),
                 "shell command terminated",
               )
+              output += decoder.flush()
               // kilocode_change end
             }).pipe(Effect.scoped, Effect.orDie),
           ).pipe(Effect.exit)
