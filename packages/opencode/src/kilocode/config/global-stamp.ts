@@ -1,24 +1,27 @@
 import path from "path"
-import { stat } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import { Effect } from "effect"
 
 export namespace KilocodeGlobalConfigStamp {
   const files = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc", "config"]
 
-  // Metadata is enough to detect edits and is cheaper than reading every body.
-  // Nanosecond mtime and ctime avoid the same-size edit gap of millisecond
-  // `Date` mtimes, which would otherwise hide same-length rewrites.
+  // Hash the file contents. Metadata alone is not enough: a same-size rewrite
+  // inside one clock tick leaves mtime, ctime, size and ino unchanged, which
+  // hides the edit. That gap is real on runners with coarse file timestamps
+  // (a Linux CI runner measured a ~4ms clock granularity). Read the small
+  // global config files with node:fs instead of the FSUtil service to keep the
+  // per-check cost down.
   export const read = Effect.fnUntraced(function* (dir: string) {
-    const entries = yield* Effect.forEach(
+    const parts = yield* Effect.forEach(
       files,
       Effect.fnUntraced(function* (file) {
         const source = path.join(dir, file)
-        const info = yield* Effect.promise(() => stat(source, { bigint: true }).catch(() => undefined))
-        if (!info) return [source, null] as const
-        return [source, String(info.mtimeNs), String(info.ctimeNs), String(info.size), String(info.ino)] as const
+        const text = yield* Effect.promise(() => readFile(source, "utf8").catch(() => ""))
+        return `${source}\u0000${text}`
       }),
       { concurrency: "unbounded" },
     )
-    return entries.map((entry) => entry.join(":")).join("|")
+    return createHash("sha1").update(parts.join("\u0001")).digest("hex")
   })
 }

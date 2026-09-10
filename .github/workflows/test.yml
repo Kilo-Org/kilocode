@@ -262,7 +262,6 @@ jobs:
             .artifacts/unit/junit.xml
             packages/*/.artifacts/unit/junit.xml
             packages/opencode/.artifacts/unit/startup.json
-            packages/opencode/.artifacts/unit/fs-stamp-precision.json
       # kilocode_change end
 
   # kilocode_change start

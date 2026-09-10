@@ -14,7 +14,6 @@ export namespace TestProfile {
         filesystem: [
           "filesystem/*.test.ts",
           "kilocode/{external-directory-boundary,read-directory}.test.ts",
-          "kilocode/global-config-stamp-precision.test.ts",
           "util/filesystem.test.ts",
         ],
         pty: ["server/httpapi-pty.test.ts", "server/httpapi-v2-pty.test.ts"],

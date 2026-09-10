@@ -24,7 +24,6 @@ describe("KilocodeGlobalConfigStamp", () => {
       const first = yield* KilocodeGlobalConfigStamp.read(dir)
       const second = yield* KilocodeGlobalConfigStamp.read(dir)
       expect(second).toBe(first)
-      expect(second).toContain("kilo.json")
     }),
   )
 
