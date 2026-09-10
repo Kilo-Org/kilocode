@@ -8,8 +8,6 @@
   vertical-align: middle;
   color: color-mix(in oklch, var(--agent-avatar-a), var(--agent-avatar-b));
   fill: currentColor;
-  /* Smooth the grey-to-identity tint when a real id replaces an empty one. */
-  transition: color 620ms ease;
 
   /* Unlit dots stay faintly visible, like the spinner's outer ring, but low
      enough that the lit glyph stays readable. */

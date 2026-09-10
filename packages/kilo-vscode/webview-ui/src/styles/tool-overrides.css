@@ -26,7 +26,12 @@
   justify-content: center;
 
   [data-component="agent-avatar"] {
-    transition: filter 120ms ease;
+    /* Both transitions live here so the base avatar rule stays free of them.
+       The shorthand would otherwise reset transition-property and drop the
+       color fade on this card while still applying it everywhere else. */
+    transition:
+      color 620ms ease,
+      filter 120ms ease;
   }
 }
 
@@ -94,6 +99,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-slot="task-agent-avatar"] [data-component="agent-avatar"] {
+    transition: none;
+  }
+
   [data-slot="task-agent-avatar"] svg[data-component="agent-avatar"]:not([data-color]) circle {
     animation: none;
     opacity: 0.3;
