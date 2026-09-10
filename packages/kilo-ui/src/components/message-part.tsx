@@ -59,7 +59,7 @@ import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./to
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
-import { busy, createThrottledValue, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
+import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
 export { useGrowIn } from "./tool-utils"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
@@ -1526,13 +1526,6 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
-  const throttledText = createThrottledValue(displayText)
-  const summary = createMemo(() => {
-    if (props.message.role !== "assistant") return
-    if (!props.showTurnDiffSummary) return
-    if (props.showAssistantCopyPartID !== part().id) return
-    return props.turnDiffSummary
-  })
 
   // Assistant message is still in-flight when `time.completed` hasn't been set.
   // Used as a render guard for synthetic status parts so stale ones don't
@@ -1540,6 +1533,18 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const streaming = createMemo(
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
+
+  // Repaint at frame cadence while text is arriving, and fall back to the slow
+  // throttle once the part settles so static history stays cheap.
+  const throttledText = createThrottledValue(displayText, () =>
+    streaming() ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS,
+  )
+  const summary = createMemo(() => {
+    if (props.message.role !== "assistant") return
+    if (!props.showTurnDiffSummary) return
+    if (props.showAssistantCopyPartID !== part().id) return
+    return props.turnDiffSummary
+  })
 
   // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
   // guard) are transient status indicators. Hide them once the owning message
@@ -1871,7 +1876,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   }
 
   // Throttle markdown re-renders during streaming
-  const display = createThrottledValue(text)
+  const display = createThrottledValue(text, () => (done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS))
   const view = createMemo(() => reasoningHeading(display(), !done()))
 
   const id = (props.part as any).id as string

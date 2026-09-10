@@ -12,8 +12,9 @@ import {
 } from "./motion"
 
 export const TEXT_RENDER_THROTTLE_MS = 100
+export const STREAMING_TEXT_RENDER_THROTTLE_MS = 16
 
-export function createThrottledValue(getValue: () => string) {
+export function createThrottledValue(getValue: () => string, getInterval: () => number = () => TEXT_RENDER_THROTTLE_MS) {
   const [value, setValue] = createSignal(getValue())
   let timeout: ReturnType<typeof setTimeout> | undefined
   let last = 0
@@ -22,7 +23,7 @@ export function createThrottledValue(getValue: () => string) {
     const next = getValue()
     const now = Date.now()
 
-    const remaining = TEXT_RENDER_THROTTLE_MS - (now - last)
+    const remaining = getInterval() - (now - last)
     if (remaining <= 0) {
       if (timeout) {
         clearTimeout(timeout)
