@@ -7,6 +7,8 @@ interface PendingEntry {
   info: Permission.Request
   ruleset: Permission.Ruleset
   hardRuleset?: Permission.Ruleset
+  /** Written back so `ask` can report who approved a drained sibling; see `interactive` below. */
+  approval?: { interactive: boolean }
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
@@ -21,12 +23,17 @@ type PublishReply = (data: {
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
  * When the user approves/denies a rule on subagent A, sibling subagent B's
  * pending permission for the same pattern resolves or rejects automatically.
+ *
+ * `interactive` says whether a human made the decision that covers them: a drained sibling is
+ * approved by whoever set the covering rule, so it must be attributed the same way rather than
+ * reported as a decision the mode made on its own.
  */
 export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
   publishReply: PublishReply,
   exclude?: string,
+  interactive = false,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (const [id, entry] of pending) {
@@ -60,6 +67,7 @@ export function drainCovered(
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
         yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "always" })
+        entry.approval = { interactive }
         yield* Deferred.succeed(entry.deferred, undefined)
       }
     }

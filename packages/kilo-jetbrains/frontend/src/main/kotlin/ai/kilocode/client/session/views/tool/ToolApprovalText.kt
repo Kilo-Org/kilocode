@@ -34,6 +34,7 @@ private fun source(approval: ToolApproval): String? = when (approval.source) {
     "project" -> KiloBundle.message("session.part.tool.approval.source.project")
     "yolo" -> KiloBundle.message("session.part.tool.approval.source.yolo")
     "session" -> KiloBundle.message("session.part.tool.approval.source.session")
+    "auto" -> KiloBundle.message("session.part.tool.approval.source.auto")
     "default" -> KiloBundle.message("session.part.tool.approval.source.default")
     else -> null
 }
