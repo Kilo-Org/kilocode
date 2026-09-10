@@ -113,7 +113,7 @@ Worktrees share Git object storage with the main repository, but each worktree i
 
 Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the internal PR panel. Use **Open in browser** in the panel header to open the pull request on GitHub.
 
-If the pull request has unresolved review threads, the badge also shows a comment count. Click the count to open the PR panel at its comments section.
+If the pull request has unresolved review threads, the badge also shows a comment count. The badge, the hover-card link, and the count all open the PR panel at its comments section.
 
 {% callout type="info" %}
 The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
@@ -174,7 +174,7 @@ The selected worktree controls the panel. The panel shows the worktree branch an
 
 The panel header provides the **Push Pull Request Fixes** toggle, **Refresh**, **Copy PR link**, **Open in browser**, and **Close**. The panel body contains:
 
-- **Summary:** merge readiness, review status, checks, unresolved comments, and conversation counts, each with a jump action
+- **Summary:** merge readiness, review status, checks, unresolved comments, and conversation counts. Checks, comments, and conversation include a jump action.
 - **Files and review:** load the PR files and post inline review comments (see below)
 - **Reviewers:** requested and completed reviewers with avatars and states (see below)
 - **Checks:** passed, failed, running, cancelled, or skipped checks, with duration and browser links when available
@@ -211,7 +211,7 @@ Use **Files and review** to load the changed files. Select **Load PR files** to 
 To comment on a line, select a line or drag across lines in one gutter of the unified diff. You can comment on the new version (right side) or the old version (left side). A multiline selection is posted as a range. In the comment form:
 
 - Switch between **Write** and **Preview**. `Cmd+Enter` / `Ctrl+Enter` submits.
-- Use **Insert suggestion** to wrap the selected text in a `suggestion` fence. When you view a comment that contains a `suggestion` fence, use **Preview change** to see the proposed diff and **Apply to worktree** to write it into the local worktree file. Applying a suggestion does not stage, commit, or push. The worktree branch and HEAD must match the PR head, and the target lines must still match, or the apply fails.
+- Use **Insert suggestion** on a new-version (right side) line comment or a reply to wrap the selected text in a `suggestion` fence. When you view a comment that contains a `suggestion` fence, use **Preview change** to see the proposed diff and **Apply to worktree** to write it into the local worktree file. Applying a suggestion does not stage, commit, or push. The worktree branch and HEAD must match the PR head, and the target lines must still match, or the apply fails.
 - Submit the review as **Comment**, **Approve**, or **Request changes**. You cannot approve or request changes on your own pull request. Approve needs no body; the other decisions require one.
 
 For review threads and comments:
