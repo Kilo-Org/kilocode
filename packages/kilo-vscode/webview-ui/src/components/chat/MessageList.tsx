@@ -96,6 +96,8 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Whether inline questions and suggestions are actionable on this surface. */
+  interactivePrompts?: boolean
   queuedDisabled?: boolean
   editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
@@ -1358,6 +1360,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                         readonly={props.readonly}
+                        interactivePrompts={props.interactivePrompts}
                       />
                     )}
                   </Virtualizer>
@@ -1377,6 +1380,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                       readonly={props.readonly}
+                      interactivePrompts={props.interactivePrompts}
                     />
                   )}
                 </For>
@@ -1398,12 +1402,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                   readonly={props.readonly}
+                  interactivePrompts={props.interactivePrompts}
                 />
               )}
             </For>
             <TurnOutcome />
-            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
-            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            <Show when={props.interactivePrompts !== false}>
+              <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+              <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            </Show>
           </Show>
         </div>
       </div>

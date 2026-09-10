@@ -1880,9 +1880,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} />
-          <ModelSelector sessionID={sid} />
-          <ThinkingSelector sessionID={sid} />
+          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>
