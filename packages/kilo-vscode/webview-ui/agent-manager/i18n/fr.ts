@@ -108,7 +108,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Dupliquer la session",
   "agentManager.tab.pin": "Épingler",
   "agentManager.tab.unpin": "Détacher",
-  "agentManager.tab.pinned": "Épinglée",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Ouvrir le Terminal",
   "agentManager.tab.newOptions": "Plus d'options de nouvel onglet",

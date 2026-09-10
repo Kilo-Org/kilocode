@@ -59,7 +59,8 @@ export const SortableTab: Component<{
           title={props.tab.title || t("agentManager.session.untitled")}
           active={props.active}
           pinned={props.pinned}
-          pinnedLabel={t("agentManager.tab.pinned")}
+          unpinLabel={t("agentManager.tab.unpin")}
+          onTogglePin={props.onTogglePin}
           state={props.state}
           stateLabel={props.stateLabel}
           keybind={props.keybind}

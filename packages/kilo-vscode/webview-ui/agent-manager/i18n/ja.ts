@@ -102,7 +102,6 @@ export const dict = {
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.pin": "ピン留め",
   "agentManager.tab.unpin": "ピン留めを解除",
-  "agentManager.tab.pinned": "ピン留め済み",
   "agentManager.tab.terminal": "ターミナル",
   "agentManager.tab.openTerminal": "ターミナルを開く",
   "agentManager.tab.newOptions": "新しいタブのその他のオプション",

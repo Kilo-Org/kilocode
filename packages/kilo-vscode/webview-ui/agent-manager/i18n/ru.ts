@@ -105,7 +105,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.pin": "Закрепить",
   "agentManager.tab.unpin": "Открепить",
-  "agentManager.tab.pinned": "Закреплена",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.tab.newOptions": "Другие параметры новой вкладки",

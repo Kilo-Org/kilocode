@@ -1522,20 +1522,6 @@ html[data-theme="kilo-vscode"]
   color: currentColor;
 }
 
-.am-tab-pin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-  opacity: 0.75;
-}
-
-.am-tab-pin [data-component="icon"] {
-  color: currentColor;
-}
-
 .am-subagent-panel .am-tab-icon:has([data-component="agent-avatar"]) {
   overflow: visible;
 }
@@ -1601,8 +1587,25 @@ html[data-theme="kilo-vscode"]
   opacity: 1;
 }
 
+/* A pinned tab keeps its trailing control on screen, because that control is
+   the pin toggle rather than the close button. It doubles as the marker that
+   the tab is pinned. */
+.am-tab[data-pinned="true"] .am-tab-close-wrap {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .am-tab-close {
   flex-shrink: 0;
+}
+
+.am-tab-unpin {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.am-tab-unpin:hover {
+  opacity: 1;
 }
 
 /* Drag-and-drop sortable tab wrapper */

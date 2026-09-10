@@ -103,7 +103,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Rozgałęź sesję",
   "agentManager.tab.pin": "Przypnij",
   "agentManager.tab.unpin": "Odepnij",
-  "agentManager.tab.pinned": "Przypięta",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.tab.newOptions": "Więcej opcji nowej karty",

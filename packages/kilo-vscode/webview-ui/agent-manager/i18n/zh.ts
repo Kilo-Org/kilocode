@@ -100,7 +100,6 @@ export const dict = {
   "agentManager.tab.forkSession": "复制会话",
   "agentManager.tab.pin": "固定",
   "agentManager.tab.unpin": "取消固定",
-  "agentManager.tab.pinned": "已固定",
   "agentManager.tab.terminal": "终端",
   "agentManager.tab.openTerminal": "打开终端",
   "agentManager.tab.newOptions": "更多新建标签页选项",

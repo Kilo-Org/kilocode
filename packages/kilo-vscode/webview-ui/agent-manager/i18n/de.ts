@@ -108,7 +108,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Sitzung verzweigen",
   "agentManager.tab.pin": "Anheften",
   "agentManager.tab.unpin": "Lösen",
-  "agentManager.tab.pinned": "Angeheftet",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal öffnen",
   "agentManager.tab.newOptions": "Weitere Tab-Optionen",

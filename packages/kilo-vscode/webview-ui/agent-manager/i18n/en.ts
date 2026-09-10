@@ -104,7 +104,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.pin": "Pin",
   "agentManager.tab.unpin": "Unpin",
-  "agentManager.tab.pinned": "Pinned",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
   "agentManager.tab.newOptions": "More new-tab options",

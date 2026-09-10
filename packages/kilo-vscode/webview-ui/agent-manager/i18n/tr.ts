@@ -107,7 +107,6 @@ export const dict = {
   "agentManager.tab.forkSession": "Oturumu Fork'la",
   "agentManager.tab.pin": "Sabitle",
   "agentManager.tab.unpin": "Sabitlemeyi kaldır",
-  "agentManager.tab.pinned": "Sabitlendi",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminali Aç",
   "agentManager.tab.newOptions": "Daha fazla yeni sekme seçeneği",
