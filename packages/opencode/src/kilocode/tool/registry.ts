@@ -22,6 +22,8 @@ import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
@@ -275,13 +277,16 @@ export namespace KiloToolRegistry {
         shared_agent_board?: boolean
       }
     },
+    flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
   ): Tool.Def[] {
+    const enabled = BoardEnabled.resolve({
+      config: cfg.experimental?.shared_agent_board,
+      flag: flags.experimentalSharedAgentBoard,
+    })
     return [
       ...(tools.goalReport ? [tools.goalReport] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
-      ...(cfg.experimental?.shared_agent_board === true && tools.boardRead && tools.boardPost
-        ? [tools.boardRead, tools.boardPost]
-        : []),
+      ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,

@@ -10,6 +10,8 @@ import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
@@ -356,14 +358,19 @@ export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | 
 export interface KiloData {
   mcpRules: Record<string, "allow" | "ask" | "deny">
   defaultsPatch: Permission.Ruleset
+  board: boolean
 }
 
 // Prepare kilo-specific data derived from config. Call once per state initialization.
-export function prepare(cfg: Config.Info): KiloData {
+export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">): KiloData {
   const mcpRules = getMcpRules(cfg)
+  const enabled = BoardEnabled.resolve({
+    config: cfg.experimental?.shared_agent_board,
+    flag: flags.experimentalSharedAgentBoard,
+  })
   const defaultsPatch = Permission.fromConfig({
     bash,
-    ...board(cfg.experimental?.shared_agent_board === true),
+    ...board(enabled),
     recall: "ask",
     ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
       ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
@@ -372,7 +379,7 @@ export function prepare(cfg: Config.Info): KiloData {
     kilo_memory_recall: "ask",
     kilo_memory_save: "ask",
   })
-  return { mcpRules, defaultsPatch }
+  return { mcpRules, defaultsPatch, board: enabled }
 }
 
 export function cacheKey(cfg: Config.Info) {
@@ -489,12 +496,11 @@ export function patchAgents(
   >,
   defaults: Permission.Ruleset,
   user: Permission.Ruleset,
-  cfg: Config.Info,
   kilo: KiloData,
   worktree: string,
   whitelistedDirs: string[],
 ) {
-  const enabled = cfg.experimental?.shared_agent_board === true
+  const enabled = kilo.board
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = {
