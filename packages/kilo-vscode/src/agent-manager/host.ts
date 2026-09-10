@@ -121,8 +121,6 @@ export interface Host {
     /** Dynamic root directory for the panel's session provider (follows the active project). */
     workspaceRoot?: () => string | undefined
     projectId?: () => string | undefined
-    /** Source of an externally created session, including async background work. */
-    sessionProject?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */
@@ -134,6 +132,8 @@ export interface Host {
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
   pickFolder(): Promise<string | undefined>
 
+  /** Whether the experimental multi-project Agent Manager mode is enabled. */
+  multiProject(): boolean
   browserAutomation(): boolean
 
   /** Read the persisted additional-project registry payload. */
@@ -142,11 +142,17 @@ export interface Host {
   /** Persist the additional-project registry payload. */
   writeProjects(value: unknown): Promise<void>
 
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
+  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
+
   unregisterProjectRoutes(projectId: string): void
 
   /** Subscribe to workspace folder changes (pinned project re-derivation). */
   onDidChangeWorkspaceFolders(cb: () => void): Disposable
 
+  /** Subscribe to multi-project flag changes. */
+  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 

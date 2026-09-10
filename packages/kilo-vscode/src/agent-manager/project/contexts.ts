@@ -33,6 +33,8 @@ interface ContextsOptions {
     get(id: string): StoredProject | undefined
     expanded?(id: string): boolean | undefined
   }
+  /** Whether the multi-project experiment is enabled. */
+  enabled: () => boolean
   remove?: (id: string) => void
   deps: ProjectContextDeps
 }
@@ -67,6 +69,7 @@ export class ProjectContexts {
     if (existing) return existing
     const pinned = this.pinned()
     if (pinned?.id === id) return pinned
+    if (!this.opts.enabled()) return undefined
     const stored = this.opts.registry.get(id)
     if (!stored) return undefined
     return this.ensure(stored.id, stored.root, false)
@@ -81,7 +84,8 @@ export class ProjectContexts {
       this.rememberExpansion(pinned.id, true)
       return pinned
     }
-    const first = this.opts.registry.list().at(0)
+    if (!this.opts.enabled()) return undefined
+    const first = this.opts.registry.list()[0]
     if (!first) return undefined
     const ctx = this.ensure(first.id, first.root, false)
     this.activeId = ctx.id
@@ -128,9 +132,9 @@ export class ProjectContexts {
     return this.resolveCtx(id)
   }
 
-  /** Resolve a known project that can be shown or initialized. */
+  /** Whether a project may be shown or initialized: known and flag-gated. */
   usable(id: string): ProjectContext | undefined {
-    return this.resolveCtx(id)
+    return this.usableCtx(id)
   }
 
   isActive(id: string): boolean {
@@ -148,7 +152,7 @@ export class ProjectContexts {
 
   /** Make a project the active context and expand it. Returns undefined when not allowed. */
   activate(id: string): ProjectContext | undefined {
-    const ctx = this.resolveCtx(id)
+    const ctx = this.usableCtx(id)
     if (!ctx) return undefined
     this.activeId = id
     this.rememberExpansion(id, false)
@@ -157,7 +161,7 @@ export class ProjectContexts {
 
   /** Expand a project without activating it. Returns undefined when not allowed. */
   expand(id: string): ProjectContext | undefined {
-    const ctx = this.resolveCtx(id)
+    const ctx = this.usableCtx(id)
     if (!ctx) return undefined
     this.expansion.set(id, true)
     return ctx
@@ -167,6 +171,30 @@ export class ProjectContexts {
     this.expansion.set(id, false)
     if (this.isActive(id)) return
     this.contexts.get(id)?.suspend()
+  }
+
+  /** Return ownership to pinned Local and suspend all secondary contexts. */
+  disable(): ProjectContext | undefined {
+    const pinned = this.pinned()
+    this.activeId = pinned?.id
+    if (pinned) this.expansion.set(pinned.id, true)
+    for (const ctx of this.contexts.values()) {
+      if (ctx.pinned) continue
+      this.expansion.set(ctx.id, false)
+      ctx.suspend()
+      // Match remove()/syncPinned(): drop the routes too, otherwise the shared
+      // route service accumulates entries for every disabled project.
+      this.opts.remove?.(ctx.id)
+    }
+    return pinned
+  }
+
+  private usableCtx(id: string): ProjectContext | undefined {
+    const ctx = this.resolveCtx(id)
+    if (!ctx) return undefined
+    if (ctx.pinned) return ctx
+    if (!this.opts.enabled()) return undefined
+    return ctx
   }
 
   /** Remove a non-pinned project context. Falls back to the pinned project when it was active. */
@@ -208,6 +236,7 @@ export class ProjectContexts {
     const out: ProjectSnapshot[] = []
     const pinned = this.pinned()
     if (pinned) out.push(this.snapshot(pinned, undefined))
+    if (!this.opts.enabled()) return out
     for (const stored of this.opts.registry.list()) {
       if (pinned?.id === stored.id) continue
       out.push(this.snapshot(this.contexts.get(stored.id), stored))

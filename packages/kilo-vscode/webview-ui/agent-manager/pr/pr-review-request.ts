@@ -6,6 +6,7 @@ export function reviewRequest(
   post: (message: never) => void,
   settle: (result: PRCommentResult) => void,
   timeout = 30_000,
+  cancelOnCleanup = false,
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined
   let done = false
@@ -53,5 +54,15 @@ export function reviewRequest(
   window.addEventListener("message", handler)
   timer = setTimeout(() => finish(failure), timeout)
   post(message as never)
-  return () => finish(failure)
+  return () => {
+    if (!cancelOnCleanup) {
+      finish(failure)
+      return
+    }
+    if (done) return
+    done = true
+    window.removeEventListener("message", handler)
+    if (timer !== undefined) clearTimeout(timer)
+    timer = undefined
+  }
 }

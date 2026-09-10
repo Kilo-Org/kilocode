@@ -8,7 +8,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
 
-interface WorktreeCreateProps {
+export interface WorktreeCreateProps {
   branch: string
   bindings: Record<string, string>
   loaded: boolean
@@ -18,7 +18,7 @@ interface WorktreeCreateProps {
   onSection: () => void
 }
 
-const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
+export const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
   <div class="am-split-button">
     <TooltipKeybind
       title={props.t("agentManager.shortcuts.advancedWorktree")}
@@ -35,12 +35,14 @@ const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
     </TooltipKeybind>
     <DropdownMenu gutter={4} placement="bottom-end">
       <DropdownMenu.Trigger
+        as={IconButton}
+        icon="chevron-down"
+        size="small"
+        variant="ghost"
         class="am-split-arrow"
         aria-label={props.t("agentManager.worktree.advancedOptions")}
         disabled={!props.loaded}
-      >
-        <Icon name="chevron-down" size="small" />
-      </DropdownMenu.Trigger>
+      />
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="am-split-menu">
           <DropdownMenu.Item onSelect={props.onCreate}>

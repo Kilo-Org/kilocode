@@ -21,6 +21,8 @@ import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
+const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
+type PRMergeMethod = "merge" | "squash" | "rebase"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -74,7 +76,6 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
-      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -87,7 +88,6 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
-      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -177,7 +177,7 @@ export class VscodeHost implements Host {
       listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
-      registerSession: (s) => provider.registerSession(s, false, opts.sessionProject?.()),
+      registerSession: (s) => provider.registerSession(s),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
@@ -276,6 +276,10 @@ export class VscodeHost implements Host {
     return uris?.[0]?.fsPath
   }
 
+  multiProject(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
+  }
+
   browserAutomation(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
@@ -288,12 +292,30 @@ export class VscodeHost implements Host {
     await this.context.globalState.update("agentManager.projects", value)
   }
 
+  getPRMergeMethod(repo: string): PRMergeMethod | undefined {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY)
+    const value = values?.[repo]
+    if (value === "merge" || value === "squash" || value === "rebase") return value
+    return undefined
+  }
+
+  async savePRMergeMethod(repo: string, method: PRMergeMethod): Promise<void> {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY) ?? {}
+    await this.context.globalState.update(PR_MERGE_METHODS_KEY, { ...values, [repo]: method })
+  }
+
   unregisterProjectRoutes(projectId: string): void {
     this.routes.unregisterProject(projectId)
   }
 
   onDidChangeWorkspaceFolders(cb: () => void): Disposable {
     return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
+  }
+
+  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
+    })
   }
 
   isTrusted(): boolean {

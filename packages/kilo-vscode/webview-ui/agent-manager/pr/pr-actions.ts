@@ -9,7 +9,7 @@ import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import type { PRReviewCommentData } from "../../../src/shared/review-comments"
 import { SEND_LIMIT, prConversationPayload, prPayload } from "./pr-comment-payload"
 import { type CommentState, patchCommentState } from "./pr-comment-state"
-import type { PRComment, PRConversationComment } from "./pr-types"
+import { isConversationComment, type PRComment, type PRTimelineItem } from "./pr-types"
 
 export type JumpTarget = "checks" | "comments" | "conversation"
 
@@ -23,9 +23,18 @@ export function unsentThreads(comments: PRComment[], state: CommentState): strin
   return comments.filter((item) => !resolvedFor(item, state) && !state.sent[item.threadId]).map((item) => item.threadId)
 }
 
-/** Human conversation comments not yet sent or dismissed. */
-export function actionableConversation(comments: PRConversationComment[], state: CommentState): string[] {
-  return comments.filter((c) => !c.isBot && !state.sent[c.id] && !state.dismissed[c.id]).map((c) => c.id)
+/** Human conversation comments with text, not yet sent or dismissed. */
+export function actionableConversation(items: PRTimelineItem[], state: CommentState): string[] {
+  return items
+    .filter(
+      (item) =>
+        isConversationComment(item) &&
+        item.body.trim().length > 0 &&
+        !item.isBot &&
+        !state.sent[item.id] &&
+        !state.dismissed[item.id],
+    )
+    .map((item) => item.id)
 }
 
 function send<T>(
@@ -65,10 +74,10 @@ export function sendThreads(
 
 export function sendConversation(
   worktree: string,
-  comments: PRConversationComment[],
+  items: PRTimelineItem[],
   ids: string[],
   state: CommentState,
   terminal?: string,
 ): void {
-  send(worktree, comments, ids, state, (item) => item.id, prConversationPayload, terminal)
+  send(worktree, items.filter(isConversationComment), ids, state, (item) => item.id, prConversationPayload, terminal)
 }

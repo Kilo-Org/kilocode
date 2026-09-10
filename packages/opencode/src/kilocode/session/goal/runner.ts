@@ -1,4 +1,4 @@
-import { Cause, Deferred, Effect, Scope, Semaphore } from "effect"
+import { Cause, Deferred, Effect, Exit, Scope, Semaphore } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { EventV2 } from "@opencode-ai/core/event"
@@ -233,7 +233,7 @@ export namespace Goal {
               if (session.time.archived || session.revert) {
                 yield* Effect.fail(new Error("Restore this session before starting a goal."))
               }
-              if (!replace || !GoalState.active(id))
+              if (!replace || (!starting && !GoalState.active(id)))
                 yield* state
                   .assertNotBusy(id)
                   .pipe(Effect.mapError(() => new Error("Stop the current response before starting a goal.")))
@@ -273,7 +273,11 @@ export namespace Goal {
             : undefined
           if (starting) yield* admit(true)
           if (intent && !intent.current()) return yield* Effect.interrupt
-          if (args && GoalState.active(id)) yield* ops.cancel(id, true)
+          if (GoalState.active(id)) yield* ops.cancel(id, true)
+          if (starting) {
+            const busy = yield* Effect.exit(state.assertNotBusy(id))
+            if (Exit.isFailure(busy)) yield* ops.cancel(id, true)
+          }
           if (intent && !intent.current()) return yield* Effect.interrupt
           if (args === "pause" || args === "clear") yield* pause(id, true)
           const prior = yield* ops.control.begin(id, false)
@@ -303,7 +307,7 @@ export namespace Goal {
               : args === "clear"
                 ? "Goal cleared."
                 : starting
-                  ? "Goal active. Work uses model credits. The working model reports completion or blockers with goal_report; completion is not independently verified. No progress or errors pause the goal. Use Stop or /goal pause to pause."
+                  ? "Goal active. The working model reports completion or blockers with goal_report; completion is not independently verified. No progress or errors pause the goal. Use Stop or /goal pause to pause."
                   : "Goal paused. Use /goal resume to continue."
             const user = prepared ? (yield* prepared).info : undefined
             if (user && user.role !== "user") return yield* Effect.die(new Error("Expected a user message"))

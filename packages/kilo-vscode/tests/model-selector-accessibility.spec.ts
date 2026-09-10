@@ -38,6 +38,17 @@ test("model selector exposes combobox relationships and active option movement",
     "aria-label",
     "Routes each request to the cheapest model that gets the job done, based on continuously benchmarked accuracy and cost.",
   )
+  const kilo = page.getByRole("treeitem", { name: "Kilo", exact: true })
+  const legacy = page.getByRole("treeitem", { name: /Kilo Auto Legacy/ })
+  await expect(legacy).toBeVisible()
+  const legacyAfterKilo = await kilo.evaluate(
+    (group, id) => {
+      const model = document.getElementById(id!)
+      return !!model && !!(group.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING)
+    },
+    await legacy.getAttribute("id"),
+  )
+  expect(legacyAfterKilo).toBe(true)
   await expect(page.getByRole("treeitem", { name: "Omega" })).toBeVisible()
 
   await combobox.press("ArrowDown")

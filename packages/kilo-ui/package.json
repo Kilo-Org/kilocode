@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.5.16",
+  "version": "7.6.2",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -26,6 +26,7 @@
     "./tabs": "./src/components/tabs.tsx",
     "./card": "./src/components/card.tsx",
     "./avatar": "./src/components/avatar.tsx",
+    "./agent-avatar": "./src/components/agent-avatar.tsx",
     "./logo": "./src/components/logo.tsx",
     "./favicon": "./src/components/favicon.tsx",
     "./file-icon": "./src/components/file-icon.tsx",
@@ -70,6 +71,7 @@
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/clipboard": "./src/context/clipboard.tsx",
+    "./context/board-navigation": "./src/context/board-navigation.tsx",
     "./context/data": "./src/context/data.tsx",
     "./context/dialog": "./src/context/dialog.tsx",
     "./context/diff": "./src/context/diff.tsx",

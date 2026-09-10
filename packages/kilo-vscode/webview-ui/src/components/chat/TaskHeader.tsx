@@ -267,14 +267,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 aria-pressed={search.active()}
               />
             </Tooltip>
-            <button
+            <IconButton
+              icon="chevron-down"
+              size="small"
+              variant="ghost"
               data-slot="task-header-expand"
               onClick={toggle}
               aria-expanded={expanded()}
               aria-label="Toggle timeline"
-            >
-              <Icon name="chevron-down" size="small" style={expanded() ? { transform: "rotate(180deg)" } : undefined} />
-            </button>
+            />
           </Show>
         </div>
       </div>

@@ -24,6 +24,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import type { Activity } from "../utils/session-activity"
+import type { Timing } from "./session-timing"
 import type { MessageMutation } from "./session-utils"
 
 export interface SessionContextValue {
@@ -40,7 +41,7 @@ export interface SessionContextValue {
   statusInfo: Accessor<SessionStatusInfo>
   closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
-  busySince: Accessor<number | undefined>
+  busyTiming: Accessor<Timing | undefined>
   submitting: Accessor<boolean>
   canResume: Accessor<boolean>
   resume: () => void
@@ -196,7 +197,7 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
-  ) => void
+  ) => boolean
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   closeQuestion: (requestID: string) => void
@@ -206,7 +207,9 @@ export interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string, options?: { focus?: boolean }) => void
+  selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
+  scrollBottomID: Accessor<string | undefined>
+  consumeScrollBottom: (id: string) => boolean
   releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void

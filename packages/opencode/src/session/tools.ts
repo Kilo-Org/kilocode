@@ -30,6 +30,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -74,9 +75,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const truncate = yield* Truncate.Service
   // kilocode_change start - permission provenance
   const config = yield* Config.Service
+  const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
-  const notify = cfg.experimental?.shared_agent_board === true ? input.notify : undefined
+  const notify = BoardEnabled.resolve({
+    config: cfg.experimental?.shared_agent_board,
+    flag: flags.experimentalSharedAgentBoard,
+  })
+    ? input.notify
+    : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
     Effect.gen(function* () {
@@ -91,7 +98,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       return result
     })
   // kilocode_change end
-  const flags = yield* RuntimeFlags.Service
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {

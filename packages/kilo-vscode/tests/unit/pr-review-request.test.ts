@@ -72,4 +72,49 @@ describe("reviewRequest", () => {
       globalThis.window = previous
     }
   })
+
+  it("can cancel without settling a result", () => {
+    const events = new EventTarget()
+    let active = 0
+    const target = {
+      addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+        if (type === "message") active++
+        events.addEventListener(type, listener)
+      },
+      removeEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+        if (type === "message") active--
+        events.removeEventListener(type, listener)
+      },
+      dispatchEvent: (event: Event) => events.dispatchEvent(event),
+    }
+    const previous = globalThis.window
+    globalThis.window = target as typeof globalThis.window
+
+    try {
+      const message: PRCommentRequest = {
+        type: "agentManager.loadPRConflicts",
+        projectId: "project",
+        worktreeId: "worktree",
+        prNumber: 1,
+        prUrl: "https://github.com/owner/repo/pull/1",
+        base: "a".repeat(40),
+        head: "b".repeat(40),
+        requestId: "request",
+      }
+      const results: PRCommentResult[] = []
+      const dispose = reviewRequest(
+        message,
+        () => {},
+        (result) => results.push(result),
+        5,
+        true,
+      )
+      expect(active).toBe(1)
+      dispose()
+      expect(active).toBe(0)
+      expect(results).toHaveLength(0)
+    } finally {
+      globalThis.window = previous
+    }
+  })
 })

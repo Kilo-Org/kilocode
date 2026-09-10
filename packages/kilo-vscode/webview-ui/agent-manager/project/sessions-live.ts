@@ -14,6 +14,7 @@ import { isKnownRootSession } from "../navigate"
 export function createProjectSessionsLive(opts: {
   base: () => Record<string, ProjectSessionInfo[]>
   pid: () => string | undefined
+  enabled: () => boolean
   store: () => SessionInfo[]
   managed: () => ManagedSessionState[]
   locals: () => Set<string>
@@ -21,7 +22,7 @@ export function createProjectSessionsLive(opts: {
   const sessions = createMemo(() => {
     const base = opts.base()
     const pid = opts.pid()
-    if (!pid) return base
+    if (!pid || !opts.enabled()) return base
     const pushed = base[pid] ?? []
     const store = opts.store()
     if (store.length === 0) return base
@@ -41,6 +42,6 @@ export function createProjectSessionsLive(opts: {
     return { ...base, [pid]: [...merged, ...extra] }
   })
   return Object.assign(sessions, {
-    current: () => sessions()[opts.pid() ?? ""] ?? [],
+    current: () => (opts.enabled() ? (sessions()[opts.pid() ?? ""] ?? []) : opts.store()),
   })
 }

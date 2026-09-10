@@ -114,8 +114,6 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   startStatsPolling: () => void
   contextSessionID: string | undefined
-  resolveSession: (sessionID?: string, draftID?: string, context?: string, directory?: string) => Promise<unknown>
-  handleCreateSession: () => Promise<void>
   checkpoints: Map<string, Promise<void>>
   sessionStatusMap: Map<string, string>
   retryAbortControllers: Map<string, AbortController>
@@ -152,78 +150,6 @@ function connect(internal: ProviderInternals): void {
 }
 
 describe("KiloProvider route integration", () => {
-  const session = {
-    id: "ses-background",
-    slug: "background",
-    projectID: "backend-b",
-    directory: "/repo/b",
-    title: "Background session",
-    version: "1",
-    time: { created: 1, updated: 1 },
-  }
-
-  it("registers a background source without replacing the foreground session", () => {
-    const { connection } = mockConnection()
-    const provider = new KiloProvider({} as never, connection, undefined, {
-      rootDirectory: () => "/repo/a",
-      projectQualifier: () => ({ projectId: "a" }),
-    })
-    const internal = provider as unknown as ProviderInternals
-    const posted: unknown[] = []
-    internal.webview = { postMessage: async (message) => posted.push(message) }
-    internal.isWebviewReady = true
-    internal.contextSessionID = "foreground"
-    provider.registerSession(session, false, "b")
-    expect(internal.contextSessionID).toBe("foreground")
-    expect(posted).toContainEqual(
-      expect.objectContaining({
-        type: "sessionCreated",
-        projectId: "b",
-        session: expect.objectContaining({ id: session.id }),
-      }),
-    )
-  })
-
-  it.each(["draft", "explicit"])("retains the source of a delayed %s local creation", async (mode) => {
-    const { connection } = mockConnection()
-    const started = Promise.withResolvers<void>()
-    const created = Promise.withResolvers<{ data: typeof session }>()
-    const client = connection.getClient()
-    Object.assign(client.session, {
-      create: () => {
-        started.resolve()
-        return created.promise
-      },
-    })
-    let project = "b"
-    const provider = new KiloProvider({} as never, connection, undefined, {
-      rootDirectory: () => `/repo/${project}`,
-      projectQualifier: () => ({ projectId: project }),
-    })
-    const internal = provider as unknown as ProviderInternals
-    const posted: unknown[] = []
-    connect(internal)
-    internal.webview = { postMessage: async (message) => posted.push(message) }
-    internal.isWebviewReady = true
-    const pending =
-      mode === "draft"
-        ? internal.resolveSession(undefined, "pending-b", "local", "/repo/b")
-        : internal.handleCreateSession()
-    await started.promise
-    project = "a"
-    internal.contextSessionID = "foreground"
-    created.resolve({ data: session })
-    await pending
-    expect(internal.contextSessionID).toBe("foreground")
-    expect(posted).toContainEqual(
-      expect.objectContaining({
-        type: "sessionCreated",
-        projectId: "b",
-        session: expect.objectContaining({ id: session.id }),
-      }),
-    )
-  })
-
   const comment: PRReviewCommentData = {
     id: "thread-one",
     origin: "pr",

@@ -128,7 +128,7 @@ export function PRCommentCard(props: Props) {
             {t("agentManager.import.pullRequest")}
           </span>
         </Show>
-        <Show when={!props.inline || !props.open}>
+        <Show when={!props.open}>
           <span class="am-pr-comment-preview">{preview(props.comment.body)}</span>
         </Show>
         <div class="am-pr-comment-tags">

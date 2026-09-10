@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { ExtensionMessage, Part } from "../../webview-ui/src/types/messages"
-import { planOpens } from "../../webview-ui/src/utils/open-plan"
+import { createPlanOpener, planOpens } from "../../webview-ui/src/utils/open-plan"
 
 const done = (id = "part-1") =>
   ({
@@ -63,5 +63,43 @@ describe("planOpens", () => {
 
     expect(planOpens(update(running), "session-1")).toEqual([])
     expect(planOpens(update(unmarked), "session-1")).toEqual([])
+  })
+
+  it("defers inactive plans and replays them when the session becomes active", async () => {
+    let active = "session-2"
+    const opened: string[] = []
+    const opener = createPlanOpener(
+      () => active,
+      (plan) => opened.push(`${plan.sessionID}:${plan.id}`),
+    )
+    const plan = update(done("part-deferred"), "session-1")
+
+    opener.accept(plan)
+    expect(opened).toEqual([])
+
+    active = "session-1"
+    opener.flush(active)
+    await Promise.resolve()
+    expect(opened).toEqual(["session-1:part-deferred"])
+  })
+
+  it("requeues a plan if the active session changes before dispatch", async () => {
+    let active = "session-1"
+    const opened: string[] = []
+    const opener = createPlanOpener(
+      () => active,
+      (plan) => opened.push(`${plan.sessionID}:${plan.id}`),
+    )
+    const plan = update(done("part-race"), "session-1")
+
+    opener.accept(plan)
+    active = "session-2"
+    await Promise.resolve()
+    expect(opened).toEqual([])
+
+    active = "session-1"
+    opener.flush(active)
+    await Promise.resolve()
+    expect(opened).toEqual(["session-1:part-race"])
   })
 })

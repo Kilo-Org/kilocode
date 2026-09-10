@@ -1,4 +1,6 @@
 import type { PRStatus } from "../types"
+import type { PRConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import { isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
 import { execGhInput } from "./PRActions"
 import { GH_MUTATION_TIMEOUT } from "./pr-constants"
 
@@ -36,7 +38,10 @@ function target(m: Record<string, unknown>, pr: PRStatus) {
   if (action !== "delete" && (typeof m.body !== "string" || !m.body.trim())) {
     throw new Error("Comment cannot be blank.")
   }
-  const issue = pr.conversation?.find((comment) => comment.id === m.commentId && comment.kind === "issue")
+  const issue = pr.conversation?.find(
+    (comment): comment is PRConversationComment =>
+      isConversationComment(comment) && comment.kind === "issue" && comment.id === m.commentId,
+  )
   const review = pr.comments?.comments
     .flatMap((comment) => [comment, ...(comment.replies ?? [])])
     .find((comment) => comment.id && comment.id === m.commentId)

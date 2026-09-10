@@ -6,7 +6,7 @@
  * interface abstracts all platform capabilities.
  */
 
-import type { Host } from "../host"
+import type { Host, Disposable } from "../host"
 import type { GitOps } from "../GitOps"
 import { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
@@ -21,7 +21,7 @@ export interface ProjectWiring {
   settings: SettingsHandler
   messages: ProjectMessageDeps
   /** Payload for the agentManager.projects webview message. */
-  snapshots(): { type: "agentManager.projects"; projects: ProjectSnapshot[] }
+  snapshots(): { type: "agentManager.projects"; multiProject: boolean; projects: ProjectSnapshot[] }
   dispose(): void
 }
 
@@ -32,7 +32,6 @@ export function createProjectWiring(opts: {
   output: (msg: string) => void
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
-  empty: () => void
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
@@ -56,6 +55,7 @@ export function createProjectWiring(opts: {
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.host.workspacePath(),
     registry,
+    enabled: () => opts.host.multiProject(),
     remove: (id) => {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)
@@ -65,9 +65,9 @@ export function createProjectWiring(opts: {
   const messages: ProjectMessageDeps = {
     registry,
     contexts,
+    enabled: () => opts.host.multiProject(),
     pickFolder: () => opts.host.pickFolder(),
     activate: opts.activate,
-    empty: opts.empty,
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,
@@ -85,7 +85,17 @@ export function createProjectWiring(opts: {
     push: opts.pushState,
     log: opts.log,
   })
-  const listener = opts.host.onDidChangeWorkspaceFolders(() => opts.changed())
+  const listeners: Disposable[] = [
+    opts.host.onDidChangeWorkspaceFolders(() => opts.changed()),
+    opts.host.onDidChangeMultiProject((enabled) => {
+      if (!enabled) {
+        const pinned = contexts.disable()
+        if (pinned) opts.activate(pinned)
+      }
+      opts.push()
+      opts.pushState()
+    }),
+  ]
   return {
     registry,
     contexts,
@@ -93,10 +103,11 @@ export function createProjectWiring(opts: {
     messages,
     snapshots: () => ({
       type: "agentManager.projects",
+      multiProject: opts.host.multiProject(),
       projects: contexts.snapshots(),
     }),
     dispose: () => {
-      listener.dispose()
+      for (const listener of listeners) listener.dispose()
     },
   }
 }

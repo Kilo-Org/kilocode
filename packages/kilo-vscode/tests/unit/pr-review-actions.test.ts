@@ -2,8 +2,9 @@ import { readFile } from "node:fs/promises"
 import { afterAll, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import * as gh from "../../src/agent-manager/gh"
 import { PRReviewActions } from "../../src/agent-manager/pr/review-actions"
+import { PRMergeActions } from "../../src/agent-manager/pr/merge-actions"
 import type { PRReviewContext } from "../../src/agent-manager/pr/review-context"
-import type { PRReviewResult } from "../../src/shared/pr-comment-actions"
+import type { PRMergeResult, PRReviewResult } from "../../src/shared/pr-comment-actions"
 import { parsePatch } from "../../src/shared/pr-patch"
 
 const execute = spyOn(gh, "execGhRead")
@@ -59,6 +60,8 @@ function harness() {
       title: "Review",
       state: "open",
       review: null,
+      baseRefOid: base,
+      headRefOid: head,
       checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
       reviewers: [],
       additions: 2,
@@ -479,4 +482,157 @@ describe("commit-bound PR review actions", () => {
       expect(result.requestId).toBe("2")
     },
   )
+})
+
+describe("GitHub PR merge actions", () => {
+  it("updates the remote branch with the expected head", async () => {
+    execute.mockResolvedValue({ stdout: "{}", stderr: "" })
+    const context = harness().context
+    const sent: PRMergeResult[] = []
+    const completion = Promise.withResolvers<PRMergeResult>()
+    const host = {
+      context: (_message: Record<string, unknown>) => context,
+      post: (message: PRMergeResult) => {
+        sent.push(message)
+        completion.resolve(message)
+      },
+      refresh: spyOn({ run: (_value: PRReviewContext) => {} }, "run"),
+      dirtyFiles: () => [],
+    }
+    const actions = new PRMergeActions(host)
+    expect(
+      actions.handle({
+        type: "agentManager.updatePRBranch",
+        projectId: context.projectId,
+        worktreeId: context.worktreeId,
+        requestId: "update",
+        prNumber: context.pr.number,
+        prUrl: context.pr.url,
+        head,
+      }),
+    ).toBe(true)
+    expect(await completion.promise).toMatchObject({ type: "agentManager.updatePRBranchResult", success: true })
+    expect(execute.mock.calls.at(-1)?.[0]).toEqual([
+      "api",
+      "--hostname",
+      "github.com",
+      "--method",
+      "PUT",
+      "repos/owner/repo/pulls/7/update-branch",
+      "-f",
+      `expected_head_sha=${head}`,
+    ])
+  })
+
+  it("merges with the selected method and persists it after GitHub succeeds", async () => {
+    execute.mockResolvedValue({ stdout: "", stderr: "" })
+    const context = harness().context
+    const sent: Array<PRMergeResult> = []
+    const completion = Promise.withResolvers<PRMergeResult>()
+    const save = spyOn({ run: async (_repo: string, _method: "merge" | "squash" | "rebase") => {} }, "run")
+    const refresh = spyOn({ run: (_value: PRReviewContext, _settle?: boolean) => {} }, "run")
+    const host = {
+      context: (_message: Record<string, unknown>) => context,
+      post: (message: PRMergeResult) => {
+        sent.push(message)
+        completion.resolve(message)
+      },
+      refresh,
+      dirtyFiles: () => [],
+      savePRMergeMethod: save,
+    }
+    const actions = new PRMergeActions(host)
+    actions.handle({
+      type: "agentManager.mergePR",
+      projectId: context.projectId,
+      worktreeId: context.worktreeId,
+      requestId: "merge",
+      prNumber: context.pr.number,
+      prUrl: context.pr.url,
+      method: "squash",
+      auto: true,
+      head,
+    })
+    expect(await completion.promise).toMatchObject({ type: "agentManager.mergePRResult", success: true })
+    expect(execute.mock.calls.at(-1)?.[0]).toEqual([
+      "pr",
+      "merge",
+      url,
+      "--squash",
+      "--match-head-commit",
+      head,
+      "--auto",
+    ])
+    expect(save).toHaveBeenCalledWith("owner/repo", "squash")
+    expect(refresh).toHaveBeenCalledWith(context, true)
+  })
+
+  it("loads conflicting files without refreshing the pull request", async () => {
+    const context = harness().context
+    const completion = Promise.withResolvers<PRMergeResult>()
+    const conflicts = spyOn(
+      { run: async (_context: PRReviewContext, _base: string, _head: string) => ["a.txt"] },
+      "run",
+    )
+    const refresh = spyOn({ run: (_value: PRReviewContext) => {} }, "run")
+    const host = {
+      context: (_message: Record<string, unknown>) => context,
+      post: (message: PRMergeResult) => completion.resolve(message),
+      refresh,
+      dirtyFiles: () => [],
+      conflicts,
+    }
+    const actions = new PRMergeActions(host)
+    expect(
+      actions.handle({
+        type: "agentManager.loadPRConflicts",
+        projectId: context.projectId,
+        worktreeId: context.worktreeId,
+        requestId: "conflicts",
+        prNumber: context.pr.number,
+        prUrl: context.pr.url,
+        base,
+        head,
+      }),
+    ).toBe(true)
+    expect(await completion.promise).toMatchObject({
+      type: "agentManager.loadPRConflictsResult",
+      success: true,
+      files: ["a.txt"],
+    })
+    expect(conflicts).toHaveBeenCalledWith(context, base, head)
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it("rejects stale or unsafe conflict revisions", async () => {
+    const context = harness().context
+    const completion = Promise.withResolvers<PRMergeResult>()
+    const conflicts = spyOn(
+      { run: async (_context: PRReviewContext, _base: string, _head: string) => ["a.txt"] },
+      "run",
+    )
+    const host = {
+      context: (_message: Record<string, unknown>) => context,
+      post: (message: PRMergeResult) => completion.resolve(message),
+      refresh: spyOn({ run: (_value: PRReviewContext) => {} }, "run"),
+      dirtyFiles: () => [],
+      conflicts,
+    }
+    const actions = new PRMergeActions(host)
+    actions.handle({
+      type: "agentManager.loadPRConflicts",
+      projectId: context.projectId,
+      worktreeId: context.worktreeId,
+      requestId: "stale-conflicts",
+      prNumber: context.pr.number,
+      prUrl: context.pr.url,
+      base: "c".repeat(40),
+      head,
+    })
+    expect(await completion.promise).toMatchObject({
+      type: "agentManager.loadPRConflictsResult",
+      success: false,
+    })
+    expect(conflicts).not.toHaveBeenCalled()
+  })
 })
