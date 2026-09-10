@@ -16,6 +16,7 @@ import {
 test("fixScripts preserves Kilo-only root scripts from base", () => {
   const ours = {
     scripts: {
+      dev: "KILO_CLIENT=cli bun run --cwd packages/opencode --conditions=node src/index.ts",
       "dev-setup": "kilo dev-setup",
       postinstall: "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
       extension: "bun --cwd packages/kilo-vscode script/launch.ts",
@@ -25,11 +26,15 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
     },
   }
   const pkg: Record<string, unknown> = {
-    scripts: { postinstall: "bun run --cwd packages/opencode fix-node-pty" },
+    scripts: {
+      dev: "bun run --cwd packages/opencode --conditions=browser src/index.ts",
+      postinstall: "bun run --cwd packages/opencode fix-node-pty",
+    },
   }
   const changes: string[] = []
   fixScripts(pkg, "package.json", ours, changes)
   const scripts = pkg.scripts as Record<string, string>
+  expect(scripts.dev).toBe(ours.scripts.dev)
   expect(scripts.postinstall).toBe(ours.scripts.postinstall)
   expect(scripts["dev-setup"]).toBe(ours.scripts["dev-setup"])
   expect(scripts.extension).toBe(ours.scripts.extension)

@@ -452,6 +452,7 @@ export function QuestionPrompt(props: {
                         textColor={theme.text}
                         focusedTextColor={theme.text}
                         cursorColor={theme.primary}
+                        cursorStyle={tuiConfig.cursor}
                       />
                     </box>
                   </Show>
