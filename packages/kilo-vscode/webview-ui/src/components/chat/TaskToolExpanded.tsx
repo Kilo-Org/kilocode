@@ -63,6 +63,20 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     const id = childSessionId()
     return taskAvatarStatus(id, props.status, session.allStatusMap())
   })
+  // The avatar shimmers until the child session id is known, then plays a
+  // one-shot resolve into the identity glyph. Only an actual unknown-to-known
+  // transition sets this, so a virtualized remount that starts with the id
+  // already known shows the resolved glyph without replaying the animation.
+  const [resolved, setResolved] = createSignal(false)
+  createEffect(
+    on(
+      childSessionId,
+      (id, prev) => {
+        if (id && !prev) setResolved(true)
+      },
+      { defer: true },
+    ),
+  )
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
   // true never transitions, so this local signal must also seed itself from
@@ -90,7 +104,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (synced) session.unsyncSession(synced)
   })
 
-  const title = createMemo(() => i18n.t("ui.tool.agent", { type: props.input.subagent_type || props.tool }))
+  const title = createMemo(() =>
+    props.input.subagent_type
+      ? i18n.t("ui.tool.agent", { type: props.input.subagent_type })
+      : i18n.t("ui.tool.agent.default"),
+  )
 
   const description = createMemo(() => {
     const val = props.input.description
@@ -208,18 +226,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       <BasicTool
         icon="task"
         iconNode={
-          <Show when={childSessionId()} fallback={<AgentAvatar id="" status={avatar()} />}>
-            {(id) => (
-              <span
-                data-slot="task-agent-avatar"
-                data-clickable="true"
-                title={worktree ? "Open sub-agent in panel" : "Open sub-agent in tab"}
-                onClick={openInTab}
-              >
-                <AgentAvatar id={id()} status={avatar()} />
-              </span>
-            )}
-          </Show>
+          <span
+            data-slot="task-agent-avatar"
+            data-clickable={childSessionId() ? "true" : undefined}
+            data-resolve={resolved() ? "true" : undefined}
+            title={childSessionId() ? (worktree ? "Open sub-agent in panel" : "Open sub-agent in tab") : undefined}
+            onClick={childSessionId() ? openInTab : undefined}
+          >
+            <AgentAvatar id={childSessionId() ?? ""} status={avatar()} />
+          </span>
         }
         status={props.status}
         tool={props.tool}

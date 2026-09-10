@@ -8,6 +8,8 @@
   vertical-align: middle;
   color: color-mix(in oklch, var(--agent-avatar-a), var(--agent-avatar-b));
   fill: currentColor;
+  /* Smooth the grey-to-identity tint when a real id replaces an empty one. */
+  transition: color 620ms ease;
 
   /* Unlit dots stay faintly visible, like the spinner's outer ring, but low
      enough that the lit glyph stays readable. */
@@ -23,6 +25,7 @@
      around it, so the symbol remains recognizable. */
   &[data-status="running"] circle:not([data-lit]) {
     animation: agent-avatar-pulse 1.4s ease-in-out infinite both;
+    animation-delay: var(--agent-avatar-delay);
   }
 
   /* Eight well-separated hues: the six VS Code chart colors plus teal and pink,
