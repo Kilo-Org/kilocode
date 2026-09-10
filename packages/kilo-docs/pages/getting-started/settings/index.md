@@ -187,6 +187,7 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Kilo Swarm** - let a main session and its task subagents share a board (off by default)
+- **Claude Code Migration** - one-time import of supported global Claude Code configuration into Kilo (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -230,3 +231,17 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 **Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
+
+### Claude Code Migration
+
+Claude Code Migration is an opt-in, one-time import of supported global Claude Code configuration into Kilo. Enable **Claude Code Migration (Experimental)** in the VS Code **Experimental** settings; the migration runs once on the next backend start and never retries automatically. It is off by default.
+
+The migration imports the supported global subset only:
+
+- **Global instructions** — `~/.claude/CLAUDE.md` becomes your global `AGENTS.md`
+- **Skills** — simple standalone skills from `~/.claude/skills/`
+- **MCP servers** — top-level definitions from `~/.claude.json`, imported disabled so you enable them explicitly
+
+Existing Kilo instructions, skills, and MCP server names win on conflict, and items outside the supported subset are skipped. After the migration attempt, Kilo stops loading global Claude configuration as a fallback; project-level Claude compatibility (for example a `CLAUDE.md` in your repository) is unaffected.
+
+Your original Claude files are never modified or deleted, so you can keep using Claude Code alongside Kilo. A notification reports the outcome — imported, skipped, or failed per item — with a receipt on disk for the full list.

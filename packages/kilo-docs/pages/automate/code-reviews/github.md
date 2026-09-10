@@ -79,6 +79,10 @@ When a review triggers:
 
 The repository list is synced from GitHub and can be refreshed from the configuration page.
 
+### Per-repository overrides
+
+You can turn automated PR reviews on or off for an individual repository without changing the overall configuration. A repository-level setting takes precedence over the installation default, so you can disable reviews for one noisy repository — or keep a single repository enabled while the default is off. When reviews are disabled for a repository, Kilo skips incoming pull requests for it and no review is started.
+
 ## Troubleshooting
 
 ### Reviews are not triggering
@@ -86,7 +90,8 @@ The repository list is synced from GitHub and can be refreshed from the configur
 1. Verify the GitHub App is installed and has access to the repository
 2. Check that the Review Agent is **enabled** in the Code Reviews configuration
 3. Ensure the repository is in the allowed list (if using "Selected repositories" mode)
-4. Confirm the PR is not a draft
+4. Check that automated reviews are not turned off for that repository by a per-repository override
+5. Confirm the PR is not a draft
 
 ### Reviews are failing
 
