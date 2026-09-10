@@ -56,6 +56,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   experimentalCodeMode: enabledByExperimental("KILO_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalSessionSwitcher: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"), // kilocode_change
+  experimentalSharedAgentBoard: enabledByExperimental("KILO_EXPERIMENTAL_SHARED_AGENT_BOARD"), // kilocode_change
   experimentalWorkspaces: enabledByExperimental("KILO_EXPERIMENTAL_WORKSPACES"),
   experimentalIconDiscovery: enabledByExperimental("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
   experimentalMcpApps: enabledByExperimental("KILO_EXPERIMENTAL_MCP_APPS"), // kilocode_change

@@ -455,6 +455,7 @@ describe("send_file tool", () => {
         send: tool,
       },
       {},
+      { experimentalSharedAgentBoard: false },
     )
 
     const ids = extra.map((t) => t.id)
