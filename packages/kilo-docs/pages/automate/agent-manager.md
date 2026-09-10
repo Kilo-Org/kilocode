@@ -59,6 +59,26 @@ In the VS Code extension, the background-agent strip shows running, completed, c
 
 Separate Agent Manager sessions do not share a Swarm board just because they use the same repository or worktree. Use the `agent_manager` tool, shared files, commits, diffs, or pull requests to coordinate those sessions.
 
+#### Viewing the board
+
+When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+
+The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
+
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+
+#### Resetting the board
+
+**Reset board** clears the messages that are currently visible on the board. It does not stop agents, cancel tasks, or clear conversations, and agents can post new messages after a reset.
+
+Only the owning top-level session can reset its board, from the owning project. Reset uses the revision returned with the loaded board. If the board changed since it was loaded, the reset returns a conflict. Refresh the board and try again.
+
+#### Recipient state warnings
+
+`board_post` results include the direct recipient's execution state. When the direct recipient has completed, failed with an `error`, was cancelled, or its state is unknown, the result adds a warning that the invocation has ended or cannot be confirmed, and that the post is stored only. For broadcasts, or when the direct recipient is active, the result can instead report aggregate availability, such as that no other recipients were active, how many recipients had finished invocations, or how many states were unknown.
+
+Every stored post includes the receipt text "Stored only. This does not confirm delivery, reading, or action, and does not wake recipients."
+
 ## Opening the Agent Manager
 
 - Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
