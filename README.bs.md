@@ -1,19 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">OpenCode je open source AI agent za programiranje.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
+<!-- kilocode_change - Kilo v1 README adapted for this v2 development branch; root locale paths retained. -->
 <p align="center">
   <a href="README.md">English</a> |
   <a href="README.zh.md">简体中文</a> |
@@ -27,7 +12,7 @@
   <a href="README.ja.md">日本語</a> |
   <a href="README.pl.md">Polski</a> |
   <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
+  Bosanski |
   <a href="README.ar.md">العربية</a> |
   <a href="README.no.md">Norsk</a> |
   <a href="README.br.md">Português (Brasil)</a> |
@@ -39,91 +24,80 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="https://kilo.ai"><img width="96" alt="Kilo Code" src="packages/kilo-vscode/assets/kilo.svg" /></a>
+</p>
+
+<p align="center">AI agent za programiranje otvorenog koda — Kilo na OpenCode v2.</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Kilo</a> ·
+  <a href="https://kilo.ai/discord">Discord</a> ·
+  <a href="https://x.com/kilocode">X</a> ·
+  <a href="https://www.reddit.com/r/kilocode/">Reddit</a>
+</p>
+
+> [!IMPORTANT]
+> Ova grana je razvojna pretpregledna verzija, a ne objavljeni Kilo proizvod ili direktna nadogradnja v1. Zadržava izvorni Kilo interfejs dok se izvršno okruženje prenosi na v2. Koristi odvojenu `kilo2` pohranu; uvoz se pokreće izričito. Podaci iz v1 ne prenose se automatski.
 
 ---
 
 ### Instalacija
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+Koristite Bun 1.4 ili noviji. Instalirajte zavisnosti iz ove kopije repozitorija i odaberite CLI ili VS Code. Nova instalacija i sve platforme još nisu završile provjeru za izdavanje. Objavljeni npm paketi i Marketplace verzije ne instaliraju ovu granu.
 
-# Package manageri
-npm i -g opencode-ai@latest        # ili bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS i Linux (preporučeno, uvijek ažurno)
-brew install opencode              # macOS i Linux (zvanična brew formula, rjeđe se ažurira)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Bilo koji OS
-nix run nixpkgs#opencode           # ili github:anomalyco/opencode za najnoviji dev branch
+```sh
+bun install
 ```
 
-> [!TIP]
-> Ukloni verzije starije od 0.1.x prije instalacije.
+#### CLI
 
-### Desktop aplikacija (BETA)
+Otvorite interaktivni Kilo CLI. Možete navesti direktorij projekta, npr. `bun run dev /path/to/project`.
 
-OpenCode je dostupan i kao desktop aplikacija. Preuzmi je direktno sa [stranice izdanja](https://github.com/anomalyco/opencode/releases) ili sa [opencode.ai/download](https://opencode.ai/download).
-
-| Platforma             | Preuzimanje                        |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, ili AppImage       |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```sh
+bun run dev
 ```
 
-#### Instalacijski direktorij
+#### VS Code
 
-Instalacijska skripta koristi sljedeći redoslijed prioriteta za putanju instalacije:
+Izgradite i otvorite izvorno Kilo proširenje u izolovanom razvojnom profilu VS Codea. Instalirajte VS Code i dodajte `code` u PATH ili postavite `VSCODE_BIN`. Proširenje automatski pokreće lokalni server. Prijenos još nije završen.
 
-1. `$OPENCODE_INSTALL_DIR` - Prilagođeni instalacijski direktorij
-2. `$XDG_BIN_DIR` - Putanja usklađena sa XDG Base Directory specifikacijom
-3. `$HOME/bin` - Standardni korisnički bin direktorij (ako postoji ili se može kreirati)
-4. `$HOME/.opencode/bin` - Podrazumijevana rezervna lokacija
-
-```bash
-# Primjeri
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```sh
+bun run extension
 ```
 
 ### Agenti
 
-OpenCode uključuje dva ugrađena agenta između kojih možeš prebacivati tasterom `Tab`.
+**Code** implementira promjene. **Plan** istražuje, preispituje pretpostavke, sprema plan i nudi prelazak na implementaciju. **Ask** odgovara bez uređivanja datoteka. **Debug** istražuje probleme. Moguće je konfigurirati vlastite agente. Alati i dozvole zavise od konfiguracije.
 
-- **build** - Podrazumijevani agent sa punim pristupom za razvoj
-- **plan** - Agent samo za čitanje za analizu i istraživanje koda
-  - Podrazumijevano zabranjuje izmjene datoteka
-  - Traži dozvolu prije pokretanja bash komandi
-  - Idealan za istraživanje nepoznatih codebase-ova ili planiranje izmjena
+### Šta radi
 
-Uključen je i **general** pod-agent za složene pretrage i višekoračne zadatke.
-Koristi se interno i može se pozvati pomoću `@general` u porukama.
-
-Saznaj više o [agentima](https://opencode.ai/docs/agents).
+Implementirani su dijelovi nativnih razgovora, alata i dozvola, Gateway modela i računa, postavki, memorije, indeksiranja, izolacije i terminala. Potpuna jednakost VS Code funkcija, JetBrains, automatsko dovršavanje/FIM, govor i neki tokovi u oblaku još nisu završeni. Dijeljenje, provjera postavljenih servisa, potpisivanje i višeplatformska distribucija imaju otvorene zahtjeve. Prisustvo koda nije dokaz provjere od početka do kraja.
 
 ### Dokumentacija
 
-Za više informacija o konfiguraciji OpenCode-a, [**pogledaj dokumentaciju**](https://opencode.ai/docs).
+Status grane potražite u planu migracije i planovima testiranja. Opća Kilo dokumentacija opisuje objavljeni proizvod i može se razlikovati od ove verzije.
 
-### Doprinosi
+- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Kilo](https://kilo.ai/docs)
 
-Ako želiš doprinositi OpenCode-u, pročitaj [upute za doprinošenje](./CONTRIBUTING.md) prije slanja pull requesta.
+### Doprinos
 
-### Gradnja na OpenCode-u
+Doprinosi su dobrodošli. Prije promjene zajedničkog koda pročitajte vodič za doprinos i pravila v2 forka. Kada je moguće, držite Kilo logiku u vlastitim paketima, provjerite pogođene pakete i sačuvajte podatke o autorstvu izvornog projekta.
 
-Ako radiš na projektu koji je povezan s OpenCode-om i koristi "opencode" kao dio naziva, npr. "opencode-dashboard" ili "opencode-mobile", dodaj napomenu u svoj README da projekat nije napravio OpenCode tim i da nije povezan s nama.
+- [Doprinos](CONTRIBUTING.md)
+- [Kilo v2](migration-tracking/technical-notes/v2-fork-conventions.md)
 
----
+### Licenca
 
-**Pridruži se našoj zajednici** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+[MIT](LICENSE)
+
+### FAQ
+
+<details>
+<summary>Odakle dolazi Kilo CLI?</summary>
+
+Kilo CLI je fork [OpenCode](https://github.com/anomalyco/opencode), poboljšan za rad unutar Kilo agentic engineering platforme.
+
+</details>

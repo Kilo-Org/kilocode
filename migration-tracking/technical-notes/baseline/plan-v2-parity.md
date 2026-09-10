@@ -98,3 +98,30 @@ session. The captured model request is asserted to advertise the `write` and
 save-consent instruction and the plan-file exception. Writes outside the plan
 directory are denied through real tool authorization and leave the tree
 untouched.
+
+## Timestamped filenames and TUI handoff (2026-09-10)
+
+The built-in Plan prompt now supplies a concrete Unix-millisecond filename prefix
+and instructs new plans to use `<timestamp>-<short-kebab-case-description>.md`.
+Refinements retain the same filename. This is a model instruction, not a rename
+of existing plans or a filesystem-level naming restriction.
+
+The server already created and prompted a fresh implementation session after
+“Start new session”, but the TUI had no handoff consumer. Successful `plan_exit`
+now carries the destination session ID in tool-result metadata. The owned TUI
+listener opens it only when the originating Plan session is currently displayed,
+with duplicate handling and activation cleanup. The source remains in Plan mode;
+the destination uses Code and retains the selected model. Tabs-disabled clients
+navigate to the new session instead.
+
+The native plugin `tabs.open` implementation previously only selected a route,
+which could replace a preview tab. It now promotes the target before selection.
+The handoff promotes the source first, preserving the original Plan tab.
+
+Validation: 15 Plan policy and real-renderer handoff tests pass. The renderer test
+chooses “Start new session” through the actual question UI, observes the new
+implementation prompt and Code agent, and verifies the original tab remains.
+CLI and TUI typechecks pass. The broader native tab suites recorded 64 passes
+and two shared-storage notification timeouts; those suites exercise native tab
+contexts directly rather than the modified plugin API. No blanket green-suite
+claim is made. All checks were local; no running user session was restarted.

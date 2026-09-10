@@ -1,19 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">Trợ lý lập trình AI mã nguồn mở.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
+<!-- kilocode_change - Kilo v1 README adapted for this v2 development branch; root locale paths retained. -->
 <p align="center">
   <a href="README.md">English</a> |
   <a href="README.zh.md">简体中文</a> |
@@ -36,94 +21,83 @@
   <a href="README.uk.md">Українська</a> |
   <a href="README.bn.md">বাংলা</a> |
   <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
+  Tiếng Việt
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="https://kilo.ai"><img width="96" alt="Kilo Code" src="packages/kilo-vscode/assets/kilo.svg" /></a>
+</p>
+
+<p align="center">Tác nhân lập trình AI mã nguồn mở — Kilo trên OpenCode v2.</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Kilo</a> ·
+  <a href="https://kilo.ai/discord">Discord</a> ·
+  <a href="https://x.com/kilocode">X</a> ·
+  <a href="https://www.reddit.com/r/kilocode/">Reddit</a>
+</p>
+
+> [!IMPORTANT]
+> Nhánh này là bản xem trước dành cho phát triển, không phải sản phẩm Kilo đã phát hành hay bản nâng cấp ghi đè v1. Giao diện Kilo gốc được giữ lại trong khi chuyển môi trường chạy sang v2. Bản xem trước dùng vùng lưu trữ `kilo2` riêng; việc nhập dữ liệu phải được thực hiện rõ ràng. Dữ liệu v1 không tự động di chuyển.
 
 ---
 
 ### Cài đặt
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+Dùng Bun 1.4 trở lên. Cài các phụ thuộc trong bản mã nguồn này, rồi chọn CLI hoặc VS Code. Việc cài mới và tất cả nền tảng chưa hoàn tất kiểm định phát hành. Các gói npm và bản Marketplace đã phát hành không cài nhánh này.
 
-# Các trình quản lý gói (Package managers)
-npm i -g opencode-ai@latest        # hoặc bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS và Linux (khuyên dùng, luôn cập nhật)
-brew install opencode              # macOS và Linux (công thức brew chính thức, ít cập nhật hơn)
-sudo pacman -S opencode            # Arch Linux (Bản ổn định)
-paru -S opencode-bin               # Arch Linux (Bản mới nhất từ AUR)
-mise use -g opencode               # Mọi hệ điều hành
-nix run nixpkgs#opencode           # hoặc github:anomalyco/opencode cho nhánh dev mới nhất
+```sh
+bun install
 ```
 
-> [!TIP]
-> Hãy xóa các phiên bản cũ hơn 0.1.x trước khi cài đặt.
+#### CLI
 
-### Ứng dụng Desktop (BETA)
+Mở CLI tương tác của Kilo. Có thể chỉ định thư mục dự án, ví dụ `bun run dev /path/to/project`.
 
-OpenCode cũng có sẵn dưới dạng ứng dụng desktop. Tải trực tiếp từ [trang releases](https://github.com/anomalyco/opencode/releases) hoặc [opencode.ai/download](https://opencode.ai/download).
-
-| Nền tảng              | Tải xuống                          |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, hoặc AppImage      |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```sh
+bun run dev
 ```
 
-#### Thư mục cài đặt
+#### VS Code
 
-Tập lệnh cài đặt tuân theo thứ tự ưu tiên sau cho đường dẫn cài đặt:
+Biên dịch và mở tiện ích Kilo gốc trong hồ sơ phát triển VS Code riêng biệt. Cài VS Code và thêm `code` vào PATH hoặc đặt `VSCODE_BIN`. Tiện ích tự khởi động máy chủ cục bộ. Việc chuyển đổi tiện ích vẫn chưa hoàn tất.
 
-1. `$OPENCODE_INSTALL_DIR` - Thư mục cài đặt tùy chỉnh
-2. `$XDG_BIN_DIR` - Đường dẫn tuân thủ XDG Base Directory Specification
-3. `$HOME/bin` - Thư mục nhị phân tiêu chuẩn của người dùng (nếu tồn tại hoặc có thể tạo)
-4. `$HOME/.opencode/bin` - Mặc định dự phòng
-
-```bash
-# Ví dụ
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```sh
+bun run extension
 ```
 
-### Agents (Đại diện)
+### Tác nhân
 
-OpenCode bao gồm hai agent được tích hợp sẵn mà bạn có thể chuyển đổi bằng phím `Tab`.
+**Code** thực hiện thay đổi. **Plan** tìm hiểu, kiểm tra giả định, lưu kế hoạch và đề xuất chuyển sang triển khai. **Ask** trả lời mà không sửa tệp. **Debug** tìm nguyên nhân sự cố. Vẫn có thể cấu hình tác nhân tùy chỉnh. Công cụ và quyền phụ thuộc vào cấu hình.
 
-- **build** - Agent mặc định, có toàn quyền truy cập cho công việc lập trình
-- **plan** - Agent chỉ đọc dùng để phân tích và khám phá mã nguồn
-  - Mặc định từ chối việc chỉnh sửa tệp
-  - Hỏi quyền trước khi chạy các lệnh bash
-  - Lý tưởng để khám phá các codebase lạ hoặc lên kế hoạch thay đổi
+### Nó làm gì
 
-Ngoài ra còn có một subagent **general** dùng cho các tìm kiếm phức tạp và tác vụ nhiều bước.
-Agent này được sử dụng nội bộ và có thể gọi bằng cách dùng `@general` trong tin nhắn.
-
-Tìm hiểu thêm về [agents](https://opencode.ai/docs/agents).
+Đã triển khai một phần hội thoại gốc, công cụ và quyền, tích hợp mô hình/tài khoản Gateway, cài đặt, bộ nhớ, lập chỉ mục, sandbox và bộ điều hợp terminal. Khả năng tương đương đầy đủ với VS Code gốc, JetBrains, tự hoàn thành/FIM, giọng nói và một số luồng đám mây còn dang dở. Chia sẻ, kiểm định dịch vụ đã triển khai, ký và phân phối đa nền tảng vẫn có yêu cầu chưa hoàn thành. Có mã nguồn không đồng nghĩa với đạt kiểm định đầu cuối.
 
 ### Tài liệu
 
-Để biết thêm thông tin về cách cấu hình OpenCode, [**hãy truy cập tài liệu của chúng tôi**](https://opencode.ai/docs).
+Xem kế hoạch chuyển đổi và kế hoạch kiểm thử để biết trạng thái nhánh. Tài liệu Kilo chung mô tả sản phẩm đã phát hành và có thể khác bản xem trước này.
+
+- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Kilo](https://kilo.ai/docs)
 
 ### Đóng góp
 
-Nếu bạn muốn đóng góp cho OpenCode, vui lòng đọc [tài liệu hướng dẫn đóng góp](./CONTRIBUTING.md) trước khi gửi pull request.
+Hoan nghênh đóng góp. Đọc hướng dẫn đóng góp và quy ước fork v2 trước khi sửa mã dùng chung. Ưu tiên đặt hành vi Kilo trong các gói riêng, kiểm tra các gói bị ảnh hưởng và giữ thông tin ghi nhận dự án gốc.
 
-### Xây dựng trên nền tảng OpenCode
+- [Đóng góp](CONTRIBUTING.md)
+- [Kilo v2](migration-tracking/technical-notes/v2-fork-conventions.md)
 
-Nếu bạn đang làm việc trên một dự án liên quan đến OpenCode và sử dụng "opencode" như một phần của tên dự án, ví dụ "opencode-dashboard" hoặc "opencode-mobile", vui lòng thêm một ghi chú vào README của bạn để làm rõ rằng dự án đó không được xây dựng bởi đội ngũ OpenCode và không liên kết với chúng tôi dưới bất kỳ hình thức nào.
+### License
 
----
+[MIT](LICENSE)
 
-**Tham gia cộng đồng của chúng tôi** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+### FAQ
+
+<details>
+<summary>Kilo CLI đến từ đâu?</summary>
+
+Kilo CLI là một fork của [OpenCode](https://github.com/anomalyco/opencode), được cải tiến để hoạt động trong nền tảng Kilo agentic engineering.
+
+</details>

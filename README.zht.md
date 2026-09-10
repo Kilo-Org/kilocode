@@ -1,23 +1,8 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">開源的 AI Coding Agent。</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
+<!-- kilocode_change - Kilo v1 README adapted for this v2 development branch; root locale paths retained. -->
 <p align="center">
   <a href="README.md">English</a> |
   <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
+  繁體中文 |
   <a href="README.ko.md">한국어</a> |
   <a href="README.de.md">Deutsch</a> |
   <a href="README.es.md">Español</a> |
@@ -39,90 +24,80 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="https://kilo.ai"><img width="96" alt="Kilo Code" src="packages/kilo-vscode/assets/kilo.svg" /></a>
+</p>
+
+<p align="center">開源 AI 程式開發代理 — 基於 OpenCode v2 的 Kilo。</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Kilo</a> ·
+  <a href="https://kilo.ai/discord">Discord</a> ·
+  <a href="https://x.com/kilocode">X</a> ·
+  <a href="https://www.reddit.com/r/kilocode/">Reddit</a>
+</p>
+
+> [!IMPORTANT]
+> 此分支是開發預覽版，不是已發布的 Kilo 產品，也不是 v1 的原地升級。它保留 Kilo 原有介面，並將執行環境遷移至 v2。預覽版使用獨立的 `kilo2` 儲存空間；匯入必須明確執行，不會自動遷移現有 v1 資料。
 
 ---
 
 ### 安裝
 
-```bash
-# 直接安裝 (YOLO)
-curl -fsSL https://opencode.ai/install | bash
+請使用 Bun 1.4 或更新版本。在此程式碼目錄安裝相依套件後，選擇下方的 CLI 或 VS Code 工作流程。全新安裝及所有平台尚未完成發布驗證。已發布的 npm 套件和 Marketplace 版本不會安裝此分支。
 
-# 套件管理員
-npm i -g opencode-ai@latest        # 也可使用 bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS 與 Linux（推薦，始終保持最新）
-brew install opencode              # macOS 與 Linux（官方 brew formula，更新頻率較低）
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # 任何作業系統
-nix run nixpkgs#opencode           # 或使用 github:anomalyco/opencode 以取得最新開發分支
+```sh
+bun install
 ```
 
-> [!TIP]
-> 安裝前請先移除 0.1.x 以前的舊版本。
+#### CLI
 
-### 桌面應用程式 (BETA)
+啟動 Kilo 互動式 CLI。可指定專案目錄，例如 `bun run dev /path/to/project`。
 
-OpenCode 也提供桌面版應用程式。您可以直接從 [發佈頁面 (releases page)](https://github.com/anomalyco/opencode/releases) 或 [opencode.ai/download](https://opencode.ai/download) 下載。
-
-| 平台                  | 下載連結                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, 或 AppImage        |
-
-```bash
-# macOS (Homebrew Cask)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```sh
+bun run dev
 ```
 
-#### 安裝目錄
+#### VS Code
 
-安裝腳本會依據以下優先順序決定安裝路徑：
+建置並在獨立的 VS Code 開發設定中開啟原有 Kilo 擴充功能。請先安裝 VS Code，將 `code` 加入 PATH，或設定 `VSCODE_BIN`。擴充功能會自動啟動本機伺服器。遷移仍未完成。
 
-1. `$OPENCODE_INSTALL_DIR` - 自定義安裝目錄
-2. `$XDG_BIN_DIR` - 符合 XDG 基礎目錄規範的路徑
-3. `$HOME/bin` - 標準使用者執行檔目錄 (若存在或可建立)
-4. `$HOME/.opencode/bin` - 預設備用路徑
-
-```bash
-# 範例
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```sh
+bun run extension
 ```
 
-### Agents
+### 代理
 
-OpenCode 內建了兩種 Agent，您可以使用 `Tab` 鍵快速切換。
+**Code** 實作變更。**Plan** 調查問題、質疑假設、儲存計畫，並提供轉入實作階段的選項。**Ask** 回答問題而不編輯檔案。**Debug** 排查問題。仍可設定自訂代理。可用工具與權限取決於設定。
 
-- **build** - 預設模式，具備完整權限的 Agent，適用於開發工作。
-- **plan** - 唯讀模式，適用於程式碼分析與探索。
-  - 預設禁止修改檔案。
-  - 執行 bash 指令前會詢問權限。
-  - 非常適合用來探索陌生的程式碼庫或規劃變更。
+### 功能
 
-此外，OpenCode 還包含一個 **general** 子 Agent，用於處理複雜搜尋與多步驟任務。此 Agent 供系統內部使用，亦可透過在訊息中輸入 `@general` 來呼叫。
+已實作的部分包括原生對話、工具與權限、Gateway 模型與帳戶整合、設定、記憶、索引、沙箱與終端機介接。完整的原有 VS Code 功能對等、JetBrains、自動補全/FIM、語音及部分雲端流程仍待完成。分享、已部署服務驗證、簽署與跨平台散布仍有未完成的驗收條件。有原始碼不代表已通過端對端驗收。
 
-了解更多關於 [Agents](https://opencode.ai/docs/agents) 的資訊。
+### 文件
 
-### 線上文件
+請參閱遷移計畫與測試計畫，了解此分支的狀態。Kilo 通用文件介紹的是已發布產品，可能與此預覽版不同。
 
-關於如何設定 OpenCode 的詳細資訊，請參閱我們的 [**官方文件**](https://opencode.ai/docs)。
+- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Kilo](https://kilo.ai/docs)
 
-### 參與貢獻
+### 貢獻
 
-如果您有興趣參與 OpenCode 的開發，請在提交 Pull Request 前先閱讀我們的 [貢獻指南 (Contributing Docs)](./CONTRIBUTING.md)。
+歡迎貢獻。修改共用程式碼前，請閱讀貢獻指南與 v2 分支慣例。盡可能將 Kilo 行為放在專屬套件中，驗證受影響的套件，並保留上游署名。
 
-### 基於 OpenCode 進行開發
+- [貢獻](CONTRIBUTING.md)
+- [Kilo v2](migration-tracking/technical-notes/v2-fork-conventions.md)
 
-如果您正在開發與 OpenCode 相關的專案，並在名稱中使用了 "opencode"（例如 "opencode-dashboard" 或 "opencode-mobile"），請在您的 README 中加入聲明，說明該專案並非由 OpenCode 團隊開發，且與我們沒有任何隸屬關係。
+### 授權
 
----
+[MIT](LICENSE)
 
-**加入我們的社群** [飞书](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=52ao9352-5623-4fa0-b7dd-3407c392c1af&qr_code=true) | [X.com](https://x.com/opencode)
+### FAQ
+
+<details>
+<summary>Kilo CLI 從何而來？</summary>
+
+Kilo CLI 是 [OpenCode](https://github.com/anomalyco/opencode) 的 fork，並增強為可在 Kilo agentic engineering 平台中使用。
+
+</details>

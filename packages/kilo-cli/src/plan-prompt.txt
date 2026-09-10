@@ -20,6 +20,8 @@ Your job is to gather context, challenge assumptions, resolve design questions, 
 
 ## Plan Files
 
+- Name each new plan `{{timestamp}}-<short-kebab-case-description>.md` under `.kilo/plans/`. The leading number is the supplied Unix timestamp in milliseconds; retain that prefix when refining the same plan.
+
 - You may create and edit Markdown plan files only under `.kilo/plans/` in this project. This is your one permitted exception to the editing prohibitions below; it does not extend to any other documentation.
 - Before creating or updating a plan file, use the native question tool to ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the plan file, then call `plan_exit` with the exact saved path. If the user chooses to continue refining, keep planning without saving.
 - Do not edit source files or non-plan documentation files.

@@ -1819,3 +1819,18 @@ Keep the sharing inventory row `in-progress` until all of these are resolved:
 
 These are completion criteria for the existing Phase 1 sharing row, not new
 phases or permission to increase the approved shared-patch count.
+
+## Plan completion follow-up — 2026-09-10
+
+Fixed the reported missing timestamp naming instruction and invisible new-session
+handoff. Built-in Plan supplies a Unix-millisecond prefix for new filenames.
+Successful new-session completion carries its destination in tool metadata; the
+TUI preserves the Plan tab and opens/focuses a separate Code tab. The shared plugin
+tab-open implementation now promotes explicitly opened tabs instead of replacing
+a preview. The old Plan session remains Plan by design.
+
+Focused verification: 15 tests pass, including a real-host/rendered question-to-tab
+handoff; CLI and TUI typechecks pass. Broader native tab coverage: 64 pass, two
+shared-storage timeout failures. See
+[Plan parity notes](../technical-notes/baseline/plan-v2-parity.md) for scope and
+limitations. No capability percentage changed, no live session restart, no commit.

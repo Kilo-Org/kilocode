@@ -1,19 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">Ο πράκτορας τεχνητής νοημοσύνης ανοικτού κώδικα για προγραμματισμό.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
+<!-- kilocode_change - Kilo v1 README adapted for this v2 development branch; root locale paths retained. -->
 <p align="center">
   <a href="README.md">English</a> |
   <a href="README.zh.md">简体中文</a> |
@@ -35,95 +20,84 @@
   <a href="README.tr.md">Türkçe</a> |
   <a href="README.uk.md">Українська</a> |
   <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
+  Ελληνικά |
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="https://kilo.ai"><img width="96" alt="Kilo Code" src="packages/kilo-vscode/assets/kilo.svg" /></a>
+</p>
+
+<p align="center">Ο πράκτορας προγραμματισμού AI ανοικτού κώδικα — Kilo πάνω στο OpenCode v2.</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Kilo</a> ·
+  <a href="https://kilo.ai/discord">Discord</a> ·
+  <a href="https://x.com/kilocode">X</a> ·
+  <a href="https://www.reddit.com/r/kilocode/">Reddit</a>
+</p>
+
+> [!IMPORTANT]
+> Αυτός ο κλάδος είναι προεπισκόπηση ανάπτυξης, όχι το δημοσιευμένο προϊόν Kilo ούτε αναβάθμιση πάνω στη v1. Διατηρεί την αρχική διεπαφή Kilo ενώ μεταφέρει το περιβάλλον εκτέλεσης στη v2. Χρησιμοποιεί ξεχωριστό χώρο `kilo2` και ρητή εισαγωγή. Τα δεδομένα v1 δεν μεταφέρονται αυτόματα.
 
 ---
 
 ### Εγκατάσταση
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+Χρησιμοποιήστε Bun 1.4 ή νεότερο. Εγκαταστήστε τις εξαρτήσεις σε αυτό το αντίγραφο και επιλέξτε CLI ή VS Code. Η νέα εγκατάσταση και όλες οι πλατφόρμες δεν έχουν ολοκληρώσει τον έλεγχο έκδοσης. Τα δημοσιευμένα πακέτα npm και οι εκδόσεις Marketplace δεν εγκαθιστούν αυτόν τον κλάδο.
 
-# Διαχειριστές πακέτων
-npm i -g opencode-ai@latest        # ή bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS και Linux (προτείνεται, πάντα ενημερωμένο)
-brew install opencode              # macOS και Linux (επίσημος τύπος brew, λιγότερο συχνές ενημερώσεις)
-sudo pacman -S opencode            # Arch Linux (Σταθερό)
-paru -S opencode-bin               # Arch Linux (Τελευταία έκδοση από AUR)
-mise use -g opencode               # Οποιοδήποτε λειτουργικό σύστημα
-nix run nixpkgs#opencode           # ή github:anomalyco/opencode με βάση την πιο πρόσφατη αλλαγή από το dev branch
+```sh
+bun install
 ```
 
-> [!TIP]
-> Αφαίρεσε παλαιότερες εκδόσεις από τη 0.1.x πριν από την εγκατάσταση.
+#### CLI
 
-### Εφαρμογή Desktop (BETA)
+Ανοίξτε το διαδραστικό Kilo CLI. Μπορείτε να ορίσετε φάκελο έργου, π.χ. `bun run dev /path/to/project`.
 
-Το OpenCode είναι επίσης διαθέσιμο ως εφαρμογή. Κατέβασε το απευθείας από τη [σελίδα εκδόσεων](https://github.com/anomalyco/opencode/releases) ή το [opencode.ai/download](https://opencode.ai/download).
-
-| Πλατφόρμα             | Λήψη                               |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, ή AppImage         |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```sh
+bun run dev
 ```
 
-#### Κατάλογος Εγκατάστασης
+#### VS Code
 
-Το script εγκατάστασης τηρεί την ακόλουθη σειρά προτεραιότητας για τη διαδρομή εγκατάστασης:
+Δημιουργήστε και ανοίξτε την αρχική επέκταση Kilo σε απομονωμένο προφίλ ανάπτυξης VS Code. Εγκαταστήστε το VS Code και προσθέστε το `code` στο PATH ή ορίστε το `VSCODE_BIN`. Η επέκταση ξεκινά αυτόματα τον τοπικό διακομιστή. Η μεταφορά παραμένει ημιτελής.
 
-1. `$OPENCODE_INSTALL_DIR` - Προσαρμοσμένος κατάλογος εγκατάστασης
-2. `$XDG_BIN_DIR` - Διαδρομή συμβατή με τις προδιαγραφές XDG Base Directory
-3. `$HOME/bin` - Τυπικός κατάλογος εκτελέσιμων αρχείων χρήστη (εάν υπάρχει ή μπορεί να δημιουργηθεί)
-4. `$HOME/.opencode/bin` - Προεπιλεγμένη εφεδρική διαδρομή
-
-```bash
-# Παραδείγματα
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```sh
+bun run extension
 ```
 
 ### Πράκτορες
 
-Το OpenCode περιλαμβάνει δύο ενσωματωμένους πράκτορες μεταξύ των οποίων μπορείτε να εναλλάσσεστε με το πλήκτρο `Tab`.
+Το **Code** υλοποιεί αλλαγές. Το **Plan** ερευνά, αμφισβητεί παραδοχές, αποθηκεύει σχέδιο και προσφέρει μετάβαση στην υλοποίηση. Το **Ask** απαντά χωρίς επεξεργασία αρχείων. Το **Debug** διερευνά προβλήματα. Υποστηρίζεται ρύθμιση προσαρμοσμένων πρακτόρων. Εργαλεία και άδειες εξαρτώνται από τη διαμόρφωση.
 
-- **build** - Προεπιλεγμένος πράκτορας με πλήρη πρόσβαση για εργασία πάνω σε κώδικα
-- **plan** - Πράκτορας μόνο ανάγνωσης για ανάλυση και εξερεύνηση κώδικα
-  - Αρνείται την επεξεργασία αρχείων από προεπιλογή
-  - Ζητά άδεια πριν εκτελέσει εντολές bash
-  - Ιδανικός για εξερεύνηση άγνωστων αρχείων πηγαίου κώδικα ή σχεδιασμό αλλαγών
+### Τι κάνει
 
-Περιλαμβάνεται επίσης ένας **general** υποπράκτορας για σύνθετες αναζητήσεις και πολυβηματικές διεργασίες.
-Χρησιμοποιείται εσωτερικά και μπορεί να κληθεί χρησιμοποιώντας `@general` στα μηνύματα.
+Έχουν υλοποιηθεί τμήματα συνομιλιών, εργαλείων και αδειών, μοντέλων και λογαριασμών Gateway, ρυθμίσεων, μνήμης, ευρετηρίασης, απομόνωσης και τερματικών. Πλήρης ισοδυναμία VS Code, JetBrains, αυτόματη συμπλήρωση/FIM, ομιλία και ορισμένες ροές cloud εκκρεμούν. Κοινή χρήση, έλεγχος ανεπτυγμένων υπηρεσιών, υπογραφή και διανομή σε όλες τις πλατφόρμες έχουν ανοικτές απαιτήσεις. Η ύπαρξη κώδικα δεν αποδεικνύει ολοκληρωμένη αποδοχή.
 
-Μάθετε περισσότερα για τους [πράκτορες](https://opencode.ai/docs/agents).
+### Τεκμηρίωση
 
-### Οδηγός Χρήσης
+Δείτε το σχέδιο μετάβασης και τα σχέδια δοκιμών για την κατάσταση του κλάδου. Η γενική τεκμηρίωση Kilo αφορά το δημοσιευμένο προϊόν και μπορεί να διαφέρει από την προεπισκόπηση.
 
-Για περισσότερες πληροφορίες σχετικά με τη ρύθμιση του OpenCode, [**πλοηγήσου στον οδηγό χρήσης μας**](https://opencode.ai/docs).
+- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Kilo](https://kilo.ai/docs)
 
 ### Συνεισφορά
 
-Εάν ενδιαφέρεσαι να συνεισφέρεις στο OpenCode, διαβάστε τα [οδηγό χρήσης συνεισφοράς](./CONTRIBUTING.md) πριν υποβάλεις ένα pull request.
+Οι συνεισφορές είναι ευπρόσδεκτες. Διαβάστε τον οδηγό συνεισφοράς και τους κανόνες του fork v2 πριν αλλάξετε κοινόχρηστο κώδικα. Κρατήστε τη συμπεριφορά Kilo σε δικά του πακέτα όπου γίνεται, ελέγξτε τα επηρεαζόμενα πακέτα και διατηρήστε την αναφορά προέλευσης.
 
-### Δημιουργία πάνω στο OpenCode
+- [Συνεισφορά](CONTRIBUTING.md)
+- [Kilo v2](migration-tracking/technical-notes/v2-fork-conventions.md)
 
-Εάν εργάζεσαι σε ένα έργο σχετικό με το OpenCode και χρησιμοποιείτε το "opencode" ως μέρος του ονόματός του, για παράδειγμα "opencode-dashboard" ή "opencode-mobile", πρόσθεσε μια σημείωση στο README σας για να διευκρινίσεις ότι δεν είναι κατασκευασμένο από την ομάδα του OpenCode και δεν έχει καμία σχέση με εμάς.
+### Άδεια
 
----
+[MIT](LICENSE)
 
-**Γίνε μέλος της κοινότητάς μας** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+### FAQ
+
+<details>
+<summary>Από πού προήλθε το Kilo CLI;</summary>
+
+Το Kilo CLI είναι fork του [OpenCode](https://github.com/anomalyco/opencode), βελτιωμένο για να λειτουργεί μέσα στην Kilo agentic engineering platform.
+
+</details>

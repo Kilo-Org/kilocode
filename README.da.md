@@ -1,19 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">Den open source AI-kodeagent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
+<!-- kilocode_change - Kilo v1 README adapted for this v2 development branch; root locale paths retained. -->
 <p align="center">
   <a href="README.md">English</a> |
   <a href="README.zh.md">简体中文</a> |
@@ -23,7 +8,7 @@
   <a href="README.es.md">Español</a> |
   <a href="README.fr.md">Français</a> |
   <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
+  Dansk |
   <a href="README.ja.md">日本語</a> |
   <a href="README.pl.md">Polski</a> |
   <a href="README.ru.md">Русский</a> |
@@ -39,91 +24,80 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="https://kilo.ai"><img width="96" alt="Kilo Code" src="packages/kilo-vscode/assets/kilo.svg" /></a>
+</p>
+
+<p align="center">Den åbne AI-kodningsagent — Kilo på OpenCode v2.</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Kilo</a> ·
+  <a href="https://kilo.ai/discord">Discord</a> ·
+  <a href="https://x.com/kilocode">X</a> ·
+  <a href="https://www.reddit.com/r/kilocode/">Reddit</a>
+</p>
+
+> [!IMPORTANT]
+> Denne gren er en udviklingspreview, ikke det udgivne Kilo-produkt eller en direkte v1-opgradering. Den oprindelige Kilo-grænseflade bevares, mens runtime flyttes til v2. Previewen bruger separat `kilo2`-lagring og eksplicit import. Eksisterende v1-data migreres ikke automatisk.
 
 ---
 
 ### Installation
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+Brug Bun 1.4 eller nyere. Installér afhængighederne fra denne checkout, og vælg CLI eller VS Code. Nyinstallation og alle platforme har endnu ikke gennemført udgivelsesvalidering. Udgivne npm-pakker og Marketplace-versioner installerer ikke denne gren.
 
-# Pakkehåndteringer
-npm i -g opencode-ai@latest        # eller bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS og Linux (anbefalet, altid up to date)
-brew install opencode              # macOS og Linux (officiel brew formula, opdateres sjældnere)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # alle OS
-nix run nixpkgs#opencode           # eller github:anomalyco/opencode for nyeste dev-branch
+```sh
+bun install
 ```
 
-> [!TIP]
-> Fjern versioner ældre end 0.1.x før installation.
+#### CLI
 
-### Desktop-app (BETA)
+Åbn Kilos interaktive CLI. Angiv eventuelt en projektmappe, for eksempel `bun run dev /path/to/project`.
 
-OpenCode findes også som desktop-app. Download direkte fra [releases-siden](https://github.com/anomalyco/opencode/releases) eller [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, eller AppImage     |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```sh
+bun run dev
 ```
 
-#### Installationsmappe
+#### VS Code
 
-Installationsscriptet bruger følgende prioriteringsrækkefølge for installationsstien:
+Byg og åbn den oprindelige Kilo-udvidelse i en isoleret VS Code-udviklingsprofil. Installér VS Code, og føj `code` til PATH, eller sæt `VSCODE_BIN`. Udvidelsen starter automatisk sin lokale server. Porteringen er stadig ufuldstændig.
 
-1. `$OPENCODE_INSTALL_DIR` - Tilpasset installationsmappe
-2. `$XDG_BIN_DIR` - Sti der følger XDG Base Directory Specification
-3. `$HOME/bin` - Standard bruger-bin-mappe (hvis den findes eller kan oprettes)
-4. `$HOME/.opencode/bin` - Standard fallback
-
-```bash
-# Eksempler
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```sh
+bun run extension
 ```
 
-### Agents
+### Agenter
 
-OpenCode har to indbyggede agents, som du kan skifte mellem med `Tab`-tasten.
+**Code** implementerer ændringer. **Plan** undersøger, udfordrer antagelser, gemmer en plan og tilbyder overdragelse til implementering. **Ask** svarer uden at redigere filer. **Debug** undersøger problemer. Egne agenter kan konfigureres. Værktøjer og tilladelser afhænger af konfigurationen.
 
-- **build** - Standard, agent med fuld adgang til udviklingsarbejde
-- **plan** - Skrivebeskyttet agent til analyse og kodeudforskning
-  - Afviser filredigering som standard
-  - Spørger om tilladelse før bash-kommandoer
-  - Ideel til at udforske ukendte kodebaser eller planlægge ændringer
+### Hvad den gør
 
-Derudover findes der en **general**-subagent til komplekse søgninger og flertrinsopgaver.
-Den bruges internt og kan kaldes via `@general` i beskeder.
-
-Læs mere om [agents](https://opencode.ai/docs/agents).
+Dele af samtaler, værktøjer, tilladelser, Gateway-modeller og konti, indstillinger, hukommelse, indeksering, sandbox og terminaler er implementeret. Fuld VS Code-paritet, JetBrains, autofuldførelse/FIM, tale og visse cloudforløb mangler stadig. Deling, kontrol af udrullede tjenester, signering og distribution på tværs af platforme har åbne krav. Kildekode alene er ikke en ende-til-ende-godkendelse.
 
 ### Dokumentation
 
-For mere info om konfiguration af OpenCode, [**se vores docs**](https://opencode.ai/docs).
+Se migrationsplanen og testplanerne for denne grens status. Kilos generelle dokumentation beskriver det udgivne produkt og kan afvige fra previewen.
+
+- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Kilo](https://kilo.ai/docs)
 
 ### Bidrag
 
-Hvis du vil bidrage til OpenCode, så læs vores [contributing docs](./CONTRIBUTING.md) før du sender en pull request.
+Bidrag er velkomne. Læs bidragsvejledningen og v2-forkens konventioner før ændringer i fælles kode. Placér om muligt Kilo-adfærd i egne pakker, kontrollér berørte pakker, og bevar krediteringen af upstream-projektet.
 
-### Bygget på OpenCode
+- [Bidrag](CONTRIBUTING.md)
+- [Kilo v2](migration-tracking/technical-notes/v2-fork-conventions.md)
 
-Hvis du arbejder på et projekt der er relateret til OpenCode og bruger "opencode" som en del af navnet; f.eks. "opencode-dashboard" eller "opencode-mobile", så tilføj en note i din README, der tydeliggør at projektet ikke er bygget af OpenCode-teamet og ikke er tilknyttet os på nogen måde.
+### Licens
 
----
+[MIT](LICENSE)
 
-**Bliv en del af vores community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+### FAQ
+
+<details>
+<summary>Hvor kommer Kilo CLI fra?</summary>
+
+Kilo CLI er en fork af [OpenCode](https://github.com/anomalyco/opencode), forbedret til at fungere i Kilo agentic engineering-platformen.
+
+</details>

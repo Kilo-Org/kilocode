@@ -50,7 +50,7 @@ test("Kilo Plan uses the native question form and only implements after Continue
 test("Kilo Plan saves a new plan file through a real write before plan_exit", async () => {
   await using input = await fixture()
   const content = "# Fresh plan\n\n1. Ship the fix.\n"
-  const freshPlan = ".kilo/plans/fresh-plan.md"
+  const freshPlan = `.kilo/plans/${Date.now()}-fresh-plan.md`
   await withHost(
     interactiveLayout(input.directory, input.home),
     freshPlan,
@@ -84,6 +84,8 @@ test("Kilo Plan saves a new plan file through a real write before plan_exit", as
       expect(host.system()).toContain("Finalize and save the plan")
       expect(host.system()).toContain("use the native question tool")
       expect(host.system()).toContain("one permitted exception")
+      expect(host.system()).toMatch(/\d{13}-<short-kebab-case-description>\.md/)
+      expect(host.system()).not.toContain("{{timestamp}}")
       await host.client.form.reply({
         sessionID: session.id,
         formID: implement.id,
@@ -320,6 +322,10 @@ test("Kilo Plan starts a code session only after Start new session", async () =>
       return sessions.find((item) => item.id !== session.id)
     })
     await host.client.session.wait({ sessionID: next.id }, { signal: AbortSignal.timeout(10_000) })
+    await host.client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(10_000) })
+    const sourceMessages = JSON.stringify((await host.client.message.list({ sessionID: session.id })).data)
+    expect(sourceMessages).toContain('"kiloPlanHandoff":{"sessionID":"' + next.id + '"}')
+    expect((await host.client.session.get({ sessionID: session.id })).agent).toBe("plan")
     expect(next.agent).toBe("build")
     expect(next.model).toMatchObject({ providerID: "fixture", id: "selected" })
     expect(JSON.stringify((await host.client.message.list({ sessionID: next.id })).data)).toContain(plan)

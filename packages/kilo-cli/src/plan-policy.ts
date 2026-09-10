@@ -50,7 +50,7 @@ export function createPlanPolicy(options: PlanPolicyOptions = {}) {
           item.name = Agent.Name.make("Plan")
           item.description = "Plan work before implementation."
           item.mode = "primary"
-          item.system = planPrompt
+          item.system = planPrompt.replace("{{timestamp}}", String(Date.now()))
           item.permissions.push(
             { action: "*", resource: "*", effect: "deny" },
             { action: "question", resource: "*", effect: "allow" },
@@ -159,7 +159,11 @@ export function createPlanPolicy(options: PlanPolicyOptions = {}) {
                 ...(current.model ? { model: current.model } : {}),
               })
               yield* ctx.session.prompt({ sessionID: next.id, text: implementationPrompt(planFile), delivery: "steer" })
-              return { output: { plan: planFile, choice }, content: `Implementing ${planFile} in a new session.` }
+              return {
+                output: { plan: planFile, choice },
+                metadata: { kiloPlanHandoff: { sessionID: next.id } },
+                content: `Implementing ${planFile} in a new Code session (${next.id}).`,
+              }
             }).pipe(
               Effect.mapError((error) =>
                 error instanceof Tool.Error

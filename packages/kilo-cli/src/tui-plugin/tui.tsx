@@ -2,6 +2,7 @@ import { createClient, type KiloGatewayAccount } from "@kilocode/client"
 import { Plugin } from "@opencode-ai/plugin/tui"
 import { Option, Schema } from "effect"
 import { createMemo, createSignal } from "solid-js"
+import { installPlanHandoff } from "./plan-handoff"
 import { KiloLogo } from "./logo"
 import { installMemoryUi } from "./memory"
 import { installMemorySidebar } from "./sidebar-memory"
@@ -36,6 +37,7 @@ export default Plugin.define({
     const options = Schema.decodeUnknownSync(Options)(ctx.options ?? {})
     const client = options.kiloHttp ? createClient(options.kiloHttp) : undefined
     const controller = new AbortController()
+    const stopPlanHandoff = installPlanHandoff(ctx)
     const [account, setAccount] = createSignal<KiloGatewayAccount>()
     const [privacy, setPrivacy] = createSignal<PrivacyUi>()
     const [revision, setRevision] = createSignal(0)
@@ -347,7 +349,10 @@ export default Plugin.define({
         }
       }
     })().catch(() => undefined)
-    return () => controller.abort()
+    return () => {
+      stopPlanHandoff()
+      controller.abort()
+    }
   },
 })
 

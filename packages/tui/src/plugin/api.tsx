@@ -188,6 +188,8 @@ export function createPluginContext(input: {
           }),
         open(sessionID) {
           if (!host.sessionTabs.enabled()) return false
+          // kilocode_change - explicit plugin opens create persistent tabs rather than replacing a preview.
+          host.sessionTabs.promote(sessionID)
           host.sessionTabs.select(sessionID)
           return true
         },
