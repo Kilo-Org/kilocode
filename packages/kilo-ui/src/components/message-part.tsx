@@ -162,6 +162,10 @@ export interface MessagePartProps {
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
   reasoningAutoCollapse?: boolean
+  /** True when the stream has moved past this reasoning part. Encrypted
+   * reasoning items hold every summary's `time.end` until the whole item
+   * finishes, so the caller settles finished summaries from the part order. */
+  settled?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
@@ -1077,6 +1081,7 @@ export function Part(props: MessagePartProps) {
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
+        settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
@@ -1857,9 +1862,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     return (p.text ?? "").replace("[REDACTED]", "").trim()
   }
 
-  // time.end is set by the processor on reasoning-end.
-  // v1 parts lack time entirely → treat as historical.
+  // time.end is set by the processor on reasoning-end. The caller marks a part
+  // settled once a later part started. v1 parts lack time entirely → historical.
   const done = () => {
+    if (props.settled) return true
     const t = (props.part as any).time
     return !t || !!t.end
   }
