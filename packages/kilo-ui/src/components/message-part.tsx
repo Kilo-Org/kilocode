@@ -176,7 +176,7 @@ export interface MessagePartProps {
   readonly?: boolean
 }
 
-export type ReasoningDisplay = "collapsed" | "shortened" | "full" | "full_persist"
+export type ReasoningDisplay = "collapsed" | "shortened" | "shortened_persist" | "full" | "full_persist"
 
 export type PartComponent = Component<MessagePartProps>
 
@@ -1890,25 +1890,31 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // The reasoning display mode splits into independent axes:
   //  - collapsesOnFinish: collapse the block once the agent finishes (shortened, full)
-  //  - usesOpenModel: default-closed and track manual opens (collapsed/shortened/full);
+  //  - usesOpenModel: default-closed and track manual opens (everything but full_persist);
   //    full_persist is default-open and tracks manual collapses instead
   //  - startClosed: closed even while streaming (collapsed)
-  //  - shortenLive: cap the live streaming view to a scrolling window (shortened)
+  //  - shortenLive: cap the live view to a scrolling window (shortened, shortened_persist)
+  //  - capPersists: keep that capped window open once finished (shortened_persist)
   // Default to full_persist (full text while streaming, stays open) when unset.
   const reasoningMode = (): ReasoningDisplay => props.reasoningDisplay ?? "full_persist"
   const collapsesOnFinish = () => reasoningMode() === "shortened" || reasoningMode() === "full"
   const usesOpenModel = () => reasoningMode() !== "full_persist"
   const startClosed = () => reasoningMode() === "collapsed"
-  const shortenLive = () => reasoningMode() === "shortened"
+  const shortenLive = () => reasoningMode() === "shortened" || reasoningMode() === "shortened_persist"
+  const capPersists = () => reasoningMode() === "shortened_persist"
 
   // collapsed: closed even while streaming (click to expand). shortened/full:
   // streaming -> open, just-finished -> open briefly then collapse, historical
-  // -> collapsed. full_persist: open unless the user explicitly collapsed it.
+  // -> collapsed. shortened_persist: streaming or streamed this session -> open in
+  // the capped window and stays there, historical -> collapsed. full_persist: open
+  // unless the user explicitly collapsed it.
   const initial = startClosed()
     ? userOpened.has(id)
     : collapsesOnFinish()
       ? !done() || was || userOpened.has(id)
-      : !userCollapsed.has(id)
+      : capPersists()
+        ? !userCollapsed.has(id) && (was || !done() || userOpened.has(id))
+        : !userCollapsed.has(id)
   const [open, setOpen] = createSignal(initial)
   const [manual, setManual] = createSignal(usesOpenModel() && userOpened.has(id))
   const title = createMemo(() => {
@@ -1961,10 +1967,12 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     }
   })
 
-  // Drop the in-session streaming mark on unmount so a finished block is
-  // treated as historical (and starts collapsed) the next time it mounts.
+  // Drop the in-session streaming mark on unmount so a finished block is treated
+  // as historical (and starts collapsed) the next time it mounts. Only the
+  // collapse-on-finish modes want that: shortened_persist deliberately keeps the
+  // mark so a block that streamed this session stays open across remounts.
   onCleanup(() => {
-    if (done()) streamed.delete(id)
+    if (collapsesOnFinish() && done()) streamed.delete(id)
   })
 
   // Auto-scroll the content container while streaming.

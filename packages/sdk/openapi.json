@@ -34549,7 +34549,7 @@
           },
           "reasoning_display": {
             "type": "string",
-            "enum": ["collapsed", "shortened", "full", "full_persist"]
+            "enum": ["collapsed", "shortened", "shortened_persist", "full", "full_persist"]
           },
           "inline_code_background": {
             "type": "boolean"

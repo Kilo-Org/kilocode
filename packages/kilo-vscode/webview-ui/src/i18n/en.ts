@@ -1139,6 +1139,7 @@ export const dict = {
     "How reasoning blocks appear in chat while the agent is thinking and after it finishes.",
   "settings.display.reasoning.collapsed": "Collapsed (click to expand)",
   "settings.display.reasoning.shortened": "Preview while thinking, then collapse",
+  "settings.display.reasoning.shortenedPersist": "Preview while thinking, stay open",
   "settings.display.reasoning.full": "Full while thinking, then collapse",
   "settings.display.reasoning.fullPersist": "Full, stay open",
   "settings.display.inlineCodeBackground.title": "Highlight Inline Code",

@@ -32,6 +32,7 @@ const MCP_OPTIONS: LayoutOption[] = [
 const REASONING_OPTIONS: LayoutOption[] = [
   { value: "collapsed", labelKey: "settings.display.reasoning.collapsed" },
   { value: "shortened", labelKey: "settings.display.reasoning.shortened" },
+  { value: "shortened_persist", labelKey: "settings.display.reasoning.shortenedPersist" },
   { value: "full", labelKey: "settings.display.reasoning.full" },
   { value: "full_persist", labelKey: "settings.display.reasoning.fullPersist" },
 ]

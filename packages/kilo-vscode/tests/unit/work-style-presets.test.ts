@@ -43,7 +43,7 @@ describe("work style presets", () => {
   it("does not loosen permissions for high autonomy", () => {
     const cfg = WORK_STYLE_PRESETS.autonomous.config
     expect(cfg.terminal_command_display).toBe("collapsed")
-    expect(cfg.reasoning_display).toBe("shortened")
+    expect(cfg.reasoning_display).toBe("shortened_persist")
     expect(cfg.permission).toBeUndefined()
     expect(WORK_STYLE_PRESETS.autonomous.settings).toEqual({
       showTaskTimeline: false,

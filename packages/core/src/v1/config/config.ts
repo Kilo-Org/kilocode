@@ -108,11 +108,13 @@ export const Info = Schema.Struct({
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
     description:
-      "@deprecated Use 'reasoning_display' instead. Still recognized for backward compatibility with existing configs: true maps to 'shortened', false or unset to 'full_persist'.",
+      "@deprecated Use 'reasoning_display' instead. Still recognized for backward compatibility with existing configs: true maps to 'shortened_persist' (the behavior this boolean actually produced), false or unset to 'full_persist'.",
   }),
-  reasoning_display: Schema.optional(Schema.Literals(["collapsed", "shortened", "full", "full_persist"])).annotate({
+  reasoning_display: Schema.optional(
+    Schema.Literals(["collapsed", "shortened", "shortened_persist", "full", "full_persist"]),
+  ).annotate({
     description:
-      "How reasoning blocks display in the VS Code chat UI: 'collapsed' (hidden until clicked to expand live), 'shortened' (scrolling preview while streaming, then collapse when finished), 'full' (full text while streaming, then collapse when finished), 'full_persist' (full text, stays open). Defaults to 'full_persist'; when set, overrides the deprecated auto_collapse_reasoning boolean.",
+      "How reasoning blocks display in the VS Code chat UI: 'collapsed' (hidden until clicked to expand live), 'shortened' (scrolling preview while streaming, then collapse when finished), 'shortened_persist' (scrolling preview while streaming, stays open when finished), 'full' (full text while streaming, then collapse when finished), 'full_persist' (full text, stays open). Defaults to 'full_persist'; when set, overrides the deprecated auto_collapse_reasoning boolean.",
   }),
   inline_code_background: Schema.optional(Schema.Boolean).annotate({
     description:

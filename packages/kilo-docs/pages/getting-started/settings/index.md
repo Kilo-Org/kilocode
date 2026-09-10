@@ -91,6 +91,7 @@ Reasoning blocks show their full text while the agent is thinking and stay open 
 
 - `collapsed` — hidden until you click to expand
 - `shortened` — scrolling preview while streaming, then collapse when finished
+- `shortened_persist` — scrolling preview while streaming, stays open when finished
 - `full` — full text while streaming, then collapse when finished
 - `full_persist` — full text, stays open (default)
 

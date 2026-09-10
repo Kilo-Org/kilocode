@@ -5,7 +5,7 @@ type PermissionConfig = Partial<Record<string, PermissionRule>>
 export interface WorkStyleConfig {
   permission?: PermissionConfig
   terminal_command_display?: "expanded" | "collapsed"
-  reasoning_display?: "collapsed" | "shortened" | "full" | "full_persist"
+  reasoning_display?: "collapsed" | "shortened" | "shortened_persist" | "full" | "full_persist"
   /**
    * @deprecated Superseded by reasoning_display. Still read here so applying a work style
    * to a legacy config (auto_collapse_reasoning set, reasoning_display unset) does not
@@ -100,7 +100,7 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
     style: "autonomous",
     config: {
       terminal_command_display: "collapsed",
-      reasoning_display: "shortened",
+      reasoning_display: "shortened_persist",
     },
     settings: {
       showTaskTimeline: false,

@@ -38,7 +38,9 @@ export const DisplayProvider: ParentComponent = (props) => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
   const reasoningDisplay = createMemo<ReasoningDisplay>(
-    () => config().reasoning_display ?? (config().auto_collapse_reasoning === true ? "shortened" : "full_persist"),
+    () =>
+      config().reasoning_display ??
+      (config().auto_collapse_reasoning === true ? "shortened_persist" : "full_persist"),
   )
   const inlineCodeBackground = createMemo(() => config().inline_code_background === true)
   const inlineCodeColor = createMemo(() => config().inline_code_color)
