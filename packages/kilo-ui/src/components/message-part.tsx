@@ -3,6 +3,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  createUniqueId,
   For,
   Match,
   onCleanup,
@@ -46,7 +47,6 @@ import { Card } from "./card"
 import { Collapsible } from "./collapsible"
 import { FileIcon } from "./file-icon"
 import { Icon } from "./icon"
-import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
@@ -3296,6 +3296,54 @@ ToolRegistry.register({
   },
 })
 
+function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
+  const id = createUniqueId()
+  const state = () => (props.checked ? "" : undefined)
+  return (
+    <div role="group" data-component="checkbox" data-readonly="" data-checked={state()}>
+      <input
+        type="checkbox"
+        id={`${id}-input`}
+        data-slot="checkbox-checkbox-input"
+        data-readonly=""
+        data-checked={state()}
+        checked={props.checked}
+        readOnly
+        aria-readonly="true"
+        aria-labelledby={`${id}-label`}
+        onChange={(event) => {
+          event.currentTarget.checked = props.checked
+        }}
+      />
+      <div data-slot="checkbox-checkbox-control" data-readonly="" data-checked={state()}>
+        <Show when={props.checked}>
+          <div data-slot="checkbox-checkbox-indicator" data-readonly="" data-checked="">
+            <svg viewBox="0 0 12 12" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3 7.17905L5.02703 8.85135L9 3.5"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="square"
+              />
+            </svg>
+          </div>
+        </Show>
+      </div>
+      <div data-slot="checkbox-checkbox-content">
+        <label
+          id={`${id}-label`}
+          for={`${id}-input`}
+          data-slot="checkbox-checkbox-label"
+          data-readonly=""
+          data-checked={state()}
+        >
+          {props.children}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "todowrite",
   render(props) {
@@ -3341,7 +3389,7 @@ ToolRegistry.register({
             </Show>
             <For each={shown()}>
               {(todo: TodoItem) => (
-                <Checkbox readOnly checked={todo.status === "completed"}>
+                <TodoCheckbox checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
@@ -3349,7 +3397,7 @@ ToolRegistry.register({
                   >
                     {todo.content}
                   </span>
-                </Checkbox>
+                </TodoCheckbox>
               )}
             </For>
             <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
