@@ -138,6 +138,8 @@ export interface ModelSelectorBaseProps {
   description?: string
   /** Only respond to picker events from this prompt scope. */
   trigger?: string
+  /** Disable this prompt-scoped selector while a permission owns the prompt. */
+  blocked?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -569,7 +571,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // always restore the prompt before the popover's own Escape handler runs.
   const onTrigger = (event: Event) => {
     const source = (event as CustomEvent<{ source?: string }>).detail?.source
-    if (source !== props.trigger) return
+    if (source !== props.trigger || props.blocked) return
     setOpen(true)
   }
   const onEscape = (e: KeyboardEvent) => {
@@ -578,11 +580,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     e.stopImmediatePropagation()
     cancel()
   }
-  window.addEventListener("openModelPicker", onTrigger)
-  window.addEventListener("keydown", onEscape, true)
+  createEffect(() => {
+    if (props.blocked) {
+      setOpen(false)
+      return
+    }
+    window.addEventListener("openModelPicker", onTrigger)
+    window.addEventListener("keydown", onEscape, true)
+    onCleanup(() => {
+      window.removeEventListener("openModelPicker", onTrigger)
+      window.removeEventListener("keydown", onEscape, true)
+    })
+  })
   onCleanup(() => {
-    window.removeEventListener("openModelPicker", onTrigger)
-    window.removeEventListener("keydown", onEscape, true)
     clearTimeout(previewTimer)
     if (scrollFrame !== undefined) cancelAnimationFrame(scrollFrame)
   })
@@ -818,13 +828,16 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           deferDismiss={props.deferDismiss}
           portal={props.portal}
           open={open()}
-          onOpenChange={setOpen}
+          onOpenChange={(value) => {
+            if (value && props.blocked) return
+            setOpen(value)
+          }}
           triggerAs={Button}
           triggerProps={{
             variant: "secondary",
             size: "normal",
             get disabled() {
-              return !canOpen()
+              return props.blocked || !canOpen()
             },
             get ["aria-label"]() {
               return controlLabel()
@@ -1145,6 +1158,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
 interface ModelSelectorProps {
   sessionID?: Accessor<string | undefined>
+  blocked?: boolean
 }
 
 export const ModelSelector: Component<ModelSelectorProps> = (props) => {
@@ -1154,6 +1168,7 @@ export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   return (
     <ModelSelectorBase
       value={session.selected(id())}
+      blocked={props.blocked}
       onSelect={(providerID, modelID) => {
         session.selectModel(providerID, modelID, id())
       }}

@@ -40,6 +40,8 @@ interface ChatViewProps {
   onForkMessage?: (sessionId: string, messageId: string) => void
   onForkSession?: (sessionId: string) => void
   readonly?: boolean
+  /** Whether this chat owns actionable prompt controls. Defaults to true. */
+  interactivePrompts?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   worktree?: boolean
@@ -68,6 +70,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const pendingSessionID = () => props.pendingSessionID ?? tabs?.pending()
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
+  const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
   const goal = () => session.currentSession()?.goal
@@ -103,7 +106,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Tool-linked questions render inline at their tool part position via AssistantMessage.
   const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
   const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
-  const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  const permissionRequest = () => familyPermissions().at(0)
   // Questions and suggestions do not block input; permissions do.
   // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
   const blocked = () => isPromptBlocked(familyPermissions().length)
@@ -112,14 +115,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   const dock = () =>
-    !props.readonly || !!goal() || !!permissionRequest() || session.submitting() || session.status() !== "idle"
+    ownsPrompts() &&
+    (!props.readonly || !!goal() || !!permissionRequest() || session.submitting() || session.status() !== "idle")
   // The session dock stays empty while another surface owns the interaction:
   // a permission card, a pending question or suggestion, or agent requirements.
   // A spinner there would claim the agent is working while it waits on the user.
   const dockBlocked = () => blocked() || familyQuestions().length > 0 || familySuggestions().length > 0
 
   onMount(() => {
-    if (props.readonly) return
+    if (props.readonly || !ownsPrompts()) return
     const handler = (e: KeyboardEvent) => {
       if (
         e.key !== "Escape" ||
@@ -166,10 +170,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     onCleanup(cleanup)
   }
 
-  const decide = (response: "once" | "always" | "reject", approvedAlways: string[], deniedAlways: string[]) => {
+  const decide = (
+    permissionID: string,
+    response: "once" | "always" | "reject",
+    approvedAlways: string[],
+    deniedAlways: string[],
+  ) => {
     const perm = permissionRequest()
-    if (!perm || session.respondingPermissions().has(perm.id)) return
-    session.respondToPermission(perm.id, response, approvedAlways, deniedAlways)
+    if (!perm || perm.id !== permissionID || session.respondingPermissions().has(permissionID)) return
+    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways)
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
@@ -392,6 +401,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 questions={standaloneQuestions}
                 suggestions={standaloneSuggestions}
                 readonly={props.readonly}
+                interactivePrompts={ownsPrompts()}
                 emptyState={props.emptyState}
                 introduction={props.introduction}
                 announce={isSidebar()}
@@ -421,7 +431,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
               />
-              <Show when={!props.readonly}>
+              <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput
                   blocked={blocked}
                   edit={editing()}
