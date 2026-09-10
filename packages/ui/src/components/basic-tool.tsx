@@ -105,7 +105,13 @@ export function BasicTool(props: BasicToolProps) {
   const open = () => props.open ?? state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
-  const hasChildren = () => (props.defer ? "children" in props : props.children)
+  // kilocode_change start - testing for children must not evaluate them. Reading
+  // the `children` getter constructs the whole collapsed body tree (and runs
+  // Markdown/diff parsing inside it) on every mount, even while closed, which
+  // dominated the cost of mounting tool cards. `"children" in props` only checks
+  // presence, keeping the body lazy without changing how it renders.
+  const hasChildren = () => "children" in props
+  // kilocode_change end
   const hasDetails = () => props.hasDetails ?? !!hasChildren() // kilocode_change
 
   let cancelReady: (() => void) | undefined
