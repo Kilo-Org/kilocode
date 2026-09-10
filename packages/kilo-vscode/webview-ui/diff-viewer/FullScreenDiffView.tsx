@@ -13,7 +13,6 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
@@ -24,14 +23,14 @@ import {
   toggleOpenFiles,
 } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { DiffViewerNotice } from "./DiffViewerNotice"
 import { VirtualDiffList } from "./VirtualDiffList"
 import { createDiffViewport } from "./diff-requests"
 import { RemoteCommentsOutside } from "./remote-comment-renderer"
 import { ReviewDiffItem } from "./ReviewDiffItem"
-import { createReviewView, type ReviewViewProps } from "./review-controller"
-import { notice, reviewSendAllKeybind } from "./review-setup"
+import { type ReviewViewProps } from "./review-controller"
+import { createReviewSurface } from "./review-surface"
 import { SendAllButton } from "./SendAllButton"
-import { createDiffCommentForms } from "../agent-manager/pr/diff-comment-forms"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 
 type DiffStyle = "unified" | "split"
@@ -59,17 +58,11 @@ interface FullScreenDiffViewProps extends ReviewViewProps {
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
-  const { t } = useLanguage()
-  const noticeText = () => notice(t, props.notice)
-  const sendAllKeybind = () => reviewSendAllKeybind(t)
   let rootRef: HTMLDivElement | undefined
-  const forms = createDiffCommentForms({
-    target: () => props.prTarget,
-    snapshot: () => props.prSnapshot,
-    diffs: () => props.diffs,
-    worktree: () => props.worktreeId ?? props.sessionId ?? "diff",
-  })
   const {
+    t,
+    noticeText,
+    sendAllKeybind,
     open,
     setOpen,
     rows,
@@ -94,10 +87,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     sendAllGithubAvailable,
     sendAllPending,
     sendAllError,
-  } = createReviewView(props, () => rootRef, {
-    commentForm: props.commentForm ?? forms.mount,
-    commentsGithub: props.commentsGithub ?? forms.github,
-  })
+  } = createReviewSurface(props, () => rootRef)
 
   const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
   const activeFile = createMemo(() => {
@@ -274,14 +264,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
-      <Show when={props.prError}>
-        <div class="diff-viewer-notice" role="alert">
-          <span class="diff-viewer-notice-icon">
-            <Icon name="warning" size="small" />
-          </span>
-          <span class="diff-viewer-notice-text">{props.prError}</span>
-        </div>
-      </Show>
+      <DiffViewerNotice text={props.prError} role="alert" />
 
       {/* Body: file tree + diff viewer */}
       <div class="am-review-body">
@@ -306,14 +289,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           />
         </div>
         <div class="am-review-diff" ref={setScroller}>
-          <Show when={noticeText()}>
-            <div class="diff-viewer-notice" role="status">
-              <span class="diff-viewer-notice-icon">
-                <Icon name="warning" size="small" />
-              </span>
-              <span class="diff-viewer-notice-text">{noticeText()}</span>
-            </div>
-          </Show>
+          <DiffViewerNotice text={noticeText()} role="status" />
 
           <Show when={props.loading && props.diffs.length === 0}>
             <div class="am-diff-loading">
