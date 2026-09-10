@@ -78,8 +78,10 @@ Yerel konuşmalar, araçlar ve izinler, Gateway model ve hesap entegrasyonu, aya
 
 Bu dalın durumu için geçiş ve test planlarına bakın. Genel Kilo belgeleri yayımlanmış ürünü açıklar ve bu önizlemeden farklı olabilir.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Geçiş ilerlemesi (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Geçiş takibi](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Katkıda bulunma

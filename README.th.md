@@ -78,8 +78,10 @@ bun run extension
 
 ดูสถานะบรานช์ได้จากแผนการย้ายและแผนทดสอบ เอกสาร Kilo ทั่วไปอธิบายผลิตภัณฑ์ที่เผยแพร่แล้ว ซึ่งอาจต่างจากพรีวิวนี้
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [ความคืบหน้าการย้ายระบบ (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [การติดตามการย้ายระบบ](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### การมีส่วนร่วม

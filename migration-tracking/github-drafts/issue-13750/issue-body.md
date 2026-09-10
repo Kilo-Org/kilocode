@@ -1,6 +1,16 @@
 > Work in progress — status reviewed September 10, 2026.
 
-## Current status
+## Branch: [`kilo-v2`](https://github.com/Kilo-Org/kilocode/tree/kilo-v2)
+
+| Quick reference | Link / status |
+|---|---|
+| Start here | [Migration tracking](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking) |
+| Detailed progress | [Implementation and verification inventory](https://github.com/Kilo-Org/kilocode/blob/kilo-v2/migration-tracking/plans/kilo-opencode-v2-plan-progress.md) |
+| Remaining work | [Subissues](#subissues) |
+| Verification | End-to-end acceptance is incomplete; implemented does not mean fully verified. |
+| Product lines | `kilo-v2`: migration work · `main`: v1 product line |
+
+## Summary
 
 The isolated Kilo v2 CLI/runtime foundation is implemented. The original Kilo VS Code interface now builds and has working backend adapters, but full original-client parity and acceptance remain incomplete.
 
@@ -8,15 +18,31 @@ A source assessment of 816 v1 files containing 6,128 Kilo change annotations is 
 
 The inventory below retains the original 36 capability rows. The repository's expanded plan separates these into 88 finer-grained rows.
 
-Detailed progress and acceptance requirements live in `migration-tracking/plans/kilo-opencode-v2-plan-progress.md`; the source assessment is `migration-tracking/marker-audit/v1-kilo-marker-port-assessment.md`.
+**Continuing the work:** use the [`migration-tracking/` folder on `kilo-v2`](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking) as your starting point.
 
-## Summary
+1. Read the [progress plan](https://github.com/Kilo-Org/kilocode/blob/kilo-v2/migration-tracking/plans/kilo-opencode-v2-plan-progress.md) and choose an open subissue below.
+2. Follow `AGENTS.md` and the [fork conventions](https://github.com/Kilo-Org/kilocode/blob/kilo-v2/migration-tracking/technical-notes/v2-fork-conventions.md); use the relevant technical notes, source assessment and test plans to understand the remaining behavior.
+3. Update the repository plan and subissue with changes, verification results and remaining gaps. Keep implementation status separate from end-to-end acceptance.
+
 
 Migrate Kilo onto the OpenCode v2 architecture as a **target-shaped port**, not a merge of `main` into `v2`, and not a second `packages/opencode` host.
 
 - Branch: `kilo-v2`, tracking a **pinned** `upstream/v2` SHA (record in `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`). Merge forward once history is shared; perpetual rebase is not the standing policy.
 - `main` stays the V1 product line.
 - Related (different approach): #12887
+
+## CLI preview
+Kilo v2 CLI development preview, September 10, 2026. This screenshot illustrates the interface; end-to-end acceptance remains tracked separately.
+
+![Kilo v2 CLI showing a Plan session, session tabs, questions and usage sidebar](https://raw.githubusercontent.com/Kilo-Org/kilocode/kilo-v2/migration-tracking/assets/kilo-v2-cli-2026-09-10.png)
+
+## VS Code extension preview
+
+Original Kilo Code interface running against v2, September 10, 2026. Development preview; full original-client acceptance remains incomplete.
+
+**Known startup issue:** this preview is currently started in Restricted Mode as a workaround for a reported conflict with the main VS Code instance’s keys. The underlying conflict still needs investigation and a fix; Restricted Mode is not the intended final setup.
+
+![Kilo Code v2 VS Code extension showing sidebar conversation and Agent Manager panel](https://raw.githubusercontent.com/Kilo-Org/kilocode/kilo-v2/migration-tracking/assets/kilo-v2-vscode-2026-09-10.png)
 
 ## What this is not
 
@@ -130,46 +156,50 @@ Host prompt + copy-then-migrate-the-copy. Originals untouched. Canary identity (
 
 ## Inventory (Kilo-Org/kilocode)
 
+> **End-to-end acceptance is incomplete.** Implementation describes code coverage, not confirmation that the full capability works end to end. Verification applies only to the tested scope; no row below claims complete E2E acceptance.
+
 Status: **implemented** = stated local slice verified, not release-wide approval; **native reuse** = native generic behavior; **partial** = concrete work or acceptance remains; **needs port** = required behavior missing; **deferred** = awaits a later implementation or an external dependency; **obsolete** = not required. Broader audit findings can reopen an implemented requirement.
 
-| Capability | Owner | Phase | Status | Status detail / remaining work |
-|---|---|---|---|---|
-| Kilo logo / branding | 2 host + shared `home.logo` slot | 0 | implemented | Preview branding; full legacy theme catalogue remains under CLI/TUI parity. |
-| Isolated `kilo2` identity + config/data dirs | 2 host | 0 | implemented | Separate preview stores; production cutover is a separate gate. |
-| Gateway device auth / profile | 3 plugin (`integration.transform`) | 0–1 | implemented | Local authentication/profile covered; deployed verification remains. |
-| Organization / team (`/teams`) | 3 plugin + client UI | 0–1 | implemented | Selection and scoped requests covered locally; original-client variants remain. |
-| Gateway catalog, BYOK, org routing (`kilo-gateway`) | 3 Gateway plugin + host policy | 1 | implemented | Catalog/request policy and eight prompt selectors covered locally. |
-| `kilo serve` / daemon / attach | 2 host | 1 | implemented | Native daemon and attach paths exist; client lifecycle acceptance is separate. |
-| Generated JS SDK | Native Client + 3 Kilo RPC definitions | 1 | native reuse | Public typed client; no legacy SDK runtime required. |
-| Session share / unshare / fork-from-share | 3 plugin + sharing backend + clients | 1 | partial | Local client paths exist; viewer, ownership, synchronization and deployed acceptance remain. |
-| Memory (`/memory`) | 3 plugin + Kilo memory engine | 3 | partial | CLI/TUI and adapter slices exist; source-assessment gaps and original-client consumers remain. |
-| Codebase indexing | 3 plugin + Kilo indexing engine | 3 | partial | Runtime implemented; original-client controls and detailed acceptance remain. |
-| Sandbox tool shells (macOS/Linux) | 3 plugin + Kilo sandbox | 3 | partial | Shell confinement exists; complete legacy policy variants and platform acceptance. |
-| Sandbox PTY / MCP / git spawn policy | 2 host decorators + shared MCP hook | 3 | implemented | Local MCP confinement and PTY create refusal; model-requested git uses shell confinement. |
-| OpenTelemetry / telemetry | 2 host / 3 plugin | 3 | partial | Runtime integration exists; original extension proxy/consumer parity remains. |
-| Kilo Swarm | 3 plugin + host permission policy | 3 | implemented | Scoped orchestration implemented; Agent Manager is a separate capability. |
-| Skills, custom agents, `.kilo/agents` | 3 discovery + native agent/skill services | 3 | partial | Discovery works; original management/removal consumers remain. |
-| Project config discovery (`.kilo/`, `kilo.jsonc` vs `.opencode`) | 2 host configuration integration | 0–1 | implemented | Native folding with Kilo project discovery. |
-| Local `/review` | 3 command policy + native review | 4 | implemented | Generic review reused; Kilo policy integrated. |
-| CLI TUI remainder | 2 host + owned TUI extensions | 4 | partial | Many workflows work; audit identifies remaining notification, theme, scope and presentation gaps. |
-| `kilo run --auto`, session export/import, resume Claude/Codex | 2 host through native client | 4 | implemented | Headless run and supported transfers/import formats locally covered. |
-| `/remote` | 2 adapter + Gateway | 4 | partial | Local transport/features covered; deployed relay/consumer acceptance remains. |
-| `kilo cloud` CLI client | 2 host + Gateway | 4 | implemented | Local CLI contract covered; deployed-service acceptance remains. |
-| Updater / update channel / packaging | 2 host + release tooling | 4 | partial | Real local directory update/rollback works; archives, signing and distribution remain. |
-| ACP | 2 host over native ACP | 4 | implemented | Product launcher/host surface implemented. |
-| Credential import (`auth.json` → v2) | 2 explicit import | 6 | implemented | Supported mappings preserve originals; unsupported inputs fail explicitly. |
-| `kilo.jsonc` key mapping (Kilo-only keys) | 2 explicit import | 6 | implemented | Safe mapping implemented; unsupported feature keys remain documented refusals. |
-| V1 schema-diff + fixture import test | 2 import tooling | 6 | implemented | Schema/source comparisons and fixture migration recorded. |
-| VS Code sidebar chat | 2 original Kilo VS Code client | 5 | partial | Original UI builds; backend/lifecycle slices work; complete original-UI acceptance remains. |
-| VS Code editor tabs | 2 original Kilo VS Code client | 5 | partial | Panel sources and adapters exist; verify original tab/restore workflows end to end. |
-| Agent Manager | 2 original Kilo VS Code client | 5 | partial | UI builds; control-plane and notebook behavior remain incomplete. |
-| VS Code settings webview | 2 original client + Kilo settings RPC | 5 | partial | Supported settings/collections/refresh work; complete original controls and acceptance. |
-| Inline autocomplete / FIM | 2 editor client + service integration | 5 | needs port | Original autocomplete/FIM and next-edit consumer/service contracts remain. |
-| Code actions, enhance prompt, git commit generation | 2 editor client + Kilo generation RPC | 5 | partial | Generation backend covered; original editor/SCM workflow acceptance remains. |
-| Task timeline, diff viewer | 2 original client + native projections | 5 | partial | Complete original timeline and authoritative diff/restore details. |
-| Voice / speech-to-text | 2 client + transcription provider | 5 | deferred | Client integration and transcription provider acceptance. |
-| JetBrains plugin | 2 v2 client integration | 5 | deferred | Port and validate the original plugin against v2. |
-| Kilo Console | — | — | obsolete | Not required by the target plan. |
+Verification: **Local checks passed** means recorded focused tests or isolated integration checks for the stated slice. **Pending** means acceptance remains open. Partial rows may have passing tests for individual paths; their scope notes describe the limits.
+
+| Capability | Owner | Phase | Implementation | Verification | Status detail / remaining work |
+|---|---|---|---|---|---|
+| Kilo logo / branding | 2 host + shared `home.logo` slot | 0 | implemented | Local checks passed; full E2E pending | Preview branding; full legacy theme catalogue remains under CLI/TUI parity. |
+| Isolated `kilo2` identity + config/data dirs | 2 host | 0 | implemented | Local checks passed; full E2E pending | Separate preview stores; production cutover is a separate gate. |
+| Gateway device auth / profile | 3 plugin (`integration.transform`) | 0–1 | implemented | Local checks passed; full E2E pending | Local authentication/profile covered; deployed verification remains. |
+| Organization / team (`/teams`) | 3 plugin + client UI | 0–1 | implemented | Local checks passed; full E2E pending | Selection and scoped requests covered locally; original-client variants remain. |
+| Gateway catalog, BYOK, org routing (`kilo-gateway`) | 3 Gateway plugin + host policy | 1 | implemented | Local checks passed; full E2E pending | Catalog/request policy and eight prompt selectors covered locally. |
+| `kilo serve` / daemon / attach | 2 host | 1 | implemented | Local checks passed; full E2E pending | Native daemon and attach paths exist; client lifecycle acceptance is separate. |
+| Generated JS SDK | Native Client + 3 Kilo RPC definitions | 1 | native reuse | Kilo integration E2E pending | Public typed client; no legacy SDK runtime required. |
+| Session share / unshare / fork-from-share | 3 plugin + sharing backend + clients | 1 | partial | Full E2E pending; see scope notes | Local client paths exist; viewer, ownership, synchronization and deployed acceptance remain. |
+| Memory (`/memory`) | 3 plugin + Kilo memory engine | 3 | partial | Full E2E pending; see scope notes | CLI/TUI and adapter slices exist; source-assessment gaps and original-client consumers remain. |
+| Codebase indexing | 3 plugin + Kilo indexing engine | 3 | partial | Full E2E pending; see scope notes | Runtime implemented; original-client controls and detailed acceptance remain. |
+| Sandbox tool shells (macOS/Linux) | 3 plugin + Kilo sandbox | 3 | partial | Full E2E pending; see scope notes | Shell confinement exists; complete legacy policy variants and platform acceptance. |
+| Sandbox PTY / MCP / git spawn policy | 2 host decorators + shared MCP hook | 3 | implemented | Local checks passed; full E2E pending | Local MCP confinement and PTY create refusal; model-requested git uses shell confinement. |
+| OpenTelemetry / telemetry | 2 host / 3 plugin | 3 | partial | Full E2E pending; see scope notes | Runtime integration exists; original extension proxy/consumer parity remains. |
+| Kilo Swarm | 3 plugin + host permission policy | 3 | implemented | Local checks passed; full E2E pending | Scoped orchestration implemented; Agent Manager is a separate capability. |
+| Skills, custom agents, `.kilo/agents` | 3 discovery + native agent/skill services | 3 | partial | Full E2E pending; see scope notes | Discovery works; original management/removal consumers remain. |
+| Project config discovery (`.kilo/`, `kilo.jsonc` vs `.opencode`) | 2 host configuration integration | 0–1 | implemented | Local checks passed; full E2E pending | Native folding with Kilo project discovery. |
+| Local `/review` | 3 command policy + native review | 4 | implemented | Local checks passed; full E2E pending | Generic review reused; Kilo policy integrated. |
+| CLI TUI remainder | 2 host + owned TUI extensions | 4 | partial | Full E2E pending; see scope notes | Many workflows work; audit identifies remaining notification, theme, scope and presentation gaps. |
+| `kilo run --auto`, session export/import, resume Claude/Codex | 2 host through native client | 4 | implemented | Local checks passed; full E2E pending | Headless run and supported transfers/import formats locally covered. |
+| `/remote` | 2 adapter + Gateway | 4 | partial | Full E2E pending; see scope notes | Local transport/features covered; deployed relay/consumer acceptance remains. |
+| `kilo cloud` CLI client | 2 host + Gateway | 4 | implemented | Local checks passed; full E2E pending | Local CLI contract covered; deployed-service acceptance remains. |
+| Updater / update channel / packaging | 2 host + release tooling | 4 | partial | Full E2E pending; see scope notes | Real local directory update/rollback works; archives, signing and distribution remain. |
+| ACP | 2 host over native ACP | 4 | implemented | Local checks passed; full E2E pending | Product launcher/host surface implemented. |
+| Credential import (`auth.json` → v2) | 2 explicit import | 6 | implemented | Local checks passed; full E2E pending | Supported mappings preserve originals; unsupported inputs fail explicitly. |
+| `kilo.jsonc` key mapping (Kilo-only keys) | 2 explicit import | 6 | implemented | Local checks passed; full E2E pending | Safe mapping implemented; unsupported feature keys remain documented refusals. |
+| V1 schema-diff + fixture import test | 2 import tooling | 6 | implemented | Local checks passed; full E2E pending | Schema/source comparisons and fixture migration recorded. |
+| VS Code sidebar chat | 2 original Kilo VS Code client | 5 | partial | Full E2E pending; see scope notes | Original UI builds; backend/lifecycle slices work; complete original-UI acceptance remains. |
+| VS Code editor tabs | 2 original Kilo VS Code client | 5 | partial | Full E2E pending; see scope notes | Panel sources and adapters exist; verify original tab/restore workflows end to end. |
+| Agent Manager | 2 original Kilo VS Code client | 5 | partial | Full E2E pending; see scope notes | UI builds; control-plane and notebook behavior remain incomplete. |
+| VS Code settings webview | 2 original client + Kilo settings RPC | 5 | partial | Full E2E pending; see scope notes | Supported settings/collections/refresh work; complete original controls and acceptance. |
+| Inline autocomplete / FIM | 2 editor client + service integration | 5 | needs port | Pending | Original autocomplete/FIM and next-edit consumer/service contracts remain. |
+| Code actions, enhance prompt, git commit generation | 2 editor client + Kilo generation RPC | 5 | partial | Full E2E pending; see scope notes | Generation backend covered; original editor/SCM workflow acceptance remains. |
+| Task timeline, diff viewer | 2 original client + native projections | 5 | partial | Full E2E pending; see scope notes | Complete original timeline and authoritative diff/restore details. |
+| Voice / speech-to-text | 2 client + transcription provider | 5 | deferred | Pending | Client integration and transcription provider acceptance. |
+| JetBrains plugin | 2 v2 client integration | 5 | deferred | Pending | Port and validate the original plugin against v2. |
+| Kilo Console | — | — | obsolete | Not applicable | Not required by the target plan. |
 
 **Overlap with upstream v2** (do not rebuild): permissions, MCP, snapshots, compaction, session fork, ACP, plugins, subagents, `webfetch` / `websearch`, daemon HTTP+SSE. Port Kilo policy on these, not a second engine.
 
@@ -191,6 +221,18 @@ These rows are new scope under assessment. Add other clients as discovery identi
 3. Complete sharing and remote integration contracts and their external acceptance when permitted.
 4. Complete outstanding editor services and JetBrains scope, or record a product decision to reduce scope.
 5. Finish platform distribution, signing, and opt-in import/canary acceptance before cutover.
+
+## Subissues
+
+- [#14016 — Complete original Kilo VS Code client parity](https://github.com/Kilo-Org/kilocode/issues/14016)
+- [#14017 — Complete remaining runtime and CLI/TUI parity](https://github.com/Kilo-Org/kilocode/issues/14017)
+- [#14018 — Complete v2 session sharing compatibility and acceptance](https://github.com/Kilo-Org/kilocode/issues/14018)
+- [#14019 — Complete remote session consumer acceptance](https://github.com/Kilo-Org/kilocode/issues/14019)
+- [#14020 — Complete distribution and safe migration cutover](https://github.com/Kilo-Org/kilocode/issues/14020)
+- [#14021 — Complete remaining editor services](https://github.com/Kilo-Org/kilocode/issues/14021)
+- [#14022 — Port the JetBrains plugin to v2](https://github.com/Kilo-Org/kilocode/issues/14022)
+- [#14023 — Assess and integrate cloud agent consumers with v2](https://github.com/Kilo-Org/kilocode/issues/14023)
+- [#14024 — Assess and integrate Anaconda Desktop and related clients with v2](https://github.com/Kilo-Org/kilocode/issues/14024)
 
 ## Detailed tracking
 

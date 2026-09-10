@@ -1,15 +1,15 @@
 # Issue #13750 publication drafts
 
-Local review package, prepared September 10, 2026. Nothing in this folder has been published to GitHub. Existing plans are preserved.
+Local review package, prepared September 10, 2026. The issue body and all nine subissues have been published to GitHub; the progress comment remains unpublished. Existing plans are preserved.
 
 ## Review order
 
 1. [Proposed issue body](issue-body.md): retains the original phases and all 36 inventory capabilities, updates status and remaining scope, and replaces the bootstrap next step with current milestones.
 2. [Initial progress comment](progress-comment.md): a dated checkpoint to accompany the body update.
 3. [Tracking policy](tracking-policy.md): how the issue, repository plan, comments and subissues stay consistent.
-4. Proposed subissues below: draft deliverables, not created issues or assigned commitments.
+4. [Published subissues](published-subissues.md): all nine have been created and linked to the parent; their draft source files remain below.
 
-## Proposed subissues
+## Subissue source files
 
 - [Original VS Code client parity](subissues/01-original-vscode.md)
 - [Runtime and CLI/TUI parity](subissues/02-runtime-cli-tui.md)

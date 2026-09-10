@@ -78,8 +78,10 @@ bun run extension
 
 이 브랜치의 상태는 이전 계획과 테스트 계획을 확인하세요. 일반 Kilo 문서는 출시 제품을 설명하므로 이 미리 보기와 다를 수 있습니다.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [마이그레이션 진행 상황 (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [마이그레이션 추적](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### 기여

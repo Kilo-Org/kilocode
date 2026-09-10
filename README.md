@@ -78,8 +78,10 @@ Implemented slices include native conversations, tools and permissions, Gateway 
 
 Start with the migration plan and test plans for this branch's status. The general Kilo documentation describes the released product and may differ from this preview.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Migration progress (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Migration tracking](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Contributing

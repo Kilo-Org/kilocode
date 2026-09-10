@@ -78,8 +78,10 @@ bun run extension
 
 راجع خطة الانتقال وخطط الاختبار لمعرفة حالة الفرع. تصف وثائق Kilo العامة المنتج المنشور وقد تختلف عن هذه المعاينة.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [تقدم الترحيل (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [تتبع الترحيل](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### المساهمة

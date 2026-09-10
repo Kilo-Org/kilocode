@@ -78,8 +78,10 @@ bun run extension
 
 このブランチの状況は移行計画とテスト計画を参照してください。一般の Kilo ドキュメントは公開製品向けであり、このプレビューとは異なる場合があります。
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [移行の進捗 (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [移行状況の管理](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### コントリビューション

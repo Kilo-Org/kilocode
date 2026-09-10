@@ -78,8 +78,10 @@ Há partes implementadas de conversas nativas, ferramentas e permissões, modelo
 
 Consulte o plano de migração e os planos de testes para saber o estado desta branch. A documentação geral do Kilo descreve o produto publicado e pode diferir desta prévia.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Progresso da migração (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Acompanhamento da migração](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Contribuindo

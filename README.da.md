@@ -78,8 +78,10 @@ Dele af samtaler, værktøjer, tilladelser, Gateway-modeller og konti, indstilli
 
 Se migrationsplanen og testplanerne for denne grens status. Kilos generelle dokumentation beskriver det udgivne produkt og kan afvige fra previewen.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Migreringsstatus (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Migreringsoversigt](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Bidrag

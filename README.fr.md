@@ -78,8 +78,10 @@ Des parties des conversations natives, outils et permissions, modèles et compte
 
 Consultez le plan de migration et les plans de tests pour l’état de cette branche. La documentation générale de Kilo décrit le produit publié et peut différer de cette préversion.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Avancement de la migration (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Suivi de la migration](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Contribuer

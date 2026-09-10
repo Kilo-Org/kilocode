@@ -78,8 +78,10 @@ bun run extension
 
 ব্রাঞ্চের অবস্থা জানতে মাইগ্রেশন পরিকল্পনা ও পরীক্ষার পরিকল্পনা দেখুন। সাধারণ Kilo ডকুমেন্টেশন প্রকাশিত পণ্যের জন্য; এই প্রিভিউয়ের সঙ্গে পার্থক্য থাকতে পারে।
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [মাইগ্রেশনের অগ্রগতি (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [মাইগ্রেশন ট্র্যাকিং](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### অবদান

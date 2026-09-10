@@ -78,8 +78,10 @@ bun run extension
 
 請參閱遷移計畫與測試計畫，了解此分支的狀態。Kilo 通用文件介紹的是已發布產品，可能與此預覽版不同。
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [遷移進度 (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [遷移追蹤](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### 貢獻

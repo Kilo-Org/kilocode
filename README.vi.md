@@ -78,8 +78,10 @@ bun run extension
 
 Xem kế hoạch chuyển đổi và kế hoạch kiểm thử để biết trạng thái nhánh. Tài liệu Kilo chung mô tả sản phẩm đã phát hành và có thể khác bản xem trước này.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Tiến độ chuyển đổi (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Theo dõi chuyển đổi](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Đóng góp

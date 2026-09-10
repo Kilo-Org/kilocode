@@ -78,8 +78,10 @@ Teile der nativen Gespräche, Werkzeuge und Berechtigungen, Gateway-Modelle und 
 
 Der Migrationsplan und die Testpläne beschreiben den Stand dieses Branches. Die allgemeine Kilo-Dokumentation beschreibt das veröffentlichte Produkt und kann von dieser Vorschau abweichen.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Migrationsfortschritt (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Migrationsübersicht](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Mitwirken

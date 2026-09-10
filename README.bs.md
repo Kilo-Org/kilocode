@@ -78,8 +78,10 @@ Implementirani su dijelovi nativnih razgovora, alata i dozvola, Gateway modela i
 
 Status grane potražite u planu migracije i planovima testiranja. Opća Kilo dokumentacija opisuje objavljeni proizvod i može se razlikovati od ove verzije.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Napredak migracije (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Praćenje migracije](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Doprinos

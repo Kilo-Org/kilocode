@@ -78,8 +78,10 @@ Zaimplementowano części rozmów natywnych, narzędzi i uprawnień, integracji 
 
 Stan gałęzi opisują plan migracji i plany testów. Ogólna dokumentacja Kilo dotyczy wydanego produktu i może różnić się od tej wersji rozwojowej.
 
-- [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
-- [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
+- [Postęp migracji (#13750)](https://github.com/Kilo-Org/kilocode/issues/13750)
+- [Śledzenie migracji](https://github.com/Kilo-Org/kilocode/tree/kilo-v2/migration-tracking)
+  - [Kilo v2](migration-tracking/plans/kilo-opencode-v2-plan-progress.md)
+  - [Runtime](migration-tracking/test-plans/kilo-opencode-v2-test-plan-runtime.md) / [UI](migration-tracking/test-plans/kilo-opencode-v2-test-plan-ui.md)
 - [Kilo](https://kilo.ai/docs)
 
 ### Wkład
