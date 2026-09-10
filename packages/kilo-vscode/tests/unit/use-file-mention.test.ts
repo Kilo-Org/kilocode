@@ -398,6 +398,58 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("reclassifies a restored model reference once the catalog loads after seeding", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    // The catalog is empty while the draft is restored, so the seed cannot yet
+    // tell the token is a model reference.
+    let catalog = new Set<string>()
+    const modelKeys = () => catalog
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    const text = "use @anthropic/claude-sonnet-4 for the subagent"
+    mention.seedFromText(text)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(true)
+
+    catalog = new Set(["anthropic/claude-sonnet-4"])
+    mention.seedFromText(text)
+    expect(mention.mentionedModels().has("anthropic/claude-sonnet-4")).toBe(true)
+    expect(mention.mentionedPaths().has("anthropic/claude-sonnet-4")).toBe(false)
+    expect(mention.parseFileAttachments(text)).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("never turns a catalog model reference into a file attachment", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+    // Simulate a path that was seeded before the catalog was available.
+    let catalog = new Set<string>()
+    const modelKeys = () => catalog
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false, undefined, modelKeys)
+    })
+
+    const text = "use @anthropic/claude-sonnet-4 for the subagent"
+    mention.seedFromText(text)
+    mention.addPaths(["anthropic/claude-sonnet-4"], "/workspace")
+    catalog = new Set(["anthropic/claude-sonnet-4"])
+
+    expect(mention.parseFileAttachments(text)).toEqual([])
+
+    dispose.fn?.()
+  })
+
   it("waits for past chats before treating a spaced query as prose", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()

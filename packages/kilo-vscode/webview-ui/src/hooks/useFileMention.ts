@@ -487,9 +487,24 @@ export function useFileMention(
 
   const syncMentionedPaths = (text: string) => {
     references()
+    reclassifyModels()
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
     setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
     setMentionedModels(() => _syncMentionedPaths(knownModels, text))
+  }
+
+  // A restored draft can be seeded before the model catalog has loaded, so the
+  // seed-time split between files and models is not final. Re-run it against the
+  // live catalog so a model reference that was momentarily treated as a file
+  // moves to the model set instead of becoming a bogus attachment.
+  const reclassifyModels = () => {
+    const keys = modelKeys?.()
+    if (!keys?.size) return
+    for (const key of keys) {
+      if (!knownPaths.has(key)) continue
+      knownPaths.delete(key)
+      knownModels.add(key)
+    }
   }
 
   // Past chats are searched client-side (fuzzysort, same as the Agent Manager
@@ -790,7 +805,11 @@ export function useFileMention(
 
   const parseFileAttachments = (text: string): FileAttachment[] => {
     const worktrees = references()
-    const paths = new Set([..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path)))
+    reclassifyModels()
+    const keys = modelKeys?.()
+    const paths = new Set(
+      [..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path) && !keys?.has(path)),
+    )
     return [
       ...buildFileAttachments(text, paths, workspaceDir),
       ...buildSessionAttachments(text, mentionedSessions()),
