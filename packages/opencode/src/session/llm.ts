@@ -30,6 +30,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
+import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
@@ -430,7 +431,7 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
-      if (!exportable) return { type: "ai-sdk" as const, result }
+      if (!exportable) return { type: "ai-sdk" as const, result, messages: prepared.messages }
       return {
         type: "ai-sdk" as const,
         result: {
@@ -444,6 +445,7 @@ const live: Layer.Layer<
             retries: input.retries ?? 0,
           }),
         },
+        messages: prepared.messages,
       }
       // kilocode_change end
     })
@@ -468,6 +470,12 @@ const live: Layer.Layer<
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
+              // kilocode_change start - emit structural diagnostics when the AI SDK
+              // rejects the assembled ModelMessage[] before dispatch (#13185)
+              Stream.tapError((e) =>
+                Effect.sync(() => KiloMessageDiagnostics.reportModelMessageError(e, result.messages)),
+              ),
+              // kilocode_change end
               Stream.flatMap((events) => Stream.fromIterable(events)),
             )
           }),
