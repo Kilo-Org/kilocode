@@ -29,6 +29,7 @@ Object.assign(globalThis, {
   HTMLHeadElement: window.HTMLHeadElement,
   HTMLInputElement: window.HTMLInputElement,
   HTMLTextAreaElement: window.HTMLTextAreaElement,
+  DOMRect: window.DOMRect,
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   IntersectionObserver: window.IntersectionObserver,
@@ -110,6 +111,21 @@ const [run, setRun] = createSignal(false)
 const [inspected, setInspected] = createSignal(["task-child", "task-grand"])
 const [inspector, setInspector] = createSignal(false)
 const [composer, setComposer] = createSignal(false)
+const transcript = document.createElement("div")
+transcript.dataset.transcriptRoot = ""
+transcript.dataset.session = "composer"
+const row = document.createElement("div")
+row.dataset.row = "assistant"
+row.dataset.session = "composer"
+row.dataset.message = "lens-answer"
+const paragraph = document.createElement("p")
+paragraph.textContent = "Precision measures correct positive predictions."
+const part = document.createElement("div")
+part.dataset.component = "text-part"
+part.append(paragraph)
+row.append(part)
+transcript.append(row)
+document.body.append(transcript)
 const [active, setActive] = createSignal("task-child")
 const [review, setReview] = createSignal(false)
 const [sharing, setSharing] = createSignal(false)
@@ -203,7 +219,7 @@ const Probe = () => {
         <IndexingProvider>
           <MemoryProvider>
             <SpeechToTextModelsProvider>
-              <PromptInput boxId="acceptance" />
+              <PromptInput boxId="acceptance" transcript={() => transcript} />
             </SpeechToTextModelsProvider>
           </MemoryProvider>
         </IndexingProvider>

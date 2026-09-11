@@ -409,8 +409,11 @@ describe("PromptInput send origin contract", () => {
     expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
       source.indexOf("const terminalFile = await terminal"),
     )
-    expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
-    expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
+    expect(source).toContain("const token = annotationSend.begin({ key, sessionID: id })")
+    expect(source).toContain("terminal.resolveAttachment(draft, id, terminalContext)")
+    expect(source).toMatch(
+      /git\s*\.resolveAttachment\(draft, id, \{\s*captured: true,\s*\.\.\.\(context === undefined \? \{\} : \{ agentManagerContext: context \}\),\s*available: gitAvailable/,
+    )
   })
 
   it("passes the captured origin to message and command sends", () => {
@@ -713,6 +716,85 @@ describe("browser element reference contract", () => {
     expect(source).toContain("if (reference.sessionId !== sid()) return")
     expect(source).toContain("mergeBrowserReferences(browsers(), reference)")
     expect(source).toContain("browsers().length > 0")
+  })
+})
+
+describe("webview-local annotation send contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("commits the open editor before formatting and clears only after an accepted send", () => {
+    const send = source.indexOf("// Server-side slash command")
+    const accepted = source.indexOf("if (!accepted) return", send)
+    const cleared = source.indexOf("clearAcceptedAnnotationDraft(token.key", send)
+    expect(source.indexOf("if (!commitOpenAnnotation()) return")).toBeLessThan(
+      source.indexOf("formatAnnotationsMarkdown(pendingAnnotations)"),
+    )
+    expect(send).toBeGreaterThan(0)
+    expect(accepted).toBeGreaterThan(send)
+    expect(cleared).toBeGreaterThan(accepted)
+  })
+
+  it("locks annotation controls before attachment resolution", () => {
+    const lock = source.indexOf("const token = annotationSend.begin({ key, sessionID: id })")
+    const terminal = source.indexOf("const terminalFile = await terminal.resolveAttachment")
+    expect(lock).toBeGreaterThan(0)
+    expect(lock).toBeLessThan(terminal)
+    // The host-backed write path acquires its own begin/end lock; mounted
+    // annotation-prompt-storage tests verify delayed save, Send and failure.
+    expect(source).toContain("disabled={annotationSend.locked(draftKey())}")
+    expect(source).toContain("disabled={() => annotationSend.active()}")
+    expect(source.match(/if \(!annotationSend\.held\(token\)\) return/g)).toHaveLength(2)
+    expect(source).toMatch(/finally \{\s*finishPending\(pendingId\)\s*annotationSend\.end\(token\)/)
+  })
+
+  it("resolves terminal and Git mentions from only the raw user draft", () => {
+    expect(source).toContain("terminal.resolveAttachment(draft, id, terminalContext)")
+    expect(source).toMatch(
+      /git\s*\.resolveAttachment\(draft, id, \{\s*captured: true,\s*\.\.\.\(context === undefined \? \{\} : \{ agentManagerContext: context \}\),\s*available: gitAvailable/,
+    )
+    expect(source).toContain("hasTerminalMention(draft)")
+    expect(source).toContain("hasGitChangesMention(draft)")
+    expect(source).not.toContain("resolveAttachment(message, id")
+  })
+
+  it("blocks known commands before committing or clearing annotation state", () => {
+    const handleSend = source.slice(source.indexOf("const handleSend = async () =>"))
+    const blocked = handleSend.indexOf("if (blockAnnotatedCommand(memory ?? matched)) return")
+    const committed = handleSend.indexOf("if (!commitOpenAnnotation()) return")
+    expect(blocked).toBeGreaterThan(0)
+    expect(blocked).toBeLessThan(committed)
+    expect(source).toContain("(command) => !blockAnnotatedCommand(command)")
+  })
+
+  it("keeps failed annotation sends as raw Markdown and protects newer annotation drafts", () => {
+    expect(source).toContain("const restored = failedPrompt(failed)")
+    expect(source).toContain("hasAnnotationDraft()")
+    expect(source).not.toContain("annotationData")
+    expect(source).not.toContain("acceptedSend")
+  })
+
+  it("prevents review and speech auto-send from pulling in unrelated annotations", () => {
+    expect(source).toContain("const empty = !hasInput()")
+    expect(source).toMatch(
+      /const hasInput = \(\) =>[\s\S]*annotations\(\)\.length > 0[\s\S]*annotationEditor\(\) !== undefined/,
+    )
+    expect(source).toContain("message.autoSend && empty && canAutoSendAnnotations()")
+    expect(source).toMatch(/const transcribeAndSend = \(\) => \{\s*if \(!canAutoSendAnnotations\(\)\)/)
+    expect(source).toContain("annotationEditor() === undefined")
+  })
+
+  it("targets revert and full-redo replacements without clearing another prompt", () => {
+    const start = source.indexOf("const restoreBox = (message:")
+    const end = source.indexOf("const appendBox =", start)
+    const restore = source.slice(start, end)
+    expect(restore).toContain("promptDraftStorageKey(raw, boxKey(), promptDraftStores)")
+    expect(restore).toContain("annotationSend.cancel(target)")
+    expect(restore).toContain("replaceAnnotationDraft({")
+    expect(restore).toContain("saveDraft(target, message.text, comments, images")
+    expect(restore.indexOf("if (!active) return")).toBeGreaterThan(restore.indexOf("saveDraft(target"))
+    const session = readFile(SESSION_FILE)
+    expect(session).toMatch(/type: "setChatBoxMessage",\s*sessionID: id,\s*text,\s*paths/)
+    expect(session).toMatch(/type: "setChatBoxMessage",\s*sessionID: id,\s*text: "",\s*images: \[\]/)
   })
 })
 

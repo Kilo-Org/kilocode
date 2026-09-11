@@ -4084,6 +4084,10 @@ export type TuiKeybindListResponse = {
   keybinds: Array<TuiKeybindInfo>
 }
 
+export type ResponseLensFailedError = {
+  message: string
+}
+
 export type KiloEmbeddingModelCatalog = {
   defaultModel: string
   models: Array<{
@@ -15774,6 +15778,61 @@ export type EnhancePromptEnhanceResponses = {
 }
 
 export type EnhancePromptEnhanceResponse = EnhancePromptEnhanceResponses[keyof EnhancePromptEnhanceResponses]
+
+export type ResponseLensExplainData = {
+  body?: {
+    text: string
+    context: Array<{
+      role: "user" | "assistant"
+      text: string
+    }>
+    level: "simple" | "school" | "high-school" | "university"
+    model: {
+      providerID: string
+      modelID: string
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/response-lens/explain"
+}
+
+export type ResponseLensExplainErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * ResponseLensFailedError
+   */
+  422: ResponseLensFailedError
+}
+
+export type ResponseLensExplainError = ResponseLensExplainErrors[keyof ResponseLensExplainErrors]
+
+export type ResponseLensExplainResponses = {
+  /**
+   * Brief contextual explanation without creating a chat session
+   */
+  200: {
+    text: string
+    truncated: boolean
+    model: {
+      providerID: string
+      modelID: string
+    }
+    usage: {
+      inputTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      outputTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      totalTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+  }
+}
+
+export type ResponseLensExplainResponse = ResponseLensExplainResponses[keyof ResponseLensExplainResponses]
 
 export type IndexingStatusData = {
   body?: never

@@ -31,6 +31,8 @@ import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-uti
 import { children } from "./background-agents"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
+import { AnnotationSourceMarkers } from "./AnnotationMarkers"
+import { ResponseLensBoundary } from "./ResponseLens"
 
 interface ChatViewProps {
   projectId?: string

@@ -64,18 +64,23 @@ import { sandboxMessages } from "./prompt-sandbox-messages"
 import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown, pushInstruction } from "../../utils/review-comment-markdown"
 import {
+  composePromptMessage,
   createdDraftKey,
   failedPrompt,
   movePromptDraft,
   pendingDraftKey,
   promotePromptDraft,
   promptDraftKey,
+  promptDraftPromotion,
+  promptDraftStorageKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../utils/prompt-drafts"
 import {
   beginPendingSend,
   browserDrafts as references,
+  annotationDrafts,
+  annotationEditorDrafts,
   clearPendingDraftDiscarded,
   clearSessionDraftDiscarded,
   drafts,
@@ -90,6 +95,34 @@ import {
 } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
 import { BrowserReferences } from "./BrowserReferences"
+import { AnnotationEditorHost } from "./AnnotationPopover"
+import { AnnotationList } from "./AnnotationList"
+import { type SelectionCapture } from "./SelectionToolbar"
+import { createAnnotationBridge } from "../../utils/annotation-bridge"
+import { captureAnnotationAnchor } from "../../utils/annotation-anchors"
+import { ResponseLens, ResponseLensBoundary } from "./ResponseLens"
+import {
+  ANNOTATION_LIMIT,
+  type Annotation,
+  formatAnnotationsMarkdown,
+  newAnnotation,
+  parseAnnotations,
+  removeAnnotation,
+  validAnnotation,
+} from "../../utils/annotations"
+import {
+  annotationAutoSendAllowed,
+  annotationCommandBlocked,
+  annotationFocusTarget,
+  annotationSendOwns,
+  clearAcceptedAnnotationDraft,
+  commitAnnotationEditor,
+  createAnnotationEditorDraftState,
+  createAnnotationSendLock,
+  openAnnotationEditor,
+  replaceAnnotationDraft,
+  updateAnnotationEditor,
+} from "../../utils/annotation-state"
 import {
   browserFeedbackData,
   formatBrowserFeedback,
@@ -148,6 +181,7 @@ interface PromptInputProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  transcript?: () => HTMLElement | undefined
 }
 
 // The `@` model entry reopens the shared model selector through its
@@ -345,6 +379,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
+    annotations: annotations(),
+    editor: annotationEditorState.snapshot(),
     images: imageAttach.images(),
     browsers: browsers(),
     scroll: textareaRef?.scrollTop ?? scrollDrafts.get(draftKey()) ?? 0,
@@ -353,6 +389,236 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
+
+  const [annotations, setAnnotations] = createSignal<Annotation[]>([])
+  const annotationRect = (annotation: Annotation) => {
+    const row = Array.from(props.transcript?.()?.querySelectorAll<HTMLElement>('[data-row="assistant"]') ?? []).find(
+      (candidate) =>
+        candidate.dataset.message === annotation.messageID && candidate.dataset.session === annotation.sessionID,
+    )
+    return row?.getBoundingClientRect() ?? new DOMRect(window.innerWidth / 2, window.innerHeight / 2, 0, 0)
+  }
+  const annotationEditorState = createAnnotationEditorDraftState({
+    key: draftKey,
+    drafts: annotationEditorDrafts,
+    rect: annotationRect,
+  })
+  const annotationEditor = annotationEditorState.editor
+  const annotationSend = createAnnotationSendLock()
+  const annotationBridge = createAnnotationBridge(vscode)
+  onCleanup(annotationBridge.dispose)
+  let annotationSaving: { key: string; promise: Promise<boolean> } | undefined
+  const annotationFailure = (error: unknown) =>
+    showToast({
+      variant: "error",
+      title: language.t("annotations.storageFailed"),
+      description: error instanceof Error ? error.message : language.t("annotations.saveFailed"),
+    })
+  const persistAnnotations = async (key: string, items: readonly Annotation[]) => {
+    const saved: Annotation[] = []
+    for (const item of items) {
+      const result = await annotationBridge.save(item)
+      saved.push(result)
+      const pending = annotationDrafts.get(key)
+      if (!pending) continue
+      const next = pending.map((entry) => (entry.id === item.id && entry.updatedAt === item.updatedAt ? result : entry))
+      annotationDrafts.set(key, next)
+      if (draftKey() === key) setAnnotations(next)
+    }
+    return saved
+  }
+  const writeAnnotation = (work: (key: string) => Promise<void>) => {
+    const key = draftKey()
+    const token = annotationSend.begin({ key, sessionID: session.currentSessionID() })
+    if (!token) return false
+    const promise = work(key)
+      .then(() => true)
+      .catch((error) => {
+        annotationFailure(error)
+        return false
+      })
+      .finally(() => {
+        annotationSend.end(token)
+        if (annotationSaving?.promise === promise) annotationSaving = undefined
+      })
+    annotationSaving = { key, promise }
+    return true
+  }
+  const promptDraftStores = {
+    text: drafts,
+    comments: reviewDrafts,
+    images: imageDrafts,
+    scrolls: scrollDrafts,
+    browsers: references,
+    annotations: annotationDrafts,
+    editors: annotationEditorDrafts,
+  }
+  let annotationFocus: HTMLElement | undefined
+  let annotationFallback: HTMLElement | undefined
+  const replaceAnnotations = (next: Annotation[]) => {
+    const safe = next.length > 0 ? parseAnnotations(next) : []
+    if (!safe) return false
+    setAnnotations(safe)
+    if (safe.length === 0) annotationDrafts.delete(draftKey())
+    else annotationDrafts.set(draftKey(), safe)
+    return true
+  }
+  const streamingMessageIDs = () => {
+    const ids = new Set<string>()
+    // While the session is busy, the trailing assistant message is streaming.
+    if (session.status() !== "idle") {
+      const msgs = session.messages()
+      const last = [...msgs].reverse().find((m) => m.role === "assistant")
+      if (last) ids.add(last.id)
+    }
+    return ids
+  }
+  const addAnnotation = (capture: SelectionCapture) => {
+    if (annotationSend.active()) return
+    annotationSend.run(draftKey(), () => {
+      const open = annotationEditorState.editor()
+      if (open?.comment.trim()) {
+        if (!commitOpenAnnotation()) return
+      } else if (open) annotationEditorState.replace(undefined)
+      if (annotations().length >= ANNOTATION_LIMIT) {
+        showToast({ title: language.t("annotations.limitReached", { count: ANNOTATION_LIMIT }) })
+        return
+      }
+      const annotation = newAnnotation({
+        sessionID: capture.sessionID,
+        messageID: capture.messageID,
+        selectedText: capture.text,
+        comment: "",
+      })
+      if (!validAnnotation(annotation)) {
+        showToast({ title: language.t("annotations.saveFailed") })
+        return
+      }
+      annotationFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+      annotationFallback = undefined
+      annotationEditorState.replace(openAnnotationEditor(annotation, capture.rect))
+      if (capture.range && capture.textOnly) {
+        const range = capture.range.cloneRange()
+        writeAnnotation(async (key) => {
+          const anchor = await captureAnnotationAnchor(capture.row, range)
+          if (!anchor) throw new Error("The selected source location is unavailable. Select the completed text again.")
+          const current = annotationEditorDrafts.get(key)
+          if (!current || current.annotation.id !== annotation.id) return
+          const next = { ...current, annotation: { ...current.annotation, anchor } }
+          annotationEditorDrafts.set(key, next)
+          if (draftKey() === key) annotationEditorState.replace({ ...next, rect: capture.rect })
+        })
+      }
+    })
+  }
+  const editAnnotation = (annotation: Annotation, rect: DOMRect, trigger: HTMLElement, fallback: HTMLElement) => {
+    annotationSend.run(draftKey(), () => {
+      const open = annotationEditorState.editor()
+      if (open?.comment.trim()) {
+        if (!commitOpenAnnotation()) return
+      } else if (open) annotationEditorState.replace(undefined)
+      annotationFocus = trigger
+      annotationFallback = fallback
+      annotationEditorState.replace(openAnnotationEditor(annotation, rect))
+    })
+  }
+  const restoreAnnotationFocus = () => {
+    const primary = annotationFocus
+    const fallback = annotationFallback
+    annotationFocus = undefined
+    annotationFallback = undefined
+    requestAnimationFrame(() => (annotationFocusTarget(primary, fallback) ?? textareaRef)?.focus())
+  }
+  const closeAnnotationEditor = (restoreFocus: boolean) => {
+    annotationEditorState.replace(undefined)
+    if (restoreFocus) restoreAnnotationFocus()
+  }
+  const commitOpenAnnotation = () => {
+    const committed = annotationEditorState.commitAndClose(annotations())
+    if (committed.status === "none") return true
+    if (committed.status === "invalid") {
+      showToast({ title: language.t("annotations.commentRequired") })
+      return false
+    }
+    if (committed.status === "rejected" || !replaceAnnotations(committed.annotations)) {
+      showToast({ title: language.t("annotations.saveFailed") })
+      return false
+    }
+    return true
+  }
+  const saveAnnotation = (restoreFocus: boolean) => {
+    if (annotationSend.locked(draftKey())) return false
+    const editor = annotationEditor()
+    const result = commitAnnotationEditor(editor, annotations())
+    if (result.status === "none") return true
+    if (result.status !== "committed" || !editor || !replaceAnnotations(result.annotations)) {
+      showToast({
+        title: language.t(result.status === "invalid" ? "annotations.commentRequired" : "annotations.saveFailed"),
+      })
+      return false
+    }
+    return writeAnnotation(async (key) => {
+      await persistAnnotations(
+        key,
+        result.annotations.filter((item) => item.id === editor.annotation.id),
+      )
+      const stored = annotationEditorDrafts.get(key)
+      if (!stored || stored.annotation.id !== editor.annotation.id || stored.comment !== editor.comment) return
+      annotationEditorDrafts.delete(key)
+      if (draftKey() === key) closeAnnotationEditor(restoreFocus)
+    })
+  }
+  const updateAnnotationComment = (annotationID: string, comment: string) => {
+    annotationSend.run(draftKey(), () => {
+      annotationEditorState.replace(updateAnnotationEditor(annotationEditor(), annotationID, comment))
+    })
+  }
+  const cancelAnnotation = (restoreFocus: boolean) => {
+    annotationSend.run(draftKey(), () => closeAnnotationEditor(restoreFocus))
+  }
+  const deleteAnnotation = (id: string, restoreFocus = false) => {
+    const item = annotations().find((item) => item.id === id) ?? annotationEditor()?.annotation
+    if (!item) return
+    writeAnnotation(async (key) => {
+      await annotationBridge.remove(item.sessionID, [id])
+      const next = removeAnnotation(annotationDrafts.get(key) ?? [], id)
+      if (next.length) annotationDrafts.set(key, next)
+      else annotationDrafts.delete(key)
+      annotationEditorDrafts.delete(key)
+      if (draftKey() !== key) return
+      setAnnotations(next)
+      closeAnnotationEditor(restoreFocus)
+    })
+  }
+  const resetAnnotations = () => {
+    replaceAnnotations([])
+    closeAnnotationEditor(false)
+  }
+  const clearAnnotations = () => {
+    const items = [...annotations()]
+    if (!items.length) {
+      annotationSend.run(draftKey(), resetAnnotations)
+      return
+    }
+    writeAnnotation(async (key) => {
+      for (const id of new Set(items.map((item) => item.sessionID))) {
+        await annotationBridge.remove(
+          id,
+          items.filter((item) => item.sessionID === id).map((item) => item.id),
+        )
+      }
+      annotationDrafts.delete(key)
+      annotationEditorDrafts.delete(key)
+      if (draftKey() === key) resetAnnotations()
+    })
+  }
+  const canAutoSendAnnotations = () => annotationAutoSendAllowed(annotations(), annotationEditor())
+  const hasAnnotationDraft = () => !canAutoSendAnnotations()
+  const blockAnnotatedCommand = (command: unknown) => {
+    if (!annotationCommandBlocked(command, annotations(), annotationEditor())) return false
+    showToast({ title: language.t("annotations.commandBlocked") })
+    return true
+  }
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -449,6 +715,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         action: () => vscode.postMessage({ type: "toggleCaffeination" }),
       },
     ],
+    (command) => !blockAnnotatedCommand(command),
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -534,13 +801,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         const comments = untrack(reviewComments)
         const imgs = untrack(imageAttach.images)
         const browser = untrack(browsers)
+        const notes = untrack(annotations)
         if (val || comments.length > 0 || imgs.length > 0 || browser.length > 0 || drafts.has(prev)) {
           saveDraft(prev, val, comments, imgs, undefined, browser)
         }
+        if (notes.length > 0) annotationDrafts.set(prev, notes)
+        else annotationDrafts.delete(prev)
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
       const scroll = scrollDrafts.get(key) ?? 0
+      const storedAnnotations = annotationDrafts.get(key)
+      const pendingAnnotations = parseAnnotations(storedAnnotations) ?? []
+      if (storedAnnotations && pendingAnnotations.length === 0) annotationDrafts.delete(key)
       setText(draft)
       mention.seedFromText(draft)
       const refs = mentionDrafts.get(key)
@@ -549,6 +822,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         mention.seedSessions(refs.sessions, draft)
       }
       setReviewComments(pending)
+      setAnnotations(pendingAnnotations)
       setBrowsers(references.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
@@ -625,6 +899,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const onNewTaskRequest = () => {
     const draft = text().trim()
     const comments = reviewComments()
+    const notes = annotations()
+    const editor = annotationEditorState.snapshot()
     const imgs = imageAttach.images()
     const browser = browsers()
     const scroll = textareaRef?.scrollTop ?? 0
@@ -632,6 +908,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!id) session.clearCurrentSession()
     const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
     saveDraft(key, draft, comments, imgs, scroll, browser)
+    if (notes.length > 0) annotationDrafts.set(key, notes)
+    else annotationDrafts.delete(key)
+    if (editor) annotationEditorDrafts.set(key, editor)
+    else annotationEditorDrafts.delete(key)
+    if (draftKey() === key) {
+      setAnnotations(notes)
+      annotationEditorState.load(key)
+    }
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -653,14 +937,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = captured.get(id)
     captured.delete(id)
     if (!draft) return
-    saveDraft(
-      scopeDraftKey(box, sessionDraftKey(sid)),
-      draft.text,
-      draft.comments,
-      draft.images,
-      draft.scroll,
-      draft.browsers,
-    )
+    const key = scopeDraftKey(box, sessionDraftKey(sid))
+    saveDraft(key, draft.text, draft.comments, draft.images, draft.scroll, draft.browsers)
+    if (draft.annotations.length > 0) annotationDrafts.set(key, draft.annotations)
+    else annotationDrafts.delete(key)
+    if (draft.editor) annotationEditorDrafts.set(key, draft.editor)
+    else annotationEditorDrafts.delete(key)
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
   onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
@@ -748,7 +1030,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const canEdit = () =>
-    server.isConnected() && !hasInput() && !enhancing() && !speech.active() && !terminal.pending() && !git.pending()
+    server.isConnected() &&
+    !hasInput() &&
+    !enhancing() &&
+    !speech.active() &&
+    !terminal.pending() &&
+    !git.pending() &&
+    !annotationSend.active()
   createEffect(() => props.onEditReady?.(canEdit()))
 
   const edit = async (request: NonNullable<PromptInputProps["edit"]>) => {
@@ -848,7 +1136,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     // Do not overwrite a new draft the user started while the send was in flight.
-    if (text().trim() || reviewComments().length > 0 || imageAttach.images().length > 0 || browsers().length > 0) return
+    if (
+      text().trim() ||
+      reviewComments().length > 0 ||
+      imageAttach.images().length > 0 ||
+      browsers().length > 0 ||
+      hasAnnotationDraft()
+    )
+      return
     replaceReviewComments(comments)
     replace(browser)
     if (draft) {
@@ -910,23 +1205,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
     else mention.seedFromText(message.text)
     if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
+    setReviewComments(comments)
+    setBrowsers(browser)
+    imageAttach.replace(images)
     if (textareaRef) {
       textareaRef.value = message.text
       adjustHeight()
-    }
-    if (message.review || message.browser) {
-      replaceReviewComments(message.review ?? [])
-      replace(message.browser ?? [])
-    }
-    if (message.images) {
-      const imgs = message.images.map((img) => ({
-        id: crypto.randomUUID(),
-        filename: img.filename ?? "image",
-        mime: img.mime,
-        dataUrl: img.dataUrl,
-      }))
-      imageAttach.replace(imgs)
-      imageDrafts.set(draftKey(), imgs)
     }
   }
 
@@ -976,10 +1260,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       reviewDrafts.set(target, mergeReviewComments(reviewDrafts.get(target) ?? [], message.comments))
       return
     }
-    const empty =
-      !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0 && browsers().length === 0
+    const empty = !hasInput()
     replaceReviewComments(mergeReviewComments(reviewComments(), message.comments))
-    if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
+    if (message.autoSend && empty && canAutoSendAnnotations() && !isDisabled() && !props.blocked?.()) {
       void handleSend()
       return
     }
@@ -1001,15 +1284,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const from = reviewDrafts.get(source)
     const to = reviewDrafts.get(target)
     if (from && to) {
-      reviewDrafts.set(target, mergeReviewComments(from, to))
-      reviewDrafts.delete(source)
+      reviewDrafts.set(route.target, mergeReviewComments(from, to))
+      reviewDrafts.delete(route.source)
     }
-    movePromptDraft(
-      { text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references },
-      source,
-      target,
-    )
-    if (message.draftID) promotePromptDraft(boxKey(), message.draftID, message.session.id)
+    movePromptDraft(promptDraftStores, route.source, route.target)
+    if (message.draftID) {
+      const origin = route.source.slice(0, -raw.length - 1)
+      promotePromptDraft(origin, message.draftID, message.session.id)
+    }
+    const targetActive = route.target === draftKey()
+    if (targetActive) {
+      const draft = drafts.get(route.target) ?? ""
+      setText(draft)
+      mention.seedFromText(draft)
+      setReviewComments(reviewDrafts.get(route.target) ?? [])
+      setAnnotations(parseAnnotations(annotationDrafts.get(route.target)) ?? [])
+      setBrowsers(references.get(route.target) ?? [])
+      imageAttach.replace(imageDrafts.get(route.target) ?? [])
+      if (textareaRef) textareaRef.value = draft
+    }
+    if (sourceActive || targetActive) annotationEditorState.load(route.target)
     if (
       message.draftID &&
       !session.currentSessionID() &&
@@ -1089,6 +1383,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     deferred.clear()
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
+    if (annotations().length > 0) annotationDrafts.set(draftKey(), annotations())
+    else annotationDrafts.delete(draftKey())
+    annotationEditorState.persist(draftKey())
     if (sandboxRetry) clearTimeout(sandboxRetry)
     unsubAutoApprove()
     unsubscribe()
@@ -1325,6 +1622,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const transcribeAndSend = () => {
+    if (!canAutoSendAnnotations()) {
+      speech.stop()
+      return
+    }
     const key = draftKey()
     const id = sid()
     const context = ctx()
@@ -1332,6 +1633,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const comments = reviewComments()
     const browser = browsers()
     const images = imageAttach.images()
+    const notes = annotations()
     speech.stop({
       done: () => void handleSend(),
       ready: () =>
@@ -1341,6 +1643,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         text() === value &&
         reviewComments() === comments &&
         browsers() === browser &&
+        annotations() === notes &&
+        annotationEditor() === undefined &&
         imageAttach.images() === images,
     })
   }
@@ -1446,6 +1750,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleSend = async () => {
+    if (annotationSaving && !(await waitAnnotation())) return
     const draft = text().trim()
     if (
       !goal.prepare(draft, () => {
@@ -1464,12 +1769,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       history.append(draft)
       setMemoryText(memory)
       clearReviewComments()
+      clearAnnotations()
       clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      annotationDrafts.delete(draftKey())
+      annotationEditorDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1489,12 +1797,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (matched.enabled && !matched.enabled()) return
       setText("")
       clearReviewComments()
+      clearAnnotations()
       clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
+      annotationDrafts.delete(draftKey())
+      annotationEditorDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
@@ -1516,22 +1827,22 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return
     }
     const data = review ? { version: 1 as const, comments: pending } : undefined
-    if ((!message && imgs.length === 0) || !sendReady() || speech.active()) return
+    if (sendBlocked(message, imgs.length)) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const origin = session.currentSessionID()
-    const pendingId = props.pendingSessionID ?? (!origin ? session.draftSessionID() : undefined)
+    const pendingId = pendingSession(origin)
     const id = origin ?? pendingId
-    beginPending(pendingId)
     const sel = session.selected(id)
     const context = ctx()
     const key = draftKey()
     const stamp = fingerprint(key)
 
-    const terminalFile = await terminal
-      .resolveAttachment(message, id, readTerminalContext(props.terminalContext))
-      .catch((err: Error) => {
+    try {
+      if (pendingAnnotations.length)
+        message = await annotationMessage(key, pendingAnnotations, { review, browser: browserText, draft })
+      const terminalFile = await terminal.resolveAttachment(draft, id, terminalContext).catch((err: Error) => {
         showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
         return undefined
       })
@@ -1611,7 +1922,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         browserData,
       )
       if (!accepted) return
-    }
 
     clearDraft(key, draft)
   }
@@ -1626,15 +1936,22 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     scrollDrafts.delete(key)
     if (draftKey() !== key) return
 
-    history.reset()
-    setText("")
-    clearReviewComments()
-    setBrowsers([])
-    imageAttach.clear()
-    mention.closeMention()
-    slash.close()
+      history.reset()
+      setText("")
+      clearReviewComments()
+      setAnnotations([])
+      setBrowsers([])
+      imageAttach.clear()
+      mention.closeMention()
+      slash.close()
 
-    if (textareaRef) textareaRef.style.height = "auto"
+      if (textareaRef) textareaRef.style.height = "auto"
+    } catch (error) {
+      annotationFailure(error)
+    } finally {
+      finishPending(pendingId)
+      annotationSend.end(token)
+    }
   }
 
   return (
@@ -1669,6 +1986,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           }}
         />
       </Show>
+      <Show when={annotationSend.locked(draftKey()) && (annotations().length > 0 || annotationEditor())}>
+        <div class="annotation-storage-status" role="status">
+          {language.t("annotations.saving")}
+        </div>
+      </Show>
+      <ResponseLensBoundary>
+        <Show when={annotations().length > 0}>
+          <AnnotationList
+            annotations={annotations()}
+            editingID={annotationEditor()?.annotation.id}
+            disabled={annotationSend.locked(draftKey())}
+            onEdit={editAnnotation}
+            onDelete={deleteAnnotation}
+            onClear={clearAnnotations}
+          />
+        </Show>
+        <AnnotationEditorHost
+          editor={annotationEditor}
+          disabled={annotationSend.locked(draftKey())}
+          onCommentChange={updateAnnotationComment}
+          onSave={saveAnnotation}
+          onCancel={cancelAnnotation}
+          onDelete={(annotationID) => deleteAnnotation(annotationID, true)}
+        />
+      </ResponseLensBoundary>
       <Show when={browsers().length > 0}>
         <div data-component="browser-references">
           <BrowserReferences
@@ -1929,6 +2271,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>
         <div class="prompt-input-hint-actions">
+          <ResponseLensBoundary>
+            <ResponseLens
+              streamingMessageIDs={streamingMessageIDs}
+              transcript={() => props.transcript?.()}
+              disabled={() => annotationSend.active()}
+              editing={() => annotationEditor() !== undefined}
+              onAdd={addAnnotation}
+              focus={() => textareaRef}
+            />
+          </ResponseLensBoundary>
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <IconButton

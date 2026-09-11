@@ -14,18 +14,25 @@ const button = readFileSync(buttonPath, "utf8")
 const icons = readFileSync(iconPath, "utf8")
 
 describe("PromptInput connection guard", () => {
-  it("rechecks the connection after resolving async attachments and before clearing the draft", () => {
-    const attachments = src.indexOf("const gitFile = await git.resolveAttachment")
-    const guard = src.indexOf("if (isDisabled()) {", attachments)
-    const finish = src.indexOf("finishPending(pendingId)", guard)
+  it("uses captured send identity around async attachment resolution and accepted cleanup", () => {
+    const lock = src.indexOf("const token = annotationSend.begin({ key, sessionID: id })")
+    const attachments = src.indexOf("const terminalFile = await terminal.resolveAttachment")
+    const guard = src.indexOf("if (!server.isConnected() || finishPending(pendingId)) return", attachments)
     const send = src.indexOf("session.sendMessage(", guard)
-    const clear = src.indexOf("drafts.delete(key)", send)
+    const clear = src.indexOf("drafts.delete(token.key)", send)
+    const release = src.indexOf("annotationSend.end(token)", clear)
 
+    expect(lock).toBeGreaterThan(-1)
     expect(attachments).toBeGreaterThan(-1)
+    expect(lock).toBeLessThan(attachments)
     expect(guard).toBeGreaterThan(attachments)
-    expect(finish).toBeGreaterThan(guard)
     expect(send).toBeGreaterThan(guard)
     expect(clear).toBeGreaterThan(send)
+    expect(release).toBeGreaterThan(clear)
+    expect(src).toContain("terminal.resolveAttachment(draft, id, terminalContext)")
+    expect(src).toMatch(
+      /git\s*\.resolveAttachment\(draft, id, \{\s*captured: true,\s*\.\.\.\(context === undefined \? \{\} : \{ agentManagerContext: context \}\),\s*available: gitAvailable/,
+    )
   })
 })
 
@@ -56,19 +63,18 @@ describe("PromptInput sandbox toggle", () => {
     const start = src.indexOf("const created = (message:")
     const end = src.indexOf("const unsubscribe", start)
     const created = src.slice(start, end)
-    const save = created.indexOf(
-      "if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())",
-    )
-    const move = created.indexOf("movePromptDraft(")
+    const save = created.indexOf("saveDraft(live, text(), reviewComments(), imageAttach.images()")
+    const promote = created.indexOf("promptDraftPromotion(raw, message.session.id, box, promptDraftStores)")
+    const move = created.indexOf("movePromptDraft(promptDraftStores, route.source, route.target)")
 
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
     expect(save).toBeGreaterThan(-1)
+    expect(promote).toBeGreaterThan(save)
     expect(move).toBeGreaterThan(save)
-    expect(created).toContain(
-      "{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts, browsers: references }",
-    )
-    expect(created).toContain("saveDraft(source, text(), reviewComments(), imageAttach.images())")
+    expect(move).toBeGreaterThan(promote)
+    expect(created).toContain("annotationEditorState.persist(live)")
+    expect(created).toContain("if (sourceActive || targetActive) annotationEditorState.load(route.target)")
   })
 
   it("restores each prompt draft's textarea and highlight scroll positions", () => {

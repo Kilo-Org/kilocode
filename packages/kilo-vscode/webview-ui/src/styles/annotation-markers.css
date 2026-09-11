@@ -1,0 +1,55 @@
+.annotation-markers {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  user-select: none;
+}
+
+.annotation-marker-cluster {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  pointer-events: none;
+}
+
+.annotation-markers .annotation-marker-badge[data-component="button"] {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
+  user-select: none;
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 18px;
+  border: 1px solid var(--vscode-focusBorder);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-editorWidget-foreground, var(--vscode-editor-foreground));
+}
+
+.annotation-markers .annotation-marker-badge[data-component="button"]:focus-visible {
+  outline-offset: -2px;
+}
+
+.annotation-marker-detail {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 360px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.annotation-storage-status {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}

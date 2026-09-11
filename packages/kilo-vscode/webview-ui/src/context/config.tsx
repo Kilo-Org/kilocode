@@ -74,7 +74,10 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return { "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled }
   }
   if (message.type === "chatSettingsLoaded") {
-    return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
+    return {
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      "chat.responseLens": message.settings.responseLens,
+    }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
@@ -249,19 +252,12 @@ export const ConfigProvider: ParentComponent = (props) => {
       "indexing.projectId": message.settings.projectId,
     })
   })
-  const unsubscribeChat = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "chatSettingsLoaded") return
-    mergeSettings({
-      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
-    })
-  })
 
   onCleanup(() => {
     unsubscribe()
     unsubscribeExpired()
     unsubscribeFailure()
     unsubscribeIndexing()
-    unsubscribeChat()
   })
 
   function mergeSettings(patch: Record<string, unknown>) {

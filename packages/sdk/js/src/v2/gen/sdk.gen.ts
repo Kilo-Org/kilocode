@@ -366,6 +366,8 @@ import type {
   RemoteEnableResponses,
   RemoteStatusErrors,
   RemoteStatusResponses,
+  ResponseLensExplainErrors,
+  ResponseLensExplainResponses,
   SandboxStatusErrors,
   SandboxStatusResponses,
   SandboxSupportErrors,
@@ -6592,6 +6594,59 @@ export class EnhancePrompt extends HeyApiClient {
   }
 }
 
+export class ResponseLens extends HeyApiClient {
+  /**
+   * Explain selected text briefly
+   *
+   * Explain a bounded selection and nearby conversation using the explicitly selected model, without tools or session persistence.
+   */
+  public explain<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      text: string
+      context: Array<{
+        role: "user" | "assistant"
+        text: string
+      }>
+      level: "simple" | "school" | "high-school" | "university"
+      model: {
+        providerID: string
+        modelID: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "text" },
+            { in: "body", key: "context" },
+            { in: "body", key: "level" },
+            { in: "body", key: "model" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ResponseLensExplainResponses, ResponseLensExplainErrors, ThrowOnError>(
+      {
+        url: "/response-lens/explain",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+}
+
 export class Indexing extends HeyApiClient {
   /**
    * Get indexing status
@@ -11864,6 +11919,11 @@ export class KiloClient extends HeyApiClient {
   private _enhancePrompt?: EnhancePrompt
   get enhancePrompt(): EnhancePrompt {
     return (this._enhancePrompt ??= new EnhancePrompt({ client: this.client }))
+  }
+
+  private _responseLens?: ResponseLens
+  get responseLens(): ResponseLens {
+    return (this._responseLens ??= new ResponseLens({ client: this.client }))
   }
 
   private _indexing?: Indexing

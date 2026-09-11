@@ -1,0 +1,315 @@
+.selection-toolbar,
+.annotation-popover,
+.response-lens-popover,
+.prompt-annotations,
+.response-lens-settings {
+  --lens-background: var(--vscode-editorWidget-background, var(--vscode-editor-background, Canvas));
+  --lens-foreground: var(--vscode-editorWidget-foreground, var(--vscode-editor-foreground, CanvasText));
+  --lens-border: var(--vscode-contrastBorder, var(--vscode-editorWidget-border, var(--vscode-panel-border, GrayText)));
+  --lens-focus: var(--vscode-focusBorder, Highlight);
+  color: var(--lens-foreground);
+}
+
+.selection-toolbar {
+  position: fixed;
+  z-index: var(--kilo-z-popover, 60);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--lens-border);
+  border-radius: 4px;
+  background: var(--lens-background);
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.16));
+}
+
+.selection-toolbar:not([data-positioned]) {
+  visibility: hidden;
+}
+
+.selection-toolbar [data-component="button"].selection-toolbar-button {
+  min-height: 26px;
+  height: auto;
+  padding: 3px 9px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lens-foreground);
+  font-size: var(--kilo-font-size-12, 12px);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.selection-toolbar-button + .selection-toolbar-button {
+  border-left: 1px solid var(--lens-border);
+}
+
+.selection-toolbar [data-component="button"].selection-toolbar-button:hover:not(:disabled),
+.selection-toolbar [data-component="button"].selection-toolbar-button:focus:not(:disabled),
+.selection-toolbar [data-component="button"].selection-toolbar-button:active:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground, var(--lens-background)));
+  color: var(--lens-foreground);
+  opacity: 1;
+}
+
+:is(.selection-toolbar, .annotation-popover, .response-lens-popover, .prompt-annotations, .response-lens-settings)
+  :is([data-component="button"], [data-component="icon-button"]):focus-visible {
+  outline: 1px solid var(--lens-focus);
+  outline-offset: 1px;
+}
+
+:is(.annotation-popover, .response-lens-popover, .prompt-annotations, .response-lens-settings)
+  :is([data-component="button"], [data-component="icon-button"])[data-variant="ghost"] {
+  color: var(--lens-foreground);
+}
+
+:is(.annotation-popover, .response-lens-popover, .prompt-annotations, .response-lens-settings)
+  :is([data-component="button"], [data-component="icon-button"])[data-variant="ghost"]:is(
+    :hover,
+    :focus-visible,
+    :active
+  ):not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground, color-mix(in srgb, currentColor 10%, transparent));
+  color: var(--lens-foreground);
+}
+
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="primary"],
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="primary"]:is(:focus, :active, :disabled) {
+  background: var(--vscode-button-background, ButtonFace);
+  color: var(--vscode-button-foreground, ButtonText);
+  border-color: var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+}
+
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="primary"]:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground, var(--vscode-button-background, ButtonFace));
+}
+
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="secondary"],
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="secondary"]:is(:focus, :active, :disabled) {
+  background: var(--vscode-button-secondaryBackground, var(--lens-background));
+  color: var(--vscode-button-secondaryForeground, var(--lens-foreground));
+  border-color: var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+}
+
+:is(.annotation-popover, .response-lens-popover, .response-lens-settings)
+  [data-component="button"][data-variant="secondary"]:hover:not(:disabled) {
+  background: var(
+    --vscode-button-secondaryHoverBackground,
+    var(--vscode-button-secondaryBackground, var(--lens-background))
+  );
+}
+
+:is(.selection-toolbar, .annotation-popover, .response-lens-popover, .prompt-annotations, .response-lens-settings)
+  :is([data-component="button"], [data-component="icon-button"])
+  [data-slot="icon-svg"] {
+  color: currentColor;
+}
+
+.annotation-popover-anchor {
+  position: fixed;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:is(.annotation-popover, .response-lens-popover)[data-component="popover-content"] {
+  z-index: var(--kilo-z-popover, 60);
+  width: min(380px, calc(100vw - 24px));
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  max-height: min(calc(100dvh - 24px), var(--kb-popper-content-available-height, 100dvh));
+  overflow: auto;
+  border: 1px solid var(--lens-border);
+  border-radius: 4px;
+  background: var(--lens-background);
+  color: var(--lens-foreground);
+  box-shadow: 0 3px 12px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.18));
+}
+
+:is(.annotation-popover, .response-lens-popover) [data-slot="popover-arrow"] {
+  fill: var(--lens-background);
+}
+
+.annotation-popover [data-slot="popover-body"] {
+  padding: 0;
+}
+
+.annotation-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.annotation-popover-selection {
+  max-height: 80px;
+  overflow: auto;
+  padding: 6px 8px;
+  border-left: 2px solid var(--vscode-textBlockQuote-border, var(--lens-border));
+  border-radius: 2px;
+  background: var(--vscode-editor-background, Canvas);
+  color: var(--vscode-editor-foreground, CanvasText);
+  font-size: var(--kilo-font-size-12, 12px);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.annotation-popover [data-component="input"] [data-slot="input-wrapper"] {
+  background: var(--vscode-input-background, var(--vscode-editor-background, Field));
+  border-color: var(--vscode-input-border, var(--lens-border));
+}
+
+.annotation-popover [data-component="input"] [data-slot="input-wrapper"]:focus-within {
+  border-color: var(--lens-focus);
+  box-shadow: none;
+  outline: 1px solid var(--lens-focus);
+  outline-offset: -1px;
+}
+
+.annotation-popover [data-component="input"] textarea.annotation-popover-textarea {
+  min-height: 80px;
+  max-height: 200px;
+  padding: 7px 8px;
+  color: var(--vscode-input-foreground, var(--vscode-editor-foreground, FieldText));
+  background: transparent;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.annotation-popover textarea.annotation-popover-textarea::placeholder {
+  color: var(
+    --vscode-input-placeholderForeground,
+    var(--vscode-input-foreground, var(--vscode-editor-foreground, FieldText))
+  );
+}
+
+.annotation-popover-hint {
+  color: var(--vscode-descriptionForeground, var(--lens-foreground));
+  font-size: var(--kilo-font-size-11, 11px);
+  line-height: 1.5;
+}
+
+.annotation-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.annotation-popover-actions > [data-component="button"] {
+  min-height: 26px;
+  padding: 3px 10px;
+}
+
+.annotation-popover-spacer {
+  flex: 1;
+}
+
+.prompt-annotations {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0 6px 2px;
+}
+
+.prompt-annotations [data-component="button"].prompt-annotations-toggle {
+  min-height: 24px;
+  padding: 2px 7px;
+  font-size: var(--kilo-font-size-12, 12px);
+  white-space: nowrap;
+}
+
+.prompt-annotations-toggle[aria-expanded="true"] {
+  background: var(--vscode-toolbar-activeBackground, var(--vscode-toolbar-hoverBackground));
+}
+
+.prompt-annotations-chevron {
+  display: inline-flex;
+  transition: transform 0.1s ease;
+}
+
+.prompt-annotations-chevron[data-open] {
+  transform: rotate(180deg);
+}
+
+.prompt-annotations-list {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--kilo-z-popover, 60);
+  display: flex;
+  max-height: min(200px, 40dvh);
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  border: 1px solid var(--lens-border);
+  border-radius: 4px;
+  background: var(--lens-background);
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.16));
+}
+
+.prompt-annotations-list[hidden] {
+  display: none;
+}
+
+.prompt-annotation-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 0;
+  font-size: var(--kilo-font-size-12, 12px);
+}
+
+.prompt-annotation-row + .prompt-annotation-row {
+  border-top: 1px solid var(--lens-border);
+}
+
+.prompt-annotation-number {
+  flex: none;
+  color: var(--lens-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.prompt-annotation-main {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.prompt-annotation-selection,
+.prompt-annotation-comment {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-annotation-selection {
+  flex: 1;
+  color: var(--lens-foreground);
+}
+
+.prompt-annotation-comment {
+  flex: 2;
+  color: var(--vscode-descriptionForeground, var(--lens-foreground));
+}
+
+.prompt-annotation-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.prompt-annotations-clear {
+  align-self: flex-end;
+}

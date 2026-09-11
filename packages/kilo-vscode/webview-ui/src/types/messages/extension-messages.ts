@@ -349,6 +349,8 @@ export interface RestoredImage {
 
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
+  /** Session whose prompt draft is being replaced. Omitted by legacy callers. */
+  sessionID?: string
   text: string
   /**
    * Exact relative paths of the file attachments carried by the restored
@@ -498,6 +500,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    responseLens: ResponseLensSettings
   }
 }
 
@@ -1734,6 +1737,8 @@ export type ExtensionMessage =
   | MigrationCompleteMessage
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | ExplainBrieflyResult
+  | ExplainBrieflyError
   | ViewSubAgentSessionMessage
   | DiffViewerContextMessage
   | DiffViewerPRCommentsMessage

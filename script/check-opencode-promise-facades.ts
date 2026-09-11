@@ -34,6 +34,14 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/cli-shutdown.test.ts": { count: 1, reason: "mocked runtime boundary for shutdown unit tests" },
   "kilocode/plan-followup.test.ts": { count: 3, reason: "existing runtime integration test" },
+  "kilocode/response-lens.test.ts": {
+    count: 2,
+    reason: "cleanup of the real production provider runtime after isolated loopback explanation integration tests",
+  },
+  "kilocode/server/httpapi-response-lens.test.ts": {
+    count: 2,
+    reason: "cleanup of the real application runtime after authenticated stateless HTTP explanation integration tests",
+  },
   "kilocode/session-compaction-chunks.test.ts": {
     count: 2,
     reason: "disk-backed instance integration test cleanup",
@@ -86,7 +94,8 @@ const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith(
 const hits: Array<{ file: string; line: number }> = []
 const glob = new Bun.Glob("**/*.ts")
 
-for (const file of glob.scanSync({ cwd: DIR, onlyFiles: true })) {
+for (const entry of glob.scanSync({ cwd: DIR, onlyFiles: true })) {
+  const file = entry.replaceAll("\\", "/")
   if (owned(file)) continue
   const text = await Bun.file(path.join(DIR, file)).text()
   for (const match of text.matchAll(PATTERN)) {
@@ -103,7 +112,8 @@ const drift = Object.entries(allow).flatMap(([file, reason]) => {
 })
 
 const testHits: Array<{ file: string; line: number }> = []
-for (const file of glob.scanSync({ cwd: TEST_DIR, onlyFiles: true })) {
+for (const entry of glob.scanSync({ cwd: TEST_DIR, onlyFiles: true })) {
+  const file = entry.replaceAll("\\", "/")
   const text = await Bun.file(path.join(TEST_DIR, file)).text()
   for (const match of text.matchAll(TEST_PATTERN)) {
     const line = text.slice(0, match.index ?? 0).split("\n").length
