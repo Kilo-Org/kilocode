@@ -116,6 +116,7 @@ interface AssistantMessageProps {
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
   readonly?: boolean
+  interactivePrompts?: boolean
 }
 
 type ToolStateProps = {
@@ -233,7 +234,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       if (!isRenderable(part, props.message)) return false
       if (part.type !== "tool" || part.tool !== "question") return true
       if (part.state.status !== "pending" && part.state.status !== "running") return true
-      return !!matchToolRequest(part, "question", session.questions())
+      return props.interactivePrompts === false || !!matchToolRequest(part, "question", session.questions())
     })
   })
   // Pull the weighted generation rate across the turn's step-finish parts
@@ -260,10 +261,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
           // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          const activeQuestion = createMemo(() =>
+            props.interactivePrompts === false ? undefined : matchToolRequest(part, "question", session.questions()),
+          )
 
           // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+          const activeSuggestion = createMemo(() =>
+            props.interactivePrompts === false ? undefined : matchToolRequest(part, "suggest", session.suggestions()),
+          )
           const bash = createMemo(() => {
             if (part.type !== "tool") return
             const tool = part as unknown as ToolPart
@@ -280,10 +285,19 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // their header and body bleed 6px past this wrapper, so the grow-in
           // clip would trim their sides for the whole stream and then release
           // them when the text stops growing, resizing the block at the end.
-          const live =
-            part.type === "tool"
-              ? part.state.status === "pending" || part.state.status === "running"
-              : part.type === "text" && !!part.time && !part.time.end
+          // Tool parts are excluded too: worktree and session switches remount
+          // them, so the wrapper would replay the reveal on an already-seen tool.
+          // Encrypted reasoning items only set time.end on their summaries once
+          // the whole item finishes, so a summary the stream already moved past
+          // would keep pulsing. Read the full store list: props.parts is a chunk.
+          const settled = createMemo(() => {
+            if (part.type !== "reasoning") return false
+            if (props.message.time.completed) return true
+            const all = (data.store.part?.[props.message.id] ?? props.parts ?? []) as SDKPart[]
+            const index = all.findIndex((item) => item.id === part.id)
+            return index >= 0 && index < all.length - 1
+          })
+          const live = part.type === "text" && !!part.time && !part.time.end
           let el: HTMLDivElement | undefined
           useGrowIn(() => el, live)
 
@@ -350,6 +364,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                      settled={settled()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
                                       readonly={props.readonly}

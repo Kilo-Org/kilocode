@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -210,6 +211,63 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isVisible)
     }
 
+    fun `test elapsed time pauses during AwaitingPermission and resumes without losing banked time`() {
+        val clock = FakeClock()
+        replace(clock)
+
+        model.setState(SessionState.Busy("Thinking"))
+        clock.advance(5_000)
+        model.setState(SessionState.AwaitingPermission(stub()))
+
+        assertFalse(panel.isVisible)
+        assertFalse(clock.timer.isRunning())
+        assertEquals("5s", panel.elapsedText())
+
+        // The wait for the human is long, but must not be counted.
+        clock.advance(480_000)
+        assertEquals("5s", panel.elapsedText())
+
+        model.setState(SessionState.Busy("Considering next steps\u2026"))
+
+        assertTrue(panel.isVisible)
+        assertEquals("5s", panel.elapsedText())
+
+        clock.advance(1_000)
+        assertEquals("6s", panel.elapsedText())
+    }
+
+    fun `test elapsed time pauses during AwaitingQuestion and resumes without losing banked time`() {
+        val clock = FakeClock()
+        replace(clock)
+
+        model.setState(SessionState.Busy("Thinking"))
+        clock.advance(2_000)
+        model.setState(SessionState.AwaitingQuestion(questionStub()))
+
+        assertFalse(panel.isVisible)
+        assertFalse(clock.timer.isRunning())
+        assertEquals("2s", panel.elapsedText())
+
+        clock.advance(60_000)
+        model.setState(SessionState.Busy("Considering next steps\u2026"))
+
+        assertEquals("2s", panel.elapsedText())
+    }
+
+    fun `test elapsed time resets to zero after Idle even if a permission wait preceded it`() {
+        val clock = FakeClock()
+        replace(clock)
+
+        model.setState(SessionState.Busy("Thinking"))
+        clock.advance(5_000)
+        model.setState(SessionState.AwaitingPermission(stub()))
+        clock.advance(2_000)
+        model.setState(SessionState.Idle)
+        model.setState(SessionState.Busy("Thinking again"))
+
+        assertEquals("0s", panel.elapsedText())
+    }
+
     // ------ helpers ------
 
     private fun replace(clock: FakeClock) {
@@ -227,6 +285,8 @@ class ProgressPanelTest : BasePlatformTestCase() {
         always = emptyList(),
         meta = PermissionMeta(raw = emptyMap()),
     )
+
+    private fun questionStub() = Question(id = "q1", items = emptyList())
 
     private fun spinner() = labels(panel).first { it.icon != null }
 
