@@ -117,4 +117,21 @@ describe("plugin.trigger", () => {
       }),
     ),
   )
+
+  // kilocode_change start
+  it.instance("tolerates plugins that resolve to undefined", () =>
+    withProject(
+      // A no-op boot stub (like the kilo-indexing plugin entry) returns no
+      // hooks object. The state factory runs the "notify plugins of current
+      // config" loop, which must not crash on a resolved-but-empty hook.
+      "export default async () => undefined",
+      Effect.gen(function* () {
+        const plugin = yield* Plugin.Service
+        yield* plugin.init()
+        const hooks = yield* plugin.list()
+        expect(hooks).toEqual([])
+      }),
+    ),
+  )
+  // kilocode_change end
 })
