@@ -2,8 +2,9 @@
 
 /**
  * One row between the transcript and composer. Both working and action states
- * stay in the same grid cell so the taller state reserves the row's height,
- * including wrapped actions in narrow sidebars. Blocking surfaces hide both.
+ * stay mounted in the same grid cell; the inactive one is hidden and out of
+ * flow, so the row is exactly as tall as the visible state. Blocking surfaces
+ * hide both.
  */
 import { type Component, type JSX } from "solid-js"
 import { useSession } from "../../context/session"
