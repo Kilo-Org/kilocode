@@ -2627,24 +2627,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async fetchAndSendProviderUsage(force = false): Promise<void> {
     const generation = ++this.providerUsageGeneration
-    const client = this.client
-    if (!client) {
-      this.postMessage(
-        this.cachedProviderUsageMessage ?? {
-          type: "providerUsageLoaded",
-          error: "Provider usage could not be loaded.",
-        },
-      )
-      return
-    }
-
     const directory = this.getProjectDirectory(this.currentSession?.id)
-    const result = await (
-      force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory })
-    ).catch((error) => {
-      console.error("[Kilo New] KiloProvider: Failed to fetch provider usage:", error)
-      return undefined
-    })
+    const result = await this.connectionService
+      .getClientAsync(directory)
+      .then((client) =>
+        force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory }),
+      )
+      .catch((error) => {
+        console.error("[Kilo New] KiloProvider: Failed to fetch provider usage:", error)
+        return undefined
+      })
     if (generation !== this.providerUsageGeneration) return
     if (!result?.data) {
       if (this.cachedProviderUsageMessage) {
