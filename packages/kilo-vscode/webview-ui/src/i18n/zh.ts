@@ -1048,6 +1048,18 @@ export const dict = {
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",
   "settings.checkpoints.enable.description": "在文件编辑前创建检查点，以便恢复之前的状态",
+  "settings.autoCleanup.enable.title": "启用自动任务清理",
+  "settings.autoCleanup.enable.description":
+    "自动删除旧任务历史以释放磁盘空间。正在运行的任务和有近期分支的任务永远不会被删除。删除是不可逆的。",
+  "settings.autoCleanup.defaultRetention.title": "任务保留天数（天）",
+  "settings.autoCleanup.defaultRetention.description": "自动清理删除任务历史之前保留的时长。",
+  "settings.autoCleanup.incompleteRetention.title": "废弃任务保留天数（天）",
+  "settings.autoCleanup.incompleteRetention.description": "从未有过实际交互的任务视为废弃任务，并按此更短的周期删除。",
+  "settings.autoCleanup.lastRun.title": "上次清理",
+  "settings.autoCleanup.lastRun.never": "从未运行",
+  "settings.autoCleanup.result":
+    "{{date}}：删除了 {{scanned}} 个任务中的 {{deleted}} 个（跳过 {{active}} 个运行中，{{failed}} 个失败），用时 {{seconds}} 秒",
+  "settings.autoCleanup.runNow": "立即运行清理",
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",

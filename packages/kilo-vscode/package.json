@@ -1257,6 +1257,26 @@
           "type": "boolean",
           "default": false,
           "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.new.autoCleanup.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Automatically delete old task history (sessions) based on the auto cleanup retention settings. Sessions that are currently running, and sessions with a recent fork, are never deleted. Deletion is permanent."
+        },
+        "kilo-code.new.autoCleanup.defaultRetentionDays": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "scope": "application",
+          "description": "How many days a task is kept before automatic cleanup deletes it. Minimum 1 day."
+        },
+        "kilo-code.new.autoCleanup.incompleteRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "scope": "application",
+          "description": "How many days an abandoned task (a session that never ran a real exchange) is kept before automatic cleanup deletes it. Minimum 1 day."
         }
       }
     }

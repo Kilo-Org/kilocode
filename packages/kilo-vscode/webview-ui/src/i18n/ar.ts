@@ -1079,6 +1079,19 @@ export const dict = {
     "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
+  "settings.autoCleanup.enable.title": "تمكين التنظيف التلقائي للمهام",
+  "settings.autoCleanup.enable.description":
+    "حذف سجل المهام القديم تلقائيًا لتحرير مساحة القرص. لا يتم حذف المهام قيد التشغيل حاليًا، ولا المهام ذات التفرعات الحديثة أبدًا. الحذف نهائي.",
+  "settings.autoCleanup.defaultRetention.title": "الاحتفاظ بالمهام (أيام)",
+  "settings.autoCleanup.defaultRetention.description": "مدة الاحتفاظ بسجل المهام قبل أن يحذفه التنظيف التلقائي.",
+  "settings.autoCleanup.incompleteRetention.title": "الاحتفاظ بالمهام المتروكة (أيام)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "المهام التي لم تشهد تبادلًا حقيقيًا تُعتبر متروكة وتُحذف وفق هذا الجدول الأقصر.",
+  "settings.autoCleanup.lastRun.title": "التنظيف الأخير",
+  "settings.autoCleanup.lastRun.never": "لم يُشغّل أبدًا",
+  "settings.autoCleanup.result":
+    "{{date}}: تم حذف {{deleted}} من {{scanned}} مهمة ({{active}} نشطة تم تخطيها، {{failed}} فشلت) في {{seconds}} ثانية",
+  "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",

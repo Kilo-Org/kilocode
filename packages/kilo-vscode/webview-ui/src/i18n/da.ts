@@ -1107,6 +1107,20 @@ export const dict = {
     "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktivér automatisk oprydning af opgaver",
+  "settings.autoCleanup.enable.description":
+    "Sletter automatisk gammel opgavehistorik for at frigøre diskplads. Kørende opgaver og opgaver med en nylig forgrening slettes aldrig. Sletning er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold opgaver i (dage)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor længe opgavehistorik bevares, før automatisk oprydning sletter den.",
+  "settings.autoCleanup.incompleteRetention.title": "Behold forladte opgaver i (dage)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Opgaver, der aldrig havde en rigtig udveksling, behandles som forladte og slettes på denne kortere tidsplan.",
+  "settings.autoCleanup.lastRun.title": "Sidste oprydning",
+  "settings.autoCleanup.lastRun.never": "Aldrig kørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettede {{deleted}} af {{scanned}} opgaver ({{active}} aktive sprunget over, {{failed}} fejlede) på {{seconds}}s",
+  "settings.autoCleanup.runNow": "Kør oprydning nu",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
   "settings.context.compaction.title": "Komprimering",

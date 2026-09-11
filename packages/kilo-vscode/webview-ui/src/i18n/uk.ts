@@ -1065,6 +1065,20 @@ export const dict = {
   "settings.checkpoints.enable.title": "Увімкнути знімки",
   "settings.checkpoints.enable.description":
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
+  "settings.autoCleanup.enable.title": "Увімкнути автоматичне очищення завдань",
+  "settings.autoCleanup.enable.description":
+    "Автоматично видаляє стару історію завдань, звільняючи місце на диску. Запущені завдання та завдання з нещодавнім форком ніколи не видаляються. Видалення необоротне.",
+  "settings.autoCleanup.defaultRetention.title": "Зберігати завдання (днів)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Як довго зберігається історія завдань до видалення автоматичним очищенням.",
+  "settings.autoCleanup.incompleteRetention.title": "Зберігати покинуті завдання (днів)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Завдання без жодного реального обміну вважаються покинутими та видаляються за цим коротшим строком.",
+  "settings.autoCleanup.lastRun.title": "Останнє очищення",
+  "settings.autoCleanup.lastRun.never": "Ніколи не запускалося",
+  "settings.autoCleanup.result":
+    "{{date}}: видалено {{deleted}} із {{scanned}} завдань ({{active}} активних пропущено, {{failed}} невдалих) за {{seconds}} с",
+  "settings.autoCleanup.runNow": "Запустити очищення зараз",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",

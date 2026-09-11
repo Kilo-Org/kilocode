@@ -1085,6 +1085,21 @@ export const dict = {
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
+  "settings.autoCleanup.enable.title": "Enable automatic task cleanup",
+  "settings.autoCleanup.enable.description":
+    "Automatically delete old task history to free up disk space. Tasks that are currently running, and tasks with a recent fork, are never deleted. Deletion is permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Keep tasks for (days)",
+  "settings.autoCleanup.defaultRetention.description":
+    "How long task history is kept before automatic cleanup deletes it.",
+  "settings.autoCleanup.incompleteRetention.title": "Keep abandoned tasks for (days)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Tasks that never ran a real exchange are treated as abandoned and deleted on this shorter schedule.",
+  "settings.autoCleanup.lastRun.title": "Last cleanup",
+  "settings.autoCleanup.lastRun.never": "Never run",
+  "settings.autoCleanup.result":
+    "{{date}}: deleted {{deleted}} of {{scanned}} tasks ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+  "settings.autoCleanup.runNow": "Run Cleanup Now",
+
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",

@@ -1112,6 +1112,20 @@ export const dict = {
     "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
+  "settings.autoCleanup.enable.title": "Omogući automatsko čišćenje zadataka",
+  "settings.autoCleanup.enable.description":
+    "Automatski briše staru historiju zadataka kako bi oslobodio prostor na disku. Zadaci koji su trenutno aktivni, i zadaci sa nedavnim forkom, nikad se ne brišu. Brisanje je trajno.",
+  "settings.autoCleanup.defaultRetention.title": "Zadrži zadatke (dana)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Koliko dugo se historija zadataka čuva prije automatskog brisanja.",
+  "settings.autoCleanup.incompleteRetention.title": "Zadrži napuštene zadatke (dana)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Zadaci koji nikad nisu imali pravu razmjenu tretiraju se kao napušteni i brišu po ovom kraćem rasporedu.",
+  "settings.autoCleanup.lastRun.title": "Posljednje čišćenje",
+  "settings.autoCleanup.lastRun.never": "Nikad pokrenuto",
+  "settings.autoCleanup.result":
+    "{{date}}: obrisano {{deleted}} od {{scanned}} zadataka ({{active}} aktivnih preskočeno, {{failed}} neuspjelo) za {{seconds}}s",
+  "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",

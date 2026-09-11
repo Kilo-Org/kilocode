@@ -986,6 +986,20 @@ export const dict = {
   "settings.checkpoints.enable.title": "Abilita snapshot",
   "settings.checkpoints.enable.description":
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
+  "settings.autoCleanup.enable.title": "Abilita pulizia automatica delle attività",
+  "settings.autoCleanup.enable.description":
+    "Elimina automaticamente la vecchia cronologia delle attività per liberare spazio su disco. Le attività in esecuzione e quelle con un fork recente non vengono mai eliminate. L'eliminazione è permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Conserva attività per (giorni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Per quanto tempo viene conservata la cronologia delle attività prima che la pulizia automatica la elimini.",
+  "settings.autoCleanup.incompleteRetention.title": "Conserva attività abbandonate per (giorni)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Le attività che non hanno mai avuto uno scambio reale sono considerate abbandonate e vengono eliminate in questo lasso più breve.",
+  "settings.autoCleanup.lastRun.title": "Ultima pulizia",
+  "settings.autoCleanup.lastRun.never": "Mai eseguita",
+  "settings.autoCleanup.result":
+    "{{date}}: eliminate {{deleted}} di {{scanned}} attività ({{active}} attive ignorate, {{failed}} non riuscite) in {{seconds}}s",
+  "settings.autoCleanup.runNow": "Esegui pulizia ora",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",

@@ -1122,6 +1122,20 @@ export const dict = {
     "Evitar acciones idénticas repetidas. Se activa cuando se repite la misma llamada de herramienta con entrada idéntica.",
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
+  "settings.autoCleanup.enable.title": "Habilitar limpieza automática de tareas",
+  "settings.autoCleanup.enable.description":
+    "Elimina automáticamente el historial de tareas antiguo para liberar espacio en disco. Las tareas en ejecución y las tareas con una bifurcación reciente nunca se eliminan. La eliminación es permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Mantener tareas durante (días)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Cuánto tiempo se conserva el historial de tareas antes de que la limpieza automática lo elimine.",
+  "settings.autoCleanup.incompleteRetention.title": "Mantener tareas abandonadas durante (días)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Las tareas que nunca tuvieron un intercambio real se consideran abandonadas y se eliminan en este plazo más corto.",
+  "settings.autoCleanup.lastRun.title": "Última limpieza",
+  "settings.autoCleanup.lastRun.never": "Nunca ejecutada",
+  "settings.autoCleanup.result":
+    "{{date}}: eliminadas {{deleted}} de {{scanned}} tareas ({{active}} activas omitidas, {{failed}} fallidas) en {{seconds}}s",
+  "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",

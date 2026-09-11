@@ -1093,6 +1093,19 @@ export const dict = {
   "settings.checkpoints.enable.title": "فعال‌سازی اسنپ‌شات‌ها",
   "settings.checkpoints.enable.description":
     "قبل از ویرایش فایل‌ها نقاط بازیابی ایجاد کنید تا بتوانید به حالت‌های قبلی بازگردید",
+  "settings.autoCleanup.enable.title": "فعال‌سازی پاکسازی خودکار وظایف",
+  "settings.autoCleanup.enable.description":
+    "تاریخچه وظایف قدیمی را به‌صورت خودکار حذف می‌کند تا فضای دیسک آزاد شود. وظایف در حال اجرا و وظایف دارای انشعاب اخیر هرگز حذف نمی‌شوند. حذف دائمی است.",
+  "settings.autoCleanup.defaultRetention.title": "نگهداری وظایف (روز)",
+  "settings.autoCleanup.defaultRetention.description": "مدت نگهداری تاریخچه وظایف قبل از حذف توسط پاکسازی خودکار.",
+  "settings.autoCleanup.incompleteRetention.title": "نگهداری وظایف رهاشده (روز)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "وظایفی که هرگز تبادل واقعی نداشته‌اند رهاشده در نظر گرفته می‌شوند و در این بازه کوتاه‌تر حذف می‌شوند.",
+  "settings.autoCleanup.lastRun.title": "آخرین پاکسازی",
+  "settings.autoCleanup.lastRun.never": "هرگز اجرا نشده",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} از {{scanned}} وظیفه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
+  "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",
