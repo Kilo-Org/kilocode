@@ -2,17 +2,23 @@
  * Agent shell captures stdout through a pipe and historically decoded it as
  * UTF-8. On Chinese Windows, Python writes GBK/cp936 unless PYTHONIOENCODING
  * is set, so CJK becomes U+FFFD diamonds. This helper injects that env
- * (without overriding a user value) and decodes leftover locale bytes as
- * GB18030 when they are not valid UTF-8.
+ * (without overriding a user value) and, on Windows, decodes leftover locale
+ * bytes as GB18030 when they are not valid UTF-8.
  *
  * Bytes stay tentative UTF-8 until a definite invalid sequence appears, then
  * GB18030 is locked so a later window cut cannot flip the whole stream.
+ * Incomplete UTF-8 leftovers flush as UTF-8 replacement, not GB18030.
  * Do not set PYTHONUTF8 — that also changes open() defaults.
  */
 
 import * as Encoding from "./encoding"
 
 const PYTHON_IO_ENCODING = "PYTHONIOENCODING"
+
+export type ShellOutputDecoderOptions = {
+  /** Override the Windows-only GB18030 fallback. Tests pass true to exercise GBK. */
+  allowGb18030?: boolean
+}
 
 export function hasEnv(env: NodeJS.ProcessEnv, key: string): boolean {
   if (env[key] !== undefined) return true
@@ -25,6 +31,11 @@ export function hasEnv(env: NodeJS.ProcessEnv, key: string): boolean {
 export function withUtf8StdioEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   if (hasEnv(env, PYTHON_IO_ENCODING) || hasEnv(process.env, PYTHON_IO_ENCODING)) return env
   return { ...env, [PYTHON_IO_ENCODING]: "utf-8" }
+}
+
+/** GB18030 lock is Windows-only so Linux/macOS invalid UTF-8 stays replacement. */
+export function shouldAllowGb18030Fallback(platform = process.platform): boolean {
+  return platform === "win32"
 }
 
 function isValidUtf8(bytes: Buffer): boolean {
@@ -85,6 +96,11 @@ export class ShellOutputDecoder {
   private leftover = Buffer.alloc(0)
   private encoding: "gb18030" | undefined
   private readonly utf8 = new TextDecoder("utf-8")
+  private readonly allowGb18030: boolean
+
+  constructor(options: ShellOutputDecoderOptions = {}) {
+    this.allowGb18030 = options.allowGb18030 ?? shouldAllowGb18030Fallback()
+  }
 
   push(chunk: Uint8Array): string {
     const buf = Buffer.concat([this.leftover, Buffer.from(chunk)])
@@ -98,6 +114,7 @@ export class ShellOutputDecoder {
       this.leftover = buf.subarray(prefix)
       return prefix === 0 ? "" : this.utf8.decode(buf.subarray(0, prefix), { stream: true })
     }
+    if (!this.allowGb18030) return this.utf8.decode(buf)
     this.encoding = "gb18030"
     return this.decodeGbk(buf)
   }
@@ -108,9 +125,7 @@ export class ShellOutputDecoder {
     }
     const pending = this.leftover
     this.leftover = Buffer.alloc(0)
-    if (this.encoding === "gb18030" || !isValidUtf8(pending)) {
-      return Encoding.decode(pending, "gb18030")
-    }
+    if (this.encoding === "gb18030") return Encoding.decode(pending, "gb18030")
     return this.utf8.decode(pending)
   }
 
@@ -122,7 +137,7 @@ export class ShellOutputDecoder {
 }
 
 /** One-shot decode of a complete captured buffer. */
-export function decodeShellOutput(bytes: Uint8Array): string {
-  const decoder = new ShellOutputDecoder()
+export function decodeShellOutput(bytes: Uint8Array, options?: ShellOutputDecoderOptions): string {
+  const decoder = new ShellOutputDecoder(options)
   return decoder.push(bytes) + decoder.flush()
 }
