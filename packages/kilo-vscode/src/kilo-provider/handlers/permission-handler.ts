@@ -67,6 +67,7 @@ export async function handlePermissionResponse(
   response: PermissionResponse,
   approvedAlways: string[],
   deniedAlways: string[],
+  feedback?: string,
 ): Promise<void> {
   const client = ctx.client
   if (!client) {
@@ -115,7 +116,16 @@ export async function handlePermissionResponse(
     }
 
     const replyResult = await client.permission
-      .reply({ requestID: permissionId, reply: response, directory: dir, interactive: true }, { throwOnError: true })
+      .reply(
+        {
+          requestID: permissionId,
+          reply: response,
+          directory: dir,
+          interactive: true,
+          ...(feedback ? { message: feedback } : {}),
+        },
+        { throwOnError: true },
+      )
       .then(() => "ok" as const)
       .catch((error: unknown) => {
         if (isNotFoundError(error)) return "stale" as const

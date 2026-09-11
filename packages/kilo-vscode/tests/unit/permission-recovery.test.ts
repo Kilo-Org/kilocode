@@ -225,6 +225,23 @@ describe("handlePermissionResponse", () => {
     ])
   })
 
+  it("forwards reject feedback as the reply message", async () => {
+    const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], "use tabs, not spaces")
+
+    expect(replies).toEqual([
+      {
+        requestID: "p1",
+        reply: "reject",
+        directory: "/workspace/.kilo/worktrees/feature",
+        interactive: true,
+        message: "use tabs, not spaces",
+      },
+    ])
+  })
+
   it("treats an SDK-wrapped 404 while saving rules as stale", async () => {
     const error = new Error("Permission request not found: p1", {
       cause: { status: 404, body: { name: "NotFoundError" } },
