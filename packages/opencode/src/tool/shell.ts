@@ -753,7 +753,7 @@ export const ShellTool = Tool.define(
                 description: params.description,
                 escalate: sandboxed, // kilocode_change
               }) // kilocode_change
-              const approved = ctx.extra?.["sandboxEscalation"] === true
+              const approved = ctx.extra?.["sandboxEscalation"] === true && ctx.extra?.autoguard !== true // kilocode_change
               if (ctx.extra) ctx.extra["sandboxEscalation"] = false
               return yield* SandboxPolicy.executeEscalated(
                 approved,

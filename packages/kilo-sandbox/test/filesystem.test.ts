@@ -69,6 +69,22 @@ describe("sandbox FileSystem", () => {
     },
   )
 
+  test("mkdir-p on an existing parent is a no-op, while new siblings remain denied", async () => {
+    await execute(
+      run(
+        makeProfile(allowed),
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem
+          yield* fs.makeDirectory(root, { recursive: true })
+          const denied = yield* fs
+            .makeDirectory(path.join(root, "forbidden-new"), { recursive: true })
+            .pipe(Effect.flip)
+          expect(denied.reason._tag).toBe("PermissionDenied")
+        }),
+      ),
+    )
+  })
+
   test("batches nested finite mutations in request order", async () => {
     await mkdir(allowed, { recursive: true })
     const requests: Request[] = []
@@ -81,9 +97,9 @@ describe("sandbox FileSystem", () => {
           batchMutations(
             Effect.gen(function* () {
               const fs = yield* FileSystem.FileSystem
-              yield* fs.makeDirectory(path.join(allowed, "nested"), { recursive: true })
-              yield* batchMutations(fs.writeFileString(path.join(allowed, "nested", "value.txt"), "value"))
-              yield* fs.chmod(path.join(allowed, "nested", "value.txt"), 0o600)
+              yield* fs.makeDirectory(path.join(allowed, "batch-nested"), { recursive: true })
+              yield* batchMutations(fs.writeFileString(path.join(allowed, "batch-nested", "value.txt"), "value"))
+              yield* fs.chmod(path.join(allowed, "batch-nested", "value.txt"), 0o600)
             }),
           ),
         ),

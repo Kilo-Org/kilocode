@@ -1,3 +1,4 @@
+import * as AutoGuardRuntime from "@/kilocode/autoguard/runtime" // kilocode_change
 import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
 import { ToolJsonSchema } from "./json-schema"
@@ -239,6 +240,7 @@ export const TaskTool = Tool.define(
       )
       // kilocode_change end
 
+      yield* AutoGuardRuntime.inherit(ctx.sessionID, nextSession.id) // kilocode_change
       const metadata = {
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
@@ -537,7 +539,9 @@ export const TaskTool = Tool.define(
             }),
           ),
           execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-            drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped)).pipe(Effect.orDie),
+            drain
+              .track(ctx.sessionID, AutoGuardRuntime.execute(ctx, { id }, params, run(params, ctx).pipe(Effect.scoped)))
+              .pipe(Effect.orDie),
         }
       })
     // kilocode_change end
