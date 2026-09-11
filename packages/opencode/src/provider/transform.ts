@@ -376,11 +376,15 @@ function isFirstPartyBreakpointEndpoint(model: Provider.Model, options: Record<s
   try {
     host = new URL(override).hostname.toLowerCase()
   } catch {
-    return false
+    // Config placeholders ({env:...}, {file:...}) and SDK-style ${...} variables
+    // are expanded before the request is sent, so an unexpanded first-party
+    // base URL must not be rejected as unparseable.
+    return /\{(?:env|file):[^}]+\}|\$\{[^}]+\}/.test(override)
   }
   if (model.providerID === "openai") return host === "openai.com" || host.endsWith(".openai.com")
-  if (model.providerID === "azure")
+  if (model.providerID === "azure" || model.providerID === "azure-cognitive-services")
     return [".azure.com", ".azure.us", ".azure.cn", ".azure-api.net"].some((s) => host.endsWith(s))
+  if (model.providerID === "kilo") return host === "api.kilo.ai" || host.endsWith(".kilo.ai")
   return false
 }
 
@@ -388,7 +392,7 @@ function supportsPromptCacheBreakpoint(model: Provider.Model, options: Record<st
   if (isLikelyChatGPTSubscription(model)) return false
   // Only first-party OpenAI-family deployments support explicit breakpoints;
   // custom @ai-sdk/openai endpoints reject prompt_cache_breakpoint (#13285).
-  if (!["openai", "azure", "kilo"].includes(model.providerID)) return false
+  if (!["openai", "azure", "azure-cognitive-services", "kilo"].includes(model.providerID)) return false
   if (!isFirstPartyBreakpointEndpoint(model, options)) return false
   const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
