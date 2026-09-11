@@ -302,7 +302,12 @@ export const dict = {
   "ui.approval.source.yolo": "โดยโหมดอนุมัติอัตโนมัติ (YOLO)",
   "ui.approval.source.session": "โดยกฎอนุมัติอัตโนมัติของเซสชัน",
   "ui.approval.source.default": "ตามค่าเริ่มต้น",
+  "ui.approval.source.auto": "โดยโหมดอัตโนมัติ",
   "ui.approval.outsideWorkspace": "(นอกพื้นที่ทำงานของคุณ: {{file}})",
+  "ui.security.reviewing": "กำลังตรวจสอบ",
+  "ui.security.autoApproved": "อนุมัติอัตโนมัติ",
+  "ui.security.needsApproval": "ต้องได้รับการอนุมัติ",
+  "ui.security.blocked": "ถูกบล็อก",
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",

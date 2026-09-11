@@ -305,7 +305,12 @@ export const dict = {
   "ui.approval.source.yolo": "자동 승인(YOLO) 모드에 의해",
   "ui.approval.source.session": "세션 자동 승인 규칙에 의해",
   "ui.approval.source.default": "기본값으로",
+  "ui.approval.source.auto": "자동 모드에 의해",
   "ui.approval.outsideWorkspace": "(작업 영역 외부: {{file}})",
+  "ui.security.reviewing": "검토 중",
+  "ui.security.autoApproved": "자동 승인됨",
+  "ui.security.needsApproval": "승인 필요",
+  "ui.security.blocked": "차단됨",
 
   "session.tab.review": "검토",
   "session.review.filesChanged": "{{count}}개 파일 변경됨",

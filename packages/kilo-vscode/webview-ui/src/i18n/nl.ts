@@ -307,7 +307,12 @@ export const dict = {
   "ui.approval.source.yolo": "door de automatische goedkeuringsmodus (YOLO)",
   "ui.approval.source.session": "door een sessie-automatische-goedkeuringsregel",
   "ui.approval.source.default": "standaard",
+  "ui.approval.source.auto": "door de automatische modus",
   "ui.approval.outsideWorkspace": "(buiten je werkruimte: {{file}})",
+  "ui.security.reviewing": "Controleren",
+  "ui.security.autoApproved": "Automatisch goedgekeurd",
+  "ui.security.needsApproval": "Goedkeuring nodig",
+  "ui.security.blocked": "Geblokkeerd",
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",

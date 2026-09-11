@@ -271,7 +271,11 @@ const live: Layer.Layer<
       const found = KiloSession.resolveRoot(input.sessionID)
       const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
       const exportable =
-        exporting && isKilo && input.model.isFree === true && org.type === "personal" && input.agent.name !== "title"
+        exporting &&
+        isKilo &&
+        input.model.isFree === true &&
+        org.type === "personal" &&
+        SessionExport.exportableAgent(input.agent.name)
       if (exportable) {
         SessionExport.beforeRequest({
           input: { model: input.model, org },

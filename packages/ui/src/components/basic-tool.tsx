@@ -14,6 +14,10 @@ export type TriggerTitle = {
   args?: string[]
   argsClass?: string
   action?: JSX.Element
+  // kilocode_change start - a state chip that stays visible while the call is still pending,
+  // unlike `subtitle`, `args` and `action`, which the header hides until the call settles
+  status?: JSX.Element
+  // kilocode_change end
 }
 
 const isTriggerTitle = (val: any): val is TriggerTitle => {
@@ -238,6 +242,11 @@ export function BasicTool(props: BasicToolProps) {
                     >
                       <TextShimmer text={title().title} active={pending()} />
                     </span>
+                    {/* kilocode_change start - state that matters most while the call is pending */}
+                    <Show when={title().status}>
+                      <span data-slot="basic-tool-tool-status">{title().status}</span>
+                    </Show>
+                    {/* kilocode_change end */}
                     <Show when={!pending()}>
                       <Show when={title().subtitle}>
                         <span

@@ -579,3 +579,31 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
   flex-basis: 100%;
   padding: 2px 0 0;
 }
+
+/* The security layer's state for one call, as a chip on the tool header. Deliberately quiet:
+   three of its four states are ordinary traffic, and only the two that stop a call are tinted. */
+[data-slot="tool-security-badge"] {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  white-space: nowrap;
+  color: var(--text-weak);
+  background: var(--surface-base);
+
+  &[data-kind="reviewing"] {
+    color: var(--text-strong);
+  }
+
+  &[data-kind="needs-approval"] {
+    color: var(--text-on-warning-base);
+    background: var(--surface-warning-base);
+  }
+
+  &[data-kind="blocked"] {
+    color: var(--text-on-critical-base);
+    background: var(--surface-critical-base);
+  }
+}

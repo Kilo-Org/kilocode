@@ -10,7 +10,18 @@ import type { Permission } from "@/permission"
  */
 export namespace PermissionProvenance {
   /** Where the deciding rule came from. */
-  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
+  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "auto" | "default"
+
+  /**
+   * Who answered a prompt that was actually raised.
+   *
+   * Auto mode replies from the client and omits `interactive`, so an approval nobody looked at is
+   * attributed to the mode rather than to the user — "approved by you" about a decision the user
+   * never made is worse than saying nothing.
+   */
+  export function fromManual(outcome: { interactive?: boolean }): Approval {
+    return { source: outcome.interactive === true ? "manual" : "auto" }
+  }
 
   /** A rule optionally carrying its origin. `source` is runtime-only, never persisted. */
   export type SourcedRule = Permission.Rule & { source?: Source }
@@ -43,6 +54,13 @@ export namespace PermissionProvenance {
     if (permission !== "external_directory") return approval
     return { ...approval, outsideWorkspace: true, ...(path ? { outsideWorkspacePath: path } : {}) }
   }
+
+  /**
+   * Metadata key holding the deterministic security layer's audit record. Written once before the
+   * call is auto-approved or published as an ask, and carried across metadata replacements the same
+   * way `approval` is, so the record survives to the persisted tool part.
+   */
+  export const SECURITY_KEY = "securityDecision" as const
 
   export type Scope = "global" | "local"
 
@@ -92,11 +110,12 @@ export namespace PermissionProvenance {
    * metadata, so the second ask's `outsideWorkspace` marker would otherwise clobber the first's
    * even though `"approval" in next` is true. Merge that marker forward so it survives.
    */
-  export function carryApproval(
-    prev: Record<string, unknown> | undefined,
-    next: Record<string, unknown> | undefined,
-  ) {
+  export function carryApproval(prev: Record<string, unknown> | undefined, next: Record<string, unknown> | undefined) {
     if (!next) return next
+    // kilocode_change - carry the security audit forward alongside the approval marker
+    if (prev && SECURITY_KEY in prev && !(SECURITY_KEY in next)) {
+      next = { ...next, [SECURITY_KEY]: prev[SECURITY_KEY] }
+    }
     const prior = prev?.approval as Approval | undefined
     if (!("approval" in next)) return prior ? { ...next, approval: prior } : next
     const current = next.approval as Approval | undefined
@@ -122,7 +141,8 @@ export namespace PermissionProvenance {
     const rule = input.rule
     if (!rule) return { source: "default" }
     const source =
-      (rule as SourcedRule).source ?? (isYolo(rule) ? "yolo" : configSource(rule.permission, rule.pattern, input.origins))
+      (rule as SourcedRule).source ??
+      (isYolo(rule) ? "yolo" : configSource(rule.permission, rule.pattern, input.origins))
     return {
       source,
       ...(source === "agent" ? { agent: input.agent } : {}),

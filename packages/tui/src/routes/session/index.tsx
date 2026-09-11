@@ -63,7 +63,13 @@ import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
-import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
+import {
+  ApprovalBadge,
+  describeApproval,
+  describeSecurity,
+  securityKind,
+  stateMetadata,
+} from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
@@ -2111,6 +2117,15 @@ function SemanticSearch(props: ToolProps) {
 }
 // kilocode_change end
 
+// kilocode_change start - how much attention a security state deserves. Only the two states that
+// stop a call are worth colour; "auto-approved" is the quiet outcome and reads as ordinary metadata.
+function securityTone(kind: ReturnType<typeof securityKind>, theme: { warning: RGBA; error: RGBA; textMuted: RGBA }) {
+  if (kind === "blocked") return theme.error
+  if (kind === "reviewing" || kind === "needs-approval") return theme.warning
+  return theme.textMuted
+}
+// kilocode_change end
+
 function InlineTool(props: {
   icon: string
   iconColor?: RGBA
@@ -2151,6 +2166,9 @@ function InlineTool(props: {
   const clickable = createMemo(() => Boolean(props.onClick || failed()))
   // kilocode_change - explain why the call was auto-approved or denied
   const approvalNote = createMemo(() => describeApproval(stateMetadata(props.part.state)))
+  // kilocode_change - what the security layer is doing about this call
+  const securityNote = createMemo(() => describeSecurity(stateMetadata(props.part.state)))
+  const securityColor = createMemo(() => securityTone(securityKind(stateMetadata(props.part.state)), theme))
   const fg = createMemo(() => {
     if (props.color) return props.color
     if (permission()) return theme.warning
@@ -2177,6 +2195,8 @@ function InlineTool(props: {
       separate={props.separate}
       note={approvalNote()} // kilocode_change
       noteColor={theme.textMuted} // kilocode_change
+      security={securityNote()} // kilocode_change
+      securityColor={securityColor()} // kilocode_change
       onMouseOver={() => clickable() && setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
@@ -2209,6 +2229,8 @@ export function InlineToolRow(props: {
   separate?: boolean
   note?: string // kilocode_change - why the call was auto-approved or denied
   noteColor?: RGBA // kilocode_change
+  security?: string // kilocode_change - what the security layer is doing about this call
+  securityColor?: RGBA // kilocode_change
   children: JSX.Element
   onMouseOver?: () => void
   onMouseOut?: () => void
@@ -2243,6 +2265,8 @@ export function InlineToolRow(props: {
                 attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
               >
                 ~ {props.pending}
+                {/* kilocode_change - the security state is at its most useful before the call settles */}
+                <ApprovalBadge note={props.security} color={props.securityColor} />
               </text>
             }
             when={props.complete || props.failed}
@@ -2262,6 +2286,7 @@ export function InlineToolRow(props: {
               >
                 {props.failed && !props.complete ? (props.failure ?? props.children) : props.children}
                 {/* kilocode_change - explain why the call was auto-approved or denied, inline on the header */}
+                <ApprovalBadge note={props.security} color={props.securityColor} />
                 <ApprovalBadge note={props.note} color={props.noteColor} />
               </text>
             </box>
@@ -2294,6 +2319,9 @@ function BlockTool(props: {
   const approvalNote = createMemo(() =>
     props.hideApproval ? undefined : describeApproval(stateMetadata(props.part?.state)),
   )
+  // kilocode_change - what the security layer is doing about this call
+  const securityNote = createMemo(() => describeSecurity(stateMetadata(props.part?.state)))
+  const securityColor = createMemo(() => securityTone(securityKind(stateMetadata(props.part?.state)), theme))
   return (
     <box
       ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
@@ -2323,6 +2351,7 @@ function BlockTool(props: {
                 {/* kilocode_change start */}
                 <RoutedModelMeta.View id={props.part?.id} />
                 {/* explain why the call was auto-approved or denied, inline on the title */}
+                <ApprovalBadge note={securityNote()} color={securityColor()} />
                 <ApprovalBadge note={approvalNote()} color={theme.textMuted} />
                 {/* kilocode_change end */}
               </text>

@@ -57,6 +57,9 @@ import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./tool-approval"
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
+// The security layer's state for the same call, alongside the approval
+import { ToolSecurityProvider, resolveSecurityStatus } from "./tool-security"
+export { ToolSecurityProvider, resolveSecurityStatus } from "./tool-security"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
@@ -1474,28 +1477,38 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 )
               }
             >
-              <Dynamic
-                component={render()}
-                input={input()}
-                tool={part.tool}
-                partID={part.id}
-                callID={part.callID}
-                sessionID={part.sessionID}
-                metadata={meta()}
-                partMetadata={top()}
-                // @ts-expect-error
-                output={part.state.output}
-                status={part.state.status}
-                // @ts-expect-error
-                attachments={part.state.attachments}
-                hideDetails={props.hideDetails}
-                defaultOpen={props.defaultOpen}
-                forceOpen={props.forceOpen}
-                forceOpenFile={props.forceOpenFile}
-                animate
-                reveal={props.animate}
-                readonly={props.readonly}
-              />
+              {/* The same metadata, read for the security layer's state */}
+              <ToolSecurityProvider
+                value={() =>
+                  resolveSecurityStatus(
+                    meta(),
+                    i18n.t as (k: string, p?: Record<string, string | number | boolean>) => string,
+                  )
+                }
+              >
+                <Dynamic
+                  component={render()}
+                  input={input()}
+                  tool={part.tool}
+                  partID={part.id}
+                  callID={part.callID}
+                  sessionID={part.sessionID}
+                  metadata={meta()}
+                  partMetadata={top()}
+                  // @ts-expect-error
+                  output={part.state.output}
+                  status={part.state.status}
+                  // @ts-expect-error
+                  attachments={part.state.attachments}
+                  hideDetails={props.hideDetails}
+                  defaultOpen={props.defaultOpen}
+                  forceOpen={props.forceOpen}
+                  forceOpenFile={props.forceOpenFile}
+                  animate
+                  reveal={props.animate}
+                  readonly={props.readonly}
+                />
+              </ToolSecurityProvider>
             </ToolApprovalProvider>
           </Match>
         </Switch>

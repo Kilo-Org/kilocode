@@ -4,7 +4,7 @@ import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
-import { Deferred, Effect, Layer, Context } from "effect"
+import { Deferred, Effect, Exit, Layer, Context } from "effect"
 import os from "os"
 import z from "zod" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
@@ -19,6 +19,12 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { KiloSecurityGate } from "@/kilocode/security-decision/gate"
+import { PermissionHumanOnly } from "@/kilocode/permission/human-only" // kilocode_change
+import { SecurityBlocked } from "@/kilocode/security-decision/block"
+import { SecurityDecisionAdapter } from "@/kilocode/security-decision/adapter"
+import { SecurityAsk } from "@/kilocode/security-decision/ask"
+import type { SecurityDecisionTypes } from "@/kilocode/security-decision/types"
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -42,11 +48,39 @@ export const DeniedError = PermissionV1.DeniedError
 export type DeniedError = PermissionV1.DeniedError
 export const NotFoundError = PermissionV1.NotFoundError
 export type NotFoundError = PermissionV1.NotFoundError
-export type Error = PermissionV1.Error
+export type Error = PermissionV1.Error | SecurityBlocked.Error // kilocode_change - typed security block
 export const ReplyInput = PermissionV1.ReplyInput
 export type ReplyInput = PermissionV1.ReplyInput
 // Kilo extends upstream's AskInput with an optional hardRuleset (consumed by drain + session/prompt)
-export type AskInput = PermissionV1.AskInput & { hardRuleset?: PermissionV1.Ruleset }
+export type AskInput = PermissionV1.AskInput & {
+  source?: "builtin" | "mcp" | "unknown"
+  hardRuleset?: PermissionV1.Ruleset
+  /** Live containment facts for the security decision layer; never published to clients. */
+  containment?: SecurityDecisionTypes.Containment
+  /** The agent identity this ask was resolved against. */
+  agent?: string
+  /** True when this exact tool call was already stopped by the security layer earlier in the turn. */
+  blocked?: boolean
+  /**
+   * Re-reads the confinement facts. The security layer calls it after the reviewer answers, so a
+   * sandbox toggled during the review cannot be the evidence an approval was granted on.
+   */
+  containmentLive?: () => Effect.Effect<SecurityDecisionTypes.Containment>
+  /**
+   * Re-reads the agent and session rulesets. Same reason: the ruleset a verdict was computed under
+   * has to still be the ruleset in force when the verdict is applied.
+   */
+  authorization?: () => Effect.Effect<{
+    ruleset: PermissionV1.Ruleset
+    hardRuleset?: PermissionV1.Ruleset
+    agent?: string
+  }>
+  /**
+   * Sink for the security layer's audit record. Called with the *initial* record before the call is
+   * auto-approved or published as an ask, so a rejected or abandoned ask is still audited.
+   */
+  audit?: (record: SecurityDecisionAdapter.Audit) => Effect.Effect<void>
+}
 // kilocode_change end
 
 // kilocode_change start
@@ -69,6 +103,10 @@ export interface AskOutcome {
   manual: boolean
   /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
   rule?: Rule
+  /** Audit record of the deterministic security layer, when the feature flag is on. */
+  security?: SecurityDecisionAdapter.Audit
+  /** For a manual outcome: whether a human actually answered, or a client replied on their behalf. */
+  readonly interactive?: boolean // kilocode_change
 }
 // kilocode_change end
 
@@ -89,6 +127,17 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  /**
+   * Set by `reply` when a human or a client actually rejected this request, so `ask` can tell an
+   * answered rejection from a session teardown that fails every pending deferred at once.
+   */
+  rejection?: { interactive: boolean }
+  /**
+   * Set by `reply` when this request was approved, recording whether a human actually answered.
+   * Auto mode replies from the client without `interactive`, and an approval nobody looked at must
+   * not be reported back as one the user gave.
+   */
+  approval?: { interactive: boolean }
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -147,6 +196,7 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  if (SecurityAsk.is(entry.info.metadata)) return false // kilocode_change - a security-raised ask is never auto-approved
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -187,7 +237,8 @@ const layer = Layer.effect(
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
-      const { ruleset, hardRuleset, ...request } = input
+      const { ruleset, hardRuleset, containment, containmentLive, authorization, agent, blocked, audit, source, ...request } =
+        input
       const s = yield* InstanceState.get(state)
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
@@ -197,25 +248,29 @@ const layer = Layer.effect(
       // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
       const skill = ConfigProtection.globalSkillPattern(request)
-      const trusted = skill
-        ? (() => {
-            const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
+      // kilocode_change - factored so the security layer can re-run the same trust test against
+      // freshly read state after its reviewer awaits, instead of reusing this one's answer
+      const trustedFor = Effect.fn("Permission.trusted")(function* (rules: Rule[]) {
+        if (!skill) return false
+        const direct = ExternalDirectoryPermission.evaluate(request.permission, skill, rules)
+        if (direct.action === "allow" && direct.pattern === skill) return true
+        return yield* config.getGlobal().pipe(
+          Effect.map((global) => fromConfig(global.permission ?? {})),
+          Effect.map((globalRules) => {
+            const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, globalRules)
             return rule.action === "allow" && rule.pattern === skill
-          })() ||
-          (yield* config.getGlobal().pipe(
-            Effect.map((global) => fromConfig(global.permission ?? {})),
-            Effect.map((rules) => {
-              const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, rules)
-              return rule.action === "allow" && rule.pattern === skill
-            }),
-            Effect.catch(() => Effect.succeed(false)),
-          ))
-        : false
+          }),
+          Effect.catch(() => Effect.succeed(false)),
+        )
+      })
+      const trusted = yield* trustedFor(approved)
       // kilocode_change end
 
       const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
+      const resolved: KiloSecurityGate.Resolved[] = [] // kilocode_change - fed to the security decision layer below
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        resolved.push({ pattern, action: rule.action }) // kilocode_change
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
@@ -241,10 +296,94 @@ const layer = Layer.effect(
         needsAsk = true
       }
 
-      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
+      // kilocode_change start - deterministic security decision layer (single authoritative hook).
+      // Runs after the hard veto, the explicit deny and the human-only guards, and before the
+      // auto-return/pending split. It is monotonic: it may raise an allow to ask or block a proven
+      // destructive call, never the reverse, and it is inert while the feature flag is off.
+      // kilocode_change - a fresh read of everything the decision rests on. The security layer calls
+      // it only after its reviewer answers, so nothing here runs on the ordinary path.
+      const live = Effect.fn("Permission.live")(function* () {
+        const fresh = authorization ? yield* authorization() : undefined
+        const rules = fresh?.ruleset ?? ruleset
+        const now = yield* InstanceState.get(state)
+        const session = now.session[request.sessionID] ?? []
+        const resolvedNow: KiloSecurityGate.Resolved[] = request.patterns.map((pattern) => ({
+          pattern,
+          action: resolve(request.permission, pattern, rules, now.approved, session).action,
+        }))
+        const trustedNow = yield* trustedFor(now.approved)
+        const containmentNow = containmentLive ? yield* containmentLive() : containment
+        return {
+          resolved: resolvedNow,
+          humanOnly: forceAsk || (isProtected && !trustedNow),
+          ...(containmentNow ? { containment: containmentNow } : {}),
+          ...((fresh?.agent ?? agent) ? { agent: fresh?.agent ?? agent } : {}),
+        }
+      })
+      const security = SecurityDecisionAdapter.enabled()
+        ? yield* KiloSecurityGate.evaluate({
+            config,
+            source,
+            workspace: (yield* InstanceState.context).worktree,
+            permission: request.permission,
+            patterns: request.patterns,
+            metadata: request.metadata,
+            sessionID: request.sessionID,
+            callID: request.tool?.callID,
+            resolved,
+            humanOnly: forceAsk || (isProtected && !trusted),
+            containment,
+            ...(agent ? { agent } : {}),
+            ...(blocked ? { blocked } : {}),
+            live,
+            ...(audit ? { audit } : {}), // kilocode_change - surface the reviewer stage while it runs
+          })
+        : undefined
+      // The initial record is written before any effect: an ask that is never answered, or is
+      // rejected, still leaves an audit trail behind.
+      if (security && audit) {
+        yield* audit(
+          SecurityDecisionAdapter.finalize(
+            security.audit,
+            security.decision === "deny" ? "deny" : security.decision === "ask" || needsAsk ? "ask_pending" : "allow",
+            "security",
+          ),
+        )
+      }
+      if (security?.decision === "deny") {
+        return yield* SecurityBlocked.of(
+          security.rule_id,
+          SecurityDecisionAdapter.finalize(security.audit, "deny", "security"),
+        )
+      }
+      // Provenance: *any* ask the layer decided on is a security decision, even when the existing
+      // pipeline already needed an ask of its own. Every automated path keys off this, so nothing
+      // can approve it by mistaking it for an ordinary ask.
+      const securityAsk = security?.decision === "ask"
+      // Enforcement: only an ask the layer raised by itself carries the security reject semantics.
+      // An ask the pipeline already needed (a rule, a skill batch, a protected config path) keeps
+      // Kilo's ordinary reject semantics.
+      const securityRaisedAsk = securityAsk && !needsAsk
+      if (securityAsk) needsAsk = true
+      // kilocode_change end
+
+      if (!needsAsk)
+        return {
+          manual: false,
+          rule: approvedRule,
+          // kilocode_change - carry the audit so the tool adapter can persist it
+          ...(security ? { security: SecurityDecisionAdapter.finalize(security.audit, "allow", "rule") } : {}),
+        }
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
+        // kilocode_change - an unanswerable ask the security layer raised is a block, not a silent deny
+        if (securityAsk && security) {
+          return yield* SecurityBlocked.of(
+            security.rule_id,
+            SecurityDecisionAdapter.finalize(security.audit, "blocked", "security"),
+          )
+        }
         return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
       }
       // kilocode_change end
@@ -255,13 +394,15 @@ const layer = Layer.effect(
         sessionID: request.sessionID,
         permission: request.permission,
         patterns: request.patterns,
-        // kilocode_change start - disable persistence for protected config paths outside one exact global skill
+        // kilocode_change start - disable persistence for protected config paths outside one exact global skill,
+        // and tag a security-raised ask so no client can auto-approve it
         metadata: {
           ...request.metadata,
           ...(skill ? { rules: [skill] } : {}),
           ...(isProtected && skill === undefined
             ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true, [ConfigProtection.CONFIG_PROTECTED_KEY]: true }
             : {}),
+          ...(securityAsk && security ? SecurityAsk.mark({}, { rule_id: security.rule_id }) : {}),
         },
         // kilocode_change end
         always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
@@ -270,16 +411,69 @@ const layer = Layer.effect(
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
+      const entry: PendingEntry = { info, ruleset, hardRuleset, deferred } // kilocode_change
+      pending.set(id, entry) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
+      // kilocode_change start - a security-raised ask enforces the security outcome itself: a rejection
+      // blocks this one call with the fixed result instead of failing the turn like an ordinary reject.
+      if (securityRaisedAsk && security) {
+        const exit = yield* Effect.ensuring(
+          Deferred.await(deferred),
+          Effect.sync(() => {
+            pending.delete(id)
+          }),
+        ).pipe(Effect.exit)
+        if (Exit.isSuccess(exit)) {
+          // kilocode_change - the audit names the same answerer the approval marker does
+          const answered = entry.approval?.interactive === true
+          return {
+            manual: true,
+            interactive: answered,
+            security: SecurityDecisionAdapter.finalize(security.audit, "allow", answered ? "manual" : "auto"),
+          }
+        }
+        // Only an answered rejection is enforcement; a session teardown keeps its existing semantics.
+        if (!entry.rejection) return yield* Effect.failCause(exit.cause)
+        const record = SecurityDecisionAdapter.finalize(
+          security.audit,
+          entry.rejection.interactive ? "reject" : "blocked",
+          "security",
+        )
+        if (audit) yield* audit(record)
+        return yield* SecurityBlocked.of(security.rule_id, record)
+      }
+      // kilocode_change end
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
         Deferred.await(deferred),
         Effect.sync(() => {
           pending.delete(id)
         }),
+      ).pipe(
+        // kilocode_change - a refusal ends this effect, so the audit has to be closed on the way out.
+        // The record written before the prompt was published says `ask_pending`, and leaving it there
+        // reports a call that will never run again as one still waiting for a human.
+        Effect.tapError(() =>
+          security && audit
+            ? audit(
+                SecurityDecisionAdapter.finalize(
+                  security.audit,
+                  entry.rejection?.interactive ? "reject" : "blocked",
+                  entry.rejection?.interactive ? "manual" : "auto",
+                ),
+              ).pipe(Effect.catchCause(() => Effect.void))
+            : Effect.void,
+        ),
       )
-      return { manual: true } // the user was prompted and replied
+      // kilocode_change - the audit names the same answerer the approval marker does
+      const answered = entry.approval?.interactive === true
+      return {
+        manual: true,
+        interactive: answered,
+        ...(security
+          ? { security: SecurityDecisionAdapter.finalize(security.audit, "allow", answered ? "manual" : "auto") }
+          : {}),
+      } // the user was prompted and replied
       // kilocode_change end
     })
 
@@ -293,7 +487,7 @@ const layer = Layer.effect(
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (
-        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        PermissionHumanOnly.requires(existing.info.metadata) && // kilocode_change - one predicate, shared with the clients
         input.reply !== "reject" &&
         input.interactive !== true
       ) {
@@ -312,6 +506,7 @@ const layer = Layer.effect(
       })
 
       if (input.reply === "reject") {
+        existing.rejection = { interactive: input.interactive === true } // kilocode_change - answered, not torn down
         yield* Deferred.fail(
           existing.deferred,
           input.message
@@ -321,6 +516,7 @@ const layer = Layer.effect(
 
         for (const [id, item] of pending.entries()) {
           if (item.info.sessionID !== existing.info.sessionID) continue
+          item.rejection = { interactive: false } // kilocode_change - cascaded, so no human saw this one
           pending.delete(id)
           yield* events.publish(Event.Replied, {
             sessionID: item.info.sessionID,
@@ -332,6 +528,7 @@ const layer = Layer.effect(
         return
       }
 
+      existing.approval = { interactive: input.interactive === true } // kilocode_change
       yield* Deferred.succeed(existing.deferred, undefined)
       if (input.reply === "once") return
 

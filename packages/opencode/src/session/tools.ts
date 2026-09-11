@@ -23,11 +23,19 @@ import { Session } from "./session"
 import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
 import { EffectBridge } from "@/effect/bridge"
+import { isBuiltin } from "@/kilocode/sandbox/network" // kilocode_change - provenance from the native registry marker
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+// kilocode_change start - live containment facts for the deterministic security decision layer
+import { SecurityDecisionAdapter } from "@/kilocode/security-decision/adapter"
+import { ContainmentMacos } from "@/kilocode/security-decision/containment-macos"
+import { SecurityRealpath } from "@/kilocode/security-decision/realpath"
+import { InstanceState } from "@/effect/instance-state"
+// kilocode_change end
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { Config } from "@/config/config"
+import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
@@ -53,7 +61,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info
   model: Provider.Model
   session: Session.Info
-  processor: Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall"> // kilocode_change
+  processor: Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall" | "securityBlocked"> // kilocode_change
   bypassAgentCheck: boolean
   messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
@@ -76,6 +84,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // kilocode_change start - permission provenance
   const config = yield* Config.Service
   const flags = yield* RuntimeFlags.Service
+  const database = yield* Database.Service // kilocode_change - live containment reads the session snapshot
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
   const notify = BoardEnabled.resolve({
@@ -100,7 +109,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // kilocode_change end
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
-  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
+  const context = (args: Record<string, unknown>, options: ToolExecutionOptions, name?: string, source: "builtin" | "mcp" | "unknown" = "builtin"): Tool.Context => {
     const extra = {
       model: input.model,
       bypassAgentCheck: input.bypassAgentCheck,
@@ -119,22 +128,85 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       // kilocode_change start
       metadata: (val) => input.processor.metadata(options.toolCallId, val),
       ask: (req) =>
-        KiloSessionPrompt.askPermission({
-          permission,
-          agents,
-          sessions,
-          origins: permissionOrigins,
-          agent: input.agent,
-          session: input.session,
-          request: {
-            ...req,
-            sessionID: input.session.id,
-            tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-          },
+        // kilocode_change - resolve live containment only while the security layer is enabled
+        Effect.gen(function* () {
+          const securityEnabled = SecurityDecisionAdapter.enabled()
+          // kilocode_change - the containment facts are read live, from the same per-session snapshot
+          // `SandboxPolicy.execute` runs the call under. Facts captured when the tool set was built
+          // go stale on a `/sandbox` toggle or a config reconcile, and the call would then be allowed
+          // against a profile it no longer executes under.
+          // kilocode_change - the same read, callable again: the security layer re-takes these
+          // facts after its reviewer answers so a `/sandbox` toggle during the review cannot be the
+          // confinement an approval was granted on.
+          const containmentLive = Effect.fn("KiloTools.containment")(function* () {
+            const snapshot = yield* SandboxPolicy.containment(input.session.id).pipe(
+              Effect.provideService(Config.Service, config),
+              Effect.provideService(Database.Service, database),
+            )
+            return yield* Effect.promise(() =>
+              ContainmentMacos.facts({ ...snapshot, escalated: extra.sandboxEscalation }),
+            )
+          })
+          const containment = securityEnabled ? yield* containmentLive() : undefined
+          // kilocode_change start - resolve filesystem identity once, before the decision runs, so a
+          // symlink is judged by what it points at while the pure core stays free of IO
+          const worktree = securityEnabled ? (yield* InstanceState.context).worktree : undefined
+          const securityPaths =
+            worktree !== undefined ? yield* Effect.promise(() => SecurityRealpath.paths(req, worktree)) : undefined
+          const facts = req.metadata?.["securityFacts"]
+          const securityFacts =
+            worktree !== undefined && facts && typeof facts === "object"
+              ? {
+                  ...(facts as Record<string, unknown>),
+                  effects: yield* Effect.promise(() =>
+                    SecurityRealpath.effects((facts as { effects?: unknown }).effects, worktree),
+                  ),
+                }
+              : undefined
+          // kilocode_change end
+          return yield* KiloSessionPrompt.askPermission({
+            permission,
+            agents,
+            sessions,
+            origins: permissionOrigins,
+            agent: input.agent,
+            session: input.session,
+            request: {
+              ...req,
+              source: source !== "builtin" ? source : (req.source ?? source), // kilocode_change - catalog children may only tighten builtin provenance
+              sessionID: input.session.id,
+              // kilocode_change - a retry of a call the layer already stopped this turn stays a
+              // human ask; the signature is the continuation model's, over the tool call itself
+              ...(securityEnabled && name && input.processor.securityBlocked(name, args) ? { blocked: true } : {}),
+              ...(containment ? { containment, containmentLive } : {}), // kilocode_change
+              // kilocode_change - the resolved targets travel with the ask; patterns are untouched
+              ...(securityPaths || securityFacts
+                ? {
+                    metadata: {
+                      ...req.metadata,
+                      ...(securityPaths ? { securityPaths } : {}),
+                      ...(securityFacts ? { securityFacts } : {}),
+                    },
+                  }
+                : {}),
+              // kilocode_change - persist the initial audit record before the call runs or asks
+              ...(securityEnabled
+                ? {
+                    audit: (record: SecurityDecisionAdapter.Audit) =>
+                      input.processor.metadata(options.toolCallId, {
+                        metadata: { [PermissionProvenance.SECURITY_KEY]: record },
+                      }),
+                  }
+                : {}),
+              tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+            },
+          })
         }).pipe(
           // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-          Effect.tap((approval) =>
+          Effect.tap((outcome) =>
             Effect.gen(function* () {
+              // kilocode_change - split the security audit off the approval marker
+              const { security, ...approval } = outcome
               if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
                 extra.sandboxEscalation = true
               }
@@ -145,8 +217,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                     req.permission,
                     PermissionProvenance.filepathOf(req.metadata),
                   ),
+                  ...(security ? { [PermissionProvenance.SECURITY_KEY]: security } : {}),
                 },
               })
+            }),
+          ),
+          // kilocode_change - record the audit for a call the security layer blocked outright
+          Effect.tapErrorTag("KiloSecurityBlockedError", (err) =>
+            input.processor.metadata(options.toolCallId, {
+              metadata: { [PermissionProvenance.SECURITY_KEY]: err.audit },
             }),
           ),
           // record why the call was denied too, so JSON exports and clients can explain the denial
@@ -191,7 +270,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       execute(args, options) {
         return run.promise(
           Effect.gen(function* () {
-            const ctx = context(args, options)
+            const ctx = context(args, options, item.id, isBuiltin(item) ? "builtin" : "unknown") // kilocode_change - name the call for the block registry
             yield* plugin.trigger(
               "tool.execute.before",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
@@ -246,7 +325,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         return run.promise(
           Effect.gen(function* () {
             const parsed = parseListMcpResourcesArgs(args)
-            const ctx = context(toRecord(args), opts)
+            const ctx = context(toRecord(args), opts, undefined, "mcp")
             const clients = yield* mcp.clients()
             const resourceServers = Object.entries(clients)
               .filter((entry) => !!entry[1].getServerCapabilities()?.resources)
@@ -326,7 +405,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         return run.promise(
           Effect.gen(function* () {
             const parsed = parseListMcpResourcesArgs(args)
-            const ctx = context(toRecord(args), opts)
+            const ctx = context(toRecord(args), opts, undefined, "mcp")
             const clients = yield* mcp.clients()
             const resourceServers = Object.entries(clients)
               .filter((entry) => !!entry[1].getServerCapabilities()?.resources)
@@ -410,7 +489,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         return run.promise(
           Effect.gen(function* () {
             const parsed = parseReadMcpResourceArgs(args)
-            const ctx = context(toRecord(args), opts)
+            const ctx = context(toRecord(args), opts, undefined, "mcp")
             const clients = yield* mcp.clients()
             const client = clients[parsed.server]
             if (!client) {
@@ -480,7 +559,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     item.execute = (args, opts) =>
       run.promise(
         Effect.gen(function* () {
-          const ctx = context(args, opts)
+          const ctx = context(args, opts, key, "mcp")
           // kilocode_change start - propagate MCP App UI metadata so hosts can preload the UI resource
           const mcpAppMeta = McpApps.toolMetadata(entry, flags)
           if (mcpAppMeta) {

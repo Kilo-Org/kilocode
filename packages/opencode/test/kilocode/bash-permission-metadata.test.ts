@@ -105,3 +105,58 @@ describe("bash permission metadata.command", () => {
     })
   })
 })
+
+// The deterministic security layer reads these facts instead of re-parsing the command: the shell
+// tool is the only parser, and anything it could not fully recover must fail closed.
+describe("bash permission metadata.securityFacts", () => {
+  const facts = async (command: string) => {
+    await using tmp = await tmpdir()
+    return await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const bash = await runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
+        const requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
+        await Effect.runPromise(bash.execute({ command }, capture(requests)))
+        return requests.find((item) => item.permission === "bash")?.metadata.securityFacts
+      },
+    })
+  }
+
+  test("reports a single simple command as complete, uncomposed and named", async () => {
+    // kilocode_change - the facts also carry the scan's file effects, the parsed command line and
+    // the per-command view a sequence is judged by; a single command is one unit of that view.
+    expect(await facts("echo hello")).toEqual({
+      complete: true,
+      composed: false,
+      decomposable: true,
+      executable: "echo",
+      argv: ["echo", "hello"],
+      classified: false,
+      // kilocode_change - a command that can expose the inherited environment is flagged per unit
+      ambient: false,
+      commands: [{ executable: "echo", argv: ["echo", "hello"], classified: false, ambient: false }],
+      effects: [],
+    })
+  })
+
+  test.skipIf(process.platform === "win32")("marks a pipeline as composed", async () => {
+    expect(await facts("echo hello | cat")).toMatchObject({ complete: true, composed: true })
+  })
+
+  test.skipIf(process.platform === "win32")("marks a command list as composed", async () => {
+    expect(await facts("echo a && echo b")).toMatchObject({ complete: true, composed: true })
+  })
+
+  test.skipIf(process.platform === "win32")("marks a command substitution as composed", async () => {
+    expect(await facts("echo $(echo hi)")).toMatchObject({ complete: true, composed: true })
+  })
+
+  test.skipIf(process.platform === "win32")("marks a heredoc as composed", async () => {
+    expect(await facts("cat << EOF\nhi\nEOF")).toMatchObject({ complete: true, composed: true })
+  })
+
+  test("does not name an executable for a composed command", async () => {
+    const out = (await facts("echo a && echo b")) as { executable?: string } | undefined
+    expect(out?.executable).toBeUndefined()
+  })
+})

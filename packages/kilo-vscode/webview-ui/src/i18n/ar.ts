@@ -297,7 +297,12 @@ export const dict = {
   "ui.approval.source.yolo": "بواسطة وضع الموافقة التلقائية (YOLO)",
   "ui.approval.source.session": "بواسطة قاعدة موافقة تلقائية للجلسة",
   "ui.approval.source.default": "افتراضيًا",
+  "ui.approval.source.auto": "بواسطة الوضع التلقائي",
   "ui.approval.outsideWorkspace": "(خارج مساحة العمل: {{file}})",
+  "ui.security.reviewing": "قيد المراجعة",
+  "ui.security.autoApproved": "تمت الموافقة تلقائيًا",
+  "ui.security.needsApproval": "بحاجة إلى موافقة",
+  "ui.security.blocked": "محظور",
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
