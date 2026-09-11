@@ -52,7 +52,13 @@ test("home/end keys move the text cursor in a dialog filter input", async () => 
   function Harness() {
     const renderer = useRenderer()
     const keymap = createDefaultOpenTuiKeymap(renderer)
-    const resolvedConfig = createTuiResolvedConfig({ leader_timeout: 1000 })
+    const resolvedConfig = createTuiResolvedConfig({
+      leader_timeout: 1000,
+      keybinds: {
+        "dialog.select.home": ["home", "f6"],
+        "dialog.select.end": ["end", "f7"],
+      },
+    })
     const off = registerOpencodeKeymap(keymap, renderer, resolvedConfig)
     onCleanup(off)
 
@@ -96,8 +102,8 @@ test("home/end keys move the text cursor in a dialog filter input", async () => 
     await app.flush()
     expect(moves.at(-1)).toBe("alpha")
 
-    await app.mockInput.typeText("Alpha")
-    await wait(() => input.plainText === "Alpha")
+    await app.mockInput.typeText("a")
+    await wait(() => input.plainText === "a")
     let settled = -1
     await wait(() => {
       const count = moves.length
@@ -108,22 +114,35 @@ test("home/end keys move the text cursor in a dialog filter input", async () => 
       return true
     })
     await app.flush()
-    expect(input.cursorOffset).toBe(5)
+    expect(input.cursorOffset).toBe(1)
     const beforeEditing = moves.length
 
     app.mockInput.pressArrow("left")
     await app.flush()
-    expect(input.cursorOffset).toBe(4)
+    expect(input.cursorOffset).toBe(0)
 
     app.mockInput.pressKey("END")
     await app.flush()
-    expect(input.cursorOffset).toBe(5)
+    expect(input.cursorOffset).toBe(1)
     expect(moves.length).toBe(beforeEditing)
 
     app.mockInput.pressKey("HOME")
     await app.flush()
     expect(input.cursorOffset).toBe(0)
     expect(moves.length).toBe(beforeEditing)
+
+    // Custom bindings to the same commands stay active while the filter holds
+    // text, even though the default home/end keys are gated for text editing.
+    const beforeCustom = moves.length
+    app.mockInput.pressKey("F6")
+    await app.flush()
+    expect(moves.length).toBe(beforeCustom + 1)
+    expect(input.cursorOffset).toBe(0)
+
+    app.mockInput.pressKey("F7")
+    await app.flush()
+    expect(moves.length).toBe(beforeCustom + 2)
+    expect(input.cursorOffset).toBe(0)
   } finally {
     app.renderer.destroy()
   }

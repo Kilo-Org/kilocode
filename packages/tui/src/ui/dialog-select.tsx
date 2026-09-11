@@ -92,6 +92,13 @@ export type DialogSelectRef<T> = {
   moveTo(value: T): void
 }
 
+// kilocode_change start - Home/End shadow text editing in a focused dialog filter
+function isConflictKey(binding: { key: Binding["key"] }) {
+  const name = typeof binding.key === "string" ? binding.key : binding.key.name
+  return name === "home" || name === "end"
+}
+// kilocode_change end
+
 export function DialogSelect<T>(props: DialogSelectProps<T>) {
   type Action = NonNullable<DialogSelectProps<T>["actions"]>[number]
   type FooterHint = NonNullable<DialogSelectProps<T>["footerHints"]>[number]
@@ -487,35 +494,42 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   })
 
   // kilocode_change start - keep home/end text movement while the dialog filter
-  // holds text; they only jump the list while it is empty or not focused.
+  // holds text. Only the conflicting home/end key bindings are gated, so custom
+  // bindings for the same commands (e.g. F6/F7) keep working.
+  const jumpCommands = [
+    {
+      name: "dialog.select.home",
+      title: "First item",
+      category: "Dialog",
+      run() {
+        if (props.locked) return
+        setStore("input", "keyboard")
+        moveTo(0)
+      },
+    },
+    {
+      name: "dialog.select.end",
+      title: "Last item",
+      category: "Dialog",
+      run() {
+        if (props.locked) return
+        setStore("input", "keyboard")
+        moveTo(flat().length - 1)
+      },
+    },
+  ]
+  const jumpBindings = () =>
+    tuiConfig.keybinds.gather("dialog.select.jump", ["dialog.select.home", "dialog.select.end"])
+  useBindings(() => ({
+    commands: jumpCommands,
+    bindings: jumpBindings().filter((binding) => !isConflictKey(binding)),
+  }))
   useBindings(() => ({
     enabled: () => {
       const editor = renderer.currentFocusedEditor
       return editor !== input || store.filter.length === 0
     },
-    commands: [
-      {
-        name: "dialog.select.home",
-        title: "First item",
-        category: "Dialog",
-        run() {
-          if (props.locked) return
-          setStore("input", "keyboard")
-          moveTo(0)
-        },
-      },
-      {
-        name: "dialog.select.end",
-        title: "Last item",
-        category: "Dialog",
-        run() {
-          if (props.locked) return
-          setStore("input", "keyboard")
-          moveTo(flat().length - 1)
-        },
-      },
-    ],
-    bindings: tuiConfig.keybinds.gather("dialog.select.jump", ["dialog.select.home", "dialog.select.end"]),
+    bindings: jumpBindings().filter(isConflictKey),
   }))
   // kilocode_change end
 
