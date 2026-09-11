@@ -7,7 +7,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
 import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Duration, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
 import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
@@ -193,6 +193,120 @@ export namespace KiloSessionProcessor {
           }),
       )
     })
+  }
+
+  /** How long a stream may stay silent before the guard probes connectivity. */
+  export const STALL_MS = 10_000
+
+  /** True only for calls whose local execution started; pending input must not hold the guard back. */
+  export function executingTools(calls: Record<string, { executing?: boolean }>) {
+    return Object.values(calls).some((call) => call.executing)
+  }
+
+  /** resolveSDK's env pass: ${VAR} names resolve from the environment or stay intact. */
+  export function expandEnv(url: string) {
+    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+  }
+
+  // Dynamic import: app-runtime depends on this module, so a static import would
+  // be circular; the annotated return type keeps the AppLayer type graph acyclic.
+  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+    const url = (id ? await configured(id) : undefined) ?? apiUrl
+    if (!url) return url
+    // varsLoaders vars from resolveSDK are unreachable here; unexpanded names
+    // fail the endpoint probe and fall back to the public probe.
+    return expandEnv(url)
+  }
+
+  async function configured(id: ProviderV2.ID): Promise<string | undefined> {
+    const [runtime, provider] = await Promise.all([
+      import("@/effect/app-runtime").catch(() => undefined),
+      import("@/provider/provider").catch(() => undefined),
+    ])
+    if (!runtime || !provider) return undefined
+    // Bound the lookup: a wedged runtime must not stall the watchdog. The lookup
+    // keeps its own catch, so a rejection after the deadline is still handled,
+    // and the timer is cleared whichever side wins.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), 2_000)
+    })
+    const lookup = Promise.resolve()
+      .then(() =>
+        runtime.AppRuntime.runPromise(
+          Effect.gen(function* () {
+            const svc = yield* provider.Provider.Service
+            return yield* svc.getProvider(id)
+          }),
+        ),
+      )
+      .catch((err) => {
+        log.warn("offline probe provider lookup failed", { err })
+        return undefined
+      })
+    const info = await Promise.race([lookup, deadline]).finally(() => clearTimeout(timer))
+    // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
+    const base = info?.options?.baseURL
+    return typeof base === "string" && base !== "" ? base : undefined
+  }
+
+  /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
+  export class DisconnectedError extends Error {
+    constructor() {
+      super("network connection was lost")
+      this.name = "DisconnectedError"
+    }
+  }
+
+  /**
+   * Fails an attempt stalled for `stallMs` with DisconnectedError when the
+   * connectivity probe also fails. A passing probe resets the clock; only
+   * executing tool calls hold it back.
+   */
+  export function offlineGuard(input: {
+    busy?: () => boolean
+    stallMs?: number
+    tickMs?: number
+    check?: () => Promise<boolean>
+    providerID?: ProviderV2.ID
+    apiUrl?: string
+  }) {
+    const stall = input.stallMs ?? STALL_MS
+    const tick = input.tickMs ?? 1_000
+    const check =
+      input.check ??
+      (async () => {
+        const baseURL = await providerBaseURL(input.providerID, input.apiUrl)
+        return SessionNetwork.probeProvider(baseURL)
+      })
+    const state = { at: Date.now() }
+    return {
+      touch() {
+        state.at = Date.now()
+      },
+      watch: Effect.gen(function* () {
+        while (true) {
+          yield* Effect.sleep(Duration.millis(tick))
+          if (Date.now() - state.at < stall) continue
+          if (input.busy?.()) {
+            state.at = Date.now()
+            continue
+          }
+          // a rejected probe can't confirm connectivity either
+          const ok = yield* Effect.tryPromise({
+            try: check,
+            catch: () => new DisconnectedError(),
+          })
+          if (ok) {
+            state.at = Date.now()
+            continue
+          }
+          // stream activity during the probe proves the connection is alive
+          if (Date.now() - state.at < stall) continue
+          return yield* Effect.fail(new DisconnectedError())
+        }
+      }),
+    }
   }
 
   /**

@@ -82,6 +82,7 @@ type ToolCall = {
   messageID: SessionV1.ToolPart["messageID"]
   sessionID: SessionV1.ToolPart["sessionID"]
   done: Deferred.Deferred<void>
+  executing?: boolean // kilocode_change - only executing calls hold the offline guard back
 }
 
 interface ProcessorContext extends Input {
@@ -479,6 +480,8 @@ const layer = Layer.effect(
             }))
             delete ctx.toolmeta[value.id]
             // kilocode_change end
+            const call = ctx.toolcalls[value.id] // kilocode_change - provider-executed tools stay guard-covered
+            if (call && !value.providerExecuted) call.executing = true // kilocode_change
 
             const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
               Effect.provideService(Database.Service, database),
@@ -939,16 +942,30 @@ const layer = Layer.effect(
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
               ctx.step = { reasoning: false, text: false, tool: false }
+              // kilocode_change start - fail the attempt when the provider stalls on a dead network
+              const guard = KiloSessionProcessor.offlineGuard({
+                busy: () => KiloSessionProcessor.executingTools(ctx.toolcalls),
+                providerID: input.model.providerID, // probe the provider's own endpoint
+                apiUrl: input.model.api.url,
+              })
+              // kilocode_change end
               const stream = llm.stream({
                 ...streamInput,
                 preflight: !ctx.assistantMessage.summary,
               })
 
-              yield* stream.pipe(
-                Stream.tap((event) => handleEvent(event)),
-                Stream.takeUntil(() => ctx.needsCompaction),
-                Stream.runDrain,
+              // kilocode_change start
+              yield* guard.watch.pipe(
+                Effect.raceFirst(
+                  stream.pipe(
+                    Stream.tap((event) => handleEvent(event)),
+                    Stream.tap(() => Effect.sync(() => guard.touch())),
+                    Stream.takeUntil(() => ctx.needsCompaction),
+                    Stream.runDrain,
+                  ),
+                ),
               )
+              // kilocode_change end
             }).pipe(
               Effect.onInterrupt(() =>
                 Effect.gen(function* () {
