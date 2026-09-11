@@ -53,8 +53,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "เสร็จสมบูรณ์ (โมเดลรายงาน)",
+  "session.goal.blocked": "ถูกบล็อก",
+  "session.goal.restart": "เริ่มเป้าหมายใหม่",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "กระดาน",
+  "task.swarm.refresh": "รีเฟรช",
+  "task.swarm.reset": "รีเซ็ตกระดาน",
+  "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
+  "task.swarm.resetDescription":
+    "ล้างข้อความที่แสดงหรือไม่? การสนทนาและงานที่กำลังทำจะไม่เปลี่ยนแปลง เอเจนต์สามารถโพสต์ข้อความใหม่ได้",
+  "task.swarm.loading": "กำลังโหลดกระดาน...",
+  "task.swarm.failed": "ไม่สามารถโหลดหรือรีเซ็ตกระดานได้ โปรดลองรีเฟรช",
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -741,6 +752,14 @@ export const dict = {
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
+  "session.goal.label": "เป้าหมาย",
+  "prompt.goal.set": "ตั้งเป้าหมาย",
+  "prompt.goal.start": "เริ่มเป้าหมาย",
+  "session.goal.active": "ทำงานอยู่",
+  "session.goal.paused": "หยุดชั่วคราว",
+  "session.goal.pause": "พัก",
+  "session.goal.resume": "ดำเนินการต่อ",
+  "session.goal.clear": "ล้างเป้าหมาย",
   "session.costAlert.header": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "session.costAlert.continue": "ดำเนินการต่อ",
   "session.costAlert.question":
@@ -834,7 +853,17 @@ export const dict = {
   "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
   "settings.notifications.enable.description":
     "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.workbench.title": "เปิดใช้การแจ้งเตือนของ VS Code",
+  "settings.notifications.workbench.description":
+    "แสดงการแจ้งเตือนของ VS Code เมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.os.title": "เปิดใช้การแจ้งเตือนของระบบปฏิบัติการ",
+  "settings.notifications.os.description":
+    "แสดงการแจ้งเตือนแบบเนทีฟของระบบปฏิบัติการเมื่อ Kilo ทำงานเสร็จหรือต้องการให้คุณป้อนข้อมูลขณะที่ VS Code ไม่ได้ใช้งานอยู่",
   "settings.notifications.testSound": "ทดสอบ",
+  "settings.notifications.testOS": "ทดสอบ",
+  "settings.notifications.testOS.testing": "กำลังส่งการแจ้งเตือนทดสอบ…",
+  "settings.notifications.testOS.success": "ส่งการแจ้งเตือนทดสอบแล้ว",
+  "settings.notifications.testOS.error": "ส่งการแจ้งเตือนทดสอบไม่สำเร็จ",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
   "settings.notifications.sound.system": "ระบบ",
   "settings.notifications.sound.description":
@@ -852,6 +881,9 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "แชร์กระดานระหว่างเซสชันหลักกับเอเจนต์ย่อยที่รับมอบหมายงานจากเซสชันนั้น รวมถึงเอเจนต์ย่อยที่ซ้อนกัน ใช้สำหรับการลองแก้ปัญหาแบบขนานหรืองานที่เสริมกัน ไม่ใช่สำหรับทุกงาน",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
   "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
   "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
@@ -877,6 +909,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
@@ -991,6 +1026,9 @@ export const dict = {
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
+  "settings.agentBehaviour.pushFixes.title": "พุชการแก้ไขของคำขอดึง",
+  "settings.agentBehaviour.pushFixes.description":
+    "เมื่อคุณส่งความล้มเหลวของ CI หรือความเห็นการตรวจสอบจากคำขอดึงให้เอเจนต์ หรืออัปเดต worktree จากสาขาฐาน ให้ขอให้เอเจนต์คอมมิตและพุชเพื่อให้คำขอดึงอัปเดต การขออนุญาตยังคงมีผล ปิดเพื่อคอมมิตด้วยตนเอง",
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1198,6 +1236,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
   "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
+  "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
@@ -1210,6 +1249,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "ยกเลิกแล้ว",
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
+  "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",

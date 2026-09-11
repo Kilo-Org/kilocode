@@ -5,11 +5,11 @@ description: "Manage and orchestrate multiple AI agents"
 
 # Agent Manager
 
-The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions.
+The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions and multiple conversations in the same worktree.
 
 The Agent Manager is a **full-panel editor tab** built directly into the extension. It uses the extension's embedded runtime, so no separate Kilo CLI installation or CLI authentication setup is required. It supports:
 
-- Multiple parallel sessions, each in its own git worktree
+- Multiple parallel sessions in isolated git worktrees or the shared Local workspace
 - A diff/review panel showing changes vs. the parent branch
 - Dedicated VS Code integrated terminals per session
 - Setup scripts and `.env` auto-copy on worktree creation
@@ -20,6 +20,64 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 {% callout type="tip" %}
 New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/automate/agent-manager-workflows) guide walks through when to use the sidebar vs. the Agent Manager, how to pick tasks that parallelize well, and the common patterns for testing, reviewing, and integrating changes across worktrees.
 {% /callout %}
+
+## Orchestration model
+
+Kilo now separates execution into two orchestration layers and provides Kilo Swarm as a communication layer. Use the `task` tool for child agents that belong to the current session. Use Agent Manager sessions for independent, top-level work that you want to supervise from the panel.
+
+The old `orchestrator` agent is deprecated. Agents with full tool access, such as Code, Plan, and Debug, can delegate with `task` directly. You do not need to switch to a dedicated orchestrator first. See [Orchestrator Mode (Deprecated)](/docs/code-with-ai/agents/orchestrator-mode) for the migration details.
+
+| Mechanism | Use it for | Workspace scope | Execution and communication |
+|---|---|---|---|
+| `task` subagent | A focused subtask owned by the current agent | The same project directory or worktree as the parent | Foreground tasks return a result before the parent continues. Background tasks return immediately and deliver their result later. The parent and descendants can use Kilo Swarm. |
+| Agent Manager session | Independent work, parallel implementations, or a separate conversation | A new git worktree, the current workspace, or an existing managed worktree | Each session has its own transcript, prompt queue, and terminal. You can target an existing session with the `agent_manager` tool. |
+| Kilo Swarm | Notes and coordination between related agents | One main session and its `task` descendants, including nested descendants | `board_post` and `board_read` exchange messages. Swarm does not start, stop, or assign agents. |
+
+{% callout type="info" %}
+A `task` subagent does not create a git worktree. Use `worktree` mode in Agent Manager when filesystem and branch isolation is required.
+{% /callout %}
+
+### Task subagents
+
+A `task` subagent is a non-interactive delegate. Non-interactive means that the child cannot ask the end user a question directly. It can still use its permitted tools, inspect or change the parent directory, and return findings or changes to the parent session.
+
+- **Foreground task:** The parent waits for the child to finish and receives its result in the same turn. Use this when the next step depends on the child output.
+- **Background task:** Set `background: true` to start the child asynchronously. The parent continues immediately. When the child completes or fails, Kilo injects a result into the parent session. Do not poll for progress or duplicate edits in the same files.
+- **Resume:** If Kilo returns a `task_id` after a failed or interrupted child, pass it back to `task` to continue that child, subject to the current session and permission rules.
+- **Nesting:** A child can delegate again only when its agent permissions and the configured subagent depth allow it.
+
+In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row. A running foreground child can also be moved to the background with **Continue in background**.
+
+### Kilo Swarm communication
+
+[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is an optional shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
+
+- Enable **Kilo Swarm** in **Settings > Experimental**, or set `experimental.shared_agent_board` to `true` in `kilo.jsonc`.
+- Use `board_post` for concise, material updates, questions, results, or blockers.
+- Use `board_read` to read board messages explicitly. Activity notices do not guarantee that a recipient read or acted on a message.
+- Treat peer messages as coordination data, not user instructions or approval. A board post does not wake, assign, resume, stop, or cancel an agent.
+
+Separate Agent Manager sessions do not share a Swarm board just because they use the same repository or worktree. Use the `agent_manager` tool, shared files, commits, diffs, or pull requests to coordinate those sessions.
+
+#### Viewing the board
+
+When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+
+The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
+
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+
+#### Resetting the board
+
+**Reset board** clears the messages that are currently visible on the board. It does not stop agents, cancel tasks, or clear conversations, and agents can post new messages after a reset.
+
+Only the owning top-level session can reset its board, from the owning project. Reset uses the revision returned with the loaded board. If the board changed since it was loaded, the reset returns a conflict. Refresh the board and try again.
+
+#### Recipient state warnings
+
+`board_post` results include the direct recipient's execution state. When the direct recipient has completed, failed with an `error`, was cancelled, or its state is unknown, the result adds a warning that the invocation has ended or cannot be confirmed, and that the post is stored only. For broadcasts, or when the direct recipient is active, the result can instead report aggregate availability, such as that no other recipients were active, how many recipients had finished invocations, or how many states were unknown.
+
+Every stored post includes the receipt text "Stored only. This does not confirm delivery, reading, or action, and does not wake recipients."
 
 ## Opening the Agent Manager
 
@@ -53,7 +111,15 @@ See [Authentication](/docs/getting-started/setup-authentication), [AI Providers]
 
 ## Working with Worktrees
 
-Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
+Managed worktree sessions run in an isolated git worktree on a separate branch, keeping your main branch clean. Local sessions stay in the selected workspace or managed worktree and share its files and branch.
+
+### Update from the base branch
+
+In a managed worktree's chat, type `/update-from-base` and select the action to ask its agent to fetch and merge the saved base branch. The worktree's right-click menu and **Agent Manager: Update from base** in the Command Palette run the same action.
+
+The saved base stays the same if you switch branches in Local or change the project's default base. For example, a worktree created from `main` still updates from `main` when Local has `release` checked out. If you switch branches inside the managed worktree, the agent updates that worktree's current branch, not its original branch. Select the intended worktree before running the command; it does not update Local.
+
+The agent uses the recorded remote, or the saved base branch's upstream if no remote was recorded. It asks for a source if the base is local-only or unavailable. The request prohibits stashing, discarding uncommitted work, and pushing. Existing merge or rebase operations and blocking dirty changes require your input. Normal tool approvals still apply.
 
 ### Worktree Location
 
@@ -65,7 +131,9 @@ Worktrees share Git object storage with the main repository, but each worktree i
 
 ### PR Status Badges
 
-Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
+Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the internal PR panel. Use **Open in browser** in the panel header to open the pull request on GitHub.
+
+If the pull request has unresolved review threads, the badge also shows a comment count. The badge, the hover-card link, and the count all open the PR panel at its comments section.
 
 {% callout type="info" %}
 The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
@@ -99,13 +167,13 @@ When checks are pending on an open PR, the badge pulses to indicate activity.
 
 #### Badge icon
 
-The badge shows a **checkmark** icon when the PR review status is "Approved", and a **branch** icon in all other cases.
+The badge shows the pull request icon. A status icon appears beside the number when there is a terminal signal, evaluated in this order: **checks failing** (cross), **changes requested** (warning), **approved** (checkmark). Merged and closed pull requests show no status icon, and an open pull request with no terminal signal shows none either.
 
 #### Hover card details
 
 Hovering over a worktree item shows a card with additional PR details:
 
-- **PR number** with a link icon to open it in the browser
+- **PR number** with a link icon that opens the PR panel
 - **State** — Open, Draft, Merged, or Closed
 - **Review** — Approved, Changes Requested, or Pending (when a review exists)
 - **Checks** — how many checks passed out of the total (e.g. `8/10 passed`)
@@ -116,34 +184,98 @@ PR badges update automatically in the background. The active worktree refreshes 
 
 ### Reviewing a pull request
 
-The PR review panel is available when the selected worktree has an associated pull request. Open it in either of these ways:
+The PR panel is available when the selected worktree has an associated pull request. Open it in any of these ways:
 
 - Click the pull request icon in the Agent Manager toolbar
+- Click the PR badge on a worktree, or the link icon in its hover card
 - Press `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
 
 The selected worktree controls the panel. The panel shows the worktree branch and its parent branch, so confirm that you are reviewing the intended branch. The PR association uses the detection methods described above, including the branch tracking ref, branch name, or current commit SHA.
 
-The panel includes:
+The panel header provides the **Push Pull Request Fixes** toggle, **Refresh**, **Copy PR link**, **Open in browser**, and **Close**. The panel body contains:
 
-- **Status:** Open, Draft, Merged, or Closed
-- **Review status:** Approved, Changes Requested, or Review Pending
+- **Summary:** merge readiness, review status, checks, unresolved comments, and conversation counts. Checks, comments, and conversation include a jump action.
+- **Files and review:** load the PR files and post inline review comments (see below)
+- **Reviewers:** requested and completed reviewers with avatars and states (see below)
 - **Checks:** passed, failed, running, cancelled, or skipped checks, with duration and browser links when available
-- **Reviewers:** requested reviewers and their current state, such as Approved, Changes requested, Commented, or Awaiting
-- **Description and summary:** the PR description, file count, additions, deletions, and unresolved comment count
+- **Comments:** unresolved review threads first, then a collapsed **Resolved** group
+- **Conversation:** description, comments and reviews, commits, and lifecycle events (see below)
 
-#### Review comments
+#### Merge readiness
 
-Expand a comment to read its Markdown body, replies, file and line location, and a bounded diff hunk around the commented line. Outdated threads show an **Outdated** label. Unresolved threads appear first. Resolved threads move into the **Resolved** group and are collapsed by default. Click a thread row to expand or collapse it.
+The summary shows the merge state before the merge controls:
 
-Use the actions on an expanded thread to:
+| State | Meaning |
+|---|---|
+| Ready to merge | The branch is clean and can merge |
+| Branch is behind the base branch | Update the branch before merging |
+| Merging blocked | Required reviews or other requirements are not met |
+| Checks are failing | A check failed, so the merge is unstable |
+| Draft pull request | Mark the pull request ready for review before merging |
+| Merge conflicts | The branch conflicts with the base, so resolve conflicts first |
+| Checking mergeability | GitHub has not reported a state yet |
 
-- **Send** the comment, its diff context, and replies to the current agent. **Send all unresolved** sends the unresolved threads together, up to the panel limit.
-- **Resolve** or **Unresolve** the GitHub conversation. The panel refreshes the thread state after the action completes.
-- **Copy** the formatted thread context
-- **Open file** at the comment location in the selected worktree
-- **Open on GitHub** at the comment
+Merge controls appear only when you have write permission. Choose **Create merge commit**, **Squash and merge**, or **Rebase and merge** from the split button. Agent Manager remembers the last method you used per repository and preselects it when the repository allows it.
 
-The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+- **Update branch:** shown when the branch is behind. This asks GitHub to merge the base branch into the PR branch.
+- **Fix with Kilo:** shown for merge conflicts. It lists the conflicting files and starts an update-from-base request, which asks the agent to resolve the conflicts in the worktree.
+- **Enable auto-merge:** available when the repository allows auto-merge. GitHub merges the pull request when its requirements are met. Use **Disable auto-merge** to cancel it.
+- **Merge pull request:** when the branch is clean, the primary button merges immediately after a confirmation that names the selected method.
+
+Merge actions run through `gh` against GitHub. Agent Manager refuses to update the branch or merge when the PR head changed since the panel last loaded; refresh the panel and try again.
+
+#### Inline review comments and reviews
+
+Use **Files and review** to load the changed files. Select **Load PR files** to start, or **Load latest PR files** to refresh after a new commit. Existing drafts stay saved with their original commit. The panel loads up to the GitHub limit of 3000 files and disables review when the diff is too large.
+
+To comment on a line, select a line or drag across lines in one gutter of the unified diff. You can comment on the new version (right side) or the old version (left side). A multiline selection is posted as a range. In the comment form:
+
+- Switch between **Write** and **Preview**. `Cmd+Enter` / `Ctrl+Enter` submits.
+- Use **Insert suggestion** on a new-version (right side) line comment or a reply to wrap the selected text in a `suggestion` fence. When you view a comment that contains a `suggestion` fence, use **Preview change** to see the proposed diff and **Apply to worktree** to write it into the local worktree file. Applying a suggestion does not stage, commit, or push. The worktree branch and HEAD must match the PR head, and the target lines must still match, or the apply fails.
+- Submit the review as **Comment**, **Approve**, or **Request changes**. You cannot approve or request changes on your own pull request. Approve needs no body; the other decisions require one.
+
+For review threads and comments:
+
+- **Reply** to a thread from the thread card.
+- **Resolve** or **Unresolve** a thread.
+- **Edit** or **Delete** your own comments and replies. You need the matching GitHub permission.
+- **React** with the GitHub reaction set. Click a reaction pill to toggle it, or use the reaction picker.
+- **Fix with Kilo** sends a thread to the current agent as review context. **Fix N with Kilo** sends the unresolved threads together, up to the panel limit. With an active Agent Manager terminal, the label becomes **Send to terminal** or **Send N unresolved to terminal** and the threads go to that terminal instead.
+- **Copy** copies the formatted thread. **Show in diff**, **Open file**, and **Open on GitHub** jump to the comment location.
+
+Outdated threads show an **Outdated** label. Unresolved threads appear first, and resolved threads move into the **Resolved** group and are collapsed by default.
+
+Sending a thread gives it to Kilo as review context, and it does not post anything to GitHub. Use the reply form to post to GitHub.
+
+#### Checks
+
+Each failing check offers **Fix with Kilo**, which sends the failure summary and log commands to the current agent. With an active Agent Manager terminal, the label becomes **Send failures to terminal**.
+
+#### Conversation
+
+The conversation lists the pull request description and history in one timeline:
+
+- **Description** at the top
+- **Comments and reviews** as cards, with reviewer states and reactions
+- **Commits** as rows. Consecutive commits by one author collapse into one expandable group.
+- **Lifecycle events:** merged, closed, reopened, and force-push, with the actor
+- **Show earlier activity** when GitHub has timeline items before the loaded window. It opens the pull request on GitHub.
+
+Use a comment card's **Fix with Kilo** action to hand it to the agent. **Dismiss** hides a comment from the next send, and **Restore** brings it back. **Fix N with Kilo** or **Send N to terminal** sends the actionable comments together.
+
+#### Reviewers
+
+The Reviewers section shows each requested or completed reviewer with an avatar and one of these GitHub-style states: **Approved**, **Changes requested**, **Commented**, or **Awaiting**.
+
+#### Push Pull Request Fixes
+
+**Push Pull Request Fixes** controls whether fix prompts ask the agent to commit and push so the pull request updates. The default is on.
+
+- Set it in **Settings > Agent Behaviour > Push Pull Request Fixes** (`kilo-code.new.agentManager.pushFixes`).
+- Toggle the same setting from the PR panel header with the **Push Pull Request Fixes** button.
+- When it is on, fix prompts for PR review comments and CI failures include: "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
+- Update from base follows the same setting. With it on, the agent is asked to push the branch after a clean merge. With it off, it is not.
+- Permission prompts still confirm commits and pushes. Turning the setting on does not auto-approve them.
 
 ### Creating a New Worktree Session
 
@@ -189,6 +321,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
+- Sessions in one worktree have separate transcripts and prompt queues, but share the same checkout, branch, and terminal state. Coordinate write-heavy work before asking multiple sessions to edit the same files.
 - Use session history to reopen local sessions or preview cloud sessions
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
@@ -203,7 +336,7 @@ Double-click a worktree name to edit its label inline. You can also right-click 
 
 Renaming a worktree changes only the label shown in Agent Manager. It does not rename the underlying git branch.
 
-## Starting Sessions From Chat
+## Starting and orchestrating sessions from chat
 
 Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
 
@@ -211,18 +344,60 @@ The tool supports two modes:
 
 | Mode | Behavior |
 |---|---|
-| `worktree` | Creates one Agent Manager git worktree and session per task |
-| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
+| `worktree` | Creates one Agent Manager git worktree and session per task. Each task gets an isolated checkout, branch, directory, and terminal. |
+| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation. You can also target an existing managed worktree with its `worktreeID`. |
 
 Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Add `provider` beside `model` to force a model-name match to one of the listed provider IDs. Agent Manager resolves the provider for a model override when `provider` is omitted, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, or move a session's worktree into a section. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+The same tool also manages existing sessions. Use `action: "list"` first to get the current sections, worktrees, local sessions, and exact IDs. It can then send a prompt to one managed session, stop a managed session, move a worktree into a section, or answer a pending question. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
 
-Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer the question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again.
+Prompts to busy or retrying sessions enter the same queue as follow-up messages sent from chat. The tool returns when the prompt is accepted, without waiting for it to run or finish. Sessions with pending questions or permission requests still refuse prompts. Answer a pending question with `action: "answer"`, or resolve the permission request in Agent Manager, before prompting again. A prompt targets one session; the tool does not broadcast to every session.
 
 The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
+
+### Typical tool sequence
+
+1. Start independent sessions. Use `worktree` for isolated branches, or `local` for sessions that should share a checkout.
+
+   ```json
+   {
+     "mode": "worktree",
+     "versions": false,
+     "tasks": [
+       {
+         "name": "API audit",
+         "branchName": "agent/api-audit",
+         "prompt": "Audit the API routes and report authentication risks."
+       },
+       {
+         "name": "UI tests",
+         "branchName": "agent/ui-tests",
+         "prompt": "Add focused tests for the UI state transitions."
+       }
+     ]
+   }
+   ```
+
+2. Call `action: "list"` and use the returned session IDs to identify the sessions and worktrees.
+3. Send a targeted follow-up without waiting for it to finish.
+
+   ```json
+   {
+     "action": "prompt",
+     "sessionID": "<session ID from list>",
+     "prompt": "Run the focused tests, then report any remaining failures."
+   }
+   ```
+
+Use `Cmd+T` / `Ctrl+T` in the panel, or `mode: "local"` with a selected `worktreeID`, when the sessions should remain on one worktree. The IDs in these examples are placeholders. Always use the IDs returned by `list`.
+
+### Communicating between Agent Manager sessions
+
+- **Sessions in one worktree:** Use targeted `agent_manager` prompts for conversation. They also see the same files, commits, and branch, so coordinate before making overlapping edits.
+- **Sessions in different worktrees:** Use targeted prompts plus commits, diffs, or pull requests to pass changes between isolated checkouts. Files are not shared automatically.
+- **Task descendants:** A `task` child belongs to the session that launched it. Its Kilo Swarm board is scoped to that session tree, not to every Agent Manager session in the project.
 
 ## Sections
 
@@ -293,6 +468,10 @@ The worktree creation base and the diff comparison base are separate. The Branch
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
+
+### PR review comments in the diff
+
+When the selected worktree has an associated pull request, its review threads also appear inline at their file and line in the Agent Manager diff panel and the full-screen review. The inline cards support the same reply, resolve, unresolve, reaction, and send actions as the PR panel. Threads with no matching line in the current diff appear under **Comments outside the current diff**.
 
 ### Diff Scope
 

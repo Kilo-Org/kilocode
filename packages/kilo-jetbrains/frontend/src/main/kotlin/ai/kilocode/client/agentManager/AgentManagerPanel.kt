@@ -11,6 +11,7 @@ import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeRunBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
@@ -28,6 +29,9 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
+import ai.kilocode.client.ui.commentsCount
+import ai.kilocode.client.ui.commentsTooltip
+import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupFit
@@ -68,7 +72,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataSink
@@ -80,6 +83,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
@@ -153,6 +157,7 @@ class AgentManagerPanel(
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
+    private var running: Set<String> = emptySet()
     private var hovered: String? = null
 
     init {
@@ -209,7 +214,7 @@ class AgentManagerPanel(
         return object : BorderLayoutPanel() {
             override fun getBackground(): Color = activeListToolWindowBackground()
         }.apply {
-            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            border = JBUI.Borders.empty(UiStyle.Gap.SM)
             addToCenter(list)
         }
     }
@@ -245,7 +250,8 @@ class AgentManagerPanel(
         }
     }
 
-    internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
+    internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
+        controller.move(sessionId, directory, surface)
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
@@ -503,6 +509,7 @@ class AgentManagerPanel(
                 // The main checkout can sit on a PR branch just like a worktree can.
                 pr = prs[normalizeWorktreePath(item.path)],
                 current = true,
+                running = running.contains(normalizeWorktreePath(item.path)),
             )
         }
         list.update(
@@ -517,6 +524,8 @@ class AgentManagerPanel(
                     controller.kind(item.path),
                     stats[key],
                     pull,
+                    dirty[key],
+                    running = running.contains(key),
                 )
             },
             ActiveListSelection.Preserve,
@@ -566,11 +575,19 @@ class AgentManagerPanel(
         popup.show(key, this) { request(item) }
     }
 
+    /**
+     * The hover detail for one row, or null when the row has no pull request. This popup is the pull
+     * request view — state, title, verdicts — so a worktree that has none is left alone: its counts are
+     * already painted on the row, and opening for it means the pointer trails a balloon with nothing but
+     * a base-branch behind-count down a list of local worktrees.
+     */
     @RequiresEdt
     private fun request(row: WorktreeRow): SidePopupRequest? {
-        val target = project ?: return null
+        if (project == null || row.progress != null) return null
         val pull = row.pr ?: return null
         val key = normalizeWorktreePath(row.dto.path)
+        val base = stats[key]
+        val local = dirty[key]
         return SidePopupRequest(
             build = {
                 val disposable = Disposer.newDisposable("Worktree row popup")
@@ -578,7 +595,7 @@ class AgentManagerPanel(
                     openDiff = { openDiff(row.dto) },
                     onLocal = { openLocalDiff(row.dto) },
                 )
-                body.update(stats[key], pull, WorktreeTitle.fallback(row.dto.path), dirty[key])
+                body.update(base, pull, WorktreeTitle.fallback(row.dto.path), local)
                 // A PR title is as long as its author made it, and the popup exists to show the whole
                 // thing: past the width cap it scrolls sideways rather than losing the end of the line.
                 HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
@@ -634,10 +651,11 @@ class AgentManagerPanel(
             this,
             onStats = { value -> stats = value; sync() },
             onPr = { value -> prs = value; sync() },
-            // Uncommitted counts only appear in the row popup, so they do not rebuild rows: sync() would
-            // churn every row on each poll for a number nothing on the row itself shows.
-            onDirty = { value -> dirty = value },
+            // Rows carry the uncommitted counts too, as the summary a worktree with no commits yet shows,
+            // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
+            onDirty = { value -> dirty = value; sync() },
         )
+        WorktreeRunBinding(target, this) { value -> running = value; sync() }
     }
 
     override fun dispose() {
@@ -673,7 +691,7 @@ class AgentManagerPanel(
         }
     }
 
-    private inner class RenameAction : AnAction(
+    private inner class RenameAction : DumbAwareAction(
         KiloBundle.message("worktree.rename.action"),
         null,
         AllIcons.Actions.Edit,
@@ -704,28 +722,35 @@ class AgentManagerPanel(
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
+        val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
+        val running: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
         override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current)
+        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current, running)
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
 
         /**
-         * Review then CI verdict, on the title line so they stay readable without hovering the row.
-         * Both are glyphs rather than pills: they are the states a reviewer scans a worktree list for,
-         * and GitHub's own icons say it faster than words at this size.
+         * Unresolved review conversations, review verdict, then CI verdict, on the title line so they stay
+         * readable without hovering the row. All three are glyphs rather than pills: they are the states a
+         * reviewer scans a worktree list for, and GitHub's own icons say it faster than words at this size.
+         *
+         * Conversations lead because they are the one entry that needs a person: a build result and a review
+         * verdict are outcomes to read, while an unresolved thread is somebody waiting on a reply. The glyph
+         * carries a number for the same reason — "waiting on a reply" is not worth acting on until you know
+         * whether that is one comment or twelve.
          */
         override val badges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
-                return listOfNotNull(reviewBadge(p), checksBadge(p))
+                return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
             }
 
         private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
@@ -751,6 +776,18 @@ class AgentManagerPanel(
             )
         }
 
+        private fun commentsBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = PrIcons.comments(p.comments) ?: return null
+            return ActiveListBadge(
+                commentsCount(p.comments),
+                id = "pr-comments",
+                tooltip = commentsTooltip(p.comments),
+                // The conversation tab, which is where GitHub lists the threads themselves.
+                action = { BrowserUtil.browse(p.url) },
+                icon = glyph,
+            )
+        }
+
         override val secondaryBadges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
@@ -765,16 +802,26 @@ class AgentManagerPanel(
                     ),
                 )
             }
+        /**
+         * Committed counts against the base branch, with the uncommitted ones behind them so a worktree
+         * whose agent has not committed yet still says what it changed. A row that showed nothing until
+         * the first commit reads as "no changes here", which is the state this summary exists to deny.
+         */
         override val metrics: ActiveListMetrics?
             get() {
                 if (progress != null) return null
-                val s = stats?.takeIf { it.files > 0 } ?: return null
+                if ((stats?.files ?: 0) == 0 && (dirty?.files ?: 0) == 0) return null
                 return ActiveListMetrics(
-                    files = s.files,
-                    additions = s.additions,
-                    deletions = s.deletions,
-                    base = s.base,
+                    files = stats?.files ?: 0,
+                    additions = stats?.additions ?: 0,
+                    deletions = stats?.deletions ?: 0,
+                    base = stats?.base.orEmpty(),
+                    conflict = conflicted(pr),
                     onChanges = { openDiff(dto) },
+                    localFiles = dirty?.files ?: 0,
+                    localAdditions = dirty?.additions ?: 0,
+                    localDeletions = dirty?.deletions ?: 0,
+                    onLocal = { openLocalDiff(dto) },
                 )
             }
 
@@ -785,7 +832,9 @@ class AgentManagerPanel(
                 kind == row.kind &&
                 stats == row.stats &&
                 pr == row.pr &&
-                current == row.current
+                dirty == row.dirty &&
+                current == row.current &&
+                running == row.running
         }
 
         override fun hashCode(): Int {
@@ -794,7 +843,9 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
+            result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
+            result = 31 * result + running.hashCode()
             return result
         }
     }

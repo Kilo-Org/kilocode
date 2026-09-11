@@ -77,9 +77,41 @@ class ChangesPanelTest : BasePlatformTestCase() {
 
         val compact = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
         compact.update(1, 2, 0)
-        compact.update(0, 0, 0, ahead = 8, localFiles = 2)
+        // A compact summary has no ahead/behind counters, so commits alone leave it with nothing to show.
+        compact.update(0, 0, 0, ahead = 8)
         assertFalse(compact.isVisible)
         assertNull(compact.toolTipText)
+    }
+
+    fun `test compact stands uncommitted counts in for an empty committed set`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+
+        view.update(0, 0, 0, ahead = 8, localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main")
+
+        assertTrue(view.isVisible)
+        assertEquals(listOf("2 files", "-3", "+9"), labels(view))
+        assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), view.toolTipText)
+
+        // One committed file outranks any amount of uncommitted work: it is the number a PR would show.
+        view.update(1, 4, 0, localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main")
+        assertEquals(listOf("1 file", "+4"), labels(view))
+        assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.toolTipText)
+    }
+
+    fun `test compact ignores uncommitted counts it is not showing`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+        view.update(2, 1, 1)
+        val previous = RepaintManager.currentManager(view)
+        val tracker = Tracker(view)
+        RepaintManager.setCurrentManager(tracker)
+        try {
+            repeat(100) { view.update(2, 1, 1, localFiles = it + 1, localAdditions = it, localDeletions = it) }
+            assertEquals(0, tracker.invalidations)
+            assertEquals(0, tracker.paints)
+        } finally {
+            RepaintManager.setCurrentManager(previous)
+        }
+        assertEquals(listOf("2 files", "-1", "+1"), labels(view))
     }
 
     fun `test ahead behind remain independent from file groups`() = edt {
@@ -113,6 +145,66 @@ class ChangesPanelTest : BasePlatformTestCase() {
         view.update(2, 5, 1, localFiles = 3, localDeletions = 4, base = "origin/trunk")
         assertEquals(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/trunk"), groups.last().toolTipText)
         assertEquals(groups, groups(view))
+    }
+
+    fun `test a conflict marks the committed badge and names itself in the tooltip`() = edt {
+        val compact = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+        compact.update(2, 5, 1, base = "origin/main", conflict = true)
+
+        // The row prints the counts already, so the tooltip is the only place it can say why the badge is
+        // marked — a red crescent on its own says something is wrong without saying what. It leads with the
+        // conflict and keeps everything the summary said before it.
+        assertEquals(
+            conflictTooltip(KiloBundle.message("worktree.stats.tooltip.open"), "origin/main"),
+            compact.toolTipText,
+        )
+        assertTrue(compact.toolTipText.contains(mergeLabel("origin/main")))
+        assertTrue(badge(compact).conflict)
+
+        val full = ChangesPanel(ChangesPanel.Mode.FULL, onBase = {}, onLocal = {})
+        full.update(2, 5, 1, localFiles = 3, localDeletions = 4, base = "origin/main", conflict = true)
+        val groups = groups(full)
+
+        assertEquals(
+            conflictTooltip(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"), "origin/main"),
+            groups.last().toolTipText,
+        )
+        // The uncommitted counts are measured against HEAD, so nothing about them conflicts with a base.
+        assertEquals(KiloBundle.message("worktree.dirty.tooltip", 3, 0, 4), groups.first().toolTipText)
+        assertEquals(listOf(false, true), components(full).filterIsInstance<DiffStatBadge>().map { it.conflict })
+    }
+
+    fun `test an unresolved base branch still names the conflict`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+
+        view.update(2, 5, 1, conflict = true)
+
+        // Nothing to name the branch with, so the sentence falls back rather than reading "against ".
+        assertTrue(view.toolTipText.contains(mergeLabel("")))
+    }
+
+    fun `test a resolved conflict clears the mark and the tooltip`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+        view.update(2, 5, 1, base = "origin/main", conflict = true)
+
+        view.update(2, 5, 1, base = "origin/main")
+
+        assertFalse(badge(view).conflict)
+        assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.toolTipText)
+    }
+
+    fun `test uncommitted counts standing in for a committed set carry no conflict`() = edt {
+        val view = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = {})
+
+        // Nothing committed, so there is no committed set to conflict with the base branch — whatever the
+        // pull request last said about a merge belongs to commits this worktree no longer has.
+        view.update(
+            0, 0, 0,
+            localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main", conflict = true,
+        )
+
+        assertFalse(badge(view).conflict)
+        assertEquals(KiloBundle.message("worktree.dirty.tooltip.open"), view.toolTipText)
     }
 
     fun `test mouse children whitespace keyboard and accessibility activate once`() = edt {
@@ -283,6 +375,10 @@ class ChangesPanelTest : BasePlatformTestCase() {
 
     @RequiresEdt
     private fun separator(view: ChangesPanel): JSeparator = components(view).filterIsInstance<JSeparator>().single()
+
+    /** The badge carrying the committed counts, which is the only one a compact summary has. */
+    @RequiresEdt
+    private fun badge(view: ChangesPanel): DiffStatBadge = components(view).filterIsInstance<DiffStatBadge>().last()
 
     @RequiresEdt
     private fun layout(view: ChangesPanel) {

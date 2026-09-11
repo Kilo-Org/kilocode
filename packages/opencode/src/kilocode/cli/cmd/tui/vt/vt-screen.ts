@@ -1,17 +1,3 @@
-// Minimal VT/ANSI screen emulator for the interactive terminal dialog.
-//
-// This is intentionally small: it covers the escape sequences that line-oriented
-// interactive prompts emit (credential prompts, `gh auth login`'s arrow-key
-// survey UI, REPLs, `ssh` passphrase, installers): SGR colors/attrs, cursor
-// movement, erase-in-line / erase-in-display, scrolling, save/restore cursor,
-// tab/backspace/carriage-return. It deliberately does NOT aim for full
-// terminal fidelity (no sixel, no full alt-screen app rendering); unknown
-// sequences are dropped without corrupting the grid.
-//
-// Pure and dependency-free so it can be unit tested by feeding raw bytes and
-// asserting the resulting grid. Color is normalized to a transport-neutral
-// shape (palette index or rgb) and mapped to OpenTUI/theme colors by the caller.
-
 export type Color = number | { r: number; g: number; b: number }
 
 export interface Cell {
@@ -61,6 +47,7 @@ export class VtScreen {
   private state: "ground" | "esc" | "csi" | "osc" | "osc-esc" = "ground"
   private params = ""
   private intermediate = ""
+  private bell = false
 
   constructor(cols = 80, rows = 24) {
     this.cols = Math.max(1, cols)
@@ -229,8 +216,9 @@ export class VtScreen {
       this.intermediate = ""
       return
     }
-    if (ch === "]") {
+    if ("]PX^_".includes(ch)) {
       this.state = "osc"
+      this.bell = ch === "]"
       return
     }
     if (ch === "7") {
@@ -271,7 +259,7 @@ export class VtScreen {
   }
 
   private osc(ch: string, code: number) {
-    if (code === 0x07) {
+    if ((this.bell && code === 0x07) || code === 0x18 || code === 0x1a || code === 0x9c) {
       this.state = "ground"
       return
     }

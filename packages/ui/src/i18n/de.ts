@@ -224,6 +224,15 @@ export const dict = {
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.messagePart.mcp.input": "Eingabe",
   "ui.messagePart.mcp.output": "Ausgabe",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Nachrichten von Agenten lesen",
+  "ui.messagePart.board.all": "Alle Agenten",
+  "ui.messagePart.board.primary": "Hauptagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} an {{to}}",
+  "ui.messagePart.board.empty": "Keine Nachrichten von Agenten",
+  "ui.messagePart.board.stored": "Nur gespeichert. Zustellung und Lesen sind nicht bestätigt.",
+  // kilocode_change end
   "ui.mermaid.rendering": "Mermaid-Diagramm wird gerendert...",
   "ui.mermaid.renderError": "Mermaid-Rendering fehlgeschlagen: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid-Diagramm kann nicht gerendert werden.",

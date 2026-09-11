@@ -7,6 +7,7 @@ import {
   type RecoverablePermission,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
+import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
@@ -51,16 +52,6 @@ function permissionClient(
   }
 }
 
-function client(
-  permsPerDir: Record<string, ReturnType<typeof pending>[]>,
-  queries: string[],
-  saves: unknown[] = [],
-  replies: unknown[] = [],
-  errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown },
-): PermissionContext["client"] {
-  return permissionClient(permsPerDir, queries, saves, replies, errors) as unknown as PermissionContext["client"]
-}
-
 function ctx(opts: {
   tracked: string[]
   dirs?: Map<string, string>
@@ -74,11 +65,12 @@ function ctx(opts: {
   const saves: unknown[] = []
   const replies: unknown[] = []
   const perms = opts.permsPerDir ?? {}
-  const sdk = client(perms, queries, saves, replies, opts.errors)
+  const sdk = permissionClient(perms, queries, saves, replies, opts.errors)
+  let revision = 0
 
   const permDirs = new Map<string, string>()
   const fake: PermissionContext = {
-    client: sdk,
+    client: sdk as unknown as PermissionContext["client"],
     currentSessionId: undefined,
     trackedSessionIds: new Set(opts.tracked),
     sessionDirectories: opts.dirs ?? new Map(),
@@ -89,7 +81,9 @@ function ctx(opts: {
     getPermissionDirectory: (id) => permDirs.get(id),
     clearPermissionDirectory: (id) => {
       permDirs.delete(id)
+      revision += 1
     },
+    getPermissionRevision: () => revision,
     prunePermissionDirectories: (active, dirs) => {
       for (const [key, dir] of permDirs) {
         if (active.has(key)) {
@@ -103,7 +97,7 @@ function ctx(opts: {
     },
   }
 
-  return { fake, messages, queries, saves, replies, permDirs }
+  return { fake, sdk, messages, queries, saves, replies, permDirs }
 }
 
 describe("recoveryDirs", () => {
@@ -135,6 +129,72 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
+  it("rejects an unknown route without using a workspace fallback", async () => {
+    const { fake, messages, replies } = ctx({ tracked: ["s1"] })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "missing", "s1", "once", [], [])
+    log.mockRestore()
+
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "missing" }])
+  })
+
+  it("shares one save/reply sequence across concurrent callers", async () => {
+    const { fake, sdk, messages, replies, saves } = ctx({ tracked: ["s1"] })
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const routed: PermissionContext = {
+      ...fake,
+      recordPermissionDirectory: (id, dir, sessionID) => service.recordPermissionDirectory(id, dir, sessionID),
+      getPermissionDirectory: (id) => service.getPermissionDirectory(id),
+      getPermissionSession: (id) => service.getPermissionSession(id),
+      clearPermissionDirectory: (id) => service.clearPermissionDirectory(id),
+      runPermissionResponse: (id, sessionID, action) => service.runPermissionResponse(id, sessionID, action),
+      isPermissionResponseClaimed: (id) => service.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => service.clearPermissionResponse(id),
+    }
+    const gate = Promise.withResolvers<{ data: true }>()
+    service.recordPermissionDirectory("p1", "/workspace", "s1")
+    spyOn(sdk.permission, "reply").mockImplementation(async (args) => {
+      replies.push(args)
+      return gate.promise
+    })
+
+    try {
+      const first = handlePermissionResponse(routed, "p1", "s1", "once", ["bun *"], [])
+      const second = handlePermissionResponse(routed, "p1", "s1", "reject", ["npm *"], [])
+      await Promise.resolve()
+      gate.resolve({ data: true })
+      await Promise.all([first, second])
+    } finally {
+      service.dispose()
+    }
+
+    expect(saves).toEqual([{ requestID: "p1", directory: "/workspace", approvedAlways: ["bun *"], deniedAlways: [] }])
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace", interactive: true }])
+    expect(messages).toEqual([
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+      { type: "permissionResolved", permissionID: "p1", sessionID: "s1", response: "once" },
+    ])
+    expect(messages.some((message) => (message as { type: string }).type === "permissionError")).toBe(false)
+  })
+
+  it.each(["once", "always", "reject"] as const)(
+    "acknowledges %s for an untracked child without an SSE event",
+    async (response) => {
+      const { fake, messages, replies, permDirs } = ctx({ tracked: ["parent"] })
+      permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+      await handlePermissionResponse(fake, "p1", "child", response, [], [])
+
+      expect(replies).toEqual([
+        { requestID: "p1", reply: response, directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+      ])
+      expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "child", response }])
+      expect(permDirs.has("p1")).toBe(false)
+    },
+  )
+
   it("uses the recorded SSE directory instead of a stale session fallback", async () => {
     const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
     permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
@@ -205,7 +265,7 @@ describe("handlePermissionResponse", () => {
 
   it("does not treat other SDK-wrapped errors as stale", async () => {
     const error = new Error("Internal server error", {
-      cause: { status: 500, body: { name: "InternalServerError" } },
+      cause: { status: 500, body: { name: "InternalServerError", _tag: "NotFound" } },
     })
     const { fake, messages, permDirs } = ctx({ tracked: ["s1"], errors: { reply: error } })
     const spy = spyOn(console, "error").mockImplementation(() => {})
@@ -232,9 +292,35 @@ describe("recoverablePermissions", () => {
     expect(recoverablePermissions([pending("p1", "s1"), pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(1)
     expect(recoverablePermissions([pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(0)
   })
+
+  it("skips permissions already claimed by a response", () => {
+    const seen = new Set<string>()
+    expect(
+      recoverablePermissions([pending("p1", "s1"), pending("p2", "s1")], new Set(["s1"]), seen, (id) => id === "p1"),
+    ).toEqual([pending("p2", "s1")])
+    expect(seen).toEqual(new Set(["p1", "p2"]))
+  })
 })
 
 describe("fetchAndSendPendingPermissions", () => {
+  it("does not replay a permission resolved while recovery was in flight", async () => {
+    const { fake, sdk, messages, queries, permDirs } = ctx({ tracked: ["child"] })
+    const snapshot = Promise.withResolvers<Awaited<ReturnType<typeof sdk.permission.list>>>()
+    const list = spyOn(sdk.permission, "list").mockImplementationOnce(() => snapshot.promise)
+    permDirs.set("p1", "/workspace")
+
+    const recovery = fetchAndSendPendingPermissions(fake)
+    await handlePermissionResponse(fake, "p1", "child", "once", [], [])
+    snapshot.resolve({ data: [pending("p1", "child")] })
+    await recovery
+
+    expect(list).toHaveBeenCalledTimes(2)
+    expect(queries).toEqual(["/workspace"])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "child", response: "once" }])
+    expect(permDirs.has("p1")).toBe(false)
+    list.mockRestore()
+  })
+
   it("queries only workspace root when sessionDirectories is empty", async () => {
     const { fake, queries } = ctx({ tracked: ["s1"] })
     await fetchAndSendPendingPermissions(fake)
@@ -345,6 +431,7 @@ describe("fetchAndSendPendingPermissions", () => {
       clearPermissionDirectory: (id) => {
         permDirs.delete(id)
       },
+      getPermissionRevision: () => 0,
       prunePermissionDirectories: (active, dirs) => {
         for (const [key, dir] of permDirs) {
           if (active.has(key)) {

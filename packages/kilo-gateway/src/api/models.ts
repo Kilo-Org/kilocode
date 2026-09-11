@@ -240,8 +240,7 @@ async function fetchRawKiloModels(options?: {
   }
 
   if (!response.ok) {
-    // 401 with auth credentials: fall back to unauthenticated public endpoint
-    if (response.status === 401 && (token || organizationId)) {
+    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/api/organizations/")) {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"

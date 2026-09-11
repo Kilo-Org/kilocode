@@ -94,7 +94,7 @@ export interface SideTerminalDeps {
 
 export function createSideTerminal(deps: SideTerminalDeps) {
   const [local, setLocal] = createSignal<TerminalDestination | undefined>(deps.saved)
-  const [destination, setDestination] = createSignal<TerminalDestination>(deps.saved ?? "vscode")
+  const [destination, setDestination] = createSignal<TerminalDestination>(deps.saved ?? "agentManager")
   if (deps.saved) deps.postMessage({ type: "agentManager.terminal.destinationSelected", destination: deps.saved })
 
   /**

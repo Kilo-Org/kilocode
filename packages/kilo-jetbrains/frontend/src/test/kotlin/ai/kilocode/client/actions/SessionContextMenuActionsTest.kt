@@ -10,6 +10,7 @@ import ai.kilocode.client.session.SessionUiTestBase
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
+import ai.kilocode.client.testing.PluginDescriptor
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -23,13 +24,11 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Toggleable
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.DumbAware
 import com.intellij.testFramework.replaceService
 import ai.kilocode.client.session.model.SessionState
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.awt.Component
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Covers the two session action menus — the right-click context menu and the prompt bar's "more"
@@ -47,6 +46,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "---",
+                "Kilo.Session.Fork",
                 "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
@@ -79,6 +80,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "---",
+                "Kilo.Session.Fork",
                 "---",
                 "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
@@ -140,21 +143,8 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         }
     }
 
-    fun `test every owned menu action works during indexing`() {
-        val ids = (menuChildren("Kilo.Session.ContextMenu") + menuChildren("Kilo.Session.PromptMenu"))
-            .filter { it.startsWith("Kilo.") }
-            .distinct()
-        val actions = descriptor().getElementsByTagName("action").let { nodes ->
-            (0 until nodes.length).map { nodes.item(it) as Element }
-        }.filter { it.getAttribute("id") in ids }
-
-        val blocked = actions.mapNotNull { action ->
-            val cls = Class.forName(action.getAttribute("class"))
-            action.getAttribute("id").takeUnless { DumbAware::class.java.isAssignableFrom(cls) }
-        }
-
-        assertEquals("menu actions blocked during indexing", emptyList<String>(), blocked)
-    }
+    // Dumb-awareness of these actions is covered for every declared action, not just the session
+    // menus, by DeclaredActionsDumbAwareTest.
 
     // ---- context resolution from the transcript ----
 
@@ -208,6 +198,35 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         val event = event(action, Fake(id = "ses_test", readonly = true))
 
         ActionUtil.updateAction(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    // ---- fork ----
+
+    fun `test fork action follows the surface's fork capability`() {
+        val action = ForkSessionAction()
+
+        // The sidebar and read-only tabs report forkable=false; only worktree editor tabs opt in.
+        val off = event(action, Fake(id = "ses_test", forkable = false))
+        ActionUtil.updateAction(action, off)
+        assertFalse(off.presentation.isEnabledAndVisible)
+
+        val actions = Fake(id = "ses_test", forkable = true)
+        val on = event(action, actions)
+        ActionUtil.updateAction(action, on)
+        assertTrue(on.presentation.isEnabledAndVisible)
+
+        action.actionPerformed(on)
+        assertEquals(1, actions.forks)
+    }
+
+    fun `test fork action does nothing without a session context`() {
+        val action = ForkSessionAction()
+        val event = event(action, null)
+
+        ActionUtil.updateAction(action, event)
+        action.actionPerformed(event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -329,18 +348,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         HeadlessDataManager.fallbackToProductionDataManager(testRootDisposable)
     }
 
-    /**
-     * The plugin's declared actions are not registered with `ActionManager` in the test fixture (which
-     * is why `BranchDock` null-guards its own lookups), so the menu's shape is asserted against the
-     * module descriptor instead of a live `ActionGroup`.
-     */
-    private fun descriptor(): Document {
-        val stream = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
-            ?: error("kilo.jetbrains.frontend.xml missing from the test classpath")
-        return stream.use {
-            DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder().parse(it)
-        }
-    }
+    private fun descriptor(): Document = PluginDescriptor.frontend()
 
     private fun menuChildren(groupId: String): List<String> {
         val groups = descriptor().getElementsByTagName("group")
@@ -389,6 +397,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override val pr: WorktreePrDto? = null,
         override val share: String? = null,
         override val git: Boolean = true,
+        override val forkable: Boolean = false,
         auto: Boolean = false,
     ) : SessionActions {
         // Backing field rather than `override var auto`: a var would generate setAuto(Z)V and clash
@@ -399,10 +408,15 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         var compares = 0
         var started = 0
         var stopped = 0
+        var forks = 0
 
         override fun setAuto(value: Boolean) {
             autos.add(value)
             state = value
+        }
+
+        override fun fork() {
+            forks++
         }
 
         override fun compare() {

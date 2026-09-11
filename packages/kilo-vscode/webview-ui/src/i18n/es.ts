@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Completo (según el modelo)",
+  "session.goal.blocked": "Bloqueado",
+  "session.goal.restart": "Reiniciar objetivo",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tablero",
+  "task.swarm.refresh": "Actualizar",
+  "task.swarm.reset": "Restablecer tablero",
+  "task.swarm.resetTitle": "¿Restablecer este tablero?",
+  "task.swarm.resetDescription":
+    "¿Borrar los mensajes visibles? Las conversaciones y las tareas en curso no cambian. Los agentes pueden publicar nuevos mensajes.",
+  "task.swarm.loading": "Cargando tablero...",
+  "task.swarm.failed": "No se pudo cargar o restablecer el tablero. Intenta actualizarlo.",
 
   "command.provider.connect": "Conectar proveedor",
 
@@ -756,6 +767,14 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrumpido",
   "session.outcome.error": "Turno fallido",
   "session.outcome.finish": "Motivo de finalización: {{reason}}",
+  "session.goal.label": "Objetivo",
+  "prompt.goal.set": "Establecer objetivo",
+  "prompt.goal.start": "Iniciar objetivo",
+  "session.goal.active": "Activo",
+  "session.goal.paused": "En pausa",
+  "session.goal.pause": "Pausar",
+  "session.goal.resume": "Reanudar",
+  "session.goal.clear": "Borrar objetivo",
   "session.costAlert.header": "Alerta de coste de sesión",
   "session.costAlert.continue": "Continuar",
   "session.costAlert.question":
@@ -856,7 +875,17 @@ export const dict = {
   "settings.notifications.enable.title": "Activar las notificaciones sonoras",
   "settings.notifications.enable.description":
     "Reproducir sonidos cuando las sesiones finalicen, se produzca un error o se requiera tu intervención",
+  "settings.notifications.workbench.title": "Activar las notificaciones de VS Code",
+  "settings.notifications.workbench.description":
+    "Mostrar notificaciones de VS Code cuando Kilo complete una tarea o requiera tu intervención",
+  "settings.notifications.os.title": "Activar las notificaciones del sistema operativo",
+  "settings.notifications.os.description":
+    "Mostrar alertas de notificación nativas del sistema operativo cuando Kilo complete una tarea o requiera tu intervención mientras VS Code no está activo.",
   "settings.notifications.testSound": "Probar",
+  "settings.notifications.testOS": "Probar",
+  "settings.notifications.testOS.testing": "Enviando notificación de prueba…",
+  "settings.notifications.testOS.success": "Notificación de prueba enviada.",
+  "settings.notifications.testOS.error": "Error al enviar la notificación de prueba",
   "settings.notifications.sound.default": "Predeterminado",
   "settings.notifications.sound.system": "Sistema",
   "settings.notifications.sound.description":
@@ -874,6 +903,9 @@ export const dict = {
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
   "settings.experimental.imageGeneration.title": "Generación de imágenes",
   "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Comparte un tablero entre una sesión principal y sus subagentes de tareas, incluidos los subagentes anidados. Úsalo para intentos de solución en paralelo o trabajos complementarios, no para todas las tareas.",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
   "settings.experimental.imageGenerationModel.description": "Modelo de generación de imágenes",
   "settings.experimental.imageGenerationModel.placeholder": "Predeterminado (Auto Router)",
@@ -900,6 +932,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
+  "settings.experimental.claudeMigration.title": "Migración de Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
   "settings.experimental.taskModelSelection.title": "Selección de modelo de subagente de Task",
@@ -1019,6 +1054,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
   "settings.agentBehaviour.instructionFiles.description":
     "Rutas a archivos de instrucciones adicionales incluidos en el prompt del sistema",
+  "settings.agentBehaviour.pushFixes.title": "Enviar correcciones del pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Al enviar al agente fallos de CI o comentarios de revisión de un pull request, o al actualizar un worktree desde su base, pedirle que haga commit y push para que el pull request se actualice. Las solicitudes de permiso siguen aplicándose. Desactívalo para hacer los commits manualmente.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilidad con Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Cargar archivos de Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1237,6 +1275,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
   "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
+  "task.backgroundAgents.openAll": "Abrir todos los agentes en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",
   "task.backgroundAgents.waiting": "Un agente en segundo plano necesita tu entrada",
@@ -1249,6 +1288,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Cancelado",
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Agente en segundo plano",
+  "task.backgroundAgents.stopAll": "Detener todos ({{count}})",
   "settings.saveBar.unsavedChanges": "Cambios sin guardar",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Guardar",

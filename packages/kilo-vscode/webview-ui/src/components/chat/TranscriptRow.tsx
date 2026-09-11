@@ -17,6 +17,8 @@ import { VscodeUserMessage } from "./VscodeUserMessage"
 interface TranscriptRowViewProps {
   row: TranscriptRow
   index?: number
+  onSelectSession?: (id: string) => boolean | void
+  isSessionOpen?: (id: string) => boolean
   onForkMessage?: (sessionId: string, messageId: string) => void
   onEditMessage?: (sessionID: string, messageID: string) => void
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
@@ -28,6 +30,7 @@ interface TranscriptRowViewProps {
   /** For a multi-file apply_patch match, the specific file within that part. */
   activeSearchPartFile?: string
   readonly?: boolean
+  interactivePrompts?: boolean
   queuedDisabled?: boolean
   editDisabled?: boolean
 }
@@ -65,6 +68,9 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
             <VscodeUserMessage
               message={row().message}
               parts={row().parts}
+              revertDisabled={row().answered && session.status() !== "idle"}
+              onSelectSession={props.onSelectSession}
+              isSessionOpen={props.isSessionOpen}
               interrupted={row().interrupted}
               queued={row().queued}
               onEdit={
@@ -106,6 +112,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               forceOpenFile={props.activeSearchPartFile}
               highlight={props.highlight}
               readonly={props.readonly}
+              interactivePrompts={props.interactivePrompts}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

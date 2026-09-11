@@ -236,6 +236,15 @@ export const dict = {
   "ui.message.deleteQueued": "Supprimer le message en file d'attente",
   "ui.messagePart.mcp.input": "Entrée",
   "ui.messagePart.mcp.output": "Sortie",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Lire les messages des agents",
+  "ui.messagePart.board.all": "Tous les agents",
+  "ui.messagePart.board.primary": "Agent principal",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} vers {{to}}",
+  "ui.messagePart.board.empty": "Aucun message d'agent",
+  "ui.messagePart.board.stored": "Uniquement enregistré. La remise et la lecture ne sont pas confirmées.",
+  // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Modifié",

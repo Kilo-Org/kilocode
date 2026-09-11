@@ -5,14 +5,17 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
-import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { RequestSessionBoardMessage, ResetSessionBoardMessage } from "./board"
 import type { Activity } from "../../utils/session-activity"
+import type { PRReactionContent } from "../../../agent-manager/pr/pr-types"
+import type { PRMergeRequest } from "../../../../src/shared/pr-comment-actions"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -46,6 +49,7 @@ export interface ResumeSessionRequest {
 export interface AbortRequest {
   type: "abort"
   sessionID: string
+  scope?: "session" | "tree"
 }
 
 export interface RequestBackgroundJobsMessage {
@@ -616,6 +620,10 @@ export interface TestNotificationMessage {
   sound: string
 }
 
+export interface TestOSNotificationMessage {
+  type: "testOSNotification"
+}
+
 export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
 }
@@ -867,6 +875,11 @@ export interface AgentManagerCopyToClipboardRequest {
   text: string
 }
 
+export interface AgentManagerSetIntroDismissedRequest {
+  type: "agentManager.setIntroDismissed"
+  dismissed: boolean
+}
+
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
   type: "copyToClipboard"
@@ -1012,6 +1025,15 @@ export interface SetSidebarCollapsedRequest {
   collapsed: boolean
 }
 
+export interface RequestCaffeinationMessage {
+  type: "agentManager.requestCaffeination"
+}
+
+export interface SetCaffeinationRequest {
+  type: "agentManager.setCaffeination"
+  enabled: boolean
+}
+
 // Persist review diff style preference
 export interface SetReviewDiffStyleRequest {
   type: "agentManager.setReviewDiffStyle"
@@ -1109,6 +1131,15 @@ export interface CommentActionMessage {
   threadId: string
 }
 
+export interface CommentReactionMessage {
+  type: "agentManager.commentReaction"
+  projectId?: string
+  worktreeId: string
+  commentId: string
+  reaction: PRReactionContent
+  add: boolean
+}
+
 export interface ApplyWorktreeDiffMessage {
   type: "agentManager.applyWorktreeDiff"
   projectId?: string
@@ -1159,6 +1190,13 @@ export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
   initialDiffStyle: "unified" | "split"
+}
+
+export interface OpenPRCommentRequest {
+  type: "openPRComment"
+  comment: PRReviewCommentData
+  content: string
+  sessionID?: string
 }
 
 export interface DiffViewerSendCommentsRequest {
@@ -1322,6 +1360,10 @@ export interface ToggleSandboxMessage {
 
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
+}
+
+export interface ToggleCaffeinationMessage {
+  type: "toggleCaffeination"
 }
 
 export interface SetRemoteEnabledMessage {
@@ -1518,7 +1560,10 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | import("./agent-manager").BaseUpdateRequest
+  | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
+  | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage
@@ -1527,6 +1572,8 @@ export type WebviewMessage =
   | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
+  | RequestSessionBoardMessage
+  | ResetSessionBoardMessage
   | CancelBackgroundJobMessage
   | PromoteBackgroundJobMessage
   | RevertSessionRequest
@@ -1621,6 +1668,7 @@ export type WebviewMessage =
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | TestNotificationMessage
+  | TestOSNotificationMessage
   | ResetAllSettingsRequest
   | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
@@ -1661,6 +1709,7 @@ export type WebviewMessage =
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | AgentManagerCopyToClipboardRequest
+  | AgentManagerSetIntroDismissedRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
@@ -1670,6 +1719,8 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest
+  | RequestCaffeinationMessage
+  | SetCaffeinationRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
@@ -1688,6 +1739,7 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   | CommentActionMessage
+  | CommentReactionMessage
   | RequestMigrationDataMessage
   | StartMigrationMessage
   | ApplyWorktreeDiffMessage
@@ -1695,6 +1747,7 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
+  | OpenPRCommentRequest
   | DiffViewerSendCommentsRequest
   | DiffViewerSetDiffStyleRequest
   | DiffViewerSetMarkdownRenderRequest
@@ -1743,6 +1796,7 @@ export type WebviewMessage =
   | PersistModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
+  | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
   | ContinueInWorktreeRequest

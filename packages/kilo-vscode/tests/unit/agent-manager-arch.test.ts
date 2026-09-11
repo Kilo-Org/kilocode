@@ -19,10 +19,15 @@ const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPr
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
@@ -79,6 +84,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
+const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
 const TSX_FILE = TSX_FILES[0]!
 const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -145,7 +151,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -162,7 +168,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = readAllCss()
+    const css = readAllCss() + fs.readFileSync(SHARED_CSS, "utf-8")
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -459,6 +465,19 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).toContain('msg.action === "newSideTerminal"')
     expect(action).toContain("termHandlers.addSide()")
     expect(action).not.toContain('msg.action === "newMainTerminal"')
+  })
+
+  it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf("const closeActiveTab = () =>")
+    const end = source.indexOf("// Close the currently selected worktree", start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("termHandlers.closeFocused()")
+    expect(action).toContain("termHandlers.closeActive()")
+    expect(action).toContain("if (tabs.length === 0)")
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -924,7 +943,9 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     // Find the onStateChange callback that handles "connected"
     const connectedIdx = provider.indexOf('state === "connected"')
     expect(connectedIdx, '"connected" state handler must exist').toBeGreaterThan(-1)
-    const snippet = provider.slice(connectedIdx, connectedIdx + 800)
+    const end = provider.indexOf("this.unsubscribeNotificationDismiss", connectedIdx)
+    expect(end, "notification subscription must follow connection handler").toBeGreaterThan(connectedIdx)
+    const snippet = provider.slice(connectedIdx, end)
     expect(snippet, "must call flushPendingSessionRefresh from connected handler").toContain(
       'this.flushPendingSessionRefresh("sse-connected")',
     )
@@ -1198,12 +1219,10 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("retains the guarded setup error delay", () => {
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

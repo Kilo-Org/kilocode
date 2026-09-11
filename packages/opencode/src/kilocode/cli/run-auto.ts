@@ -26,7 +26,7 @@ export namespace KiloRunAuto {
   export function track(state: State, part: Part) {
     if (part.type !== "tool") return
     if (part.tool !== "task") return
-    if (part.sessionID !== state.root) return
+    if (!part.sessionID || !state.sessions.has(part.sessionID)) return
     const id = child(meta(part.state))
     if (!id) return
     state.sessions.add(id)

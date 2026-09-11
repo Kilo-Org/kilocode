@@ -23,6 +23,8 @@ import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-mar
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
 import { createInputBuffer, createReplayGate, createWriteBatcher } from "./replay"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
+import { registerActivity } from "./activity"
+import type { Activity } from "../../src/utils/session-activity"
 
 interface Props {
   terminalId: string
@@ -58,6 +60,7 @@ interface Props {
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
    *  state layer mirrors it into the tab label. */
   onTitleChange?: (title: string) => void
+  onActivityChange?: (state: Activity) => void
   /** Provider-owned script status (Run/Setup), used to annotate the
    *  output when a script ends in failure. */
   status?: () => ScriptTerminalStatus | undefined
@@ -224,6 +227,9 @@ export const TerminalTab: Component<Props> = (props) => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined
     let streamed = false
     let socketEnded = false
+    const activity = registerActivity(term.parser, (state) => {
+      props.onActivityChange?.(closed || socketEnded ? "idle" : state)
+    })
     let frame: number | undefined
     let deferred: number | undefined
     const batcher = createWriteBatcher((data, callback) => term.write(data, callback))
@@ -367,6 +373,7 @@ export const TerminalTab: Component<Props> = (props) => {
           fallbackTimer = undefined
         }
         socketEnded = true
+        activity.clear()
         noteFailure()
         if (props.restartable) {
           disconnected = true
@@ -611,6 +618,7 @@ export const TerminalTab: Component<Props> = (props) => {
 
     onCleanup(() => {
       closed = true
+      activity.dispose()
       batcher.cancel()
       replay.cancel()
       unregisterTerminalOutput(props.terminalId)

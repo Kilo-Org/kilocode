@@ -58,8 +58,19 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
+  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.blocked": "차단됨",
+  "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "보드",
+  "task.swarm.refresh": "새로 고침",
+  "task.swarm.reset": "보드 초기화",
+  "task.swarm.resetTitle": "이 보드를 초기화할까요?",
+  "task.swarm.resetDescription":
+    "표시된 메시지를 지울까요? 대화와 실행 중인 작업은 변경되지 않습니다. 에이전트는 새 메시지를 게시할 수 있습니다.",
+  "task.swarm.loading": "보드 로딩 중...",
+  "task.swarm.failed": "보드를 불러오거나 초기화할 수 없습니다. 새로 고침을 시도하세요.",
 
   "command.provider.connect": "공급자 연결",
 
@@ -746,6 +757,14 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.goal.label": "목표",
+  "prompt.goal.set": "목표 설정",
+  "prompt.goal.start": "목표 시작",
+  "session.goal.active": "활성",
+  "session.goal.paused": "일시 중지됨",
+  "session.goal.pause": "일시 중지",
+  "session.goal.resume": "재개",
+  "session.goal.clear": "목표 지우기",
   "session.costAlert.header": "세션 비용 알림",
   "session.costAlert.continue": "계속",
   "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
@@ -839,7 +858,17 @@ export const dict = {
   "settings.notifications.enable.title": "소리 알림 활성화",
   "settings.notifications.enable.description":
     "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.workbench.title": "VS Code 알림 활성화",
+  "settings.notifications.workbench.description":
+    "Kilo가 작업을 완료하거나 사용자 입력이 필요할 때 VS Code 알림을 표시합니다",
+  "settings.notifications.os.title": "OS 알림 활성화",
+  "settings.notifications.os.description":
+    "VS Code가 활성화되어 있지 않을 때 Kilo가 작업을 완료하거나 사용자 입력이 필요하면 기본 운영 체제 알림을 표시합니다.",
   "settings.notifications.testSound": "테스트",
+  "settings.notifications.testOS": "테스트",
+  "settings.notifications.testOS.testing": "테스트 알림을 보내는 중…",
+  "settings.notifications.testOS.success": "테스트 알림을 보냈습니다.",
+  "settings.notifications.testOS.error": "테스트 알림을 보내지 못했습니다",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.system": "시스템",
   "settings.notifications.sound.description":
@@ -857,6 +886,9 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "메인 세션과 해당 세션의 작업을 맡은 하위 에이전트(중첩된 하위 에이전트 포함)가 보드를 공유합니다. 모든 작업에 사용하지 말고, 해결책을 병렬로 시도하거나 서로 보완하는 작업을 수행할 때 사용하세요.",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",
@@ -882,6 +914,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
+  "settings.experimental.claudeMigration.description":
+    "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
   "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
@@ -995,6 +1030,9 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.pushFixes.title": "풀 리퀘스트 수정 사항 푸시",
+  "settings.agentBehaviour.pushFixes.description":
+    "풀 리퀘스트의 CI 실패나 리뷰 댓글을 에이전트에게 보내거나 worktree를 기본 브랜치에서 업데이트할 때, 풀 리퀘스트가 업데이트되도록 커밋과 푸시를 요청합니다. 권한 확인은 계속 적용됩니다. 직접 커밋하려면 끄세요.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1201,6 +1239,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
   "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
+  "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
@@ -1213,6 +1252,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "취소됨",
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
+  "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",

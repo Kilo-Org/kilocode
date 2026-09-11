@@ -53,8 +53,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "مكتمل (حسب تقرير النموذج)",
+  "session.goal.blocked": "محظور",
+  "session.goal.restart": "إعادة بدء الهدف",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "اللوحة",
+  "task.swarm.refresh": "تحديث",
+  "task.swarm.reset": "إعادة تعيين اللوحة",
+  "task.swarm.resetTitle": "إعادة تعيين هذه اللوحة؟",
+  "task.swarm.resetDescription":
+    "مسح الرسائل الظاهرة؟ لن تتغير المحادثات والمهام الجارية. يمكن للوكلاء نشر رسائل جديدة.",
+  "task.swarm.loading": "جارٍ تحميل اللوحة...",
+  "task.swarm.failed": "تعذّر تحميل اللوحة أو إعادة تعيينها. حاول تحديثها.",
 
   "command.provider.connect": "اتصال بموفر",
 
@@ -735,6 +746,14 @@ export const dict = {
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",
+  "session.goal.label": "الهدف",
+  "prompt.goal.set": "تحديد الهدف",
+  "prompt.goal.start": "بدء الهدف",
+  "session.goal.active": "نشط",
+  "session.goal.paused": "متوقف مؤقتًا",
+  "session.goal.pause": "إيقاف مؤقت",
+  "session.goal.resume": "استئناف",
+  "session.goal.clear": "مسح الهدف",
   "session.costAlert.header": "تنبيه تكلفة الجلسة",
   "session.costAlert.continue": "متابعة",
   "session.costAlert.question":
@@ -826,7 +845,16 @@ export const dict = {
   "settings.notifications.sounds": "أصوات",
   "settings.notifications.enable.title": "تمكين الإشعارات الصوتية",
   "settings.notifications.enable.description": "تشغيل أصوات عند اكتمال الجلسات أو حدوث خطأ أو الحاجة إلى ردّك",
+  "settings.notifications.workbench.title": "تفعيل إشعارات VS Code",
+  "settings.notifications.workbench.description": "عرض إشعارات VS Code عند اكتمال مهمة Kilo أو الحاجة إلى ردّك",
+  "settings.notifications.os.title": "تفعيل إشعارات نظام التشغيل",
+  "settings.notifications.os.description":
+    "عرض تنبيهات إشعارات نظام التشغيل الأصلية عند اكتمال مهمة Kilo أو الحاجة إلى ردّك بينما يكون VS Code غير نشط.",
   "settings.notifications.testSound": "اختبار",
+  "settings.notifications.testOS": "اختبار",
+  "settings.notifications.testOS.testing": "جارٍ إرسال إشعار تجريبي…",
+  "settings.notifications.testOS.success": "تم إرسال إشعار الاختبار.",
+  "settings.notifications.testOS.error": "فشل إرسال إشعار الاختبار",
   "settings.notifications.sound.default": "افتراضي",
   "settings.notifications.sound.system": "النظام",
   "settings.notifications.sound.description":
@@ -844,6 +872,9 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "شارك لوحة بين جلسة رئيسية ووكلائها الفرعيين المكلّفين بالمهام، بما يشمل الوكلاء الفرعيين المتداخلين. استخدمها لمحاولات حل متوازية أو أعمال متكاملة، وليس لكل مهمة.",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
   "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
   "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
@@ -869,6 +900,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
@@ -984,6 +1018,9 @@ export const dict = {
     "القواعد هي ملفات تعليمات توجه سلوك الوكيل. يتم تضمينها في موجه النظام لكل محادثة. أضف مسارات الملفات أدناه لتضمين قواعد إضافية.",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
+  "settings.agentBehaviour.pushFixes.title": "دفع إصلاحات طلب السحب",
+  "settings.agentBehaviour.pushFixes.description":
+    "عند إرسال حالات فشل CI أو تعليقات المراجعة من طلب سحب إلى الوكيل، أو تحديث worktree من فرعه الأساسي، اطلب منه إنشاء التزام ودفع التغييرات حتى يتم تحديث طلب السحب. تظل مطالبات الأذونات سارية. أوقف هذا الخيار للاحتفاظ بالالتزامات يدوية.",
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1193,6 +1230,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
+  "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
@@ -1205,6 +1243,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "ملغى",
   "task.backgroundAgents.status.error": "خطأ",
   "task.backgroundAgents.untitled": "وكيل خلفي",
+  "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",

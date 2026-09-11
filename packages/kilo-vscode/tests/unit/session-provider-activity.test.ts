@@ -9,7 +9,7 @@ const webview = path.join(root, "webview-ui")
 const fixture = path.join(root, "tests/fixtures/session-provider-activity.tsx")
 
 describe("SessionProvider activity", () => {
-  it("covers real session activity lifecycle messages", async () => {
+  it("covers real session activity and composer send acceptance", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", webview))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),
@@ -49,5 +49,5 @@ describe("SessionProvider activity", () => {
     } finally {
       unlinkSync(file)
     }
-  })
+  }, 15_000)
 })

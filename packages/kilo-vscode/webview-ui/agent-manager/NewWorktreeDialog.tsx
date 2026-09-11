@@ -14,6 +14,7 @@ import type {
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
@@ -42,15 +43,16 @@ import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImage
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
-import { convertToMentionPath } from "../src/utils/path-mentions"
+import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { useSlashCommand } from "../src/hooks/useSlashCommand"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
 import { ProjectSelect } from "./ProjectSelect"
+import { createDialogModels } from "./new-worktree-models"
+import { validBranch } from "./new-worktree-branch"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -90,39 +92,7 @@ function restoreAgent(value: string | undefined, list: Array<{ name: string }>, 
   return list.some((item) => item.name === value) ? value : base
 }
 
-function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
-  if (!value) return undefined
-  if (Object.keys(providers).length === 0) return value
-  return valid(value) ? value : undefined
-}
-
-function fallback<T>(value: T | undefined, get: () => T): T {
-  return value === undefined ? get() : value
-}
-
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-
-function sanitizeSegment(text: string, maxLength = 50): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._+@-]/g, "")
-    .replace(/\.{2,}/g, ".")
-    .replace(/@\{/g, "@")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]|[-.]+$/g, "")
-    .replace(/\.lock$/g, "")
-    .slice(0, maxLength)
-}
-
-function sanitizeBranchName(name: string): string {
-  return name
-    .split("/")
-    .map((s) => sanitizeSegment(s))
-    .filter(Boolean)
-    .join("/")
-}
 
 export const NewWorktreeDialog: Component<{
   onClose: () => void
@@ -168,14 +138,17 @@ export const NewWorktreeDialog: Component<{
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
-  const initialModel = fallback(
-    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
-    () => session.modelForAgent(initialAgent),
-  )
-  const [model, setModel] = createSignal<Model | null>(initialModel)
+  const [agent, setAgent] = createSignal(initialAgent)
+  const selection = createDialogModels({
+    saved: saved.model,
+    fallback: () => session.modelForAgent(agent()),
+    ready: provider.ready,
+    valid: provider.isModelValid,
+    variants: (value) => Object.keys(provider.findModel(value)?.variants ?? {}),
+  })
+  const model = selection.model
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -207,8 +180,7 @@ export const NewWorktreeDialog: Component<{
 
   const selectAgent = (name: string) => {
     setAgent(name)
-    const sel = session.modelForAgent(name)
-    setModel(sel)
+    selection.select(undefined)
     setVariant(undefined)
   }
 
@@ -299,18 +271,12 @@ export const NewWorktreeDialog: Component<{
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
-    const val = ref.value
-    const cursor = ref.selectionStart ?? val.length
-    const before = val.substring(0, cursor)
-    const after = val.substring(cursor)
-    const inserted = resolved.map((p) => `@${p}`).join(" ")
-    const result = before + inserted + " " + after
-    ref.value = result
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
     cancel()
-    setPrompt(result)
-    persistPrompt(result)
-    const pos = cursor + inserted.length + 1
-    ref.setSelectionRange(pos, pos)
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()
   })
@@ -335,7 +301,7 @@ export const NewWorktreeDialog: Component<{
       ...state,
       advancedDialogSelections: {
         agent: agent(),
-        model: model(),
+        model: selection.choice(),
         variant: variant(),
         sandbox: sandbox(),
       },
@@ -423,21 +389,28 @@ export const NewWorktreeDialog: Component<{
   const canSubmit = () => {
     if (starting()) return false
     if (speech.active()) return false
-    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
-    return true
+    return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
 
   const handleSubmit = () => {
     if (!canSubmit()) return
+    const advanced = showAdvanced()
+    const customBranch = advanced ? branchName() || undefined : undefined
+    if (!validBranch(customBranch)) {
+      showToast({
+        variant: "error",
+        title: t("agentManager.dialog.branchName"),
+        description: t("agentManager.dialog.invalidBranch"),
+      })
+      return
+    }
     setStarting(true)
 
     const text = prompt().trim() || undefined
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
-    const advanced = showAdvanced()
-    const customBranch = advanced ? branchName().trim() || undefined : undefined
     const imgs = imageAttach.images()
     const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
 
@@ -856,7 +829,7 @@ export const NewWorktreeDialog: Component<{
                         const current = effectiveVariant()
                         const next = { providerID: pid, modelID: mid }
                         const list = Object.keys(provider.findModel(next)?.variants ?? {})
-                        setModel(next)
+                        selection.select(next)
                         setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
                       }}
                       onPick={restorePrompt}
@@ -882,15 +855,15 @@ export const NewWorktreeDialog: Component<{
                 </div>
                 <div class="prompt-input-hint-actions">
                   <Tooltip value={t("prompt.action.enhance")} placement="top">
-                    <Button
+                    <IconButton
+                      icon="wand-sparkles"
                       variant="ghost"
                       size="small"
                       onClick={handleEnhance}
                       disabled={!canEnhance()}
+                      loading={enhancing()}
                       aria-label={t("prompt.action.enhance")}
-                    >
-                      <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
-                    </Button>
+                    />
                   </Tooltip>
                   <Show when={sandboxVisible()}>
                     <SandboxButtonBase
@@ -941,7 +914,7 @@ export const NewWorktreeDialog: Component<{
                     type="text"
                     placeholder={t("agentManager.dialog.branchNamePlaceholder")}
                     value={branchName()}
-                    onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
+                    onInput={(e) => setBranchName(e.currentTarget.value)}
                   />
                 </div>
                 <div class="am-advanced-field">

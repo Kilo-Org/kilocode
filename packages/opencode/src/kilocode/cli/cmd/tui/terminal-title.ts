@@ -99,11 +99,11 @@ export namespace KiloTerminalTitle {
     return title.slice(0, 37) + "..."
   }
 
-  function root(list: readonly Session[], id: string) {
+  export function root(list: readonly Session[], id: string) {
     return list.find((item) => item.id === id)?.parentID ?? id
   }
 
-  function family(list: readonly Session[], id: string) {
+  export function family(list: readonly Session[], id: string) {
     return list.filter((item) => item.id === id || item.parentID === id).map((item) => item.id)
   }
 
@@ -118,7 +118,7 @@ export namespace KiloTerminalTitle {
     return status?.type === "busy" || status?.type === "retry"
   }
 
-  function attention(data: Data, id: string) {
+  export function attention(data: Data, id: string) {
     if (data.session_status[id]?.type === "offline") return true
     if ((data.permission[id]?.length ?? 0) > 0) return true
     if ((data.question[id]?.length ?? 0) > 0) return true

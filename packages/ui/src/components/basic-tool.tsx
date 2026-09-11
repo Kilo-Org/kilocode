@@ -24,6 +24,7 @@ const isTriggerTitle = (val: any): val is TriggerTitle => {
 
 export interface BasicToolProps {
   icon: IconProps["name"]
+  iconNode?: JSX.Element // kilocode_change
   trigger: TriggerTitle | JSX.Element
   children?: JSX.Element
   status?: string
@@ -48,19 +49,32 @@ const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
 const deferredMounts: Array<{ active: boolean; fn: () => void }> = []
 let deferredFrame: number | undefined
 
+// kilocode_change start
+// Mount deferred tool bodies within a per-frame time budget. Mounting one body
+// per frame kept each diff card's render off a single frame, but an expanded
+// transcript with many cards then needed one frame per card before everything
+// was visible. Spend a fixed budget per frame so cheap bodies mount together.
+// A body whose duration exceeds the budget ends that frame, so later bodies
+// wait for the next one.
+const DEFERRED_MOUNT_BUDGET_MS = 12
+
 function flushDeferredMounts() {
-  while (deferredMounts.length > 0) {
-    // Timeline tools are mounted top-to-bottom, but the viewport starts at the latest turn.
-    // Pop from the end so heavy default-open bodies near the bottom become interactive first.
-    const item = deferredMounts.pop()!
-    if (item.active) {
-      deferredFrame = deferredMounts.length > 0 ? requestAnimationFrame(flushDeferredMounts) : undefined
-      item.fn()
-      return
+  const deadline = performance.now() + DEFERRED_MOUNT_BUDGET_MS
+  // Re-arm in `finally`: a throw from one body must not leave `deferredFrame`
+  // pointing at an already-fired frame, which would stall every later mount.
+  try {
+    while (deferredMounts.length > 0) {
+      // Timeline tools are mounted top-to-bottom, but the viewport starts at the latest turn.
+      // Pop from the end so heavy default-open bodies near the bottom become interactive first.
+      const item = deferredMounts.pop()!
+      if (item.active) item.fn()
+      if (performance.now() >= deadline) break
     }
+  } finally {
+    deferredFrame = deferredMounts.length > 0 ? requestAnimationFrame(flushDeferredMounts) : undefined
   }
-  deferredFrame = undefined
 }
+// kilocode_change end
 
 function scheduleDeferredFlush() {
   if (deferredFrame !== undefined) return
@@ -91,7 +105,13 @@ export function BasicTool(props: BasicToolProps) {
   const open = () => props.open ?? state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
-  const hasChildren = () => (props.defer ? "children" in props : props.children)
+  // kilocode_change start - testing for children must not evaluate them. Reading
+  // the `children` getter constructs the whole collapsed body tree (and runs
+  // Markdown/diff parsing inside it) on every mount, even while closed, which
+  // dominated the cost of mounting tool cards. `"children" in props` only checks
+  // presence, keeping the body lazy without changing how it renders.
+  const hasChildren = () => "children" in props
+  // kilocode_change end
   const hasDetails = () => props.hasDetails ?? !!hasChildren() // kilocode_change
 
   let cancelReady: (() => void) | undefined
@@ -201,7 +221,7 @@ export function BasicTool(props: BasicToolProps) {
       <div data-slot="basic-tool-tool-trigger-content">
         {/* kilocode_change start */}
         <span data-slot="basic-tool-icon">
-          <Icon name={props.icon} size="small" />
+          {props.iconNode ?? <Icon name={props.icon} size="small" />}
         </span>
         {/* kilocode_change end */}
         <div data-slot="basic-tool-tool-info">

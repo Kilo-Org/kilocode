@@ -129,6 +129,11 @@ export namespace KiloSessionPromptQueue {
     return targets.get(sessionID)?.base
   }
 
+  export function owner(sessionID: SessionID, messageID: MessageID) {
+    const target = targets.get(sessionID)
+    return target?.base === messageID || target?.extras.has(messageID) ? target.base : undefined
+  }
+
   /**
    * True when a newer prompt was enqueued after the currently running slot
    * began. runLoop calls this between LLM steps to break out so the next

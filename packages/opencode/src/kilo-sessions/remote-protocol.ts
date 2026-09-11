@@ -37,6 +37,12 @@ export namespace RemoteProtocol {
     name: z.string().min(1).max(64), // os.hostname(), truncated
     projectName: z.string().min(1).max(64), // basename(Instance.directory), truncated
     version: z.string().max(32).optional(), // InstallationVersion, truncated
+    // Older CLIs advertise only name, projectName, and optional version.
+    // Keep metadata optional until those CLI versions and retained relay
+    // attachments are confirmed retired.
+    kind: z.enum(["cli", "remote"]).optional(),
+    startedAt: z.iso.datetime({ precision: 3 }).length(24).optional(),
+    gitBranch: z.string().max(24).optional(),
   })
   export type InstanceAdvertisement = z.infer<typeof InstanceAdvertisement>
 

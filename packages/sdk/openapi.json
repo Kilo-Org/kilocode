@@ -7522,6 +7522,16 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["session", "tree"],
+              "description": "Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues."
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -12955,373 +12965,6 @@
         ]
       }
     },
-    "/interactive-terminal": {
-      "get": {
-        "tags": ["interactive-terminal"],
-        "operationId": "interactiveTerminal.list",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of interactive terminals",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/InteractiveTerminalSnapshot"
-                  },
-                  "description": "List of interactive terminals"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "description": "List active human-driven terminal sessions for the current instance.",
-        "summary": "List interactive terminals",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.list({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/interactive-terminal/{terminalID}": {
-      "get": {
-        "tags": ["interactive-terminal"],
-        "operationId": "interactiveTerminal.get",
-        "parameters": [
-          {
-            "name": "terminalID",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          },
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Interactive terminal snapshot",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InteractiveTerminalSnapshot"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Get metadata and retained output for an active interactive terminal.",
-        "summary": "Get interactive terminal",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.get({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/interactive-terminal/{terminalID}/input": {
-      "post": {
-        "tags": ["interactive-terminal"],
-        "operationId": "interactiveTerminal.write",
-        "parameters": [
-          {
-            "name": "terminalID",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          },
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Input written",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "boolean",
-                  "description": "Input written"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Send raw keyboard input to an active interactive terminal.",
-        "summary": "Write interactive terminal input",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InteractiveTerminalWriteInput"
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.write({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/interactive-terminal/{terminalID}/resize": {
-      "post": {
-        "tags": ["interactive-terminal"],
-        "operationId": "interactiveTerminal.resize",
-        "parameters": [
-          {
-            "name": "terminalID",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          },
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Terminal resized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "boolean",
-                  "description": "Terminal resized"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Resize an active interactive terminal's PTY.",
-        "summary": "Resize interactive terminal",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InteractiveTerminalResizeInput"
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.resize({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/interactive-terminal/{terminalID}/close": {
-      "post": {
-        "tags": ["interactive-terminal"],
-        "operationId": "interactiveTerminal.close",
-        "parameters": [
-          {
-            "name": "terminalID",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          },
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Terminal closed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "boolean",
-                  "description": "Terminal closed"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Terminate an active interactive terminal and unblock its tool call.",
-        "summary": "Close interactive terminal",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.close({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/kilo/profile": {
       "get": {
         "tags": ["kilo"],
@@ -13526,6 +13169,9 @@
                     "type": {
                       "type": "string",
                       "enum": ["api", "oauth"]
+                    },
+                    "organizationId": {
+                      "type": "string"
                     }
                   },
                   "required": ["authenticated"],
@@ -15196,6 +14842,333 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resumeSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session/{sessionID}/drain": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.drainSession",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session work drained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Session work drained"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Wait for active session work and background result delivery, then publish the matching drain acknowledgment.",
+        "summary": "Wait for session completion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": ["token"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.drainSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session/{sessionID}/board": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.sessionBoard",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shared board snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionBoard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read stored board messages without changing the board.",
+        "summary": "Observe a session's shared board",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionBoard({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session/{sessionID}/board/reset": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.resetSessionBoard",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shared board after reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionBoard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clear visible messages without changing conversations or running tasks.",
+        "summary": "Clear a session's shared board",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": ["revision"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resetSessionBoard({\n  ...\n})"
           }
         ]
       }
@@ -22181,7 +22154,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -22280,7 +22253,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -22441,7 +22414,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -22969,7 +22942,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnknownError1"
+                  "$ref": "#/components/schemas/UnknownError2"
                 }
               }
             }
@@ -26887,6 +26860,12 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated1"
           },
           {
+            "$ref": "#/components/schemas/EventSessionDrained1"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrainInterrupted1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -26915,15 +26894,6 @@
           },
           {
             "$ref": "#/components/schemas/EventBackground_processDeleted"
-          },
-          {
-            "$ref": "#/components/schemas/EventInteractive_terminalUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/EventInteractive_terminalData"
-          },
-          {
-            "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
           },
           {
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
@@ -27244,6 +27214,12 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
           },
           {
+            "$ref": "#/components/schemas/EventSessionDrained"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionDrainInterrupted"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           }
         ]
@@ -27521,94 +27497,6 @@
         "required": ["id", "sessionID", "command", "cwd", "ports", "status", "lifetime", "ready", "output", "time"],
         "additionalProperties": false
       },
-      "InteractiveTerminalInfo": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          },
-          "pid": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "command": {
-            "type": "string"
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "closed"]
-          },
-          "cols": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "rows": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "exitCode": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "enum": ["NaN"]
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity"]
-              },
-              {
-                "type": "string",
-                "enum": ["-Infinity"]
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity", "-Infinity", "NaN"]
-              }
-            ]
-          },
-          "signal": {
-            "type": "string"
-          },
-          "closedBy": {
-            "type": "string",
-            "enum": ["exit", "user", "abort"]
-          },
-          "time": {
-            "type": "object",
-            "properties": {
-              "started": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "updated": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "ended": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "required": ["started", "updated"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "sessionID", "pid", "command", "cwd", "status", "cols", "rows", "time"],
-        "additionalProperties": false
-      },
       "SuggestionRequest": {
         "type": "object",
         "properties": {
@@ -27734,10 +27622,17 @@
             "type": "string",
             "pattern": "^ses"
           },
+          "sourceSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
           "prompt": {
             "type": "string",
             "minLength": 1,
             "maxLength": 100000
+          },
+          "replyTo": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
           }
         },
         "required": ["id", "sessionID", "operation", "targetSessionID", "prompt"],
@@ -30036,6 +29931,10 @@
           "multiple": {
             "type": "boolean"
           },
+          "default": {
+            "type": "string",
+            "description": "Exact option label to preselect for a single-select question. Use for a recommended answer; the user must still confirm. Ignored when multiple is true or the label is unknown."
+          },
           "questionKey": {
             "type": "string"
           },
@@ -30112,15 +30011,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventBackground_processDeleted"
-              },
-              {
-                "$ref": "#/components/schemas/EventInteractive_terminalUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/EventInteractive_terminalData"
-              },
-              {
-                "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
               },
               {
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
@@ -30439,6 +30329,12 @@
               },
               {
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionDrained"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionDrainInterrupted"
               },
               {
                 "type": "object",
@@ -33496,6 +33392,63 @@
                 "additionalProperties": false
               },
               {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.drained"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    },
+                    "required": ["sessionID", "token"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["session.drain.interrupted"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      }
+                    },
+                    "required": ["sessionID"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
@@ -35004,6 +34957,9 @@
                 "type": "string"
               },
               "openTelemetry": {
+                "type": "boolean"
+              },
+              "shared_agent_board": {
                 "type": "boolean"
               },
               "primary_tools": {
@@ -39398,48 +39354,6 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
-      "InteractiveTerminalSnapshot": {
-        "type": "object",
-        "properties": {
-          "info": {
-            "$ref": "#/components/schemas/InteractiveTerminalInfo"
-          },
-          "output": {
-            "type": "string"
-          },
-          "cursor": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": ["info", "output", "cursor"],
-        "additionalProperties": false
-      },
-      "InteractiveTerminalWriteInput": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "string"
-          }
-        },
-        "required": ["data"],
-        "additionalProperties": false
-      },
-      "InteractiveTerminalResizeInput": {
-        "type": "object",
-        "properties": {
-          "cols": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "rows": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          }
-        },
-        "required": ["cols", "rows"],
-        "additionalProperties": false
-      },
       "effect_HttpApiError_Unauthorized": {
         "type": "object",
         "properties": {
@@ -39470,6 +39384,86 @@
           }
         },
         "required": ["error"],
+        "additionalProperties": false
+      },
+      "BoardMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "fromLabel": {
+            "type": "string"
+          },
+          "toLabel": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["INFO", "ASK", "RESULT", "HOLD", "VETO"]
+          },
+          "body": {
+            "type": "string"
+          },
+          "reply_to": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "timestamp", "from", "to", "type", "body"],
+        "additionalProperties": false
+      },
+      "SessionBoard": {
+        "type": "object",
+        "properties": {
+          "ownerSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMessage"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": ["ownerSessionID", "revision", "messages", "hasMore"],
+        "additionalProperties": false
+      },
+      "UnknownError1": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["UnknownError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
         "additionalProperties": false
       },
       "CommandFile": {
@@ -40851,7 +40845,7 @@
         "required": ["_tag", "sessionID", "messageID", "message"],
         "additionalProperties": false
       },
-      "UnknownError1": {
+      "UnknownError2": {
         "type": "object",
         "properties": {
           "_tag": {
@@ -41489,6 +41483,12 @@
           },
           {
             "$ref": "#/components/schemas/GlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/SessionDrained"
+          },
+          {
+            "$ref": "#/components/schemas/SessionDrainInterrupted"
           }
         ]
       },
@@ -41546,90 +41546,6 @@
           }
         },
         "required": ["_tag"],
-        "additionalProperties": false
-      },
-      "InteractiveTerminalInfo1": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          },
-          "pid": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "command": {
-            "type": "string"
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "closed"]
-          },
-          "cols": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "rows": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "exitCode": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "enum": ["NaN"]
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity"]
-              },
-              {
-                "type": "string",
-                "enum": ["-Infinity"]
-              }
-            ]
-          },
-          "signal": {
-            "type": "string"
-          },
-          "closedBy": {
-            "type": "string",
-            "enum": ["exit", "user", "abort"]
-          },
-          "time": {
-            "type": "object",
-            "properties": {
-              "started": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "updated": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "ended": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "required": ["started", "updated"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "sessionID", "pid", "command", "cwd", "status", "cols", "rows", "time"],
         "additionalProperties": false
       },
       "CredentialValue": {
@@ -41976,93 +41892,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventInteractive_terminalUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["interactive_terminal.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "info": {
-                "$ref": "#/components/schemas/InteractiveTerminalInfo"
-              }
-            },
-            "required": ["info"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventInteractive_terminalData": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["interactive_terminal.data"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "terminalID": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "data": {
-                "type": "string"
-              },
-              "cursor": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "required": ["terminalID", "sessionID", "data", "cursor"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventInteractive_terminalDeleted": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["interactive_terminal.deleted"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "terminalID": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              }
-            },
-            "required": ["terminalID", "sessionID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventSandboxStatusChanged": {
         "type": "object",
         "properties": {
@@ -42226,6 +42055,9 @@
               "mode": {
                 "type": "string",
                 "enum": ["worktree", "local"]
+              },
+              "worktreeID": {
+                "type": "string"
               },
               "versions": {
                 "type": "boolean"
@@ -46676,6 +46508,61 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrainInterrupted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -55636,6 +55523,107 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SessionDrained": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "SessionDrainInterrupted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -58807,6 +58795,63 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSessionDrained1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drained"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": ["sessionID", "token"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionDrainInterrupted1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.drain.interrupted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventMemoryStatus1": {
         "type": "object",
         "properties": {
@@ -59959,10 +60004,6 @@
     {
       "name": "instance-reload",
       "description": "Kilo instance reload route."
-    },
-    {
-      "name": "interactive-terminal",
-      "description": "Kilo human-driven interactive terminal routes."
     },
     {
       "name": "kilo",

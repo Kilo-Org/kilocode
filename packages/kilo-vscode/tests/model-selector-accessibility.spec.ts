@@ -38,6 +38,17 @@ test("model selector exposes combobox relationships and active option movement",
     "aria-label",
     "Routes each request to the cheapest model that gets the job done, based on continuously benchmarked accuracy and cost.",
   )
+  const kilo = page.getByRole("treeitem", { name: "Kilo", exact: true })
+  const legacy = page.getByRole("treeitem", { name: /Kilo Auto Legacy/ })
+  await expect(legacy).toBeVisible()
+  const legacyAfterKilo = await kilo.evaluate(
+    (group, id) => {
+      const model = document.getElementById(id!)
+      return !!model && !!(group.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING)
+    },
+    await legacy.getAttribute("id"),
+  )
+  expect(legacyAfterKilo).toBe(true)
   await expect(page.getByRole("treeitem", { name: "Omega" })).toBeVisible()
 
   await combobox.press("ArrowDown")
@@ -313,6 +324,43 @@ test("variant picker focuses the selected effort as it opens", async ({ page }) 
   await page.getByRole("button", { name: "Medium", exact: true }).click()
   await expect(page.locator(".thinking-selector-item.selected")).toBeFocused()
 })
+
+for (const picker of ["model", "variant"]) {
+  test(`${picker} picker keeps focus during automatic prompt restoration`, async ({ page }) => {
+    await load(page, "prompt-input--with-thinking-420")
+
+    const trigger = page.getByRole("button", {
+      name: picker === "model" ? /^Select model:/ : "Medium",
+      exact: picker === "variant",
+    })
+    const prompt = page.locator("textarea.prompt-input")
+    await prompt.evaluate((el) => el.setAttribute("aria-disabled", "false"))
+    const popup = page.locator(".popup-selector[data-expanded]")
+    await trigger.click()
+    const choice =
+      picker === "model"
+        ? popup.locator(".model-selector-search-wrapper button")
+        : popup.locator(".thinking-selector-item.selected")
+    if (picker === "model") await popup.getByRole("combobox").press("Tab")
+    await expect(choice).toBeFocused()
+    await prompt.hover()
+    await expect(popup).toBeVisible()
+
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    await page.waitForTimeout(100)
+    await expect(popup).toBeVisible()
+    await expect(choice).toBeFocused()
+    await choice.press("Escape")
+    await expect(popup).toBeHidden()
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await expect(popup).toBeVisible()
+    await prompt.click()
+    await expect(popup).toBeHidden()
+    await expect(prompt).toBeFocused()
+  })
+}
 
 test("slash mode picker Escape returns focus to the prompt", async ({ page }) => {
   await load(page, "prompt-input--default-420")

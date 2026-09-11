@@ -12,14 +12,25 @@ export function continuation(input: {
 }) {
   if (!input.id || input.id.startsWith("cloud:") || input.status !== "idle") return
   if (input.submitting || input.blocked || input.loading || input.reverted) return
-  const user = input.messages.findLast((message) => message.role === "user")
-  const assistant = input.messages.at(-1)
+  const answered = new Set(
+    input.messages.flatMap((message) => (message.role === "assistant" ? [message.parentID] : [])),
+  )
+  const messages = input.messages.filter(
+    (message) =>
+      message.role !== "user" ||
+      answered.has(message.id) ||
+      !input
+        .parts(message.id)
+        .some((part) => part.type === "text" && part.synthetic && part.metadata?.background === true),
+  )
+  const user = messages.findLast((message) => message.role === "user")
+  const assistant = messages.at(-1)
   if (!user || !assistant || assistant.role !== "assistant" || assistant.summary === true) return
   if (assistant.parentID !== user.id) return
   if (input.parts(user.id).some((part) => part.type === "compaction")) return
   if (
-    input.messages
-      .slice(input.messages.indexOf(user) + 1)
+    messages
+      .slice(messages.indexOf(user) + 1)
       .some((message) =>
         input
           .parts(message.id)

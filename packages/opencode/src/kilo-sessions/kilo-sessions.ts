@@ -23,6 +23,7 @@ import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
+import { Git } from "@/git"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
@@ -94,6 +95,7 @@ export namespace KiloSessions {
   const orgKey = "kilo-sessions:org"
   const clientKey = "kilo-sessions:client"
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
+  const gitBranchKeyPrefix = "kilo-sessions:git-branch:"
 
   const ttlMs = 10_000
 
@@ -128,7 +130,12 @@ export namespace KiloSessions {
     clearInFlightCache(tokenValidKey)
     clearInFlightCache(clientKey)
     clearInFlightCache(orgKey)
+    // The git-url and per-directory branch caches are keyed per directory
+    // (`<prefix><directory>`); only the launch-directory entry is cleared here.
+    // Entries for other session directories expire via ttlMs (10 s) — there is
+    // intentionally no prefix-clear API.
     clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
+    clearInFlightCache(gitBranchKeyPrefix + Instance.worktree)
   }
 
   async function authValid(token: string) {
@@ -291,6 +298,79 @@ export namespace KiloSessions {
       remote ? remote.conn.heartbeat(opts) : Promise.reject(new Error("attachRemoteSession: no remote connection")),
     log: attachedLog,
   })
+
+  // kilocode_change - locally started sessions never announce to the remote
+  // connection, so the mobile live list (fed by per-connection attached ids)
+  // never shows them. Announce on the first turn (idempotent via
+  // AttachedState.announce) and detach on dispose, mirroring the create_session
+  // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
+  // fire-and-forget event handlers log failures instead of surfacing them.
+  // Per-session in-flight local announce tracker. A delete that races the
+  // announce — while it awaits the in-flight enable, or while the attach
+  // heartbeat is in flight — must converge on the same outcome instead of
+  // no-oping and leaving the dead id attached forever. `deleted` is set by
+  // detachLocalSession so an announce that has not yet attached can skip.
+  type LocalAnnounce = { promise: Promise<void>; deleted: boolean }
+  const localAnnounceInflight = new Map<string, LocalAnnounce>()
+
+  async function announceLocalSession(id: string) {
+    const existing = localAnnounceInflight.get(id)
+    if (existing) {
+      await existing.promise
+      return
+    }
+    const entry: LocalAnnounce = { promise: Promise.resolve(), deleted: false }
+    localAnnounceInflight.set(id, entry)
+    entry.promise = doAnnounceLocalSession(id, entry)
+    await entry.promise
+  }
+
+  async function doAnnounceLocalSession(id: string, entry: LocalAnnounce) {
+    try {
+      // Do not announce when remote is disabled. A first turn that races
+      // bootstrap auto-enable waits for the in-flight enable so the session
+      // still lands in the live list.
+      if (!remote && !enabling) return
+      const inflight = enabling
+      if (inflight) {
+        await inflight.catch(() => undefined)
+        if (!remote) return
+      }
+      // A delete that fired while we awaited the enable must cancel this
+      // announce so the dead session never lands in the live list.
+      if (entry.deleted) return
+      await attachRemoteSession(id)
+    } catch (error) {
+      log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    } finally {
+      if (localAnnounceInflight.get(id) === entry) localAnnounceInflight.delete(id)
+    }
+  }
+
+  // kilocode_change - detach a locally announced session on dispose so it leaves
+  // the live list. No-op for an unowned id (e.g. an app-spawned session already
+  // detached via exit_cli). Detaches the raw attached state without touching
+  // SessionStatus, because the session row is already gone on delete.
+  async function detachLocalSession(id: string) {
+    try {
+      // Converge with an in-flight announce: mark it deleted so it skips the
+      // attach, then wait for it to settle. If it already attached (the delete
+      // raced the attach heartbeat), the ownership check below still sees it
+      // and detaches it. Without this, a delete during the enable await no-ops
+      // (the id is not yet attached) and the announce then attaches the dead
+      // session forever.
+      const announce = localAnnounceInflight.get(id)
+      if (announce) {
+        announce.deleted = true
+        await announce.promise
+      }
+      if (!hasRemoteSession(id)) return
+      await attachedState.detach(id)
+    } catch (error) {
+      log.warn("local session detach failed", { sessionID: id, error: String(error) })
+    }
+  }
+
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -518,6 +598,8 @@ export namespace KiloSessions {
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
+            // kilocode_change - detach a locally announced session on dispose.
+            void detachLocalSession(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -533,9 +615,13 @@ export namespace KiloSessions {
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          watch(Session.Event.TurnOpen, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
-          )
+          watch(Session.Event.TurnOpen, (evt) => {
+            const sessionID = evt.properties.sessionID
+            // kilocode_change - announce a locally started session on its first
+            // turn so it appears in the mobile live list.
+            void announceLocalSession(sessionID)
+            return ingest.sync(sessionID, [{ type: "session_open", data: {} }])
+          })
           watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
@@ -716,15 +802,15 @@ export namespace KiloSessions {
       // moment of sending. The flag may be set after this closure is created
       // (race-proof) — `getSessions` reads the current value each tick.
       const getSessions = async (): Promise<RemoteProtocol.Heartbeat> => {
-        const [gitUrl, gitBranch] = await Promise.all([
-          getGitUrl().catch(() => undefined),
-          branch().catch(() => undefined),
-        ])
+        // The instance advertisement describes the host process's own project,
+        // so it keeps the launch-directory (Vcs) branch. Session rows derive
+        // their repository metadata from each session's own directory below.
+        const gitBranch = await branch().catch(() => undefined)
         const { AppRuntime } = await import("@/effect/app-runtime")
         // Batch SessionStatus + attention lists once per heartbeat (not per session).
         // Permission/Question list() feeds the same precedence as deriveStatus().
         const [statusMap, permissions, questions] = await Promise.all([
-          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(SessionStatus.listAll()),
           AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
           AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
         ])
@@ -740,17 +826,16 @@ export namespace KiloSessions {
             Effect.all(
               [...ids].map((id) =>
                 svc.get(SessionID.make(id)).pipe(
-                  Effect.map((session) => ({
-                    id,
-                    status: resolveDerivedSessionStatus({
+                Effect.map((session) => ({
+                  id,
+                  directory: session.directory,
+                  status: resolveDerivedSessionStatus({
                       hasPermission: permissionSessions.has(id),
                       hasQuestion: questionSessions.has(id),
                       statusType: statuses[id]?.type,
                     }),
                     title: session.title,
                     parentSessionId: session.parentID,
-                    gitUrl,
-                    gitBranch,
                     // kilocode_change - K1 W1: per-session platform, mirrors
                     // meta()'s resolution order so the live value always agrees
                     // with the session's stored created_on_platform.
@@ -762,7 +847,29 @@ export namespace KiloSessions {
             ),
           ),
         )
-        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
+        // Resolve repository metadata per distinct session directory: a host
+        // launched outside the selected repository must still publish each
+        // session's own repo. Directory-less sessions fall back to the launch
+        // worktree, and the in-flight cache collapses same-directory sessions
+        // into one git call per ttlMs.
+        const gitPairs = new Map<string, { gitUrl?: string; gitBranch?: string }>()
+        await Promise.all(
+          [...new Set(results.map((r) => r?.directory ?? Instance.worktree))].map(async (directory) => {
+            const [gitUrl, sessionGitBranch] = await Promise.all([
+              getGitUrl(directory).catch(() => undefined),
+              branchFor(directory).catch(() => undefined),
+            ])
+            gitPairs.set(directory, { gitUrl, gitBranch: sessionGitBranch })
+          }),
+        )
+        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r).map((r) => ({
+          id: r.id,
+          status: r.status,
+          title: r.title,
+          parentSessionId: r.parentSessionId,
+          ...gitPairs.get(r.directory ?? Instance.worktree),
+          platform: r.platform,
+        }))
         // kilocode_change - PR link advertise (plan 8.2): resolve once
         // (worktree-scoped) and attach to every advertised row, then ingest the
         // triple per session (deduped by last-sent triple).
@@ -771,7 +878,11 @@ export namespace KiloSessions {
           for (const row of sessions) await syncPrLinkTriple(row.id, pr.triple)
         }
         const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
-        const instance = instanceAdvertisement
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Truncate the launch-directory branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 
@@ -1383,9 +1494,9 @@ export namespace KiloSessions {
     }
   }
 
-  async function getGitUrl(): Promise<string | undefined> {
-    return withInFlightCache(gitUrlKeyPrefix + Instance.worktree, ttlMs, async () => {
-      const repo = simpleGit(Instance.worktree)
+  async function getGitUrl(directory: string): Promise<string | undefined> {
+    return withInFlightCache(gitUrlKeyPrefix + directory, ttlMs, async () => {
+      const repo = simpleGit(directory)
       const remotes = await repo.getRemotes(true).catch(() => [])
       if (remotes.length === 0) return undefined
 
@@ -1405,17 +1516,48 @@ export namespace KiloSessions {
     })
   }
 
+  // Context-scoped branch for the instance advertisement: the ad describes the
+  // host process's own project, so it keeps the launch-directory Vcs branch.
   async function branch() {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
+  }
+
+  // Per-directory branch for session rows and persisted kilo_meta: a session
+  // created in a nested repository must report that repository's branch, not
+  // the host's launch directory. `Git.branch` returns undefined for
+  // non-repositories, which collapses to "no branch metadata".
+  async function branchFor(directory: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return withInFlightCache(gitBranchKeyPrefix + directory, ttlMs, () =>
+      AppRuntime.runPromise(Git.Service.use((svc) => svc.branch(directory))),
+    )
+  }
+
+  // Non-throwing launch-directory read for `meta()`: when called outside any
+  // instance context (e.g. the API-robustness path where Session.get already
+  // failed), `Instance.worktree` throws synchronously — before, the only access
+  // sat inside an async closure so it degraded to "git metadata absent".
+  // Degrade the same way instead of throwing.
+  function launchDirectory(): string | undefined {
+    try {
+      return Instance.worktree
+    } catch {
+      return undefined
+    }
   }
 
   async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId(sessionId, info)
-    const gitBranch = await branch().catch(() => undefined)
-    const gitUrl = await getGitUrl().catch(() => undefined)
+    // Repository metadata follows the session's own directory (a `kilo remote`
+    // host launched outside the selected repository must still publish the
+    // session's repo); directory-less sessions fall back to the launch worktree
+    // when an instance context exists, else to "no git metadata".
+    const directory = info?.directory ?? launchDirectory()
+    const gitBranch = directory ? await branchFor(directory).catch(() => undefined) : undefined
+    const gitUrl = directory ? await getGitUrl(directory).catch(() => undefined) : undefined
 
     return {
       platform,

@@ -42,9 +42,7 @@ export function createReviewSpeech(t: T): {
 }
 
 export function reviewFocus(root: () => HTMLElement | undefined): void {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => root()?.focus())
-  })
+  root()?.focus({ preventScroll: true })
 }
 
 export function keepsNativeFocus(target: EventTarget | null): boolean {

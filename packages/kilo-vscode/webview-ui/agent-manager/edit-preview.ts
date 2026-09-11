@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
+import { createSignal, onCleanup, type Accessor } from "solid-js"
 import type { PermissionFileDiff } from "../src/types/messages"
 import type { DiffStyle } from "../src/context/diff-style"
 import { LOCAL } from "./navigate"
@@ -69,64 +69,57 @@ export function previewMatchesContext(
   return selection === LOCAL || selection === null
 }
 
-export function createEditPreviewContextGuard(
-  preview: Accessor<EditPreview | undefined>,
-  current: Accessor<string | null | undefined>,
-  selection: Accessor<string | null | undefined>,
-  owner: (sessionID: string) => string | undefined,
-  close: () => void,
-  related?: (previewSessionID: string, currentSessionID: string) => boolean,
-) {
-  createEffect(
-    on(
-      () => {
-        const item = preview()
-        const worktree = item?.sessionID ? owner(item.sessionID) : undefined
-        const currentID = current()
-        const nested =
-          item?.sessionID && currentID ? (related?.(item.sessionID, currentID) === true ? "nested" : "same") : "none"
-        return `${item?.sessionID ?? ""}:${current() ?? ""}:${selection() ?? "unassigned"}:${worktree ?? "local"}:${nested}`
-      },
-      () => {
-        const item = preview()
-        if (item && !previewMatchesContext(item.sessionID, current(), selection(), owner(item.sessionID!), related))
-          close()
-      },
-      { defer: true },
-    ),
-  )
-}
-
 interface Options {
   show: () => void
   hide: () => void
+  context?: Accessor<string | undefined>
+  matches?: (sessionID: string | undefined) => boolean
   style?: Accessor<DiffStyle>
   onStyleChange?: (style: DiffStyle) => void
 }
 
 export function createEditPreview(opts: Options) {
-  const [preview, setPreview] = createSignal<EditPreview>()
+  const [previews, setPreviews] = createSignal<Record<string, EditPreview | undefined>>({})
+  const key = () => (opts.context ? opts.context() : "default")
+  const preview = () => {
+    const scope = key()
+    const item = scope === undefined ? undefined : previews()[scope]
+    return item && opts.matches?.(item.sessionID) !== false ? item : undefined
+  }
 
   const open = (diff: PermissionFileDiff, sessionID?: string, style?: DiffStyle) => {
-    setPreview({ diff, sessionID, style: style ?? opts.style?.() ?? "unified", markdown: false })
+    const scope = key()
+    if (scope === undefined || opts.matches?.(sessionID) === false) return
+    setPreviews((prev) => ({
+      ...prev,
+      [scope]: { diff, sessionID, style: style ?? opts.style?.() ?? "unified", markdown: false },
+    }))
     opts.show()
   }
 
+  const update = (patch: Partial<Pick<EditPreview, "style" | "markdown">>) => {
+    const scope = key()
+    if (scope === undefined) return
+    setPreviews((prev) => {
+      const item = prev[scope]
+      return item ? { ...prev, [scope]: { ...item, ...patch } } : prev
+    })
+  }
   const updateStyle = (style: "unified" | "split") => {
-    setPreview((current) => (current ? { ...current, style } : current))
+    update({ style })
     opts.onStyleChange?.(style)
   }
 
-  const updateMarkdown = (markdown: boolean) => {
-    setPreview((current) => (current ? { ...current, markdown } : current))
-  }
+  const updateMarkdown = (markdown: boolean) => update({ markdown })
 
   const close = () => {
-    setPreview(undefined)
+    const scope = key()
+    if (scope === undefined) return
+    setPreviews((prev) => ({ ...prev, [scope]: undefined }))
     opts.hide()
   }
 
-  return { preview: preview as Accessor<EditPreview | undefined>, open, updateStyle, updateMarkdown, close }
+  return { preview, open, updateStyle, updateMarkdown, close }
 }
 
 export function isEditPreviewDiff(value: unknown): value is PermissionFileDiff {
@@ -163,24 +156,8 @@ export function attachEditPreviewEvent(
   return () => window.removeEventListener("agentManager.openEditPreview", handler)
 }
 
-export function createAgentManagerEditPreview(
-  history: (value: boolean) => void,
-  review: (value: boolean) => void,
-  show: () => void,
-  hide: () => void,
-  style?: Accessor<DiffStyle>,
-  onStyleChange?: (style: DiffStyle) => void,
-) {
-  const state = createEditPreview({
-    show: () => {
-      history(false)
-      review(false)
-      show()
-    },
-    hide,
-    style,
-    onStyleChange,
-  })
+export function createAgentManagerEditPreview(opts: Options) {
+  const state = createEditPreview(opts)
   onCleanup(attachEditPreviewEvent(state.open))
   return state
 }

@@ -1,5 +1,8 @@
 const nonText = new Set(["button", "checkbox", "file", "hidden", "image", "radio", "range", "reset", "submit"])
 
+export const hasPopup = (root: ParentNode = document): boolean =>
+  root.querySelector(".popup-selector[data-expanded]") !== null
+
 /** Whether an element owns editable text focus that should not be stolen. */
 export const isTextControl = (el: Element | null): boolean => {
   if (!el) return false

@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型报告）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新开始目标",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "刷新",
+  "task.swarm.reset": "重置看板",
+  "task.swarm.resetTitle": "重置此看板？",
+  "task.swarm.resetDescription": "清除可见消息？对话和正在运行的任务不会改变。智能体可以发布新消息。",
+  "task.swarm.loading": "正在加载看板...",
+  "task.swarm.failed": "无法加载或重置看板。请尝试刷新。",
 
   "command.provider.connect": "连接提供商",
 
@@ -725,6 +735,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",
+  "session.goal.label": "目标",
+  "prompt.goal.set": "设置目标",
+  "prompt.goal.start": "开始目标",
+  "session.goal.active": "运行中",
+  "session.goal.paused": "已暂停",
+  "session.goal.pause": "暂停",
+  "session.goal.resume": "继续",
+  "session.goal.clear": "清除目标",
   "session.costAlert.header": "会话费用提醒",
   "session.costAlert.continue": "继续",
   "session.costAlert.question": "此会话刚刚超过每会话提醒阈值 {{limit}}，当前费用为 {{cost}}。是否继续？",
@@ -814,7 +832,16 @@ export const dict = {
   "settings.notifications.sounds": "声音",
   "settings.notifications.enable.title": "启用声音通知",
   "settings.notifications.enable.description": "在会话完成、遇到错误或需要你输入时播放声音",
+  "settings.notifications.workbench.title": "启用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成任务或需要你输入时显示 VS Code 通知",
+  "settings.notifications.os.title": "启用操作系统通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未处于活动状态时，如果 Kilo 完成任务或需要你输入，则显示原生操作系统通知提醒。",
   "settings.notifications.testSound": "测试",
+  "settings.notifications.testOS": "测试",
+  "settings.notifications.testOS.testing": "正在发送测试通知…",
+  "settings.notifications.testOS.success": "测试通知已发送。",
+  "settings.notifications.testOS.error": "测试通知发送失败",
   "settings.notifications.sound.default": "默认",
   "settings.notifications.sound.system": "系统",
   "settings.notifications.sound.description":
@@ -832,6 +859,9 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "让主会话与负责其任务的子智能体共享看板，包括嵌套的子智能体。用于并行尝试解决方案或开展相互补充的工作，而不是用于每一项任务。",
   "settings.experimental.imageGenerationModel.title": "图像模型",
   "settings.experimental.imageGenerationModel.description": "图像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "默认 (Auto Router)",
@@ -856,6 +886,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 迁移",
+  "settings.experimental.claudeMigration.description":
+    "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
@@ -961,6 +994,9 @@ export const dict = {
     "规则是指导代理行为的指令文件。它们会被包含在每次对话的系统提示词中。在下方添加文件路径以包含额外的规则。",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
+  "settings.agentBehaviour.pushFixes.title": "推送拉取请求修复",
+  "settings.agentBehaviour.pushFixes.description":
+    "当你将拉取请求的 CI 失败或评审评论发送给智能体，或从基础分支更新 worktree 时，请求智能体提交并推送，以便更新拉取请求。权限确认仍然适用。关闭后可手动提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
   "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1157,6 +1193,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
   "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
+  "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
@@ -1169,6 +1206,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "已取消",
   "task.backgroundAgents.status.error": "错误",
   "task.backgroundAgents.untitled": "后台智能体",
+  "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",

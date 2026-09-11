@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.blocked": "Blokeret",
+  "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "Tavle",
+  "task.swarm.refresh": "Opdater",
+  "task.swarm.reset": "Nulstil tavle",
+  "task.swarm.resetTitle": "Nulstil denne tavle?",
+  "task.swarm.resetDescription":
+    "Ryd synlige beskeder? Samtaler og igangværende opgaver ændres ikke. Agenter kan sende nye beskeder.",
+  "task.swarm.loading": "Indlæser tavle...",
+  "task.swarm.failed": "Tavlen kunne ikke indlæses eller nulstilles. Prøv at opdatere den.",
 
   "command.provider.connect": "Tilslut udbyder",
 
@@ -750,6 +761,14 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.goal.label": "Mål",
+  "prompt.goal.set": "Angiv mål",
+  "prompt.goal.start": "Start mål",
+  "session.goal.active": "Aktiv",
+  "session.goal.paused": "Sat på pause",
+  "session.goal.pause": "Sæt på pause",
+  "session.goal.resume": "Genoptag",
+  "session.goal.clear": "Ryd mål",
   "session.costAlert.header": "Advarsel om sessionsomkostning",
   "session.costAlert.continue": "Fortsæt",
   "session.costAlert.question":
@@ -848,7 +867,17 @@ export const dict = {
   "settings.notifications.enable.title": "Aktivér lydnotifikationer",
   "settings.notifications.enable.description":
     "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.workbench.title": "Aktivér VS Code-notifikationer",
+  "settings.notifications.workbench.description":
+    "Vis VS Code-notifikationer, når Kilo fuldfører en opgave eller har brug for input fra dig",
+  "settings.notifications.os.title": "Aktivér OS-notifikationer",
+  "settings.notifications.os.description":
+    "Vis oprindelige OS-notifikationsadvarsler, når Kilo fuldfører en opgave eller har brug for input fra dig, mens VS Code ikke er aktiv.",
   "settings.notifications.testSound": "Test",
+  "settings.notifications.testOS": "Test",
+  "settings.notifications.testOS.testing": "Sender testnotifikation…",
+  "settings.notifications.testOS.success": "Testnotifikation sendt.",
+  "settings.notifications.testOS.error": "Testnotifikation mislykkedes",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.system": "System",
   "settings.notifications.sound.description":
@@ -866,6 +895,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.experimental.sharedAgentBoard.description":
+    "Del et board mellem en hovedsession og dens underagenter til opgaveløsning, herunder indlejrede underagenter. Brug det til parallelle løsningsforsøg eller arbejdsopgaver, der supplerer hinanden, ikke til alle opgaver.",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
   "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
@@ -891,6 +923,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
@@ -1006,6 +1041,9 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-fejl eller review-kommentarer fra en pull request til agenten, eller opdaterer et worktree fra dets base, bedes agenten committe og pushe, så pull requesten opdateres. Tilladelsesprompter gælder stadig. Slå fra for at committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
@@ -1221,6 +1259,7 @@ export const dict = {
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
   "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
+  "task.backgroundAgents.openAll": "Åbn alle baggrundsagenter",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
@@ -1233,6 +1272,7 @@ export const dict = {
   "task.backgroundAgents.status.cancelled": "Annulleret",
   "task.backgroundAgents.status.error": "Fejl",
   "task.backgroundAgents.untitled": "Baggrundsagent",
+  "task.backgroundAgents.stopAll": "Stop alle ({{count}})",
   "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
   "settings.saveBar.discard": "Kassér",
   "settings.saveBar.save": "Gem",
