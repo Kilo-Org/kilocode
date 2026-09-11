@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
+import { KilocodeSystemPrompt } from "../../src/kilocode/system-prompt"
 import { environmentDetails } from "../../src/kilocode/editor-context"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -9,6 +10,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderTest } from "../fake/provider"
 import { patchAgents } from "../../src/kilocode/agent"
 import PROMPT_ASK from "../../src/agent/prompt/ask.txt"
+import { ProjectV2 } from "@opencode-ai/core/project"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
 import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
@@ -248,5 +250,26 @@ describe("KiloSessionPrompt.injectEditorContext", () => {
     expect(env.synthetic).toBe(true)
     expect(env.text.startsWith("\n\n<environment_details>")).toBe(true)
     expect(env.text).toContain("Active file: src/app.ts")
+  })
+})
+
+describe("KilocodeSystemPrompt.environment", () => {
+  test("includes Kilo Code version", () => {
+    const result = KilocodeSystemPrompt.environment({
+      ctx: {
+        directory: "/project",
+        worktree: "/project",
+        project: {
+          id: ProjectV2.ID.make("test-project"),
+          worktree: "/project",
+          vcs: "git",
+          time: { created: 0, updated: 0 },
+          sandboxes: [],
+        },
+      },
+      model: ProviderTest.model(),
+    })
+
+    expect(result[0]).toContain("Kilo Code version:")
   })
 })
