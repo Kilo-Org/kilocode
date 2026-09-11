@@ -118,6 +118,7 @@ const catalog = {
         ...custom("config-provider", "dup-model").models,
         ...custom("config-provider", "codestral-latest", [], "Codestral (latest)").models,
         ...custom("config-provider", "org/model", [], "Org/Model").models,
+        ...custom("config-provider", "slash-name-model", [], "Vendor / Model").models,
       },
     },
     "sub-provider": subProvider,
@@ -891,13 +892,13 @@ describe("tool.task model resolution", () => {
     run({
       agent: "worker",
       variant: inherited,
-      config: { subagent_model: "Org/Model" },
+      config: { subagent_model: "Vendor / Model" },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual({
             providerID: ProviderV2.ID.make("config-provider"),
-            modelID: ModelV2.ID.make("org/model"),
+            modelID: ModelV2.ID.make("slash-name-model"),
           })
           expect(result.variant).toBeUndefined()
         }),
