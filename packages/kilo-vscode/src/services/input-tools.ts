@@ -2,6 +2,7 @@ import type { KiloConnectionService } from "./cli-backend/connection-service"
 import { routeAutocompleteMessage } from "./autocomplete/settings"
 import { handleSpeechToTextCancel, handleSpeechToTextStart, handleSpeechToTextStop } from "../speech-to-text/handler"
 import { prewarmSpeechCapture } from "../speech-to-text/capture"
+import type { SpeechToTextSource } from "../speech-to-text/source"
 
 type Msg = {
   type: string
@@ -14,6 +15,7 @@ type Ctx = {
   connection: KiloConnectionService
   dir: string
   post: (msg: unknown) => void
+  speechSource?: () => SpeechToTextSource | undefined
 }
 
 export async function routeInputToolMessage(message: Msg, ctx: Ctx): Promise<boolean> {
@@ -35,7 +37,7 @@ export async function routeInputToolMessage(message: Msg, ctx: Ctx): Promise<boo
 
   if (message.type === "speechToTextStop") {
     if (!message.requestId) return true
-    handleSpeechToTextStop(ctx.connection, { requestId: message.requestId }, ctx.dir, ctx.post)
+    handleSpeechToTextStop(ctx.connection, { requestId: message.requestId }, ctx.dir, ctx.post, ctx.speechSource?.())
     return true
   }
 

@@ -67,6 +67,22 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Voice Transcription Source
+
+By default both the model list and the audio go to Kilo Gateway. Set **Models** > **Speech to Text Base URL** to send them to any OpenAI-compatible transcription API instead, with an optional bearer token:
+
+```json
+{
+  "experimental": {
+    "speech_to_text_base_url": "https://api.openai.com/v1",
+    "speech_to_text_api_key": "sk-...",
+    "speech_to_text_model": "whisper-1"
+  }
+}
+```
+
+Models are read from `{base_url}/models` and audio is posted to `{base_url}/audio/transcriptions`. Leave the base URL empty to use Kilo Gateway. See [Voice Transcription](/docs/code-with-ai/features/speech-to-text) for details.
+
 ### Prompt-Training Model Visibility
 
 Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.

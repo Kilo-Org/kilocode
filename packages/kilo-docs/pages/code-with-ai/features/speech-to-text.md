@@ -47,6 +47,34 @@ The model list is discovered from the Kilo Gateway and reflects the transcriptio
 
 ---
 
+## Use your own transcription service
+
+By default the model list and the audio itself go through Kilo Gateway. To use another service, set a base URL in **Settings** > **Models** > **Speech to Text Base URL**. Any OpenAI-compatible transcription API works, including OpenAI, Groq, and a self-hosted Whisper server.
+
+```json
+{
+  "experimental": {
+    "speech_to_text_base_url": "https://api.openai.com/v1",
+    "speech_to_text_api_key": "sk-...",
+    "speech_to_text_model": "whisper-1"
+  }
+}
+```
+
+With a base URL set:
+
+- The model list is read from `{base_url}/models`, and the model field accepts any ID that service exposes
+- Audio is uploaded straight to `{base_url}/audio/transcriptions` as a multipart request, so it never passes through Kilo Gateway
+- The API key is sent as a bearer token, and voice input works without signing in to Kilo
+
+Leave the base URL empty to go back to Kilo Gateway.
+
+{% callout type="warning" %}
+The API key is stored as plain text in your Kilo config file. For a local server that needs no credentials, leave the key empty.
+{% /callout %}
+
+---
+
 ## Record prompts
 
 When you are signed in to the enabled Kilo provider, a microphone button appears in prompt fields:
@@ -65,7 +93,7 @@ The feature includes real-time audio level visualization and voice activity dete
 ## Review details
 
 - **Audio processing**: Uses FFmpeg for system audio capture
-- **Transcription**: Sends audio through Kilo Gateway with the selected transcription model
+- **Transcription**: Sends audio through Kilo Gateway with the selected transcription model, or straight to your own base URL when one is set
 
 ---
 
@@ -73,11 +101,12 @@ The feature includes real-time audio level visualization and voice activity dete
 
 **Microphone button not appearing:**
 
-- Enable and sign in to the Kilo provider
+- Enable and sign in to the Kilo provider, or set a custom transcription base URL
 
 **Transcription errors:**
 
-- Confirm the Kilo provider remains enabled and signed in
+- Confirm the Kilo provider remains enabled and signed in, or that your custom base URL and API key are correct
+- For a custom base URL, confirm the service exposes `/models` and `/audio/transcriptions`
 - Verify FFmpeg is installed and in your PATH
 - Check your internet connection
 - Try speaking more clearly or adjusting your microphone settings
@@ -88,6 +117,6 @@ The feature includes real-time audio level visualization and voice activity dete
 
 Voice transcription has these requirements:
 
-- Requires an active internet connection
-- Requires Kilo Gateway access through your Kilo account
+- Requires an active internet connection, unless your custom base URL points at a local service
+- Requires Kilo Gateway access through your Kilo account, or a custom OpenAI-compatible base URL
 - Transcription accuracy depends on audio quality and speech clarity
