@@ -407,17 +407,23 @@ export const KiloTheme = {
 // kilocode_change start: double-dollar and guarded single-dollar math rules for marked.
 const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
 const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
-// Guarded single-dollar inline math, following pandoc's tex_math_dollars rules
-// (https://pandoc.org/MANUAL.html#extension-tex_math_dollars): the opening $
-// must have a non-space to its right, the closing $ a non-space to its left and
-// never a digit to its right, and \$ escapes the delimiter. Content cannot span
-// newlines. On top of pandoc, content that is only a bare money amount stays
-// plain text unless it carries LaTeX structure (\cmd, ^, _, {}) — pandoc's
-// rules alone still garble enclosing-$ prices such as "a $10$-off coupon".
-const SINGLE_SRC = String.raw`(?<![$\\])\$(?!\s)((?:\\.|[^\\\n$])+?)(?<!\s)\$(?!\d)(?!\$)`
-const SINGLE = new RegExp(`^${SINGLE_SRC}`)
-const SINGLE_G = new RegExp(SINGLE_SRC, "g")
-const OPENER = /(?<![$\\])\$/
+// Guarded single-dollar inline math. Base rules are pandoc's tex_math_dollars
+// (https://pandoc.org/MANUAL.html#extension-tex_math_dollars): non-space after
+// the opening $, non-space before the closing $, \$ escapes. Tightened beyond
+// pandoc for coding-agent output, where $ is also currency and shell syntax:
+//  - both delimiters must sit on a word boundary (never adjacent to a letter,
+//    digit, _ or $) — the norm across renderers; marked-katex-extension's
+//    standard mode enforces a stricter punctuation whitelist, which would also
+//    reject legitimate "($y$)" and "$x$-axis", so a word boundary is used.
+//  - content cannot contain backticks or span newlines, so a $...$ pair can
+//    never straddle an inline code span ("$PATH and `$HOME`").
+//  - content that is only a bare money amount stays plain text unless it
+//    carries LaTeX structure (\cmd, ^, _, {}) — pandoc's rules alone still
+//    garble enclosing-$ prices such as "a $10$-off coupon".
+const BODY = /(?<![A-Za-z0-9_$`])\$(?!\s)((?:\\.|[^\\\n$`])+?)(?<!\s)\$(?![A-Za-z0-9_$`])(?!\$)/
+const SINGLE = new RegExp(`^${BODY.source}`)
+const SINGLE_G = new RegExp(BODY.source, "g")
+const OPENER = /(?<![A-Za-z0-9_$`])\$/
 const MONEY = /^[\d,.]+\s*[KkMmBb%]?\s*[+\-*/]?[KkMmBb%]?$/
 const LATEX = /[\^_{}\\]/
 const isMath = (content: string) => !MONEY.test(content) || LATEX.test(content)

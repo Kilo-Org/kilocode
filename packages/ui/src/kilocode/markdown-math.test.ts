@@ -32,8 +32,17 @@ describe("Inline dollar math ($...$)", () => {
     "the \\$\\phi\\$ symbol stays literal",
     "a $10$-off coupon for $20$ items",
     "paid $5$ in cash and $8$ tax",
+    "cost split: $HOME/$PATH var",
+    "$PATH and `$HOME` here",
+    "the `echo $HOME` and $HOME/.cache file",
+    "price is$5 or 10$ fixed",
   ])("leaves money and shell text untouched: %s", async (text) => {
     expect(spans(await parse(text))).toBe(0)
+  })
+
+  test("renders math adjacent to punctuation and hyphens", async () => {
+    const html = await parse("value ($y$) and the $x$-axis, then $\\phi$.")
+    expect(spans(html)).toBe(3)
   })
 
   test("mixes currency and math in one line", async () => {
