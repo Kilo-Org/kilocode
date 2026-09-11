@@ -160,7 +160,6 @@ describe("WorktreeManager pool claim", () => {
 
     manager.warmPool()
     const slot = await waitForPooledSlot(root)
-    await new Promise((resolve) => setTimeout(resolve, 150))
 
     await fs.writeFile(path.join(root, "next.txt"), "next")
     gitExec(["git", "-C", root, "add", "."])
@@ -177,13 +176,36 @@ describe("WorktreeManager pool claim", () => {
   })
 })
 
+describe("WorktreeManager pool reconcile", () => {
+  it("trusts the slot HEAD over stale metadata when adopting", async () => {
+    const root = await createTempRepo()
+    createManager(root).warmPool()
+    const slot = await waitForPooledSlot(root)
+    const head = (await simpleGit(slot).revparse(["HEAD"])).trim()
+
+    // Simulate a crash between a retarget checkout and its metadata write.
+    const pointer = await fs.readFile(path.join(slot, ".git"), "utf-8")
+    const dir = path.resolve(slot, pointer.match(/^gitdir:\s*(.+)$/m)![1]!.trim())
+    const file = path.join(dir, "kilo-agent-manager-metadata.json")
+    const meta = JSON.parse(await fs.readFile(file, "utf-8")) as Record<string, unknown>
+    await fs.writeFile(file, JSON.stringify({ ...meta, owner: 999999, baseOid: "0".repeat(40) }))
+
+    const manager = createManager(root)
+    await manager.reconcilePool()
+    const result = await manager.createWorktree({})
+
+    expect(await fs.realpath(result.path)).toBe(await fs.realpath(slot))
+    expect((await simpleGit(result.path).revparse(["HEAD"])).trim()).toBe(head)
+    expect((await simpleGit(result.path).raw(["status", "--porcelain"])).trim()).toBe("")
+  })
+})
+
 describe("WorktreeManager pool disabled", () => {
   it("keeps creation behavior unchanged when poolSize is 0", async () => {
     const root = await createTempRepo()
     const manager = createManager(root, 0)
 
     manager.warmPool()
-    await new Promise((resolve) => setTimeout(resolve, 100))
     expect(await pooledSlots(root)).toEqual([])
 
     const result = await manager.createWorktree({ branchName: "plain" })

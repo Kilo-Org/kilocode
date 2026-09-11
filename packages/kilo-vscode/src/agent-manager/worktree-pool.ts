@@ -71,20 +71,27 @@ export class WorktreePool {
 
   /**
    * Fire-and-forget warm-up. Idempotent and at most one warm runs at a time.
-   * Never forces a fresh network fetch: start resolution reuses the manager's
-   * 60 s fetch cache.
+   * The start point (which may fetch when the 60 s cache is cold) is resolved
+   * before the git lock is taken, so user operations never wait on the network.
    */
   warm(base?: string): void {
     if (this.size() <= 0 || this.warming) return
     this.warming = true
     queueMicrotask(() => {
-      void this.deps
-        .lock(() => this.fill(base))
+      void this.resolve(base)
+        .then((start) => this.deps.lock(() => this.fill(start.point, start.oid)))
         .catch((e) => this.deps.log(`worktree pool: warm failed: ${e}`))
         .finally(() => {
           this.warming = false
         })
     })
+  }
+
+  /** Resolve the base ref and its commit outside the git lock. */
+  private async resolve(base?: string): Promise<{ point: PoolStart; oid: string }> {
+    const point = await this.deps.start(base)
+    const oid = (await this.deps.client(this.deps.root).raw(["rev-parse", "--verify", `${point.ref}^{commit}`])).trim()
+    return { point, oid }
   }
 
   /**
@@ -125,11 +132,9 @@ export class WorktreePool {
     this.slots = this.slots.filter((slot) => normalizePath(slot.path) !== normalizePath(wtPath))
   }
 
-  private async fill(base?: string): Promise<void> {
+  private async fill(point: PoolStart, oid: string): Promise<void> {
     if (this.size() <= 0) return
     await fs.promises.mkdir(this.deps.dir, { recursive: true })
-    const point = await this.deps.start(base)
-    const oid = (await this.deps.client(this.deps.root).raw(["rev-parse", "--verify", `${point.ref}^{commit}`])).trim()
 
     await this.prune()
     await this.retarget(point, oid)
@@ -252,7 +257,13 @@ export class WorktreePool {
         await this.removePath(slotPath)
         continue
       }
-      const usable = meta.baseOid !== undefined && (await this.registered(slotPath))
+      // Trust the worktree's real HEAD over persisted metadata: a crash between
+      // a retarget checkout and its metadata write leaves them different.
+      const head = await this.attemptValue(
+        async () => (await this.deps.client(slotPath).raw(["rev-parse", "--verify", "HEAD^{commit}"])).trim(),
+        `resolve HEAD ${slotPath}`,
+      )
+      const usable = head !== undefined && head !== "" && (await this.registered(slotPath))
       if (!usable || this.slots.length >= this.size()) {
         await this.removePath(slotPath)
         continue
@@ -261,13 +272,13 @@ export class WorktreePool {
         pooled: true,
         owner: process.pid,
         baseRef: meta.baseRef,
-        baseOid: meta.baseOid,
+        baseOid: head,
       })
       this.slots.push({
         path: slotPath,
         baseRef: meta.baseRef ?? "",
-        baseOid: meta.baseOid!,
-        ready: Promise.resolve(meta.baseOid!),
+        baseOid: head,
+        ready: Promise.resolve(head),
         refreshed: false,
       })
     }
