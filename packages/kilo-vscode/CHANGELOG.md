@@ -1,5 +1,39 @@
 # kilo-code
 
+## 7.6.2
+
+## 7.6.1
+
+### Minor Changes
+
+- [#14006](https://github.com/Kilo-Org/kilocode/pull/14006) [`e9f18b7`](https://github.com/Kilo-Org/kilocode/commit/e9f18b744208588b44866bd93f346f1794985211) - Reference a model inline in the prompt with `@`, opening a model picker that inserts an `@provider/model` mention for Agent Manager or subagent instructions.
+
+### Patch Changes
+
+- [#13932](https://github.com/Kilo-Org/kilocode/pull/13932) [`a508228`](https://github.com/Kilo-Org/kilocode/commit/a508228b405b6ff6fea3fc52c816a510cc4ede5b) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Open attention notifications for Agent Manager sessions in Agent Manager instead of the sidebar, selecting the right project, worktree or Local tab, and session
+
+- [#14007](https://github.com/Kilo-Org/kilocode/pull/14007) [`546321e`](https://github.com/Kilo-Org/kilocode/commit/546321e599308c2f5d805edc166c93551402e7a1) - Speed up rendering of expanded bash tool cards in the VS Code chat webview.
+
+- [#13995](https://github.com/Kilo-Org/kilocode/pull/13995) [`685afc6`](https://github.com/Kilo-Org/kilocode/commit/685afc6f6793d3287b3dd534fa17c8042f1e5603) Thanks [@WebReflection](https://github.com/WebReflection)! - Remove the redundant "(Experimental)" suffix from the Claude Code Migration label in the Experimental settings tab
+
+- [#14011](https://github.com/Kilo-Org/kilocode/pull/14011) [`ee6ff21`](https://github.com/Kilo-Org/kilocode/commit/ee6ff21e656472147aa5049ee9feec3d8a612f06) - Render collapsed diff tool cards without parsing and mount deferred tool bodies within a frame budget, so expanded transcripts fill in faster.
+
+- [#13936](https://github.com/Kilo-Org/kilocode/pull/13936) [`35c487f`](https://github.com/Kilo-Org/kilocode/commit/35c487f72448d9a00deb11dc7c728499547e64ad) - Pause the working timer while a turn is waiting on your permission or question response, so the reported working time no longer includes time spent waiting for you.
+
+- [#13993](https://github.com/Kilo-Org/kilocode/pull/13993) [`b41b3d2`](https://github.com/Kilo-Org/kilocode/commit/b41b3d2ff0624bd940de5ac2b5de777af88db70d) - Keep unlisted Auto models in the regular provider list instead of featuring them in the Auto Models section.
+
+- [#13977](https://github.com/Kilo-Org/kilocode/pull/13977) [`d12a139`](https://github.com/Kilo-Org/kilocode/commit/d12a1392bb13a503d663177544b2d455f03915b6) Thanks [@WebReflection](https://github.com/WebReflection)! - Prevent duplicate permission prompts and response races in Agent Manager.
+
+- [#14000](https://github.com/Kilo-Org/kilocode/pull/14000) [`7e0bc21`](https://github.com/Kilo-Org/kilocode/commit/7e0bc2175fd4494aba25db26c54ac00acd573a7b) - Speed up Agent Manager worktree deletion by skipping a redundant source project resolve when sessions move without their changes.
+
+- [#14012](https://github.com/Kilo-Org/kilocode/pull/14012) [`c0e4d51`](https://github.com/Kilo-Org/kilocode/commit/c0e4d51f30c2f0460c3a9c738672760bde1d6d0d) - Render tool cards faster by not building collapsed tool content on mount.
+
+- [#14002](https://github.com/Kilo-Org/kilocode/pull/14002) [`8d5cae6`](https://github.com/Kilo-Org/kilocode/commit/8d5cae6843fe649e698f2b2d29adadeb88cd32a0) - Render streamed assistant text and reasoning at frame cadence in the VS Code webview instead of waiting for the fixed 100 ms throttle, so text appears smoothly as it arrives. Completed history still renders at the slower cadence.
+
+- [#14004](https://github.com/Kilo-Org/kilocode/pull/14004) [`5d1e7a2`](https://github.com/Kilo-Org/kilocode/commit/5d1e7a25eaf81dcf083424e544474364540f1dfb) - Show a neutral frame shimmer while a subagent starts, then animate it into the agent's identity glyph once the child session is known, and label the card with the agent type instead of the internal tool name.
+
+- [#14005](https://github.com/Kilo-Org/kilocode/pull/14005) [`2205cdb`](https://github.com/Kilo-Org/kilocode/commit/2205cdb4ef5e88b8d5526ca2c8def36cc08e7f3b) - Speed up rendering of to-do list tool cards in the chat.
+
 ## 7.6.0
 
 ### Minor Changes
