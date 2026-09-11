@@ -5,7 +5,8 @@ import type { AgentManagerInMessage } from "./types"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
-import type { LifecycleHost } from "./provider-lifecycle"
+import { beginBoot, type LifecycleHost } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
 import { Semaphore } from "./semaphore"
 import type { WorktreeCreationFailure } from "./worktree-create"
 
@@ -188,16 +189,23 @@ async function provisionVersion(
   prepared: PreparedVersion,
 ): Promise<CreatedVersion | null> {
   const { spec, wt } = prepared
+  const timing = Timing.start(`create ${wt.result.branch} v${spec.index + 1}`, host.log)
 
+  // Boot the new directory concurrently with the setup script. Session creation
+  // and MCP warmup still wait for setup, which may install files plugins need.
+  const boot = beginBoot(() => host.metadata(host.client(), wt.result.path), timing)
   await host.runSetup(wt.result.path, wt.result.branch, wt.worktree.id)
+  timing.mark("setup")
 
-  const session = await host.createSession(wt.result.path, wt.result.branch, wt.worktree.id)
+  const session = await host.createSession(wt.result.path, wt.result.branch, wt.worktree.id, boot, timing)
   if (!session) {
     let releasePtyCleanup: () => void
     try {
       releasePtyCleanup = await host.acquirePtyCleanup(wt.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
+      timing.mark("cleanup")
+      timing.end()
       return null
     }
     try {
@@ -210,6 +218,8 @@ async function provisionVersion(
       releasePtyCleanup()
     }
     host.log(`Failed to create session for version ${spec.index + 1}`)
+    timing.mark("cleanup")
+    timing.end()
     return null
   }
 
@@ -218,14 +228,20 @@ async function provisionVersion(
   if (!spec.branchName && !spec.worktreeName && host.autoName().enabled) {
     state.armAutoName(wt.worktree.id, session.id)
   }
+  timing.mark("state")
 
   // Sandbox must match the user's choice before this session is exposed or
   // receives its initial prompt. A failed reconciliation aborts this version.
-  if (spec.sandbox !== undefined && !(await reconcileSandbox(host, spec, wt, session.id))) return null
+  if (spec.sandbox !== undefined && !(await reconcileSandbox(host, spec, wt, session.id))) {
+    timing.mark("cleanup")
+    timing.end()
+    return null
+  }
 
   host.register(session.id, wt.result.path)
   host.notifyReady(session.id, wt.result, wt.worktree.id)
   host.sessions.register(session)
+  timing.mark("ready")
 
   // Set the per-version model immediately so the UI selector reflects
   // the correct model as soon as the worktree appears, before Phase 2.
@@ -243,6 +259,7 @@ async function provisionVersion(
     })
   }
 
+  const span = timing.end()
   host.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
@@ -252,6 +269,8 @@ async function provisionVersion(
     version: spec.index + 1,
     totalVersions: spec.versions,
     groupId: spec.groupId,
+    durationMs: span.total,
+    ...span.phases,
   })
   host.log(`Version ${spec.index + 1} worktree ready: session=${session.id}`)
 

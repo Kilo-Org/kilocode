@@ -40,6 +40,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "بادئة الفرع",
   "agentManager.settings.branchPrefix.description":
     "بادئة للفروع المسماة تلقائيًا في جميع المشاريع، مثل feature/. لا تنطبق على أسماء الفروع الصريحة. اتركها فارغة لعدم استخدام بادئة.",
+  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
   "agentManager.settings.project.title": "المشروع",
   "agentManager.settings.project.description": "اختر repository الذي تريد تعديل إعدادات worktree الخاصة به.",
   "agentManager.settings.project.empty": "لا تتوفر أي مشاريع في Agent Manager.",

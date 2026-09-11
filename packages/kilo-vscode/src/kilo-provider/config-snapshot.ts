@@ -11,6 +11,7 @@ type Settings = {
   claudeMigration: boolean
   "agentManager.autoBranchNaming": boolean
   "agentManager.branchPrefix": string
+  "agentManager.worktreePool": boolean
 }
 export async function fetchSnapshot(client: Client, dir: string, settings: () => Settings) {
   const [{ data: config }, { data: global }, { data: overlay }, capabilities] = await Promise.all([

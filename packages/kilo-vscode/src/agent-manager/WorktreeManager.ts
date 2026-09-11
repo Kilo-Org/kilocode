@@ -15,6 +15,7 @@ import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
+import { WorktreePool, type PoolStart } from "./worktree-pool"
 import {
   parsePRUrl,
   localBranchName,
@@ -83,6 +84,16 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
+interface Metadata {
+  sessionId: string
+  parentBranch?: string
+  remote?: string
+  pooled?: boolean
+  owner?: number
+  baseRef?: string
+  baseOid?: string
+}
+
 /**
  * Backward compat: split a possibly-prefixed branch like "origin/main" into
  * `{ branch: "main", remote: "origin" }`. If no slash is found, returns bare branch.
@@ -106,15 +117,32 @@ export class WorktreeManager {
   private readonly ops: GitOps | undefined
   private readonly binary: string
   private readonly log: (msg: string) => void
+  private readonly pool: WorktreePool
   private migrated = false
 
-  constructor(root: string, log: (msg: string) => void, ops?: GitOps, binary?: string) {
+  constructor(
+    root: string,
+    log: (msg: string) => void,
+    ops?: GitOps,
+    binary?: string,
+    poolSize: number | (() => number) = 1,
+  ) {
     this.root = root
     this.dir = path.join(root, KILO_DIR, "worktrees")
     this.ops = ops
     this.binary = binary ?? ops?.path ?? "git"
     this.git = this.client(root)
     this.log = log
+    this.pool = new WorktreePool({
+      root,
+      dir: this.dir,
+      poolSize,
+      log,
+      client: (cwd) => this.client(cwd),
+      lock: (fn) => this.withGitLock(fn),
+      gitdir: (wtPath) => this.worktreeGitDir(wtPath),
+      start: (base) => this.poolStart(base),
+    })
   }
 
   /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
@@ -186,6 +214,94 @@ export class WorktreeManager {
     await this.withGitLock(() => this.refreshBase(base))
   }
 
+  /**
+   * Fire-and-forget warm-up of pooled worktrees. Idempotent, at most one warm
+   * in flight, and never blocks callers. `poolSize` 0 disables the pool.
+   */
+  warmPool(base?: string): void {
+    this.pool.warm(base)
+  }
+
+  /** Adopt leftover pooled slots at startup and discard broken ones. */
+  async reconcilePool(): Promise<void> {
+    await this.ensureMigrated()
+    await this.ensureDir()
+    await this.ensureGitExclude()
+    return this.pool.reconcile()
+  }
+
+  /** Remove idle pooled slots when the feature is turned off. */
+  async disposePool(): Promise<void> {
+    return this.pool.dispose()
+  }
+
+  private async poolStart(base?: string): Promise<PoolStart> {
+    const branch = base || (await this.defaultBranch())
+    const point = await this.resolveStartPoint(branch)
+    return { ref: point.ref, branch: point.branch, remote: point.remote }
+  }
+
+  /**
+   * Run independent preflight checks in parallel. Validates the requested ref,
+   * confirms commits exist for an explicit base, and resolves LFS and remote.
+   */
+  private async preflight(
+    params: { existingBranch?: string; branchName?: string; baseBranch?: string },
+    requested: string | undefined,
+  ): Promise<{ resolvedRemote: string | undefined }> {
+    // Validate the literal ref first so --branch cannot expand checkout shorthand.
+    const refFormat =
+      requested === undefined
+        ? Promise.resolve()
+        : Promise.all([
+            this.git.raw(["check-ref-format", `refs/heads/${requested}`]),
+            this.git.raw(["check-ref-format", "--branch", requested]),
+          ])
+    // An explicit base branch skips defaultBranch(), so check repository state here.
+    const commit = params.baseBranch ? this.ensureCommit() : Promise.resolve()
+    const [, , usesLfs, resolvedRemote] = await Promise.all([
+      refFormat,
+      commit,
+      this.repoUsesLfs(),
+      this.resolveRemote(),
+    ])
+    if (usesLfs && !(await this.checkLfsAvailable())) {
+      throw new Error(
+        "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
+      )
+    }
+    return { resolvedRemote }
+  }
+
+  /** Claim a pooled slot for a new branch and schedule a replacement warm-up. */
+  private async tryClaimPool(
+    branch: string,
+    oid: string,
+    auto: boolean,
+    base?: string,
+  ): Promise<{ path: string; branch: string } | undefined> {
+    const slot = await this.pool.claim(branch, oid, auto)
+    if (!slot) return undefined
+    setTimeout(() => this.pool.warm(base), 0)
+
+    // Keep the folder name aligned with the branch, as the normal path does.
+    const target = path.join(this.dir, directory(slot.branch))
+    if (target === slot.path || fs.existsSync(target)) {
+      this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
+      return slot
+    }
+    const moved = await this.git
+      .raw(["worktree", "move", slot.path, target])
+      .then(() => true)
+      .catch((error: unknown) => {
+        this.log(`Pooled worktree move failed, keeping ${slot.path}: ${error}`)
+        return false
+      })
+    const result = moved ? { path: target, branch: slot.branch } : slot
+    this.log(`Reused pooled worktree: ${result.path} (branch: ${result.branch})`)
+    return result
+  }
+
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
@@ -228,13 +344,14 @@ export class WorktreeManager {
   }
 
   private async ensureCommit(): Promise<void> {
-    try {
-      const commit = await this.git.raw(["rev-list", "-n", "1", "--all"])
-      if (!commit.trim()) throw new Error("No commits found")
-    } catch (error) {
-      this.log(`ensureCommit: ${error}`)
-      throw new Error(NO_COMMITS_MESSAGE)
-    }
+    // Fast path: HEAD resolves to a commit in the common case.
+    const head = await this.git.raw(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]).catch(() => "")
+    if (head.trim()) return
+
+    // HEAD can be unborn while other refs still hold commits (orphan checkout),
+    // so only treat the repository as empty when no ref has a commit.
+    const any = await this.git.raw(["rev-list", "-n", "1", "--all"]).catch(() => "")
+    if (!any.trim()) throw new Error(NO_COMMITS_MESSAGE)
   }
 
   private async createWorktreeImpl(params: {
@@ -253,27 +370,8 @@ export class WorktreeManager {
       )
 
     const requested = params.existingBranch ?? params.branchName
-    if (requested !== undefined) {
-      // Validate the literal ref first so --branch cannot expand checkout shorthand.
-      await this.git.raw(["check-ref-format", `refs/heads/${requested}`])
-      await this.git.raw(["check-ref-format", "--branch", requested])
-    }
-
-    // An explicit base branch skips defaultBranch(), so check the repository
-    // state here before trying to resolve a start point.
-    if (params.baseBranch) await this.ensureCommit()
-
-    // Git LFS Pre-flight Check
-    if (await this.repoUsesLfs()) {
-      if (!(await this.checkLfsAvailable())) {
-        throw new Error(
-          "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
-        )
-      }
-    }
-
-    await this.ensureDir()
-    await this.ensureGitExclude()
+    const { resolvedRemote } = await this.preflight(params, requested)
+    await Promise.all([this.ensureDir(), this.ensureGitExclude()])
 
     // Resolve start point (parent branch + remote)
     let parent: string
@@ -283,14 +381,13 @@ export class WorktreeManager {
     if (params.existingBranch) {
       // Existing branch provided directly — only attach remote when the
       // remote tracking ref actually exists (the branch may be local-only).
-      const remote = await this.resolveRemote()
-      const hasRemoteRef = remote && (await this.refExistsLocally(`${remote}/${params.existingBranch}`))
+      const hasRemoteRef = resolvedRemote && (await this.refExistsLocally(`${resolvedRemote}/${params.existingBranch}`))
       parent = params.existingBranch
-      parentRemote = hasRemoteRef ? remote : undefined
+      parentRemote = hasRemoteRef ? resolvedRemote : undefined
       startPoint = {
         ref: params.existingBranch,
         branch: params.existingBranch,
-        remote: hasRemoteRef ? remote : undefined,
+        remote: hasRemoteRef ? resolvedRemote : undefined,
         source: "local-branch",
       }
     } else {
@@ -308,16 +405,36 @@ export class WorktreeManager {
       parentRemote = startPoint.remote
     }
 
-    let branch = await this.resolveBranch(params)
+    // Dereference to commit SHA to prevent upstream tracking for new branches
+    const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
+
+    // Resolve the pool base commit alongside the branch name; both are read-only.
+    const [resolved, oid] = await Promise.all([
+      this.resolveBranch(params),
+      startRef && this.pool.has() ? this.git.raw(["rev-parse", "--verify", startRef]).then((s) => s.trim()) : undefined,
+    ])
+    let branch = resolved
+
+    const slot = oid
+      ? await this.tryClaimPool(branch, oid, params.branchName === undefined, params.baseBranch)
+      : undefined
+    if (slot) {
+      return {
+        branch: slot.branch,
+        path: slot.path,
+        parentBranch: parent,
+        remote: parentRemote,
+        startPointSource: startPoint.source,
+        startPointWarning: startPoint.warning,
+      }
+    }
+
     const dirName = directory(branch)
     let worktreePath = path.join(this.dir, dirName)
 
     worktreePath = await this.prepareWorktreePath(worktreePath, params.existingBranch)
 
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
-
-    // Dereference to commit SHA to prevent upstream tracking for new branches
-    const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
 
     try {
       const args = params.existingBranch
@@ -460,7 +577,7 @@ export class WorktreeManager {
         )
         return undefined
       })
-      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=2", ...args] : args)
+      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=4", ...args] : args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
@@ -526,6 +643,8 @@ export class WorktreeManager {
       this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
       return
     }
+
+    this.pool.release(worktreePath)
 
     // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
     //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
@@ -610,9 +729,7 @@ export class WorktreeManager {
     this.log(`Wrote metadata for session ${sessionId} to ${worktreePath}`)
   }
 
-  async readMetadata(
-    worktreePath: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  async readMetadata(worktreePath: string): Promise<Metadata | undefined> {
     const current = await this.readCurrentMetadata(worktreePath)
     if (current) return current
 
@@ -624,14 +741,23 @@ export class WorktreeManager {
     return undefined
   }
 
-  private async readCurrentMetadata(
-    worktreePath: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  private async readCurrentMetadata(worktreePath: string): Promise<Metadata | undefined> {
     try {
       const file = await this.gitMetadataPath(worktreePath)
       if (!file) return undefined
       const content = await fs.promises.readFile(file, "utf-8")
-      const data = JSON.parse(content) as { sessionId?: string; parentBranch?: string; remote?: string }
+      const data = JSON.parse(content) as Partial<Metadata>
+      if (data.pooled) {
+        return {
+          sessionId: data.sessionId ?? "",
+          pooled: true,
+          owner: data.owner,
+          baseRef: data.baseRef,
+          baseOid: data.baseOid,
+          parentBranch: data.parentBranch,
+          remote: data.remote,
+        }
+      }
       if (!data.sessionId) return undefined
       return {
         sessionId: data.sessionId,
@@ -652,7 +778,12 @@ export class WorktreeManager {
 
   private async worktreeGitDir(worktreePath: string): Promise<string | undefined> {
     const gitPath = path.join(worktreePath, ".git")
-    const stat = await fs.promises.stat(gitPath)
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.stat(gitPath)
+    } catch {
+      return undefined
+    }
     if (stat.isDirectory()) return gitPath
     if (!stat.isFile()) return undefined
 
@@ -662,10 +793,7 @@ export class WorktreeManager {
     return path.resolve(worktreePath, match[1].trim())
   }
 
-  private async readMetadataFrom(
-    worktreePath: string,
-    dirName: string,
-  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+  private async readMetadataFrom(worktreePath: string, dirName: string): Promise<Metadata | undefined> {
     const dir = path.join(worktreePath, dirName)
 
     // Try metadata.json first (has parentBranch + remote)
@@ -783,6 +911,8 @@ export class WorktreeManager {
         fs.promises.stat(wtPath),
         this.readMetadata(wtPath),
       ])
+      // Pooled slots are internal warm-up worktrees, not user sessions.
+      if (meta?.pooled) return undefined
       // Use persisted metadata if available, fall back to resolveBaseBranch.
       // Backward compat: old metadata may store "origin/main" in parentBranch without
       // a separate remote field. Try to detect this by checking if the prefix is a known remote.

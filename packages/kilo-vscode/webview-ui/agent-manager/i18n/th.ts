@@ -41,6 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "คำนำหน้าบรานช์",
   "agentManager.settings.branchPrefix.description":
     "คำนำหน้าสำหรับบรานช์ที่ตั้งชื่ออัตโนมัติในทุกโปรเจกต์ เช่น feature/ ไม่ใช้กับชื่อบรานช์ที่ระบุไว้อย่างชัดเจน เว้นว่างไว้หากไม่ต้องการคำนำหน้า",
+  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
   "agentManager.settings.project.title": "โปรเจกต์",
   "agentManager.settings.project.description": "เลือก repository ที่มีการตั้งค่า worktree ที่คุณต้องการแก้ไข",
   "agentManager.settings.project.empty": "ไม่มีโปรเจกต์ Agent Manager ที่พร้อมใช้งาน",

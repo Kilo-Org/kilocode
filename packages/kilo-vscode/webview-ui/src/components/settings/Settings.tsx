@@ -180,6 +180,18 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
             />
           </SettingsRow>
           <SettingsRow
+            title={language.t("agentManager.settings.worktreePool.title")}
+            description={language.t("agentManager.settings.worktreePool.description")}
+          >
+            <Switch
+              checked={(settings()["agentManager.worktreePool"] as boolean | undefined) ?? true}
+              onChange={(value) => updateSetting("agentManager.worktreePool", value)}
+              hideLabel
+            >
+              {language.t("agentManager.settings.worktreePool.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
             title={language.t("agentManager.settings.project.title")}
             description={language.t("agentManager.settings.project.description")}
           >

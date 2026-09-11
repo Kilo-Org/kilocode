@@ -92,6 +92,11 @@ export async function initContextState(
         await state.flush()
       }
     }
+    // Adopt or clean leftover pooled slots, then pre-warm one off the click path.
+    void manager
+      .reconcilePool()
+      .then(() => manager.warmPool())
+      .catch((err) => log("Failed to reconcile worktree pool:", err))
     return { ok: true, refsFixed: loaded.refsFixed }
   })
 }

@@ -39,6 +39,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "分支前缀",
   "agentManager.settings.branchPrefix.description":
     "所有项目中自动命名分支的前缀，例如 feature/。不适用于明确指定的分支名称。留空则不使用前缀。",
+  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
   "agentManager.settings.project.title": "项目",
   "agentManager.settings.project.description": "选择要编辑其 worktree 设置的 repository。",
   "agentManager.settings.project.empty": "没有可用的 Agent Manager 项目。",

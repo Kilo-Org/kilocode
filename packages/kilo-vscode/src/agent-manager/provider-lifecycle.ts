@@ -11,6 +11,26 @@ import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 import { routeProjectSession } from "./project/messages"
+import { Timing } from "./creation-timing"
+
+/** A backend-instance boot that started before setup, awaited before session creation. */
+export interface CreationBoot {
+  /** Timing clock reading captured when the boot request started. */
+  at: number
+  metadata: () => Promise<Record<string, unknown>>
+}
+
+/**
+ * Start a directory boot without blocking its caller. The error is retained and
+ * rethrown when `metadata` is awaited, so a setup failure before that point
+ * cannot leave an unhandled rejection.
+ */
+export function beginBoot(start: () => Promise<Record<string, unknown>>, timing?: Timing): CreationBoot {
+  const at = timing?.now() ?? performance.now()
+  const pending = (async () => start())()
+  void pending.catch(() => undefined)
+  return { at, metadata: () => pending }
+}
 
 /**
  * Provider capabilities the worktree lifecycle needs beyond project state.
@@ -22,7 +42,13 @@ import { routeProjectSession } from "./project/messages"
 export interface LifecycleHost {
   createOnDisk: (opts?: CreateWorktreeOnDiskOptions) => Promise<CreateWorktreeOnDiskResult | null>
   runSetup: (dir: string, branch: string, id: string) => Promise<void>
-  createSession: (dir: string, branch: string, id: string) => Promise<Session | null>
+  createSession: (
+    dir: string,
+    branch: string,
+    id: string,
+    boot?: CreationBoot,
+    timing?: Timing,
+  ) => Promise<Session | null>
   notifyReady: (sessionId: string, result: CreateWorktreeResult, worktreeId?: string) => void
   sessions: {
     register: (session: Session) => void
@@ -63,21 +89,42 @@ export async function createLifecycleWorktree(
   host: LifecycleHost,
   opts: { baseBranch?: string; branchName?: string },
 ): Promise<null> {
+  const timing = Timing.start(`create ${opts.branchName ?? "worktree"}`, host.log)
+
   await initContextState(ctx, host.log)
+  timing.mark("context")
 
   const created = await host.createOnDisk({ baseBranch: opts.baseBranch, branchName: opts.branchName })
-  if (!created) return null
+  timing.mark("create")
+  if (!created) {
+    timing.end()
+    return null
+  }
+
+  // Boot the new directory's backend instance at once, concurrently with the
+  // .env copy and setup script. Session creation and MCP warmup still wait for
+  // setup to finish because plugins may depend on installed files.
+  const boot = beginBoot(() => host.metadata(host.client(), created.result.path), timing)
 
   // Run setup script for new worktree (blocks until complete, shows in overlay)
   await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
+  timing.mark("setup")
 
-  const session = await host.createSession(created.result.path, created.result.branch, created.worktree.id)
+  const session = await host.createSession(
+    created.result.path,
+    created.result.branch,
+    created.worktree.id,
+    boot,
+    timing,
+  )
   if (!session) {
     let releasePtyCleanup: () => void
     try {
       releasePtyCleanup = await host.acquirePtyCleanup(created.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
+      timing.mark("cleanup")
+      timing.end()
       return null
     }
     try {
@@ -89,6 +136,8 @@ export async function createLifecycleWorktree(
     } finally {
       releasePtyCleanup()
     }
+    timing.mark("cleanup")
+    timing.end()
     return null
   }
 
@@ -96,15 +145,20 @@ export async function createLifecycleWorktree(
   state.addSession(session.id, created.worktree.id)
   if (!opts.branchName && host.autoName().enabled) state.armAutoName(created.worktree.id, session.id)
   host.register(session.id, created.result.path)
+  timing.mark("state")
   // Push state before registerSession so the webview's sessionCreated handler
   // sees the worktree mapping and routes the session to the worktree tab.
   host.notifyReady(session.id, created.result, created.worktree.id)
   host.sessions.register(session)
+  timing.mark("ready")
+  const span = timing.end()
   host.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
     worktreeId: created.worktree.id,
     branch: created.result.branch,
+    durationMs: span.total,
+    ...span.phases,
   })
   host.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
   return null
