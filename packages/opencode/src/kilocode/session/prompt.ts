@@ -119,6 +119,8 @@ export namespace KiloSessionPrompt {
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
     if (!supportsPlanFollowup()) return false
+    const user = input.messages.findLast((message) => message.info.role === "user")
+    if (!user || !planning({ name: user.info.agent })) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
