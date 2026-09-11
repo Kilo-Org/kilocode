@@ -886,7 +886,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code 迁移（实验性）",
+  "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
@@ -1055,6 +1055,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",

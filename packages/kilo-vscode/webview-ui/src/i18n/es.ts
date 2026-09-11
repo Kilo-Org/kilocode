@@ -932,7 +932,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
-  "settings.experimental.claudeMigration.title": "Migración de Claude Code (Experimental)",
+  "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
@@ -1129,6 +1129,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modelo utilizado para la compactación automática y manual. Déjalo sin configurar para usar el modelo de chat. El coste, la velocidad y la calidad del resumen dependen del modelo.",
   "settings.context.compactionModel.useChatModel": "Usar modelo de chat",
+  "settings.context.compactionModel.hint":
+    "Para elegir qué modelo se usa para la compactación, consulta la configuración de Modelos.",
   "settings.context.compactionLimit.title": "Límite de compactación automática",
   "settings.context.compactionLimit.description":
     "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",

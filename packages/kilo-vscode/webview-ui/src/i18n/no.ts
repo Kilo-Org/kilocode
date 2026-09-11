@@ -884,7 +884,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code-migrering (Eksperimentell)",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
   "settings.experimental.multiProject.description":
@@ -1113,6 +1113,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell som brukes for automatisk og manuell komprimering. La feltet stå tomt for å bruke chatmodellen. Kostnad, hastighet og kvaliteten på sammendraget avhenger av modellen.",
   "settings.context.compactionModel.useChatModel": "Bruk chatmodell",
+  "settings.context.compactionModel.hint":
+    "For å velge hvilken modell som brukes til komprimering, se Modellinnstillinger.",
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",

@@ -943,7 +943,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude-Code-Migration (Experimentell)",
+  "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
   "settings.experimental.multiProject.description":
@@ -1139,6 +1139,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modell für die automatische und manuelle Komprimierung. Leer lassen, um das Chatmodell zu verwenden. Kosten, Geschwindigkeit und Zusammenfassungsqualität hängen vom Modell ab.",
   "settings.context.compactionModel.useChatModel": "Chatmodell verwenden",
+  "settings.context.compactionModel.hint":
+    "Um zu wählen, welches Modell für die Komprimierung verwendet wird, siehe Modelleinstellungen.",
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",

@@ -914,7 +914,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션 (실험적)",
+  "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
@@ -1097,6 +1097,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
   "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
+  "settings.context.compactionModel.hint": "압축에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",

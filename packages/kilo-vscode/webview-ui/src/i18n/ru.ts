@@ -920,7 +920,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
-  "settings.experimental.claudeMigration.title": "Миграция Claude Code (экспериментальная)",
+  "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
   "settings.experimental.multiProject.description":
@@ -1114,6 +1114,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, используемая для автоматического и ручного сжатия. Оставьте поле пустым, чтобы использовать модель чата. Стоимость, скорость и качество сводки зависят от модели.",
   "settings.context.compactionModel.useChatModel": "Использовать модель чата",
+  "settings.context.compactionModel.hint": "Чтобы выбрать модель для сжатия, см. настройки Моделей.",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",

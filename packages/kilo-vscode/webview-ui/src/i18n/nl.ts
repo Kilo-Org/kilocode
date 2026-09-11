@@ -922,7 +922,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code-migratie (Experimenteel)",
+  "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
@@ -1086,6 +1086,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
   "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
+  "settings.context.compactionModel.hint":
+    "Om te kiezen welk model wordt gebruikt voor compactie, zie de Modellen-instellingen.",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",

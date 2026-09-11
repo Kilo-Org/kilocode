@@ -22,6 +22,7 @@ import {
   getMentionRemovalRange,
   findMentionRange,
   mentionSettled,
+  modelReferenceToken,
   sessionMentionText,
   sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
@@ -60,10 +61,14 @@ export interface FileMention {
   mentionedPaths: Accessor<Set<string>>
   /** Mentioned past chats, keyed by their `@title` token in the text. */
   mentionedSessions: Accessor<Map<string, SessionSearchItem>>
+  /** Mentioned model references, keyed by their `@providerID/modelID` token. */
+  mentionedModels: Accessor<Set<string>>
   /** Whether the past-chat session picker (AM-style search) is open. */
   sessionPicker: Accessor<boolean>
   /** Directory-scoped past chats shown in the session picker. */
   sessionCandidates: Accessor<SessionSearchItem[]>
+  /** Whether the inline model reference picker is open. */
+  modelPicker: Accessor<boolean>
   worktreePicker: Accessor<boolean>
   worktreeCandidates: Accessor<WorktreeReference[]>
   selectWorktree: (
@@ -138,6 +143,8 @@ export interface FileMention {
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => void
+  /** Insert a model reference picked from the model picker as an @-mention. */
+  selectModelReference: (providerID: string, modelID: string, onSelect?: () => void) => void
 }
 
 export function useFileMention(
@@ -145,14 +152,17 @@ export function useFileMention(
   sessionID?: Accessor<string | undefined>,
   git?: Accessor<boolean>,
   worktrees?: Accessor<WorktreeReference[]>,
+  modelKeys?: Accessor<Set<string>>,
 ): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
+  const [mentionedModels, setMentionedModels] = createSignal<Set<string>>(new Set())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
   const [sessionPicker, setSessionPicker] = createSignal(false)
   const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
+  const [modelPicker, setModelPicker] = createSignal(false)
   const [worktreePicker, setWorktreePicker] = createSignal(false)
   const worktreeCandidates = () => worktrees?.().filter((worktree) => !worktree.disabled) ?? []
   let workspaceDir = ""
@@ -164,6 +174,9 @@ export function useFileMention(
   // Same accumulation for past-chat mentions, keyed by their exact visible
   // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
   const knownSessions = new Map<string, SessionSearchItem>()
+  // Model references are kept apart from knownPaths: they are inline text
+  // tokens, not files, so they must never turn into file attachments.
+  const knownModels = new Set<string>()
   const knownWorktrees = new Map<string, WorktreeReference>()
   const references = () => {
     for (const worktree of worktrees?.() ?? []) {
@@ -216,6 +229,8 @@ export function useFileMention(
     setText: (text: string) => void
     onSelect?: () => void
   } | null = null
+  // The `@query` range that the open model picker will replace on selection.
+  let modelPickerState: { textarea: HTMLTextAreaElement; atStart: number; atEnd: number } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
   // Offset of the "@" that opened the current query, the mention inserted at
   // each "@" offset, and the last spaced query the file search resolved to
@@ -254,6 +269,8 @@ export function useFileMention(
     sessionTimer = undefined
     setSessionCandidates([])
     setWorktreePicker(false)
+    setModelPicker(false)
+    modelPickerState = null
     setMentionResults([])
     setMentionIndex(0)
     return value
@@ -461,6 +478,7 @@ export function useFileMention(
     setMentionResults([])
     setSessionPicker(false)
     setWorktreePicker(false)
+    setModelPicker(false)
   }
 
   const closeSessionPicker = () => {
@@ -469,8 +487,24 @@ export function useFileMention(
 
   const syncMentionedPaths = (text: string) => {
     references()
+    reclassifyModels()
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
     setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
+    setMentionedModels(() => _syncMentionedPaths(knownModels, text))
+  }
+
+  // A restored draft can be seeded before the model catalog has loaded, so the
+  // seed-time split between files and models is not final. Re-run it against the
+  // live catalog so a model reference that was momentarily treated as a file
+  // moves to the model set instead of becoming a bogus attachment.
+  const reclassifyModels = () => {
+    const keys = modelKeys?.()
+    if (!keys?.size) return
+    for (const key of keys) {
+      if (!knownPaths.has(key)) continue
+      knownPaths.delete(key)
+      knownModels.add(key)
+    }
   }
 
   // Past chats are searched client-side (fuzzysort, same as the Agent Manager
@@ -557,6 +591,18 @@ export function useFileMention(
       return
     }
 
+    if (result.type === "model") {
+      // Switch the dropdown into the model picker; the actual insertion
+      // happens when a model is picked there.
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      modelPickerState = { textarea, atStart: atPos, atEnd: cursor }
+      closeMention()
+      setModelPicker(true)
+      return
+    }
+
     // Past chats resolve their token again here: inline results are built from
     // a shared candidate list, so two chats with the same title would otherwise
     // insert the same token and overwrite each other in knownSessions.
@@ -620,6 +666,35 @@ export function useFileMention(
       onSelect,
     )
 
+  const selectModelReference = (providerID: string, modelID: string, onSelect?: () => void) => {
+    const state = modelPickerState
+    modelPickerState = null
+    setModelPicker(false)
+    if (!state) return
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const token = modelReferenceToken(providerID, modelID)
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Add to knownModels BEFORE execCommand so syncMentionedPaths (triggered by
+    // the input event) can discover the new reference. Model tokens stay out of
+    // knownPaths so they are never turned into file attachments.
+    knownModels.add(token)
+    remember(state.atStart, token)
+    // Restore focus before execCommand: the picker's search field owns focus,
+    // which makes execCommand silently no-op.
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${token}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    setMentionedModels((prev) => new Set([...prev, token]))
+    onSelect?.()
+  }
+
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false
 
@@ -629,6 +704,7 @@ export function useFileMention(
     if (suppress) return
     closeSessionPicker()
     setWorktreePicker(false)
+    setModelPicker(false)
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
     if (!match) {
@@ -723,12 +799,17 @@ export function useFileMention(
   }
 
   // Mention tokens that count as atomic units for cursor movement, deletion
-  // and selection snapping: file paths plus past-chat title tokens.
-  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys()])
+  // and selection snapping: file paths, past-chat title tokens and model
+  // references.
+  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys(), ...mentionedModels()])
 
   const parseFileAttachments = (text: string): FileAttachment[] => {
     const worktrees = references()
-    const paths = new Set([..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path)))
+    reclassifyModels()
+    const keys = modelKeys?.()
+    const paths = new Set(
+      [..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path) && !keys?.has(path)),
+    )
     return [
       ...buildFileAttachments(text, paths, workspaceDir),
       ...buildSessionAttachments(text, mentionedSessions()),
@@ -858,7 +939,11 @@ export function useFileMention(
     const re = /@((?:[A-Za-z]:)?(?:[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+))/g
     let m: RegExpExecArray | null
     while ((m = re.exec(text))) {
-      knownPaths.add(m[1])
+      const token = m[1]!
+      // A known model reference is inline text, not a path, so it must not be
+      // seeded into knownPaths where it would become a file attachment.
+      if (modelKeys?.().has(token)) knownModels.add(token)
+      else knownPaths.add(token)
     }
     syncMentionedPaths(text)
   }
@@ -926,8 +1011,10 @@ export function useFileMention(
   return {
     mentionedPaths,
     mentionedSessions,
+    mentionedModels,
     sessionPicker,
     sessionCandidates,
+    modelPicker,
     worktreePicker,
     worktreeCandidates,
     selectWorktree,
@@ -950,5 +1037,6 @@ export function useFileMention(
     seedFromParts,
     seedSessions,
     selectSession,
+    selectModelReference,
   }
 }

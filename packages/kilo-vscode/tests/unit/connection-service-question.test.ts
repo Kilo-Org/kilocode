@@ -26,6 +26,49 @@ describe("KiloConnectionService permission routing", () => {
     expect(service.getPermissionDirectory("per_stale")).toBeUndefined()
     expect(service.getPermissionRevision()).toBe(4)
   })
+
+  test("keeps live permission routes and claims when a session is temporarily pruned", async () => {
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const gate = Promise.withResolvers<{
+      kind: "resolved"
+      sessionID: string
+      response: "once"
+    }>()
+    service.recordPermissionDirectory("per_live", "/tmp/worktree", "ses_child")
+    const response = service.runPermissionResponse("per_live", "ses_child", async () => gate.promise)
+
+    service.pruneSession("ses_child")
+
+    expect(service.getPermissionDirectory("per_live")).toBe("/tmp/worktree")
+    expect(service.getPermissionSession("per_live")).toBe("ses_child")
+    expect(service.isPermissionResponseClaimed("per_live")).toBe(true)
+
+    gate.resolve({ kind: "resolved", sessionID: "ses_child", response: "once" })
+    await expect(response).resolves.toEqual({ kind: "resolved", sessionID: "ses_child", response: "once" })
+    service.dispose()
+  })
+
+  test("clears permission state after a session is deleted", async () => {
+    const service = new KiloConnectionService({} as ConstructorParameters<typeof KiloConnectionService>[0])
+    const gate = Promise.withResolvers<{
+      kind: "resolved"
+      sessionID: string
+      response: "once"
+    }>()
+    service.recordPermissionDirectory("per_deleted", "/tmp/worktree", "ses_deleted")
+    const response = service.runPermissionResponse("per_deleted", "ses_deleted", async () => gate.promise)
+
+    service.clearPermissionSession("ses_deleted")
+
+    expect(service.getPermissionDirectory("per_deleted")).toBeUndefined()
+    expect(service.getPermissionSession("per_deleted")).toBeUndefined()
+    expect(service.isPermissionResponseClaimed("per_deleted")).toBe(true)
+
+    gate.resolve({ kind: "resolved", sessionID: "ses_deleted", response: "once" })
+    await expect(response).resolves.toEqual({ kind: "resolved", sessionID: "ses_deleted", response: "once" })
+    expect(service.isPermissionResponseClaimed("per_deleted")).toBe(false)
+    service.dispose()
+  })
 })
 
 describe("KiloConnectionService question routing", () => {

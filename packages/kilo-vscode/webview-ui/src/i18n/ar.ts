@@ -900,7 +900,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
-  "settings.experimental.claudeMigration.title": "ترحيل Claude Code (تجريبي)",
+  "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
@@ -1086,6 +1086,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
   "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
+  "settings.context.compactionModel.hint": "لاختيار النموذج المستخدم للضغط، راجع إعدادات النماذج.",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",

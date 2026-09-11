@@ -913,7 +913,7 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
-  "settings.experimental.claudeMigration.title": "Claude Code Geçişi (Deneysel)",
+  "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
@@ -1074,6 +1074,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
   "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
+  "settings.context.compactionModel.hint": "Sıkıştırma için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
