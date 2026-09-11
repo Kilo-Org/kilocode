@@ -13,6 +13,7 @@
         <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
+        <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider"/>
 
         <notificationGroup id="Kilo Code"
                            displayType="BALLOON"
