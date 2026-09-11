@@ -495,20 +495,25 @@ describe("BrowserBroker", () => {
     expect(untrusted.sessions()).toEqual([])
   })
 
-  test("explains how to recover when the selected browser runtime is missing", async () => {
-    const broker = new BrowserBroker({
-      log: () => {},
-      useSystemChrome: () => false,
-      launch: async () => {
-        throw new Error("Browser executable does not exist")
-      },
-    })
-    brokers.push(broker)
-    await expect(
-      broker.open({ sessionId: "missing-runtime", directory: "/tmp/project" }, "http://localhost:3000/"),
-    ).rejects.toThrow("enable Use System Chrome")
-    expect(broker.sessions()).toEqual([])
-  })
+  test.each([false, true])(
+    "points at Agent Manager settings when the browser is missing (Chrome: %s)",
+    async (chrome) => {
+      const broker = new BrowserBroker({
+        log: () => {},
+        useSystemChrome: () => chrome,
+        launch: async () => {
+          throw new Error("Browser executable does not exist")
+        },
+      })
+      brokers.push(broker)
+      await expect(
+        broker.open({ sessionId: "missing-runtime", directory: "/tmp/project" }, "http://localhost:3000/"),
+      ).rejects.toThrow(
+        `${chrome ? "disable" : "enable"} Use System Chrome in Kilo Settings > Experimental for the Agent Manager browser`,
+      )
+      expect(broker.sessions()).toEqual([])
+    },
+  )
 
   test("rejects unregistered browser sessions before launching Chrome", async () => {
     const broker = new BrowserBroker({ log: () => {} })

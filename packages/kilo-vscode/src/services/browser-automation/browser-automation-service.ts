@@ -26,6 +26,7 @@ export class BrowserAutomationService implements vscode.Disposable {
         if (!event.affectsConfiguration("kilo-code.new.browserAutomation")) return
         void this.syncWithSettings()
       }),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.enqueue(() => this.apply(true))),
     )
   }
 
@@ -57,7 +58,7 @@ export class BrowserAutomationService implements vscode.Disposable {
     return next
   }
 
-  private async apply(): Promise<void> {
+  private async apply(reconcile = false): Promise<void> {
     if (this.disposed) return
     if (!this.enabled()) {
       await this.unregister()
@@ -68,7 +69,10 @@ export class BrowserAutomationService implements vscode.Disposable {
       this.setState("disabled")
       return
     }
-    await this.register()
+    const dirs = this.directories()
+    const removed = [...this.registered].filter((dir) => !dirs.includes(dir))
+    if (removed.length) await this.unregister(removed)
+    await this.register(reconcile ? dirs.filter((dir) => !this.registered.has(dir)) : dirs)
   }
 
   private enabled(): boolean {
@@ -89,7 +93,7 @@ export class BrowserAutomationService implements vscode.Disposable {
     return [...new Set(dirs)]
   }
 
-  private async register(): Promise<void> {
+  private async register(dirs: string[]): Promise<void> {
     const client = this.getClient()
     if (!client) {
       this.setState("failed")
@@ -98,7 +102,7 @@ export class BrowserAutomationService implements vscode.Disposable {
     const command = this.command()
     this.setState("registering")
     let failure: unknown
-    for (const directory of this.directories()) {
+    for (const directory of dirs) {
       try {
         const { data: status } = await client.mcp.add(
           {
@@ -140,10 +144,10 @@ export class BrowserAutomationService implements vscode.Disposable {
     this.setState("disconnected")
   }
 
-  private async unregister(): Promise<void> {
+  private async unregister(dirs = [...this.registered]): Promise<void> {
     const client = this.getClient()
     if (client) {
-      for (const directory of [...this.registered]) {
+      for (const directory of dirs) {
         try {
           await client.mcp.disconnect(
             { name: BrowserAutomationService.MCP_SERVER_NAME, directory },

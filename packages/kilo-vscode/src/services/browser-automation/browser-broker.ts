@@ -475,8 +475,8 @@ export class BrowserBroker {
       const detail = error instanceof Error ? error.message : String(error)
       const action =
         this.opts.useSystemChrome?.() === false
-          ? "Install a compatible Playwright Chromium browser or enable Use System Chrome in Kilo Settings > Web Tools."
-          : "Install Google Chrome or select an existing Playwright Chromium browser in Kilo Settings > Web Tools."
+          ? "Install a compatible Playwright Chromium browser or enable Use System Chrome in Kilo Settings > Experimental for the Agent Manager browser."
+          : "Install Google Chrome or disable Use System Chrome in Kilo Settings > Experimental for the Agent Manager browser to use an installed Playwright Chromium browser."
       throw new Error(`${action} ${detail}`.slice(0, 1000), { cause: error })
     } finally {
       this.browserStarting = undefined

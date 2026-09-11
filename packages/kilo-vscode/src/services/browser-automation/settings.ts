@@ -6,8 +6,8 @@ export const PLAYWRIGHT_OUTPUT_DIR = path.join(os.tmpdir(), "kilo-playwright-mcp
 /**
  * Build the Playwright MCP launch command.
  *
- * Artifacts go to a temp directory outside the workspace so screenshots and
- * traces are never staged in git.
+ * Default artifacts go outside the workspace. Explicit screenshot paths can
+ * bypass this directory, so this is not a guarantee against staging artifacts.
  */
 export function playwrightCommand(input: {
   headless: boolean
