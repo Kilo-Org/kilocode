@@ -129,4 +129,98 @@ describe("ProviderTransform.message - prompt cache breakpoint endpoint gating", 
     expect(result[0].providerOptions?.azure?.promptCacheBreakpoint).toBeUndefined()
     expect(result[1].providerOptions?.azure?.promptCacheBreakpoint).toBeUndefined()
   })
+
+  test("azure-cognitive-services endpoint still applies promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "azure-cognitive-services",
+      api: {
+        id: "gpt-5.6",
+        url: "",
+        npm: "@ai-sdk/azure",
+      },
+    })
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "https://myresource.cognitiveservices.azure.com/openai/v1",
+    }) as any[]
+
+    expect(result[0].providerOptions?.azure?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+    expect(result[1].providerOptions?.azure?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+  })
+
+  test("azure-cognitive-services endpoint on a non-azure host does not apply promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "azure-cognitive-services",
+      api: {
+        id: "gpt-5.6",
+        url: "",
+        npm: "@ai-sdk/azure",
+      },
+    })
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "https://proxy.example.com/azure/v1",
+    }) as any[]
+
+    expect(result[0].providerOptions?.azure?.promptCacheBreakpoint).toBeUndefined()
+    expect(result[1].providerOptions?.azure?.promptCacheBreakpoint).toBeUndefined()
+  })
+
+  test("kilo provider with the official api.kilo.ai base URL still applies promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "kilo",
+      api: {
+        id: "gpt-5.6",
+        url: "https://api.kilo.ai",
+        npm: "@ai-sdk/openai",
+      },
+    })
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "https://api.kilo.ai",
+    }) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+  })
+
+  test("kilo provider with a custom base URL does not apply promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "kilo",
+      api: {
+        id: "gpt-5.6",
+        url: "",
+        npm: "@ai-sdk/openai",
+      },
+    })
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "https://proxy.example.com/kilo/v1",
+    }) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+  })
+
+  test("openai provider with an unexpanded {env:} base URL still applies promptCacheBreakpoint", () => {
+    const model = createModel()
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "{env:OPENAI_BASE_URL}",
+    }) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+  })
+
+  test("openai provider with an unexpanded ${} base URL still applies promptCacheBreakpoint", () => {
+    const model = createModel()
+
+    const result = ProviderTransform.message(msgs(), model, {
+      providerEndpointOverride: "${OPENAI_BASE_URL}",
+    }) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toEqual({ mode: "explicit" })
+  })
 })
