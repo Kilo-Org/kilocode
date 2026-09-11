@@ -1337,5 +1337,11 @@ export const dict = {
   "chat.search.close": "Cerrar búsqueda",
   "chat.search.invalidRegex": "Expresión regular no válida",
   "chat.search.noResults": "Sin resultados",
+  "settings.experimental.browserAutomation.title": "Agent Manager Browser",
+  "settings.experimental.browserAutomation.description":
+    "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use installed Google Chrome for the Agent Manager browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
 }

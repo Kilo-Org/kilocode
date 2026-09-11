@@ -1349,5 +1349,11 @@ export const dict = {
   "chat.search.close": "Suche schließen",
   "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
   "chat.search.noResults": "Keine Ergebnisse",
+  "settings.experimental.browserAutomation.title": "Agent Manager Browser",
+  "settings.experimental.browserAutomation.description":
+    "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use installed Google Chrome for the Agent Manager browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
 } satisfies Partial<Record<Keys, string>>
