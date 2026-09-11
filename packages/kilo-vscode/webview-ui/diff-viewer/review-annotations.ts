@@ -18,6 +18,22 @@ export interface AnnotationLabels {
   delete: string
 }
 
+export interface CommentFormActions {
+  body: string
+  onBodyChange: (body: string) => void
+  onSave: (body: string, selectedText: string) => void
+  onSend: (body: string, selectedText: string) => void
+  onGithubSuccess: () => void
+  onCancel: () => void
+  onDestination: (value: "local" | "github") => void
+}
+
+export type CommentFormMount = (
+  host: HTMLElement,
+  meta: AnnotationMeta,
+  actions: CommentFormActions,
+) => (() => void) | undefined
+
 export function labels(t: (key: string, params?: UiI18nParams) => string): AnnotationLabels {
   return {
     commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
@@ -44,6 +60,7 @@ export interface AnnotationMeta {
   endLine?: number
   editing?: boolean
   text?: string
+  destination?: "local" | "github"
 }
 
 export type ReviewDraft = Pick<AnnotationMeta, "file" | "side" | "line" | "endLine">
@@ -91,6 +108,7 @@ export function reviewAnnotationSpeechKey(meta: AnnotationMeta): string | undefi
 }
 
 interface AnnotationHandlers {
+  track?: (meta: AnnotationMeta, host: HTMLElement, dispose: () => void) => void
   diffs: WorktreeFileDiff[]
   editing: string | null
   setEditing: (id: string | null) => void
@@ -99,6 +117,10 @@ interface AnnotationHandlers {
   updateComment: (id: string, text: string) => void
   deleteComment: (id: string) => void
   cancelDraft: () => void
+  completeRemoteDraft?: (meta: AnnotationMeta) => void
+  /** Remember the destination so the next comment keeps the same choice. */
+  onDestination?: (value: "local" | "github") => void
+  mount?: CommentFormMount
   labels: AnnotationLabels
   activeTerminalId: () => string | undefined
   speech?: {
@@ -109,17 +131,23 @@ interface AnnotationHandlers {
   }
 }
 
-function focusWhenConnected(el: HTMLTextAreaElement): void {
+function focusWhenConnected(el: HTMLElement): () => void {
+  if (el.isConnected) {
+    el.focus()
+    return () => {}
+  }
   let attempts = 0
+  let frame = 0
   const tick = () => {
     if (el.isConnected) {
       el.focus()
       return
     }
     attempts += 1
-    if (attempts < 20) requestAnimationFrame(tick)
+    if (attempts < 20) frame = requestAnimationFrame(tick)
   }
-  requestAnimationFrame(tick)
+  frame = requestAnimationFrame(tick)
+  return () => cancelAnimationFrame(frame)
 }
 
 // Keep composer text off the disposable annotation DOM without making each keystroke reactive.
@@ -245,6 +273,87 @@ export function buildReviewAnnotation(
   if (meta.type === "draft") {
     wrapper.className = "am-annotation am-annotation-draft"
 
+    if (handlers.mount) {
+      wrapper.dataset.mounted = "true"
+      const header = document.createElement("div")
+      header.className = "am-annotation-header"
+      header.textContent = handlers.labels.commentOnLine(meta.line)
+      wrapper.appendChild(header)
+      const host = document.createElement("div")
+      host.className = "am-annotation-form"
+      wrapper.appendChild(host)
+
+      let dispose: (() => void) | undefined
+      let unfocus: (() => void) | undefined
+      let speechField: HTMLTextAreaElement | undefined
+
+      const submit = () => {
+        // Speech-to-text confirms with the local action. GitHub publication stays
+        // on an explicit button click so a voice command cannot post by accident.
+        const kilo = host.querySelector<HTMLButtonElement>('[data-action="send-kilo"], [data-action="send"]')
+        if (kilo && !kilo.disabled) {
+          kilo.click()
+          return
+        }
+        const primary = host.querySelector<HTMLButtonElement>('[data-action="send-primary"]')
+        if (primary && primary.dataset.destination !== "github" && !primary.disabled) {
+          primary.click()
+          return
+        }
+        const fallback = host.querySelector<HTMLButtonElement>('[data-action="submit"]')
+        if (fallback && !fallback.disabled) fallback.click()
+      }
+
+      // Keep focus and speech-to-text attached to the mounted form's editor.
+      const afterMount = () => {
+        const field = host.querySelector<HTMLTextAreaElement>("textarea")
+        if (!field) return
+        unfocus?.()
+        unfocus = focusWhenConnected(field)
+        if (handlers.speech && field !== speechField) {
+          speechField = field
+          field.addEventListener("keydown", (event) => {
+            if (!handlers.speech?.down(meta, event, submit)) return
+            event.preventDefault()
+            event.stopPropagation()
+          })
+          field.addEventListener("keyup", (event) => {
+            if (!handlers.speech?.up(meta, event)) return
+            event.preventDefault()
+            event.stopPropagation()
+          })
+        }
+        if (!handlers.speech) return
+        const row = host.querySelector('[data-slot="comment-actions"]')
+        const speechHost = handlers.speech.render(meta, field)
+        if (speechHost && row) row.prepend(speechHost)
+      }
+
+      dispose = handlers.mount(host, meta, {
+        body: meta.text ?? "",
+        onBodyChange: (body) => {
+          meta.text = body
+        },
+        onSave: (body, selected) => handlers.addComment(meta.file, meta.side, meta.line, body, selected),
+        onSend: (body, selected) => handlers.sendComment(meta.file, meta.side, meta.line, body, selected),
+        onGithubSuccess: () => handlers.completeRemoteDraft?.(meta),
+        onCancel: handlers.cancelDraft,
+        onDestination: (value) => {
+          meta.destination = value
+          handlers.onDestination?.(value)
+        },
+      })
+      afterMount()
+
+      handlers.track?.(meta, wrapper, () => {
+        unfocus?.()
+        dispose?.()
+        dispose = undefined
+      })
+      return wrapper
+    }
+
+    // Fallback native composer for surfaces without a mounted form (for example the document panel).
     const header = document.createElement("div")
     header.className = "am-annotation-header"
     header.textContent = handlers.labels.commentOnLine(meta.line)
@@ -351,6 +460,11 @@ export function buildReviewAnnotation(
     return wrapper
   }
 
+  return buildSavedAnnotation(meta, handlers)
+}
+
+function buildSavedAnnotation(meta: AnnotationMeta, handlers: AnnotationHandlers): HTMLElement {
+  const wrapper = document.createElement("div")
   const comment = meta.comment!
   if (meta.editing) {
     wrapper.className = "am-annotation am-annotation-draft"

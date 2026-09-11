@@ -243,6 +243,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Надіслати все до чату ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "Локальні коментарі ({{count}})",
   "agentManager.review.prCount": "Коментарі PR ({{count}})",
   "agentManager.review.fileCount": "{{count}} файлів",

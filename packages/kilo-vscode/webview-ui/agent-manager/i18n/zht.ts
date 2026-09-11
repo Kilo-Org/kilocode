@@ -222,6 +222,8 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "全部傳送到聊天 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.sendAllToGithubWithCount": "Send {{count}} to GitHub #{{number}}",
+  "agentManager.review.sendAllToGithubFailed": "Stopped at a GitHub error: {{error}}",
   "agentManager.review.inlineCount": "本機留言 ({{count}})",
   "agentManager.review.prCount": "PR 留言 ({{count}})",
   "agentManager.review.fileCount": "{{count}} 個檔案",

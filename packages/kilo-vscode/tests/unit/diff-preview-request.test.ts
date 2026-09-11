@@ -201,10 +201,7 @@ describe("diff preview detail requests", () => {
   })
 
   it("discards cancelled standalone details and recovers real failures through the message handler", async () => {
-    const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
-    const result = await build({
-      stdin: {
-        contents: `
+    const child = await renderSurface(`
           import assert from "node:assert/strict"
           import { createRoot } from "solid-js"
           import { SourceController } from "../src/diff/SourceController"
@@ -252,75 +249,119 @@ describe("diff preview detail requests", () => {
             controller.dispose()
             dispose()
           })().catch((err) => { console.error(err); process.exitCode = 1 })
-        `,
-        resolveDir: WEBVIEW,
-        sourcefile: "detail-recovery.ts",
-        loader: "ts",
-      },
-      bundle: true,
-      platform: "node",
-      format: "cjs",
-      write: false,
-      logLevel: "silent",
-      plugins: [
-        {
-          name: "review-surface",
-          setup(ctx) {
-            ctx.onResolve({ filter: /^solid-js$/ }, () => ({ path: path.join(solid, "dist/solid.js") }))
-            ctx.onResolve({ filter: /^solid-js\/web$/ }, () => ({ path: path.join(solid, "web/dist/server.js") }))
-            ctx.onResolve({ filter: /.*/ }, (args) => {
-              if (
-                args.path !== "probe:surface" &&
-                (!args.importer.endsWith("/DiffViewerApp.tsx") || ["solid-js", "./diff-state"].includes(args.path))
-              )
-                return
-              return { path: "surface", namespace: "probe" }
-            })
-            ctx.onLoad({ filter: /.*/, namespace: "probe" }, () => ({
-              contents: `
-                export const state = { posted: [] }
-                export const useVSCode = () => ({ onMessage(receive) { state.receive = receive; return () => {} } })
-                export const getVSCodeAPI = () => ({ postMessage: (message) => state.posted.push(message) })
-                export const useLanguage = () => ({ t: (key) => key })
-                export const useServer = () => ({})
-                export const FullScreenDiffView = (props) => { state.view = props; return "" }
-                export const Toast = { Region: () => "" }
-                ${[
-                  "DialogProvider",
-                  "CodeComponentProvider",
-                  "DiffComponentProvider",
-                  "FileComponentProvider",
-                  "MarkedProvider",
-                  "ThemeProvider",
-                  "LanguageProvider",
-                  "ServerProvider",
-                  "ConfigProvider",
-                  "ProviderProvider",
-                  "VSCodeProvider",
-                  "SpeechToTextModelsProvider",
-                  "SpeechToTextPrewarm",
-                  "Code",
-                  "Diff",
-                  "File",
-                  "Icon",
-                  "DiffPickerHeader",
-                  "BaseBranchPicker",
-                ]
-                  .map((name) => `export const ${name} = (props) => props.children`)
-                  .join("\n")}
-              `,
-              loader: "js",
-            }))
-          },
-        },
-        solidPlugin({ solid: { generate: "ssr" } }),
-      ],
-    })
-    const child = Bun.spawnSync(["bun", "-e", result.outputFiles.at(0)!.text], {
-      cwd: WEBVIEW,
-      stdout: "pipe",
-      stderr: "pipe",
-    })
-    expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+        `)
+    expectPass(child)
+  })
+
+  it("reloads the PR snapshot on a ref-only refresh", async () => {
+    const child = await renderSurface(`
+          import assert from "node:assert/strict"
+          import { createRoot } from "solid-js"
+          import { DiffViewerApp } from "./diff-viewer/DiffViewerApp"
+          import { state } from "probe:surface"
+          globalThis.window = new EventTarget()
+          const dispose = createRoot((dispose) => { DiffViewerApp({}); return dispose })
+          const target = (head) => ({
+            projectId: "p",
+            worktreeId: "diff",
+            prNumber: 7,
+            prUrl: "https://github.com/o/r/pull/7",
+            baseRefOid: "base",
+            headRefOid: head,
+          })
+          state.receive({ type: "diffViewer.prComments", comments: [], target: target("a"), threads: [] })
+          assert.equal(state.requests.length, 1, "initial target loads the snapshot")
+          assert.equal(state.requests[0].headRefOid, "a")
+          state.receive({ type: "diffViewer.prComments", comments: [], target: target("b"), threads: [] })
+          assert.equal(state.requests.length, 2, "ref-only refresh reloads the snapshot")
+          assert.equal(state.requests[1].headRefOid, "b")
+          dispose()
+        `)
+    expectPass(child)
   })
 })
+
+async function renderSurface(script: string) {
+  const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
+  const result = await build({
+    stdin: {
+      contents: script,
+      resolveDir: WEBVIEW,
+      sourcefile: "review-surface.ts",
+      loader: "ts",
+    },
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    write: false,
+    logLevel: "silent",
+    plugins: [
+      {
+        name: "review-surface",
+        setup(ctx) {
+          ctx.onResolve({ filter: /^solid-js$/ }, () => ({ path: path.join(solid, "dist/solid.js") }))
+          ctx.onResolve({ filter: /^solid-js\/web$/ }, () => ({ path: path.join(solid, "web/dist/server.js") }))
+          ctx.onResolve({ filter: /.*/ }, (args) => {
+            if (
+              args.path !== "probe:surface" &&
+              (!args.importer.endsWith("/DiffViewerApp.tsx") || ["solid-js", "./diff-state"].includes(args.path))
+            )
+              return
+            return { path: "surface", namespace: "probe" }
+          })
+          ctx.onLoad({ filter: /.*/, namespace: "probe" }, () => ({
+            contents: `
+              export const state = { posted: [], requests: [] }
+              export const useVSCode = () => ({ onMessage(receive) { state.receive = receive; return () => {} } })
+              export const getVSCodeAPI = () => ({ postMessage: (message) => state.posted.push(message) })
+              export const useLanguage = () => ({ t: (key) => key })
+              export const useServer = () => ({})
+              export const FullScreenDiffView = (props) => { state.view = props; return "" }
+              export const Toast = { Region: () => "" }
+              export const reviewRequest = (request) => { state.requests.push(request) }
+              export const createPRDiffs = () => []
+              export const createDiffCommentForms = () => ({ mount: () => () => {} })
+              ${[
+                "DialogProvider",
+                "CodeComponentProvider",
+                "DiffComponentProvider",
+                "FileComponentProvider",
+                "MarkedProvider",
+                "ThemeProvider",
+                "LanguageProvider",
+                "ServerProvider",
+                "ConfigProvider",
+                "ProviderProvider",
+                "VSCodeProvider",
+                "SpeechToTextModelsProvider",
+                "SpeechToTextPrewarm",
+                "Code",
+                "Diff",
+                "File",
+                "Icon",
+                "IconButton",
+                "Button",
+                "Spinner",
+                "DiffPickerHeader",
+                "BaseBranchPicker",
+              ]
+                .map((name) => `export const ${name} = (props) => props.children`)
+                .join("\n")}
+            `,
+            loader: "js",
+          }))
+        },
+      },
+      solidPlugin({ solid: { generate: "ssr" } }),
+    ],
+  })
+  return Bun.spawnSync(["bun", "-e", result.outputFiles.at(0)!.text], {
+    cwd: WEBVIEW,
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+}
+
+function expectPass(child: ReturnType<typeof Bun.spawnSync>) {
+  expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+}
