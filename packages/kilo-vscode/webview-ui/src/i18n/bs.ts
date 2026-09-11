@@ -1119,6 +1119,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model koji se koristi za automatsku i ručnu kompresiju. Ostavite nepostavljeno da biste koristili model za chat. Trošak, brzina i kvalitet sažetka zavise od modela.",
   "settings.context.compactionModel.useChatModel": "Koristi model za chat",
+  "settings.context.compactionModel.hint":
+    "Da odaberete koji se model koristi za kompresiju, pogledajte postavke Modela.",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
