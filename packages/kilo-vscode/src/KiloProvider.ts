@@ -497,8 +497,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
   private continueInWorktreeHandler:
-    | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
-    | null = null
+    ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>) | null =
+    null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
 
@@ -3331,6 +3331,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const service = this.autoCleanup()
       if (!service) {
         this.postMessage({ type: "error", message: "Task cleanup is unavailable" })
+        this.sendAutoCleanupState()
         return true
       }
       const result = await service.run()

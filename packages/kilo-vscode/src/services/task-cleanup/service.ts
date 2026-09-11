@@ -23,6 +23,7 @@ const INTERVAL_MS = DAY_MS
 export class TaskCleanupService {
   private timer?: ReturnType<typeof setTimeout>
   private running = false
+  private disposed = false
 
   constructor(
     private readonly connection: KiloConnectionService,
@@ -30,10 +31,12 @@ export class TaskCleanupService {
   ) {}
 
   start(): void {
+    this.disposed = false
     this.schedule(STARTUP_DELAY_MS)
   }
 
   dispose(): void {
+    this.disposed = true
     if (this.timer) clearTimeout(this.timer)
   }
 
@@ -53,12 +56,13 @@ export class TaskCleanupService {
    */
   private async tick(): Promise<void> {
     try {
+      if (this.disposed) return
       if (!cleanupSettings().enabled) return
       const last = this.lastResult()
       if (last && Date.now() - last.at < INTERVAL_MS) return
       await this.run()
     } finally {
-      this.schedule(INTERVAL_MS)
+      if (!this.disposed) this.schedule(INTERVAL_MS)
     }
   }
 

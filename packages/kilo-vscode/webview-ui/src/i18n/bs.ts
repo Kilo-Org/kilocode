@@ -1115,10 +1115,10 @@ export const dict = {
   "settings.autoCleanup.enable.title": "Omogući automatsko čišćenje zadataka",
   "settings.autoCleanup.enable.description":
     "Automatski briše staru historiju zadataka kako bi oslobodio prostor na disku. Zadaci koji su trenutno aktivni, i zadaci sa nedavnim forkom, nikad se ne brišu. Brisanje je trajno.",
-  "settings.autoCleanup.defaultRetention.title": "Zadrži zadake (dana)",
+  "settings.autoCleanup.defaultRetention.title": "Zadrži zadatke (dana)",
   "settings.autoCleanup.defaultRetention.description":
     "Koliko dugo se historija zadataka čuva prije automatskog brisanja.",
-  "settings.autoCleanup.incompleteRetention.title": "Zadrži napuštene zadake (dana)",
+  "settings.autoCleanup.incompleteRetention.title": "Zadrži napuštene zadatke (dana)",
   "settings.autoCleanup.incompleteRetention.description":
     "Zadaci koji nikad nisu imali pravu razmjenu tretiraju se kao napušteni i brišu po ovom kraćem rasporedu.",
   "settings.autoCleanup.lastRun.title": "Posljednje čišćenje",
