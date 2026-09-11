@@ -1,5 +1,5 @@
 diff --git a/lib/solid/Virtualizer.d.ts b/lib/solid/Virtualizer.d.ts
-index 144dd7f..819aab9 100644
+index 144dd7fba894d440069a8dc0415f4b778a98793d..819aab92c5727d3bca4ef51da08ab05ec1af452f 100644
 --- a/lib/solid/Virtualizer.d.ts
 +++ b/lib/solid/Virtualizer.d.ts
 @@ -38,6 +38,10 @@ export interface VirtualizerHandle {
@@ -13,8 +13,47 @@ index 144dd7f..819aab9 100644
      /**
       * Scroll to the item specified by index.
       * @param index index of item
+diff --git a/lib/solid/index.js b/lib/solid/index.js
+index dbf44b0231abaf594c026488dd0261a3fa3fafc7..2fb3544c283a2f241a65be574ad01d0f21db4e3a 100644
+--- a/lib/solid/index.js
++++ b/lib/solid/index.js
+@@ -306,7 +306,7 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+     }, r);
+     const c = q(r.data.length, o, void 0, i, !o), l = ((e, t) => {
+         let r;
+-        const n = t ? "width" : "height", o = new WeakMap, s = D(t => {
++        const n = t ? "width" : "height", o = new WeakMap, m = new Map, s = D(t => {
+             const s = [];
+             for (const {target: i, contentRect: c} of t) if (i.offsetParent) if (i === r) e.H(4, c[n]); else {
+                 const e = o.get(i);
+@@ -318,9 +318,15 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+             G(e) {
+                 s.q(r = e);
+             },
+-            K: (e, t) => (o.set(e, t), s.q(e), () => {
+-                o.delete(e), s.N(e);
++            K: (e, t) => (o.set(e, t), m.set(t, e), s.q(e), () => {
++                o.delete(e), m.get(t) === e && m.delete(t), s.N(e);
+             }),
++            ae() {
++                const t = [];
++                m.forEach((e, r) => {
++                    e.offsetParent && t.push([ r, e.getBoundingClientRect()[n] ]);
++                }), t.length && e.H(3, t);
++            },
+             p: s.W
+         };
+     })(c, s), $ = ((e, t) => {
+@@ -397,6 +403,7 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+             findItemIndex: c.$,
+             getItemOffset: c.I,
+             getItemSize: c.k,
++            measure: l.ae,
+             scrollToIndex: $.ne,
+             scrollTo: $.te,
+             scrollBy: $.re
 diff --git a/lib/solid/index.jsx b/lib/solid/index.jsx
-index 029201a..3949cd4 100644
+index 029201a2c88fe71645242b3f6f11493a7f91fa86..3949cd43438aae3edc5f8c9cdd6c75fb7c091e83 100644
 --- a/lib/solid/index.jsx
 +++ b/lib/solid/index.jsx
 @@ -1085,6 +1085,7 @@ const createResizer = (store, isHorizontal) => {
