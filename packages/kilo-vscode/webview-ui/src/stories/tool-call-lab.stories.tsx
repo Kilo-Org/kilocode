@@ -1059,7 +1059,7 @@ export const SearchPreviews: Story = {
     }
     const retry = {
       ...session,
-      busySince: () => undefined,
+      busyTiming: () => undefined,
       permissions: () => [],
       questions: () => [],
       statusInfo: () => ({ type: "retry", attempt: 2, message: "Rate limited", next: 0 }),

@@ -37,7 +37,12 @@ let rulesExpandedPreference = false
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+  onDecide: (
+    permissionID: string,
+    response: "once" | "reject",
+    approvedAlways: string[],
+    deniedAlways: string[],
+  ) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
@@ -146,7 +151,7 @@ export const PermissionDock: Component<{
   const submit = (response: "once" | "reject") => {
     if (props.responding) return
     const { approved, denied } = collectRules()
-    props.onDecide(response, approved, denied)
+    props.onDecide(props.request.id, response, approved, denied)
     focusPrompt()
   }
 
@@ -354,26 +359,10 @@ export const PermissionDock: Component<{
         </div>
 
         <div data-slot="permission-actions">
-          <Button
-            variant="primary"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("once", approved, denied)
-            }}
-            disabled={props.responding}
-          >
+          <Button variant="primary" size="small" onClick={() => submit("once")} disabled={props.responding}>
             {language.t("ui.permission.allowOnce")}
           </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("reject", approved, denied)
-            }}
-            disabled={props.responding}
-          >
+          <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={props.responding}>
             {language.t("ui.permission.deny")}
           </Button>
         </div>

@@ -136,6 +136,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
 | `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
+| `/caffeinate` | `/caffenate` | Toggle Keep Awake: prevent system sleep while Kilo sessions run |
 | `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
@@ -153,6 +154,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
 | `/review` | Review code changes |
+| `/goal [objective \| pause \| resume \| clear]` | Start, pause, resume, or clear a [session goal](/docs/code-with-ai/agents/goals) |
 
 ### Importing Claude Code and Codex Sessions
 
@@ -193,6 +195,8 @@ CLI attention alerts are disabled by default. Enable and configure them by editi
 
 - Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
 - Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
+
+For VS Code sounds and notifications, see [Notifications](/docs/getting-started/settings/notifications).
 
 Use the following configuration for attention, desktop notification, sound, and volume controls:
 
@@ -236,7 +240,7 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
-There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
+There is no slash command or command-palette toggle for notifications or sounds. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration. Keep Awake is separate and has its own `/caffeinate` command; see [Keep Awake](/docs/getting-started/settings/keep-awake).
 
 ## Slash Commands
 
