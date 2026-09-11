@@ -45,6 +45,7 @@ Run models on your own hardware for privacy and offline use:
 Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
+- **[MindsHub](/docs/ai-providers/mindshub)** - OpenAI/Anthropic-compatible gateway to Claude, GPT, Kimi, DeepSeek, and more on one key
 - **[TrustedRouter](/docs/ai-providers/trustedrouter)** - OpenAI-compatible access to attested routing, ZDR routing, and E2E encrypted model routes
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
 - **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
