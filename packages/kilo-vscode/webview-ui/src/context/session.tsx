@@ -2455,6 +2455,7 @@ export const SessionProvider: ParentComponent = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ): boolean {
     // The rendered request must still exist in this provider. Never fall back to
     // the currently selected session for a stale callback.
@@ -2467,6 +2468,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // The permission is removed when the server confirms via permission.replied SSE.
     setRespondingPermissions((prev) => new Set(prev).add(permissionId))
 
+    const message = feedback?.trim()
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
@@ -2474,6 +2476,7 @@ export const SessionProvider: ParentComponent = (props) => {
       response,
       approvedAlways,
       deniedAlways,
+      ...(message ? { feedback: message } : {}),
     })
     return true
   }

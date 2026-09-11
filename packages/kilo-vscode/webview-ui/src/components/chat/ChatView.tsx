@@ -175,10 +175,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ) => {
     const perm = permissionRequest()
     if (!perm || perm.id !== permissionID || session.respondingPermissions().has(permissionID)) return
-    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways)
+    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways, feedback)
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))

@@ -51,6 +51,9 @@ function EditBody(props: { request: PermissionRequest }) {
   const ft = createMemo(() => filetype(filepath()))
   const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
   const hunks = createMemo(() => splitDiffHunks(diff())) // kilocode_change
+  // kilocode_change start - a nonempty header-only patch has no hunks; show a fallback instead of a blank viewer
+  const changed = createMemo(() => /^@@/m.test(diff()))
+  // kilocode_change end
 
   return (
     <box flexDirection="column" gap={1}>
@@ -67,34 +70,36 @@ function EditBody(props: { request: PermissionRequest }) {
         >
           {/* kilocode_change start */}
           <box flexDirection="column">
-            <For each={hunks()}>
-              {(hunk, i) => (
-                <>
-                  <Show when={i() > 0}>
-                    <text fg={theme.textMuted}>...</text>
-                  </Show>
-                  <diff
-                    diff={hunk}
-                    view={view()}
-                    filetype={ft()}
-                    syntaxStyle={syntax()}
-                    showLineNumbers={true}
-                    width="100%"
-                    wrapMode="word"
-                    fg={theme.text}
-                    addedBg={theme.diffAddedBg}
-                    removedBg={theme.diffRemovedBg}
-                    contextBg={theme.diffContextBg}
-                    addedSignColor={theme.diffHighlightAdded}
-                    removedSignColor={theme.diffHighlightRemoved}
-                    lineNumberFg={theme.diffLineNumber}
-                    lineNumberBg={theme.diffContextBg}
-                    addedLineNumberBg={theme.diffAddedLineNumberBg}
-                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
-                  />
-                </>
-              )}
-            </For>
+            <Show when={changed()} fallback={<text fg={theme.textMuted}>No changes to review</text>}>
+              <For each={hunks()}>
+                {(hunk, i) => (
+                  <>
+                    <Show when={i() > 0}>
+                      <text fg={theme.textMuted}>...</text>
+                    </Show>
+                    <diff
+                      diff={hunk}
+                      view={view()}
+                      filetype={ft()}
+                      syntaxStyle={syntax()}
+                      showLineNumbers={true}
+                      width="100%"
+                      wrapMode="word"
+                      fg={theme.text}
+                      addedBg={theme.diffAddedBg}
+                      removedBg={theme.diffRemovedBg}
+                      contextBg={theme.diffContextBg}
+                      addedSignColor={theme.diffHighlightAdded}
+                      removedSignColor={theme.diffHighlightRemoved}
+                      lineNumberFg={theme.diffLineNumber}
+                      lineNumberBg={theme.diffContextBg}
+                      addedLineNumberBg={theme.diffAddedLineNumberBg}
+                      removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                    />
+                  </>
+                )}
+              </For>
+            </Show>
           </box>
           {/* kilocode_change end */}
         </scrollbox>
@@ -137,8 +142,6 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
     stage: "permission" as PermissionStage,
   })
   const pathFormatter = usePathFormatter()
-
-  const session = createMemo(() => sync.data.session.find((s) => s.id === props.request.sessionID))
 
   const input = createMemo(() => {
     const tool = props.request.tool
@@ -506,16 +509,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                   return
                 }
                 if (option === "reject") {
-                  if (session()?.parentID) {
-                    setStore("stage", "reject")
-                    return
-                  }
-                  void sdk.client.permission.reply({
-                    reply: "reject",
-                    requestID: props.request.id,
-                    directory: props.directory,
-                    workspace: project.workspace.current(),
-                  })
+                  // kilocode_change start - every reject collects optional feedback, matching the direct-mode footer
+                  setStore("stage", "reject")
+                  // kilocode_change end
                   return
                 }
                 void sdk.client.permission.reply({
