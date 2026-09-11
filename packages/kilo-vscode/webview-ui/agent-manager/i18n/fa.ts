@@ -41,9 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "پیشوند شاخه",
   "agentManager.settings.branchPrefix.description":
     "پیشوند شاخه‌هایی که در همه پروژه‌ها خودکار نام‌گذاری می‌شوند، برای مثال feature/. برای نام‌های صریح شاخه‌ها اعمال نمی‌شود. برای نداشتن پیشوند، خالی بگذارید.",
-  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.title": "آماده‌سازی از پیش worktreeها",
   "agentManager.settings.worktreePool.description":
-    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
+    "یک worktree آماده را در پس‌زمینه فراهم کنید تا نشست‌های جدید Agent Manager سریع‌تر شروع شوند. برای هر پروژه باز، یک checkout روی دیسک فضای اضافی مصرف می‌کند.",
   "agentManager.settings.project.title": "پروژه",
   "agentManager.settings.project.description":
     "repository موردنظر را انتخاب کنید تا تنظیمات worktree آن را ویرایش کنید.",

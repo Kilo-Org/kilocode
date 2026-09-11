@@ -41,9 +41,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "ブランチのプレフィックス",
   "agentManager.settings.branchPrefix.description":
     "すべてのプロジェクトで自動命名されるブランチのプレフィックスです（例：feature/）。明示的なブランチ名には適用されません。プレフィックスを使わない場合は空欄にしてください。",
-  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.title": "Worktreeの事前準備",
   "agentManager.settings.worktreePool.description":
-    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
+    "バックグラウンドで準備済みの worktree を用意し、新しい Agent Manager セッションがより速く開始できるようにします。開いているプロジェクトごとに 1 つの checkout 分の追加ディスク容量を使用します。",
   "agentManager.settings.project.title": "プロジェクト",
   "agentManager.settings.project.description": "編集する worktree 設定の repository を選択してください。",
   "agentManager.settings.project.empty": "利用可能な Agent Manager プロジェクトはありません。",

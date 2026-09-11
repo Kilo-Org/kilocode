@@ -44,9 +44,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefijo de rama",
   "agentManager.settings.branchPrefix.description":
     "Prefijo para las ramas nombradas automáticamente en todos los proyectos, por ejemplo feature/. No se aplica a nombres de rama explícitos. Déjalo vacío para no usar prefijo.",
-  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.title": "Precalentar worktrees",
   "agentManager.settings.worktreePool.description":
-    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
+    "Prepara un worktree listo en segundo plano para que las nuevas sesiones de Agent Manager se inicien más rápido. Usa espacio adicional en disco para un checkout por cada proyecto abierto.",
   "agentManager.settings.project.title": "Proyecto",
   "agentManager.settings.project.description": "Elige el repository cuyos ajustes de worktree quieres editar.",
   "agentManager.settings.project.empty": "No hay proyectos de Agent Manager disponibles.",
