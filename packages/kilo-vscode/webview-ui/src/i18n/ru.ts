@@ -1114,6 +1114,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, используемая для автоматического и ручного сжатия. Оставьте поле пустым, чтобы использовать модель чата. Стоимость, скорость и качество сводки зависят от модели.",
   "settings.context.compactionModel.useChatModel": "Использовать модель чата",
+  "settings.context.compactionModel.hint": "Чтобы выбрать модель для сжатия, см. настройки Моделей.",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
