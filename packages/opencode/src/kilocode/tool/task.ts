@@ -183,12 +183,12 @@ export namespace KiloTask {
 
   /**
    * Resolve a configured model reference. A qualified `provider/model` value
-   * is parsed directly. A bare value (no `/`) is treated as a model name and
-   * matched against the provider catalog, preferring the parent session's
-   * provider so a custom provider's display name (e.g. "codestral (latest)")
-   * resolves to that provider's model instead of failing with an empty model
-   * ID. Unresolvable or ambiguous names log a warning and resolve to
-   * undefined, so the caller falls back to the next model source.
+   * is parsed directly. A bare value (no `/`) is matched against the provider
+   * catalog by model ID first, then by display name, preferring the parent
+   * session's provider so a custom provider's display name (e.g.
+   * "codestral (latest)") resolves to that provider's model instead of failing
+   * with an empty model ID. Unresolvable or ambiguous names log a warning and
+   * resolve to undefined, so the caller falls back to the next model source.
    */
   const resolve = Effect.fn("KiloTask.resolve")(function* (input: {
     value: string
@@ -203,8 +203,8 @@ export namespace KiloTask {
       Object.values(provider.models).map((model) => ({ providerID: provider.id, model })),
     )
     const query = value.toLowerCase()
-    const exact = all.filter((item) => `${item.providerID}/${item.model.id}`.toLowerCase() === query)
-    const named = exact.length ? exact : all.filter((item) => item.model.name.toLowerCase() === query)
+    const ids = all.filter((item) => item.model.id.toLowerCase() === query)
+    const named = ids.length ? ids : all.filter((item) => item.model.name.toLowerCase() === query)
     if (named.length === 0) {
       log.warn("task model name is not available", { value })
       return undefined
