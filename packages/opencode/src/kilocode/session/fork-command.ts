@@ -4,7 +4,12 @@ import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import z from "zod"
 
 export const kiloSessionFork = fn(
-  z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
+  z.object({
+    sessionID: toZod(SessionID),
+    messageID: toZod(MessageID).optional(),
+    parentID: toZod(SessionID).optional(), // kilocode_change - allow ephemeral forks to register as child sessions
+    children: z.boolean().optional(), // kilocode_change - optionally skip task-child cloning
+  }),
   async (input) => {
     const [{ AppRuntime }, { Session }] = await Promise.all([
       import("@/effect/app-runtime"),
