@@ -1094,6 +1094,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "โมเดลที่ใช้สำหรับการบีบอัดอัตโนมัติและด้วยตนเอง เว้นว่างไว้เพื่อใช้โมเดลแชท ค่าใช้จ่าย ความเร็ว และคุณภาพของสรุปขึ้นอยู่กับโมเดล",
   "settings.context.compactionModel.useChatModel": "ใช้โมเดลแชท",
+  "settings.context.compactionModel.hint": "เลือกโมเดลที่ใช้สำหรับการบีบอัดได้ที่การตั้งค่าโมเดล",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",

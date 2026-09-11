@@ -199,24 +199,29 @@
    Session Dock
    ============================================ */
 
-/* The single row between the transcript and the composer. Both states occupy the
-   same grid cell and only one is visible, so the row is always exactly as tall
-   as the taller state at the current width. Swapping the working indicator for
-   the session actions therefore never resizes the transcript viewport and never
-   shifts the conversation text.
+/* The single row between the transcript and the composer. It is exactly as tall
+   as the visible state: the working indicator, or the session actions row. The
+   inactive state stays mounted but out of flow, so it cannot reserve height.
 
-   The height cannot be a fixed pixel value: the actions row wraps to a second
-   line in a narrow sidebar (see the container query in session-actions.css), and
-   a hard-coded height clipped it behind the composer. */
+   The actions row wraps to a second line in a narrow sidebar (see the container
+   query in session-actions.css). Reserving that wrapped height while a turn
+   runs left the spinner floating in an empty band whose size depended on the
+   sidebar width; the row only grows while the actions are actually shown. */
 .session-dock {
   /* Tracks the natural width of the actions row (measured at 434px: New Session,
      Fork Session, Move to Worktree, and the diff stats), so the two dock states
      read as one centered component on wide surfaces. Deliberately px and not ch:
      a font-relative lane changes width with the webview font metrics. */
   --session-dock-lane: 440px;
+  position: relative;
   display: grid;
   box-sizing: border-box;
   align-items: center;
+  /* One line of the actions row: 24px small buttons inside the wrapper's 6px
+     padding. The working indicator is a fraction shorter, so without this floor
+     the swap would move the transcript by half a pixel on every surface where
+     the row does not wrap. */
+  min-height: 36px;
   flex-shrink: 0;
 }
 
@@ -232,9 +237,11 @@
   min-width: 0;
 }
 
-/* Hidden rather than unmounted, so the inactive state keeps reserving its height
-   and the row cannot resize when the two swap. */
+/* Hidden and out of flow rather than unmounted: the working indicator keeps its
+   refs and width lock across the swap, but contributes nothing to the height. */
 .session-dock-state:not([data-active]) {
+  position: absolute;
+  inset: 0;
   visibility: hidden;
   pointer-events: none;
 }
@@ -299,8 +306,8 @@
   margin-inline: auto;
 }
 
-/* The hidden state stays laid out to reserve the row height, so the spinner and
-   the label shimmer would otherwise animate for the whole idle session. */
+/* The hidden state stays mounted, so the spinner and the label shimmer would
+   otherwise animate for the whole idle session. */
 .session-dock-state:not([data-active]) .working-indicator * {
   animation-play-state: paused;
 }
