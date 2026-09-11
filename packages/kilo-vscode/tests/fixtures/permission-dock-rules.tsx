@@ -35,8 +35,9 @@ const request: PermissionRequest = {
 const session = { currentSessionID: () => request.sessionID }
 const language = { t: (key: string) => key }
 const config = { config: () => ({ permission: { edit: { "*": "allow" } } }) }
+Object.defineProperty(document, "hasFocus", { value: () => true })
 
-for (const mode of ["reject", "once", "approve", "deny"] as const) {
+for (const mode of ["reject", "once", "approve", "deny", "keyboard"] as const) {
   const root = document.createElement("div")
   document.body.append(root)
   const calls: Array<{ response: string; approved: string[]; denied: string[]; feedback?: string }> = []
@@ -58,6 +59,12 @@ for (const mode of ["reject", "once", "approve", "deny"] as const) {
     ),
     root,
   )
+  const dock = root.querySelector('[data-component="permission-shortcuts"]')
+  assert(dock)
+  // Happy DOM has no layout; make the mounted dock visible to its shortcut listener.
+  Object.defineProperty(dock, "getClientRects", { value: () => [{ width: 800, height: 400 }] })
+  const enter = () =>
+    document.body.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
   const click = (selector: string) => {
     const button = root.querySelector<HTMLButtonElement>(selector)
     assert(button, `Missing button: ${selector}`)
@@ -72,7 +79,7 @@ for (const mode of ["reject", "once", "approve", "deny"] as const) {
     }
     if (mode === "deny") click('[aria-label="ui.permission.rule.addToDenied"]')
     if (mode === "once") {
-      click('[data-slot="permission-actions"] button:first-child')
+      enter()
     }
     if (mode !== "once") {
       click('[data-slot="permission-actions"] button:last-child')
@@ -81,6 +88,12 @@ for (const mode of ["reject", "once", "approve", "deny"] as const) {
       assert(input)
       input.value = "Use spaces, not tabs"
       input.dispatchEvent(new window.Event("input", { bubbles: true }))
+      if (mode === "keyboard") {
+        input.blur()
+        enter()
+        assert.equal(calls.length, 0, "Global Enter must not approve while rejection feedback is open")
+        assert(root.querySelector('[data-slot="permission-feedback-input"]'))
+      }
       click('[data-slot="permission-reject-confirm"]')
     }
     assert.deepEqual(calls, [

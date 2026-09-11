@@ -239,7 +239,7 @@ export const PermissionDock: Component<{
       return
     }
 
-    if (plain(e)) {
+    if (plain(e) && !rejecting()) {
       handle(e, "once")
       return
     }
