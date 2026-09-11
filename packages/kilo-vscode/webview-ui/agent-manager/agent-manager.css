@@ -1531,6 +1531,23 @@ html[data-theme="kilo-vscode"]
   color: currentColor;
 }
 
+/* Sits left of the title, next to the activity icon, because that is where the
+   eye lands when scanning the bar. A pinned tab has no close button, so this is
+   the only pin affordance on the tab itself. */
+.am-tab-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.am-tab-pin [data-component="icon"] {
+  color: currentColor;
+}
+
 .am-subagent-panel .am-tab-icon:has([data-component="agent-avatar"]) {
   overflow: visible;
 }

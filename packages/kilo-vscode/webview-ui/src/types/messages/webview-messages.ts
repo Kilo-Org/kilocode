@@ -1005,6 +1005,13 @@ export interface SetTabOrderRequest {
   order: string[]
 }
 
+// Persist pinned session tabs for a context (worktree ID or "local"), in pin order
+export interface SetPinnedTabsRequest {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
+}
+
 // Persist sidebar worktree order
 export interface SetWorktreeOrderRequest {
   type: "agentManager.setWorktreeOrder"
@@ -1716,6 +1723,7 @@ export type WebviewMessage =
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
+  | SetPinnedTabsRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest

@@ -82,6 +82,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/src/components/shared/ActivityIcon.tsx"),
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
+  path.join(ROOT, "webview-ui/src/components/chat/SessionTab.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const SHARED_CSS = path.join(ROOT, "webview-ui/src/styles/session-tabs.css")
@@ -92,6 +93,7 @@ const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-co
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
+const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
@@ -299,6 +301,7 @@ describe("Agent Manager Provider Messages", () => {
     const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setWorktreeOrder",
       "agentManager.persistSession",
       "agentManager.forgetSession",
@@ -560,7 +563,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("provider routing handles all documented agentManager.* message types", () => {
     const text =
-      provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") + fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8")
+      provider() +
+      fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
+      fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -581,6 +587,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setPinnedTabs",
       "agentManager.setDefaultBaseBranch",
       "agentManager.terminal.create",
       "agentManager.terminal.close",

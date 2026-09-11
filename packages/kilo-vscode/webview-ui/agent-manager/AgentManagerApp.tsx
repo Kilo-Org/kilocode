@@ -154,7 +154,7 @@ import {
   isPendingSend,
   promotePendingDraftDiscard,
 } from "../src/utils/draft-store"
-import { applyTabOrder, firstOrderedTitle } from "./tab-order"
+import { applyTabOrder, firstOrderedTitle, togglePinnedTab } from "./tab-order"
 import { createTabDrag } from "./tab-drag"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
@@ -697,6 +697,22 @@ const AgentManagerContent: Component = () => {
   const persistTabOrder = (key: string, order: string[]) => {
     const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
     vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
+  }
+  const pinnedTabs = () => registry.active().pinnedTabs()
+  const setPinnedTabs: Setter<Record<string, string[]>> = (v) => registry.active().setPinnedTabs(v)
+  const persistPinnedTabs = (key: string, ids: string[]) => {
+    vscode.postMessage({ type: "agentManager.setPinnedTabs", key, ids })
+  }
+  const isTabPinned = (id: string) => {
+    const key = selection()
+    return key !== null && (pinnedTabs()[key] ?? []).includes(id)
+  }
+  const toggleTabPinned = (id: string) => {
+    const key = selection()
+    if (key === null) return
+    const next = togglePinnedTab(pinnedTabs()[key], id)
+    setPinnedTabs((prev) => ({ ...prev, [key]: next }))
+    persistPinnedTabs(key, next)
   }
   const tabOrderSync = createTabOrderSync({
     LOCAL,
@@ -2105,10 +2121,13 @@ const AgentManagerContent: Component = () => {
     review: { id: REVIEW_TAB_ID, open: reviewOpen, title: () => t("session.tab.review") },
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
+    pinned: pinnedTabs,
+    setPinned: setPinnedTabs,
     setLocal: setLocalSessionIDs,
     terms,
     namespace: nsKey,
     persist: persistTabOrder,
+    persistPinned: persistPinnedTabs,
   })
   const tabIds = drag.ids
   const tabScroll = useTabScroll(tabIds, visibleTabId)
@@ -2220,6 +2239,8 @@ const AgentManagerContent: Component = () => {
       sessionMiddleClick: handleTabMouseDown,
       sessionClose: handleCloseTab,
       sessionFork: handleForkSession,
+      isPinned: isTabPinned,
+      togglePinned: toggleTabPinned,
       onTabKey: tabFocus.key,
       reviewLabel: t("session.tab.review"),
       reviewTooltip: t("command.review.toggle"),
