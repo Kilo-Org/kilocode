@@ -32,11 +32,18 @@ const benign = (value: unknown): unknown =>
         apply: () => Promise.resolve({ data: [] }),
       })
 
-function bridge(usage: UsageClient) {
+function bridge(usage: UsageClient, pending?: Promise<void>) {
   const messages: unknown[] = []
+  const client = benign({ kilocode: { providerUsage: usage } })
   const provider = new KiloProvider(
     {} as never,
-    { getClient: () => benign({ kilocode: { providerUsage: usage } }) } as never,
+    {
+      getClient: () => client,
+      getClientAsync: async () => {
+        await pending
+        return client
+      },
+    } as never,
     undefined,
     { projectDirectory: "/repo" },
   )
@@ -81,6 +88,29 @@ describe("provider usage presentation", () => {
 })
 
 describe("KiloProvider provider usage bridge", () => {
+  it("waits for backend startup before loading profile usage", async () => {
+    const pending = Promise.withResolvers<void>()
+    const requests: unknown[] = []
+    const { internal, messages } = bridge(
+      {
+        get: async (input) => {
+          requests.push(input)
+          return { data }
+        },
+        refresh: async () => ({ data }),
+      },
+      pending.promise,
+    )
+
+    const loading = internal.fetchAndSendProviderUsage()
+    expect(requests).toEqual([])
+    expect(messages).toEqual([])
+    pending.resolve()
+    await loading
+    expect(requests).toEqual([{ directory: "/repo" }])
+    expect(messages).toEqual([{ type: "providerUsageLoaded", data }])
+  })
+
   it("uses cache-aware GET on open and forced POST for refresh", async () => {
     const get: Array<{ directory?: string }> = []
     const refresh: Array<{ directory?: string }> = []

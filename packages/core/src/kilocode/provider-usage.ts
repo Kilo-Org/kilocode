@@ -9,6 +9,7 @@ import { Integration } from "../integration"
 import { PluginV2 } from "../plugin"
 import { ProviderV2 } from "../provider"
 import * as Cloud from "./provider-usage/cloud"
+import * as Codex from "./provider-usage/codex"
 import { bindings, direct, type Candidate } from "./provider-usage/minimax/usage"
 
 const successTtl = 60_000
@@ -17,6 +18,8 @@ const readyPlugin = PluginV2.ID.make("config-provider")
 
 interface AdapterContext {
   candidates: readonly Candidate[]
+  codex: Codex.Input
+  scope: string | undefined
   failedCandidates: readonly Candidate["providerID"][]
   cloud: (() => Promise<Cloud.CloudState>) | undefined
   token: string | undefined
@@ -25,6 +28,7 @@ interface AdapterContext {
   fetch: typeof fetch
   usage: typeof Cloud.fetchCodingPlanUsage
   identityCurrent(identity: string): boolean
+  current(identity: string): boolean
   source(id: string, load: () => Promise<Contract.UsageSnapshot>, identity?: string): Promise<Contract.UsageSnapshot>
   preserve(prefix: string, identity?: string): Contract.UsageSnapshot[]
   prune(prefix: string, keep: string[]): void
@@ -80,7 +84,21 @@ const minimax: Adapter = {
   },
 }
 
-const registry: readonly Adapter[] = [managed, minimax]
+const codex: Adapter = {
+  cachePrefixes: ["codex-chatgpt"],
+  async run(ctx) {
+    if (ctx.codex.status === "absent") return { items: [] }
+    if (ctx.codex.status === "failed") {
+      return { items: ctx.scope ? ctx.preserve("codex-chatgpt", ctx.scope) : [] }
+    }
+    const current = ctx.codex
+    if (!ctx.current(current.identity)) return { items: [] }
+    const item = await ctx.source("codex-chatgpt", () => Codex.load(current.candidate, ctx.fetch), current.identity)
+    return { items: ctx.current(current.identity) ? [item] : [] }
+  },
+}
+
+const registry: readonly Adapter[] = [managed, minimax, codex]
 
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,
@@ -105,6 +123,7 @@ interface State {
   sources: Map<string, SourceCell>
   cloud: CloudCell
   cloudIdentity?: string
+  codex?: { connection: string; identity: string }
 }
 
 function fingerprint(value: string) {
@@ -122,6 +141,7 @@ function scopeCloudCache(state: State, token: string | undefined) {
 
 function stale(next: Contract.UsageSnapshot, previous: Contract.UsageSnapshot | undefined) {
   if (next.fetchState !== "unavailable" && next.fetchState !== "error") return next
+  if (next.error?.retryable === false) return next
   if (!previous || (previous.fetchState !== "ready" && previous.fetchState !== "stale")) return next
   return {
     ...previous,
@@ -279,12 +299,27 @@ function nonempty(value: unknown) {
   return text || undefined
 }
 
+function scoped(state: State, current: Codex.Input) {
+  if (current.status === "failed" && state.codex?.connection === current.connection) return state.codex.identity
+  if (
+    current.status === "ready" &&
+    state.codex?.connection === current.connection &&
+    state.codex.identity === current.identity
+  ) {
+    return current.identity
+  }
+  state.codex = current.status === "ready" ? { connection: current.connection, identity: current.identity } : undefined
+  prune(state, "codex-chatgpt", [])
+  return state.codex?.identity
+}
+
 const inputs = Effect.fn("ProviderUsage.inputs")(function* (
   catalog: Catalog.Interface,
   integrations: Integration.Interface,
 ) {
   const providers = yield* catalog.provider.all()
   const byID = new Map(providers.map((provider) => [provider.id, provider]))
+  const codex = yield* Codex.discover(byID.get(ProviderV2.ID.openai), integrations)
   const failedCandidates: Candidate["providerID"][] = []
   const candidates = yield* Effect.forEach(Object.keys(bindings) as (keyof typeof bindings)[], (providerID) =>
     Effect.gen(function* () {
@@ -312,6 +347,7 @@ const inputs = Effect.fn("ProviderUsage.inputs")(function* (
     kilo.ok && kilo.value?.type === "oauth" && !organization && kilo.value.access ? kilo.value.access : undefined
   return {
     candidates: candidates.filter((item): item is Candidate => item !== undefined),
+    codex,
     failedCandidates,
     token,
     cloudReliable,
@@ -330,8 +366,11 @@ function makeService(
     yield* ready
     const current = yield* inputs(catalog, integrations)
     const cloudIdentity = current.cloudReliable ? scopeCloudCache(state, current.token) : state.cloudIdentity
+    const identity = scoped(state, current.codex)
     const ctx: AdapterContext = {
       candidates: current.candidates,
+      codex: current.codex,
+      scope: identity,
       failedCandidates: current.failedCandidates,
       cloud:
         current.token && cloudIdentity
@@ -343,6 +382,7 @@ function makeService(
       fetch: transport.fetch,
       usage: transport.usage,
       identityCurrent: (identity) => state.cloudIdentity === identity,
+      current: (identity) => state.codex?.identity === identity,
       source: (id, load, identity) => source(state, id, force, load, identity),
       preserve: (prefix, identity) => preserve(state, prefix, identity),
       prune: (prefix, keep) => prune(state, prefix, keep),
@@ -367,7 +407,11 @@ function makeService(
       (value): value is string => value !== undefined,
     )
     return {
-      items: results.flatMap((result) => result.items),
+      items: results
+        .flatMap((result) => result.items)
+        .filter(
+          (item) => item.id !== "codex-chatgpt" || (identity !== undefined && state.codex?.identity === identity),
+        ),
       generatedAt: stamps.toSorted().at(-1) ?? new Date().toISOString(),
     } satisfies Contract.Info
   })
