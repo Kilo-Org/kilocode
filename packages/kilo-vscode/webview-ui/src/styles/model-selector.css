@@ -21,11 +21,24 @@
   transition: height 0.2s ease;
 }
 
-.model-selector-body .model-selector-list {
+.model-selector-body .model-selector-list-wrap {
   order: 3;
   flex: 1;
   min-height: 0;
   max-height: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: max-height 0.15s ease;
+}
+
+.model-selector-list-wrap .model-selector-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 4px 0;
 }
 
 .model-selector-preview {
@@ -336,9 +349,7 @@
 .model-selector-list {
   overflow-y: auto;
   scrollbar-gutter: stable;
-  max-height: 300px;
   padding: 4px 0;
-  transition: max-height 0.15s ease;
 }
 
 .model-selector-empty {
@@ -348,17 +359,41 @@
   text-align: center;
 }
 
+/* Pinned group header shown while scrolling. Overlays the top of the list
+   (outside the scroll flow) so no gap or see-through; reuses the group-label
+   look via .model-selector-group-label. */
+.model-selector-sticky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+}
+
+.model-selector-sticky.model-selector-group-label,
+.model-selector-sticky.model-selector-group-label:hover {
+  background: var(--surface-raised-stronger-non-alpha, var(--vscode-editor-background));
+}
+
+/* Hover uses the same interactive-hover color as other group labels, drawn as
+   an inset overlay on top of the opaque surface so the pinned header stays
+   fully opaque and nothing shows through from the list beneath. */
+.model-selector-sticky.model-selector-group-label:hover {
+  box-shadow: inset 0 0 0 999px var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
 .model-selector-group-label {
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
   padding: 4px 12px;
-  font-size: var(--font-size-x-small, 11px);
-  font-weight: var(--font-weight-medium, 500);
+  font-size: var(--kilo-font-size-12);
+  font-weight: var(--font-weight-semibold, 600);
   line-height: var(--line-height-large, 1.67);
   letter-spacing: var(--letter-spacing-normal, 0);
-  color: var(--text-weak, var(--vscode-descriptionForeground));
+  color: var(--text-base, var(--vscode-foreground));
   user-select: none;
   background: transparent;
   border: none;
@@ -414,7 +449,7 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
-  padding: 5px 12px;
+  padding: 5px 12px 5px 26px;
   font-size: var(--kilo-font-size-12);
   cursor: pointer;
   user-select: none;
@@ -465,7 +500,7 @@
 }
 
 .model-selector-item-name-main {
-  font-weight: 600;
+  font-weight: var(--font-weight-normal, 400);
   overflow: hidden;
   text-overflow: ellipsis;
 }
