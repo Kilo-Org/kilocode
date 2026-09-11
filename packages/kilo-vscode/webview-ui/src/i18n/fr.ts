@@ -1146,6 +1146,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
   "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
+  "settings.context.compactionModel.hint":
+    "Pour choisir le modèle utilisé pour le compactage, consultez les paramètres des Modèles.",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
