@@ -1,0 +1,55 @@
+# kilocode_change - new file
+# Temporary workflow for validating Azure Key Vault EV code signing end-to-end.
+# Runs on the draft PR. Before merging: delete this file and its entry in
+# script/check-workflows.ts (the allowlist check fails if only one is removed).
+name: ev-sign-test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  sign:
+    name: Sign Windows binary with EV cert
+    runs-on: windows-latest
+    environment: GithubActionEVCodeSignDev
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download test binary
+        shell: pwsh
+        run: |
+          gh release download v7.5.16 --repo Kilo-Org/kilocode --pattern kilo-windows-x64.zip --clobber
+          Expand-Archive kilo-windows-x64.zip -DestinationPath test-bin -Force
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Az login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.EV_CODE_SIGN_APP_CLIENT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+
+      - name: Sign with EV certificate
+        shell: bash
+        run: |
+          dotnet tool install --global AzureSignTool
+          export PATH="$USERPROFILE/.dotnet/tools:$PATH"
+          AzureSignTool sign -v \
+            -kvu "${{ secrets.KEY_VAULT_URI }}" \
+            -kvc "${{ secrets.EV_CERT_NAME }}" \
+            -tr http://timestamp.digicert.com \
+            -d "Kilo CLI" \
+            test-bin/kilo.exe
+
+      - name: Verify signature
+        shell: pwsh
+        run: |
+          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          & (Join-Path $kit.FullName "x64\signtool.exe") verify /pa test-bin\kilo.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
