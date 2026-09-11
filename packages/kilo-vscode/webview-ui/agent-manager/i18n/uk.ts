@@ -44,6 +44,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Префікс гілки",
   "agentManager.settings.branchPrefix.description":
     "Префікс автоматично іменованих гілок у всіх проєктах, наприклад feature/. Не застосовується до явно заданих назв гілок. Залиште порожнім, щоб не використовувати префікс.",
+  "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
   "agentManager.settings.project.title": "Проєкт",
   "agentManager.settings.project.description": "Виберіть repository, налаштування worktree якого потрібно змінити.",
   "agentManager.settings.project.empty": "Немає доступних проєктів Agent Manager.",

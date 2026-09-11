@@ -477,7 +477,7 @@ describe("WorktreeManager.createWorktree", () => {
     expect(result.parentBranch).toBe(branch)
   })
 
-  it("uses two checkout workers without changing Git configuration", async () => {
+  it("uses four checkout workers without changing Git configuration", async () => {
     const root = await createTempRepo()
     const hook = path.join(root, ".git", "hooks", "post-checkout")
     const file = path.join(root, "workers")
@@ -486,7 +486,7 @@ describe("WorktreeManager.createWorktree", () => {
 
     await createManager(root).createWorktree({ branchName: "parallel-checkout" })
 
-    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("4")
     expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
   })
 

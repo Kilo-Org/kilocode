@@ -20,6 +20,7 @@ import {
   removeStaleLifecycleWorktree,
   type LifecycleHost,
 } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
@@ -951,6 +952,8 @@ export class AgentManagerProvider implements Disposable {
     branch: string,
     worktreeId?: string,
     source?: { sandboxInheritanceToken?: string },
+    boot?: { at: number; metadata: () => Promise<Record<string, unknown>> },
+    timing?: Timing,
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -980,7 +983,9 @@ export class AgentManagerProvider implements Disposable {
     })
 
     try {
-      const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath)
+      const metadata = await (boot?.metadata() ??
+        sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath))
+      if (boot) timing?.mark("boot", boot.at)
       const { data: session } = await startSession(
         client,
         worktreePath,
@@ -996,6 +1001,7 @@ export class AgentManagerProvider implements Disposable {
           ),
         (...args) => this.log(...args),
       )
+      timing?.mark("session")
       return session
     } catch (error) {
       const err = getErrorMessage(error)
@@ -1101,7 +1107,8 @@ export class AgentManagerProvider implements Disposable {
           }
         },
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id, source) => this.createSessionInWorktree(dir, branch, id, source),
+        createSessionInWorktree: (dir, branch, id, source, boot, timing) =>
+          this.createSessionInWorktree(dir, branch, id, source, boot, timing),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
@@ -1450,7 +1457,8 @@ export class AgentManagerProvider implements Disposable {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
       runSetup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-      createSession: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      createSession: (dir, branch, id, boot, timing) =>
+        this.createSessionInWorktree(dir, branch, id, undefined, boot, timing),
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),

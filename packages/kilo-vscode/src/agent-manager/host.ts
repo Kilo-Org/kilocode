@@ -136,6 +136,12 @@ export interface Host {
   multiProject(): boolean
   browserAutomation(): boolean
 
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
+
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
 

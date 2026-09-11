@@ -129,4 +129,66 @@ describe("multi-version provisioning", () => {
 
     expect(error).toHaveBeenCalledWith("Failed to create any of the 1 multi-version worktrees.")
   })
+
+  it("boots the directory before setup finishes and creates the session after", async () => {
+    const flow: string[] = []
+    const setupEntered = Promise.withResolvers<void>()
+    const setupGate = Promise.withResolvers<void>()
+    const state = { addSession: mock(() => {}), armAutoName: mock(() => {}) }
+    const ctx = {
+      id: "project-1",
+      stateManager: () => state,
+      peekState: () => state,
+      worktreeManager: () => ({ removeWorktree: mock(async () => {}) }),
+    } as unknown as ProjectContext
+    const host = {
+      log: mock(() => {}),
+      post: mock(() => {}),
+      createOnDisk: mock(async () => {
+        return {
+          worktree: { id: "wt-0" },
+          result: { path: "/repo/wt-0", branch: "branch-0", parentBranch: "main" },
+        } as CreateWorktreeOnDiskResult
+      }),
+      metadata: mock(async () => {
+        flow.push("boot")
+        return {}
+      }),
+      client: () => ({}) as never,
+      runSetup: mock(async () => {
+        flow.push("setup:start")
+        setupEntered.resolve()
+        await setupGate.promise
+        flow.push("setup:end")
+      }),
+      createSession: mock(
+        async (_dir: string, _branch: string, _id: string, boot: { metadata: () => Promise<unknown> }) => {
+          flow.push("create")
+          await boot.metadata()
+          return { id: "session-0" } as Session
+        },
+      ),
+      autoName: () => ({ enabled: false }),
+      register: mock(() => {}),
+      notifyReady: mock(() => {}),
+      sessions: { register: mock(() => {}) },
+      promptName: mock(() => {}),
+      capture: mock(() => {}),
+      error: mock(() => {}),
+    } as unknown as MultiVersionHost
+
+    const pending = createMultiVersion(ctx, host, {
+      type: "agentManager.createMultiVersion",
+      text: "Fix it",
+      versions: 1,
+    })
+    await setupEntered.promise
+
+    expect(flow).toEqual(["boot", "setup:start"])
+
+    setupGate.resolve()
+    await pending
+
+    expect(flow).toEqual(["boot", "setup:start", "setup:end", "create"])
+  })
 })
