@@ -5,10 +5,14 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY, DEFAULT_KILO_API_URL } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { transformRequestBody } from "./responses.js"
 import * as GatewayMetadata from "./gateway-metadata.js"
+import { promisify } from "node:util"
+import * as zlib from "node:zlib"
+
+const compress = typeof zlib.zstdCompress === "function" ? promisify(zlib.zstdCompress) : undefined
 
 export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
   const headers = new Headers(defaultHeaders)
@@ -39,6 +43,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const apiKey = getApiKey(options)
 
   const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
+  const compression = options.requestCompression ?? new URL(openRouterUrl).origin === DEFAULT_KILO_API_URL
 
   // Merge custom headers with defaults
   const customHeaders = {
@@ -61,10 +66,23 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       headers.set("Authorization", `Bearer ${apiKey}`)
     }
 
+    const payload = await (async () => {
+      if (!compression || !compress || typeof body !== "string" || headers.has("content-encoding")) return body
+      const size = Buffer.byteLength(body)
+      if (size < 64 * 1024) return body
+      init?.signal?.throwIfAborted()
+      const encoded = await compress(body, { params: { [zlib.constants.ZSTD_c_compressionLevel]: 3 } })
+      init?.signal?.throwIfAborted()
+      if (encoded.byteLength >= size) return body
+      headers.set("content-encoding", "zstd")
+      headers.delete("content-length")
+      return new Uint8Array(encoded)
+    })()
+
     return originalFetch(input, {
       ...init,
       headers,
-      body,
+      body: payload,
     })
   }
 
