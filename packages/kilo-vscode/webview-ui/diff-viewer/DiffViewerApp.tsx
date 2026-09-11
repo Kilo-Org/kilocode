@@ -227,7 +227,7 @@ const DiffViewerContent: Component = () => {
           setPRMode(false)
         }
       })
-      if (changed) requestPRFiles(msg.target)
+      requestPRFiles(msg.target)
       return
     }
     if (msg.type === "diffViewer.focusComment") {
