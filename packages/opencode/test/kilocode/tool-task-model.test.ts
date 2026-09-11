@@ -117,6 +117,7 @@ const catalog = {
         ...configProvider.models,
         ...custom("config-provider", "dup-model").models,
         ...custom("config-provider", "codestral-latest", [], "Codestral (latest)").models,
+        ...custom("config-provider", "org/model", [], "Org/Model").models,
       },
     },
     "sub-provider": subProvider,
@@ -843,6 +844,60 @@ describe("tool.task model resolution", () => {
           expect(result.prompt).toEqual({
             providerID: ProviderV2.ID.make("config-provider"),
             modelID: ModelV2.ID.make("codestral-latest"),
+          })
+          expect(result.variant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("bare subagent display name resolves to the matching provider model", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "Codestral (latest)" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual({
+            providerID: ProviderV2.ID.make("config-provider"),
+            modelID: ModelV2.ID.make("codestral-latest"),
+          })
+          expect(result.variant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("model id containing a slash resolves before provider parsing", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "org/model" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual({
+            providerID: ProviderV2.ID.make("config-provider"),
+            modelID: ModelV2.ID.make("org/model"),
+          })
+          expect(result.variant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("display name containing a slash resolves before provider parsing", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "Org/Model" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual({
+            providerID: ProviderV2.ID.make("config-provider"),
+            modelID: ModelV2.ID.make("org/model"),
           })
           expect(result.variant).toBeUndefined()
         }),

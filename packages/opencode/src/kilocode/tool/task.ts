@@ -182,12 +182,13 @@ export namespace KiloTask {
   }
 
   /**
-   * Resolve a configured model reference. A qualified `provider/model` value
-   * is parsed directly. A bare value (no `/`) is matched against the provider
-   * catalog by model ID first, then by display name, preferring the parent
-   * session's provider so a custom provider's display name (e.g.
-   * "codestral (latest)") resolves to that provider's model instead of failing
-   * with an empty model ID. Unresolvable or ambiguous names log a warning and
+   * Resolve a configured model reference. A value is matched against the
+   * provider catalog by qualified `provider/model` key, model ID, then display
+   * name, preferring the parent session's provider so a custom provider's
+   * display name (e.g. "codestral (latest)") resolves to that provider's model
+   * instead of failing with an empty model ID. A model ID or display name may
+   * itself contain `/`, so the catalog is consulted before a slash is treated
+   * as a provider separator. Unresolvable or ambiguous names log a warning and
    * resolve to undefined, so the caller falls back to the next model source.
    */
   const resolve = Effect.fn("KiloTask.resolve")(function* (input: {
@@ -197,20 +198,22 @@ export namespace KiloTask {
   }) {
     const value = input.value.trim()
     if (!value) return undefined
-    if (value.includes("/")) return parse(value)
     const providers = yield* input.provider.list()
     const all = Object.values(providers).flatMap((provider) =>
       Object.values(provider.models).map((model) => ({ providerID: provider.id, model })),
     )
     const query = value.toLowerCase()
+    const keys = all.filter((item) => `${item.providerID}/${item.model.id}`.toLowerCase() === query)
     const ids = all.filter((item) => item.model.id.toLowerCase() === query)
-    const named = ids.length ? ids : all.filter((item) => item.model.name.toLowerCase() === query)
-    if (named.length === 0) {
+    const named = all.filter((item) => item.model.name.toLowerCase() === query)
+    const matched = keys.length ? keys : ids.length ? ids : named
+    if (matched.length === 0) {
+      if (value.includes("/")) return parse(value)
       log.warn("task model name is not available", { value })
       return undefined
     }
-    const preferred = named.filter((item) => item.providerID === input.preferred)
-    const pool = preferred.length ? preferred : named
+    const preferred = matched.filter((item) => item.providerID === input.preferred)
+    const pool = preferred.length ? preferred : matched
     if (pool.length > 1) {
       log.warn("task model name is ambiguous", {
         value,
