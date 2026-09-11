@@ -307,7 +307,7 @@ const layer = Layer.effect(
               tool.patch,
               tool.plan,
               ...(["cli", "vscode"].includes(flags.client) ? [tool.suggest] : []),
-              ...KiloToolRegistry.extra(kilo, cfg),
+              ...KiloToolRegistry.extra(kilo, cfg, flags),
               ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ],

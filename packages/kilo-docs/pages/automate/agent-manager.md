@@ -59,6 +59,26 @@ In the VS Code extension, the background-agent strip shows running, completed, c
 
 Separate Agent Manager sessions do not share a Swarm board just because they use the same repository or worktree. Use the `agent_manager` tool, shared files, commits, diffs, or pull requests to coordinate those sessions.
 
+#### Viewing the board
+
+When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+
+The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
+
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+
+#### Resetting the board
+
+**Reset board** clears the messages that are currently visible on the board. It does not stop agents, cancel tasks, or clear conversations, and agents can post new messages after a reset.
+
+Only the owning top-level session can reset its board, from the owning project. Reset uses the revision returned with the loaded board. If the board changed since it was loaded, the reset returns a conflict. Refresh the board and try again.
+
+#### Recipient state warnings
+
+`board_post` results include the direct recipient's execution state. When the direct recipient has completed, failed with an `error`, was cancelled, or its state is unknown, the result adds a warning that the invocation has ended or cannot be confirmed, and that the post is stored only. For broadcasts, or when the direct recipient is active, the result can instead report aggregate availability, such as that no other recipients were active, how many recipients had finished invocations, or how many states were unknown.
+
+Every stored post includes the receipt text "Stored only. This does not confirm delivery, reading, or action, and does not wake recipients."
+
 ## Opening the Agent Manager
 
 - Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
@@ -111,7 +131,9 @@ Worktrees share Git object storage with the main repository, but each worktree i
 
 ### PR Status Badges
 
-Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
+Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the internal PR panel. Use **Open in browser** in the panel header to open the pull request on GitHub.
+
+If the pull request has unresolved review threads, the badge also shows a comment count. The badge, the hover-card link, and the count all open the PR panel at its comments section.
 
 {% callout type="info" %}
 The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
@@ -145,13 +167,13 @@ When checks are pending on an open PR, the badge pulses to indicate activity.
 
 #### Badge icon
 
-The badge shows a **checkmark** icon when the PR review status is "Approved", and a **branch** icon in all other cases.
+The badge shows the pull request icon. A status icon appears beside the number when there is a terminal signal, evaluated in this order: **checks failing** (cross), **changes requested** (warning), **approved** (checkmark). Merged and closed pull requests show no status icon, and an open pull request with no terminal signal shows none either.
 
 #### Hover card details
 
 Hovering over a worktree item shows a card with additional PR details:
 
-- **PR number** with a link icon to open it in the browser
+- **PR number** with a link icon that opens the PR panel
 - **State** — Open, Draft, Merged, or Closed
 - **Review** — Approved, Changes Requested, or Pending (when a review exists)
 - **Checks** — how many checks passed out of the total (e.g. `8/10 passed`)
@@ -162,34 +184,98 @@ PR badges update automatically in the background. The active worktree refreshes 
 
 ### Reviewing a pull request
 
-The PR review panel is available when the selected worktree has an associated pull request. Open it in either of these ways:
+The PR panel is available when the selected worktree has an associated pull request. Open it in any of these ways:
 
 - Click the pull request icon in the Agent Manager toolbar
+- Click the PR badge on a worktree, or the link icon in its hover card
 - Press `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
 
 The selected worktree controls the panel. The panel shows the worktree branch and its parent branch, so confirm that you are reviewing the intended branch. The PR association uses the detection methods described above, including the branch tracking ref, branch name, or current commit SHA.
 
-The panel includes:
+The panel header provides the **Push Pull Request Fixes** toggle, **Refresh**, **Copy PR link**, **Open in browser**, and **Close**. The panel body contains:
 
-- **Status:** Open, Draft, Merged, or Closed
-- **Review status:** Approved, Changes Requested, or Review Pending
+- **Summary:** merge readiness, review status, checks, unresolved comments, and conversation counts. Checks, comments, and conversation include a jump action.
+- **Files and review:** load the PR files and post inline review comments (see below)
+- **Reviewers:** requested and completed reviewers with avatars and states (see below)
 - **Checks:** passed, failed, running, cancelled, or skipped checks, with duration and browser links when available
-- **Reviewers:** requested reviewers and their current state, such as Approved, Changes requested, Commented, or Awaiting
-- **Description and summary:** the PR description, file count, additions, deletions, and unresolved comment count
+- **Comments:** unresolved review threads first, then a collapsed **Resolved** group
+- **Conversation:** description, comments and reviews, commits, and lifecycle events (see below)
 
-#### Review comments
+#### Merge readiness
 
-Expand a comment to read its Markdown body, replies, file and line location, and a bounded diff hunk around the commented line. Outdated threads show an **Outdated** label. Unresolved threads appear first. Resolved threads move into the **Resolved** group and are collapsed by default. Click a thread row to expand or collapse it.
+The summary shows the merge state before the merge controls:
 
-Use the actions on an expanded thread to:
+| State | Meaning |
+|---|---|
+| Ready to merge | The branch is clean and can merge |
+| Branch is behind the base branch | Update the branch before merging |
+| Merging blocked | Required reviews or other requirements are not met |
+| Checks are failing | A check failed, so the merge is unstable |
+| Draft pull request | Mark the pull request ready for review before merging |
+| Merge conflicts | The branch conflicts with the base, so resolve conflicts first |
+| Checking mergeability | GitHub has not reported a state yet |
 
-- **Send** the comment, its diff context, and replies to the current agent. **Send all unresolved** sends the unresolved threads together, up to the panel limit.
-- **Resolve** or **Unresolve** the GitHub conversation. The panel refreshes the thread state after the action completes.
-- **Copy** the formatted thread context
-- **Open file** at the comment location in the selected worktree
-- **Open on GitHub** at the comment
+Merge controls appear only when you have write permission. Choose **Create merge commit**, **Squash and merge**, or **Rebase and merge** from the split button. Agent Manager remembers the last method you used per repository and preselects it when the repository allows it.
 
-The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+- **Update branch:** shown when the branch is behind. This asks GitHub to merge the base branch into the PR branch.
+- **Fix with Kilo:** shown for merge conflicts. It lists the conflicting files and starts an update-from-base request, which asks the agent to resolve the conflicts in the worktree.
+- **Enable auto-merge:** available when the repository allows auto-merge. GitHub merges the pull request when its requirements are met. Use **Disable auto-merge** to cancel it.
+- **Merge pull request:** when the branch is clean, the primary button merges immediately after a confirmation that names the selected method.
+
+Merge actions run through `gh` against GitHub. Agent Manager refuses to update the branch or merge when the PR head changed since the panel last loaded; refresh the panel and try again.
+
+#### Inline review comments and reviews
+
+Use **Files and review** to load the changed files. Select **Load PR files** to start, or **Load latest PR files** to refresh after a new commit. Existing drafts stay saved with their original commit. The panel loads up to the GitHub limit of 3000 files and disables review when the diff is too large.
+
+To comment on a line, select a line or drag across lines in one gutter of the unified diff. You can comment on the new version (right side) or the old version (left side). A multiline selection is posted as a range. In the comment form:
+
+- Switch between **Write** and **Preview**. `Cmd+Enter` / `Ctrl+Enter` submits.
+- Use **Insert suggestion** on a new-version (right side) line comment or a reply to wrap the selected text in a `suggestion` fence. When you view a comment that contains a `suggestion` fence, use **Preview change** to see the proposed diff and **Apply to worktree** to write it into the local worktree file. Applying a suggestion does not stage, commit, or push. The worktree branch and HEAD must match the PR head, and the target lines must still match, or the apply fails.
+- Submit the review as **Comment**, **Approve**, or **Request changes**. You cannot approve or request changes on your own pull request. Approve needs no body; the other decisions require one.
+
+For review threads and comments:
+
+- **Reply** to a thread from the thread card.
+- **Resolve** or **Unresolve** a thread.
+- **Edit** or **Delete** your own comments and replies. You need the matching GitHub permission.
+- **React** with the GitHub reaction set. Click a reaction pill to toggle it, or use the reaction picker.
+- **Fix with Kilo** sends a thread to the current agent as review context. **Fix N with Kilo** sends the unresolved threads together, up to the panel limit. With an active Agent Manager terminal, the label becomes **Send to terminal** or **Send N unresolved to terminal** and the threads go to that terminal instead.
+- **Copy** copies the formatted thread. **Show in diff**, **Open file**, and **Open on GitHub** jump to the comment location.
+
+Outdated threads show an **Outdated** label. Unresolved threads appear first, and resolved threads move into the **Resolved** group and are collapsed by default.
+
+Sending a thread gives it to Kilo as review context, and it does not post anything to GitHub. Use the reply form to post to GitHub.
+
+#### Checks
+
+Each failing check offers **Fix with Kilo**, which sends the failure summary and log commands to the current agent. With an active Agent Manager terminal, the label becomes **Send failures to terminal**.
+
+#### Conversation
+
+The conversation lists the pull request description and history in one timeline:
+
+- **Description** at the top
+- **Comments and reviews** as cards, with reviewer states and reactions
+- **Commits** as rows. Consecutive commits by one author collapse into one expandable group.
+- **Lifecycle events:** merged, closed, reopened, and force-push, with the actor
+- **Show earlier activity** when GitHub has timeline items before the loaded window. It opens the pull request on GitHub.
+
+Use a comment card's **Fix with Kilo** action to hand it to the agent. **Dismiss** hides a comment from the next send, and **Restore** brings it back. **Fix N with Kilo** or **Send N to terminal** sends the actionable comments together.
+
+#### Reviewers
+
+The Reviewers section shows each requested or completed reviewer with an avatar and one of these GitHub-style states: **Approved**, **Changes requested**, **Commented**, or **Awaiting**.
+
+#### Push Pull Request Fixes
+
+**Push Pull Request Fixes** controls whether fix prompts ask the agent to commit and push so the pull request updates. The default is on.
+
+- Set it in **Settings > Agent Behaviour > Push Pull Request Fixes** (`kilo-code.new.agentManager.pushFixes`).
+- Toggle the same setting from the PR panel header with the **Push Pull Request Fixes** button.
+- When it is on, fix prompts for PR review comments and CI failures include: "When the changes pass local checks, commit them and push to this branch so the pull request updates. Do not force-push."
+- Update from base follows the same setting. With it on, the agent is asked to push the branch after a clean merge. With it off, it is not.
+- Permission prompts still confirm commits and pushes. Turning the setting on does not auto-approve them.
 
 ### Creating a New Worktree Session
 
@@ -382,6 +468,10 @@ The worktree creation base and the diff comparison base are separate. The Branch
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
 
 After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
+
+### PR review comments in the diff
+
+When the selected worktree has an associated pull request, its review threads also appear inline at their file and line in the Agent Manager diff panel and the full-screen review. The inline cards support the same reply, resolve, unresolve, reaction, and send actions as the PR panel. Threads with no matching line in the current diff appear under **Comments outside the current diff**.
 
 ### Diff Scope
 

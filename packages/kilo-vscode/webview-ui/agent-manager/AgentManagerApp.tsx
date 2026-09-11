@@ -731,7 +731,7 @@ const AgentManagerContent: Component = () => {
     if (!pending && !existing) tabOrderSync.append(LOCAL, id)
     if (pending && pending === active) setActivePendingId(undefined)
   }
-  const focusLocalSession = (id: string) => {
+  const focusLocalSession = (id: string, scrollToBottom = false) => {
     const pending = activePendingId()
     const replace = pending && localSessionIDs().includes(pending) ? pending : undefined
     placeLocal(id, replace, replace)
@@ -739,7 +739,7 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewActive(false)
     setSelection(LOCAL)
-    session.selectSession(id)
+    session.selectSession(id, { scrollToBottom })
     requestChatFocus()
   }
   persistLocalTabs({
@@ -1087,13 +1087,13 @@ const AgentManagerContent: Component = () => {
     return true
   }
 
-  const focusManagedSession = (worktreeId: string, sid: string) => {
+  const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
     selectWorktree(worktreeId)
     closeHistory()
     terms.setActiveId(undefined)
     setActivePendingId(undefined)
     setReviewActive(false)
-    session.selectSession(sid)
+    session.selectSession(sid, { scrollToBottom })
     requestChatFocus()
     return true
   }
@@ -1515,6 +1515,12 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
+      if (msg.type === "agentManager.revealSession") {
+        if (currentProjectId() !== msg.projectId) return
+        if (msg.worktreeId) focusManagedSession(msg.worktreeId, msg.sessionId, true)
+        else focusLocalSession(msg.sessionId, true)
+        return
+      }
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
       stateHandlers.browser(msg)
