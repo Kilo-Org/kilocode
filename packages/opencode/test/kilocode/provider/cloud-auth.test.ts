@@ -78,4 +78,41 @@ describe("cloud provider auth", () => {
     vertexOptions("google-vertex", "@ai-sdk/google-vertex", options)
     expect(options).toEqual({ project: "test-project", googleAuthOptions: { credentials } })
   })
+
+  test("normalizes null content for OpenAI-compatible tool-only assistant messages", () => {
+    const options: Record<string, unknown> = {}
+    vertexOptions("custom", "@ai-sdk/openai-compatible", options)
+
+    const transform = options.transformRequestBody as (body: Record<string, unknown>) => Record<string, unknown>
+    expect(transform).toBeFunction()
+    expect(
+      transform({
+        messages: [
+          { role: "user", content: "hello" },
+          {
+            role: "assistant",
+            content: null,
+            tool_calls: [{ id: "call-1", type: "function", function: { name: "test", arguments: "{}" } }],
+          },
+          { role: "assistant", content: null },
+        ],
+      }),
+    ).toEqual({
+      messages: [
+        { role: "user", content: "hello" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [{ id: "call-1", type: "function", function: { name: "test", arguments: "{}" } }],
+        },
+        { role: "assistant", content: null },
+      ],
+    })
+  })
+
+  test("does not install the request transform for non OpenAI-compatible providers", () => {
+    const options: Record<string, unknown> = {}
+    vertexOptions("custom", "@ai-sdk/openai", options)
+    expect(options.transformRequestBody).toBeUndefined()
+  })
 })
