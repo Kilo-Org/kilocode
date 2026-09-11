@@ -242,10 +242,12 @@ export function createDialogProviderOptions() {
   return options
 }
 
-export function DialogProvider() {
+// kilocode_change start
+export function DialogProvider(props: { scrollbar?: boolean }) {
   const options = createDialogProviderOptions()
-  return <DialogSelect title="Connect a provider" options={options()} />
+  return <DialogSelect title="Connect a provider" options={options()} scrollbar={props.scrollbar} />
 }
+// kilocode_change end
 
 interface AutoMethodProps {
   index: number
@@ -378,6 +380,7 @@ function ApiMethod(props: ApiMethodProps) {
   const sync = useSync()
   const toast = useToast()
   const { theme } = useTheme()
+  const [busy, setBusy] = createSignal(false) // kilocode_change
 
   const optionalApiKey = KiloProvider.isLocalOptionalApiKey(props.providerID) // kilocode_change
 
@@ -386,28 +389,39 @@ function ApiMethod(props: ApiMethodProps) {
       title={props.title}
       placeholder={KiloProvider.apiKeyPlaceholder(props.providerID)} // kilocode_change
       description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
+      busy={busy()} // kilocode_change
+      busyText="Connecting provider…" // kilocode_change
       onConfirm={async (value) => {
         const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "") // kilocode_change
         if (!key) return // kilocode_change
-        await sdk.client.auth.set({
-          providerID: props.providerID,
-          auth: {
-            type: "api",
-            key, // kilocode_change
-            ...(props.metadata ? { metadata: props.metadata } : {}),
-          },
-        })
-        await sdk.client.instance.dispose()
-        await sync.bootstrap()
-        if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
-          toast.show({
-            variant: "info",
-            message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`, // kilocode_change
+        // kilocode_change start
+        setBusy(true)
+        await (async () => {
+          const result = await sdk.client.auth.set({
+            providerID: props.providerID,
+            auth: {
+              type: "api",
+              key,
+              ...(props.metadata ? { metadata: props.metadata } : {}),
+            },
           })
-          dialog.clear()
-          return
-        }
-        dialog.replace(() => <DialogModel providerID={props.providerID} />)
+          if (result.error) throw new Error(errorMessage(result.error))
+          await sdk.client.instance.dispose()
+          await sync.bootstrap()
+          if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
+            toast.show({
+              variant: "info",
+              message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`,
+            })
+            dialog.clear()
+            return
+          }
+          dialog.replace(() => <DialogModel providerID={props.providerID} />)
+        })().catch((err) => {
+          toast.show({ variant: "error", message: errorMessage(err) })
+          setBusy(false)
+        })
+        // kilocode_change end
       }}
     />
   )
