@@ -62,6 +62,15 @@ The composer stays editable while the agent is working, so you don't have to wai
 
 A queued message shows a subtle **Queued** badge on its bubble. The badge clears when the message starts processing or when the queue drains or is cancelled. Queueing works for Cloud Agent sessions and for remote sessions on a connected `kilo remote` CLI instance.
 
+## Voice input
+
+Every voice dictation in the app uses one of two transcription engines:
+
+- **Operating system** (default) — your device's built-in speech recognizer.
+- **Kilo gateway** — transcribes through your Kilo account with a transcription model you choose. Enable the **Gateway transcription** switch in **Preferences**, then pick a model from the gateway's available transcription models; the choice persists across launches.
+
+The switch is a two-way choice, not a fallback — the selected engine handles the whole dictation. With gateway transcription on, distinct messages cover an unreachable gateway, an unavailable model, no detected speech, and timeouts, and you can cancel an in-progress transcription from the microphone button.
+
 ## Attachments in remote sessions
 
 When you connect the mobile app to a `kilo remote` CLI session, you can share files in both directions.
@@ -85,9 +94,9 @@ Open a pull request from a PR link to review it without leaving the app:
 
 - **Overview** — PR state and CI checks at a glance.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
-- **Discussion** — review threads with replies, resolve/unresolve, and reactions.
+- **Discussion** — review threads with replies, resolve/unresolve, and reactions. A **Comment on this pull request** bar at the bottom opens a composer that posts a regular PR conversation comment — it appears in the discussion right away and is not part of a review.
 
-Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
+Comments you leave on diffs are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
 
 PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
 

@@ -22,6 +22,7 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 
 | Mention | Description | Example |
 |---|---|---|
+| **Model** | Insert an inline `@provider/model` reference for Agent Manager sessions and subagents | `@` → **Model** → pick a model |
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
 | **Terminal** | In the sidebar, include the active VS Code terminal output. In Agent Manager, include the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
@@ -30,6 +31,10 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
 Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
+
+### Referencing a Model
+
+Choosing **Model** from the `@` menu opens the model picker; picking a model inserts an `@provider/model` token into the prompt, for example `@anthropic/claude-sonnet-4`. The token is inline text — not a file attachment — and it does not change the session's active model. It keeps the exact model key visible to the agent reading the prompt, so an orchestrator can pass it as the model for an Agent Manager session or a subagent.
 
 ### Referencing Past Chats
 
