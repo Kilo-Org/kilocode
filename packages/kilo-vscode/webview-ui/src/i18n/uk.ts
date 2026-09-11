@@ -1073,6 +1073,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
   "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
+  "settings.context.compactionModel.hint": "Щоб вибрати модель для стискання, див. Налаштування моделей.",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
