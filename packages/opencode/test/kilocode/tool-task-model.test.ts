@@ -68,7 +68,7 @@ const sub = {
 }
 const subVariant = "deep"
 
-function custom(id: string, model: string, variants: string[] = []) {
+function custom(id: string, model: string, variants: string[] = [], name = model) {
   return {
     name: id,
     id,
@@ -77,7 +77,7 @@ function custom(id: string, model: string, variants: string[] = []) {
     models: {
       [model]: {
         id: model,
-        name: model,
+        name,
         attachment: false,
         reasoning: variants.length > 0,
         temperature: false,
@@ -105,11 +105,19 @@ const catalog = {
     },
     "saved-provider": {
       ...savedProvider,
-      models: { ...savedProvider.models, ...custom("saved-provider", "dup-model").models },
+      models: {
+        ...savedProvider.models,
+        ...custom("saved-provider", "dup-model").models,
+        ...custom("saved-provider", "shared-model").models,
+      },
     },
     "config-provider": {
       ...configProvider,
-      models: { ...configProvider.models, ...custom("config-provider", "dup-model").models },
+      models: {
+        ...configProvider.models,
+        ...custom("config-provider", "dup-model").models,
+        ...custom("config-provider", "codestral-latest", [], "Codestral (latest)").models,
+      },
     },
     "sub-provider": subProvider,
   },
@@ -824,11 +832,29 @@ describe("tool.task model resolution", () => {
     ),
   )
 
+  it.live("bare subagent model id resolves when the display name differs", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "codestral-latest" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual({
+            providerID: ProviderV2.ID.make("config-provider"),
+            modelID: ModelV2.ID.make("codestral-latest"),
+          })
+          expect(result.variant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
   it.live("unknown bare subagent model name falls back to the parent model", () =>
     run({
       agent: "worker",
       variant: inherited,
-      config: { subagent_model: "codestral (latest)" },
+      config: { subagent_model: "missing-display-name" },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
