@@ -3,6 +3,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  createUniqueId,
   For,
   Match,
   onCleanup,
@@ -12,6 +13,7 @@ import {
   type JSX,
 } from "solid-js"
 import stripAnsi from "strip-ansi"
+import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
 import {
@@ -29,19 +31,22 @@ import {
   QuestionInfo,
 } from "@kilocode/sdk/v2"
 import { useData } from "../context"
+import { useBoardNavigation } from "../context/board-navigation"
 import { checkFile } from "../file-link-validator"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { useClipboard } from "../context/clipboard"
 import { type UiI18n, useI18n } from "../context/i18n"
 import { BasicTool, useToolApprovalLine } from "./basic-tool"
+import { BoardMessage, BoardParticipantStack, BoardRoute } from "./board-message"
+import { preview } from "./board-route"
+import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
 import { Collapsible } from "./collapsible"
 import { FileIcon } from "./file-icon"
 import { Icon } from "./icon"
-import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
@@ -54,11 +59,12 @@ import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./to
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
-import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
+import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
+export { useGrowIn } from "./tool-utils"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
-import { reasoningHeading } from "./reasoning-heading"
+import { reasoningHeading, reasoningSummary } from "./reasoning-heading"
 import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
@@ -156,6 +162,10 @@ export interface MessagePartProps {
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
   reasoningAutoCollapse?: boolean
+  /** True when the stream has moved past this reasoning part. Encrypted
+   * reasoning items hold every summary's `time.end` until the whole item
+   * finishes, so the caller settles finished summaries from the part order. */
+  settled?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
@@ -758,6 +768,7 @@ export function UserMessageDisplay(props: {
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
+  revertDisabled?: boolean
   onImageClick?: (url: string, filename?: string) => boolean
 }) {
   const data = useData()
@@ -977,6 +988,7 @@ export function UserMessageDisplay(props: {
                     icon="arrow-left"
                     size="normal"
                     variant="ghost"
+                    disabled={props.revertDisabled}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(event) => {
                       event.stopPropagation()
@@ -1069,6 +1081,7 @@ export function Part(props: MessagePartProps) {
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
+        settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
@@ -1089,6 +1102,7 @@ export interface ToolProps {
   tool: string
   partID?: string
   callID?: string
+  sessionID?: string
   output?: string
   status?: string
   attachments?: FilePart[]
@@ -1164,65 +1178,11 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
-function BoardRoute(props: { from?: unknown; to?: unknown; fromLabel?: unknown; toLabel?: unknown }) {
-  const i18n = useI18n()
-  const text = (value: unknown) => (typeof value === "string" ? value : "")
-  const from = () => text(props.from)
-  const to = () => text(props.to)
-  const label = (id: string, value: unknown) => {
-    if (id === "ALL") return i18n.t("ui.messagePart.board.all")
-    const title = text(value)
-    if (title.trim()) return title
-    if (id === "main") return i18n.t("ui.messagePart.board.primary")
-    return id ? `${i18n.t("ui.messagePart.board.agent")} · ${id.slice(-8)}` : i18n.t("ui.messagePart.board.agent")
-  }
-  const sender = () => label(from(), props.fromLabel)
-  const recipient = () => label(to(), props.toLabel)
-  const detail = (title: string, id: string) => (
-    <div data-slot="board-route-detail">
-      <span>{title}</span>
-      <Show when={id}>
-        <code>{id}</code>
-      </Show>
-    </div>
-  )
-  return (
-    <span
-      data-component="board-route"
-      data-broadcast={to() === "ALL"}
-      role="group"
-      aria-label={i18n.t("ui.messagePart.board.route", { from: sender(), to: recipient() })}
-    >
-      <Icon name="task" size="small" />
-      <Tooltip
-        class="board-route-member board-route-sender"
-        contentClass="board-route-tooltip"
-        value={detail(sender(), from())}
-      >
-        {sender()}
-      </Tooltip>
-      <Icon name="arrow-right" size="small" />
-      <span data-slot="board-route-recipient-icon" data-broadcast={to() === "ALL"}>
-        <Icon name="task" size="small" />
-        <Show when={to() === "ALL"}>
-          <Icon name="task" size="small" />
-        </Show>
-      </span>
-      <Tooltip
-        class="board-route-member board-route-recipient"
-        contentClass="board-route-tooltip"
-        value={detail(recipient(), to())}
-      >
-        {recipient()}
-      </Tooltip>
-    </span>
-  )
-}
-
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
   const i18n = useI18n()
+  const navigate = useBoardNavigation()
   const board = () => props.tool === "board_post" || props.tool === "board_read"
   const record = (value: unknown): value is Record<string, unknown> =>
     !!value && typeof value === "object" && !Array.isArray(value)
@@ -1246,14 +1206,43 @@ function McpTool(props: ToolProps) {
     )
     return items.length === rows.length ? items : undefined
   })
+  // The stored route only arrives with the result. While the model still
+  // streams the post, derive the sender and recipient from the session store
+  // so the trigger shows the real avatars and titles from the first frame.
+  const data = props.tool === "board_post" ? useData() : undefined
+  const live = () => props.status === "pending" || props.status === "running"
+  const guess = createMemo(() => {
+    if (!data || !live() || !props.sessionID) return undefined
+    return preview(data.store.session, props.sessionID, props.input.to)
+  })
+  const participants = createMemo(() => {
+    const seen = new Set<string>()
+    const ids: string[] = []
+    for (const item of messages() ?? []) {
+      for (const id of [item.from, item.to]) {
+        if (!id || id === "ALL" || seen.has(id)) continue
+        seen.add(id)
+        ids.push(id)
+      }
+    }
+    const main = ids.indexOf("main")
+    if (main > 0) {
+      ids.splice(main, 1)
+      ids.unshift("main")
+    }
+    return ids
+  })
   const trigger = () => {
     if (props.tool === "board_post")
       return (
         <BoardRoute
-          from={props.metadata.from ?? result()?.from}
-          to={props.metadata.to ?? result()?.to ?? props.input.to}
-          fromLabel={props.metadata.fromLabel ?? result()?.fromLabel}
-          toLabel={props.metadata.toLabel ?? result()?.toLabel}
+          from={props.metadata.from ?? result()?.from ?? guess()?.from}
+          to={props.metadata.to ?? result()?.to ?? guess()?.to ?? props.input.to}
+          fromLabel={props.metadata.fromLabel ?? result()?.fromLabel ?? guess()?.fromLabel}
+          toLabel={props.metadata.toLabel ?? result()?.toLabel ?? guess()?.toLabel}
+          pending={live()}
+          onSessionClick={navigate}
+          semantic={false}
         />
       )
     if (props.tool === "board_read") {
@@ -1301,10 +1290,27 @@ function McpTool(props: ToolProps) {
   return (
     <Show
       when={!props.hideDetails}
-      fallback={<BasicTool hideDetails icon={board() ? "task" : "mcp"} status={props.status} trigger={trigger()} />}
+      fallback={
+        <BasicTool
+          hideDetails
+          icon={board() ? "task" : "mcp"}
+          iconNode={
+            props.tool === "board_read" ? (
+              <BoardParticipantStack ids={participants()} onSessionClick={navigate} semantic={false} />
+            ) : undefined
+          }
+          status={props.status}
+          trigger={trigger()}
+        />
+      }
     >
       <BasicTool
         icon={board() ? "task" : "mcp"}
+        iconNode={
+          props.tool === "board_read" ? (
+            <BoardParticipantStack ids={participants()} onSessionClick={navigate} semantic={false} />
+          ) : undefined
+        }
         defer={board()}
         status={props.status}
         tool={props.tool}
@@ -1346,16 +1352,7 @@ function McpTool(props: ToolProps) {
                 fallback={<span data-slot="board-message-note">{i18n.t("ui.messagePart.board.empty")}</span>}
               >
                 <For each={rows()}>
-                  {(message) => (
-                    <div data-slot="board-message">
-                      <Show when={props.tool === "board_read"}>
-                        <BoardRoute {...message} />
-                      </Show>
-                      <div data-slot="board-message-body">
-                        <Markdown text={message.body} />
-                      </div>
-                    </div>
-                  )}
+                  {(message) => <BoardMessage {...message} route={props.tool === "board_read"} />}
                 </For>
               </Show>
               <Show when={props.tool === "board_post" && props.status === "completed"}>
@@ -1483,6 +1480,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 tool={part.tool}
                 partID={part.id}
                 callID={part.callID}
+                sessionID={part.sessionID}
                 metadata={meta()}
                 partMetadata={top()}
                 // @ts-expect-error
@@ -1528,13 +1526,6 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
-  const throttledText = createThrottledValue(displayText)
-  const summary = createMemo(() => {
-    if (props.message.role !== "assistant") return
-    if (!props.showTurnDiffSummary) return
-    if (props.showAssistantCopyPartID !== part().id) return
-    return props.turnDiffSummary
-  })
 
   // Assistant message is still in-flight when `time.completed` hasn't been set.
   // Used as a render guard for synthetic status parts so stale ones don't
@@ -1542,6 +1533,18 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const streaming = createMemo(
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
+
+  // Repaint at frame cadence while text is arriving, and fall back to the slow
+  // throttle once the part settles so static history stays cheap.
+  const throttledText = createThrottledValue(displayText, () =>
+    streaming() ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS,
+  )
+  const summary = createMemo(() => {
+    if (props.message.role !== "assistant") return
+    if (!props.showTurnDiffSummary) return
+    if (props.showAssistantCopyPartID !== part().id) return
+    return props.turnDiffSummary
+  })
 
   // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
   // guard) are transient status indicators. Hide them once the owning message
@@ -1833,13 +1836,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   )
 }
 
-// Expanded mode tracks explicit user collapses so reactive or virtualized
+// Both modes track explicit user collapses so reactive or virtualized
 // remounts do not reopen a block the user closed.
 const userCollapsed = new Set<string>()
-// Auto-collapse mode preserves the original flow: streaming blocks open,
-// completed blocks collapse once, and manual opens survive later remounts.
+// Auto-collapse mode: blocks that streamed in this session stay open in the
+// capped viewport (nothing moves when reasoning ends), blocks loaded from
+// history start collapsed, and manual opens survive later remounts.
 const streamed = new Set<string>()
-const autocollapsed = new Set<string>()
 const userOpened = new Set<string>()
 const MAX_REASONING_STATE = 1000
 
@@ -1864,71 +1867,68 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     return (p.text ?? "").replace("[REDACTED]", "").trim()
   }
 
+  // time.end is set by the processor on reasoning-end. The caller marks a part
+  // settled once a later part started. v1 parts lack time entirely → historical.
+  const done = () => {
+    if (props.settled) return true
+    const t = (props.part as any).time
+    return !t || !!t.end
+  }
+
   // Throttle markdown re-renders during streaming
-  const display = createThrottledValue(text)
-  const view = createMemo(() => reasoningHeading(display()))
+  const display = createThrottledValue(text, () => (done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS))
+  const view = createMemo(() => reasoningHeading(display(), !done()))
+
+  const id = (props.part as any).id as string
+  if (!done()) rememberReasoningState(streamed, id)
+
+  // Auto-collapse mode: streaming or streamed this session -> open (capped),
+  // historical -> collapsed, unless the user toggled it. Expanded mode: open
+  // unless the user explicitly collapsed this reasoning part.
+  const initial = props.reasoningAutoCollapse
+    ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
+    : !userCollapsed.has(id)
+  const [open, setOpen] = createSignal(initial)
+  const [manual, setManual] = createSignal(props.reasoningAutoCollapse && userOpened.has(id))
+  const title = createMemo(() => {
+    const value = view().title
+    if (value) return value
+    if (!done() || open()) return ""
+    return reasoningSummary(view().body)
+  })
 
   const Header = () => (
     <div data-slot="reasoning-header">
       <Icon name="brain" size="small" />
       <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
-      <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
+      <Show when={title()}>{(value) => <span data-slot="reasoning-title">{value()}</span>}</Show>
     </div>
   )
 
-  // time.end is set by the processor on reasoning-end.
-  // v1 parts lack time entirely → treat as historical.
-  const done = () => {
-    const t = (props.part as any).time
-    return !t || !!t.end
-  }
-
-  const id = (props.part as any).id as string
-  const was = streamed.has(id)
-  if (!done()) rememberReasoningState(streamed, id)
-
-  // Auto-collapse mode: streaming -> open, just-finished -> open briefly then
-  // collapse, historical -> collapsed. Expanded mode: open unless the user
-  // explicitly collapsed this reasoning part.
-  const initial = props.reasoningAutoCollapse ? !done() || was || userOpened.has(id) : !userCollapsed.has(id)
-  const [open, setOpen] = createSignal(initial)
-
   const track = (value: boolean) => {
+    if (value) userCollapsed.delete(id)
+    else rememberReasoningState(userCollapsed, id)
     if (props.reasoningAutoCollapse) {
       if (value) rememberReasoningState(userOpened, id)
       else userOpened.delete(id)
-      setOpen(value)
-      return
+      setManual(value)
     }
-
-    if (value) userCollapsed.delete(id)
-    else rememberReasoningState(userCollapsed, id)
     setOpen(value)
   }
 
   // Reasoning has no built-in "force open" hook (unlike BasicTool's forceOpen
-  // ratchet) — mirror that one-way-open behavior here so jumping a chat
+  // ratchet) - mirror that one-way-open behavior here so jumping a chat
   // search match to a collapsed reasoning block reveals it, the same as it
   // does for tool calls. Recorded into userOpened/userCollapsed the same way
   // a manual open would be, so it stays open across remounts/re-renders.
   createEffect(() => {
     if (!props.forceOpen || open()) return
-    if (props.reasoningAutoCollapse) rememberReasoningState(userOpened, id)
-    else userCollapsed.delete(id)
-    setOpen(true)
-  })
-
-  createEffect(() => {
-    if (!props.reasoningAutoCollapse) return
-    // Skip auto-collapse for blocks the user explicitly opened.
-    if (done() && open() && !autocollapsed.has(id) && !userOpened.has(id)) {
-      rememberReasoningState(autocollapsed, id)
-      setOpen(false)
+    userCollapsed.delete(id)
+    if (props.reasoningAutoCollapse) {
+      rememberReasoningState(userOpened, id)
+      setManual(true)
     }
-  })
-
-  onCleanup(() => {
-    if (done()) streamed.delete(id)
+    setOpen(true)
   })
 
   // Auto-scroll the content container while streaming.
@@ -1936,8 +1936,34 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   // effect: by the time the effect runs the DOM has already grown, so reading
   // scrollHeight post-update incorrectly reports the user as scrolled away
   // whenever a streaming chunk is > 10px tall.
+  let content: HTMLDivElement | undefined
+  let frame: HTMLDivElement | undefined
   let ref: HTMLDivElement | undefined
+  let body: HTMLDivElement | undefined
   let scrolled = false
+  let follow: number | undefined
+
+  const stop = () => {
+    if (follow === undefined) return
+    cancelAnimationFrame(follow)
+    follow = undefined
+  }
+
+  const [mounted, setMounted] = createSignal(initial)
+  createEffect(() => {
+    if (open()) setMounted(true)
+  })
+
+  // The content mounts in its initial state without an animation so streaming
+  // blocks are not clipped at a stale measured height and historical blocks
+  // do not animate in on every virtualized remount. The measured close runs
+  // from the live (capped) height, so the auto-collapse never jumps.
+  useCollapsible({
+    content: () => content,
+    body: () => frame,
+    open,
+    defer: true,
+  })
 
   const onScroll = (e: Event) => {
     const el = e.currentTarget as HTMLDivElement
@@ -1945,14 +1971,35 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   }
 
   const onWheel = (e: WheelEvent) => {
-    if (e.deltaY < 0) scrolled = true
+    if (e.deltaY < 0) {
+      scrolled = true
+      stop()
+    }
   }
 
-  createEffect(() => {
-    display()
-    if (!done() && ref && !scrolled) {
-      ref.scrollTop = ref.scrollHeight
+  const tick = () => {
+    follow = undefined
+    if (done() || scrolled || !ref) return
+    const target = Math.max(0, ref.scrollHeight - ref.clientHeight)
+    const rest = target - ref.scrollTop
+    if (Math.abs(rest) < 0.5) {
+      ref.scrollTop = target
+      return
     }
+    ref.scrollTop += rest * 0.25
+    follow = requestAnimationFrame(tick)
+  }
+
+  createResizeObserver(
+    () => body,
+    () => {
+      if (done() || !ref || scrolled || follow !== undefined) return
+      follow = requestAnimationFrame(tick)
+    },
+  )
+
+  onCleanup(() => {
+    stop()
   })
 
   return (
@@ -1961,24 +2008,36 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
         data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
+        data-manual={manual() ? "" : undefined}
       >
         <Show
-          when={view().body}
+          when={view().body || !done()}
           fallback={
             <div data-slot="collapsible-trigger" data-static="">
               <Header />
             </div>
           }
         >
-          <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
+          {/* forceMount keeps the content mounted so useCollapsible can measure
+              the live height on close instead of Kobalte presence unmounting it. */}
+          <Collapsible open={open()} onOpenChange={track} forceMount class="tool-collapsible">
             <Collapsible.Trigger>
               <Header />
               <Collapsible.Arrow />
             </Collapsible.Trigger>
             <Collapsible.Content>
-              <div data-slot="reasoning-details">
-                <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-                  <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+              <div
+                ref={content}
+                style={{ overflow: "clip", height: initial ? "auto" : "0px", display: initial ? "" : "none" }}
+              >
+                <div ref={frame} data-slot="reasoning-details">
+                  <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                    <div data-slot="reasoning-body" ref={body}>
+                      <Show when={mounted()}>
+                        <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+                      </Show>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Collapsible.Content>
@@ -2232,9 +2291,9 @@ ToolRegistry.register({
               animate={props.reveal}
               onClick={data.openFile ? () => data.openFile!(filepath) : undefined}
             />
-    )}
+          )}
         </For>
-      <Show when={images().length > 0}>
+        <Show when={images().length > 0}>
           <div data-slot="tool-read-images">
             <For each={images()}>
               {(file) => (
@@ -2520,6 +2579,7 @@ ToolRegistry.register({
         hideDetails
         approvalPlacement="hidden"
         icon="task"
+        iconNode={<AgentAvatar id={childSessionId() ?? ""} status={taskStatus(props.status)} />}
         status={props.status}
         trigger={trigger()}
         animated
@@ -2714,7 +2774,11 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // A plain function, not `createMemo`: Solid evaluates a memo eagerly on
+    // render, which parsed the patch with Pierre even while the card stayed
+    // collapsed. This is only read when the deferred body mounts or the user
+    // opens the diff viewer, so collapsed cards do no parse work.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (diff?.patch) return normalize(diff)
       // Pending state: tool-part metadata.filediff is written only after the
@@ -2729,8 +2793,15 @@ ToolRegistry.register({
         additions: diff?.additions ?? 0,
         deletions: diff?.deletions ?? 0,
       })
-    })
-    const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
+    }
+    const canOpenDiff = () => {
+      if (!data.openDiff || !path()) return false
+      // Presence check instead of `view()` so the always-rendered trigger does
+      // not parse the patch while the card stays collapsed.
+      const diff = props.metadata?.filediff
+      if (diff?.patch) return true
+      return !!(props.input.oldString || props.input.newString)
+    }
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2826,12 +2897,16 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // Lazy like the edit card: only parsed when the deferred body mounts or the
+    // user opens the diff viewer, never while the card is collapsed.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (!diff?.patch) return
       return normalize(diff)
-    })
-    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
+    }
+    // Cheap presence check instead of `view()` so a collapsed card never
+    // parses its patch with Pierre just to decide whether to show the button.
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!props.metadata?.filediff?.patch
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -2941,6 +3016,8 @@ interface ApplyPatchFile {
   movePath?: string
 }
 
+const HUNK_MARKER = /^\s*@@/m
+
 ToolRegistry.register({
   name: "apply_patch",
   render(props) {
@@ -2967,32 +3044,37 @@ ToolRegistry.register({
       const diffs = files().flatMap((file) => {
         const diff = view(file)
         return diff
-          ? [{
-              file: file.relativePath,
-              patch: diff.patch,
-              status:
-                file.type === "add"
-                  ? ("added" as const)
-                  : file.type === "delete"
-                    ? ("deleted" as const)
-                    : ("modified" as const),
-              additions:
-                file.type === "add" && diff.additions === 0
-                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
-                  : diff.additions,
-              deletions:
-                file.type === "delete" && diff.deletions === 0
-                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
-                  : diff.deletions,
-            }]
+          ? [
+              {
+                file: file.relativePath,
+                patch: diff.patch,
+                status:
+                  file.type === "add"
+                    ? ("added" as const)
+                    : file.type === "delete"
+                      ? ("deleted" as const)
+                      : ("modified" as const),
+                additions:
+                  file.type === "add" && diff.additions === 0
+                    ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
+                    : diff.additions,
+                deletions:
+                  file.type === "delete" && diff.deletions === 0
+                    ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
+                    : diff.deletions,
+              },
+            ]
           : []
       })
       const first = diffs[0]
       if (!data.openDiff || !first) return
       data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
     }
+    // Cheap `@@` marker check: keeps the trigger hidden for unparsable patches
+    // like the `view` guard did, without parsing every file while collapsed.
+    const hasHunk = (file: ApplyPatchFile) => HUNK_MARKER.test(file.patch ?? file.diff ?? "")
     const allDiffAction = () => (
-      <Show when={data.openDiff && files().some((file) => view(file))}>
+      <Show when={data.openDiff && files().some(hasHunk)}>
         <span data-slot="tool-trigger-actions">
           <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
             <IconButton
@@ -3133,11 +3215,7 @@ ToolRegistry.register({
                                       <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
                                     </Show>
 
-                                    <span
-                                      data-slot="apply-patch-filename"
-                                    >
-                                      {getFilename(file.relativePath)}
-                                    </span>
+                                    <span data-slot="apply-patch-filename">{getFilename(file.relativePath)}</span>
                                   </div>
                                 </div>
                                 <div data-slot="apply-patch-trigger-actions">
@@ -3238,6 +3316,54 @@ ToolRegistry.register({
   },
 })
 
+function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
+  const id = createUniqueId()
+  const state = () => (props.checked ? "" : undefined)
+  return (
+    <div role="group" data-component="checkbox" data-readonly="" data-checked={state()}>
+      <input
+        type="checkbox"
+        id={`${id}-input`}
+        data-slot="checkbox-checkbox-input"
+        data-readonly=""
+        data-checked={state()}
+        checked={props.checked}
+        readOnly
+        aria-readonly="true"
+        aria-labelledby={`${id}-label`}
+        onChange={(event) => {
+          event.currentTarget.checked = props.checked
+        }}
+      />
+      <div data-slot="checkbox-checkbox-control" data-readonly="" data-checked={state()}>
+        <Show when={props.checked}>
+          <div data-slot="checkbox-checkbox-indicator" data-readonly="" data-checked="">
+            <svg viewBox="0 0 12 12" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3 7.17905L5.02703 8.85135L9 3.5"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="square"
+              />
+            </svg>
+          </div>
+        </Show>
+      </div>
+      <div data-slot="checkbox-checkbox-content">
+        <label
+          id={`${id}-label`}
+          for={`${id}-input`}
+          data-slot="checkbox-checkbox-label"
+          data-readonly=""
+          data-checked={state()}
+        >
+          {props.children}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "todowrite",
   render(props) {
@@ -3283,7 +3409,7 @@ ToolRegistry.register({
             </Show>
             <For each={shown()}>
               {(todo: TodoItem) => (
-                <Checkbox readOnly checked={todo.status === "completed"}>
+                <TodoCheckbox checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
@@ -3291,7 +3417,7 @@ ToolRegistry.register({
                   >
                     {todo.content}
                   </span>
-                </Checkbox>
+                </TodoCheckbox>
               )}
             </For>
             <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>

@@ -261,7 +261,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a second session shows the list once and stores that choice`() {
+    fun `test a second session never forces the list open or writes a choice`() {
         val view = view()
         rpc.listed += session("ses_1", 1.0)
         rpc.listed += session("ses_2", 2.0)
@@ -269,15 +269,16 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         flush()
 
         edt {
-            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
-            assertEquals(listOf(true), saves)
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
         }
 
         rpc.listed += session("ses_3", 3.0)
         edt { controller.reload() }
         flush()
 
-        assertEquals(listOf(true), saves)
+        edt { assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent) }
+        assertTrue(saves.isEmpty())
     }
 
     fun `test a stored hidden list survives extra sessions`() {
@@ -325,7 +326,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test an empty stored answer promotes a worktree that already holds two sessions`() {
+    fun `test an empty stored answer leaves a worktree with two sessions hidden`() {
         var answer: ((Boolean?) -> Unit)? = null
         val view = view(load = { done -> answer = done })
         rpc.listed += session("ses_1", 1.0)
@@ -336,8 +337,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         edt { answer!!(null) }
 
         edt {
-            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
-            assertEquals(listOf(true), saves)
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
         }
     }
 
@@ -737,7 +738,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertTrue(manager.forks.isEmpty())
     }
 
-    fun `test forking a lone session promotes the list through the shared rule`() {
+    fun `test forking a lone session keeps the list hidden with no stored choice`() {
         val view = view()
         val session = session("ses_1", nowSeconds())
         rpc.listed += session
@@ -751,11 +752,11 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         edt { view.forkRow(session) }
         flush()
 
-        // The fork adds a row to the same list model every other creation path writes to, so the
-        // panel's own second-session promotion is what opens the list -- no fork-specific rule.
+        // The fork adds a row to the same list model every other creation path writes to, but the
+        // panel never changes visibility on its own -- it stays hidden and nothing is persisted.
         edt {
-            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
-            assertEquals(listOf(true), saves)
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
         }
     }
 
@@ -929,7 +930,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     fun `test multi select rename resets to first visible selected session`() {
         val edits = mutableListOf<String>()
         val view = edt {
-            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, edit = { _, opts, _ -> edits += opts.value })
+            WorktreeSessionEditorPanel(
+                testRootDisposable,
+                manager,
+                controller,
+                workspace,
+                edit = { _, opts, _ -> edits += opts.value },
+                load = { done -> done(true) },
+                save = {},
+            )
         }
         rpc.listed += session("ses_1", 1.0)
         rpc.listed += session("ses_2", 2.0)
@@ -1227,8 +1236,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
         val renamed = mutableListOf<Pair<String, String>>()
-        // Records the call and then runs the real fork, so the list model and the panel's promotion
-        // rule are exercised end to end rather than stubbed out.
+        // Records the call and then runs the real fork, so the list model and the panel's row/badge
+        // sync are exercised end to end rather than stubbed out.
         val forks = mutableListOf<Triple<String, String?, String>>()
         // Real editors resolve this once in start() from git; panel tests set it directly so
         // canMove()/moveRow() can be exercised without touching KiloWorktreeService.

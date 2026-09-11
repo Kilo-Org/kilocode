@@ -16,7 +16,9 @@ import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import { PRCommentCard } from "../agent-manager/pr/PRCommentCard"
 import { githubUrl, prPayload } from "../agent-manager/pr/pr-comment-payload"
 import type { ReactionController } from "../agent-manager/pr/pr-comment-state"
-import type { PRComment } from "../agent-manager/pr/pr-types"
+import type { PRComment, PRReactionContent } from "../agent-manager/pr/pr-types"
+import type { PRTarget } from "../../src/shared/pr-comment-actions"
+import { useVSCode } from "../src/context/vscode"
 import { useLanguage } from "../src/context/language"
 import { sendReviewComments } from "./review-annotations"
 import type { AnnotationMeta } from "./review-annotations"
@@ -40,6 +42,10 @@ type Entry = {
   setOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   sent: () => boolean
   setSent: (sent: boolean) => void
+  pending: () => { route: PRTarget; resolved: boolean } | undefined
+  setPending: (pending: { route: PRTarget; resolved: boolean } | undefined) => void
+  error: () => string | undefined
+  setError: (error: string | undefined) => void
 }
 
 type Mounted = {
@@ -65,6 +71,8 @@ export interface RemoteCommentController {
 interface Options {
   key: () => string | undefined
   comments: () => PRComment[] | undefined
+  target?: (comment: PRComment) => PRTarget | undefined
+  applySuggestions?: () => boolean
   diffs: () => WorktreeFileDiff[]
   active: () => boolean
   activeTerminalId: () => string | undefined
@@ -79,6 +87,19 @@ interface CardProps {
   inline: boolean
 }
 
+function reactionProps(ctrl: ReactionController | undefined, comment: PRComment) {
+  return {
+    reactionError: ctrl?.error(comment.id),
+    reactions: ctrl?.list(comment.id, comment.reactions),
+    reactionPending: ctrl ? (content: PRReactionContent) => ctrl.pending(comment.id, content) : undefined,
+    onReaction: ctrl ? (content: PRReactionContent, add: boolean) => ctrl.toggle(comment.id, content, add) : undefined,
+    replyReactionError: ctrl?.error,
+    replyReactions: ctrl?.list,
+    replyReactionPending: ctrl?.pending,
+    onReplyReaction: ctrl?.toggle,
+  }
+}
+
 function findTarget(container: HTMLElement, id: string, place: "inline" | "outside"): HTMLElement | undefined {
   const selector =
     place === "inline"
@@ -91,6 +112,8 @@ function findTarget(container: HTMLElement, id: string, place: "inline" | "outsi
 }
 
 export function createRemoteCommentController(options: Options): RemoteCommentController {
+  const vscode = useVSCode()
+  const { t } = useLanguage()
   const owner: Owner | null = getOwner()
   const entries = new Map<string, Entry>()
   const mounted = new Map<string, Mounted>()
@@ -125,7 +148,20 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
     const [value, setValue] = createSignal(comment)
     const [open, setOpen] = createSignal(!comment.resolved && !comment.outdated)
     const [sent, setSent] = createSignal(false)
-    const next = { comment: value, setComment: setValue, open, setOpen, sent, setSent }
+    const [pending, setPending] = createSignal<{ route: PRTarget; resolved: boolean }>()
+    const [error, setError] = createSignal<string>()
+    const next = {
+      comment: value,
+      setComment: setValue,
+      open,
+      setOpen,
+      sent,
+      setSent,
+      pending,
+      setPending,
+      error,
+      setError,
+    }
     entries.set(comment.threadId, next)
     return next
   }
@@ -154,6 +190,36 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
     ),
   )
 
+  createEffect(() => {
+    for (const comment of options.comments() ?? []) {
+      const item = entries.get(comment.threadId)
+      const pending = item?.pending()
+      if (!pending) continue
+      const route = options.target?.(comment)
+      if (JSON.stringify(route) !== JSON.stringify(pending.route) || comment.resolved === pending.resolved)
+        item?.setPending(undefined)
+    }
+  })
+  const unsubscribe = vscode.onMessage((msg) => {
+    if (msg.type !== "agentManager.resolveCommentResult" && msg.type !== "agentManager.unresolveCommentResult") return
+    const item = entries.get(msg.threadId)
+    const pending = item?.pending()
+    if (!item || !pending || msg.projectId !== pending.route.projectId || msg.worktreeId !== pending.route.worktreeId)
+      return
+    if (msg.success) return
+    item.setPending(undefined)
+    item.setOpen(true)
+    item.setError(
+      t(
+        msg.type === "agentManager.resolveCommentResult"
+          ? "agentManager.pr.comment.resolveFailed"
+          : "agentManager.pr.comment.unresolveFailed",
+        { error: msg.error || t("common.requestFailed") },
+      ),
+    )
+  })
+  onCleanup(unsubscribe)
+
   createEffect(
     on(
       () => [options.key(), options.active(), options.comments(), options.diffs()] as const,
@@ -172,16 +238,40 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
 
   const RemoteCard: Component<CardProps> = (props) => {
     const comment = () => props.item.comment()
+    const target = () => options.target?.(comment())
     const ctrl = options.reactions?.enabled() ? options.reactions : undefined
+    const reactions = reactionProps(ctrl, comment())
     return (
       <PRCommentCard
+        projectId={target()?.projectId}
+        worktreeId={target()?.worktreeId}
+        prNumber={target()?.prNumber}
+        prUrl={target()?.prUrl}
+        applySuggestions={options.applySuggestions?.()}
         comment={comment()}
-        resolved={comment().resolved}
-        pending={false}
+        resolved={props.item.pending()?.resolved ?? comment().resolved}
+        pending={props.item.pending() !== undefined}
+        error={props.item.error()}
         sent={props.item.sent()}
         open={props.item.open()}
         inline={props.inline}
         onToggleOpen={() => props.item.setOpen((value) => !value)}
+        onToggleResolved={
+          target()
+            ? () => {
+                const route = target()
+                if (!route || props.item.pending()) return
+                const next = !comment().resolved
+                props.item.setError(undefined)
+                props.item.setPending({ route, resolved: next })
+                vscode.postMessage({
+                  type: next ? "agentManager.resolveComment" : "agentManager.unresolveComment",
+                  ...route,
+                  threadId: comment().threadId,
+                } as never)
+              }
+            : undefined
+        }
         onSend={() => {
           const value = comment()
           sendReviewComments([prPayload(value)], options.activeTerminalId())
@@ -202,14 +292,7 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
             ? () => options.onOpenUrl?.(githubUrl(comment().url)!)
             : undefined
         }
-        reactionError={ctrl?.error(comment().id)}
-        reactions={ctrl?.list(comment().id, comment().reactions)}
-        reactionPending={ctrl ? (content) => ctrl.pending(comment().id, content) : undefined}
-        onReaction={ctrl ? (content, add) => ctrl.toggle(comment().id, content, add) : undefined}
-        replyReactionError={ctrl?.error}
-        replyReactions={ctrl?.list}
-        replyReactionPending={ctrl?.pending}
-        onReplyReaction={ctrl?.toggle}
+        {...reactions}
       />
     )
   }

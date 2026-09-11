@@ -12,6 +12,7 @@ import {
   isPRReviewComment,
   partReview,
   parseReview,
+  pushInstruction,
   reviewMetadata,
   type CIReviewCommentData,
   type PRReviewCommentData,
@@ -102,6 +103,24 @@ describe("PR review comment markdown", () => {
     ])
     expect(text).toContain("```\n@@ -1 +1 @@\n-const x = 1\n+const x = 2\n```")
     expect(text).toContain("> @bob: agreed\n> guard it")
+  })
+})
+
+describe("push instruction", () => {
+  it("asks for commit and push only for PR or CI feedback when enabled", () => {
+    expect(pushInstruction([pr()], true)).toContain("commit them and push to this branch")
+    expect(pushInstruction([ci()], true)).toContain("Do not force-push")
+    expect(pushInstruction([local(), pr()], true)).not.toBe("")
+    expect(pushInstruction([local()], true)).toBe("")
+    expect(pushInstruction([pr(), ci()], false)).toBe("")
+  })
+
+  it("keeps the review chips when appended after the review block", () => {
+    const comments = [ci()]
+    const text = [formatReviewCommentsMarkdown(comments), pushInstruction(comments, true)].join("\n\n")
+    const view = partReview(reviewMetadata({ version: 1, comments }), text)
+    expect(view?.data.comments).toEqual(comments)
+    expect(view?.body).toBe(pushInstruction(comments, true))
   })
 })
 

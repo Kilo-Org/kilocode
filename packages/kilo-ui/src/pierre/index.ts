@@ -18,9 +18,13 @@ export interface DiffHandle {
 // existing symbols. Word-alt keeps those logical additions visually intact.
 export const LINE_DIFF_TYPE = "word-alt" as const
 
-// Pierre 1.1 treats its changed-line override properties as tint targets. Apply
-// Kilo semantic surfaces at the computed row level so host diff colors stay final.
+// Keep Kilo semantic surfaces at the computed row level. Pierre's dedicated
+// number override keeps deletion bars red without tinting line-number text.
 const css = `
+:host {
+  --diffs-fg-number-deletion-override: var(--diffs-fg-number-override, var(--diffs-fg));
+  --diffs-bg-deletion-override: var(--surface-diff-delete-base, var(--diffs-deletion-base));
+}
 [data-indicators='bars'] [data-column-number][data-line-type='change-deletion'] {
   --diffs-deletion-base: var(--surface-diff-delete-strong, #ff6762);
 }
@@ -36,9 +40,6 @@ const css = `
   --diffs-computed-diff-line-bg: var(--surface-diff-delete-base, var(--diffs-bg-deletion));
   --diffs-computed-selected-line-bg: var(--surface-diff-delete-base, var(--diffs-bg-deletion));
 }
-[data-diff] [data-column-number][data-line-type='change-deletion'] {
-  color: inherit;
-}
 [data-diff][data-background] [data-column-number][data-line-type='change-deletion'] {
   --diffs-computed-diff-line-bg: var(--surface-diff-delete-weaker, var(--diffs-bg-deletion-number));
   --diffs-computed-selected-line-bg: var(--surface-diff-delete-weaker, var(--diffs-bg-deletion-number));
@@ -49,6 +50,7 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
   const opts = defaults<T>(style)
   return {
     ...opts,
+    diffIndicators: "bars" as const,
     lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }

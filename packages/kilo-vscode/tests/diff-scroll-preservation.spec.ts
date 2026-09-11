@@ -77,14 +77,12 @@ for (const width of [420, 200]) {
     await header.scrollIntoViewIfNeeded()
     await header.focus()
     const original = await header.evaluateHandle((el) => el)
-    const title = await header.locator(".am-pr-comment-preview").textContent()
     const position = await header.evaluate((el) => ({
       x: el.getBoundingClientRect().x,
       y: el.getBoundingClientRect().y,
     }))
 
     async function stable() {
-      await expect(header.locator(".am-pr-comment-preview")).toHaveText(title!)
       await expect(card).toHaveCount(1)
       await expect(header).toHaveCount(1)
       await expect(header).toBeFocused()
@@ -95,6 +93,7 @@ for (const width of [420, 200]) {
 
     async function inline() {
       await expect(header).toHaveAttribute("aria-expanded", "true")
+      await expect(header.locator(".am-pr-comment-preview")).toHaveCount(0)
       await expect(diff.locator(".am-pr-diff-context-marker + [data-component='diff']")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-head")).toHaveCount(0)
       await expect(annotation.locator(".am-pr-comment-body").first()).toContainText("This throws when")
@@ -142,6 +141,7 @@ for (const width of [420, 200]) {
       await expect(diff).toHaveCount(0)
       await expect(card.locator(".am-pr-comment-body")).toHaveCount(0)
       await expect(header).toHaveAttribute("aria-expanded", "false")
+      await expect(header.locator(".am-pr-comment-preview")).toContainText("This throws when")
       await stable()
       if (input === "click") await header.click()
       if (input !== "click") await page.keyboard.press(input)

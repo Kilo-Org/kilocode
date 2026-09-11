@@ -26,6 +26,7 @@ interface VSCodeContext {
 
 export interface SlashCommandEntry extends SlashCommandInfo {
   action?: () => void
+  select?: () => void
   enabled?: Accessor<boolean>
   nested?: boolean
 }
@@ -347,7 +348,7 @@ export function useSlashCommand(
     // slashEnd is the cursor position from onInput when the slash pattern was matched.
     const trailingText = textarea.value.substring(cursor)
 
-    if (cmd.action) {
+    if (cmd.action || cmd.select) {
       if (cmd.enabled && !cmd.enabled()) return
       if (beforeAction && !beforeAction(cmd)) return
       textarea.value = trailingText
@@ -355,7 +356,7 @@ export function useSlashCommand(
       textarea.setSelectionRange(0, 0)
       close()
       onSelect?.()
-      cmd.action()
+      ;(cmd.select ?? cmd.action)?.()
       return
     }
     const commandText = `/${cmd.name} `

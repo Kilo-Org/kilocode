@@ -55,8 +55,18 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完成（模型回報）",
+  "session.goal.blocked": "受阻",
+  "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "看板",
+  "task.swarm.refresh": "重新整理",
+  "task.swarm.reset": "重設看板",
+  "task.swarm.resetTitle": "重設此看板？",
+  "task.swarm.resetDescription": "清除可見訊息？對話和執行中的工作不會改變。代理可以發布新訊息。",
+  "task.swarm.loading": "正在載入看板...",
+  "task.swarm.failed": "無法載入或重設看板。請嘗試重新整理。",
 
   "command.provider.connect": "連接供應商",
 
@@ -685,6 +695,14 @@ export const dict = {
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "設定目標",
+  "prompt.goal.start": "開始目標",
+  "session.goal.active": "執行中",
+  "session.goal.paused": "已暫停",
+  "session.goal.pause": "暫停",
+  "session.goal.resume": "繼續",
+  "session.goal.clear": "清除目標",
   "session.costAlert.header": "工作階段費用提醒",
   "session.costAlert.continue": "繼續",
   "session.costAlert.question": "此工作階段剛剛超過每工作階段提醒門檻 {{limit}}，目前費用為 {{cost}}。是否繼續？",
@@ -774,7 +792,16 @@ export const dict = {
   "settings.notifications.sounds": "聲音",
   "settings.notifications.enable.title": "啟用聲音通知",
   "settings.notifications.enable.description": "在工作階段完成、遇到錯誤或需要你輸入時播放聲音",
+  "settings.notifications.workbench.title": "啟用 VS Code 通知",
+  "settings.notifications.workbench.description": "在 Kilo 完成工作或需要你輸入時顯示 VS Code 通知",
+  "settings.notifications.os.title": "啟用作業系統通知",
+  "settings.notifications.os.description":
+    "在 VS Code 未處於使用中狀態時，若 Kilo 完成工作或需要你輸入，則顯示原生作業系統通知提醒。",
   "settings.notifications.testSound": "測試",
+  "settings.notifications.testOS": "測試",
+  "settings.notifications.testOS.testing": "正在傳送測試通知…",
+  "settings.notifications.testOS.success": "測試通知已傳送。",
+  "settings.notifications.testOS.error": "測試通知傳送失敗",
   "settings.notifications.sound.default": "預設",
   "settings.notifications.sound.system": "系統",
   "settings.notifications.sound.description":
@@ -819,6 +846,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 遷移",
+  "settings.experimental.claudeMigration.description":
+    "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
@@ -926,6 +956,9 @@ export const dict = {
     "規則是引導代理行為的指令檔案。它們會被包含在每次對話的系統提示詞中。在下方新增檔案路徑以包含額外的規則。",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",
   "settings.agentBehaviour.instructionFiles.description": "包含在系統提示詞中的附加指令檔案路徑",
+  "settings.agentBehaviour.pushFixes.title": "推送提取請求修正",
+  "settings.agentBehaviour.pushFixes.description":
+    "當你將提取請求的 CI 失敗或審查留言傳送給代理程式，或從基礎分支更新 worktree 時，要求代理程式提交並推送，以更新提取請求。權限確認仍然適用。關閉後可手動提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":

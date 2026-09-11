@@ -15,6 +15,8 @@ interface Props {
   comments: NonNullable<PRStatus["comments"]>
   projectId?: string
   worktreeId: string
+  prNumber: number
+  prUrl: string
   activeTerminalId?: string
   onOpenFile?: (file: string, line?: number) => void
   onOpenDiff?: (comment: PRComment) => void
@@ -126,6 +128,10 @@ export function PRComments(props: Props) {
     <Show when={index().get(id)}>
       {(comment) => (
         <PRCommentCard
+          projectId={props.projectId}
+          worktreeId={props.worktreeId}
+          prNumber={props.prNumber}
+          prUrl={props.prUrl}
           comment={comment()}
           preview={comment().outdated ? undefined : comment().preview}
           resolved={resolved(comment())}

@@ -54,8 +54,19 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.blocked": "ブロック中",
+  "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
+  "task.swarm.title": "ボード",
+  "task.swarm.refresh": "更新",
+  "task.swarm.reset": "ボードをリセット",
+  "task.swarm.resetTitle": "このボードをリセットしますか？",
+  "task.swarm.resetDescription":
+    "表示されているメッセージを消去しますか？会話と実行中のタスクは変更されません。エージェントは新しいメッセージを投稿できます。",
+  "task.swarm.loading": "ボードを読み込み中...",
+  "task.swarm.failed": "ボードを読み込むかリセットできませんでした。更新を試してください。",
 
   "command.provider.connect": "プロバイダーに接続",
 
@@ -745,6 +756,14 @@ export const dict = {
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",
+  "session.goal.label": "目標",
+  "prompt.goal.set": "目標を設定",
+  "prompt.goal.start": "目標を開始",
+  "session.goal.active": "実行中",
+  "session.goal.paused": "一時停止中",
+  "session.goal.pause": "一時停止",
+  "session.goal.resume": "再開",
+  "session.goal.clear": "目標をクリア",
   "session.costAlert.header": "セッションコストアラート",
   "session.costAlert.continue": "続行",
   "session.costAlert.question":
@@ -842,7 +861,17 @@ export const dict = {
   "settings.notifications.enable.title": "サウンド通知を有効にする",
   "settings.notifications.enable.description":
     "セッションの完了時、エラーの発生時、またはユーザー入力が必要なときにサウンドを再生します",
+  "settings.notifications.workbench.title": "VS Code 通知を有効にする",
+  "settings.notifications.workbench.description":
+    "Kilo がタスクを完了したとき、またはユーザー入力が必要なときに VS Code の通知を表示します",
+  "settings.notifications.os.title": "OS 通知を有効にする",
+  "settings.notifications.os.description":
+    "VS Code が非アクティブのときに Kilo がタスクを完了した場合、またはユーザー入力が必要な場合にネイティブ OS 通知を表示します。",
   "settings.notifications.testSound": "テスト",
+  "settings.notifications.testOS": "テスト",
+  "settings.notifications.testOS.testing": "テスト通知を送信しています…",
+  "settings.notifications.testOS.success": "テスト通知を送信しました。",
+  "settings.notifications.testOS.error": "テスト通知の送信に失敗しました",
   "settings.notifications.sound.default": "デフォルト",
   "settings.notifications.sound.system": "システム",
   "settings.notifications.sound.description":
@@ -888,6 +917,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 移行",
+  "settings.experimental.claudeMigration.description":
+    "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
@@ -1004,6 +1036,9 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.pushFixes.title": "プルリクエストの修正をプッシュ",
+  "settings.agentBehaviour.pushFixes.description":
+    "プルリクエストの CI 失敗やレビューコメントをエージェントに送信したとき、またはベースから worktree を更新したときに、プルリクエストが更新されるようにコミットとプッシュを依頼します。権限の確認は引き続き行われます。手動でコミットしたい場合はオフにしてください。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":

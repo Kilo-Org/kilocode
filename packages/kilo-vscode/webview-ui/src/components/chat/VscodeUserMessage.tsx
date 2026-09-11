@@ -21,6 +21,7 @@ interface VscodeUserMessageProps {
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
+  revertDisabled?: boolean
   onSelectSession?: (id: string) => boolean | void
   isSessionOpen?: (id: string) => boolean
 }
@@ -99,6 +100,7 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       onDelete={props.onDelete}
       onFork={props.onFork}
       onRevert={props.onRevert}
+      revertDisabled={props.revertDisabled}
       onImageClick={(dataUrl, filename) => {
         // Only claim the click when the host can decode the image; anything
         // else (remote URLs, non-base64 data URLs) keeps the modal fallback

@@ -72,7 +72,36 @@ describe("routeEarlyMessage activity", () => {
   })
 })
 
+describe("routeEarlyMessage caffeination", () => {
+  it("delegates keep-awake toggles to the host", async () => {
+    const calls: string[] = []
+    const ctx = { caffeination: () => calls.push("toggle") } as Ctx
+
+    expect(await routeEarlyMessage({ type: "toggleCaffeination" }, ctx)).toBe(true)
+    expect(calls).toEqual(["toggle"])
+  })
+})
+
 describe("routeEarlyMessage background jobs", () => {
+  it("forwards board requests without losing owner, project, or revision", async () => {
+    const calls: unknown[] = []
+    const ctx = {
+      board: async (message: Record<string, unknown>) => {
+        calls.push(message)
+        return true
+      },
+    } as Ctx
+    const message = {
+      type: "resetSessionBoard",
+      sessionID: "ses_owner",
+      requestID: "reset-1",
+      projectId: "project-1",
+      revision: 12,
+    }
+    expect(await routeEarlyMessage(message, ctx)).toBe(true)
+    expect(calls).toEqual([message])
+  })
+
   it("forwards list request correlation", async () => {
     const calls: unknown[] = []
     const ctx = {

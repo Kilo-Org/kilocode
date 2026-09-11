@@ -36,7 +36,6 @@ import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-promp
 import { ResponseLensApi } from "@/kilocode/server/httpapi/groups/response-lens"
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
 import { InstanceReloadApi } from "@/kilocode/server/httpapi/groups/instance-reload"
-import { InteractiveTerminalApi } from "@/kilocode/server/httpapi/groups/interactive-terminal"
 import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodeApi } from "@/kilocode/server/httpapi/groups/kilocode"
 import { MigrateApi } from "@/kilocode/server/httpapi/groups/migrate"
@@ -108,7 +107,6 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(ResponseLensApi)
   .addHttpApi(IndexingApi)
   .addHttpApi(InstanceReloadApi)
-  .addHttpApi(InteractiveTerminalApi)
   .addHttpApi(KiloGatewayApi)
   .addHttpApi(KilocodeApi)
   .addHttpApi(MigrateApi)

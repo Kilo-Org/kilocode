@@ -21,6 +21,8 @@ import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
+const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
+type PRMergeMethod = "merge" | "squash" | "rebase"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -257,6 +259,12 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  dirtyFiles(): string[] {
+    return vscode.workspace.textDocuments
+      .filter((doc) => doc.isDirty && doc.uri.scheme === "file")
+      .map((doc) => doc.uri.fsPath)
+  }
+
   async pickFolder(): Promise<string | undefined> {
     const uris = await vscode.window.showOpenDialog({
       canSelectFiles: false,
@@ -282,6 +290,18 @@ export class VscodeHost implements Host {
 
   async writeProjects(value: unknown): Promise<void> {
     await this.context.globalState.update("agentManager.projects", value)
+  }
+
+  getPRMergeMethod(repo: string): PRMergeMethod | undefined {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY)
+    const value = values?.[repo]
+    if (value === "merge" || value === "squash" || value === "rebase") return value
+    return undefined
+  }
+
+  async savePRMergeMethod(repo: string, method: PRMergeMethod): Promise<void> {
+    const values = this.context.globalState.get<Record<string, unknown>>(PR_MERGE_METHODS_KEY) ?? {}
+    await this.context.globalState.update(PR_MERGE_METHODS_KEY, { ...values, [repo]: method })
   }
 
   unregisterProjectRoutes(projectId: string): void {

@@ -27,6 +27,8 @@ import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
 import { Session as SessionApi } from "@/session/session"
+import { useCaffeination } from "./caffeination"
+import { useLinkInteractions } from "@tui/kilocode/link-interactions"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
@@ -78,6 +80,7 @@ export function useSessionEffects(deps: {
   sdk: ReturnType<typeof useSDK>
   sync: ReturnType<typeof useSync>
 }) {
+  useLinkInteractions()
   const pty = process.env.KILO_PTY_ID
   const viewerId = crypto.randomUUID()
   const renderer = useRenderer()
@@ -270,6 +273,7 @@ export function init() {
 
   // Register Kilo Gateway commands (profile, teams, kiloclaw, remote, etc.)
   registerKiloCommands(useSDK)
+  useCaffeination()
 
   // Register auto-approve toggle
   useBindings(() => ({

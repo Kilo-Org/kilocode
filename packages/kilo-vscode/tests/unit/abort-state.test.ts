@@ -30,6 +30,30 @@ describe("pending prompt abort state", () => {
     expect(aborts.update("session", "busy")).toBe(false)
   })
 
+  it("preserves pending cancellation across an immediate goal abort becoming idle", () => {
+    const aborts = createAbortState()
+
+    expect(aborts.request("session", "idle", "message", true)).toBe(false)
+    expect(aborts.update("session", "idle")).toBe(false)
+    expect(aborts.update("session", "idle")).toBe(false)
+    aborts.finish("other")
+    expect(aborts.update("other", "busy")).toBe(false)
+    expect(aborts.update("session", "busy")).toBe(true)
+    expect(aborts.update("session", "busy")).toBe(false)
+    expect(aborts.update("session", "idle")).toBe(false)
+    expect(aborts.update("session", "busy")).toBe(false)
+  })
+
+  it("clears preserved cancellation when its submission finishes before becoming busy", () => {
+    const aborts = createAbortState()
+
+    expect(aborts.request("session", "idle", "message")).toBe(false)
+    expect(aborts.request("session", "idle", "message", true)).toBe(false)
+    expect(aborts.update("session", "idle")).toBe(false)
+    aborts.finish("message")
+    expect(aborts.update("session", "busy")).toBe(false)
+  })
+
   it("allows retrying an abort while the session remains active", () => {
     const aborts = createAbortState()
 
