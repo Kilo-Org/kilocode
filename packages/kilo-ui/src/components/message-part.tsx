@@ -3,6 +3,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  createUniqueId,
   For,
   Match,
   onCleanup,
@@ -46,7 +47,6 @@ import { Card } from "./card"
 import { Collapsible } from "./collapsible"
 import { FileIcon } from "./file-icon"
 import { Icon } from "./icon"
-import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
@@ -59,7 +59,7 @@ import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./to
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
-import { busy, createThrottledValue, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
+import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS, useCollapsible, useToolFade, useContextToolPending } from "./tool-utils"
 export { useGrowIn } from "./tool-utils"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
@@ -162,6 +162,10 @@ export interface MessagePartProps {
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
   reasoningAutoCollapse?: boolean
+  /** True when the stream has moved past this reasoning part. Encrypted
+   * reasoning items hold every summary's `time.end` until the whole item
+   * finishes, so the caller settles finished summaries from the part order. */
+  settled?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
@@ -1077,6 +1081,7 @@ export function Part(props: MessagePartProps) {
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
+        settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
@@ -1521,13 +1526,6 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
-  const throttledText = createThrottledValue(displayText)
-  const summary = createMemo(() => {
-    if (props.message.role !== "assistant") return
-    if (!props.showTurnDiffSummary) return
-    if (props.showAssistantCopyPartID !== part().id) return
-    return props.turnDiffSummary
-  })
 
   // Assistant message is still in-flight when `time.completed` hasn't been set.
   // Used as a render guard for synthetic status parts so stale ones don't
@@ -1535,6 +1533,18 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const streaming = createMemo(
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
+
+  // Repaint at frame cadence while text is arriving, and fall back to the slow
+  // throttle once the part settles so static history stays cheap.
+  const throttledText = createThrottledValue(displayText, () =>
+    streaming() ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS,
+  )
+  const summary = createMemo(() => {
+    if (props.message.role !== "assistant") return
+    if (!props.showTurnDiffSummary) return
+    if (props.showAssistantCopyPartID !== part().id) return
+    return props.turnDiffSummary
+  })
 
   // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
   // guard) are transient status indicators. Hide them once the owning message
@@ -1857,15 +1867,16 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     return (p.text ?? "").replace("[REDACTED]", "").trim()
   }
 
-  // time.end is set by the processor on reasoning-end.
-  // v1 parts lack time entirely → treat as historical.
+  // time.end is set by the processor on reasoning-end. The caller marks a part
+  // settled once a later part started. v1 parts lack time entirely → historical.
   const done = () => {
+    if (props.settled) return true
     const t = (props.part as any).time
     return !t || !!t.end
   }
 
   // Throttle markdown re-renders during streaming
-  const display = createThrottledValue(text)
+  const display = createThrottledValue(text, () => (done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS))
   const view = createMemo(() => reasoningHeading(display(), !done()))
 
   const id = (props.part as any).id as string
@@ -2763,7 +2774,11 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // A plain function, not `createMemo`: Solid evaluates a memo eagerly on
+    // render, which parsed the patch with Pierre even while the card stayed
+    // collapsed. This is only read when the deferred body mounts or the user
+    // opens the diff viewer, so collapsed cards do no parse work.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (diff?.patch) return normalize(diff)
       // Pending state: tool-part metadata.filediff is written only after the
@@ -2778,8 +2793,15 @@ ToolRegistry.register({
         additions: diff?.additions ?? 0,
         deletions: diff?.deletions ?? 0,
       })
-    })
-    const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
+    }
+    const canOpenDiff = () => {
+      if (!data.openDiff || !path()) return false
+      // Presence check instead of `view()` so the always-rendered trigger does
+      // not parse the patch while the card stays collapsed.
+      const diff = props.metadata?.filediff
+      if (diff?.patch) return true
+      return !!(props.input.oldString || props.input.newString)
+    }
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2875,12 +2897,16 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const view = createMemo(() => {
+    // Lazy like the edit card: only parsed when the deferred body mounts or the
+    // user opens the diff viewer, never while the card is collapsed.
+    const view = () => {
       const diff = props.metadata?.filediff
       if (!diff?.patch) return
       return normalize(diff)
-    })
-    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
+    }
+    // Cheap presence check instead of `view()` so a collapsed card never
+    // parses its patch with Pierre just to decide whether to show the button.
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!props.metadata?.filediff?.patch
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -2990,6 +3016,8 @@ interface ApplyPatchFile {
   movePath?: string
 }
 
+const HUNK_MARKER = /^\s*@@/m
+
 ToolRegistry.register({
   name: "apply_patch",
   render(props) {
@@ -3042,8 +3070,11 @@ ToolRegistry.register({
       if (!data.openDiff || !first) return
       data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
     }
+    // Cheap `@@` marker check: keeps the trigger hidden for unparsable patches
+    // like the `view` guard did, without parsing every file while collapsed.
+    const hasHunk = (file: ApplyPatchFile) => HUNK_MARKER.test(file.patch ?? file.diff ?? "")
     const allDiffAction = () => (
-      <Show when={data.openDiff && files().some((file) => view(file))}>
+      <Show when={data.openDiff && files().some(hasHunk)}>
         <span data-slot="tool-trigger-actions">
           <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
             <IconButton
@@ -3285,6 +3316,54 @@ ToolRegistry.register({
   },
 })
 
+function TodoCheckbox(props: { checked: boolean; children: JSX.Element }) {
+  const id = createUniqueId()
+  const state = () => (props.checked ? "" : undefined)
+  return (
+    <div role="group" data-component="checkbox" data-readonly="" data-checked={state()}>
+      <input
+        type="checkbox"
+        id={`${id}-input`}
+        data-slot="checkbox-checkbox-input"
+        data-readonly=""
+        data-checked={state()}
+        checked={props.checked}
+        readOnly
+        aria-readonly="true"
+        aria-labelledby={`${id}-label`}
+        onChange={(event) => {
+          event.currentTarget.checked = props.checked
+        }}
+      />
+      <div data-slot="checkbox-checkbox-control" data-readonly="" data-checked={state()}>
+        <Show when={props.checked}>
+          <div data-slot="checkbox-checkbox-indicator" data-readonly="" data-checked="">
+            <svg viewBox="0 0 12 12" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3 7.17905L5.02703 8.85135L9 3.5"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="square"
+              />
+            </svg>
+          </div>
+        </Show>
+      </div>
+      <div data-slot="checkbox-checkbox-content">
+        <label
+          id={`${id}-label`}
+          for={`${id}-input`}
+          data-slot="checkbox-checkbox-label"
+          data-readonly=""
+          data-checked={state()}
+        >
+          {props.children}
+        </label>
+      </div>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "todowrite",
   render(props) {
@@ -3330,7 +3409,7 @@ ToolRegistry.register({
             </Show>
             <For each={shown()}>
               {(todo: TodoItem) => (
-                <Checkbox readOnly checked={todo.status === "completed"}>
+                <TodoCheckbox checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
@@ -3338,7 +3417,7 @@ ToolRegistry.register({
                   >
                     {todo.content}
                   </span>
-                </Checkbox>
+                </TodoCheckbox>
               )}
             </For>
             <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>

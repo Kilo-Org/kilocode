@@ -6,7 +6,6 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
-import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { composeDiffId, normalizeScope } from "./diff-scope"
@@ -78,6 +77,8 @@ import { createMultiVersion, type MultiVersionHost } from "./provider-multi-vers
 import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
+import { revealManagedSession } from "./reveal-session"
+import { resolveWorktreeFile } from "./worktree-file-path"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
@@ -1645,34 +1646,10 @@ export class AgentManagerProvider implements Disposable {
     this.host.openFolder(target, true)
   }
 
-  /** Open a file from a worktree or local session in the VS Code editor.
-   * Absolute paths are opened directly; relative paths resolve against the
-   * context's worktree directory (repo root for local) with symlink-traversal
-   * protection. The id may be a worktree id, session id, or `local`. */
+  /** Open a file from a worktree or local session in the VS Code editor. */
   private openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
-    if (isAbsolutePath(filePath)) {
-      this.host.openFile(filePath, line, column)
-      return
-    }
-    const state = this.getStateManager()
-    if (!state) return
-    const worktree = state.getWorktree(id)
-    const session = worktree ? undefined : state.getSession(id)
-    const base = worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot())
-    if (!base) return
-    // Resolve real paths to prevent symlink traversal and normalize for
-    // consistent comparison on both Unix and Windows.
-    let resolved: string
-    try {
-      const root = fs.realpathSync(base)
-      resolved = fs.realpathSync(path.resolve(base, filePath))
-      // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) return
-    } catch (err) {
-      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
-      return
-    }
-    this.host.openFile(resolved, line, column)
+    const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
+    if (target) this.host.openFile(target, line, column)
   }
 
   private postToWebview(message: AgentManagerOutMessage): void {
@@ -1762,6 +1739,23 @@ export class AgentManagerProvider implements Disposable {
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  /**
+   * Reveal a session Agent Manager owns: activate its project, open the panel,
+   * and select its worktree and session tab. False means Agent Manager does not
+   * own the session (or its worktree is gone) and the caller should fall back.
+   */
+  public revealSession(sessionId: string): Promise<boolean> {
+    return revealManagedSession(sessionId, this.contexts, {
+      directories: () => this.getSessionDirectories(),
+      activate: (ctx) => this.activateProject(ctx),
+      projects: () => this.pushProjects(),
+      open: () => this.openPanel(),
+      state: () => this.waitForStateReady("revealSession"),
+      ready: () => this.waitForReady(),
+      post: (message) => this.panel?.postMessage(message),
+    })
   }
 
   public getWorktreeDirectories(): string[] {

@@ -455,4 +455,27 @@ test.describe("webview accessibility ratchet", () => {
       await expect(page.getByRole("dialog")).toHaveAccessibleName(/.+/)
     }
   })
+
+  test("To-do cards render read-only checkboxes with labeled states", async ({ page }) => {
+    await open(page, "composite-webview--todo-write-completed")
+
+    const card = page.locator('[data-component="todos"]')
+    const done = card.getByRole("checkbox", { name: "Create a haiku about Jan" })
+    const active = card.getByRole("checkbox", { name: "Create a poem about Henk" })
+
+    await expect(done).toBeChecked()
+    await expect(active).not.toBeChecked()
+    await expect(done).toHaveAttribute("aria-readonly", "true")
+    await expect(active).toHaveAttribute("aria-readonly", "true")
+    await expect(card.locator('[data-component="checkbox"][data-readonly]')).toHaveCount(2)
+    await expect(card.locator('[data-slot="checkbox-checkbox-indicator"]')).toHaveCount(1)
+    await expect(card.locator('[data-slot="message-part-todo-content"][data-completed="completed"]')).toHaveText(
+      "Create a haiku about Jan",
+    )
+
+    await active.focus()
+    await page.keyboard.press("Space")
+    await expect(active).not.toBeChecked()
+    await expect(done).toBeChecked()
+  })
 })

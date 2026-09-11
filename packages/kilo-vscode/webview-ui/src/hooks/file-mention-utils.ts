@@ -26,6 +26,17 @@ export type WorktreeReference = {
 
 export const PAST_CHATS_MENTION = "past-chats"
 
+const model = {
+  result: {
+    type: "model",
+    value: "model",
+    label: "Model",
+    description: "Reference a model for subagents",
+  },
+  aliases: ["models", "llm"],
+  gate: null,
+} as const
+
 const terminal = {
   result: {
     type: "terminal",
@@ -76,7 +87,7 @@ const picker = {
   gate: null,
 } as const
 
-const entries = [terminal, changes, chats, worktrees, picker] as const
+const entries = [model, terminal, changes, chats, worktrees, picker] as const
 type MentionEntry = (typeof entries)[number]["result"]
 
 export type MentionResult =
@@ -104,6 +115,7 @@ export const GIT_CHANGES_RESULT = changes.result
 export const FILE_PICKER_RESULT = picker.result
 export const PAST_CHATS_RESULT = chats.result
 export const WORKTREES_RESULT = worktrees.result
+export const MODEL_RESULT = model.result
 
 /**
  * Whether the query spells out the Browse files entry rather than just leaving
@@ -245,6 +257,11 @@ export function sessionMentionFilename(title: string, id: string) {
     .replace(/\s+/g, "-")
     .slice(0, 50)
   return `${slug || id}.md`
+}
+
+/** The inline token for referencing a model: `@providerID/modelID`. */
+export function modelReferenceToken(providerID: string, modelID: string) {
+  return `${providerID}/${modelID}`
 }
 
 /**
