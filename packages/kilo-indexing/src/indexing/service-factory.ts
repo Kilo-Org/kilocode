@@ -15,13 +15,13 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
+import { MilvusVectorStore } from "./vector-store/milvus-vector-store"
 import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
 import type { CacheManager } from "./cache-manager"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "./interfaces/telemetry"
 import {
-  BATCH_SEGMENT_THRESHOLD,
   DEFAULT_VECTOR_STORE,
   OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS,
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
@@ -112,7 +112,7 @@ export class CodeIndexServiceFactory {
     }
     if (provider === "gemini") {
       if (!config.geminiOptions?.apiKey) throw new Error("Gemini API key is required for embedding.")
-      return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId)
+      return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId, config.modelDimension)
     }
     if (provider === "mistral") {
       if (!config.mistralOptions?.apiKey) throw new Error("Mistral API key is required for embedding.")
@@ -210,6 +210,24 @@ export class CodeIndexServiceFactory {
         dbDir,
       })
       return new LanceDBVectorStore(workspacePath, profile.dimension, dbDir, profile)
+    }
+
+    if (config.vectorStoreProvider === "milvus") {
+      if (!config.milvusAddress) throw new Error("Milvus address is required.")
+      log.info("creating vector store", {
+        provider: config.embedderProvider,
+        vectorStore: "milvus",
+        model: profile.modelId,
+        vectorSize: profile.dimension,
+      })
+      return new MilvusVectorStore(
+        workspacePath,
+        config.milvusAddress,
+        profile.dimension,
+        config.milvusToken,
+        config.milvusDatabase,
+        profile,
+      )
     }
 
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")

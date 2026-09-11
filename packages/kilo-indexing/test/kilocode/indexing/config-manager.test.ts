@@ -77,6 +77,32 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.getConfig().vectorStoreProvider).toBe("qdrant")
   })
 
+  test("preserves an explicit Milvus override", () => {
+    const input = toIndexingConfigInput({
+      vectorStore: "milvus",
+      milvus: {
+        address: "https://cluster.example.com",
+        token: "token",
+        database: "code",
+      },
+    })
+    const cfg = new CodeIndexConfigManager(input)
+
+    expect(input.vectorStoreProvider).toBe("milvus")
+    expect(input.milvusAddress).toBe("https://cluster.example.com")
+    expect(cfg.getConfig().vectorStoreProvider).toBe("milvus")
+    expect(cfg.getConfig().milvusAddress).toBe("https://cluster.example.com")
+    expect(cfg.getConfig().milvusToken).toBe("token")
+    expect(cfg.getConfig().milvusDatabase).toBe("code")
+  })
+
+  test("uses the default Milvus address when omitted", () => {
+    const cfg = new CodeIndexConfigManager(createInput({ vectorStoreProvider: "milvus" }))
+
+    expect(cfg.isFeatureConfigured).toBe(true)
+    expect(cfg.getConfig().milvusAddress).toBe("localhost:19530")
+  })
+
   test("normalizes configured file extensions", () => {
     expect(normalizeFileExtensions([" PHP ", ".JS", "js", "css"])).toEqual([".css", ".js", ".php"])
     expect(parseFileExtensions(" PHP, .JS, js, css ")).toEqual([".css", ".js", ".php"])
@@ -205,6 +231,20 @@ describe("CodeIndexConfigManager", () => {
       expect(cfg.loadConfiguration({ ...input, openAiCompatibleApiKey: "sk-test" }).requiresRestart).toBe(true)
       expect(cfg.loadConfiguration(input).requiresRestart).toBe(true)
       expect(cfg.loadConfiguration(input).requiresRestart).toBe(false)
+    })
+
+    test("requires restart when Milvus connection settings change", () => {
+      const input = createInput({
+        vectorStoreProvider: "milvus",
+        milvusAddress: "localhost:19530",
+        milvusToken: "old-token",
+      })
+      const cfg = new CodeIndexConfigManager(input)
+
+      expect(cfg.loadConfiguration({ ...input, milvusAddress: "localhost:19531" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration({ ...input, milvusToken: "new-token" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration({ ...input, milvusDatabase: "code" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration({ ...input, milvusDatabase: "code" }).requiresRestart).toBe(false)
     })
 
     test("requires restart when Kilo auth changes", () => {

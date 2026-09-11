@@ -12,7 +12,7 @@ import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { DEFAULT_VECTOR_STORE, isFileExtension, parseFileExtensions } from "@kilocode/kilo-indexing/config"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
-import { createEffect, createMemo, createResource, createSignal, Show } from "solid-js"
+import { createEffect, createMemo, createResource, createSignal } from "solid-js"
 import { reconcile } from "solid-js/store"
 import type { IndexingConfig, Config } from "@kilocode/sdk/v2"
 import * as Log from "@opencode-ai/core/util/log"
@@ -78,6 +78,7 @@ const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
 const VECTOR_STORE_LABELS: Record<string, string> = {
   lancedb: "LanceDB (default)",
   qdrant: "Qdrant",
+  milvus: "Milvus",
 }
 
 function maskSecret(value: string | undefined): string {
@@ -315,11 +316,13 @@ function VectorStoreSelect(props: SubDialogProps) {
       options={options}
       current={indexing.vectorStore ?? DEFAULT_VECTOR_STORE}
       onSelect={async (option) => {
-        const store = option.value as "lancedb" | "qdrant"
+        const store = option.value as "lancedb" | "qdrant" | "milvus"
         if (store === "lancedb") {
           await showLancedbSettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
-        } else {
+        } else if (store === "qdrant") {
           await showQdrantSettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
+        } else {
+          await showMilvusSettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
         }
       }}
     />
@@ -389,6 +392,58 @@ async function showQdrantSettings(
     qdrant: {
       url: url.trim() || undefined,
       apiKey: apiKey.trim() || undefined,
+    },
+  }
+  await saveScopedIndexing(sdk, sync, scope, raw, updated, toast)
+  dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+}
+
+async function showMilvusSettings(
+  dialog: ReturnType<typeof useDialog>,
+  sync: ReturnType<typeof useSync>,
+  sdk: SDK,
+  toast: ReturnType<typeof useToast>,
+  useSDK: () => UseSDK,
+  scope: IndexingScope,
+  indexing: IndexingConfig,
+  raw: IndexingConfig,
+) {
+  const currentSettings = indexing.milvus ?? {}
+
+  const address = await DialogPrompt.show(dialog, "Milvus — Address", {
+    value: currentSettings.address ?? "",
+    placeholder: "localhost:19530",
+  })
+  if (address === null) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+    return
+  }
+
+  const token = await DialogPrompt.show(dialog, "Milvus — Token", {
+    value: currentSettings.token ?? "",
+    placeholder: "Optional token",
+  })
+  if (token === null) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+    return
+  }
+
+  const database = await DialogPrompt.show(dialog, "Milvus — Database", {
+    value: currentSettings.database ?? "",
+    placeholder: "Optional database",
+  })
+  if (database === null) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+    return
+  }
+
+  const updated: IndexingConfig = {
+    ...raw,
+    vectorStore: "milvus",
+    milvus: {
+      address: address.trim() || undefined,
+      token: token.trim() || undefined,
+      database: database.trim() || undefined,
     },
   }
   await saveScopedIndexing(sdk, sync, scope, raw, updated, toast)
