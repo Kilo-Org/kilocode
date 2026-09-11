@@ -71,6 +71,8 @@ export const Flag = {
 
   KILO_EXPERIMENTAL, // kilocode_change
 
+  KILO_EXPERIMENTAL_CLAUDE_MIGRATION: truthy("KILO_EXPERIMENTAL_CLAUDE_MIGRATION"), // kilocode_change
+
   KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(Config.withDefault(false)), // kilocode_change
 
   KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(

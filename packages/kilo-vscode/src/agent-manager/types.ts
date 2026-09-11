@@ -59,9 +59,18 @@ import type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
   PRReaction,
   PRReactionContent,
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 } from "../../webview-ui/agent-manager/pr/pr-types"
 
 export type {
@@ -74,39 +83,18 @@ export type {
   PRComment,
   ReviewerState,
   PRReviewer,
+  PRStatus,
   PRConversationComment,
+  PRCommitItem,
+  PREventItem,
+  PREventKind,
+  PRTimelineItem,
   PRReaction,
   PRReactionContent,
-}
-
-export interface PRStatus {
-  number: number
-  baseRefOid?: string
-  headRefOid?: string
-  title: string
-  body?: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  checks: {
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }
-  reviewers: PRReviewer[]
-  unresolvedThreads?: number
-  comments?: {
-    total: number
-    unresolved: number
-    comments: PRComment[]
-  }
-  conversation?: PRConversationComment[]
-  additions: number
-  deletions: number
-  files: number
+  PRMergeMethod,
+  PRMergeability,
+  PRMergeState,
+  PRMergeStatus,
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +162,7 @@ interface StateMessage {
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   browserAutomation?: boolean
+  restricted?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -511,6 +500,7 @@ interface RunStatusMessage extends RunStatus {
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeDeletedMessage
+  | import("../shared/pr-comment-actions").PRCommentResult
   | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
@@ -932,6 +922,7 @@ interface GenericOpenFileIn {
   filePath: string
   line?: number
   column?: number
+  sessionID?: string
 }
 
 interface PreviewImageIn {
@@ -1174,6 +1165,7 @@ interface BrowserRequestIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | import("../shared/pr-comment-actions").PRCommentRequest
   | import("../../webview-ui/src/types/messages/agent-manager").BaseUpdateRequest
   | CreateWorktreeIn
   | RequestProjectsIn

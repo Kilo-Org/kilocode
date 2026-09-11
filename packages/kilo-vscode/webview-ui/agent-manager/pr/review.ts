@@ -1,5 +1,6 @@
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { thread } from "../../../src/shared/pr-review"
+import type { PRTarget } from "../../../src/shared/pr-comment-actions"
 import type { PRReviewCommentData } from "../../../src/shared/review-comments"
 import type { PRStatus } from "../../src/types/messages"
 import { sessionTreeContains, sessionWorktree } from "../edit-preview"
@@ -11,7 +12,7 @@ interface Options {
   current: Accessor<string | null | undefined>
   sessions: Accessor<Parameters<typeof sessionTreeContains>[2]>
   managed: Accessor<Parameters<typeof sessionWorktree>[2]>
-  statuses: Accessor<Record<string, Pick<PRStatus, "comments"> | null>>
+  statuses: Accessor<Record<string, Pick<PRStatus, "comments" | "number" | "url"> | null>>
   select: (id: string) => void
   show: () => void
 }
@@ -78,5 +79,11 @@ export function createPRReview(opts: Options) {
       [opts.context() ?? ""]?.comments?.comments.find((comment) => comment.threadId === item.comment.threadId)
     if (live?.file) setTarget({ ...item, comment: live, pending: false })
   })
-  return { comments, focus, open }
+  const route = (context: string | undefined, comment: PRComment): PRTarget | undefined => {
+    if (!context) return
+    const pr = opts.statuses()[context]
+    if (!pr?.comments?.comments.some((item) => item.id === comment.id && item.threadId === comment.threadId)) return
+    return { projectId: opts.project(), worktreeId: context, prNumber: pr.number, prUrl: pr.url }
+  }
+  return { comments, focus, open, target: route }
 }

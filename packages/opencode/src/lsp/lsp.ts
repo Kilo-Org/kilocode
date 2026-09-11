@@ -266,7 +266,7 @@ const layer = Layer.effect(
               result.push(existing)
               continue
             }
-            const client = TsClient.create({ root })
+            const client = TsClient.create({ root, ctx })
             s.clients.push(client)
             result.push(client)
             updated++

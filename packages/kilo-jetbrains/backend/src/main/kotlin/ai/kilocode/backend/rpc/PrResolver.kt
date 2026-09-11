@@ -11,7 +11,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 
 /** Result of running a `git`/`gh` command. */
-internal data class CmdOut(val exit: Int, val stdout: String, val stderr: String) {
+internal data class CmdOut(
+    val exit: Int,
+    val stdout: String,
+    val stderr: String,
+    /** True when the process was killed for exceeding its timeout, so [exit] `-1` reads as a real
+     * failure reason instead of an unexplained one. */
+    val timeout: Boolean = false,
+) {
     val ok get() = exit == 0
 }
 

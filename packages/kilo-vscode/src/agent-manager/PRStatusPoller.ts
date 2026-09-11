@@ -1,7 +1,7 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRReviewer, PRConversationComment } from "./types"
+import type { PRMergeMethod, PRStatus, PRCheck, PRReviewer, PRTimelineItem } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
@@ -12,18 +12,11 @@ import {
   signature,
   formatCheckDuration,
   parseComments,
-  parseConversation,
   parseReviewers,
   summarize,
 } from "./pr/am-pr-utils"
-import type {
-  PRResult,
-  GhThread,
-  GhReviewRequest,
-  GhReview,
-  GhConversationComment,
-  GhReviewWithBody,
-} from "./pr/am-pr-types"
+import { TIMELINE_QUERY, parseTimeline } from "./pr/timeline"
+import type { PRResult, GhThread, GhReviewRequest, GhReview, GhTimelineItem } from "./pr/am-pr-types"
 import { withContext } from "./pr/pr-comment-context"
 import { oid } from "../shared/pr-comment-preview"
 
@@ -41,6 +34,16 @@ interface PRStatusPollerOptions {
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
   getBranch?: (worktree: Worktree) => Promise<string | undefined>
+  getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+}
+
+interface RepoInfo {
+  owner: string
+  name: string
+  root: string
+  methods: PRMergeMethod[]
+  autoAllowed: boolean
+  canWrite: boolean
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
@@ -63,8 +66,13 @@ export class PRStatusPoller {
   private ghProbeTime = 0
   private rich = true
   private activeWorktreeId: string | undefined
-  private cachedRepo: { owner: string; name: string; root: string } | undefined
+  private cachedRepo: RepoInfo | undefined
+  private repoRequest: { root: string; promise: Promise<RepoInfo> } | undefined
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
+  /** Reviewer avatars are stable, so look them up once per login and reuse them. */
+  private readonly avatars = new Map<string, string>()
+  private readonly resolvedAvatars = new Set<string>()
+  private readonly refreshTimers = new Map<string, ReturnType<typeof setTimeout>[]>()
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
   private readonly semaphore: Semaphore | undefined
@@ -127,6 +135,7 @@ export class PRStatusPoller {
       clearTimeout(this.timer)
       this.timer = undefined
     }
+    this.clearRefreshTimers()
   }
 
   stop(): void {
@@ -144,16 +153,49 @@ export class PRStatusPoller {
     this.ghProbeTime = 0
     this.rich = true
     this.cachedRepo = undefined
+    this.repoRequest = undefined
     this.prCache.clear()
+    this.avatars.clear()
+    this.resolvedAvatars.clear()
     this.lastFullSync = 0
+    this.clearRefreshTimers()
   }
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
-  refresh(worktreeId: string): void {
-    if (!this.active) return
+  refresh(worktreeId: string, settle = false): void {
+    this.clearRefreshTimers(worktreeId)
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
     if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
-    void this.fetchOne(worktreeId)
+    this.lastHash.delete(worktreeId)
+    if (!this.active) return
+    const generation = this.generation
+    void this.fetchOne(worktreeId, generation, true).catch(() => undefined)
+    if (!settle || !this.visible) return
+    const delays = [2_000, 8_000]
+    this.refreshTimers.set(
+      worktreeId,
+      delays.map((delay) =>
+        setTimeout(() => {
+          if (!this.active || !this.visible || this.stale(generation)) return
+          const current = this.options.getWorktrees().find((w) => w.id === worktreeId)
+          if (current) this.prCache.delete(this.key(current.branch, current.path))
+          this.lastHash.delete(worktreeId)
+          void this.fetchOne(worktreeId, generation, true).catch(() => undefined)
+        }, delay),
+      ),
+    )
+  }
+
+  private clearRefreshTimers(worktreeId?: string): void {
+    if (worktreeId) {
+      for (const timer of this.refreshTimers.get(worktreeId) ?? []) clearTimeout(timer)
+      this.refreshTimers.delete(worktreeId)
+      return
+    }
+    for (const timers of this.refreshTimers.values()) {
+      for (const timer of timers) clearTimeout(timer)
+    }
+    this.refreshTimers.clear()
   }
 
   setActiveWorktreeId(id: string | undefined): void {
@@ -260,7 +302,11 @@ export class PRStatusPoller {
     this.failures++
   }
 
-  private async fetchOne(worktreeId: string, generation = this.generation): Promise<void> {
+  private async fetchOne(
+    worktreeId: string,
+    generation = this.generation,
+    full = this.activeWorktreeId === worktreeId,
+  ): Promise<void> {
     const wt = this.target(worktreeId)
     if (!wt) return
 
@@ -269,32 +315,31 @@ export class PRStatusPoller {
       branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
       if (this.stale(generation)) return
       const pr = await this.cachedFetchPR(branch ?? wt.branch, wt.path)
-      if (!pr || this.stale(generation)) {
-        if (this.stale(generation)) return
-        const hash = `${worktreeId}:${branch ?? wt.branch}:none`
-        if (this.lastHash.get(worktreeId) === hash) return
-        this.lastHash.set(worktreeId, hash)
-        this.options.onStatus(worktreeId, null, undefined, branch)
-        return
-      }
+      if (this.stale(generation)) return
+      if (!pr) return this.empty(worktreeId, branch ?? wt.branch, branch)
 
+      const repo = await this.getRepoInfo(wt.path)
       const [checks, reviewers, threads] = await Promise.all([
         ...this.extras(pr, wt.path),
-        this.fetchThreads(pr.number, wt.path, this.activeWorktreeId === worktreeId),
+        this.fetchThreads(pr.number, wt.path, full),
       ])
       if (this.stale(generation)) return
-      if (threads && (threads.baseRefOid !== pr.baseRefOid || threads.headRefOid !== pr.headRefOid))
-        this.prCache.delete(this.key(branch ?? wt.branch, wt.path))
+      this.invalidateThreadCache(pr, threads, branch ?? wt.branch, wt.path)
 
+      const merge = mergeStatus(pr.merge, repo, this.options.getPRMergeMethod?.(`${repo.owner}/${repo.name}`))
       const status: PRStatus = {
+        id: pr.id,
         number: pr.number,
         baseRefOid: pr.baseRefOid,
         headRefOid: pr.headRefOid,
         title: pr.title,
         body: pr.body,
+        author: pr.author,
+        createdAt: pr.createdAt,
         url: pr.url,
         state: pr.state,
         review: pr.review,
+        ...(merge ? { merge } : {}),
         checks,
         reviewers,
         ...threads,
@@ -316,7 +361,46 @@ export class PRStatusPoller {
   }
 
   private extras(pr: PRResult, cwd: string) {
-    return [pr.checks ?? this.fetchChecks(pr.number, cwd), pr.reviewers ?? this.fetchReviewers(pr.number, cwd)] as const
+    return [pr.checks ?? this.fetchChecks(pr.number, cwd), this.reviewers(pr, cwd)] as const
+  }
+
+  private empty(worktreeId: string, fallback: string, branch: string | undefined): void {
+    const hash = `${worktreeId}:${fallback}:none`
+    if (this.lastHash.get(worktreeId) === hash) return
+    this.lastHash.set(worktreeId, hash)
+    this.options.onStatus(worktreeId, null, undefined, branch)
+  }
+
+  private invalidateThreadCache(
+    pr: PRResult,
+    threads: { baseRefOid?: string; headRefOid?: string } | undefined,
+    branch: string,
+    cwd: string,
+  ): void {
+    if (!threads) return
+    if (threads.baseRefOid === pr.baseRefOid && threads.headRefOid === pr.headRefOid) return
+    this.prCache.delete(this.key(branch, cwd))
+  }
+
+  /**
+   * `gh pr view --json reviews` returns reviewer logins without avatars, so
+   * merge avatar URLs from the GraphQL query and cache them per login. States
+   * from `gh pr view` stay authoritative.
+   */
+  private async reviewers(pr: PRResult, cwd: string): Promise<PRReviewer[]> {
+    if (pr.reviewers === undefined) return (await this.fetchReviewers(pr.number, cwd)).items
+    const list = pr.reviewers
+    if (list.length === 0 || list.every((item) => item.avatar || this.resolvedAvatars.has(item.login)))
+      return list.map((item) => (item.avatar ? item : { ...item, avatar: this.avatars.get(item.login) }))
+    const fetched = await this.fetchReviewers(pr.number, cwd)
+    if (fetched.ok) {
+      for (const item of list) this.resolvedAvatars.add(item.login)
+      for (const item of fetched.items) {
+        this.resolvedAvatars.add(item.login)
+        if (item.avatar) this.avatars.set(item.login, item.avatar)
+      }
+    }
+    return list.map((item) => (item.avatar ? item : { ...item, avatar: this.avatars.get(item.login) }))
   }
 
   private handleError(worktreeId: string, branch: string | undefined, cwd: string, err: unknown): void {
@@ -339,8 +423,8 @@ export class PRStatusPoller {
   }
 
   private static readonly BASE_JSON_FIELDS =
-    "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid"
-  private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews`
+    "id,number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,baseRefOid,headRefOid,author,createdAt"
+  private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews,mergeable,mergeStateStatus,autoMergeRequest`
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
    *  Keyed by branch name so multiple worktrees on the same branch share
@@ -445,20 +529,70 @@ export class PRStatusPoller {
     }
   }
 
-  private async getRepoInfo(cwd: string): Promise<{ owner: string; name: string }> {
+  private async getRepoInfo(cwd: string): Promise<RepoInfo> {
     const root = this.options.getWorkspaceRoot() ?? cwd
     if (this.cachedRepo?.root === root) return this.cachedRepo
-    const { stdout } = await this.gh(["repo", "view", "--json", "owner,name"], {
-      cwd,
-      timeout: 10_000,
-    })
-    const data = JSON.parse(stdout)
-    const info = { owner: data.owner.login as string, name: data.name as string, root }
-    this.cachedRepo = info
-    return info
+    if (this.repoRequest?.root === root) return this.repoRequest.promise
+    const promise = this.fetchRepoInfo(cwd, root)
+      .then((info) => {
+        this.cachedRepo = info
+        return info
+      })
+      .catch((err) => {
+        if (this.repoRequest?.promise === promise) this.repoRequest = undefined
+        throw err
+      })
+    this.repoRequest = { root, promise }
+    return promise
   }
 
-  private async fetchReviewers(prNumber: number, cwd: string): Promise<PRReviewer[]> {
+  private async fetchRepoInfo(cwd: string, root: string): Promise<RepoInfo> {
+    const fields = "owner,name,mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed,viewerPermission"
+    const stdout = await this.gh(["repo", "view", "--json", fields], { cwd, timeout: 10_000 }).then(
+      (result) => result.stdout,
+      (err) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!/unknown.*field|does(?:n't| not) exist|not accessible/i.test(msg)) throw err
+        return this.gh(["repo", "view", "--json", "owner,name,viewerPermission"], { cwd, timeout: 10_000 }).then(
+          (result) => result.stdout,
+          (fallback) => {
+            const reason = fallback instanceof Error ? fallback.message : String(fallback)
+            if (!/unknown.*field|does(?:n't| not) exist|not accessible/i.test(reason)) throw fallback
+            return this.gh(["repo", "view", "--json", "owner,name"], { cwd, timeout: 10_000 }).then(
+              (result) => result.stdout,
+            )
+          },
+        )
+      },
+    )
+    const data = JSON.parse(stdout) as Record<string, unknown>
+    const owner = typeof data.owner === "string" ? data.owner : (data.owner as { login?: string } | undefined)?.login
+    const name = typeof data.name === "string" ? data.name : undefined
+    if (!owner || !name) throw new Error("GitHub repository identity is missing")
+    const settings = await this.gh(["api", `repos/${owner}/${name}`], { cwd, timeout: 10_000 }).then(
+      (result) => JSON.parse(result.stdout) as { allow_auto_merge?: boolean },
+      (err) => {
+        this.options.log("Failed to read GitHub auto-merge settings:", err)
+        return { allow_auto_merge: undefined }
+      },
+    )
+    const methods = [
+      ...(data.squashMergeAllowed !== false ? (["squash"] as const) : []),
+      ...(data.mergeCommitAllowed !== false ? (["merge"] as const) : []),
+      ...(data.rebaseMergeAllowed !== false ? (["rebase"] as const) : []),
+    ]
+    return {
+      owner,
+      name,
+      root,
+      methods: methods.length > 0 ? [...methods] : ["squash"],
+      autoAllowed: settings.allow_auto_merge === true,
+      canWrite:
+        data.viewerPermission === "WRITE" || data.viewerPermission === "MAINTAIN" || data.viewerPermission === "ADMIN",
+    }
+  }
+
+  private async fetchReviewers(prNumber: number, cwd: string): Promise<{ items: PRReviewer[]; ok: boolean }> {
     try {
       const repo = await this.getRepoInfo(cwd)
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
@@ -489,13 +623,16 @@ export class PRStatusPoller {
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      return parseReviewers(
-        (pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[],
-        (pr?.reviews?.nodes ?? []) as GhReview[],
-      )
+      return {
+        items: parseReviewers(
+          (pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[],
+          (pr?.reviews?.nodes ?? []) as GhReview[],
+        ),
+        ok: true,
+      }
     } catch (err) {
       this.options.log("Failed to fetch PR reviewers:", err)
-      return []
+      return { items: [], ok: false }
     }
   }
 
@@ -504,7 +641,17 @@ export class PRStatusPoller {
     cwd: string,
     full: boolean,
   ): Promise<
-    Pick<PRStatus, "comments" | "unresolvedThreads" | "conversation" | "baseRefOid" | "headRefOid"> | undefined
+    | Pick<
+        PRStatus,
+        | "comments"
+        | "unresolvedThreads"
+        | "conversation"
+        | "conversationHasEarlier"
+        | "baseRefOid"
+        | "headRefOid"
+        | "viewerDidAuthor"
+      >
+    | undefined
   > {
     let refs: { baseRefOid: string; headRefOid: string } | undefined
     try {
@@ -519,6 +666,9 @@ export class PRStatusPoller {
            startLine
            originalStartLine
            startDiffSide
+           latest: comments(last: 10) {
+             nodes { id author { login avatarUrl } body viewerDidAuthor viewerCanUpdate viewerCanDelete }
+           }
            comments(first: 10) {
              nodes {
                id
@@ -530,45 +680,28 @@ export class PRStatusPoller {
                url
                createdAt
                diffHunk
-               reactionGroups { content reactors { totalCount } viewerHasReacted }
+                reactionGroups { content reactors { totalCount } viewerHasReacted }
+                viewerDidAuthor viewerCanUpdate viewerCanDelete
              }
            }`
         : ""
-      let extra = full
-        ? `comments(last: 50) {
-             nodes {
-               id
-               author { login avatarUrl __typename }
-               body
-               createdAt
-               url
-               reactionGroups { content reactors { totalCount } viewerHasReacted }
-             }
-           }
-           reviews(last: 50) {
-             nodes {
-               id
-               author { login avatarUrl __typename }
-               body
-               state
-               submittedAt
-               url
-               reactionGroups { content reactors { totalCount } viewerHasReacted }
-             }
-           }`
-        : ""
+      // Keep the timeline in the first review-thread request. This avoids a
+      // second GitHub round trip while leaving non-active worktree polls cheap.
+      let extra = full ? TIMELINE_QUERY : ""
       const nodes: GhThread[] = []
       const cursors = new Set<string>()
       const ids = new Set<string>()
       let total: number | undefined
       let cursor: string | undefined
-      let conversation: PRConversationComment[] | undefined
+      let conversation: PRTimelineItem[] | undefined
+      let conversationHasEarlier: boolean | undefined
       while (true) {
         const query = `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
           repository(owner: $owner, name: $repo) {
             pullRequest(number: $number) {
               baseRefOid
               headRefOid
+              viewerDidAuthor
               reviewThreads(first: 100, after: $cursor) {
                 totalCount
                 pageInfo { hasNextPage endCursor }
@@ -610,7 +743,9 @@ export class PRStatusPoller {
         }
         nodes.push(...page.nodes)
         if (extra) {
-          conversation = parseConversationPayload(stdout)
+          const parsed = parseConversationPayload(stdout)
+          conversation = parsed.items
+          conversationHasEarlier = parsed.hasEarlier
           extra = ""
         }
         if (nodes.length > total) throw new Error("Incomplete PR review threads")
@@ -627,9 +762,11 @@ export class PRStatusPoller {
           })
           return {
             ...refs,
+            viewerDidAuthor: page.viewerDidAuthor,
             unresolvedThreads: unresolved,
             comments: { total, unresolved, comments },
             conversation,
+            conversationHasEarlier,
           }
         }
         cursor = advance(page.pageInfo.endCursor, cursors)
@@ -655,6 +792,7 @@ function threads(json: string) {
         pullRequest?: {
           baseRefOid?: string
           headRefOid?: string
+          viewerDidAuthor?: boolean
           reviewThreads?: {
             totalCount: number
             pageInfo: { hasNextPage: boolean; endCursor?: string | null }
@@ -676,7 +814,7 @@ function threads(json: string) {
   ) {
     throw new Error("Incomplete PR review threads response")
   }
-  return { ...page, baseRefOid: pr.baseRefOid, headRefOid: pr.headRefOid }
+  return { ...page, baseRefOid: pr.baseRefOid, headRefOid: pr.headRefOid, viewerDidAuthor: pr.viewerDidAuthor }
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */
@@ -698,11 +836,26 @@ async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Pr
   return results
 }
 
-function parseConversationPayload(stdout: string): PRConversationComment[] | undefined {
-  const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-  if (!pr) return undefined
-  return parseConversation(
-    (pr.comments?.nodes ?? []) as GhConversationComment[],
-    (pr.reviews?.nodes ?? []) as GhReviewWithBody[],
-  )
+function parseConversationPayload(stdout: string): { items?: PRTimelineItem[]; hasEarlier: boolean } {
+  const page = JSON.parse(stdout)?.data?.repository?.pullRequest?.timelineItems
+  if (!page || !Array.isArray(page.nodes)) return { hasEarlier: false }
+  return {
+    items: parseTimeline(page.nodes as Array<GhTimelineItem | null>),
+    hasEarlier: page.pageInfo?.hasPreviousPage === true,
+  }
+}
+
+function mergeStatus(merge: PRResult["merge"], repo: RepoInfo, saved: PRMergeMethod | undefined): PRStatus["merge"] {
+  if (!merge) return undefined
+  const method =
+    saved && repo.methods.includes(saved)
+      ? saved
+      : (repo.methods.find((item) => item === "squash") ?? repo.methods[0] ?? "squash")
+  return {
+    ...merge,
+    methods: repo.methods,
+    method,
+    autoAllowed: repo.autoAllowed,
+    canWrite: repo.canWrite,
+  }
 }

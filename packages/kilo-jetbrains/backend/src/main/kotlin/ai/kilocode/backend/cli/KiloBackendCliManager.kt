@@ -156,9 +156,11 @@ class KiloBackendCliManager(
             builder.environment().clear()
             builder.environment().putAll(env)
             builder.redirectErrorStream(false)
+            workDir()?.let { builder.directory(it) }
 
             log.info("Starting CLI: ${cmd.joinToString(" ")}")
             log.info("CLI env: KILO_CLIENT=jetbrains KILO_PLATFORM=jetbrains KILO_APP_NAME=kilo-code")
+            log.info("CLI cwd: ${builder.directory()?.absolutePath ?: "<inherited>"}")
             val proc = try {
                 builder.start()
             } catch (e: Exception) {
@@ -608,6 +610,23 @@ internal fun buildKiloCliEnv(
     putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }
     devStorageEnv(log)?.forEach { entry -> put(entry.key, entry.value) }
+}
+
+/**
+ * Working directory for the spawned CLI. The CLI resolves a request with no `directory`
+ * to `process.cwd()`, so inheriting the IDE cwd (typically the user's home on macOS)
+ * makes those requests target $HOME. Point it at an empty plugin-owned directory instead.
+ */
+internal fun workDir(
+    root: File = File(PathManager.getSystemPath(), "kilo"),
+    log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
+): File? {
+    val dir = File(root, "cwd")
+    // mkdirs() returns false when the directory already exists, including when a concurrent
+    // spawn created it, so treat an existing directory as success.
+    if (dir.mkdirs() || dir.isDirectory) return dir
+    log.warn("Could not create CLI working directory $dir; inheriting IDE working directory")
+    return null
 }
 
 private fun ideEnv(log: KiloLog): Map<String, String> = buildMap {

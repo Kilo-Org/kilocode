@@ -377,6 +377,14 @@
   visibility: visible;
 }
 
+.kilo-console .project-terminal-loading {
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
 .kilo-console .project-terminal {
   --project-terminal-background: var(--background-base, #0f1015);
   position: relative;

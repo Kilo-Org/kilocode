@@ -27,23 +27,36 @@
   min-width: 0;
 }
 
+/* Plain state-colored icon so the header matches the toolbar PR button
+   instead of reading as a second, clickable pill. */
 .am-pr-panel-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: var(--kilo-font-size-10);
-  font-variant-numeric: tabular-nums;
-  background: color-mix(in srgb, var(--am-pr-accent) 15%, transparent);
   color: var(--am-pr-accent);
-  border: 1px solid color-mix(in srgb, var(--am-pr-accent) 40%, transparent);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .am-pr-panel-badge.am-pr-badge-pending {
-  animation: am-pr-badge-pulse 1.5s ease-in-out infinite;
+  animation: am-pr-panel-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes am-pr-panel-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-panel-badge.am-pr-badge-pending {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .am-pr-panel-title {
@@ -67,6 +80,27 @@
   flex-shrink: 0;
 }
 
+/* Separates the fix-mode toggle from the panel navigation actions. */
+.am-pr-panel-actions-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--vscode-panel-border);
+}
+
+/* Fix mode is on: the VS Code toggled-control look, distinct from ghost hover. */
+.am-pr-panel-actions .am-pr-panel-mode[aria-pressed="true"] {
+  background: var(--vscode-inputOption-activeBackground, color-mix(in srgb, var(--vscode-foreground) 14%, transparent));
+  color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground));
+  box-shadow: inset 0 0 0 1px var(--vscode-inputOption-activeBorder, transparent);
+}
+
+/* Keep the off state visibly different from the enabled push mode. */
+.am-pr-panel-actions .am-pr-panel-mode[aria-pressed="false"] {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.72;
+}
+
 .am-pr-panel-body-wrap {
   flex: 1;
   position: relative;
@@ -76,12 +110,12 @@
 .am-pr-panel-body {
   height: 100%;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 0 0 16px;
   overflow-anchor: none;
 }
 
 .am-pr-panel-section {
-  padding: 4px 12px;
+  padding: 6px 12px;
 }
 
 .am-pr-panel-section-heading {
@@ -108,8 +142,21 @@
   color: var(--vscode-foreground);
 }
 
+/* Title stays on the 12px content grid; the disclosure chevron sits at the
+   trailing edge so headings and their content share one left edge. */
 .am-pr-panel-section-heading-left {
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-panel-section-heading-right {
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .am-pr-section-chevron {
@@ -344,6 +391,84 @@
   flex-shrink: 0;
 }
 
+/* Conversation timeline rows: commits and lifecycle events */
+.am-pr-timeline-row {
+  width: 100%;
+  gap: 6px;
+  padding: 3px 8px;
+  min-height: 24px;
+  min-width: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.am-pr-timeline-toggle {
+  cursor: pointer;
+}
+
+.am-pr-timeline-toggle:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.am-pr-timeline-toggle:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.am-pr-timeline-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.am-pr-timeline-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.am-pr-timeline-label {
+  flex: 1;
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weak);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-timeline-sha {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-textLink-foreground, #3794ff);
+  flex-shrink: 0;
+}
+
+.am-pr-timeline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.am-pr-timeline-link:hover {
+  text-decoration: underline;
+}
+
+.am-pr-timeline-link:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.am-pr-timeline-children {
+  display: flex;
+  flex-direction: column;
+  margin-left: 16px;
+  border-left: 1px solid var(--vscode-panel-border);
+  padding-left: 4px;
+}
+
 .am-pr-comment-body {
   padding: 6px 8px 0;
 }
@@ -358,6 +483,10 @@
   padding-left: 0;
 }
 
+.am-pr-comment-reactions {
+  padding-top: 4px;
+}
+
 .am-pr-comment [data-component="avatar"] {
   border-radius: 50%;
 }
@@ -370,6 +499,141 @@
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-testing-iconFailed, #f87171);
   padding: 6px 8px 0;
+}
+
+.am-pr-comment-composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px;
+  min-width: 0;
+}
+
+.am-pr-comment-composer > .am-pr-comment-body {
+  padding: 0;
+  width: 100%;
+}
+
+.am-pr-comment-composer [data-slot="comment-editor"] {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-base);
+}
+
+.am-pr-comment-composer [data-slot="comment-editor"]:focus-within {
+  border-color: var(--border-focus);
+}
+
+.am-pr-comment-composer [data-slot="comment-toolbar"] {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.am-pr-comment-composer [data-slot="comment-toolbar"] [aria-pressed="true"] {
+  background: var(--surface-raised-base);
+  color: var(--text-strong);
+}
+
+.am-pr-comment-composer [data-slot="comment-suggestion"] {
+  margin-left: auto;
+}
+
+.am-pr-comment-composer [data-component="button"].am-pr-comment-input {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  height: 34px;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-placeholderForeground);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-comment-input:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.am-pr-comment-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.am-pr-comment-collapse-icon {
+  transform: rotate(180deg);
+}
+
+.am-pr-comment-composer [data-component="input"][data-variant="normal"] [data-slot="input-wrapper"],
+.am-pr-comment-composer
+  [data-component="input"][data-variant="normal"]
+  [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.am-pr-comment-composer [data-component="input"][data-variant="normal"] textarea[data-slot="input-input"] {
+  min-height: 88px;
+  max-height: 320px;
+  overflow-y: auto;
+  resize: vertical;
+}
+
+.am-pr-comment-composer [data-slot="comment-preview"] {
+  min-height: 88px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+
+[data-slot="suggested-change"] {
+  margin-block: 8px;
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+[data-slot="suggested-change-label"] {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-base);
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+}
+
+[data-slot="suggested-change"] pre {
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  background: var(--surface-raised-base);
+}
+
+.am-pr-comment-composer [data-component="input"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.am-pr-comment-composer .am-pr-comment-actions {
+  padding: 6px;
+}
+
+.am-pr-comment-form-buttons {
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .am-pr-comment-actions {
@@ -536,9 +800,13 @@
 }
 
 .am-pr-panel-reviewer {
-  gap: 6px;
+  gap: 8px;
   padding: 3px 0;
   font-size: var(--kilo-font-size-12);
+}
+
+.am-pr-panel-reviewer [data-component="avatar"] {
+  border-radius: 50%;
 }
 
 .am-pr-reviewer-icon {
@@ -549,7 +817,7 @@
   color: var(--vscode-testing-iconPassed, #34d399);
 }
 .am-pr-panel-reviewer[data-state="changes_requested"] .am-pr-reviewer-icon {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-testing-iconFailed, #f87171);
 }
 .am-pr-panel-reviewer[data-state="commented"] .am-pr-reviewer-icon {
   color: var(--text-weak);
@@ -561,11 +829,14 @@
 .am-pr-reviewer-login {
   flex: 1;
   color: var(--vscode-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .am-pr-reviewer-state {
-  color: var(--text-weak);
   flex-shrink: 0;
+  color: var(--text-weak);
 }
 
 .am-pr-panel-checks {
@@ -579,8 +850,8 @@
 }
 
 .am-pr-check-group-heading {
-  justify-content: flex-start;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 6px;
   width: 100%;
   padding: 4px 0;
   color: var(--text-weak);
@@ -605,6 +876,12 @@
   flex-shrink: 0;
 }
 
+.am-pr-check-icon[data-component="spinner"],
+.am-pr-summary-icon[data-component="spinner"] {
+  width: 16px;
+  height: 16px;
+}
+
 .am-pr-panel-check-item[data-status="success"] .am-pr-check-icon {
   color: var(--vscode-testing-iconPassed, #34d399);
 }
@@ -619,6 +896,10 @@
 }
 .am-pr-panel-check-item[data-status="pending"] .am-pr-check-icon {
   color: var(--vscode-charts-yellow, #fbbf24);
+}
+.am-pr-panel-check-item[data-status="pending"] .am-pr-check-icon[data-component="spinner"],
+.am-pr-summary-row[data-status="pending"] .am-pr-summary-icon[data-component="spinner"] {
+  color: var(--vscode-foreground);
 }
 
 .am-pr-check-name {
@@ -654,19 +935,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* PR Summary banner */
+/* PR Summary band. Full-bleed so its rules match the section dividers and
+   its rows share the 12px content grid with the rest of the panel. */
 .am-pr-summary {
-  margin: 8px 12px;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 6px;
-  overflow: hidden;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editor-background);
 }
 
 .am-pr-summary-header {
   justify-content: space-between;
-  padding: 6px 6px 6px 10px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-editor-background);
+  padding: 8px 12px 4px;
 }
 
 .am-pr-summary-title {
@@ -678,15 +956,15 @@
 }
 
 .am-pr-summary-rows {
-  padding: 6px 10px;
-  gap: 4px;
-  background: var(--vscode-editor-background);
+  padding: 0 12px 8px;
+  gap: 2px;
 }
 
 .am-pr-summary-row {
   gap: 7px;
   padding: 2px 0;
   font-size: var(--kilo-font-size-12);
+  min-height: 24px;
 }
 
 .am-pr-summary-icon {
@@ -706,42 +984,248 @@
   color: var(--vscode-charts-yellow, #fbbf24);
 }
 
+.am-pr-summary-row.am-pr-merge-status[data-status="error"] .am-pr-summary-icon {
+  color: var(--vscode-testing-iconFailed, #f87171);
+}
+.am-pr-summary-row.am-pr-merge-status[data-status="behind"] .am-pr-summary-icon,
+.am-pr-summary-row.am-pr-merge-status[data-status="blocked"] .am-pr-summary-icon,
+.am-pr-summary-row.am-pr-merge-status[data-status="unstable"] .am-pr-summary-icon,
+.am-pr-summary-row.am-pr-merge-status[data-status="unknown"] .am-pr-summary-icon {
+  color: var(--vscode-charts-yellow, #fbbf24);
+}
+.am-pr-summary-row.am-pr-merge-status[data-status="clean"] .am-pr-summary-icon {
+  color: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-pr-merge-status {
+  padding: 5px 0;
+}
+
+.am-pr-merge-status .am-pr-summary-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.am-pr-merge-hint {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  white-space: normal;
+}
+
+.am-pr-merge-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.am-pr-conflict-loading {
+  gap: 6px;
+  margin: 0 0 4px 23px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+}
+
+.am-pr-conflict-files {
+  display: flex;
+  flex-direction: column;
+  max-height: 132px;
+  overflow: auto;
+  margin: 0 0 4px 23px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-foreground));
+}
+
+.am-pr-conflict-file {
+  gap: 6px;
+  padding: 3px 8px;
+  min-width: 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+}
+
+.am-pr-conflict-file span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-summary-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-summary-main strong {
+  font-weight: 500;
+}
+
+.am-pr-summary-avatars {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
+.am-pr-summary-avatars [data-component="avatar"] {
+  width: 18px;
+  height: 18px;
+  margin-left: -3px;
+  border: 2px solid var(--vscode-editor-background);
+  border-radius: 50%;
+}
+
+.am-pr-merge-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+  background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-foreground));
+}
+
+.am-pr-merge-footer .am-split-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.am-pr-merge-footer .am-split-button[data-variant="primary"]:hover:not([data-disabled]) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--surface-brand-base) 35%, transparent);
+}
+
+.am-pr-merge-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.am-pr-merge-auto-note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-pr-merge-error {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--vscode-testing-iconFailed, #f87171);
+  font-size: var(--kilo-font-size-11);
+}
+
+.am-pr-merge-spinner {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-merge-footer .am-split-button {
+    transition: none;
+  }
+}
+
+.am-pr-merge-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 12px;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+}
+
+.am-pr-merge-dialog-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .am-pr-summary-label {
   color: var(--vscode-foreground);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.am-pr-summary-jump {
+/* Fix with Kilo plus jump-to-section, kept visible when the panel is narrow. */
+.am-pr-summary-actions {
   margin-left: auto;
-  font-size: var(--kilo-font-size-12);
-  color: var(--text-weaker);
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-.am-pr-summary-row-link {
-  cursor: pointer;
-  border-radius: 3px;
-  padding-left: 2px;
-  padding-right: 2px;
+.am-pr-summary-fix {
+  white-space: nowrap;
+}
+.am-pr-review {
+  padding: 8px 12px 12px;
+  min-width: 0;
 }
 
-button.am-pr-summary-row-link {
-  all: unset;
+.am-pr-review h3 {
+  margin: 12px 0 8px;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-weak);
+}
+
+.am-pr-review h3:first-child {
+  margin-top: 0;
+}
+
+/* The VS Code theme renders secondary kilo-ui buttons as bare text, which
+   hides the affordance of the load action. Match the bordered comment actions. */
+[data-component="button"].am-pr-review-load[data-variant="secondary"] {
+  border: 1px solid var(--border-base);
+  background: var(--surface-base);
+  color: var(--text-base);
+}
+
+[data-component="button"].am-pr-review-load[data-variant="secondary"]:hover:not(:disabled) {
+  background: var(--surface-interactive-base);
+}
+
+.am-pr-review p,
+[data-component="pr-suggestion"] p {
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+
+.am-pr-review-files {
   display: flex;
-  width: 100%;
-  gap: 7px;
-  padding: 2px;
-  font-size: var(--kilo-font-size-12);
-  box-sizing: border-box;
-  cursor: pointer;
+  flex-wrap: wrap;
+  max-height: 160px;
+  overflow: auto;
+  gap: 4px;
 }
 
-button.am-pr-summary-row-link:focus-visible {
-  outline: 1px solid var(--vscode-focusBorder);
+.am-pr-review-files button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.am-pr-summary-row-link:hover {
-  background: var(--vscode-list-hoverBackground);
+.am-pr-review-files button[aria-pressed="true"] {
+  background: var(--surface-raised-base);
 }
 
-.am-pr-summary-row-link:hover .am-pr-summary-jump {
-  color: var(--vscode-foreground);
+[data-component="pr-suggestion"] {
+  padding: 8px 0;
+  min-width: 0;
 }

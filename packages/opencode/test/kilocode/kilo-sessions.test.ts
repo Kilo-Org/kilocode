@@ -1,6 +1,9 @@
 // kilocode_change - new file
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { $ } from "bun"
+import * as fs from "fs/promises"
+import { join } from "node:path"
 import { tmpdir } from "../fixture/fixture"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -566,6 +569,8 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
     })
   })
 
+  // The heartbeat loop makes many real git calls; the 5 s default is too tight
+  // once the whole file runs sequentially on a loaded machine.
   test("refreshes and bounds only instance branches while preserving process identity", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
@@ -573,6 +578,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
       fn: async () => {
         const { AppRuntime } = await import("../../src/effect/app-runtime")
         const { Vcs } = await import("../../src/project/vcs")
+        const { Git } = await import("../../src/git")
         const vcs = await AppRuntime.runPromise(Vcs.Service.use((svc) => Effect.succeed(svc)))
         const branch = spyOn(vcs, "branch").mockReturnValue(Effect.succeed("main"))
         await KiloSessions.enableRemote()
@@ -580,6 +586,11 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
         const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
         KiloSessions.setAttachedSessions([chat.id])
+        // Rows carry the session directory's branch via Git.Service — not the
+        // context-scoped Vcs branch that only feeds the instance advertisement.
+        const git = await AppRuntime.runPromise(Git.Service.use((svc) => Effect.succeed(svc)))
+        const gitBranch = spyOn(git, "branch").mockReturnValue(Effect.succeed("feature/session"))
+        clearInFlightCache(`kilo-sessions:git-branch:${tmp.path}`)
         for (const [input, expected] of [
           ["feature/current", "feature/current"],
           ["a".repeat(25), "a".repeat(24)],
@@ -594,14 +605,140 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
           branch.mockReturnValue(Effect.succeed(input))
           const payload = await capturedGetSessions()()
           expect(payload.instance).toEqual({ ...first.instance, gitBranch: expected })
-          expect(payload.sessions.find((row) => row.id === chat.id)).toMatchObject({ id: chat.id, gitBranch: input })
+          expect(payload.sessions.find((row) => row.id === chat.id)).toMatchObject({
+            id: chat.id,
+            gitBranch: "feature/session",
+          })
         }
         branch.mockReturnValue(Effect.die(new Error("branch unavailable")))
         const payload = await capturedGetSessions()()
         expect(payload.instance).toEqual({ ...first.instance, gitBranch: undefined })
       },
     })
-  })
+  }, 20_000)
+
+  // Creates a child repository through shell git before asserting; keep room
+  // for that setup under sequential full-file load.
+  test("session repository metadata follows the session directory when the host was started outside the selected repository", async () => {
+    // Parent WITHOUT git mirrors `kilo remote` launched from e.g. ~/Projects;
+    // the session is created inside the child repo `cloud`, which has its own
+    // remote and branch. Rows and persisted kilo_meta must describe the child.
+    await using tmp = await tmpdir({
+      git: false,
+      init: async (dir) => {
+        const repo = join(dir, "cloud")
+        await fs.mkdir(repo, { recursive: true })
+        await $`git init`.cwd(repo).quiet()
+        await $`git config core.fsmonitor false`.cwd(repo).quiet()
+        await $`git config user.email "test@opencode.test"`.cwd(repo).quiet()
+        await $`git config user.name "Test"`.cwd(repo).quiet()
+        await $`git commit --allow-empty -m "root commit"`.cwd(repo).quiet()
+        await $`git branch -m feature/live`.cwd(repo).quiet()
+        await $`git remote add origin https://github.com/kilo-test/cloud.git`.cwd(repo).quiet()
+        return { repo }
+      },
+    })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        await KiloSessions.enableRemote()
+        // Create the session the way create_session does: inside the child repo.
+        const chat: { info?: Session.Info } = {}
+        await provide({
+          directory: join(tmp.path, "cloud"),
+          fn: async () => {
+            chat.info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+          },
+        })
+        if (!chat.info) throw new Error("session was not created in the child repository")
+        KiloSessions.setAttachedSessions([chat.info.id])
+        const payload = await capturedGetSessions()()
+        const row = payload.sessions.find((r) => r.id === chat.info!.id)
+        expect(row?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+        expect(row?.gitBranch).toBe("feature/live")
+        // The host itself is not a git repo, so the instance advertisement
+        // describes the launch directory only: no branch.
+        expect(payload.instance?.gitBranch).toBeUndefined()
+        // The persisted kilo_meta path follows the session directory too.
+        const info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(chat.info!.id)))
+        const persisted = await KiloSessions._metaForTests(chat.info!.id, info)
+        expect(persisted.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+        expect(persisted.gitBranch).toBe("feature/live")
+      },
+    })
+  }, 20_000)
+
+  // e5 (device scenario): `chmod 000 .git` makes git fail, so heartbeat rows
+  // omit repository metadata; the first gather AFTER `chmod 755` must recompute
+  // and carry it again. A failed read is never cached (the in-flight cache
+  // drops `undefined`), so the row self-heals within one heartbeat interval —
+  // no user action. If a negative cache ever returns here, the final gather
+  // stays metadata-free and this test fails.
+  test("heartbeat rows drop repository metadata while .git is unreadable and restore it on the next gather", async () => {
+    // Windows: chmod(0o000) is a no-op for reads, so git keeps succeeding and
+    // the assertions below would spuriously fail on the Windows CI shards.
+    if (process.platform === "win32") return
+    if (process.getuid?.() === 0) return // skip when running as root
+    await using tmp = await tmpdir({
+      git: false,
+      init: async (dir) => {
+        const repo = join(dir, "cloud")
+        await fs.mkdir(repo, { recursive: true })
+        await $`git init`.cwd(repo).quiet()
+        await $`git config core.fsmonitor false`.cwd(repo).quiet()
+        await $`git config user.email "test@opencode.test"`.cwd(repo).quiet()
+        await $`git config user.name "Test"`.cwd(repo).quiet()
+        await $`git commit --allow-empty -m "root commit"`.cwd(repo).quiet()
+        await $`git branch -m feature/live`.cwd(repo).quiet()
+        await $`git remote add origin https://github.com/kilo-test/cloud.git`.cwd(repo).quiet()
+        return { repo }
+      },
+    })
+    const repo = join(tmp.path, "cloud")
+    const gitDir = join(repo, ".git")
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        try {
+          await KiloSessions.enableRemote()
+          const chat: { info?: Session.Info } = {}
+          await provide({
+            directory: repo,
+            fn: async () => {
+              chat.info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+            },
+          })
+          if (!chat.info) throw new Error("session was not created in the child repository")
+          KiloSessions.setAttachedSessions([chat.info.id])
+          const rowOf = (payload: RemoteProtocol.Heartbeat) => payload.sessions.find((r) => r.id === chat.info!.id)
+          const healthy = rowOf(await capturedGetSessions()())
+          expect(healthy?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+          expect(healthy?.gitBranch).toBe("feature/live")
+
+          // Break git, then expire the cached good values the way the 10 s
+          // gather TTL does between heartbeats.
+          await fs.chmod(gitDir, 0o000)
+          clearInFlightCache(`kilo-sessions:git-url:${repo}`)
+          clearInFlightCache(`kilo-sessions:git-branch:${repo}`)
+          const broken = rowOf(await capturedGetSessions()())
+          expect(broken?.gitUrl).toBeUndefined()
+          expect(broken?.gitBranch).toBeUndefined()
+
+          // Restore git. NO cache clear: the failed reads must not be cached,
+          // so the very next gather recomputes and the row heals.
+          await fs.chmod(gitDir, 0o755)
+          const restored = rowOf(await capturedGetSessions()())
+          expect(restored?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+          expect(restored?.gitBranch).toBe("feature/live")
+        } finally {
+          // tmpdir cleanup cannot recurse into an unreadable .git.
+          await fs.chmod(gitDir, 0o755).catch(() => {})
+        }
+      },
+    })
+  }, 20_000)
 
   test("omits the whole instance when no advertisement is present", async () => {
     await using tmp = await tmpdir({ git: true })

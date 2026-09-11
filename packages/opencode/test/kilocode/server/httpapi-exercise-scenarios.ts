@@ -3,8 +3,12 @@ import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
-import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
+import { Database } from "@opencode-ai/core/database/database"
+import { BoardStore } from "../../../src/kilocode/board/store"
+import { array, check, isRecord, object, stable } from "../../server/httpapi-exercise/assertions"
+import { request } from "../../server/httpapi-exercise/backend"
 import { http, route } from "../../server/httpapi-exercise/dsl"
+import { exerciseDatabasePath } from "../../server/httpapi-exercise/environment"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
 import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
@@ -69,6 +73,32 @@ function enable(ctx: ScenarioContext) {
   return Effect.promise(() => KiloMemory.enable({ ctx: { directory: dir, worktree: dir } }))
 }
 
+function board(ctx: ScenarioContext) {
+  return Effect.gen(function* () {
+    const root = yield* ctx.session({ title: "Board owner" })
+    const child = yield* ctx.session({ title: "Board reviewer", parentID: root.id })
+    const message = yield* ctx.message(child.id, { text: "Review the changes and report on the board." })
+    const first = yield* BoardStore.post({
+      sessionID: child.id,
+      messageID: message.info.id,
+      callID: "board-start",
+      to: "ALL",
+      type: "INFO",
+      body: "Review started",
+    })
+    const last = yield* BoardStore.post({
+      sessionID: child.id,
+      messageID: message.info.id,
+      callID: "board-result",
+      to: "main",
+      type: "RESULT",
+      body: "Review complete",
+      reply_to: first.id,
+    })
+    return { root, child, first, last, transcript: yield* ctx.messages(child.id) }
+  }).pipe(Effect.provide(Database.layerFromPath(exerciseDatabasePath)), Effect.orDie)
+}
+
 const edit = {
   provider: "kilo",
   model: "inception/mercury-next-edit",
@@ -120,37 +150,6 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "session process stop should return true")),
-  http.protected.get("/interactive-terminal", "interactiveTerminal.list").json(200, array),
-  http.protected
-    .get("/interactive-terminal/{terminalID}", "interactiveTerminal.get")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/input", "interactiveTerminal.write")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/input", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-      body: { data: "x" },
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/resize", "interactiveTerminal.resize")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/resize", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-      body: { cols: 1, rows: 1 },
-    }))
-    .status(404),
-  http.protected
-    .post("/interactive-terminal/{terminalID}/close", "interactiveTerminal.close")
-    .at((ctx) => ({
-      path: route("/interactive-terminal/{terminalID}/close", { terminalID: "itx_httpapi_missing" }),
-      headers: ctx.headers(),
-    }))
-    .status(404),
   http.protected.get("/config/warnings", "config.warnings").json(200, array),
   http.protected.get("/config/effective", "config.effective").json(200, object),
   http.protected.get("/config/model-state", "config.modelState").json(200, object),
@@ -579,6 +578,105 @@ export const kiloScenarios: Scenario[] = [
       body: { token: "" },
     }))
     .status(400),
+  http.protected
+    .get("/kilocode/session/{sessionID}/board", "kilocode.sessionBoard")
+    .probe({ path: "/kilocode/session/ses_httpapi_missing/board" })
+    .seeded(board)
+    .at((ctx) => ({
+      path: `${route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.child.id })}?limit=1`,
+      headers: ctx.headers(),
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(
+          stable(body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: 2,
+              messages: [ctx.state.last],
+              cursor: ctx.state.last.id,
+              hasMore: true,
+            }),
+          "child board should return the owner, newest post, and pagination cursor",
+        )
+        const older = yield* request("GET", {
+          path: `${route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.root.id })}?before=${ctx.state.last.id}&limit=1`,
+          headers: ctx.headers(),
+        })
+        check(older.status === 200, "older board page should succeed")
+        check(
+          stable(older.body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: 2,
+              messages: [ctx.state.first],
+              hasMore: false,
+            }),
+          "before should return the older post without changing the board revision",
+        )
+        check(
+          stable(yield* ctx.messages(ctx.state.child.id)) === stable(ctx.state.transcript),
+          "observing the board should not change the conversation",
+        )
+      }),
+    ),
+  http.protected
+    .post("/kilocode/session/{sessionID}/board/reset", "kilocode.resetSessionBoard")
+    .probe({ path: "/kilocode/session/ses_httpapi_missing/board/reset", body: { revision: 0 } })
+    .mutating()
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const state = yield* board(ctx)
+        const path = route("/kilocode/session/{sessionID}/board", { sessionID: state.root.id })
+        const stale = yield* request("POST", {
+          path: `${path}/reset`,
+          headers: ctx.headers(),
+          body: { revision: 0 },
+        })
+        check(stale.status === 409, "reset should reject a stale board revision")
+        const current = yield* request("GET", { path, headers: ctx.headers() })
+        check(current.status === 200, "board should remain readable after a stale reset")
+        object(current.body)
+        check(current.body.revision === 2, "stale reset should preserve the board revision")
+        check(
+          stable(current.body.messages) === stable([state.first, state.last]),
+          "stale reset should preserve visible posts",
+        )
+        return { ...state, revision: current.body.revision }
+      }),
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/board/reset", { sessionID: ctx.state.root.id }),
+      headers: ctx.headers(),
+      body: { revision: ctx.state.revision },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(
+          stable(body) ===
+            stable({
+              ownerSessionID: ctx.state.root.id,
+              revision: ctx.state.revision,
+              messages: [],
+              hasMore: false,
+            }),
+          "reset should return an empty board without rewinding its revision",
+        )
+        const current = yield* request("GET", {
+          path: route("/kilocode/session/{sessionID}/board", { sessionID: ctx.state.child.id }),
+          headers: ctx.headers(),
+        })
+        check(current.status === 200 && stable(current.body) === stable(body), "reset should persist for child viewers")
+        check(
+          (yield* ctx.sessionGet(ctx.state.child.id))?.parentID === ctx.state.root.id,
+          "reset should preserve the session family",
+        )
+        check(
+          stable(yield* ctx.messages(ctx.state.child.id)) === stable(ctx.state.transcript),
+          "reset should preserve the conversation",
+        )
+      }),
+    ),
   http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))

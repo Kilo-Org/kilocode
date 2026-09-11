@@ -5,7 +5,6 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
-import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
@@ -18,7 +17,6 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.log.LogConfig
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
-import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -179,7 +177,6 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
                 profile = if (state.data.profile != null) ProfileStatusDto.LOADED
                     else ProfileStatusDto.NOT_LOGGED_IN,
             ),
-            warnings = state.data.warnings.map(::warning),
             config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
         )
@@ -229,10 +226,4 @@ private fun error(e: LoadError) = LoadErrorDto(
     resource = e.resource,
     status = e.status,
     detail = e.detail,
-)
-
-private fun warning(w: ConfigWarning) = ConfigWarningDto(
-    path = w.path,
-    message = w.message,
-    detail = w.detail,
 )

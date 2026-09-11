@@ -14,7 +14,7 @@ import type {
 } from "@kilocode/sdk/v2/client"
 import { MaxCostNudge, type MaxCostChoice } from "@opencode-ai/core/kilocode/cost/max-cost-nudge"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
-import { previewSound } from "./services/attention"
+import { previewSound, testOSNotification } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
@@ -91,6 +91,7 @@ import {
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
+import * as Board from "./kilo-provider/session-board"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
@@ -139,7 +140,7 @@ import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
 import type { PRReviewCommentData, ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
-import { completesWithoutStatus } from "./kilo-provider/command-completion"
+import { completesWithoutStatus, goalControl } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
 import {
@@ -189,6 +190,7 @@ import {
   buildAutoApprovalReasonSettingMessage,
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
+import { buildPushFixesSettingMessage, pushFixes, watchPushFixesConfig } from "./kilo-provider/push-fixes-settings"
 
 type ReviewCommentsHandler = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) => void
 
@@ -461,6 +463,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatConfigDisposable: vscode.Disposable | null = null
   private throughputConfigDisposable: vscode.Disposable | null = null
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
+  private pushFixesConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1011,6 +1014,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
+  public rememberSession(sessionID: string, directory?: string): void {
+    if (directory) this.sessionDirectories.set(sessionID, directory)
+  }
+
+  public async openSession(sessionID: string, directory?: string): Promise<void> {
+    this.rememberSession(sessionID, directory)
+    await this.waitForReady()
+    this.postMessage({ type: "openSession", sessionID })
+  }
+
   public selectKiloModel(modelID?: string, agent?: string): void {
     if (!modelID && !agent) return
     this.pendingKiloModel = { ...(modelID && { modelID }), ...(agent && { agent }) }
@@ -1063,6 +1076,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable = watchAutoApprovalReasonConfig((msg) => this.postMessage(msg))
+    this.pushFixesConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable = watchPushFixesConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1096,8 +1111,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
+          board: (msg) => this.handleBoardMessage(msg),
           cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
           promoteBackgroundJob: (jobID, sessionID) => this.promoteBackgroundJob(jobID, sessionID),
+          caffeination: () => void vscode.commands.executeCommand("kilo-code.new.toggleCaffeination"),
         })
       ) {
         return
@@ -1137,6 +1154,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (await this.handleMemoryMessage(message)) return
       if (await this.handleProfileDataMessage(message)) return
       if (this.handleMigrationMessage(message)) return
+      if (this.handleNotificationSettingsMessage(message)) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -1478,12 +1496,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
-        case "requestNotificationSettings":
-          this.sendNotificationSettings()
-          break
-        case "testNotification":
-          previewSound(message.sound)
-          break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
@@ -1752,6 +1764,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return true
     }
     return false
+  }
+
+  /** Notifications settings traffic, kept out of the main switch to bound its complexity. */
+  private handleNotificationSettingsMessage(message: { type: string; sound?: string }): boolean {
+    switch (message.type) {
+      case "requestNotificationSettings":
+        this.sendNotificationSettings()
+        break
+      case "testNotification":
+        previewSound(message.sound ?? "default")
+        break
+      case "testOSNotification":
+        void this.handleTestOSNotification()
+        break
+      default:
+        return false
+    }
+    return true
   }
 
   private handleMigrationMessage(message: { type: string }): boolean {
@@ -2480,6 +2510,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.activeAlerts.delete(sessionID)
       this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
     }
+    this.connectionService.clearPermissionSession(sessionID)
     this.connectionService.pruneSession(sessionID)
     if (this.currentSession?.id === sessionID) {
       this.contextSessionID = undefined
@@ -3040,6 +3071,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
   }
 
+  private handleBoardMessage(message: Record<string, unknown>): Promise<boolean> {
+    return Board.handle(message, {
+      client: this.connectionState === "connected" ? this.client : null,
+      routes: this.opts.routeService,
+      projectId: this.opts.projectQualifier?.()?.projectId,
+      directories: this.sessionDirectories,
+      session: this.currentSession,
+      post: (msg) => this.postMessage(msg),
+    })
+  }
+
   private async fetchAndSendBackgroundJobs(sessionID: string, requestID: string): Promise<void> {
     const client = this.client
     if (!client || this.connectionState !== "connected") {
@@ -3252,9 +3294,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "notificationSettingsLoaded",
       settings: {
         attentionEnabled: attention.get<boolean>("enabled", false),
+        attentionNotifications: attention.get<boolean>("notifications", false),
+        attentionOSNotifications: attention.get<boolean>("OSNotifications", false),
         attentionSound: attention.get<string>("sound", "default"),
+        osNotificationsAvailable: ["win32", "darwin", "linux"].includes(process.platform),
       },
     })
+  }
+
+  private async handleTestOSNotification(): Promise<void> {
+    const result = await testOSNotification()
+    this.postMessage({ type: "osNotificationTestResult", ...result })
   }
 
   private sendTimelineSetting(): void {
@@ -3845,6 +3895,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("multiProject", false)
   }
 
+  private claudeMigrationSetting(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("claudeMigration", false)
+  }
   private browserAutomationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
   }
@@ -3927,9 +3980,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       multiProject: this.multiProjectSetting(),
+      claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
+      "agentManager.pushFixes": pushFixes(),
     }
   }
 
@@ -4265,7 +4320,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
       if (!resolved) return
-      if (sandbox) await sandbox
+      const control = goalControl(command, args)
+      const stopping = control && args.trim() !== ""
+      if (sandbox && !stopping) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
 
@@ -4281,26 +4338,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         source: f.source,
       }))
 
-      await this.checkpoints.get(sid)
-      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
-        this.withRetry(
-          () =>
-            this.client!.session.command({
-              sessionID: sid,
-              directory: dir,
-              command,
-              arguments: args,
-              messageID,
-              model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-              agent,
-              variant,
-              parts,
-              snapshotInitialization: this.opts.snapshotInitialization,
-            }),
-          sid,
+      if (!control) await this.checkpoints.get(sid)
+      const send = () =>
+        this.client!.session.command({
+          sessionID: sid,
+          directory: dir,
+          command,
+          arguments: args,
           messageID,
-        ),
-      )
+          model: !control && providerID && modelID ? `${providerID}/${modelID}` : undefined,
+          agent: control ? undefined : agent,
+          variant: control ? undefined : variant,
+          parts,
+          snapshotInitialization: this.opts.snapshotInitialization,
+        })
+      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", async () => {
+        if (command !== "goal") return this.withRetry(send, sid, messageID)
+        const result = await send()
+        if (result.error) throw result.error
+        if (args.trim()) return
+        const message = result.data?.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("\n")
+        if (message) void vscode.window.showInformationMessage(message)
+      })
       if (messageID && completesWithoutStatus(command)) {
         this.postMessage({ type: "sessionCommandCompleted", messageID })
       }
@@ -4472,11 +4534,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       extraDirectories: this.opts.worktreeDirectories,
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
-      recordPermissionDirectory: (id, dir) => this.connectionService.recordPermissionDirectory(id, dir),
+      recordPermissionDirectory: (id, dir, sid) => this.connectionService.recordPermissionDirectory(id, dir, sid),
       getPermissionDirectory: (id) => this.connectionService.getPermissionDirectory(id),
+      getPermissionSession: (id) => this.connectionService.getPermissionSession(id),
       clearPermissionDirectory: (id) => this.connectionService.clearPermissionDirectory(id),
       getPermissionRevision: () => this.connectionService.getPermissionRevision(),
       prunePermissionDirectories: (active, dirs) => this.connectionService.prunePermissionDirectories(active, dirs),
+      runPermissionResponse: (id, sid, action) => this.connectionService.runPermissionResponse(id, sid, action),
+      isPermissionResponseClaimed: (id) => this.connectionService.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => this.connectionService.clearPermissionResponse(id),
     }
   }
 
@@ -4515,6 +4581,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       trackedSessionIds: this.trackedSessionIds,
       connectionService: this.connectionService,
       postMessage: (msg) => this.postMessage(msg),
+      notify: (message) => void vscode.window.showInformationMessage(message),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
       gatherEditorContext: () => this.gatherEditorContext(),
       runWithMessageConfirmation: (id, label, run) => runWithMessageConfirmation(this.confirmations, id, label, run),
@@ -4643,6 +4710,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
     this.postMessage(buildAutoApprovalReasonSettingMessage())
+    this.postMessage(buildPushFixesSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -5109,7 +5177,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
   public waitForReady(): Promise<void> {
-    return this.isWebviewReady && this.webview ? Promise.resolve() : new Promise((r) => this.readyResolvers.push(r))
+    if (this.isWebviewReady && this.webview) return Promise.resolve()
+    const deferred = Promise.withResolvers<void>()
+    this.readyResolvers.push(deferred.resolve)
+    return deferred.promise
   }
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
@@ -5643,6 +5714,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.chatConfigDisposable?.dispose()
     this.throughputConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()

@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveStage
@@ -36,6 +37,10 @@ class WorktreeController(
     private val abort: suspend (String, String) -> Unit = { _, _ -> },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
+    companion object {
+        private val LOG = KiloLog.create(WorktreeController::class.java)
+    }
+
     val model = CollectionListModel<WorktreeDto>()
     private val pending = LinkedHashMap<String, WorktreeDto>()
     private val tasks = LinkedHashMap<String, String>()
@@ -208,11 +213,14 @@ class WorktreeController(
         tasks[dto.id] = KiloBundle.message("common.deleting")
         edt { refresh(dto) }
         cs.launch {
+            val start = System.currentTimeMillis()
             // Stop anything the worktree run popup started here first, so git can remove the
             // directory without orphaning a process left running against a deleted working tree.
             service<KiloRunService>().release(directory, dto.path)
             val result = service.remove(directory, dto.path, dto.branch, force)
+            val ms = System.currentTimeMillis() - start
             if (result.ok) {
+                LOG.info("worktree delete: path=${dto.path} force=$force ok=true ms=$ms")
                 edt {
                     tasks.remove(dto.id)
                     val index = model.getElementIndex(dto)
@@ -226,6 +234,7 @@ class WorktreeController(
             }
             // Removal failed: git still tracks the worktree. Keep the row and reconcile with
             // ground truth so a stale optimistic delete can't make the entry reappear later.
+            LOG.warn("worktree delete: path=${dto.path} force=$force ok=false locked=${result.locked} ms=$ms error=${result.error}")
             edt {
                 tasks.remove(dto.id)
                 refresh(dto)

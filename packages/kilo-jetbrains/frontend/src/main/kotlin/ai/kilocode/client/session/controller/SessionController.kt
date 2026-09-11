@@ -771,8 +771,8 @@ class SessionController(
             app.retryAsync()
             return
         }
-        if (model.app.warnings.isNotEmpty()) {
-            app.retryAsync()
+        if (model.workspace.warnings.isNotEmpty()) {
+            workspace.reload()
             return
         }
         // Pure workspace failures stay scoped to workspace reload.
@@ -2447,7 +2447,7 @@ class SessionController(
         put("workspaceStatus", model.workspace.status.name)
         model.app.error?.let { put("appError", bucketError(it)) }
         model.workspace.error?.let { put("workspaceError", bucketError(it)) }
-        put("warningCount", model.app.warnings.size.toString())
+        put("warningCount", model.workspace.warnings.size.toString())
     }
 
     private fun bucketError(text: String): String = when {
@@ -2677,10 +2677,10 @@ class SessionController(
             )
         }
 
-        if (app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY && app.warnings.isNotEmpty()) {
+        if (app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY && workspace.warnings.isNotEmpty()) {
             return SessionControllerEvent.ConnectionChanged.ShowWarning(
-                summary(app.warnings.size),
-                app.warnings.toWarningText(),
+                summary(workspace.warnings.size),
+                workspace.warnings.toWarningText(),
             )
         }
 

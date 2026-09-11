@@ -31,6 +31,7 @@ import {
 
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
+const NO_COMMITS_MESSAGE = "This repository has no commits yet. Create an initial commit before using worktrees."
 
 function directory(branch: string): string {
   // Keep ordinary directory names, but isolate refs that need filesystem escaping.
@@ -226,6 +227,16 @@ export class WorktreeManager {
     }
   }
 
+  private async ensureCommit(): Promise<void> {
+    try {
+      const commit = await this.git.raw(["rev-list", "-n", "1", "--all"])
+      if (!commit.trim()) throw new Error("No commits found")
+    } catch (error) {
+      this.log(`ensureCommit: ${error}`)
+      throw new Error(NO_COMMITS_MESSAGE)
+    }
+  }
+
   private async createWorktreeImpl(params: {
     prompt?: string
     existingBranch?: string
@@ -247,6 +258,10 @@ export class WorktreeManager {
       await this.git.raw(["check-ref-format", `refs/heads/${requested}`])
       await this.git.raw(["check-ref-format", "--branch", requested])
     }
+
+    // An explicit base branch skips defaultBranch(), so check the repository
+    // state here before trying to resolve a start point.
+    if (params.baseBranch) await this.ensureCommit()
 
     // Git LFS Pre-flight Check
     if (await this.repoUsesLfs()) {
@@ -1052,13 +1067,7 @@ export class WorktreeManager {
     }
 
     // Check if this is an empty repo with no commits (unborn branch).
-    // rev-parse --verify HEAD exits non-zero only when HEAD has no target
-    // commit, which is the definitive test for an unborn branch.
-    try {
-      await this.git.raw(["rev-parse", "--verify", "HEAD"])
-    } catch {
-      throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
-    }
+    await this.ensureCommit()
 
     throw new Error("Could not determine default branch")
   }

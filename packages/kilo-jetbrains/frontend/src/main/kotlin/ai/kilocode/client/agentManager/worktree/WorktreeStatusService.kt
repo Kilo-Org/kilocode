@@ -283,7 +283,7 @@ class WorktreeStatusService internal constructor(
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().stats(dir) }
                 .onSuccess { dto -> statsFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
-                .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir", err) }
+                .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir (previous values kept)", err) }
         }
     }
 
@@ -295,7 +295,7 @@ class WorktreeStatusService internal constructor(
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().dirty(dir) }
                 .onSuccess { dto -> dirtyFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
-                .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir", err) }
+                .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir (previous values kept)", err) }
         }
     }
 
