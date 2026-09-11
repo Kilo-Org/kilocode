@@ -173,11 +173,56 @@ export namespace KiloTask {
   function parse(value: string | null | undefined): Model | undefined {
     if (!value) return undefined
     const [providerID, ...parts] = value.split("/")
+    const modelID = parts.join("/")
+    if (!providerID || !modelID) return undefined
     return {
       providerID: ProviderV2.ID.make(providerID),
-      modelID: ModelV2.ID.make(parts.join("/")),
+      modelID: ModelV2.ID.make(modelID),
     }
   }
+
+  /**
+   * Resolve a configured model reference. A qualified `provider/model` value
+   * is parsed directly. A bare value (no `/`) is treated as a model name and
+   * matched against the provider catalog, preferring the parent session's
+   * provider so a custom provider's display name (e.g. "codestral (latest)")
+   * resolves to that provider's model instead of failing with an empty model
+   * ID. Unresolvable or ambiguous names log a warning and resolve to
+   * undefined, so the caller falls back to the next model source.
+   */
+  const resolve = Effect.fn("KiloTask.resolve")(function* (input: {
+    value: string
+    preferred: string
+    provider: Provider.Interface
+  }) {
+    const value = input.value.trim()
+    if (!value) return undefined
+    if (value.includes("/")) return parse(value)
+    const providers = yield* input.provider.list()
+    const all = Object.values(providers).flatMap((provider) =>
+      Object.values(provider.models).map((model) => ({ providerID: provider.id, model })),
+    )
+    const query = value.toLowerCase()
+    const exact = all.filter((item) => `${item.providerID}/${item.model.id}`.toLowerCase() === query)
+    const named = exact.length ? exact : all.filter((item) => item.model.name.toLowerCase() === query)
+    if (named.length === 0) {
+      log.warn("task model name is not available", { value })
+      return undefined
+    }
+    const preferred = named.filter((item) => item.providerID === input.preferred)
+    const pool = preferred.length ? preferred : named
+    if (pool.length > 1) {
+      log.warn("task model name is ambiguous", {
+        value,
+        providers: pool.map((item) => item.providerID),
+      })
+      return undefined
+    }
+    return {
+      providerID: ProviderV2.ID.make(pool[0].providerID),
+      modelID: ModelV2.ID.make(pool[0].model.id),
+    }
+  })
 
   const saved = Effect.fn("KiloTask.savedModel")(function* (name: string) {
     if (Flag.KILO_CLIENT !== "cli") return undefined
@@ -209,7 +254,25 @@ export namespace KiloTask {
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
-    const cfg = parse(input.config.subagent_model)
+    const configured = input.config.subagent_model
+      ? yield* resolve({
+          value: input.config.subagent_model,
+          preferred: input.parent.providerID,
+          provider: input.provider,
+        })
+      : undefined
+    // A bare model name in the agent config is parsed by Provider.parseModel
+    // into an empty modelID (providerID holds the name); resolve it to a real
+    // provider/model pair instead of launching a child with an empty ID.
+    const agentModel = input.agent.model
+      ? input.agent.model.modelID
+        ? input.agent.model
+        : yield* resolve({
+            value: input.agent.model.providerID,
+            preferred: input.parent.providerID,
+            provider: input.provider,
+          })
+      : undefined
     const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
       input.workflow ? { ...input.workflow, direct: true } : undefined,
@@ -220,8 +283,8 @@ export namespace KiloTask {
             sticky: true,
           }
         : undefined,
-      input.agent.model ? { model: input.agent.model, variant: input.agent.variant, direct: true } : undefined,
-      cfg ? { model: cfg, variant: input.config.subagent_variant ?? undefined } : undefined,
+      agentModel ? { model: agentModel, variant: input.agent.variant, direct: true } : undefined,
+      configured ? { model: configured, variant: input.config.subagent_variant ?? undefined } : undefined,
     ]
 
     for (const choice of choices) {
