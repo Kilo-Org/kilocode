@@ -4,6 +4,8 @@ import { Config } from "@/config/config"
 import { BackgroundJob } from "@/background/job"
 import { SessionStatus } from "@/session/status"
 import { Tool } from "@/tool/tool"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
 import { BoardStore } from "@/kilocode/board/store"
 
 const Read = Schema.Struct({
@@ -66,12 +68,13 @@ const snapshot = Effect.fn("BoardTools.snapshot")(function* (
 export const BoardReadTool = Tool.define<
   typeof Read,
   ReadMeta,
-  Config.Service | Database.Service | BackgroundJob.Service | SessionStatus.Service,
+  Config.Service | Database.Service | BackgroundJob.Service | SessionStatus.Service | RuntimeFlags.Service,
   "board_read"
 >(
   "board_read",
   Effect.gen(function* () {
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
     const jobs = yield* BackgroundJob.Service
     const status = yield* SessionStatus.Service
@@ -91,7 +94,12 @@ export const BoardReadTool = Tool.define<
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const cfg = yield* config.get()
-          if (cfg.experimental?.shared_agent_board !== true) {
+          if (
+            !BoardEnabled.resolve({
+              config: cfg.experimental?.shared_agent_board,
+              flag: flags.experimentalSharedAgentBoard,
+            })
+          ) {
             return yield* Effect.fail(
               new Error("The shared agent board is disabled. Enable it in Experimental settings."),
             )
@@ -123,12 +131,13 @@ export const BoardReadTool = Tool.define<
 export const BoardPostTool = Tool.define<
   typeof Post,
   PostMeta,
-  Config.Service | Database.Service | BackgroundJob.Service | SessionStatus.Service,
+  Config.Service | Database.Service | BackgroundJob.Service | SessionStatus.Service | RuntimeFlags.Service,
   "board_post"
 >(
   "board_post",
   Effect.gen(function* () {
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
     const jobs = yield* BackgroundJob.Service
     const status = yield* SessionStatus.Service
@@ -154,7 +163,12 @@ export const BoardPostTool = Tool.define<
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const cfg = yield* config.get()
-          if (cfg.experimental?.shared_agent_board !== true) {
+          if (
+            !BoardEnabled.resolve({
+              config: cfg.experimental?.shared_agent_board,
+              flag: flags.experimentalSharedAgentBoard,
+            })
+          ) {
             return yield* Effect.fail(
               new Error("The shared agent board is disabled. Enable it in Experimental settings."),
             )
@@ -177,18 +191,29 @@ export const BoardPostTool = Tool.define<
             to: message.to,
             snapshot: yield* snapshot(jobs, status),
           }).pipe(Effect.provideService(Database.Service, database))
-          const warning = [
-            availability.total > 0 &&
-              availability.active === 0 &&
-              availability.unknown === 0 &&
-              "No other recipients were active at this post attempt.",
-            availability.inactive > 0 &&
-              `${availability.inactive} recipient(s) had finished invocations at this post attempt.`,
-            availability.unknown > 0 &&
-              `Availability was unknown for ${availability.unknown} recipient(s) at this post attempt.`,
-          ]
-            .filter(Boolean)
-            .join(" ")
+          const state = availability.recipientState
+          const direct =
+            state === undefined
+              ? undefined
+              : state === "unknown"
+                ? "The direct recipient's execution state was unknown at this post attempt. Do not assume it is running or will read this message. This post is stored only and does not wake or resume the recipient. Do not resume it just to deliver this note."
+                : state === "completed" || state === "error" || state === "cancelled"
+                  ? `The direct recipient's state was ${state} at this post attempt. Its invocation has ended; do not expect a reply to this message. This post is stored only and does not wake or resume the recipient. Do not resume it just to deliver this note.`
+                  : undefined
+          const warning =
+            direct ??
+            [
+              availability.total > 0 &&
+                availability.active === 0 &&
+                availability.unknown === 0 &&
+                "No other recipients were active at this post attempt.",
+              availability.inactive > 0 &&
+                `${availability.inactive} recipient(s) had finished invocations at this post attempt.`,
+              availability.unknown > 0 &&
+                `Availability was unknown for ${availability.unknown} recipient(s) at this post attempt.`,
+            ]
+              .filter(Boolean)
+              .join(" ")
           return {
             title: `${message.type} to ${message.to}`,
             output: JSON.stringify({

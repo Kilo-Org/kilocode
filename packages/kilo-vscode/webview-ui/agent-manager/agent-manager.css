@@ -251,6 +251,15 @@ html[data-theme="kilo-vscode"]
   flex-shrink: 0;
 }
 
+/* Rotate one chevron glyph for the expanded state. The separate chevron-down
+   icon draws at a different weight, so swapping icons made collapsed and
+   expanded headers look inconsistent. rotate(90deg) replaces the RTL mirror
+   for the expanded state, which must still point down. */
+.am-sidebar-header-toggle[aria-expanded="true"] [data-slot="icon-svg"],
+:dir(rtl) .am-sidebar-header-toggle[aria-expanded="true"] [data-slot="icon-svg"] {
+  transform: rotate(90deg);
+}
+
 .am-sidebar-header-label {
   display: flex;
   align-items: center;
