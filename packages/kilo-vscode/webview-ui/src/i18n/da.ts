@@ -1114,6 +1114,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
   "settings.context.compactionModel.useChatModel": "Brug chatmodel",
+  "settings.context.compactionModel.hint":
+    "For at vælge hvilken model der bruges til komprimering, se Modelindstillinger.",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",

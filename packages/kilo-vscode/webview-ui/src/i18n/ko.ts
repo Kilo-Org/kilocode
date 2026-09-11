@@ -1097,6 +1097,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
   "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
+  "settings.context.compactionModel.hint": "압축에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
