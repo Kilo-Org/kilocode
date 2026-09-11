@@ -463,7 +463,7 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
-          <ContextTab />
+          <ContextTab onNavigateToModels={() => onTabChange("models")} />
         </Tabs.Content>
 
         <Tabs.Content value="commitMessage">

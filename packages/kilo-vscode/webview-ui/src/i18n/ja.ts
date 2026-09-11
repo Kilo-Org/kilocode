@@ -1121,6 +1121,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
   "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
+  "settings.context.compactionModel.hint": "圧縮に使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",

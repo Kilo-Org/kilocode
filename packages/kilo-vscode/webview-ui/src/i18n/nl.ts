@@ -1100,6 +1100,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
   "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
+  "settings.context.compactionModel.hint":
+    "Om te kiezen welk model wordt gebruikt voor compactie, zie de Modellen-instellingen.",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",

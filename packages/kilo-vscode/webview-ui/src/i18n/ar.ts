@@ -1099,6 +1099,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
   "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
+  "settings.context.compactionModel.hint": "لاختيار النموذج المستخدم للضغط، راجع إعدادات النماذج.",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",

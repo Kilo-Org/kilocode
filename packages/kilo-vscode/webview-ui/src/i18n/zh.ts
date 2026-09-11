@@ -1067,6 +1067,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
   "settings.context.compactionModel.useChatModel": "使用聊天模型",
+  "settings.context.compactionModel.hint": "若要选择用于压缩的模型，请参阅模型设置。",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",

@@ -1007,6 +1007,8 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Modello usato per la compattazione automatica e manuale. Lascia non impostato per usare il modello di chat. Costo, velocità e qualità del riepilogo dipendono dal modello.",
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
+  "settings.context.compactionModel.hint":
+    "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",

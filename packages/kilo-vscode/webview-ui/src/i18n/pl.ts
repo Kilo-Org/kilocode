@@ -1133,6 +1133,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Model używany do automatycznej i ręcznej kompakcji. Pozostaw puste, aby używać modelu czatu. Koszt, szybkość i jakość podsumowania zależą od modelu.",
   "settings.context.compactionModel.useChatModel": "Użyj modelu czatu",
+  "settings.context.compactionModel.hint": "Aby wybrać model używany do kompakcji, zobacz Ustawienia modeli.",
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
