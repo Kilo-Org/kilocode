@@ -291,6 +291,7 @@ export const dict = {
   "ui.approval.source.yolo": "由自动批准（YOLO）模式",
   "ui.approval.source.session": "由会话自动批准规则",
   "ui.approval.source.default": "默认",
+  "ui.approval.source.auto": "由自动模式",
   "ui.approval.outsideWorkspace": "（工作区之外：{{file}}）",
 
   "session.tab.review": "审查",

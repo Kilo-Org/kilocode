@@ -19,6 +19,8 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { PermissionHumanOnly } from "@/kilocode/permission/human-only" // kilocode_change
+import { SecurityAsk } from "@/kilocode/security-decision/ask" // kilocode_change
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -69,6 +71,8 @@ export interface AskOutcome {
   manual: boolean
   /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
   rule?: Rule
+  /** For a manual outcome: whether a human actually answered, or a client replied on their behalf. */
+  readonly interactive?: boolean // kilocode_change
 }
 // kilocode_change end
 
@@ -89,6 +93,17 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  /**
+   * Set by `reply` when a human or a client actually rejected this request, so `ask` can tell an
+   * answered rejection from a session teardown that fails every pending deferred at once.
+   */
+  rejection?: { interactive: boolean }
+  /**
+   * Set by `reply` when this request was approved, recording whether a human actually answered.
+   * Auto mode replies from the client without `interactive`, and an approval nobody looked at must
+   * not be reported back as one the user gave.
+   */
+  approval?: { interactive: boolean }
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -147,6 +162,8 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  // kilocode_change - the rule that would cover a security ask is the very rule the layer overrode
+  if (SecurityAsk.is(entry.info.metadata)) return false
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -270,7 +287,8 @@ const layer = Layer.effect(
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
+      const entry: PendingEntry = { info, ruleset, hardRuleset, deferred } // kilocode_change
+      pending.set(id, entry) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
@@ -279,7 +297,8 @@ const layer = Layer.effect(
           pending.delete(id)
         }),
       )
-      return { manual: true } // the user was prompted and replied
+      // kilocode_change - auto mode replies without `interactive`, so name the answerer honestly
+      return { manual: true, interactive: entry.approval?.interactive === true } // the user was prompted and replied
       // kilocode_change end
     })
 
@@ -293,7 +312,7 @@ const layer = Layer.effect(
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (
-        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        PermissionHumanOnly.requires(existing.info.metadata) && // kilocode_change - one predicate, shared with the clients
         input.reply !== "reject" &&
         input.interactive !== true
       ) {
@@ -312,6 +331,7 @@ const layer = Layer.effect(
       })
 
       if (input.reply === "reject") {
+        existing.rejection = { interactive: input.interactive === true } // kilocode_change - answered, not torn down
         yield* Deferred.fail(
           existing.deferred,
           input.message
@@ -321,6 +341,7 @@ const layer = Layer.effect(
 
         for (const [id, item] of pending.entries()) {
           if (item.info.sessionID !== existing.info.sessionID) continue
+          item.rejection = { interactive: false } // kilocode_change - cascaded, so no human saw this one
           pending.delete(id)
           yield* events.publish(Event.Replied, {
             sessionID: item.info.sessionID,
@@ -332,6 +353,7 @@ const layer = Layer.effect(
         return
       }
 
+      existing.approval = { interactive: input.interactive === true } // kilocode_change
       yield* Deferred.succeed(existing.deferred, undefined)
       if (input.reply === "once") return
 
@@ -350,8 +372,12 @@ const layer = Layer.effect(
         }
       }
 
-      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, (data) =>
-        Effect.asVoid(events.publish(Event.Replied, data)),
+      yield* drainCovered(
+        pending as unknown as Map<string, PendingEntry>,
+        approved,
+        (data) => Effect.asVoid(events.publish(Event.Replied, data)),
+        undefined,
+        input.interactive === true, // kilocode_change - a drained sibling inherits the answerer of the rule that covered it
       ) // kilocode_change - drain publishes replies through the same EventV2Bridge channel
 
       if (!existing.saved) {
@@ -408,6 +434,7 @@ const layer = Layer.effect(
         s.approved,
         (data) => Effect.asVoid(events.publish(Event.Replied, data)),
         input.requestID as unknown as string,
+        true, // kilocode_change - always-rules are chosen in the permission dialog, by a human
       )
     })
 

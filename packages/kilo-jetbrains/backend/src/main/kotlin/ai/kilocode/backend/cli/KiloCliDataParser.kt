@@ -120,7 +120,7 @@ object KiloCliDataParser {
     private val READ_TOOL_LINE = Regex("^\\s*Called\\s+the\\s+Read\\s+tool\\s+with\\s+the\\s+following\\s+input:", RegexOption.IGNORE_CASE)
     private val READ_TOOL_PATH = Regex("\"(?:filePath|path)\"\\s*:")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
-    private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "default")
+    private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "auto", "default")
 
     // ================================================================
     // SSE event parsing

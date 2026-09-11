@@ -207,6 +207,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               directory: props.directory,
               message: message || undefined,
               workspace: project.workspace.current(),
+              interactive: true, // kilocode_change - human answered this prompt, as the approve replies already report
             })
           }}
           onCancel={() => {
@@ -515,6 +516,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                     requestID: props.request.id,
                     directory: props.directory,
                     workspace: project.workspace.current(),
+                    interactive: true, // kilocode_change - a human pressed reject here too
                   })
                   return
                 }
