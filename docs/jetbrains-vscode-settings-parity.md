@@ -66,7 +66,10 @@ existing RPC, no config plumbing.
 
 | Setting | Config key | Extra work |
 |---|---|---|
-| Auto-collapse reasoning | `auto_collapse_reasoning` | Reasoning-card default collapse |
+| Reasoning display | `reasoning_display` (collapsed/shortened/full/full_persist) | Reasoning-card default state |
+| Inline code background | `inline_code_background` (bool) | Theme-aware inline-code styling |
+| Inline code color | `inline_code_color` (hex string) | Inline-code color override |
+| Diff line backgrounds | `diff_line_backgrounds` (bool) | Diff-renderer line fill styling |
 | Terminal command display | `terminal_command_display` (expanded/collapsed) | Tool-card default state |
 | Code edit display | `code_edit_display` (expanded/collapsed) | Edit-card default state |
 

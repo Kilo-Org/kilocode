@@ -161,7 +161,7 @@ export interface MessagePartProps {
    * that file's `filePath`) whose accordion contains the current match —
    * lets that one nested item open instead of every file in the patch. */
   forceOpenFile?: string
-  reasoningAutoCollapse?: boolean
+  reasoningDisplay?: ReasoningDisplay
   /** True when the stream has moved past this reasoning part. Encrypted
    * reasoning items hold every summary's `time.end` until the whole item
    * finishes, so the caller settles finished summaries from the part order. */
@@ -175,6 +175,8 @@ export interface MessagePartProps {
   throughput?: JSX.Element
   readonly?: boolean
 }
+
+export type ReasoningDisplay = "collapsed" | "shortened" | "shortened_persist" | "full" | "full_persist"
 
 export type PartComponent = Component<MessagePartProps>
 
@@ -431,7 +433,7 @@ export function AssistantParts(props: {
   turnDiffSummary?: () => JSX.Element
   working?: boolean
   showReasoningSummaries?: boolean
-  reasoningAutoCollapse?: boolean
+  reasoningDisplay?: ReasoningDisplay
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
   mcpToolDefaultOpen?: boolean
@@ -697,7 +699,7 @@ export function AssistantParts(props: {
                               props.editToolDefaultOpen,
                               props.mcpToolDefaultOpen,
                             )}
-                            reasoningAutoCollapse={props.reasoningAutoCollapse}
+                            reasoningDisplay={props.reasoningDisplay}
                             hideDetails={false}
                             animate={props.animate}
                             working={props.working}
@@ -1080,7 +1082,7 @@ export function Part(props: MessagePartProps) {
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         forceOpenFile={props.forceOpenFile}
-        reasoningAutoCollapse={props.reasoningAutoCollapse}
+        reasoningDisplay={props.reasoningDisplay}
         settled={props.settled}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -1839,10 +1841,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 // Both modes track explicit user collapses so reactive or virtualized
 // remounts do not reopen a block the user closed.
 const userCollapsed = new Set<string>()
-// Auto-collapse mode: blocks that streamed in this session stay open in the
-// capped viewport (nothing moves when reasoning ends), blocks loaded from
-// history start collapsed, and manual opens survive later remounts.
+// Marks blocks that streamed during this session, so a just-finished block stays
+// open briefly before collapsing while blocks loaded from history start
+// collapsed. Cleared on unmount once the block is done.
 const streamed = new Set<string>()
+// Blocks the collapse-on-finish modes have already closed once, so the effect
+// fires a single time per block instead of fighting a later manual open.
+const autocollapsed = new Set<string>()
 const userOpened = new Set<string>()
 const MAX_REASONING_STATE = 1000
 
@@ -1880,16 +1885,38 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const view = createMemo(() => reasoningHeading(display(), !done()))
 
   const id = (props.part as any).id as string
+  const was = streamed.has(id)
   if (!done()) rememberReasoningState(streamed, id)
 
-  // Auto-collapse mode: streaming or streamed this session -> open (capped),
-  // historical -> collapsed, unless the user toggled it. Expanded mode: open
-  // unless the user explicitly collapsed this reasoning part.
-  const initial = props.reasoningAutoCollapse
-    ? !userCollapsed.has(id) && (streamed.has(id) || userOpened.has(id))
-    : !userCollapsed.has(id)
+  // The reasoning display mode splits into independent axes:
+  //  - collapsesOnFinish: collapse the block once the agent finishes (shortened, full)
+  //  - usesOpenModel: default-closed and track manual opens (everything but full_persist);
+  //    full_persist is default-open and tracks manual collapses instead
+  //  - startClosed: closed even while streaming (collapsed)
+  //  - shortenLive: cap the live view to a scrolling window (shortened, shortened_persist)
+  //  - capPersists: keep that capped window open once finished (shortened_persist)
+  // Default to full_persist (full text while streaming, stays open) when unset.
+  const reasoningMode = (): ReasoningDisplay => props.reasoningDisplay ?? "full_persist"
+  const collapsesOnFinish = () => reasoningMode() === "shortened" || reasoningMode() === "full"
+  const usesOpenModel = () => reasoningMode() !== "full_persist"
+  const startClosed = () => reasoningMode() === "collapsed"
+  const shortenLive = () => reasoningMode() === "shortened" || reasoningMode() === "shortened_persist"
+  const capPersists = () => reasoningMode() === "shortened_persist"
+
+  // collapsed: closed even while streaming (click to expand). shortened/full:
+  // streaming -> open, just-finished -> open briefly then collapse, historical
+  // -> collapsed. shortened_persist: streaming or streamed this session -> open in
+  // the capped window and stays there, historical -> collapsed. full_persist: open
+  // unless the user explicitly collapsed it.
+  const initial = startClosed()
+    ? userOpened.has(id)
+    : collapsesOnFinish()
+      ? !done() || was || userOpened.has(id)
+      : capPersists()
+        ? !userCollapsed.has(id) && (was || !done() || userOpened.has(id))
+        : !userCollapsed.has(id)
   const [open, setOpen] = createSignal(initial)
-  const [manual, setManual] = createSignal(props.reasoningAutoCollapse && userOpened.has(id))
+  const [manual, setManual] = createSignal(usesOpenModel() && userOpened.has(id))
   const title = createMemo(() => {
     const value = view().title
     if (value) return value
@@ -1908,7 +1935,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const track = (value: boolean) => {
     if (value) userCollapsed.delete(id)
     else rememberReasoningState(userCollapsed, id)
-    if (props.reasoningAutoCollapse) {
+    if (usesOpenModel()) {
       if (value) rememberReasoningState(userOpened, id)
       else userOpened.delete(id)
       setManual(value)
@@ -1924,11 +1951,28 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   createEffect(() => {
     if (!props.forceOpen || open()) return
     userCollapsed.delete(id)
-    if (props.reasoningAutoCollapse) {
+    if (usesOpenModel()) {
       rememberReasoningState(userOpened, id)
       setManual(true)
     }
     setOpen(true)
+  })
+
+  createEffect(() => {
+    if (!collapsesOnFinish()) return
+    // Skip auto-collapse for blocks the user explicitly opened.
+    if (done() && open() && !autocollapsed.has(id) && !userOpened.has(id)) {
+      rememberReasoningState(autocollapsed, id)
+      setOpen(false)
+    }
+  })
+
+  // Drop the in-session streaming mark on unmount so a finished block is treated
+  // as historical (and starts collapsed) the next time it mounts. Only the
+  // collapse-on-finish modes want that: shortened_persist deliberately keeps the
+  // mark so a block that streamed this session stays open across remounts.
+  onCleanup(() => {
+    if (collapsesOnFinish() && done()) streamed.delete(id)
   })
 
   // Auto-scroll the content container while streaming.
@@ -2007,7 +2051,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
       <div
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
-        data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
+        data-auto-collapse={shortenLive() ? "" : undefined}
         data-manual={manual() ? "" : undefined}
       >
         <Show

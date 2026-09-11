@@ -167,6 +167,16 @@ describe("parseImport", () => {
     if (result.ok) expect(result.config.model).toBe("test-model")
   })
 
+  it("preserves optional inline-code appearance settings", () => {
+    const json = JSON.stringify({ inline_code_background: true, inline_code_color: "#9dbefe" })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.config.inline_code_background).toBe(true)
+      expect(result.config.inline_code_color).toBe("#9dbefe")
+    }
+  })
+
   it("preserves task subagent model and variant settings", () => {
     const json = JSON.stringify({
       subagent_model: "anthropic/claude-sonnet-4",

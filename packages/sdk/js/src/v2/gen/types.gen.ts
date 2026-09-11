@@ -2535,6 +2535,10 @@ export type Config = {
   enabled_providers?: Array<string>
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: "collapsed" | "shortened" | "shortened_persist" | "full" | "full_persist"
+  inline_code_background?: boolean
+  inline_code_color?: string
+  diff_line_backgrounds?: boolean
   indexing?: IndexingConfig
   console?: {
     /**

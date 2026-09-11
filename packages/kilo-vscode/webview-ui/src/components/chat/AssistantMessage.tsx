@@ -363,7 +363,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                      reasoningDisplay={display.reasoningDisplay()}
                                       settled={settled()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
