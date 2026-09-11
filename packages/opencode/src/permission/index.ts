@@ -2,6 +2,7 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
+import { requiresInteractiveApproval, isActionGateAuthorized } from "@/kilocode/permission/interactive-approval" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
@@ -145,8 +146,7 @@ function subset(permission: string, ruleset: Ruleset) {
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
-  if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
-  if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  if (requiresInteractiveApproval(entry.info.metadata)) return false // kilocode_change - skillShell/sandboxEscalation/actionGateDegraded need an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -213,7 +213,14 @@ const layer = Layer.effect(
         : false
       // kilocode_change end
 
-      const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
+      const forceAsk = requiresInteractiveApproval(request.metadata) // kilocode_change - skillShell/sandboxEscalation/actionGateDegraded force an interactive prompt
+      // kilocode_change start - classifier one-shot pre-approval marker (gate-only; see interactive-approval).
+      // Provenance must not depend on pattern order: if ANY pattern is authorized by the gate, the outcome is
+      // sourced action_gate via a dedicated ephemeral rule, even if another pattern auto-approved by a rule.
+      const authorized = isActionGateAuthorized(request.metadata)
+      let authorizedByGate = false
+      let gateRule: Rule | undefined
+      // kilocode_change end
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -238,10 +245,27 @@ const layer = Layer.effect(
           continue
         }
         // kilocode_change end
+        // kilocode_change start - classifier one-shot pre-approval: turn a would-be ASK into a one-shot allow
+        // ONLY for the gate-verified action. Reached only AFTER hard deny (veto), explicit deny and forceAsk,
+        // and never for a protected config path (!isProtected), so those all still win. Persists no rule.
+        if (authorized && !isProtected) {
+          authorizedByGate = true
+          const gr: Rule = { permission: request.permission, pattern, action: "allow" }
+          ;(gr as { source?: string }).source = "action_gate"
+          gateRule = gr
+          continue
+        }
+        // kilocode_change end
         needsAsk = true
       }
 
-      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
+      // kilocode_change - defense-in-depth: a forced-ask request (skillShell / sandboxEscalation /
+      // actionGateDegraded) must NEVER auto-approve, even if it arrived with empty patterns (the per-pattern
+      // loop above would not have run). Production always attaches degraded to a real request with patterns;
+      // this is a backstop so an empty request can never fail open.
+      if (forceAsk) needsAsk = true
+      // kilocode_change - a gate pre-approval reports source action_gate (order-independent), else the winning rule.
+      if (!needsAsk) return { manual: false, rule: authorizedByGate ? gateRule : approvedRule }
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
@@ -293,7 +317,7 @@ const layer = Layer.effect(
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (
-        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        requiresInteractiveApproval(existing.info.metadata) && // kilocode_change
         input.reply !== "reject" &&
         input.interactive !== true
       ) {

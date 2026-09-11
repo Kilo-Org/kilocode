@@ -8,6 +8,8 @@ import type { PermissionRequest } from "@kilocode/sdk/v2"
 import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../ui/border"
 import { useSync } from "../../context/sync"
+import { ACTION_GATE_DEGRADED_KEY, ACTION_GATE_REASON_KEY } from "@/kilocode/permission/interactive-approval" // kilocode_change
+import { permissionOptions, mcpEnvelope } from "./permission-view" // kilocode_change
 import { useProject } from "../../context/project"
 import { filetype } from "../../util/filetype"
 import { Locale } from "../../util/locale"
@@ -216,7 +218,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
       </Match>
       <Match when={store.stage === "permission"}>
         {(() => {
-          const info = () => {
+          const baseInfo = () => {
             const permission = props.request.permission
             const data = input()
 
@@ -444,12 +446,50 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             const custom = MemoryPermissionRegistry.render(permission, props.request) // kilocode_change
             if (custom) return custom // kilocode_change
 
+            // kilocode_change - MCP tool call: show the SAFE envelope (server + tool + argument KEY names, no values).
+            const envelope = mcpEnvelope(props.request.metadata)
+            if (envelope) {
+              return {
+                icon: "⚙",
+                title: `Call MCP tool ${[envelope.server, envelope.tool].filter(Boolean).join(" / ") || permission}`,
+                body: (
+                  <box paddingLeft={1} flexDirection="column">
+                    <Show when={envelope.argKeys.length}>
+                      <text fg={theme.textMuted}>{"args: " + envelope.argKeys.join(", ")}</text>
+                    </Show>
+                  </box>
+                ),
+              }
+            }
+
             return {
               icon: "⚙",
               title: `Call tool ${permission}`,
               body: (
                 <box paddingLeft={1}>
                   <text fg={theme.textMuted}>{"Tool: " + permission}</text>
+                </box>
+              ),
+            }
+          }
+
+          // kilocode_change - ActionGate degraded escalation: AUGMENT the normal action view (EditBody / path /
+          // command) with a classifier-unavailable warning on top; never replace it.
+          const info = () => {
+            const base = baseInfo()
+            const md = props.request.metadata ?? {}
+            if (md[ACTION_GATE_DEGRADED_KEY] !== true) return base
+            const reason =
+              typeof md[ACTION_GATE_REASON_KEY] === "string" ? (md[ACTION_GATE_REASON_KEY] as string) : "classifier failure"
+            return {
+              icon: "!",
+              title: `⚠ Safety classifier unavailable — ${base.title}`,
+              body: (
+                <box flexDirection="column">
+                  <text fg={theme.textMuted}>
+                    {`The safety classifier could not verify this action (${reason}). Approve only if you trust it; applies once.`}
+                  </text>
+                  {base.body}
                 </box>
               ),
             }
@@ -483,13 +523,12 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
-          const options: Record<string, string> =
-            props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
-              ? { once: "Allow", reject: "Reject" }
-              : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-                ? { once: "Allow once", reject: "Reject" }
-                : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          // kilocode_change - interactive-only requests (skillShell / sandboxEscalation / actionGateDegraded)
+          // and config-protection are one-shot: NO "Allow always" (see permissionOptions).
+          const options: Record<string, string> = permissionOptions(
+            props.request.metadata,
+            Boolean(props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]),
+          )
           // kilocode_change end
 
           const body = (

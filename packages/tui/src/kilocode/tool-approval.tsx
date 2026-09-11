@@ -8,7 +8,7 @@ export function stateMetadata(state: ToolState | undefined) {
   return state && "metadata" in state ? state.metadata : undefined
 }
 
-const SOURCES = ["agent", "global", "project", "yolo", "session", "manual", "default"] as const
+const SOURCES = ["agent", "global", "project", "yolo", "session", "manual", "default", "action_gate"] as const // kilocode_change - classifier one-shot pre-approval
 
 /** Read the approval/denial provenance off a tool part's metadata, if present. */
 export function toolApprovalFrom(metadata: Record<string, unknown> | undefined) {
@@ -32,6 +32,8 @@ function sourceLabel(approval: PermissionProvenance.Approval): string | undefine
       return "by a session auto-approve rule"
     case "default":
       return "by default"
+    case "action_gate":
+      return "by the action classifier"
     default:
       return undefined
   }

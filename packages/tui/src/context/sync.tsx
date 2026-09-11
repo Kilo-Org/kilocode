@@ -24,6 +24,7 @@ import type {
   BackgroundProcessInfo, // kilocode_change
   IndexingStatus, // kilocode_change
 } from "@kilocode/sdk/v2"
+import { shouldAutoReply } from "./auto-permission" // kilocode_change - Auto Mode must not auto-answer forced-interactive requests
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useProject } from "./project"
 import { useEvent } from "./event"
@@ -248,7 +249,12 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          if (permission.mode === "auto") {
+          // kilocode_change start - never silently auto-answer a request that requires an interactive human
+          // (skillShell / sandboxEscalation / actionGateDegraded). The server refuses a non-interactive
+          // approval, so auto-replying here would leave an INVISIBLE pending prompt; fall through so it is
+          // added to the visible store and shown to the user even in Auto Mode.
+          if (shouldAutoReply(permission.mode, request.metadata)) {
+            // kilocode_change end
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",

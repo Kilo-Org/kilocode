@@ -1,6 +1,7 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { requiresInteractiveApproval } from "@/kilocode/permission/interactive-approval" // kilocode_change
 
 interface PendingEntry {
   info: Permission.Request
@@ -34,8 +35,7 @@ export function drainCovered(
       const skill = ConfigProtection.globalSkillPattern(entry.info)
       if (ConfigProtection.isRequest(entry.info) && !skill) continue
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
-      if (entry.info.metadata?.["skillShell"] === true) continue
-      if (entry.info.metadata?.["sandboxEscalation"] === true) continue
+      if (requiresInteractiveApproval(entry.info.metadata)) continue // kilocode_change - skillShell/sandboxEscalation/actionGateDegraded need an explicit reply
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)
