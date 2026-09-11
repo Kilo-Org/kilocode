@@ -178,6 +178,24 @@ const ModelsTab: Component = () => {
           </div>
         </SettingsRow>
         <SettingsRow
+          title={language.t("settings.context.compactionModel.title")}
+          description={language.t("settings.context.compactionModel.description")}
+        >
+          <ModelSelectorBase
+            value={parseModelString(config().agent?.compaction?.model ?? undefined)}
+            onSelect={(providerID, modelID) =>
+              updateConfig({
+                agent: { compaction: { model: providerID && modelID ? `${providerID}/${modelID}` : null } },
+              })
+            }
+            placement="bottom-start"
+            allowClear
+            clearLabel={language.t("settings.context.compactionModel.useChatModel")}
+            label={language.t("settings.context.compactionModel.title")}
+            description={language.t("settings.context.compactionModel.description")}
+          />
+        </SettingsRow>
+        <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
         >

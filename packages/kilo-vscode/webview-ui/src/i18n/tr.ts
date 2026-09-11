@@ -1074,6 +1074,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
   "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
+  "settings.context.compactionModel.hint": "Sıkıştırma için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
