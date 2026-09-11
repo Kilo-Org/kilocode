@@ -18,6 +18,10 @@ Browser Use requires an advanced agentic model. It is typically most reliable wi
 
 Browser automation is built into the extension and requires no manual setup. Enable it from **Settings → Web Tools → Browser Automation** and Kilo handles the rest automatically.
 
+{% callout type="note" title="Agent Manager Browser Is Separate" %}
+The experimental **Agent Manager Browser** under **Settings → Experimental** is a different feature. It shows local application previews inside Agent Manager and does not replace Playwright browser automation. The two features have independent settings.
+{% /callout %}
+
 {% /tab %}
 {% tab label="CLI" %}
 

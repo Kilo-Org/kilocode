@@ -3982,6 +3982,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       multiProject: this.multiProjectSetting(),
       claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
+      agentManagerBrowserUseSystemChrome: vscode.workspace
+        .getConfiguration("kilo-code.new.agentManager.browser")
+        .get<boolean>("useSystemChrome", true),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.pushFixes": pushFixes(),
@@ -4733,7 +4736,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "browserSettingsLoaded",
       settings: {
+        enabled: config.get<boolean>("enabled", false),
         useSystemChrome: config.get<boolean>("useSystemChrome", true),
+        headless: config.get<boolean>("headless", false),
       },
     })
   }

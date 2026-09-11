@@ -94,7 +94,7 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
 ### Browser Tools
 
-The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in **Settings → Web Tools → Browser Automation**. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
 
 - `kilo-playwright_browser_navigate` - Navigate to a URL
 - `kilo-playwright_browser_click` - Click an element
@@ -103,6 +103,8 @@ The VS Code extension has a built-in browser automation tool powered by [Playwri
 - `kilo-playwright_browser_snapshot` - Capture an accessibility snapshot
 
 These follow the same permission model as all MCP tools (see below).
+
+The experimental Agent Manager browser is separate. It shows local application previews in Agent Manager, is enabled under **Settings → Experimental → Agent Manager Browser**, and does not affect Playwright MCP.
 
 ### MCP Tools
 
