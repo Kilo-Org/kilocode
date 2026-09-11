@@ -1,0 +1,15 @@
+diff --git a/src/terminal.ts b/src/terminal.ts
+index ec248d46a939f8a09cd669e853cefb126922c80a..3d23a1e4e63d439274588bf4dfb16f4c5c8539d3 100644
+--- a/src/terminal.ts
++++ b/src/terminal.ts
+@@ -172,7 +172,9 @@ export class Terminal implements IPty {
+ 		if (this.handle < 0) throw new Error("PTY spawn failed");
+ 
+ 		this._pid = lib.symbols.bun_pty_get_pid(this.handle);
+-		this._startReadLoop();
++		// Defer the first read so listeners attached right after spawn() see output
++		// and exit that the reader thread already queued while the child started.
++		queueMicrotask(() => this._startReadLoop());
+ 	}
+ 
+ 	/* ------------- accessors ------------- */
