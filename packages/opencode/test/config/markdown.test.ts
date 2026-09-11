@@ -226,3 +226,17 @@ describe("ConfigMarkdown: frontmatter has weird model id", async () => {
     expect(result.content.trim()).toBe("Strictly follow da rules")
   })
 })
+
+describe("ConfigMarkdown: frontmatter with missing colon space (#13005)", async () => {
+  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/unspaced-frontmatter.md", { trusted: true })
+
+  test("should permissively parse key-value pairs lacking whitespace after colons", () => {
+    expect(result).toBeDefined()
+    expect(result.data["mode"]).toEqual("subagent")
+    expect(result.data["model"]).toEqual("codedesign/KAT-Coder-V2.5-Dev")
+    expect(result.data["description"]).toEqual("Workspace Discovery Agent.")
+    expect(result.data["temperature"]).toEqual(0.7)
+    expect(result.data["title"]).toEqual("Agent Title")
+    expect(result.content.trim()).toEqual("Agent body content here.")
+  })
+})
