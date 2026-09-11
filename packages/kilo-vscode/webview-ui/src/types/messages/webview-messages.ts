@@ -519,6 +519,14 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestAutoCleanupStateMessage {
+  type: "requestAutoCleanupState"
+}
+
+export interface RunAutoCleanupNowMessage {
+  type: "runAutoCleanupNow"
+}
+
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
@@ -1649,6 +1657,8 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestAutoCleanupStateMessage
+  | RunAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage

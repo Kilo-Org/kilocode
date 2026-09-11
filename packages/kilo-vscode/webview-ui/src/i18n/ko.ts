@@ -1090,6 +1090,19 @@ export const dict = {
     "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
+  "settings.autoCleanup.enable.title": "자동 작업 정리 활성화",
+  "settings.autoCleanup.enable.description":
+    "오래된 작업 기록을 자동으로 삭제해 디스크 공간을 확보합니다. 실행 중인 작업과 최근 분기가 있는 작업은 절대 삭제되지 않습니다. 삭제는 영구적입니다.",
+  "settings.autoCleanup.defaultRetention.title": "작업 보관 기간(일)",
+  "settings.autoCleanup.defaultRetention.description": "자동 정리가 작업 기록을 삭제하기 전까지 보관하는 기간입니다.",
+  "settings.autoCleanup.incompleteRetention.title": "버려진 작업 보관 기간(일)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "실제 교환이 한 번도 없었던 작업은 버려진 것으로 간주되어 이 더 짧은 일정에 따라 삭제됩니다.",
+  "settings.autoCleanup.lastRun.title": "마지막 정리",
+  "settings.autoCleanup.lastRun.never": "실행된 적 없음",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}}개 중 {{deleted}}개 작업 삭제({{active}}개 활성 건너뜀, {{failed}}개 실패), {{seconds}}초",
+  "settings.autoCleanup.runNow": "지금 정리 실행",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",

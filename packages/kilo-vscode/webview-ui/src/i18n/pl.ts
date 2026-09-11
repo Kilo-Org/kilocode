@@ -1112,6 +1112,20 @@ export const dict = {
     "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
+  "settings.autoCleanup.enable.title": "Włącz automatyczne czyszczenie zadań",
+  "settings.autoCleanup.enable.description":
+    "Automatycznie usuwa starą historię zadań, aby zwolnić miejsce na dysku. Uruchomione zadania i zadania z niedawnym forkiem nigdy nie są usuwane. Usunięcie jest trwałe.",
+  "settings.autoCleanup.defaultRetention.title": "Przechowuj zadania (dni)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Jak długo przechowywana jest historia zadań, zanim automatyczne czyszczenie ją usunie.",
+  "settings.autoCleanup.incompleteRetention.title": "Przechowuj porzucone zadania (dni)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Zadania bez żadnej rzeczywistej wymiany są traktowane jako porzucone i usuwane według tego krótszego harmonogramu.",
+  "settings.autoCleanup.lastRun.title": "Ostatnie czyszczenie",
+  "settings.autoCleanup.lastRun.never": "Nigdy nie uruchomiono",
+  "settings.autoCleanup.result":
+    "{{date}}: usunięto {{deleted}} z {{scanned}} zadań ({{active}} aktywnych pominięto, {{failed}} nie powiodło się) w {{seconds}}s",
+  "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",

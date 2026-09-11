@@ -1066,6 +1066,20 @@ export const dict = {
   "settings.checkpoints.enable.title": "Anlık Görüntüleri Etkinleştir",
   "settings.checkpoints.enable.description":
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
+  "settings.autoCleanup.enable.title": "Otomatik görev temizliğini etkinleştir",
+  "settings.autoCleanup.enable.description":
+    "Disk alanı boşaltmak için eski görev geçmişini otomatik olarak siler. Şu anda çalışan görevler ve yeni çatallaması olan görevler asla silinmez. Silme kalıcıdır.",
+  "settings.autoCleanup.defaultRetention.title": "Görevleri saklama süresi (gün)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Otomatik temizlik, görev geçmişini silmeden önce ne kadar süreyle saklanır.",
+  "settings.autoCleanup.incompleteRetention.title": "Terk edilmiş görevleri saklama süresi (gün)",
+  "settings.autoCleanup.incompleteRetention.description":
+    "Gerçek bir etkileşimi hiç olmamış görevler terk edilmiş sayılır ve bu daha kısa takvime göre silinir.",
+  "settings.autoCleanup.lastRun.title": "Son temizlik",
+  "settings.autoCleanup.lastRun.never": "Hiç çalıştırılmadı",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} görevden {{deleted}} tanesi silindi ({{active}} etkin atlandı, {{failed}} başarısız) {{seconds}} sn içinde",
+  "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",

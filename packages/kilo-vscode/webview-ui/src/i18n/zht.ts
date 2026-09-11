@@ -1011,6 +1011,18 @@ export const dict = {
   "settings.autoApprove.tool.doom_loop": "防止重複相同操作。當相同的工具呼叫以相同的輸入重複時觸發。",
   "settings.checkpoints.enable.title": "啟用快照",
   "settings.checkpoints.enable.description": "在檔案編輯前建立檢查點，以便恢復之前的狀態",
+  "settings.autoCleanup.enable.title": "啟用自動任務清理",
+  "settings.autoCleanup.enable.description":
+    "自動刪除舊任務歷史以釋放磁碟空間。正在執行的任務和有近期分支的任務永遠不會被刪除。刪除是不可逆的。",
+  "settings.autoCleanup.defaultRetention.title": "任務保留天數（天）",
+  "settings.autoCleanup.defaultRetention.description": "自動清理刪除任務歷史之前保留的時長。",
+  "settings.autoCleanup.incompleteRetention.title": "廢棄任務保留天數（天）",
+  "settings.autoCleanup.incompleteRetention.description": "從未有過實際互動的任務視為廢棄任務，並按此更短的週期刪除。",
+  "settings.autoCleanup.lastRun.title": "上次清理",
+  "settings.autoCleanup.lastRun.never": "從未執行",
+  "settings.autoCleanup.result":
+    "{{date}}：刪除了 {{scanned}} 個任務中的 {{deleted}} 個（跳過 {{active}} 個執行中，{{failed}} 個失敗），耗時 {{seconds}} 秒",
+  "settings.autoCleanup.runNow": "立即執行清理",
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",
