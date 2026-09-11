@@ -125,7 +125,7 @@ const settings = (documents: readonly Config.Entry[]) => {
   )
 }
 
-const select = (
+export const select = (
   entries: readonly Entry[],
   tokens: number,
 ): { readonly head: string; readonly recent: string } | undefined => {
@@ -136,6 +136,7 @@ const select = (
   if (conversation.length === 0) return
   let total = 0
   let split = conversation.length
+  let cut = conversation.length
   let splitPrefix = ""
   let splitSuffix = ""
   for (let index = conversation.length - 1; index >= 0; index--) {
@@ -146,14 +147,16 @@ const select = (
         splitPrefix = conversation[index].slice(0, -remaining)
         splitSuffix = conversation[index].slice(-remaining)
         split = index + 1
+        cut = index
       }
       break
     }
     total = next
     split = index
+    cut = index
   }
   return {
-    head: [...conversation.slice(0, split), splitPrefix].filter(Boolean).join("\n\n"),
+    head: [...conversation.slice(0, cut), splitPrefix].filter(Boolean).join("\n\n"),
     recent: [splitSuffix, ...conversation.slice(split)].filter(Boolean).join("\n\n"),
   }
 }
