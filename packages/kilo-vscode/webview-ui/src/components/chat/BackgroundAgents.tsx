@@ -320,15 +320,14 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
             />
           </Show>
           <Tooltip value={language.t("task.backgroundAgents.openAll")} placement="bottom">
-            <Button
+            <IconButton
+              icon="square-arrow-top-right"
               data-slot="task-header-agents-open-all"
               variant="ghost"
               size="small"
               aria-label={language.t("task.backgroundAgents.openAll")}
               onClick={() => visible().forEach(openAgent)}
-            >
-              <Icon name="square-arrow-top-right" size="small" />
-            </Button>
+            />
           </Tooltip>
         </div>
         <Show when={open()}>

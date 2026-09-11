@@ -922,6 +922,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migratie",
+  "settings.experimental.claudeMigration.description":
+    "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
@@ -992,6 +995,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.pushFixes.title": "Pull request-fixes pushen",
+  "settings.agentBehaviour.pushFixes.description":
+    "Wanneer je CI-fouten of reviewopmerkingen van een pull request naar de agent stuurt, of een worktree bijwerkt vanaf de basis, vraag de agent dan te committen en te pushen zodat de pull request wordt bijgewerkt. Toestemmingsvragen blijven gelden. Schakel uit om handmatig te committen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":

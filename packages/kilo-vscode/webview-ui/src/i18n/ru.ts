@@ -920,6 +920,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.claudeMigration.title": "Миграция Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
   "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
@@ -1036,6 +1039,9 @@ export const dict = {
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
+  "settings.agentBehaviour.pushFixes.title": "Отправлять исправления пул-реквеста",
+  "settings.agentBehaviour.pushFixes.description":
+    "Когда вы отправляете агенту ошибки CI или комментарии ревью из пул-реквеста либо обновляете worktree из базовой ветки, попросить его сделать коммит и push, чтобы пул-реквест обновился. Запросы разрешений по-прежнему действуют. Отключите, чтобы делать коммиты вручную.",
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

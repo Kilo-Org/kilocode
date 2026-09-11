@@ -190,6 +190,7 @@ import {
   buildAutoApprovalReasonSettingMessage,
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
+import { buildPushFixesSettingMessage, pushFixes, watchPushFixesConfig } from "./kilo-provider/push-fixes-settings"
 
 type ReviewCommentsHandler = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) => void
 
@@ -462,6 +463,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatConfigDisposable: vscode.Disposable | null = null
   private throughputConfigDisposable: vscode.Disposable | null = null
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
+  private pushFixesConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1074,6 +1076,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable = watchAutoApprovalReasonConfig((msg) => this.postMessage(msg))
+    this.pushFixesConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable = watchPushFixesConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -2506,6 +2510,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.activeAlerts.delete(sessionID)
       this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
     }
+    this.connectionService.clearPermissionSession(sessionID)
     this.connectionService.pruneSession(sessionID)
     if (this.currentSession?.id === sessionID) {
       this.contextSessionID = undefined
@@ -3890,6 +3895,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("multiProject", false)
   }
 
+  private claudeMigrationSetting(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("claudeMigration", false)
+  }
   private browserAutomationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
   }
@@ -3972,9 +3980,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       multiProject: this.multiProjectSetting(),
+      claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
+      "agentManager.pushFixes": pushFixes(),
     }
   }
 
@@ -4524,11 +4534,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       extraDirectories: this.opts.worktreeDirectories,
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
-      recordPermissionDirectory: (id, dir) => this.connectionService.recordPermissionDirectory(id, dir),
+      recordPermissionDirectory: (id, dir, sid) => this.connectionService.recordPermissionDirectory(id, dir, sid),
       getPermissionDirectory: (id) => this.connectionService.getPermissionDirectory(id),
+      getPermissionSession: (id) => this.connectionService.getPermissionSession(id),
       clearPermissionDirectory: (id) => this.connectionService.clearPermissionDirectory(id),
       getPermissionRevision: () => this.connectionService.getPermissionRevision(),
       prunePermissionDirectories: (active, dirs) => this.connectionService.prunePermissionDirectories(active, dirs),
+      runPermissionResponse: (id, sid, action) => this.connectionService.runPermissionResponse(id, sid, action),
+      isPermissionResponseClaimed: (id) => this.connectionService.isPermissionResponseClaimed(id),
+      clearPermissionResponse: (id) => this.connectionService.clearPermissionResponse(id),
     }
   }
 
@@ -4696,6 +4710,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
     this.postMessage(buildAutoApprovalReasonSettingMessage())
+    this.postMessage(buildPushFixesSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -5699,6 +5714,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.chatConfigDisposable?.dispose()
     this.throughputConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable?.dispose()
+    this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()

@@ -33,7 +33,10 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
-import type { PRComment } from "../../agent-manager/pr/pr-types"
+import { PRConversation } from "../../agent-manager/pr/PRConversation"
+import { PRPanel } from "../../agent-manager/pr/PRPanel"
+import { PRReviewers } from "../../agent-manager/pr/PRReviewers"
+import type { PRComment, PRReviewer, PRTimelineItem } from "../../agent-manager/pr/pr-types"
 import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -1295,6 +1298,23 @@ const MockTabAdd = () => (
   </div>
 )
 
+const MockDiffToggle = (props: { files: string; additions: string; deletions: string; active?: boolean }) => (
+  <IconButton
+    icon="layers"
+    size="small"
+    variant="ghost"
+    class="am-diff-toggle-btn"
+    aria-label="Toggle diff"
+    aria-pressed={props.active ?? false}
+  >
+    <span class="am-diff-toggle-stats">
+      <span class="am-stat-files">{props.files}</span>
+      <span class="am-stat-additions">{props.additions}</span>
+      <span class="am-stat-deletions">{props.deletions}</span>
+    </span>
+  </IconButton>
+)
+
 export const TabBarMultipleTabs: Story = {
   name: "TabBar — multiple tabs with active",
   render: () => (
@@ -1312,14 +1332,7 @@ export const TabBarMultipleTabs: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
-            <Icon name="layers" size="small" />
-            <span class="am-diff-toggle-stats">
-              <span class="am-stat-files">4f</span>
-              <span class="am-stat-additions">+32</span>
-              <span class="am-stat-deletions">−8</span>
-            </span>
-          </button>
+          <MockDiffToggle files="4f" additions="+32" deletions="−8" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1365,14 +1378,7 @@ export const TabBarSingleTab: Story = {
         </div>
         <MockTabAdd />
         <div class="am-tab-actions">
-          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
-            <Icon name="layers" size="small" />
-            <span class="am-diff-toggle-stats">
-              <span class="am-stat-files">188f</span>
-              <span class="am-stat-additions">+23625</span>
-              <span class="am-stat-deletions">−359</span>
-            </span>
-          </button>
+          <MockDiffToggle files="188f" additions="+23625" deletions="−359" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
@@ -1392,14 +1398,7 @@ const MockFullContextActions = () => (
       <span class="am-tab-actions-separator" />
     </span>
     <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
-      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
-        <Icon name="layers" size="small" />
-        <span class="am-diff-toggle-stats">
-          <span class="am-stat-files">4f</span>
-          <span class="am-stat-additions">+32</span>
-          <span class="am-stat-deletions">−8</span>
-        </span>
-      </button>
+      <MockDiffToggle files="4f" additions="+32" deletions="−8" />
     </TooltipKeybind>
     <TooltipKeybind title="Pull request" keybind="" placement="bottom">
       <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
@@ -1423,18 +1422,20 @@ const MockFullContextActions = () => (
         <IconButton size="small" variant="ghost" icon="play" aria-label="Run" />
       </TooltipKeybind>
       <TooltipKeybind title="Run options" keybind="" placement="bottom">
-        <button class="am-split-arrow" aria-label="Run options">
-          <Icon name="chevron-down" size="small" />
-        </button>
+        <IconButton icon="chevron-down" size="small" variant="ghost" aria-label="Run options" class="am-split-arrow" />
       </TooltipKeybind>
     </span>
     <div class="am-split-button">
       <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
         <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
       </TooltipKeybind>
-      <button class="am-split-arrow" aria-label="Choose terminal destination">
-        <Icon name="chevron-down" size="small" />
-      </button>
+      <IconButton
+        icon="chevron-down"
+        size="small"
+        variant="ghost"
+        aria-label="Choose terminal destination"
+        class="am-split-arrow"
+      />
     </div>
   </div>
 )
@@ -2068,6 +2069,24 @@ const prComments: NonNullable<PRStatus["comments"]> = {
   ],
 }
 
+const prReviewers: PRReviewer[] = [
+  { login: "marius-kilocode", state: "approved" },
+  { login: "reviewer-changes", state: "changes_requested" },
+  { login: "reviewer-comment", state: "commented" },
+  { login: "reviewer-pending", state: "pending" },
+]
+
+export const PRPanelReviewers: Story = {
+  name: "PR panel — reviewers",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)", width: "320px" }}>
+        <PRReviewers reviewers={prReviewers} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const PRPanelComments: Story = {
   name: "PR panel — review comments",
   render: () => (
@@ -2097,6 +2116,188 @@ export const PRPanelComments200: Story = {
           worktreeId="wt-a1"
           prNumber={8594}
           prUrl="https://github.com/org/repo/pull/8594"
+          onOpenFile={() => {}}
+          onOpenDiff={() => {}}
+          onOpenUrl={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const prPanelStatus: PRStatus = {
+  number: 13945,
+  title: "fix(cli): prevent snapshot progress session hangs",
+  url: "https://github.com/org/repo/pull/13945",
+  state: "open",
+  review: "pending",
+  checks: {
+    status: "success",
+    total: 3,
+    passed: 3,
+    failed: 0,
+    pending: 0,
+    checks: [
+      { name: "Kilo Code Review", status: "success", duration: "2m 41s" },
+      { name: "build", status: "success", duration: "1m 12s" },
+      { name: "test", status: "success", duration: "4m 03s" },
+    ],
+  },
+  reviewers: [{ login: "octocat", state: "pending" }],
+  comments: prComments,
+  additions: 219,
+  deletions: 6,
+  files: 9,
+  body: [
+    "## What Problem This Solves",
+    "",
+    "Snapshot initialization could remain visible after a mid-session snapshot operation, and an interrupted progress part could be replayed into the next provider request.",
+    "",
+    "## Why This Change Was Made",
+    "",
+    "- Preserve the project Effect context for delayed snapshot progress updates and cleanup.",
+    "- Skip snapshot lock acquisition when snapshots are disabled.",
+    "",
+    "## Evidence",
+    "",
+    "- 39 focused snapshot, history, and fork regression tests pass.",
+  ].join("\n"),
+}
+
+export const PRPanelOverview: Story = {
+  name: "PR panel — overview layout",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ height: "700px", background: "var(--vscode-sideBar-background)" }}>
+        <PRPanel
+          pr={prPanelStatus}
+          worktree={{ ...baseWorktree, branch: "fix-snapshot-initialization-hang" }}
+          worktreeId="wt-a1"
+          onClose={() => {}}
+          onRefresh={() => {}}
+          onOpenExternal={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const prConversation: PRTimelineItem[] = [
+  {
+    kind: "commit",
+    id: "commit-1",
+    sha: "a".repeat(40),
+    short: "a9f21c3",
+    message: "Guard the missing gh fallback",
+    author: "octocat",
+    createdAt: Date.now() - 50 * 60 * 1000,
+    url: "https://github.com/org/repo/commit/a9f21c3",
+  },
+  {
+    kind: "commit",
+    id: "commit-2",
+    sha: "b".repeat(40),
+    short: "b7d4e12",
+    message: "Add a regression test for the cached status",
+    author: "octocat",
+    createdAt: Date.now() - 45 * 60 * 1000,
+    url: "https://github.com/org/repo/commit/b7d4e12",
+  },
+  {
+    kind: "event",
+    event: "force_pushed",
+    id: "force-push-1",
+    actor: "octocat",
+    detail: "a9f21c3 to b7d4e12",
+    createdAt: Date.now() - 40 * 60 * 1000,
+  },
+  {
+    kind: "review",
+    id: "review-1",
+    author: "hubot",
+    body: "",
+    state: "approved",
+    createdAt: Date.now() - 30 * 60 * 1000,
+  },
+  {
+    id: "conversation-1",
+    kind: "issue",
+    author: "octocat",
+    body: "Thanks, this also covers the empty response case.",
+    createdAt: Date.now() - 20 * 60 * 1000,
+  },
+  {
+    kind: "event",
+    event: "merged",
+    id: "merged-1",
+    actor: "hubot",
+    detail: "main",
+    createdAt: Date.now() - 10 * 60 * 1000,
+  },
+]
+
+export const PRPanelConversation: Story = {
+  name: "PR panel — conversation timeline",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRConversation
+          prNumber={8594}
+          prUrl="https://github.com/org/repo/pull/8594"
+          worktreeId="wt-a1"
+          description={
+            "Replaces the separate comments and reviews queries with the GitHub timeline.\n\nCommits, force pushes, merges, and reviews now read in the order they happened."
+          }
+          author="octocat"
+          createdAt={Date.now() - 60 * 60 * 1000}
+          items={prConversation}
+          onOpenUrl={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const summaryPR: PRStatus = {
+  ...basePR,
+  review: "changes_requested",
+  checks: {
+    status: "failure",
+    total: 5,
+    passed: 3,
+    failed: 2,
+    pending: 0,
+    checks: [
+      { name: "Typecheck", status: "failure", url: "https://github.com/org/repo/actions/runs/100/job/200" },
+      { name: "Tests", status: "failure" },
+      { name: "Lint", status: "success" },
+      { name: "Build", status: "success" },
+      { name: "Docs", status: "success" },
+    ],
+  },
+  comments: prComments,
+  conversation: [
+    {
+      id: "IC_1",
+      author: "octocat",
+      body: "Ship it once CI is green.",
+      createdAt: Date.now() - 60_000,
+      isBot: false,
+    },
+  ],
+}
+
+export const PRPanelSummary: Story = {
+  name: "PR panel — header and summary",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)", height: "680px" }}>
+        <PRPanel
+          pr={summaryPR}
+          worktreeId="wt-a1"
+          onClose={() => {}}
+          onRefresh={() => {}}
+          onOpenExternal={() => {}}
           onOpenFile={() => {}}
           onOpenDiff={() => {}}
           onOpenUrl={() => {}}

@@ -731,7 +731,7 @@ const AgentManagerContent: Component = () => {
     if (!pending && !existing) tabOrderSync.append(LOCAL, id)
     if (pending && pending === active) setActivePendingId(undefined)
   }
-  const focusLocalSession = (id: string) => {
+  const focusLocalSession = (id: string, scrollToBottom = false) => {
     const pending = activePendingId()
     const replace = pending && localSessionIDs().includes(pending) ? pending : undefined
     placeLocal(id, replace, replace)
@@ -739,7 +739,7 @@ const AgentManagerContent: Component = () => {
     terms.setActiveId(undefined)
     setReviewActive(false)
     setSelection(LOCAL)
-    session.selectSession(id)
+    session.selectSession(id, { scrollToBottom })
     requestChatFocus()
   }
   persistLocalTabs({
@@ -1087,13 +1087,13 @@ const AgentManagerContent: Component = () => {
     return true
   }
 
-  const focusManagedSession = (worktreeId: string, sid: string) => {
+  const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
     selectWorktree(worktreeId)
     closeHistory()
     terms.setActiveId(undefined)
     setActivePendingId(undefined)
     setReviewActive(false)
-    session.selectSession(sid)
+    session.selectSession(sid, { scrollToBottom })
     requestChatFocus()
     return true
   }
@@ -1515,6 +1515,12 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
+      if (msg.type === "agentManager.revealSession") {
+        if (currentProjectId() !== msg.projectId) return
+        if (msg.worktreeId) focusManagedSession(msg.worktreeId, msg.sessionId, true)
+        else focusLocalSession(msg.sessionId, true)
+        return
+      }
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
       stateHandlers.browser(msg)
@@ -2277,6 +2283,7 @@ const AgentManagerContent: Component = () => {
             onCreate={creation.schedule}
             onSelect={activateSelection}
             onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
+            onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
@@ -2295,6 +2302,7 @@ const AgentManagerContent: Component = () => {
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
             onOpenComments={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
+            onOpenPR={(worktreeId) => comments.open({ projectId: activeProjectId(), worktreeId })}
             activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}
             localStats={localStats}
@@ -2628,7 +2636,7 @@ const AgentManagerContent: Component = () => {
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
-                        sessionId={diffCtx()}
+                        sessionId={activeDiffSession()}
                         onOpenDiff={remote.open}
                         jump={comments.jump()}
                         onJump={comments.complete}

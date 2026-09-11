@@ -846,6 +846,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 遷移",
+  "settings.experimental.claudeMigration.description":
+    "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
@@ -953,6 +956,9 @@ export const dict = {
     "規則是引導代理行為的指令檔案。它們會被包含在每次對話的系統提示詞中。在下方新增檔案路徑以包含額外的規則。",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",
   "settings.agentBehaviour.instructionFiles.description": "包含在系統提示詞中的附加指令檔案路徑",
+  "settings.agentBehaviour.pushFixes.title": "推送提取請求修正",
+  "settings.agentBehaviour.pushFixes.description":
+    "當你將提取請求的 CI 失敗或審查留言傳送給代理程式，或從基礎分支更新 worktree 時，要求代理程式提交並推送，以更新提取請求。權限確認仍然適用。關閉後可手動提交。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":

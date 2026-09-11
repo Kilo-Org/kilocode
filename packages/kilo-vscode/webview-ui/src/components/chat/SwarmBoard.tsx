@@ -7,6 +7,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { useBoardNavigation } from "@kilocode/kilo-ui/context/board-navigation"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
@@ -31,6 +32,7 @@ export const SwarmBoard: Component<{ readonly?: boolean; projectId?: string }> =
   const language = useLanguage()
   const vscode = useVSCode()
   const dialog = useDialog()
+  const navigate = useBoardNavigation()
   const [open, setOpen] = createSignal(false)
   const [board, setBoard] = createSignal<SessionBoard>()
   const [error, setError] = createSignal<string>()
@@ -191,6 +193,12 @@ export const SwarmBoard: Component<{ readonly?: boolean; projectId?: string }> =
       )
     })
   }
+
+  const openAgent = (id: string, title?: string) => {
+    dialog.close()
+    navigate?.(id, title)
+  }
+
   const view = () => {
     request()
     show(() => {
@@ -327,7 +335,9 @@ export const SwarmBoard: Component<{ readonly?: boolean; projectId?: string }> =
                 resize.observe(el)
               }}
             >
-              <For each={board()?.messages ?? []}>{(message) => <BoardMessage {...message} />}</For>
+              <For each={board()?.messages ?? []}>
+                {(message) => <BoardMessage {...message} onSessionClick={openAgent} />}
+              </For>
             </div>
           </div>
         </Dialog>

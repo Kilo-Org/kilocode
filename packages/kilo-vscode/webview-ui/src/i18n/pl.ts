@@ -881,6 +881,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
+  "settings.experimental.claudeMigration.title": "Migracja Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
@@ -1039,6 +1042,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",
+  "settings.agentBehaviour.pushFixes.title": "Wypychaj poprawki pull requesta",
+  "settings.agentBehaviour.pushFixes.description":
+    "Gdy wysyłasz do agenta błędy CI lub komentarze z przeglądu pull requesta, albo aktualizujesz worktree z gałęzi bazowej, poproś go o commit i push, aby pull request został zaktualizowany. Prośby o uprawnienia nadal obowiązują. Wyłącz, aby commitować ręcznie.",
   "settings.agentBehaviour.claudeCompat.heading": "Kompatybilność z Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Wczytuj pliki Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

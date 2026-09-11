@@ -373,14 +373,6 @@
   position: absolute;
   right: 16px;
   bottom: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  font-size: var(--kilo-font-size-16);
-  cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
@@ -704,14 +696,6 @@
   display: flex;
 }
 
-.kiloclaw-msg-toolbar .kiloclaw-iconbtn-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 3px;
-}
-
 /* Quick reaction picker popover (anchored to the toolbar side) */
 .kiloclaw-msg-reactionpick {
   position: absolute;
@@ -789,42 +773,4 @@
   gap: 4px;
   justify-content: flex-end;
   margin-top: 2px;
-}
-
-/* ── Icon buttons ──────────────────────────────────────────────────── */
-
-.kiloclaw-iconbtn {
-  background: none;
-  border: 1px solid var(--vscode-panel-border);
-  color: var(--vscode-foreground);
-  border-radius: 3px;
-  padding: 2px 6px;
-  cursor: pointer;
-  font-size: var(--kilo-font-size-14);
-  font-family: inherit;
-}
-
-.kiloclaw-iconbtn:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.kiloclaw-iconbtn-sm {
-  background: none;
-  border: none;
-  color: var(--vscode-foreground);
-  border-radius: 2px;
-  padding: 2px 4px;
-  cursor: pointer;
-  font-size: var(--kilo-font-size-12);
-  font-family: inherit;
-  opacity: 0.7;
-}
-
-.kiloclaw-iconbtn-sm:hover {
-  background: var(--vscode-list-hoverBackground);
-  opacity: 1;
-}
-
-.kiloclaw-iconbtn-danger {
-  color: var(--vscode-errorForeground);
 }

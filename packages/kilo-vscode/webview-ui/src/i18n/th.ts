@@ -909,6 +909,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
@@ -1023,6 +1026,9 @@ export const dict = {
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
+  "settings.agentBehaviour.pushFixes.title": "พุชการแก้ไขของคำขอดึง",
+  "settings.agentBehaviour.pushFixes.description":
+    "เมื่อคุณส่งความล้มเหลวของ CI หรือความเห็นการตรวจสอบจากคำขอดึงให้เอเจนต์ หรืออัปเดต worktree จากสาขาฐาน ให้ขอให้เอเจนต์คอมมิตและพุชเพื่อให้คำขอดึงอัปเดต การขออนุญาตยังคงมีผล ปิดเพื่อคอมมิตด้วยตนเอง",
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

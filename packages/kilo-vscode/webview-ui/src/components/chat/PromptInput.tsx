@@ -21,7 +21,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
-import { ModelSelector } from "../shared/ModelSelector"
+import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
@@ -48,7 +48,6 @@ import { formatRelativeDate } from "../../utils/date"
 import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import {
   fileName,
   dirName,
@@ -63,7 +62,7 @@ import {
 } from "./prompt-input-utils"
 import { sandboxMessages } from "./prompt-sandbox-messages"
 import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
-import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
+import { formatReviewCommentsMarkdown, pushInstruction } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
   failedPrompt,
@@ -151,6 +150,11 @@ interface PromptInputProps {
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
+// The `@` model entry reopens the shared model selector through its
+// programmatic-open event, keyed to this prompt scope so the chat model
+// selector and slash-command opens are unaffected.
+const MENTION_MODEL_TRIGGER = "mention-model"
+
 function MentionItemContent(props: { item: MentionResult }) {
   const item = props.item
   const language = useLanguage()
@@ -178,6 +182,14 @@ function MentionItemContent(props: { item: MentionResult }) {
     return (
       <>
         <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "model")
+    return (
+      <>
+        <Icon name="models" class="file-mention-icon" />
         <span class="file-mention-name">{item.label}</span>
         <span class="file-mention-dir">{item.description}</span>
       </>
@@ -232,7 +244,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const mention = useFileMention(vscode, sid, hasGit, props.worktrees)
+  const modelKeys = () => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`))
+  const mention = useFileMention(vscode, sid, hasGit, props.worktrees, modelKeys)
+  // Picking the `@` model entry reuses the shared model selector: it is
+  // mounted hidden and opened through its programmatic-open event. The mention
+  // latch resets immediately because the selector owns its own open state, so
+  // dismissing it by clicking outside cannot leave the latch stuck open.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: MENTION_MODEL_TRIGGER } }))
+  })
   const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
@@ -706,10 +728,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
     for (const token of mention.mentionedSessions().keys()) paths.add(token)
+    for (const token of mention.mentionedModels()) paths.add(token)
     if (hasTerminalMention(text())) paths.add("terminal")
     if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
   }
+  // Model references are inline text tokens, not files, so they must not be
+  // styled as or behave like clickable path mentions.
+  const isModelMention = (text: string) => mention.mentionedModels().has(text.replace(/^@/, ""))
   const placeholder = () => {
     switch (server.connectionState()) {
       case "connecting":
@@ -1480,9 +1506,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    // The user's own text comes last so it can override the default push behavior.
+    const push = pushInstruction(pending, settings()["agentManager.pushFixes"] !== false)
     const browserData = browserFeedbackData(browsers())
     const browserText = browserData ? formatBrowserFeedback(browserData.references) : ""
-    const message = [review, browserText, draft].filter(Boolean).join("\n\n")
+    const message = [review, push, browserText, draft].filter(Boolean).join("\n\n")
     if (canSendContinue()) {
       session.resume()
       return
@@ -1652,6 +1680,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           />
         </div>
       </Show>
+      <div class="mention-model-anchor" aria-hidden="true">
+        <ModelSelectorBase
+          value={null}
+          trigger={MENTION_MODEL_TRIGGER}
+          collapsed
+          onSelect={(providerID, modelID) => {
+            if (providerID && modelID) mention.selectModelReference(providerID, modelID, adjustHeight)
+          }}
+          onCancel={() => {
+            mention.closeMention()
+            textareaRef?.focus()
+          }}
+        />
+      </div>
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
@@ -1788,17 +1830,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
                   }
                 />
-                <button
-                  type="button"
+                <IconButton
+                  icon="close-small"
+                  variant="ghost"
+                  size="small"
                   class="image-attachment-remove"
                   disabled={readonly()}
                   onClick={() => {
                     if (!readonly()) imageAttach.remove(img.id)
                   }}
                   aria-label="Remove image"
-                >
-                  ×
-                </button>
+                />
               </div>
             )}
           </For>
@@ -1812,9 +1854,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
                   <span
                     class="prompt-input-file-mention"
-                    classList={{ "prompt-input-file-mention--file": isPathMention(seg().text) }}
+                    classList={{
+                      "prompt-input-file-mention--file": isPathMention(seg().text) && !isModelMention(seg().text),
+                    }}
                     onClick={(e) => {
                       if (!isPathMention(seg().text)) return
+                      if (isModelMention(seg().text)) return
                       if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
                       e.preventDefault()
                       e.stopPropagation()
@@ -1879,35 +1924,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} />
-          <ModelSelector sessionID={sid} />
-          <ThinkingSelector sessionID={sid} />
+          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
-              <Button
+              <IconButton
+                icon="database"
                 variant="ghost"
                 size="small"
                 onClick={handleOpenIndexingSettings}
                 aria-label={language.t("prompt.action.indexing")}
                 class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <ellipse cx="8" cy="3.5" rx="4.5" ry="2" stroke="currentColor" stroke-width="1.2" />
-                  <path
-                    d="M3.5 3.5V12.5C3.5 13.6046 5.51472 14.5 8 14.5C10.4853 14.5 12.5 13.6046 12.5 12.5V3.5"
-                    stroke="currentColor"
-                    stroke-width="1.2"
-                  />
-                  <path
-                    d="M3.5 8C3.5 9.10457 5.51472 10 8 10C10.4853 10 12.5 9.10457 12.5 8"
-                    stroke="currentColor"
-                    stroke-width="1.2"
-                  />
-                  <circle cx="13" cy="3" r="2.5" fill="currentColor" />
-                </svg>
-              </Button>
+              />
             </Tooltip>
           </Show>
           <Tooltip
@@ -1919,7 +1950,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             placement="top"
             openDelay={0}
           >
-            <Button
+            <IconButton
+              icon="shield"
               variant="ghost"
               size="small"
               onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
@@ -1930,9 +1962,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               }
               aria-pressed={autoApprove()}
               class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
-            >
-              <Icon name="shield" size="small" />
-            </Button>
+            />
           </Tooltip>
           <Show when={sandboxVisible()}>
             <SandboxButtonBase
@@ -1946,15 +1976,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             />
           </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
-            <Button
+            <IconButton
+              icon="wand-sparkles"
               variant="ghost"
               size="small"
               onClick={handleEnhance}
               disabled={!canEnhance()}
+              loading={enhancing()}
               aria-label={language.t("prompt.action.enhance")}
-            >
-              <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
-            </Button>
+            />
           </Tooltip>
           <Show when={canUseSpeech()}>
             <SpeechToTextButton speech={speech} disabled={isDisabled()} start={startSpeech} label={language.t} />
@@ -1963,32 +1993,41 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             when={showStop()}
             fallback={
               <Tooltip value={sendLabel()} placement="top" openDelay={0}>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={handleSendClick}
-                  aria-disabled={!canSend()}
-                  aria-label={sendLabel()}
+                <Show
+                  when={goal.active()}
+                  fallback={
+                    <IconButton
+                      icon="send"
+                      variant="ghost"
+                      size="small"
+                      onClick={handleSendClick}
+                      disabled={!canSend()}
+                      aria-label={sendLabel()}
+                    />
+                  }
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                  </svg>
-                  <Show when={goal.active()}>{language.t("prompt.goal.start")}</Show>
-                </Button>
+                  <IconButton
+                    icon="send"
+                    variant="ghost"
+                    size="small"
+                    onClick={handleSendClick}
+                    disabled={!canSend()}
+                    aria-label={sendLabel()}
+                  >
+                    {language.t("prompt.goal.start")}
+                  </IconButton>
+                </Show>
               </Tooltip>
             }
           >
             <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
-              <Button
+              <IconButton
+                icon="stop"
                 variant="ghost"
                 size="small"
                 onClick={() => session.abort()}
                 aria-label={language.t("prompt.action.stop")}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="3" y="3" width="10" height="10" rx="1" />
-                </svg>
-              </Button>
+              />
             </Tooltip>
           </Show>
         </div>

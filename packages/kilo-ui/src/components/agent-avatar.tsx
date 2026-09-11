@@ -21,6 +21,11 @@ export function AgentAvatarPalette(props: { ids: string[]; children: JSX.Element
   return <Palette.Provider value={parent ?? value}>{props.children}</Palette.Provider>
 }
 
+export function useAgentAvatarIds() {
+  const shared = useContext(Palette)
+  return createMemo(() => (shared ? [...shared().keys()] : []))
+}
+
 // Corner cells are dropped so the dot grid reads as a circle.
 const GRID = Array.from({ length: 25 }, (_, index) => index).filter((index) => ![0, 4, 20, 24].includes(index))
 
@@ -47,7 +52,12 @@ export function AgentAvatar(props: { id: string; status?: AgentAvatarStatus }) {
             cx={(cell % 5) * 4 + 1.5}
             cy={Math.floor(cell / 5) * 4 + 1.5}
             r="1.5"
-            style={{ "animation-delay": `${-(((cell * 7) % 11) / 11) * 1.4}s` }}
+            style={{
+              // Shimmer desync and resolve order are separate so a dot can keep
+              // its shimmer phase while the resolve staggers in grid order.
+              "--agent-avatar-delay": `${-(((cell * 7) % 11) / 11) * 1.4}s`,
+              "--agent-avatar-order": `${cell}`,
+            }}
           />
         )}
       </For>

@@ -28,6 +28,8 @@ export interface CommentState {
   reactionErrors: Record<string, string>
   /** commentId -> dismissed locally without sending. */
   dismissed: Record<string, boolean>
+  /** commit group id (first commit) -> expanded. */
+  commitsOpen: Record<string, boolean>
   open: boolean
   doneOpen: boolean
   conversationOpen: boolean
@@ -49,6 +51,7 @@ const BLANK: CommentState = Object.freeze({
   reactionPicked: {},
   reactionErrors: {},
   dismissed: {},
+  commitsOpen: {},
   open: true,
   doneOpen: false,
   conversationOpen: true,

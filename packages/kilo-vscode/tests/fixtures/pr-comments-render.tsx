@@ -6,6 +6,7 @@ const refreshed: WebviewMessage[] = []
 const reactions: WebviewMessage[] = []
 const replies: Record<string, unknown>[] = []
 const mutations: Record<string, unknown>[] = []
+const settings: Record<string, unknown>[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -60,6 +61,7 @@ Object.assign(globalThis, {
       if (message.type === "agentManager.commentReaction") reactions.push(message)
       if ((message as { type: string }).type === "agentManager.replyComment") replies.push(message)
       if ((message as { type: string }).type === "agentManager.mutateComment") mutations.push(message)
+      if (message.type === "updateSetting") settings.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -72,6 +74,7 @@ const { MarkedProvider } = await import("@kilocode/kilo-ui/context/marked")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { useVSCode } = await import("../../webview-ui/src/context/vscode")
 const { LanguageProvider } = await import("../../webview-ui/src/context/language")
+const { ConfigProvider } = await import("../../webview-ui/src/context/config")
 const { PRComments } = await import("../../webview-ui/agent-manager/pr/PRComments")
 const { Diff } = await import("@kilocode/kilo-ui/diff")
 const { Show, createRoot, createSignal } = await import("solid-js")
@@ -334,14 +337,13 @@ const resolvedRow = rows.find((node) => /reviewer/.test(node.textContent ?? ""))
 assert.ok(resolvedRow, "resolved row is present")
 assert.equal(resolvedRow!.getAttribute("aria-expanded"), "false")
 assert.ok(resolvedRow!.querySelector(".am-pr-comment-preview"), "collapsed row shows a preview")
-const summary = resolvedRow!.querySelector(".am-pr-comment-preview")!.textContent
 assert.doesNotMatch(root.textContent ?? "", /second paragraph only shows when expanded/)
 
 // The row expands into a full card whose unresolve action is enabled.
 ;(resolvedRow as HTMLButtonElement).click()
 await window.happyDOM.waitUntilComplete()
 assert.equal(resolvedRow!.getAttribute("aria-expanded"), "true")
-assert.equal(resolvedRow!.querySelector(".am-pr-comment-preview")!.textContent, summary)
+assert.equal(resolvedRow!.querySelector(".am-pr-comment-preview"), null)
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
 const card = resolvedRow!.parentElement!
 assert.equal(card.querySelector(".am-pr-diff-file")!.textContent, "packages/kilo-ui/src/components/other.tsx:3")
@@ -933,7 +935,7 @@ const release = render(
             openKeybind=""
             pr={badge()}
             onOpenComments={() => navigation.open(target)}
-            onOpenPR={() => clicked.push("external")}
+            onOpenPR={() => navigation.open(target)}
             onClick={() => clicked.push("row")}
             onDelete={noop}
             onStartRename={noop}
@@ -945,14 +947,16 @@ const release = render(
             onOpen={noop}
           />
           <Show when={visible()}>
-            <PRPanelHost
-              pr={badge()}
-              projectId={project()}
-              worktreeId={target.worktreeId}
-              jump={navigation.jump()}
-              onJump={navigation.complete}
-              onClose={() => setVisible(false)}
-            />
+            <ConfigProvider>
+              <PRPanelHost
+                pr={badge()}
+                projectId={project()}
+                worktreeId={target.worktreeId}
+                jump={navigation.jump()}
+                onJump={navigation.complete}
+                onClose={() => setVisible(false)}
+              />
+            </ConfigProvider>
           </Show>
         </MarkedProvider>
       </LanguageProvider>
@@ -961,6 +965,16 @@ const release = render(
   second,
 )
 const indicator = () => second.querySelector<HTMLButtonElement>(".am-pr-badge-comments")
+second.querySelector<HTMLElement>(".am-pr-badge")!.click()
+setProject(target.projectId)
+setSelection(target.worktreeId)
+await window.happyDOM.waitUntilComplete()
+assert.equal(visible(), true)
+assert.deepEqual(clicked, ["select", "refresh"])
+setVisible(false)
+clicked.length = 0
+setProject("project-a")
+setSelection("local")
 assert.equal(indicator(), null)
 setBadge({ ...base, unresolvedThreads: 1 })
 assert.equal(indicator()?.getAttribute("aria-label"), "1 unresolved review thread")
@@ -972,6 +986,27 @@ await window.happyDOM.waitUntilComplete()
 assert.equal(visible(), true)
 assert.deepEqual(clicked, ["select", "refresh"])
 assert.equal(jumps, 0)
+// Fix mode lives in the panel header: a pressed icon toggle for push-on-fix.
+const pushButton = second.querySelector<HTMLButtonElement>(".am-pr-panel-mode")
+assert.ok(pushButton)
+assert.equal(pushButton.getAttribute("aria-pressed"), "true")
+assert.equal(pushButton.hasAttribute("data-active"), true)
+assert.equal(pushButton.disabled, false)
+pushButton.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: false })
+assert.equal(pushButton.getAttribute("aria-pressed"), "false")
+assert.equal(pushButton.hasAttribute("data-active"), false)
+assert.equal(pushButton.disabled, false)
+pushButton.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(settings.at(-1), { type: "updateSetting", key: "agentManager.pushFixes", value: true })
+assert.equal(pushButton.getAttribute("aria-pressed"), "true")
+assert.equal(pushButton.hasAttribute("data-active"), true)
+post({ type: "pushFixesSettingLoaded", enabled: false })
+await window.happyDOM.waitUntilComplete()
+assert.equal(pushButton.getAttribute("aria-pressed"), "false")
+assert.equal(pushButton.hasAttribute("data-active"), false)
 const snippet = {
   patch:
     '@@ -396,0 +414,7 @@\n+                      size="small"\n+                      class="session-goal-trigger"\n+                      disabled={props.readonly}\n+                      aria-label={language.t("session.goal.label")}\n+                    >\n+                      <Icon name="chevron-down" size="small" />\n+                      <span>',
@@ -1067,7 +1102,7 @@ assert.equal(commentState(target.worktreeId).open, true)
 assert.equal(jumps, 1)
 
 // Conversation comments render at the bottom of the PR panel
-assert.match(second.textContent ?? "", /PR Comments/)
+assert.match(second.textContent ?? "", /Conversation/)
 assert.match(second.textContent ?? "", /lead-reviewer/)
 assert.match(second.textContent ?? "", /Consider simplifying the signature serializer/)
 assert.match(second.textContent ?? "", /Approved/)
@@ -1138,7 +1173,7 @@ await window.happyDOM.waitUntilComplete()
 assert.equal(second.querySelector(".am-pr-panel-title")?.textContent, "Updated")
 assert.equal(jumps, 2)
 second.querySelector<HTMLElement>(".am-pr-badge-number")!.click()
-assert.equal(clicked.at(-1), "external")
+assert.equal(clicked.at(-1), "refresh")
 assert.ok(!clicked.includes("row"))
 setBadge((prev) => ({ ...prev, unresolvedThreads: 0 }))
 assert.equal(indicator(), null)
@@ -1255,7 +1290,9 @@ const cleanup = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        <ConfigProvider>
+          <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),
@@ -1278,7 +1315,9 @@ const remount = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        <ConfigProvider>
+          <PRChecks pr={prState()} worktreeId={target.worktreeId} />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),
@@ -1382,12 +1421,14 @@ const disposeSummary = render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRSummary
-          pr={summaryPR()}
-          worktreeId={summaryWorktree}
-          activeTerminalId={terminal()}
-          onJump={(id) => jumped.push(id)}
-        />
+        <ConfigProvider>
+          <PRSummary
+            pr={summaryPR()}
+            worktreeId={summaryWorktree}
+            activeTerminalId={terminal()}
+            onJump={(id) => jumped.push(id)}
+          />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),
@@ -1400,14 +1441,16 @@ render(
   () => (
     <VSCodeProvider>
       <LanguageProvider>
-        <PRSummary
-          pr={{
-            ...base,
-            review: "pending",
-            checks: summarize([{ name: "Lint", status: "pending" }]),
-          }}
-          worktreeId="wt-pending-summary"
-        />
+        <ConfigProvider>
+          <PRSummary
+            pr={{
+              ...base,
+              review: "pending",
+              checks: summarize([{ name: "Lint", status: "pending" }]),
+            }}
+            worktreeId="wt-pending-summary"
+          />
+        </ConfigProvider>
       </LanguageProvider>
     </VSCodeProvider>
   ),

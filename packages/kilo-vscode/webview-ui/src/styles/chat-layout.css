@@ -254,9 +254,37 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 16px;
+  /* The inset the scroll button adds inside is taken off here, so the row keeps
+     the 8px 16px footprint it had before the indicator became clickable. */
+  padding: 4px 10px;
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
+}
+
+.working-indicator-scroll[data-component="button"] {
+  height: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  gap: 8px;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.working-indicator-scroll:hover:not(:disabled),
+.working-indicator-scroll:focus-visible:not(:disabled),
+.working-indicator-scroll:active:not(:disabled) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
 }
 
 /* On a wide surface (Agent Manager) the dock spans the whole composer. The lane
@@ -422,11 +450,6 @@
 
 .vscode-session-turn-user {
   width: 100%;
-}
-
-.vscode-session-turn-user[data-revert-disabled] [data-component="icon-button"][data-icon="arrow-left"] {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .vscode-session-turn-assistant {

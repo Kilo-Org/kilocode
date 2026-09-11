@@ -192,8 +192,14 @@ for (const width of [420, 200]) {
     await expect(
       routes.first().locator('[data-slot="board-route-recipient-icon"] [data-component="agent-avatar"]'),
     ).toHaveCount(1)
+    await expect(
+      routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="board-participant-stack"]'),
+    ).toHaveCount(1)
+    await expect(
+      routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="agent-avatar"]'),
+    ).toHaveCount(1)
     await expect(routes.last().locator('[data-slot="board-route-recipient-icon"] [data-component="icon"]')).toHaveCount(
-      2,
+      1,
     )
   })
 }

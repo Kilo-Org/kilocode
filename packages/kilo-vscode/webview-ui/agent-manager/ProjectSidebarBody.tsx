@@ -66,6 +66,7 @@ interface Props {
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onOpenComments?: (projectId: string, worktreeId: string) => void
+  onOpenPR?: (projectId: string, worktreeId: string) => void
   onNewWorktree: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
@@ -328,10 +329,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
           onOpenComments={() => props.onOpenComments?.(props.project.id, worktree.id)}
-          onOpenPR={() => {
-            const url = props.prs?.[worktree.id]?.url
-            post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })
-          }}
+          onOpenPR={() => props.onOpenPR?.(props.project.id, worktree.id)}
         />
       </div>
     )

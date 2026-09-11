@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { For, Show, createMemo } from "solid-js"
+import { For, Match, Show, Switch, createMemo } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -13,9 +13,20 @@ import { SectionHeading } from "./SectionHeading"
 import { actionableConversation, sendConversation } from "./pr-actions"
 import { commentState, createReactionController, patchCommentState } from "./pr-comment-state"
 import { githubUrl, prConversationMarkdown, preview, SEND_LIMIT } from "./pr-comment-payload"
-import type { PRConversationComment, PRReaction, PRReactionContent, ReviewerState } from "./pr-types"
+import type {
+  PRCommitItem,
+  PRConversationComment,
+  PREventItem,
+  PREventKind,
+  PRReaction,
+  PRReactionContent,
+  PRTimelineItem,
+  ReviewerState,
+} from "./pr-types"
 import { PRReactions } from "./PRReactions"
 import { PRCommentForm } from "./PRCommentForm"
+import { PRDescription } from "./PRDescription"
+import { PRTimelineRow } from "./PRTimelineRow"
 
 const REVIEWER_ICON: Record<ReviewerState, string> = {
   approved: "circle-check",
@@ -29,6 +40,13 @@ const REVIEWER_LABEL: Record<ReviewerState, string> = {
   changes_requested: "Changes requested",
   commented: "Commented",
   pending: "Pending",
+}
+
+const EVENT_ICON: Record<PREventKind, string> = {
+  merged: "git-merge",
+  closed: "circle-x-outline",
+  reopened: "circle-check",
+  force_pushed: "arrow-right",
 }
 
 interface CardProps {
@@ -157,10 +175,136 @@ function PRConversationCard(props: CardProps) {
   )
 }
 
+function CommitRow(props: { commit: PRCommitItem; onOpenUrl?: (url: string) => void }) {
+  const href = () => githubUrl(props.commit.url)
+  const open = () => {
+    const url = href()
+    if (url) props.onOpenUrl?.(url)
+  }
+  return (
+    <div class="am-pr-timeline-row am-pr-row" data-timeline-row>
+      <Icon name="git-commit" size="small" class="am-pr-timeline-icon" />
+      <Show when={href() && props.onOpenUrl} fallback={<span class="am-pr-timeline-sha">{props.commit.short}</span>}>
+        <button type="button" class="am-pr-timeline-sha am-pr-timeline-link" onClick={open}>
+          {props.commit.short}
+        </button>
+      </Show>
+      <span class="am-pr-timeline-label" title={props.commit.message}>
+        {props.commit.message}
+      </span>
+      <PRCommentTime time={props.commit.createdAt} />
+    </div>
+  )
+}
+
+function CommitGroup(props: {
+  commits: PRCommitItem[]
+  open: boolean
+  onToggle: () => void
+  onOpenUrl?: (url: string) => void
+}) {
+  const { t } = useLanguage()
+  const count = () => props.commits.length
+  const latest = () => props.commits.at(-1)
+  return (
+    <Show when={count() > 1} fallback={<CommitRow commit={props.commits[0]!} onOpenUrl={props.onOpenUrl} />}>
+      <div class="am-pr-timeline-group">
+        <button
+          type="button"
+          class="am-pr-timeline-row am-pr-row am-pr-timeline-toggle"
+          data-timeline-row
+          aria-expanded={props.open}
+          onClick={props.onToggle}
+        >
+          <Icon name={props.open ? "chevron-down" : "chevron-right"} size="small" class="am-pr-timeline-chevron" />
+          <Icon name="git-commit" size="small" class="am-pr-timeline-icon" />
+          <span class="am-pr-timeline-label">
+            {t("agentManager.pr.timeline.commits", { author: props.commits[0]!.author, count: count() })}
+          </span>
+          <PRCommentTime time={latest()?.createdAt} />
+        </button>
+        <Show when={props.open}>
+          <div class="am-pr-timeline-children">
+            <For each={props.commits}>{(commit) => <CommitRow commit={commit} onOpenUrl={props.onOpenUrl} />}</For>
+          </div>
+        </Show>
+      </div>
+    </Show>
+  )
+}
+
+function EventRow(props: { item: PREventItem }) {
+  const { t } = useLanguage()
+  const label = () => {
+    const item = props.item
+    switch (item.event) {
+      case "merged":
+        return t("agentManager.pr.timeline.merged", { actor: item.actor, branch: item.detail ?? "" })
+      case "closed":
+        return t("agentManager.pr.timeline.closed", { actor: item.actor })
+      case "reopened":
+        return t("agentManager.pr.timeline.reopened", { actor: item.actor })
+      case "force_pushed":
+        return t("agentManager.pr.timeline.forcePushed", { actor: item.actor, detail: item.detail ?? "" })
+    }
+  }
+  return <PRTimelineRow icon={EVENT_ICON[props.item.event]} label={label()} time={props.item.createdAt} />
+}
+
+function ReviewRow(props: { comment: PRConversationComment }) {
+  const { t } = useLanguage()
+  const key = () =>
+    props.comment.state === "approved"
+      ? "agentManager.pr.timeline.approved"
+      : props.comment.state === "changes_requested"
+        ? "agentManager.pr.timeline.changesRequested"
+        : "agentManager.pr.timeline.commented"
+  return (
+    <PRTimelineRow
+      icon={REVIEWER_ICON[props.comment.state ?? "commented"]}
+      label={t(key(), { author: props.comment.author })}
+      time={props.comment.createdAt}
+    />
+  )
+}
+
+interface Group {
+  id: string
+  comment?: PRConversationComment
+  commits?: PRCommitItem[]
+  event?: PREventItem
+}
+
+/** Consecutive commits by the same author collapse into one expandable group. */
+function groupItems(items: PRTimelineItem[]): Group[] {
+  const groups: Group[] = []
+  for (const item of items) {
+    if (item.kind === "commit") {
+      const last = groups.at(-1)
+      if (last?.commits && last.commits[0]!.author === item.author) {
+        last.commits.push(item)
+        continue
+      }
+      groups.push({ id: item.id, commits: [item] })
+      continue
+    }
+    if (item.kind === "event") {
+      groups.push({ id: item.id, event: item })
+      continue
+    }
+    groups.push({ id: item.id, comment: item })
+  }
+  return groups
+}
+
 interface Props {
   prNumber: number
   prUrl: string
-  comments: PRConversationComment[]
+  items: PRTimelineItem[]
+  hasEarlier?: boolean
+  description?: string
+  author?: string
+  createdAt?: number
   projectId?: string
   worktreeId: string
   activeTerminalId?: string
@@ -177,7 +321,7 @@ export function PRConversation(props: Props) {
     onMessage: vscode.onMessage,
     fail: (error) => t("agentManager.pr.comment.reactionFailed", { error: error || t("common.requestFailed") }),
   })
-  const index = createMemo(() => new Map(props.comments.map((comment) => [comment.id, comment])))
+  const index = createMemo(() => new Map(groupItems(props.items).map((group) => [group.id, group])))
   const state = () => commentState(props.worktreeId)
   const patch = (fn: (prev: ReturnType<typeof state>) => Partial<ReturnType<typeof state>>) =>
     patchCommentState(props.worktreeId, fn)
@@ -203,10 +347,20 @@ export function PRConversation(props: Props) {
     }))
   }
 
-  const actionable = createMemo(() => actionableConversation(props.comments, state()))
+  const toggleCommits = (id: string) => {
+    const next = !(state().commitsOpen[id] ?? false)
+    patch((prev) => ({ commitsOpen: { ...prev.commitsOpen, [id]: next } }))
+  }
+
+  const actionable = createMemo(() => actionableConversation(props.items, state()))
 
   function send(ids: string[]) {
-    sendConversation(props.worktreeId, props.comments, ids, state(), props.activeTerminalId)
+    sendConversation(props.worktreeId, props.items, ids, state(), props.activeTerminalId)
+  }
+
+  const earlier = () => {
+    const url = githubUrl(props.prUrl)
+    return url && props.onOpenUrl ? () => props.onOpenUrl?.(url) : undefined
   }
 
   return (
@@ -217,7 +371,7 @@ export function PRConversation(props: Props) {
           title={t("agentManager.pr.conversation.title")}
           open={open()}
           onToggle={() => setOpen(!open())}
-          count={props.comments.length > 0 ? String(props.comments.length) : undefined}
+          count={props.items.length > 0 ? String(props.items.length) : undefined}
         />
         <Show when={open()}>
           <Show when={actionable().length > 1}>
@@ -230,34 +384,64 @@ export function PRConversation(props: Props) {
               )}
             </Button>
           </Show>
+          <Show when={props.description}>
+            {(body) => <PRDescription body={body()} author={props.author} createdAt={props.createdAt} />}
+          </Show>
+          <Show when={props.hasEarlier}>
+            <PRTimelineRow icon="history" label={t("agentManager.pr.timeline.earlier")} onClick={earlier()} />
+          </Show>
           <div class="am-pr-panel-comment-list am-pr-col">
             <For each={[...index().keys()]}>
               {(id) => (
                 <Show when={index().get(id)}>
-                  {(comment) => (
-                    <PRConversationCard
-                      projectId={props.projectId}
-                      worktreeId={props.worktreeId}
-                      prNumber={props.prNumber}
-                      prUrl={props.prUrl}
-                      comment={comment()}
-                      open={expandedFor(comment())}
-                      sent={sent(id)}
-                      dismissed={dismissed(id)}
-                      activeTerminalId={props.activeTerminalId}
-                      onToggleOpen={() => toggleOpen(comment())}
-                      onSend={() => send([id])}
-                      onDismiss={() => toggleDismiss(comment())}
-                      reactionError={reactions.error(id)}
-                      reactions={reactions.list(id, comment().reactions)}
-                      reactionPending={(content) => reactions.pending(id, content)}
-                      onReaction={(content, add) => reactions.toggle(id, content, add)}
-                      onOpenUrl={
-                        githubUrl(comment().url) && props.onOpenUrl
-                          ? () => props.onOpenUrl?.(githubUrl(comment().url)!)
-                          : undefined
-                      }
-                    />
+                  {(group) => (
+                    <Switch>
+                      <Match when={group().comment}>
+                        {(comment) => (
+                          <Show
+                            when={comment().kind === "review" && !comment().body.trim()}
+                            fallback={
+                              <PRConversationCard
+                                projectId={props.projectId}
+                                worktreeId={props.worktreeId}
+                                prNumber={props.prNumber}
+                                prUrl={props.prUrl}
+                                comment={comment()}
+                                open={expandedFor(comment())}
+                                sent={sent(id)}
+                                dismissed={dismissed(id)}
+                                activeTerminalId={props.activeTerminalId}
+                                onToggleOpen={() => toggleOpen(comment())}
+                                onSend={() => send([id])}
+                                onDismiss={() => toggleDismiss(comment())}
+                                reactionError={reactions.error(id)}
+                                reactions={reactions.list(id, comment().reactions)}
+                                reactionPending={(content) => reactions.pending(id, content)}
+                                onReaction={(content, add) => reactions.toggle(id, content, add)}
+                                onOpenUrl={
+                                  githubUrl(comment().url) && props.onOpenUrl
+                                    ? () => props.onOpenUrl?.(githubUrl(comment().url)!)
+                                    : undefined
+                                }
+                              />
+                            }
+                          >
+                            <ReviewRow comment={comment()} />
+                          </Show>
+                        )}
+                      </Match>
+                      <Match when={group().commits}>
+                        {(commits) => (
+                          <CommitGroup
+                            commits={commits()}
+                            open={state().commitsOpen[id] ?? false}
+                            onToggle={() => toggleCommits(id)}
+                            onOpenUrl={props.onOpenUrl}
+                          />
+                        )}
+                      </Match>
+                      <Match when={group().event}>{(event) => <EventRow item={event()} />}</Match>
+                    </Switch>
                   )}
                 </Show>
               )}

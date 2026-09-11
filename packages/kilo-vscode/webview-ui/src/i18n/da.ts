@@ -923,6 +923,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code-migrering",
+  "settings.experimental.claudeMigration.description":
+    "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.taskModelSelection.title": "Valg af Task-underagentmodel",
@@ -1038,6 +1041,9 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.pushFixes.title": "Push pull request-rettelser",
+  "settings.agentBehaviour.pushFixes.description":
+    "Når du sender CI-fejl eller review-kommentarer fra en pull request til agenten, eller opdaterer et worktree fra dets base, bedes agenten committe og pushe, så pull requesten opdateres. Tilladelsesprompter gælder stadig. Slå fra for at committe manuelt.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":

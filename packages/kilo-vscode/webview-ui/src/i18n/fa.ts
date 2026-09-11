@@ -909,6 +909,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
@@ -968,6 +971,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "فایل‌های دستورالعمل اضافی",
   "settings.agentBehaviour.instructionFiles.description":
     "مسیرهای فایل‌های دستورالعمل اضافی که در پرامپت سیستم گنجانده می‌شوند",
+  "settings.agentBehaviour.pushFixes.title": "پوش کردن اصلاحات درخواست ادغام",
+  "settings.agentBehaviour.pushFixes.description":
+    "وقتی خطاهای CI یا نظرات بازبینی یک درخواست ادغام را برای عامل می‌فرستید، یا یک worktree را از شاخه پایه به‌روز می‌کنید، از عامل بخواهید کامیت و پوش کند تا درخواست ادغام به‌روز شود. درخواست‌های مجوز همچنان اعمال می‌شوند. برای کامیت دستی این گزینه را خاموش کنید.",
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

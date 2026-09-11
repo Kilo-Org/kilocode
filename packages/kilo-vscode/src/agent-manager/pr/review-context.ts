@@ -1,5 +1,5 @@
-import type { PRReviewResult } from "../../shared/pr-comment-actions"
-import type { PRStatus } from "../types"
+import type { PRMergeResult, PRReviewResult } from "../../shared/pr-comment-actions"
+import type { PRMergeMethod, PRStatus } from "../types"
 
 export interface PRReviewContext {
   pr: PRStatus
@@ -7,11 +7,15 @@ export interface PRReviewContext {
   worktreeId: string
   projectId?: string
   branch: string
+  remote?: string
 }
 
 export interface PRReviewHost {
   context(message: Record<string, unknown>): PRReviewContext
-  post(message: PRReviewResult): void
-  refresh(context: PRReviewContext): void
+  post(message: PRReviewResult | PRMergeResult): void
+  refresh(context: PRReviewContext, settle?: boolean): void
   dirtyFiles(): string[]
+  conflicts?: (context: PRReviewContext, base: string, head: string) => Promise<string[]>
+  getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+  savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
 }

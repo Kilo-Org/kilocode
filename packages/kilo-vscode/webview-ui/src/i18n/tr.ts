@@ -913,6 +913,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
+  "settings.experimental.claudeMigration.description":
+    "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
@@ -983,6 +986,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.pushFixes.title": "Çekme isteği düzeltmelerini push'la",
+  "settings.agentBehaviour.pushFixes.description":
+    "Bir çekme isteğinin CI hatalarını veya inceleme yorumlarını ajana gönderdiğinizde ya da bir worktree'yi tabanından güncellediğinizde, çekme isteğinin güncellenmesi için ajandan commit ve push yapmasını isteyin. İzin istemleri geçerli kalır. Commit'leri elle yapmak için kapatın.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":

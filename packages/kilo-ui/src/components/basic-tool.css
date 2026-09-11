@@ -49,6 +49,15 @@
       height: 18px;
       overflow: visible;
     }
+
+    &:has([data-component="board-participant-stack"]) {
+      display: inline-flex;
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 18px;
+      height: 18px;
+      overflow: visible;
+    }
   }
 
   [data-slot="basic-tool-tool-subtitle"] {

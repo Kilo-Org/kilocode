@@ -5,7 +5,7 @@
  * so the provider only needs thin delegation calls.
  */
 import type { Worktree } from "./WorktreeStateManager"
-import type { AgentManagerOutMessage, PRStatus } from "./types"
+import type { AgentManagerOutMessage, PRMergeMethod, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
@@ -20,6 +20,7 @@ import {
 import { ghErrorReason, mergePRStatus, retainPRStatus } from "./pr/am-pr-utils"
 import { mutateComment } from "./pr/mutate-comment"
 import { PRReviewActions } from "./pr/review-actions"
+import { PRMergeActions } from "./pr/merge-actions"
 import { PRSuggestionActions } from "./pr/suggestion-actions"
 import type { PRReviewContext, PRReviewHost } from "./pr/review-context"
 
@@ -34,6 +35,9 @@ interface PRBridgeHost {
   semaphore?: Semaphore
   projectId?: () => string | undefined
   dirtyFiles?: () => string[]
+  conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
+  getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+  savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
 }
 
 /** Minimal panel surface needed by the bridge (subset of PanelContext). */
@@ -68,6 +72,7 @@ function hasComment(pr: PRStatus, id: string): boolean {
 export class PRStatusBridge {
   readonly poller: PRStatusPoller
   private reviews: PRReviewActions
+  private merges: PRMergeActions
   private suggestions: PRSuggestionActions
   private readonly cache = new Map<string, AgentManagerOutMessage>()
   /** Branch each cached PR was found on, so a branch switch still clears it. */
@@ -82,13 +87,18 @@ export class PRStatusBridge {
     const actions: PRReviewHost = {
       context: (message) => this.context(message),
       post: (message) => host.postToWebview(message),
-      refresh: (context) => {
-        if (host.projectId?.() === context.projectId) this.poller.refresh(context.worktreeId)
+      refresh: (context, settle) => {
+        if (host.projectId?.() === context.projectId) this.poller.refresh(context.worktreeId, settle)
       },
       dirtyFiles: () => host.dirtyFiles?.() ?? [],
+      conflicts: async (context, base, head) =>
+        (await host.conflicts?.(context.directory, context.remote ?? "origin", base, head)) ?? [],
+      getPRMergeMethod: host.getPRMergeMethod,
+      savePRMergeMethod: host.savePRMergeMethod,
     }
     this.actionHost = actions
     this.reviews = new PRReviewActions(actions)
+    this.merges = new PRMergeActions(actions)
     this.suggestions = new PRSuggestionActions(actions)
   }
 
@@ -103,6 +113,9 @@ export class PRStatusBridge {
     semaphore?: Semaphore
     projectId?: () => string | undefined
     dirtyFiles?: () => string[]
+    conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
+    getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
+    savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
   }): PRStatusBridge {
     return new PRStatusBridge(opts)
   }
@@ -132,7 +145,7 @@ export class PRStatusBridge {
 
   /** Handle an incoming webview message. Returns true if handled. */
   handleMessage(m: Record<string, unknown>): boolean {
-    if (this.reviews.handle(m) || this.suggestions.handle(m)) return true
+    if (this.actions(m)) return true
     if (m.type === "agentManager.refreshPR") {
       if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
       this.poller.refresh(m.worktreeId as string)
@@ -158,6 +171,10 @@ export class PRStatusBridge {
     )
       return this.comment(m, `${m.type}Result`)
     return false
+  }
+
+  private actions(m: Record<string, unknown>): boolean {
+    return this.reviews.handle(m) || this.merges.handle(m) || this.suggestions.handle(m)
   }
 
   private handleReaction(m: Record<string, unknown>): boolean {
@@ -211,7 +228,7 @@ export class PRStatusBridge {
     }
     if (m.prNumber !== cached.pr.number || m.prUrl !== cached.pr.url)
       throw new Error("Pull request changed. Refresh and try again.")
-    return { pr: cached.pr, directory: wt.path, worktreeId: wt.id, projectId, branch: wt.branch }
+    return { pr: cached.pr, directory: wt.path, worktreeId: wt.id, projectId, branch: wt.branch, remote: wt.remote }
   }
 
   private comment(
@@ -308,6 +325,7 @@ export class PRStatusBridge {
     this.poller.stop()
     this.suggestions.dispose()
     this.reviews = new PRReviewActions(this.actionHost)
+    this.merges = new PRMergeActions(this.actionHost)
     this.suggestions = new PRSuggestionActions(this.actionHost)
     this.cache.clear()
     this.branches.clear()
@@ -344,6 +362,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
       accept(bridge, host, id, pr)
     },
     log: (...args: unknown[]) => host.log(...args),
+    getPRMergeMethod: host.getPRMergeMethod,
   }
 }
 

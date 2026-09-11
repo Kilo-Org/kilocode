@@ -917,6 +917,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code 移行",
+  "settings.experimental.claudeMigration.description":
+    "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
@@ -1033,6 +1036,9 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.pushFixes.title": "プルリクエストの修正をプッシュ",
+  "settings.agentBehaviour.pushFixes.description":
+    "プルリクエストの CI 失敗やレビューコメントをエージェントに送信したとき、またはベースから worktree を更新したときに、プルリクエストが更新されるようにコミットとプッシュを依頼します。権限の確認は引き続き行われます。手動でコミットしたい場合はオフにしてください。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":

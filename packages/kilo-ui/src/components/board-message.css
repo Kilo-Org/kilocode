@@ -23,23 +23,76 @@
     max-width: none;
   }
 
-  > [data-component="icon"],
+  [data-slot="board-route-arrow"],
   [data-slot="board-route-recipient-icon"] {
     flex: 0 0 auto;
-  }
-
-  [data-slot="board-route-recipient-icon"] {
     display: inline-flex;
   }
 
-  /* Parent session marker: the spinner grid, static, in the avatar slot size. */
+  /* Parent session marker, in the avatar slot size. */
   .board-route-parent {
     width: 18px;
     color: var(--text-weak);
+  }
 
-    > rect {
-      animation: none !important;
+  /* While the post is still being written or stored, the sender glyph
+     pulses (see agent-avatar.css) and the arrow travels toward the
+     recipient in the same 1.4s rhythm, so the row reads as "sending". */
+  &[data-pending="true"] [data-slot="board-route-arrow"] {
+    color: var(--text-base);
+
+    > [data-component="icon"] {
+      animation: board-route-send 1.4s ease-in-out infinite both;
     }
+  }
+}
+
+@keyframes board-route-send {
+  0% {
+    transform: translateX(-4px);
+    opacity: 0;
+  }
+  35%,
+  65% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(4px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="board-route"][data-pending="true"] [data-slot="board-route-arrow"] > [data-component="icon"] {
+    animation: none;
+  }
+}
+
+/* Clickable avatars appear both inside a route and as a tool-header stack, so
+   these rules stay outside the route block. */
+[data-slot="board-route-avatar"][data-clickable="true"] {
+  display: inline-flex;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  /* The avatar owns its hue, so the glow takes that agent's color. */
+  [data-component="agent-avatar"] {
+    transition: filter 120ms ease;
+  }
+
+  &:hover [data-component="agent-avatar"] {
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+
+  &:focus-visible {
+    border-radius: 3px;
+    outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+    outline-offset: 1px;
   }
 }
 

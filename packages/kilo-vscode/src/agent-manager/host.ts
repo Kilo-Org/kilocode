@@ -142,6 +142,10 @@ export interface Host {
   /** Persist the additional-project registry payload. */
   writeProjects(value: unknown): Promise<void>
 
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
+  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
+
   unregisterProjectRoutes(projectId: string): void
 
   /** Subscribe to workspace folder changes (pinned project re-derivation). */

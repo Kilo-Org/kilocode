@@ -1,5 +1,5 @@
-// PR sub-types — source of truth for all PR-related types used in the PR panel.
-// PRStatus lives in src/types/messages/agent-manager.ts for broad consumption.
+// PR types — source of truth for all PR-related types used by the PR panel and
+// the extension/webview message boundary.
 
 export type PRState = "open" | "draft" | "merged" | "closed"
 export type ReviewDecision = "approved" | "changes_requested" | "pending"
@@ -78,10 +78,61 @@ export interface PRComment {
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
 
+export type PRMergeMethod = "merge" | "squash" | "rebase"
+export type PRMergeability = "mergeable" | "conflicting" | "unknown"
+export type PRMergeState = "clean" | "behind" | "blocked" | "dirty" | "unstable" | "draft" | "has_hooks" | "unknown"
+
+export interface PRMergeStatus {
+  mergeable: PRMergeability
+  state: PRMergeState
+  auto: PRMergeMethod | null
+  methods: PRMergeMethod[]
+  method: PRMergeMethod
+  autoAllowed: boolean
+  canWrite: boolean
+}
+
 export interface PRReviewer {
   login: string
   avatar?: string
   state: ReviewerState
+}
+
+export interface PRStatus {
+  viewerDidAuthor?: boolean
+  id?: string
+  number: number
+  baseRefOid?: string
+  headRefOid?: string
+  title: string
+  body?: string
+  author?: string
+  createdAt?: string
+  url: string
+  state: PRState
+  review: ReviewDecision | null
+  merge?: PRMergeStatus
+  checks: {
+    status: AggregateCheckStatus
+    total: number
+    passed: number
+    failed: number
+    pending: number
+    checks: PRCheck[]
+  }
+  reviewers: PRReviewer[]
+  unresolvedThreads?: number
+  comments?: {
+    total: number
+    unresolved: number
+    comments: PRComment[]
+  }
+  conversation?: PRTimelineItem[]
+  /** Whether GitHub has timeline items before the loaded window. */
+  conversationHasEarlier?: boolean
+  additions: number
+  deletions: number
+  files: number
 }
 
 export interface PRConversationComment {
@@ -97,4 +148,38 @@ export interface PRConversationComment {
   state?: ReviewerState
   isBot?: boolean
   reactions?: PRReaction[]
+}
+
+export interface PRCommitItem {
+  kind: "commit"
+  id: string
+  sha: string
+  short: string
+  message: string
+  author: string
+  avatar?: string
+  createdAt?: number
+  url?: string
+}
+
+export type PREventKind = "merged" | "closed" | "reopened" | "force_pushed"
+
+export interface PREventItem {
+  kind: "event"
+  event: PREventKind
+  id: string
+  actor: string
+  avatar?: string
+  createdAt?: number
+  /** merged: target branch. force_pushed: `before to after` short SHAs. */
+  detail?: string
+  url?: string
+}
+
+/** One entry of the PR conversation: a comment, a commit, or a lifecycle event. */
+export type PRTimelineItem = PRConversationComment | PRCommitItem | PREventItem
+
+/** Comments and reviews render as cards; commits and events render as rows. */
+export function isConversationComment(item: PRTimelineItem): item is PRConversationComment {
+  return item.kind !== "commit" && item.kind !== "event"
 }

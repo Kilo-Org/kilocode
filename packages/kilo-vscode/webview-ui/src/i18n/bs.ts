@@ -924,6 +924,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude Code migracija",
+  "settings.experimental.claudeMigration.description":
+    "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
@@ -1040,6 +1043,9 @@ export const dict = {
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.pushFixes.title": "Pošalji ispravke pull requesta",
+  "settings.agentBehaviour.pushFixes.description":
+    "Kada agentu pošalješ CI greške ili komentare pregleda iz pull requesta, ili ažuriraš radno stablo iz osnovne grane, zatraži da napravi commit i push kako bi se pull request ažurirao. Upiti za dozvole i dalje važe. Isključi da bi commite radio ručno.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":

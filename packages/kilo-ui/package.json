@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.5.16",
+  "version": "7.6.2",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -71,6 +71,7 @@
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/clipboard": "./src/context/clipboard.tsx",
+    "./context/board-navigation": "./src/context/board-navigation.tsx",
     "./context/data": "./src/context/data.tsx",
     "./context/dialog": "./src/context/dialog.tsx",
     "./context/diff": "./src/context/diff.tsx",

@@ -95,7 +95,7 @@ describe("session dock layout", () => {
     const goal = read("webview-ui/src/components/chat/goal/useGoalDock.tsx")
     const indicator = read("webview-ui/src/components/shared/WorkingIndicator.tsx")
     expect(indicator).not.toMatch(/goal|DropdownMenu|Tooltip/)
-    expect(dock).toContain("<WorkingIndicator />")
+    expect(dock).toContain("<WorkingIndicator onScrollToBottom={props.onScrollToBottom} />")
     expect(goal).toContain('class="session-goal-action"')
     expect(goal).toContain('variant="ghost"')
     expect(goal).toContain("disabled={props.readonly || !actions()}")
@@ -124,9 +124,21 @@ describe("session dock layout", () => {
     expect(css).not.toContain(".session-goal-dot")
     expect(css).not.toContain("@container chat (max-width: 640px)")
     expect(indicator).toContain("gap: 8px")
-    expect(indicator).toContain("padding: 8px 16px")
+    expect(indicator).toContain("padding: 4px 10px")
     expect(css).not.toContain("working-goal")
     expect(css).not.toContain(".working-indicator[data-goal]")
+  })
+
+  it("keeps the working status accessible and constrained", () => {
+    const indicator = read("webview-ui/src/components/shared/WorkingIndicator.tsx")
+    const css = read("webview-ui/src/styles/chat-layout.css")
+    expect(indicator).toContain('<span class="sr-only">{language.t("session.messages.scrollToBottom")}</span>')
+    const button = css.match(/\.working-indicator-scroll\[data-component="button"\] \{([\s\S]*?)\}/)
+    expect(button).not.toBeNull()
+    expect(button![1]).toContain("max-width: 100%")
+    expect(button![1]).toContain("min-width: 0")
+    expect(css).toContain(".working-indicator-scroll:hover:not(:disabled)")
+    expect(css).toContain("var(--surface-interactive-hover, var(--vscode-list-hoverBackground))")
   })
 
   it("keeps the composer column as the only owner of the row", () => {

@@ -18,6 +18,7 @@ const STORIES = [
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
   { id: "agentmanager--side-terminal-panel-empty", name: "Agent Manager / side terminal" },
   { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
+  { id: "iconbutton--states", name: "IconButton / shared states" },
 ]
 
 function url(id: string) {
@@ -52,6 +53,40 @@ test.describe("webview accessibility ratchet", () => {
       await scan(page)
     })
   }
+
+  test("IconButton states expose labels, keyboard state, disabled state, and tooltips", async ({ page }) => {
+    await open(page, "iconbutton--states")
+
+    const create = page.getByRole("button", { name: "Create item", exact: true })
+    const disabled = page.getByRole("button", { name: "Delete item", exact: true })
+    const loading = page.getByRole("button", { name: "Refresh item", exact: true })
+    const toggle = page.getByRole("button", { name: "Toggle changes", exact: true })
+    const content = page.getByTestId("icon-button-with-content")
+    const indexing = page.getByRole("button", { name: "Indexing", exact: true })
+
+    await expect(create).toBeVisible()
+    await expect(disabled).toBeDisabled()
+    await expect(disabled).toHaveAttribute("aria-label", "Delete item")
+    await expect(loading).toBeDisabled()
+    await expect(loading).toHaveAttribute("aria-busy", "true")
+    const contentBox = await content.boundingBox()
+    const iconBox = await content.locator('[data-slot="icon-svg"]').boundingBox()
+    expect(contentBox?.width).toBeGreaterThan(20)
+    expect(iconBox?.x).toBeGreaterThanOrEqual((contentBox?.x ?? 0) - 1)
+    await expect(indexing.locator('[data-slot="icon-svg"]')).toHaveAttribute("viewBox", "0 0 24 24")
+    expect(await indexing.locator('[data-slot="icon-svg"]').evaluate((el) => getComputedStyle(el).strokeWidth)).toBe(
+      "1.5px",
+    )
+    await expect(toggle).toHaveAttribute("aria-pressed", "false")
+
+    await reach(page, toggle)
+    await expect(toggle).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(toggle).toHaveAttribute("aria-pressed", "true")
+
+    await create.hover()
+    await expect(page.locator('[data-component="tooltip"]')).toContainText("Create item")
+  })
 
   test("Background agent summary and visible agents remain pointer-accessible", async ({ page }) => {
     await page.setViewportSize({ width: 200, height: 720 })
@@ -419,5 +454,28 @@ test.describe("webview accessibility ratchet", () => {
       await open(page, id)
       await expect(page.getByRole("dialog")).toHaveAccessibleName(/.+/)
     }
+  })
+
+  test("To-do cards render read-only checkboxes with labeled states", async ({ page }) => {
+    await open(page, "composite-webview--todo-write-completed")
+
+    const card = page.locator('[data-component="todos"]')
+    const done = card.getByRole("checkbox", { name: "Create a haiku about Jan" })
+    const active = card.getByRole("checkbox", { name: "Create a poem about Henk" })
+
+    await expect(done).toBeChecked()
+    await expect(active).not.toBeChecked()
+    await expect(done).toHaveAttribute("aria-readonly", "true")
+    await expect(active).toHaveAttribute("aria-readonly", "true")
+    await expect(card.locator('[data-component="checkbox"][data-readonly]')).toHaveCount(2)
+    await expect(card.locator('[data-slot="checkbox-checkbox-indicator"]')).toHaveCount(1)
+    await expect(card.locator('[data-slot="message-part-todo-content"][data-completed="completed"]')).toHaveText(
+      "Create a haiku about Jan",
+    )
+
+    await active.focus()
+    await page.keyboard.press("Space")
+    await expect(active).not.toBeChecked()
+    await expect(done).toBeChecked()
   })
 })

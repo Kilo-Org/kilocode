@@ -943,6 +943,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
+  "settings.experimental.claudeMigration.description":
+    "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.taskModelSelection.title": "Task-Subagent-Modellauswahl",
@@ -1061,6 +1064,9 @@ export const dict = {
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.pushFixes.title": "Pull-Request-Fixes pushen",
+  "settings.agentBehaviour.pushFixes.description":
+    "Wenn du CI-Fehler oder Review-Kommentare eines Pull Requests an den Agenten sendest oder einen Worktree von seiner Basis aktualisierst, wird der Agent gebeten, zu committen und zu pushen, damit der Pull Request aktualisiert wird. Berechtigungsabfragen gelten weiterhin. Deaktivieren, um manuell zu committen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-Kompatibilität",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-Dateien laden",
   "settings.agentBehaviour.claudeCompat.description":

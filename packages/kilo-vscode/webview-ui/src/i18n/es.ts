@@ -932,6 +932,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
+  "settings.experimental.claudeMigration.title": "Migración de Claude Code",
+  "settings.experimental.claudeMigration.description":
+    "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
   "settings.experimental.taskModelSelection.title": "Selección de modelo de subagente de Task",
@@ -1051,6 +1054,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
   "settings.agentBehaviour.instructionFiles.description":
     "Rutas a archivos de instrucciones adicionales incluidos en el prompt del sistema",
+  "settings.agentBehaviour.pushFixes.title": "Enviar correcciones del pull request",
+  "settings.agentBehaviour.pushFixes.description":
+    "Al enviar al agente fallos de CI o comentarios de revisión de un pull request, o al actualizar un worktree desde su base, pedirle que haga commit y push para que el pull request se actualice. Las solicitudes de permiso siguen aplicándose. Desactívalo para hacer los commits manualmente.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilidad con Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Cargar archivos de Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

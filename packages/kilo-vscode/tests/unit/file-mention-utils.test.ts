@@ -21,6 +21,8 @@ import {
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
   WORKTREES_RESULT,
+  MODEL_RESULT,
+  modelReferenceToken,
   filePickerNamed,
   defaultMentionIndex,
 } from "../../webview-ui/src/hooks/file-mention-utils"
@@ -75,17 +77,29 @@ describe("buildMentionResults", () => {
   it("includes special mentions for empty mention query", () => {
     const result = buildMentionResults("", [])
     expect(result[0]).toEqual({
+      type: "model",
+      value: "model",
+      label: "Model",
+      description: "Reference a model for subagents",
+    })
+    expect(result[1]).toEqual({
       type: "terminal",
       value: "terminal",
       label: "Terminal",
       description: "Active terminal output",
     })
-    expect(result[1]).toEqual({
+    expect(result[2]).toEqual({
       type: "git-changes",
       value: "git-changes",
       label: "Git changes",
       description: "Current session/worktree changes",
     })
+  })
+
+  it("offers the model reference entry for its label and aliases", () => {
+    expect(buildMentionResults("model", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("models", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("llm", [])).toContainEqual(MODEL_RESULT)
   })
 
   it("ranks terminal above a file the query fits less well", () => {
@@ -121,6 +135,7 @@ describe("buildMentionResults", () => {
   it("keeps the menu order for a bare @, entries above the files", () => {
     const result = buildMentionResults("", ["src/index.ts"])
     expect(result).toEqual([
+      MODEL_RESULT,
       TERMINAL_RESULT,
       GIT_CHANGES_RESULT,
       PAST_CHATS_RESULT,
@@ -743,7 +758,7 @@ describe("session mentions", () => {
   describe("buildMentionResults", () => {
     it("offers the past-chats picker alongside the other special mentions", () => {
       const result = buildMentionResults("", [])
-      expect(result[0]).toEqual(TERMINAL_RESULT)
+      expect(result[0]).toEqual(MODEL_RESULT)
       expect(result).toContainEqual(PAST_CHATS_RESULT)
       expect(result).toContainEqual(FILE_PICKER_RESULT)
     })
@@ -897,5 +912,18 @@ describe("session mentions", () => {
       expect(attachments.map((item) => item.url)).toEqual(["session:ses_a", "session:ses_b"])
       expect(attachments.map((item) => item.source?.text.value)).toEqual(["@Fix auth bug", "@Fix auth bug (2)"])
     })
+  })
+})
+
+describe("modelReferenceToken", () => {
+  it("builds the provider/model inline token", () => {
+    expect(modelReferenceToken("anthropic", "claude-sonnet-4")).toBe("anthropic/claude-sonnet-4")
+    expect(modelReferenceToken("openrouter", "anthropic/claude-sonnet-4")).toBe("openrouter/anthropic/claude-sonnet-4")
+  })
+
+  it("is rediscovered by syncMentionedPaths as a mention token", () => {
+    const token = modelReferenceToken("anthropic", "claude-sonnet-4")
+    const kept = syncMentionedPaths(new Set([token]), `use @${token} for the subagent`)
+    expect(kept.has(token)).toBe(true)
   })
 })

@@ -121,6 +121,7 @@ export function PRFiles(props: PRTarget & { own?: boolean; closed?: boolean; onR
       </Show>
       <Button
         data-action="load-files"
+        class="am-pr-review-load"
         variant="secondary"
         size="small"
         disabled={state().pending || !!state().anchor}

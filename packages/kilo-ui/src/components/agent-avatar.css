@@ -23,6 +23,7 @@
      around it, so the symbol remains recognizable. */
   &[data-status="running"] circle:not([data-lit]) {
     animation: agent-avatar-pulse 1.4s ease-in-out infinite both;
+    animation-delay: var(--agent-avatar-delay);
   }
 
   /* Eight well-separated hues: the six VS Code chart colors plus teal and pink,
@@ -66,6 +67,23 @@
   &[data-color="7"] {
     --agent-avatar-a: var(--vscode-charts-purple, var(--icon-info-base));
     --agent-avatar-b: var(--vscode-charts-red, var(--icon-critical-base));
+  }
+}
+
+[data-component="board-participant-stack"] {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: max-content;
+  height: 18px;
+  overflow: visible;
+  gap: 3px;
+
+  > * {
+    position: relative;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
   }
 }
 

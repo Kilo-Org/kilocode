@@ -57,6 +57,10 @@ These tools help Kilo Code run commands:
 
 - `bash` - Runs shell commands with configurable timeout and working directory
 
+{% callout type="info" %}
+The `interactive_terminal` tool and the in-session terminal controls were removed, along with their API endpoints and SDK types. Run commands that need keyboard input in your own terminal, and use the `bash` tool for non-interactive shell commands. See [Shell Integration](/docs/automate/extending/shell-integration) for details.
+{% /callout %}
+
 ### Web Tools
 
 These tools help Kilo Code access web content:

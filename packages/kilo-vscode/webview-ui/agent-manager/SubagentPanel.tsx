@@ -44,7 +44,7 @@ const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props
 
   return (
     <DataBridge>
-      <ChatView readonly promptBoxId="agent-manager:subagent" />
+      <ChatView readonly interactivePrompts={false} promptBoxId="agent-manager:subagent" />
     </DataBridge>
   )
 }
