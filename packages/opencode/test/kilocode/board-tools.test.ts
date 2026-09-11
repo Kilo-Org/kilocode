@@ -16,6 +16,7 @@ import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { Permission } from "../../src/permission"
 import { Tool } from "../../src/tool/tool"
 import { ToolRegistry } from "../../src/tool/registry"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { BoardReadTool, BoardPostTool } from "../../src/kilocode/tool/board"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { KiloTask } from "../../src/kilocode/tool/task"
@@ -34,6 +35,7 @@ const it = testEffect(
       BackgroundJob.node,
       Agent.node,
       Config.node,
+      RuntimeFlags.node,
       Database.node,
       Truncate.node,
       CrossSpawnSpawner.node,
