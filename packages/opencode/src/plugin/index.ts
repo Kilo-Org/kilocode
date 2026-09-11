@@ -34,6 +34,7 @@ import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { Permission } from "@/permission" // kilocode_change
 import { InstallationChannel } from "@opencode-ai/core/installation/version"
 
 type State = {
@@ -313,6 +314,19 @@ const layer = Layer.effect(
       yield* InstanceState.get(state)
     })
 
+    // kilocode_change start: invoke the documented `permission.ask` hook, which
+    // is otherwise declared in the plugin API and never triggered. The dependency
+    // points plugin -> permission on purpose: the reverse edge would drag plugin
+    // loading into every graph that builds Permission on its own, which several
+    // tests do. The reviewer runs inside the permission service's ask flow, which
+    // already carries the instance context, so the trigger runs directly — it
+    // mutates `output` in place and asVoid drops the return value.
+    const permission = yield* Permission.Service
+    yield* permission.setReviewer((input, output) =>
+      trigger("permission.ask", input, output).pipe(Effect.asVoid),
+    )
+    // kilocode_change end
+
     return Service.of({ trigger, list, init })
   }),
 )
@@ -320,7 +334,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [EventV2Bridge.node, Config.node, RuntimeFlags.node],
+  deps: [EventV2Bridge.node, Config.node, RuntimeFlags.node, Permission.node], // kilocode_change
 })
 
 export * as Plugin from "."

@@ -160,6 +160,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                     patterns: req.patterns,
                     agent: input.agent.name,
                     origins: permissionOrigins,
+                    pluginReason: err.reason, // kilocode_change
                   }),
                   req.permission,
                   PermissionProvenance.filepathOf(req.metadata),
