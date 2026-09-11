@@ -1,4 +1,8 @@
 import type { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
+import { Effect } from "effect"
+import { createHash } from "node:crypto"
+import { Integration } from "../../integration"
+import type { ProviderV2 } from "../../provider"
 
 const url = "https://chatgpt.com/backend-api/wham/usage"
 const manage = "https://chatgpt.com/codex/settings/usage"
@@ -26,11 +30,50 @@ const plans: Record<string, string> = {
   go: "ChatGPT Go",
 }
 
-export interface Candidate {
+interface Candidate {
   label: string
   access: string
   account?: string
 }
+
+export type Input =
+  | { status: "absent" }
+  | { status: "failed"; connection: string }
+  | { status: "ready"; connection: string; identity: string; candidate: Candidate }
+
+export const discover = Effect.fn("ProviderUsage.Codex.discover")(function* (
+  provider: ProviderV2.Info | undefined,
+  integrations: Integration.Interface,
+) {
+  if (!provider || provider.disabled) return { status: "absent" as const }
+  const connection = yield* integrations.connection.active(provider.integrationID ?? Integration.ID.make(provider.id))
+  if (!connection) return { status: "absent" as const }
+  const marker = createHash("sha256")
+    .update(`${connection.type}:${connection.type === "credential" ? connection.id : connection.name}`)
+    .digest("hex")
+  const resolved = yield* integrations.connection.resolve(connection).pipe(
+    Effect.map((value) => ({ ok: true as const, value })),
+    Effect.catch(() => Effect.succeed({ ok: false as const })),
+  )
+  if (!resolved.ok) return { status: "failed" as const, connection: marker }
+  if (resolved.value?.type !== "oauth" || !resolved.value.access) return { status: "absent" as const }
+  const raw = resolved.value.metadata?.accountID
+  const account = typeof raw === "string" && /^[A-Za-z0-9._-]{1,256}$/.test(raw) ? raw : undefined
+  return {
+    status: "ready" as const,
+    connection: marker,
+    identity: createHash("sha256")
+      .update(
+        JSON.stringify([marker, typeof raw === "string" ? raw : "", resolved.value.access, resolved.value.refresh]),
+      )
+      .digest("hex"),
+    candidate: {
+      label: provider.name,
+      access: resolved.value.access,
+      ...(account ? { account } : {}),
+    },
+  }
+})
 
 interface Window {
   used: number
