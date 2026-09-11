@@ -128,6 +128,8 @@ When an agent delegates work to a subagent (via the `task` tool), the subagent *
 
 This sets the `explore` subagent to always use Haiku regardless of the parent's model. Any subagent without a `model` override uses whatever model the invoking agent is running.
 
+A bare model name without a provider prefix also works — for example `"model": "codestral (latest)"`. Kilo resolves the name against your configured providers and prefers the provider of the parent session when several providers offer a model with the same name. This applies to `agent.<name>.model` and `subagent_model`.
+
 {% /tab %}
 {% tab label="VSCode" %}
 

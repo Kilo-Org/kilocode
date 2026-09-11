@@ -93,12 +93,25 @@ function custom(id: string, model: string, variants: string[] = []) {
   }
 }
 
+const parentProvider = custom("parent-provider", "parent-model", [inherited, overrideVariant])
+const configProvider = custom("config-provider", "config-model", [cfgVariant, overrideVariant])
+const savedProvider = custom("saved-provider", "saved-model", [savedVariant, overrideVariant])
+const subProvider = custom("sub-provider", "sub-model", [subVariant, overrideVariant])
 const catalog = {
   provider: {
-    "parent-provider": custom("parent-provider", "parent-model", [inherited, overrideVariant]),
-    "saved-provider": custom("saved-provider", "saved-model", [savedVariant, overrideVariant]),
-    "config-provider": custom("config-provider", "config-model", [cfgVariant, overrideVariant]),
-    "sub-provider": custom("sub-provider", "sub-model", [subVariant, overrideVariant]),
+    "parent-provider": {
+      ...parentProvider,
+      models: { ...parentProvider.models, ...custom("parent-provider", "shared-model").models },
+    },
+    "saved-provider": {
+      ...savedProvider,
+      models: { ...savedProvider.models, ...custom("saved-provider", "dup-model").models },
+    },
+    "config-provider": {
+      ...configProvider,
+      models: { ...configProvider.models, ...custom("config-provider", "dup-model").models },
+    },
+    "sub-provider": subProvider,
   },
 }
 
@@ -206,7 +219,7 @@ function writeState(input: unknown) {
 }
 
 function run(input: {
-  agent: "pinned" | "worker"
+  agent: "pinned" | "worker" | "bare"
   state?: unknown
   client?: string
   variant?: string
@@ -274,6 +287,7 @@ function run(input: {
         agent: {
           worker: { mode: "subagent" },
           pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
+          bare: { mode: "subagent", model: "config-model", variant: cfgVariant },
         },
       },
     },
@@ -733,6 +747,105 @@ describe("tool.task model resolution", () => {
       agent: "worker",
       variant: inherited,
       config: { subagent_model: "missing-provider/missing-model", subagent_variant: subVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(inherited)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(inherited)
+        }),
+      ),
+    ),
+  )
+
+  it.live("bare subagent model name resolves to the matching provider model", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "sub-model", subagent_variant: subVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toEqual(subVariant)
+          expect(result.model).toEqual(sub)
+          expect(result.metadataVariant).toEqual(subVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("bare subagent model name prefers the parent session provider", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "shared-model" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual({
+            providerID: ProviderV2.ID.make("parent-provider"),
+            modelID: ModelV2.ID.make("shared-model"),
+          })
+          expect(result.variant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("bare agent model name resolves to the matching provider model", () =>
+    run({ agent: "bare", variant: inherited }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(cfg)
+          expect(result.variant).toEqual(cfgVariant)
+          expect(result.model).toEqual(cfg)
+          expect(result.metadataVariant).toEqual(cfgVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("ambiguous bare subagent model name falls back to the parent model", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "dup-model" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(inherited)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(inherited)
+        }),
+      ),
+    ),
+  )
+
+  it.live("unknown bare subagent model name falls back to the parent model", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "codestral (latest)" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(inherited)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(inherited)
+        }),
+      ),
+    ),
+  )
+
+  it.live("qualified subagent model without a model id falls back to the parent model", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_model: "config-provider/" },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
