@@ -123,21 +123,15 @@ async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks:
   const plugin = readV1Plugin(load.mod, load.spec, "server", "detect")
   if (plugin) {
     await resolvePluginId(load.source, load.spec, load.target, readPluginId(plugin.id, load.spec), load.pkg)
-    // kilocode_change start
-    const hook = await (plugin as PluginModule).server(input, load.options)
-    // A plugin may resolve to undefined (e.g. a no-op `async () => {}` boot
-    // stub). Pushing undefined into `hooks` later crashes the "notify
-    // plugins of current config" loop with `Cannot read properties of
-    // undefined (reading 'config')`, so skip empty hooks here.
-    if (hook) hooks.push(hook)
+    const hook = await (plugin as PluginModule).server(input, load.options) // kilocode_change
+    if (hook) hooks.push(hook) // kilocode_change
     return
   }
 
   for (const server of getLegacyPlugins(load.mod)) {
-    const hook = await server(input, load.options)
-    if (hook) hooks.push(hook)
+    const hook = await server(input, load.options) // kilocode_change
+    if (hook) hooks.push(hook) // kilocode_change
   }
-  // kilocode_change end
 }
 
 const layer = Layer.effect(
@@ -183,8 +177,7 @@ const layer = Layer.effect(
           $: typeof Bun === "undefined" ? undefined : Bun.$,
         }
 
-        // kilocode_change start
-        for (const plugin of flags.disableDefaultPlugins ? [] : internalPlugins(flags)) {
+        for (const plugin of flags.disableDefaultPlugins ? [] : internalPlugins(flags)) { // kilocode_change
           const init = yield* Effect.tryPromise({
             try: () => plugin(input),
             catch: errorMessage,
@@ -192,7 +185,7 @@ const layer = Layer.effect(
             Effect.tapError((error) => Effect.logError("failed to load internal plugin", { name: plugin.name, error })),
             Effect.option,
           )
-          if (init._tag === "Some" && init.value) hooks.push(init.value)
+          if (init._tag === "Some" && init.value) hooks.push(init.value) // kilocode_change
         }
 
         const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
@@ -259,8 +252,8 @@ const layer = Layer.effect(
         }
 
         // Notify plugins of current config
-        for (const hook of hooks) {
-          if (!hook) continue
+        for (const hook of hooks) { // kilocode_change
+          if (!hook) continue // kilocode_change
           yield* Effect.tryPromise({
             try: () => Promise.resolve((hook as any).config?.(cfg)),
             catch: errorMessage,
@@ -273,8 +266,8 @@ const layer = Layer.effect(
         const unsubscribe = yield* events.listen((event) => {
           if (event.location?.directory !== ctx.directory) return Effect.void
           return Effect.sync(() => {
-            for (const hook of hooks) {
-              if (!hook) continue
+            for (const hook of hooks) { // kilocode_change
+              if (!hook) continue // kilocode_change
               void hook["event"]?.({ event: { id: event.id, type: event.type, properties: event.data } as any })
             }
           })
@@ -286,7 +279,7 @@ const layer = Layer.effect(
             hooks,
             (hook) =>
               Effect.tryPromise({
-                try: () => Promise.resolve(hook?.dispose?.()),
+                try: () => Promise.resolve(hook?.dispose?.()), // kilocode_change
                 catch: errorMessage,
               }).pipe(
                 Effect.tapError((error) => Effect.logError("plugin dispose hook failed", { error })),
@@ -307,15 +300,14 @@ const layer = Layer.effect(
     >(name: Name, input: Input, output: Output) {
       if (!name) return output
       const s = yield* InstanceState.get(state)
-      for (const hook of s.hooks) {
-        if (!hook) continue
+      for (const hook of s.hooks) { // kilocode_change
+        if (!hook) continue // kilocode_change
         const fn = hook[name] as any
         if (!fn) continue
         yield* Effect.promise(async () => fn(input, output))
       }
       return output
     })
-    // kilocode_change end
 
     const list = Effect.fn("Plugin.list")(function* () {
       const s = yield* InstanceState.get(state)

@@ -129,7 +129,7 @@ describe("plugin.trigger", () => {
         const plugin = yield* Plugin.Service
         yield* plugin.init()
         const hooks = yield* plugin.list()
-        expect(hooks).toEqual([])
+        expect(hooks.length).toBe(0)
       }),
     ),
   )
