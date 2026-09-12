@@ -11,10 +11,10 @@ Instead of maintaining a static list that's perpetually behind, we built somethi
 
 ## Model Routing and Configuration
 
-Kilo's IDE Extension and CLI configurations have four separate, independently configurable model slots:
+Kilo's IDE Extension and CLI configurations have five separate, independently configurable model slots:
 
 - **Main model** — the primary model your agent uses for coding tasks, chat, and reasoning. This is what you pick with the model selector, `/models`, or the `model` key in `kilo.jsonc`. See [How to Select and Switch Models](#how-to-select-and-switch-models) for the full precedence order and per-agent config.
-  - The main model is also used for context compaction/summarization and todo-list generation.
+  - The main model is also used for todo-list generation, and for context compaction/summarization when no compaction model is set.
 - **Small model** — a lightweight model used for session title generation, commit message generation, and prompt enhancement. Configured with the `small_model` key in `kilo.jsonc`, or the **Small Model** field on the **Settings → Models** tab.
   - If left unset, Kilo resolves it according to the following logic: 
     1. Find a small/cheap variant on your current provider (e.g. Haiku on Anthropic, Flash on Gemini).
@@ -22,6 +22,8 @@ Kilo's IDE Extension and CLI configurations have four separate, independently co
     3. Reuse your main model if you're not authenticated to the Kilo Gateway.
 - **Subagent model** — the default model for subagents launched by the `task` tool. Configured with the `subagent_model` key in `kilo.jsonc`, or the **Subagent Model** field on the **Settings → Models** tab.
   - If left unset, inherits whichever model the parent agent session is currently using.
+- **Compaction model** — the model used for context compaction/summarization. Configured with the `agent.compaction.model` key in `kilo.jsonc`, or the **Compaction model** field on the **Settings → Models** tab.
+  - If left unset, the current session's model is used. See [Use a different model for compaction](/docs/customize/context/context-condensing#use-a-different-model-for-compaction).
 - **Autocomplete model** — the model used for inline code completions as you type. See [Autocomplete: Provider and Model](/docs/code-with-ai/features/autocomplete#provider-and-model) for how to configure it.
 
 ### Configuring Local Usage

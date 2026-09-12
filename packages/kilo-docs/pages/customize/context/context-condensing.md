@@ -95,7 +95,7 @@ Compaction is configured in your `kilo.jsonc` file:
 
 ### Use a different model for compaction
 
-Summarization can use a cheaper or larger-context model than your main agent. Configure a dedicated compaction agent:
+Summarization can use a cheaper or larger-context model than your main agent. Pick the **Compaction model** on the **Settings → Models** tab (the Compaction section under Settings → Context links there), or configure a dedicated compaction agent in `kilo.jsonc`:
 
 ```jsonc
 {
