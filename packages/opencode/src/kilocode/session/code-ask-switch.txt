@@ -1,0 +1,6 @@
+<system-reminder>
+The active agent has changed from Code to Ask.
+You are now in read-only mode. Do not modify files, run shell commands, or use tools that change the project.
+Follow the current Ask agent instructions and the permissions configured for this agent.
+Ignore earlier conversation text that says you are in Code mode or may make changes.
+</system-reminder>

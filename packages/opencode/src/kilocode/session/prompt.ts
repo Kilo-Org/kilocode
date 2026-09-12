@@ -29,6 +29,7 @@ import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import ASK_CODE_SWITCH from "./ask-code-switch.txt"
+import CODE_ASK_SWITCH from "./code-ask-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
@@ -568,16 +569,24 @@ export namespace KiloSessionPrompt {
     userMessage: MessageV2.WithParts
     messages: MessageV2.WithParts[]
   }) {
-    if (mode(input.agent.name) !== "code") return
+    const current = mode(input.agent.name)
     const prior = input.messages.findLast((msg) => msg.info.id !== input.userMessage.info.id)
-    if (!prior || mode(prior.info.agent) !== "ask") return
-    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)) return
+    if (!prior) return
+    const prev = mode(prior.info.agent)
+    const text =
+      current === "code" && prev === "ask"
+        ? ASK_CODE_SWITCH
+        : current === "ask" && prev === "code"
+          ? CODE_ASK_SWITCH
+          : undefined
+    if (!text) return
+    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === text)) return
     return {
       id: PartID.ascending(),
       messageID: input.userMessage.info.id,
       sessionID: input.userMessage.info.sessionID,
       type: "text" as const,
-      text: ASK_CODE_SWITCH,
+      text,
       synthetic: true,
     }
   }
