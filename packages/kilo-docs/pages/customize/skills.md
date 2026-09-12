@@ -22,15 +22,15 @@ This approach keeps agents fast while giving them access to more context on dema
 
 ## How Skills Work in Kilo Code
 
-Skills can be:
+Skills are discovered into a shared pool:
 
-- **Generic** - Available in all modes
-- **Mode-specific** - Only loaded when using a particular mode (e.g., `code`, `architect`)
+- **Availability** - An agent's permissions determine which discovered skills it can access
+- **Selection** - The agent uses skill descriptions and the task context to choose a skill
 
 The workflow is:
 
 1. **Discovery**: Skills are scanned from designated directories when Kilo Code initializes. Only the metadata (name, description, and file path) is read at this stage—not the full instructions.
-2. **Prompt inclusion**: When a mode is active, the metadata for relevant skills is included in the system prompt. The agent sees a list of available skills with their descriptions.
+2. **Prompt inclusion**: When the skill tool is enabled for an agent, metadata for its available skills is included in the system prompt.
 3. **On-demand loading**: When the agent determines that a task matches a skill's description, it reads the full `SKILL.md` file into context and follows the instructions.
 
 ### How the Agent Decides to Use a Skill
@@ -59,7 +59,7 @@ Global skills are located in the `.kilo` directory within your Home directory:
 
 ```
 ~/.kilo/
-└── skills/                    # Generic skills (all modes)
+└── skills/                    # Shared skills
     ├── my-skill/
     │   └── SKILL.md
     └── another-skill/
@@ -131,7 +131,7 @@ Global skills are located in the `.kilo` directory within your Home directory:
 
 ```
 ~/.kilo/
-└── skills/                    # Generic skills (all modes)
+└── skills/                    # Shared skills
     ├── my-skill/
     │   └── SKILL.md
     └── another-skill/
@@ -534,7 +534,7 @@ While the new platform does not yet have a built-in marketplace UI, skills from 
 ### How to Submit Your Skill
 
 1. **Prepare your skill**: Ensure your skill directory contains a valid `SKILL.md` file with proper frontmatter
-2. **Test thoroughly**: Verify your skill works correctly across different scenarios and modes
+2. **Test thoroughly**: Verify your skill works correctly across different scenarios and agents
 3. **Fork the marketplace repository**: Visit [github.com/Kilo-Org/kilo-marketplace](https://github.com/Kilo-Org/kilo-marketplace) and create a fork
 4. **Add your skill**: Place your skill directory in the appropriate location following the repository's structure
 5. **Submit a pull request**: Create a PR with a clear description of what your skill does and when it's useful
@@ -551,6 +551,6 @@ For more details on contributing to Kilo Code, see the [Contributing Guide](/doc
 
 ## Related
 
-- [Custom Modes](/docs/customize/custom-modes) - Create custom modes that can use specific skills
+- [Custom Agents](/docs/customize/custom-modes) - Create custom agents with their own skill permissions
 - [Custom Instructions](/docs/customize/custom-instructions) - Global instructions vs. skill-based instructions
 - [Custom Rules](/docs/customize/custom-rules) - Project-level rules complementing skills
