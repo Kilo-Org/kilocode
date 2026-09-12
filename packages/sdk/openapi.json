@@ -15609,6 +15609,91 @@
         ]
       }
     },
+    "/kilocode/snapshot/prepare": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.snapshot.prepare",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot repository preparation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prepared": {
+                      "type": "boolean"
+                    },
+                    "durationMs": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["NaN"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["Infinity"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["-Infinity"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["Infinity", "-Infinity", "NaN"]
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["prepared", "durationMs"],
+                  "additionalProperties": false,
+                  "description": "Snapshot repository preparation result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Initialize and seed snapshots for the routed directory without creating a session or tracking ref.",
+        "summary": "Prepare a snapshot repository",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.snapshot.prepare({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/provider-usage": {
       "get": {
         "tags": ["kilocode"],

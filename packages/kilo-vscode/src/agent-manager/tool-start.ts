@@ -6,8 +6,9 @@ import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { sameDirectory } from "../kilo-provider-utils"
 import { attribute } from "./prompt-attribution"
-import { beginBoot, type CreationBoot } from "./provider-lifecycle"
+import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
 import { Timing } from "./creation-timing"
+import { plan } from "./creation-plan"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -57,7 +58,8 @@ export interface ToolDeps {
   }) => Promise<WorktreeCreated | null>
   claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
-  setup: (dir: string, branch?: string, id?: string) => Promise<void>
+  hasScript: () => boolean
+  setup: (dir: string, branch?: string, id?: string, early?: () => Promise<void>) => Promise<void>
   createSessionInWorktree: (
     dir: string,
     branch: string,
@@ -220,20 +222,27 @@ async function worktree(
     return false
   }
 
-  // Boot the new directory while the setup script runs. Session creation and
-  // MCP warmup still wait for setup, which may install files plugins need.
-  const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
-  await deps.setup(created.result.path, created.result.branch, created.worktree.id)
-  timing.mark("setup")
-  const session = await deps.createSessionInWorktree(
-    created.result.path,
-    created.result.branch,
-    created.worktree.id,
-    source,
-    boot,
-    timing,
+  const prepared = await prepareSession(
+    plan({ setupScript: deps.hasScript() }),
+    async (early) => {
+      await deps.setup(created.result.path, created.result.branch, created.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
+      return deps.createSessionInWorktree(
+        created.result.path,
+        created.result.branch,
+        created.worktree.id,
+        source,
+        boot,
+        timing,
+      )
+    },
   )
+  const { session, ready } = prepared
   if (!session) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
     timing.mark("cleanup")
     timing.end()
@@ -242,6 +251,7 @@ async function worktree(
 
   const state = deps.getState()
   if (!state) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
     timing.mark("cleanup")
     timing.end()
@@ -253,7 +263,12 @@ async function worktree(
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)
   timing.mark("ready")
-  await prompt(client, session.id, created.result.path, task, source)
+  await ready
+  try {
+    await prompt(client, session.id, created.result.path, task, source)
+  } finally {
+    await prepared.done
+  }
   const span = timing.end()
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,

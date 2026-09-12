@@ -232,7 +232,7 @@ describe("Agent Manager Provider Messages", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted lifecycle module so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+)\(/)
     if (!delegated) return text
     const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
     const fn = lifecycle.getFunction(delegated[1]!)
@@ -532,7 +532,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = method!.getText()
     // Follow one-line delegations into the extracted handler modules so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    const delegated = text.match(/(?:return|await) (\w+Lifecycle\w+|createMultiVersion)\(/)
     if (!delegated) return text
     const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
     const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))

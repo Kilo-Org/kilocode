@@ -61,6 +61,7 @@ describe("multi-version provisioning", () => {
           await gates[index]?.promise
         }
       }),
+      hasScript: () => true,
       createSession: mock(async (dir: string) => ({ id: `session-${dir.at(-1)!}` }) as Session),
       autoName: () => ({ enabled: false }),
       register: mock(() => {}),
@@ -130,10 +131,11 @@ describe("multi-version provisioning", () => {
     expect(error).toHaveBeenCalledWith("Failed to create any of the 1 multi-version worktrees.")
   })
 
-  it("boots the directory before setup finishes and creates the session after", async () => {
+  it.each([false, true])("gates initial prompts on setup script presence (%s)", async (script) => {
     const flow: string[] = []
     const setupEntered = Promise.withResolvers<void>()
     const setupGate = Promise.withResolvers<void>()
+    const prompted = Promise.withResolvers<void>()
     const state = { addSession: mock(() => {}), armAutoName: mock(() => {}) }
     const ctx = {
       id: "project-1",
@@ -143,7 +145,11 @@ describe("multi-version provisioning", () => {
     } as unknown as ProjectContext
     const host = {
       log: mock(() => {}),
-      post: mock(() => {}),
+      post: mock((msg: { type: string }) => {
+        if (msg.type !== "agentManager.sendInitialMessage") return
+        flow.push("prompt")
+        prompted.resolve()
+      }),
       createOnDisk: mock(async () => {
         return {
           worktree: { id: "wt-0" },
@@ -155,8 +161,11 @@ describe("multi-version provisioning", () => {
         return {}
       }),
       client: () => ({}) as never,
-      runSetup: mock(async () => {
+      hasScript: () => script,
+      runSetup: mock(async (_dir: string, _branch: string, _id: string, early?: () => Promise<void>) => {
         flow.push("setup:start")
+        flow.push("env")
+        await early?.()
         setupEntered.resolve()
         await setupGate.promise
         flow.push("setup:end")
@@ -184,11 +193,17 @@ describe("multi-version provisioning", () => {
     })
     await setupEntered.promise
 
-    expect(flow).toEqual(["boot", "setup:start"])
+    if (!script) await prompted.promise
+    expect(flow.includes("prompt")).toBe(!script)
+    expect(flow.includes("boot")).toBe(!script)
 
     setupGate.resolve()
     await pending
 
-    expect(flow).toEqual(["boot", "setup:start", "setup:end", "create"])
+    expect(flow).toEqual(
+      script
+        ? ["setup:start", "env", "setup:end", "boot", "create", "prompt"]
+        : ["setup:start", "env", "boot", "create", "prompt", "setup:end"],
+    )
   })
 })
