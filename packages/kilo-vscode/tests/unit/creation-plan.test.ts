@@ -100,6 +100,12 @@ it("prepares directory endpoints in parallel and rejects failures", async () => 
         return gate.promise
       },
     },
+    app: {
+      agents: async ({ directory }: { directory: string }) => {
+        calls.push(`agents:${directory}`)
+        return { data: [] }
+      },
+    },
     mcp: {
       status: async ({ directory }: { directory: string }) => {
         calls.push(`mcp:${directory}`)
@@ -125,7 +131,7 @@ it("prepares directory endpoints in parallel and rejects failures", async () => 
       return err
     },
   )
-  expect(calls).toEqual(["config:/slot", "mcp:/slot", "snapshot:/slot"])
+  expect(calls).toEqual(["config:/slot", "agents:/slot", "mcp:/slot", "snapshot:/slot"])
   gate.reject(new Error("boot failed"))
   await new Promise<void>((resolve) => setImmediate(resolve))
   expect(settled.value).toBe(false)
