@@ -93,16 +93,34 @@ type CacheEntry = {
 
 // Session-output links are recorded synchronously from the session's own output
 // (a `gh pr create` line, an agent message). The REST cache and the rate-limit
-// backoff are module-level per worktree.
+// backoff are module-level per worktree, bounded so a long-lived `kilo serve`
+// that visits many worktrees does not grow them without limit.
+type Known = { branch: string; owner: string; repo: string }
+type Positive = { branch: string | undefined; link: PrLink }
+
 const recordedLinks = new Map<string, Recorded>()
 const restCache = new Map<string, CacheEntry>()
 const backoffUntil = new Map<string, number>()
-const knownIdentity = new Map<string, string>()
-// The last positive link seen for a worktree. A REST lookup only runs for a key
-// with no cached positive link, so when a head/upstream change triggers a new
-// lookup that then fails (rate limit, auth, offline), the known link must still
-// be returned instead of being dropped.
-const lastPositive = new Map<string, PrLink>()
+const knownIdentity = new Map<string, Known>()
+// The last positive link seen for a worktree, keyed by the branch it belongs to.
+// A REST lookup only runs for a key with no cached positive link, so when a
+// head/upstream change triggers a new lookup that then fails (rate limit, auth,
+// offline), the known link must still be returned instead of being dropped. It
+// is never returned once the branch changed, so a failed lookup for the new
+// branch cannot advertise the previous branch's PR.
+const lastPositive = new Map<string, Positive>()
+
+// Keep at most this many worktrees' state. The least recently used worktree is
+// dropped; losing its state only makes its next detection start fresh.
+const maxWorktrees = 64
+
+function remember<T>(map: Map<string, T>, key: string, value: T) {
+  map.delete(key)
+  map.set(key, value)
+  if (map.size <= maxWorktrees) return
+  const oldest = map.keys().next().value
+  if (oldest != null) map.delete(oldest)
+}
 
 // The head-independent part of an identity key: the tracking ref
 // (`origin/feature/x`) or the `remote/branch` fallback before the first `|`. A
@@ -110,6 +128,35 @@ const lastPositive = new Map<string, PrLink>()
 // same branch still matches and no lookup runs.
 function branchOf(key: string) {
   return key.split("|")[0]
+}
+
+// A session-output URL only counts for this worktree when it points at the
+// worktree's own GitHub repository. Anything else the session merely mentions
+// (another repo's PR, a doc link) must not stick to this branch.
+function repoOf(link: PrLink) {
+  if (link.platform !== "github") return undefined
+  let path: string
+  try {
+    path = new URL(link.prUrl).pathname
+  } catch {
+    return undefined
+  }
+  const match = path.match(/^\/([^/]+)\/([^/]+)\/(?:pull|pull-requests)\/\d+/)
+  if (!match) return undefined
+  return { owner: match[1], repo: match[2] }
+}
+
+function sameRepo(link: PrLink, repo: { owner: string; repo: string }) {
+  const own = repoOf(link)
+  if (!own) return false
+  return own.owner === repo.owner && own.repo === repo.repo
+}
+
+// The last positive link only applies to the branch it was recorded for.
+function positiveFor(worktree: string, branch: string | undefined) {
+  const positive = lastPositive.get(worktree)
+  if (!positive || branch == null || positive.branch !== branch) return undefined
+  return positive.link
 }
 
 function githubRepo(raw: string) {
@@ -196,12 +243,15 @@ export function recordPrLinkText(worktree: string, text: string): PrLink | undef
   const link = firstPrUrl(text)
   if (!link) return undefined
 
-  const key = knownIdentity.get(worktree)
+  const known = knownIdentity.get(worktree)
+  if (known && !sameRepo(link, known)) return undefined
+
+  const key = known?.branch
   const previous = recordedLinks.get(worktree)
   if (previous && previous.link.prUrl === link.prUrl && previous.key === key) return undefined
 
-  recordedLinks.set(worktree, { key, link })
-  lastPositive.set(worktree, link)
+  remember(recordedLinks, worktree, { key, link })
+  remember(lastPositive, worktree, { branch: key, link })
   return link
 }
 
@@ -219,15 +269,15 @@ async function lookup(worktree: string, identity: Identity, entry: CacheEntry): 
     if (previous == null || previous <= Date.now()) {
       log.warn("PR link lookup failed; backing off", { worktree, code: result?.code })
     }
-    backoffUntil.set(worktree, Date.now() + backoffMs)
-    return entry.link ?? lastPositive.get(worktree)
+    remember(backoffUntil, worktree, Date.now() + backoffMs)
+    return entry.link ?? positiveFor(worktree, branchOf(identity.key))
   }
 
   const link = firstRestLink(result.text)
   if (link) {
     entry.link = link
     entry.negativeAt = undefined
-    lastPositive.set(worktree, link)
+    remember(lastPositive, worktree, { branch: branchOf(identity.key), link })
     return link
   }
 
@@ -240,12 +290,20 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   const worktree = Instance.worktree
   const identity = await identityFor(worktree)
   const branch = identity ? branchOf(identity.key) : undefined
-  if (branch) knownIdentity.set(worktree, branch)
+  if (identity && branch) remember(knownIdentity, worktree, { branch, owner: identity.owner, repo: identity.repo })
 
   const recorded = recordedLinks.get(worktree)
   if (recorded) {
-    if (recorded.key == null && branch) recorded.key = branch
-    if (recorded.key == null || branch == null || recorded.key === branch) return recorded.link
+    if (identity && !sameRepo(recorded.link, identity)) {
+      // A URL recorded before the repository was known, for a different repo,
+      // must not stick to the branch.
+      recordedLinks.delete(worktree)
+      const positive = lastPositive.get(worktree)
+      if (positive && positive.link.prUrl === recorded.link.prUrl) lastPositive.delete(worktree)
+    } else {
+      if (recorded.key == null && branch) recorded.key = branch
+      if (recorded.key == null || branch == null || recorded.key === branch) return recorded.link
+    }
   }
 
   if (!identity) return undefined
@@ -262,7 +320,7 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   }
 
   const until = backoffUntil.get(worktree)
-  if (until != null && now < until) return reused?.link ?? lastPositive.get(worktree)
+  if (until != null && now < until) return reused?.link ?? positiveFor(worktree, branch)
 
   const entry: CacheEntry = {
     key: identity.key,
@@ -275,7 +333,7 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
     if (entry.inflight === tracked) entry.inflight = undefined
   })
   entry.inflight = tracked
-  restCache.set(worktree, entry)
+  remember(restCache, worktree, entry)
   return tracked
 }
 

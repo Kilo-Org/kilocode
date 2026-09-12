@@ -315,6 +315,47 @@ describe("detectPrLink", () => {
     expect(after).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
     expect(ghCalls().length).toBe(before)
   })
+
+  // The repro for the stale last-positive fallback: after a branch switch a
+  // failed lookup must not advertise the previous branch's link.
+  test("does not advertise the previous branch's link after a failed switch", async () => {
+    const dir = await makeRepo()
+    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
+
+    const link = await restoreWorktree(dir, () => detectPrLink())
+    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
+
+    const git = simpleGit(dir)
+    await git.checkoutLocalBranch("feature/y")
+
+    outcome = { code: 1, text: "API rate limit exceeded" }
+    const after = await restoreWorktree(dir, () => detectPrLink())
+    expect(after).toBeUndefined()
+  })
+
+  test("drops a recorded URL for another repo once the identity is known", async () => {
+    const dir = await makeRepo()
+
+    recordPrLinkText(dir, "mentions https://github.com/other/repo/pull/5")
+    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
+
+    const link = await restoreWorktree(dir, () => detectPrLink())
+    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
+    expect(ghCalls().length).toBe(1)
+  })
+
+  test("bounds the per-worktree state and evicts the least recent worktree", async () => {
+    const dir = await makeRepo()
+    recordPrLinkText(dir, "https://github.com/owner/repo/pull/7")
+    for (let i = 0; i < 128; i++) {
+      recordPrLinkText(path.join(os.tmpdir(), `pr-link-other-${i}`), `https://github.com/owner/repo/pull/${i + 1}`)
+    }
+
+    outcome = { code: 0, text: JSON.stringify([{ html_url: "https://github.com/owner/repo/pull/42" }]) }
+    const link = await restoreWorktree(dir, () => detectPrLink())
+
+    expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/42", prNumber: 42 })
+  })
 })
 
 describe("recordPrLinkText", () => {
@@ -354,5 +395,13 @@ describe("recordPrLinkText", () => {
 
     expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 })
     expect(ghCalls().length).toBe(0)
+  })
+
+  test("ignores a session-output URL for a different repository", async () => {
+    const dir = await makeRepo()
+    outcome = { code: 0, text: "[]" }
+    await restoreWorktree(dir, () => detectPrLink())
+
+    expect(recordPrLinkText(dir, "saw https://github.com/other/repo/pull/5")).toBeUndefined()
   })
 })
