@@ -5,6 +5,7 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import type { PrLinkOverride } from "../../../src/kilo-sessions/pr-link"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
 import type { SessionPrompt } from "../../../src/session/prompt"
@@ -24,17 +25,22 @@ import { tmpdir } from "../../fixture/fixture"
 
 function fakeConn() {
   const sent: any[] = []
+  let beats = 0
   return {
     conn: {
       send(msg: any) {
         sent.push(msg)
       },
       close() {},
+      async heartbeat() {
+        beats++
+      },
       get connected() {
         return true
       },
     } as RemoteWS.Connection,
     sent,
+    beats: () => beats,
   }
 }
 
@@ -4845,6 +4851,128 @@ describe("RemoteSender slash commands", () => {
     ])
     expect(provideCalls).toEqual([])
     expect(createCalls).toEqual([])
+  })
+
+  // set_pr_link: the app-controlled PR link override.
+  test("set_pr_link stores the parsed override, ACKs, then fires a best-effort heartbeat", async () => {
+    const { conn, sent, beats } = fakeConn()
+    const calls: PrLinkOverride[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value) => {
+        calls.push(value)
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_pr")
+    sender.handle({
+      type: "command",
+      id: "req_pr",
+      command: "set_pr_link",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(calls).toEqual([{ platform: "github", prUrl: "https://github.com/acme/widgets/pull/42", prNumber: 42 }])
+    expect(sent).toEqual([{ type: "response", id: "req_pr", result: {} }])
+    expect(beats()).toBe(1)
+  })
+
+  test("set_pr_link with cleared calls the seam with the cleared override", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: PrLinkOverride[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value) => {
+        calls.push(value)
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_clear")
+    sender.handle({ type: "command", id: "req_clear", command: "set_pr_link", data: { cleared: true } })
+    await response.promise
+    response.restore()
+
+    expect(calls).toEqual([{ cleared: true }])
+    expect(sent).toEqual([{ type: "response", id: "req_clear", result: {} }])
+  })
+
+  test("set_pr_link rejects an invalid url and never writes the override", () => {
+    const { conn, sent } = fakeConn()
+    const calls: PrLinkOverride[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value) => {
+        calls.push(value)
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_bad_url",
+      command: "set_pr_link",
+      data: { prUrl: "https://github.com/acme/widgets/issues/42" },
+    })
+
+    expect(sent).toEqual([{ type: "response", id: "req_bad_url", error: "invalid set_pr_link url" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link rejects a malformed request", () => {
+    const { conn, sent } = fakeConn()
+    const calls: PrLinkOverride[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value) => {
+        calls.push(value)
+      },
+    })
+
+    sender.handle({ type: "command", id: "req_bad", command: "set_pr_link", data: { cleared: false } })
+
+    expect(sent).toEqual([{ type: "response", id: "req_bad", error: "invalid set_pr_link command" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link reports a retryable write failure and does not fire the heartbeat", async () => {
+    const { conn, sent, beats } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async () => {
+        throw new Error("disk full")
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_fail")
+    sender.handle({
+      type: "command",
+      id: "req_fail",
+      command: "set_pr_link",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+    await response.promise
+    response.restore()
+
+    // Retryable failure: the write rejected, so the response carries an error
+    // and the best-effort heartbeat must NOT fire (the link was never stored).
+    expect(sent).toEqual([{ type: "response", id: "req_fail", error: "failed to set pr link" }])
+    expect(beats()).toBe(0)
   })
 })
 // kilocode_change end
