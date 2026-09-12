@@ -175,10 +175,10 @@ Tools are invoked under specific conditions:
    - In response to user requests
    - During automated workflows
 
-2. **Mode-Based Availability**
-   - Different modes enable different tool sets
-   - Mode switches can trigger tool availability changes
-   - Some tools are restricted to specific modes
+2. **Agent-Based Availability**
+   - Different agents enable different tool sets
+   - Switching agents can trigger tool availability changes
+   - Some tools are restricted to specific agents
 
 3. **Context-Dependent Calls**
    - Based on the current state of the workspace
@@ -217,7 +217,7 @@ The system uses a multi-step process to determine tool availability:
 
 1. **Initialization**
    - Tool name and parameters are validated
-   - Mode compatibility is checked
+   - Agent permissions are checked
    - Requirements are verified
 
 2. **Execution**
@@ -245,7 +245,7 @@ The system uses a multi-step process to determine tool availability:
 
 2. **Validation Layers**
    - Tool-specific validation
-   - Mode-based restrictions
+   - Agent-based restrictions
    - System-level checks
 
 ## Mode Integration
@@ -330,7 +330,7 @@ Tools are made available based on the current mode:
    - Network failures
 
 3. **Context Errors**
-   - Invalid mode for tool
+   - Tool unavailable to the current agent
    - Missing requirements
    - State inconsistencies
 
