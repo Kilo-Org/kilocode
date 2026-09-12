@@ -29,7 +29,7 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLink, readPrLinkOverride } from "@/kilo-sessions/pr-link"
+import { detectPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
 import type { PrLink } from "@/kilo-sessions/pr-link"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import {
@@ -607,9 +607,25 @@ export namespace KiloSessions {
             const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
             await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
-          watch(MessageV2.Event.PartUpdated, (evt) =>
-            ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
-          )
+          watch(MessageV2.Event.PartUpdated, async (evt) => {
+            const part = evt.properties.part
+            await ingest.sync(part.sessionID, [{ type: "part", data: part }])
+            // kilocode_change - PR link from the session's own output: agent text
+            // or a completed tool's output (e.g. the `gh pr create` URL). The
+            // regex prefilters before the record attempt and `recordPrLinkText`
+            // returns a link only when it is new or changed, so the next
+            // heartbeat advertises it and `syncPrLinkForSession` queues exactly
+            // one `session_pr_link` item (the triple dedupe suppresses repeats).
+            const text =
+              part.type === "text"
+                ? part.text
+                : part.type === "tool" && part.state.status === "completed"
+                  ? part.state.output
+                  : undefined
+            if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
+            if (!recordPrLinkText(Instance.worktree, text)) return
+            await syncPrLinkForSession(part.sessionID)
+          })
           watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),

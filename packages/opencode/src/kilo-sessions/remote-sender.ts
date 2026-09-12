@@ -2,6 +2,8 @@ import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+// kilocode_change - set_pr_link: parse the app-supplied PR URL into the stored override.
+import { parsePrUrl, type PrLinkOverride } from "@/kilo-sessions/pr-link"
 import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -55,6 +57,11 @@ const SuggestionData = z.object({
 const DropQueuedMessageData = z.object({
   messageID: z.string().startsWith("msg"),
 })
+
+// kilocode_change start - set_pr_link: the app-controlled PR link override.
+// `{ prUrl }` is parsed into a PrLink; `{ cleared: true }` removes the link.
+const SetPrLinkData = z.union([z.object({ prUrl: z.string() }), z.object({ cleared: z.literal(true) })])
+// kilocode_change end
 
 // kilocode_change start - create_session: strict v1 request with optional inheritance fields
 const CreateSessionModel = z.object({
@@ -249,6 +256,9 @@ export namespace RemoteSender {
     // returns the input so the existing remote-sender suite continues to
     // exercise schema/ordering paths without touching the network.
     attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
+    // kilocode_change - set_pr_link: app-controlled PR link override seam. The
+    // default writes the override for the launch worktree; tests inject this.
+    setPrLink?: (value: PrLinkOverride) => Promise<void>
   }
 
   export type Sender = {
@@ -384,6 +394,25 @@ export namespace RemoteSender {
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
     const remoteExit = options.remoteExit ?? RemoteExit
+    // kilocode_change end
+    // kilocode_change start - set_pr_link default: write the app-supplied
+    // override for the launch worktree the heartbeat reads. `options.directory`
+    // selects the instance whose `Instance.worktree` is the same one
+    // resolvePrLink reads (kilo-sessions.ts), so the override wins and detection
+    // stops. No timer and no `gh` call is added.
+    const setPrLink =
+      options.setPrLink ??
+      (async (value: PrLinkOverride) => {
+        const run = options.provide ?? provide
+        await run({
+          directory: options.directory,
+          fn: async () => {
+            const { writePrLinkOverride } = await import("@/kilo-sessions/pr-link")
+            const { Instance } = await import("@/kilocode/instance")
+            await writePrLinkOverride(Instance.worktree, value)
+          },
+        })
+      })
     // kilocode_change end
 
     const sub =
@@ -1308,6 +1337,37 @@ export namespace RemoteSender {
         })
         return
       }
+      // kilocode_change start - set_pr_link: the app (or the cloud) knows the
+      // PR; store it as the worktree override so the heartbeat advertises it and
+      // detection stops. An unparseable URL is non-retryable and writes nothing.
+      if (msg.command === "set_pr_link") {
+        const parsed = SetPrLinkData.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link command" })
+          return
+        }
+        const value = "cleared" in parsed.data ? ({ cleared: true } as const) : parsePrUrl(parsed.data.prUrl)
+        if (!value) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link url" })
+          return
+        }
+        void (async () => {
+          try {
+            await setPrLink(value)
+            options.conn.send({ type: "response", id: msg.id, result: {} })
+            // Best-effort: let the cloud see the link immediately. Never await
+            // the heartbeat before responding (mirror setInstanceAdvertisement).
+            void options.conn
+              .heartbeat()
+              .catch((err) => options.log.warn("set_pr_link heartbeat failed", { id: msg.id, error: String(err) }))
+          } catch (error) {
+            options.log.error("set pr link failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to set pr link" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       options.conn.send({
         type: "response",
         id: msg.id,
