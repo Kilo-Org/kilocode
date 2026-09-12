@@ -39,6 +39,7 @@ describe("read permission descriptions", () => {
       const file = path.join(dir, "report.txt")
       yield* fs.writeWithDirs(file, "report contents")
       const tool = yield* (yield* ReadTool).init()
+      expect(tool.jsonSchema?.required).toContain("description")
       const requests: Parameters<Tool.Context["ask"]>[0][] = []
       const ctx: Tool.Context = {
         sessionID: SessionID.make("ses_test"),

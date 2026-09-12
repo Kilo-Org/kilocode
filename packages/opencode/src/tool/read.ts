@@ -401,6 +401,7 @@ export const ReadTool = Tool.define<
     return {
       description: DESCRIPTION,
       parameters: Parameters,
+      jsonSchema: KiloRead.schema(Parameters), // kilocode_change
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         run(params, KiloRead.context(ctx, params.description)).pipe(Effect.orDie), // kilocode_change
     }
