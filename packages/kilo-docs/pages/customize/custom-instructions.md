@@ -157,7 +157,7 @@ If your project contains `.kilocoderules` files from the VSCode extension, these
 
 ## Related Features
 
-- [Custom Modes](/docs/customize/custom-modes)
+- [Custom Agents](/docs/customize/custom-modes)
 - [Custom Rules](/docs/customize/custom-rules)
 - [Settings Management](/docs/getting-started/settings)
 - [Auto-Approval Settings](/docs/getting-started/settings/auto-approving-actions)

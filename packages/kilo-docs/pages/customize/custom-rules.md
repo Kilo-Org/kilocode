@@ -316,7 +316,7 @@ If your rules aren't being followed:
 
 ## Related Features
 
-- [Custom Modes](/docs/customize/custom-modes)
+- [Custom Agents](/docs/customize/custom-modes)
 - [Custom Instructions](/docs/customize/custom-instructions)
 - [Settings Management](/docs/getting-started/settings)
 - [Auto-Approval Settings](/docs/getting-started/settings/auto-approving-actions)
