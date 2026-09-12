@@ -11,13 +11,13 @@ Kilo Code allows you to create **custom modes** (also called **agents**) to tail
 The current VS Code extension (built on the Kilo CLI) uses **agent Markdown files** to define custom modes. The legacy extension used `custom_modes.yaml` / `.kilocodemodes`. See the tabs below for the relevant approach.
 {% /callout %}
 
-## Why Use Custom Modes?
+## Why use custom agents? {% #why-use-custom-modes %}
 
-- **Specialization:** Create modes optimized for specific tasks, like "Documentation Writer," "Test Engineer," or "Refactoring Expert"
-- **Safety:** Restrict a mode's access to sensitive files or commands. For example, a "Review Mode" could be limited to read-only operations
-- **Experimentation:** Safely experiment with different prompts and configurations without affecting other modes
-- **Team Collaboration:** Share custom modes with your team to standardize workflows
-- **Organization Consistency:** Use organization-managed agents/custom modes so members share the same behavior for common workflows
+- **Specialization:** Create agents optimized for specific tasks, like "Documentation Writer," "Test Engineer," or "Refactoring Expert"
+- **Safety:** Restrict an agent's access to sensitive files or commands. For example, a "Review" agent could be limited to read-only operations
+- **Experimentation:** Safely experiment with different prompts and configurations without affecting other agents
+- **Team Collaboration:** Share custom agents with your team to standardize workflows
+- **Organization Consistency:** Use organization-managed agents so members share the same behavior for common workflows
 
 ## Organization-Managed Custom Modes
 
