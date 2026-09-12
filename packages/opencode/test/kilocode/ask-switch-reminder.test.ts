@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import ASK_CODE_SWITCH from "../../src/kilocode/session/ask-code-switch.txt"
+import CODE_ASK_SWITCH from "../../src/kilocode/session/code-ask-switch.txt"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -64,11 +65,11 @@ function assistant(input: { sessionID: SessionID; parentID: MessageID; agent: st
   } satisfies MessageV2.WithParts
 }
 
-function reminder(message: MessageV2.WithParts) {
+function reminder(message: MessageV2.WithParts, text = ASK_CODE_SWITCH) {
   return message.parts
     .filter((part): part is MessageV2.TextPart => part.type === "text")
     .map((part) => part.text)
-    .find((text) => text === ASK_CODE_SWITCH)
+    .find((val) => val === text)
 }
 
 describe("insertAgentSwitchReminder", () => {
@@ -244,4 +245,109 @@ describe("insertAgentSwitchReminder", () => {
     expect(added).toBeUndefined()
     expect(reminder(next)).toBeUndefined()
   })
+
+  test("injects Code to Ask reminder when the previous turn was Code", () => {
+    const code = user({ agent: "code", text: "Please implement the change." })
+    const reply = assistant({
+      sessionID: code.info.sessionID,
+      parentID: code.info.id,
+      agent: "code",
+      text: "I have implemented the change.",
+    })
+    const next = user({ agent: "ask", text: "Can you explain how it works?" })
+    next.info.sessionID = code.info.sessionID
+    for (const part of next.parts) part.sessionID = code.info.sessionID
+
+    const added = KiloSessionPrompt.insertAgentSwitchReminder({
+      agent: { name: "ask" },
+      userMessage: next,
+      messages: [code, reply, next],
+    })
+
+    expect(added?.text).toBe(CODE_ASK_SWITCH)
+    expect(reminder(next, CODE_ASK_SWITCH)).toBeUndefined()
+    next.parts.push(added!)
+    expect(reminder(next, CODE_ASK_SWITCH)).toBe(CODE_ASK_SWITCH)
+    expect(CODE_ASK_SWITCH).toContain("from Code to Ask")
+    expect(CODE_ASK_SWITCH).toContain("read-only mode")
+    expect(CODE_ASK_SWITCH).toContain("permissions configured for this agent")
+    expect(CODE_ASK_SWITCH).not.toContain("from Ask to Code")
+  })
+
+  test("does not inject on later Ask turns after switching from Code", () => {
+    const code = user({ agent: "code", text: "Implement it." })
+    const reply = assistant({
+      sessionID: code.info.sessionID,
+      parentID: code.info.id,
+      agent: "code",
+      text: "Done.",
+    })
+    const first = user({ agent: "ask", text: "Explain it." })
+    first.info.sessionID = code.info.sessionID
+    const asked = assistant({
+      sessionID: code.info.sessionID,
+      parentID: first.info.id,
+      agent: "ask",
+      text: "Here is the explanation.",
+    })
+    const later = user({ agent: "ask", text: "One more question." })
+    later.info.sessionID = code.info.sessionID
+
+    KiloSessionPrompt.insertAgentSwitchReminder({
+      agent: { name: "ask" },
+      userMessage: later,
+      messages: [code, reply, first, asked, later],
+    })
+
+    expect(reminder(later, CODE_ASK_SWITCH)).toBeUndefined()
+  })
+
+  test("does not inject twice on the same user message for Code to Ask", () => {
+    const code = user({ agent: "code", text: "Implement it." })
+    const reply = assistant({
+      sessionID: code.info.sessionID,
+      parentID: code.info.id,
+      agent: "code",
+      text: "Done.",
+    })
+    const next = user({ agent: "ask", text: "Explain the implementation." })
+    next.info.sessionID = code.info.sessionID
+
+    const first = KiloSessionPrompt.insertAgentSwitchReminder({
+      agent: { name: "ask" },
+      userMessage: next,
+      messages: [code, reply, next],
+    })
+    next.parts.push(first!)
+    const second = KiloSessionPrompt.insertAgentSwitchReminder({
+      agent: { name: "ask" },
+      userMessage: next,
+      messages: [code, reply, next],
+    })
+
+    expect(second).toBeUndefined()
+    expect(next.parts.filter((part) => part.type === "text" && part.text === CODE_ASK_SWITCH)).toHaveLength(1)
+  })
+
+  test("does not inject on Plan to Ask", () => {
+    const plan = user({ agent: "plan", text: "Make a plan." })
+    const reply = assistant({
+      sessionID: plan.info.sessionID,
+      parentID: plan.info.id,
+      agent: "plan",
+      text: "Here is the plan.",
+    })
+    const next = user({ agent: "ask", text: "Explain the architecture." })
+    next.info.sessionID = plan.info.sessionID
+
+    const added = KiloSessionPrompt.insertAgentSwitchReminder({
+      agent: { name: "ask" },
+      userMessage: next,
+      messages: [plan, reply, next],
+    })
+
+    expect(added).toBeUndefined()
+    expect(reminder(next, CODE_ASK_SWITCH)).toBeUndefined()
+  })
 })
+
