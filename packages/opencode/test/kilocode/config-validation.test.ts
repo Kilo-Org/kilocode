@@ -1,12 +1,15 @@
 // kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
+import { Effect, Layer } from "effect"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
-import { provideTestInstance } from "../fixture/fixture"
 import { Config } from "../../src/config/config"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { Filesystem } from "../../src/util/filesystem"
-import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
+
+const it = testEffect(Layer.empty)
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -184,4 +187,50 @@ Broken agent`,
     expect(result).toContain("broken.md")
     expect(result).toContain("Post-edit validation")
   })
+
+  // write/edit/apply_patch call check() via Effect.promise, which drops the
+  // Effect fiber after the first await inside check. Reproduce that path.
+  async function probe(dir: string, name: string, body: string) {
+    const filepath = path.join(dir, ".kilo", "command", name)
+    await Filesystem.write(filepath, body)
+    return filepath
+  }
+
+  it.instance(
+    "accepts a command file with no frontmatter via Effect.promise",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = yield* Effect.promise(() => probe(test.directory, "probe.md", "just a body, no frontmatter\n"))
+        const result = yield* Effect.promise(() => check(filepath))
+        expect(result).not.toContain("Failed to parse frontmatter")
+        expect(result).not.toContain("No context found for instance")
+        expect(result).toContain("validated successfully")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "accepts a command file with valid frontmatter via Effect.promise",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = yield* Effect.promise(() =>
+          probe(
+            test.directory,
+            "probe.md",
+            `---
+description: probe
+---
+probe
+`,
+          ),
+        )
+        const result = yield* Effect.promise(() => check(filepath))
+        expect(result).not.toContain("Failed to parse frontmatter")
+        expect(result).not.toContain("No context found for instance")
+        expect(result).toContain("validated successfully")
+      }),
+    { git: true },
+  )
 })
