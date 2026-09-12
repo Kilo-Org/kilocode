@@ -20,6 +20,7 @@ import {
   removeStaleLifecycleWorktree,
   type LifecycleHost,
 } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
@@ -30,14 +31,13 @@ import type { GitExecutable } from "../util/git-executable"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
 import { SetupScriptService } from "./SetupScriptService"
-import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { discardWorktree as discard } from "./discard-worktree"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
-import { runWorktreeSetupScript } from "./setup-script-task"
+import { runLifecycleSetup } from "./provider-lifecycle"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
 import { createRunController, createScriptTerminalRuntime, clearScriptTerminals } from "./script-terminal-runtime"
@@ -61,7 +61,7 @@ import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { createOrchestrationBridge } from "./orchestration-setup"
 import type { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
-import { startSession } from "./mcp-warmup"
+import { prepareDirectory, startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -951,6 +951,8 @@ export class AgentManagerProvider implements Disposable {
     branch: string,
     worktreeId?: string,
     source?: { sandboxInheritanceToken?: string },
+    boot?: { at: number; metadata: () => Promise<Record<string, unknown>> },
+    timing?: Timing,
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -979,8 +981,14 @@ export class AgentManagerProvider implements Disposable {
       worktreeId,
     })
 
+    const preparation = { pending: Promise.resolve() }
     try {
-      const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath)
+      preparation.pending = prepareDirectory(client, worktreePath).catch((err) =>
+        this.log("Worktree preparation failed:", err),
+      )
+      const metadata = await (boot?.metadata() ??
+        sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath))
+      if (boot) timing?.mark("boot", boot.at)
       const { data: session } = await startSession(
         client,
         worktreePath,
@@ -996,8 +1004,10 @@ export class AgentManagerProvider implements Disposable {
           ),
         (...args) => this.log(...args),
       )
+      timing?.mark("session")
       return session
     } catch (error) {
+      await preparation.pending
       const err = getErrorMessage(error)
       this.postToWebview({
         type: "agentManager.worktreeSetup",
@@ -1100,8 +1110,10 @@ export class AgentManagerProvider implements Disposable {
             releasePtyCleanup()
           }
         },
-        setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id, source) => this.createSessionInWorktree(dir, branch, id, source),
+        hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
+        setup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+        createSessionInWorktree: (dir, branch, id, source, boot, timing) =>
+          this.createSessionInWorktree(dir, branch, id, source, boot, timing),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
@@ -1120,7 +1132,8 @@ export class AgentManagerProvider implements Disposable {
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
-    return createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
+    await createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
+    return null
   }
 
   /** Delete a worktree and dissociate its sessions. */
@@ -1221,41 +1234,32 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
-  private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
+  private async runSetupScriptForWorktree(
+    worktreePath: string,
+    branch?: string,
+    worktreeId?: string,
+    early?: () => Promise<void>,
+  ): Promise<void> {
     const root = this.getRoot()
     if (!root) return
 
-    // Always copy .env files from the main repo (before the setup script so it can override)
-    await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
-
-    try {
-      await runWorktreeSetupScript(
-        {
-          service: this.getSetupScriptService(),
-          destination: this.destination.value(),
-          projectId: this.context?.id,
-          worktreeId,
-          branch,
-          trusted: () => this.host.isTrusted(),
-          manager: this.scripts.manager,
-          vscode: executeVscodeTask,
-          log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
-          post: (message) => this.postToWebview(message),
-        },
-        { worktreePath, repoPath: root },
-      )
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      this.outputChannel.appendLine(`[AgentManager] Setup script error: ${msg}`)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Setup script failed: ${msg}`,
+    await runLifecycleSetup(
+      {
+        service: this.getSetupScriptService(),
+        destination: this.destination.value(),
         projectId: this.context?.id,
-        branch,
         worktreeId,
-      })
-    }
+        branch,
+        trusted: () => this.host.isTrusted(),
+        manager: this.scripts.manager,
+        vscode: executeVscodeTask,
+        log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
+        post: (message) => this.postToWebview(message),
+      },
+      { worktreePath, repoPath: root },
+      (msg) => this.outputChannel.appendLine(msg),
+      early,
+    )
   }
 
   // Repo info
@@ -1449,8 +1453,10 @@ export class AgentManagerProvider implements Disposable {
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
-      runSetup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-      createSession: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
+      runSetup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+      createSession: (dir, branch, id, boot, timing) =>
+        this.createSessionInWorktree(dir, branch, id, undefined, boot, timing),
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),

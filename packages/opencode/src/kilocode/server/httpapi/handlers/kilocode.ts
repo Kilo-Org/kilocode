@@ -41,6 +41,8 @@ import { Drained } from "@opencode-ai/schema/kilocode/session-drain"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
+import { Snapshot } from "@/snapshot"
+import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -86,6 +88,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
     const scope = yield* Scope.Scope
+    const snapshot = yield* Snapshot.Service
 
     const board = <A>(work: Effect.Effect<A, BoardStore.Error | BoardStore.Conflict, Database.Service>) =>
       work.pipe(
@@ -402,6 +405,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
       .handle("removeSnapshot", removeSnapshot)
+      .handle("prepareSnapshot", () =>
+        Effect.gen(function* () {
+          const started = performance.now()
+          const prepared = yield* KiloSnapshotPrepare.run(snapshot)
+          return { prepared, durationMs: performance.now() - started }
+        }),
+      )
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)

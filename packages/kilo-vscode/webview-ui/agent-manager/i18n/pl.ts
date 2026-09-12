@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefiks gałęzi",
   "agentManager.settings.branchPrefix.description":
     "Prefiks automatycznie nazywanych gałęzi we wszystkich projektach, na przykład feature/. Nie dotyczy jawnych nazw gałęzi. Pozostaw puste, aby nie używać prefiksu.",
+  "agentManager.settings.worktreePool.title": "Wstępne przygotowanie worktree",
+  "agentManager.settings.worktreePool.description":
+    "Przygotuj gotowy worktree w tle, aby nowe sesje Agent Manager uruchamiały się szybciej. Wykorzystuje dodatkowe miejsce na dysku na jeden checkout na otwarty projekt.",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Wybierz repository, którego ustawienia worktree chcesz edytować.",
   "agentManager.settings.project.empty": "Brak dostępnych projektów Agent Manager.",

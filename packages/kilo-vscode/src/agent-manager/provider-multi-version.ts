@@ -5,7 +5,9 @@ import type { AgentManagerInMessage } from "./types"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
-import type { LifecycleHost } from "./provider-lifecycle"
+import { beginBoot, prepareSession, type LifecycleHost } from "./provider-lifecycle"
+import { plan } from "./creation-plan"
+import { Timing } from "./creation-timing"
 import { Semaphore } from "./semaphore"
 import type { WorktreeCreationFailure } from "./worktree-create"
 
@@ -87,23 +89,23 @@ export async function createMultiVersion(
   // Phase 2: Git creation is complete, so independent setup/session pipelines
   // can overlap without racing the shared worktree metadata mutation.
   const provision = async (version: PreparedVersion) => {
-    const ready = await provisionVersion(ctx, host, version)
+    const ready = await provisionVersion(ctx, host, version, (session) =>
+      sendInitialPrompt(
+        host,
+        ctx.id,
+        session,
+        models,
+        { providerID, modelID },
+        {
+          text,
+          agent,
+          variant: msg.variant,
+          files,
+        },
+      ),
+    )
     if (!ready) return
     created.push(ready)
-
-    sendInitialPrompt(
-      host,
-      ctx.id,
-      ready,
-      models,
-      { providerID, modelID },
-      {
-        text,
-        agent,
-        variant: msg.variant,
-        files,
-      },
-    )
 
     host.post({
       type: "agentManager.multiVersionProgress",
@@ -186,18 +188,32 @@ async function provisionVersion(
   ctx: ProjectContext,
   host: MultiVersionHost,
   prepared: PreparedVersion,
+  initial: (created: CreatedVersion) => void,
 ): Promise<CreatedVersion | null> {
   const { spec, wt } = prepared
+  const timing = Timing.start(`create ${wt.result.branch} v${spec.index + 1}`, host.log)
 
-  await host.runSetup(wt.result.path, wt.result.branch, wt.worktree.id)
-
-  const session = await host.createSession(wt.result.path, wt.result.branch, wt.worktree.id)
+  const provisioned = await prepareSession(
+    plan({ setupScript: host.hasScript() }),
+    async (early) => {
+      await host.runSetup(wt.result.path, wt.result.branch, wt.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => host.metadata(host.client(), wt.result.path), timing)
+      return host.createSession(wt.result.path, wt.result.branch, wt.worktree.id, boot, timing)
+    },
+  )
+  const { session, ready, done } = provisioned
   if (!session) {
+    await done
     let releasePtyCleanup: () => void
     try {
       releasePtyCleanup = await host.acquirePtyCleanup(wt.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
+      timing.mark("cleanup")
+      timing.end()
       return null
     }
     try {
@@ -210,6 +226,8 @@ async function provisionVersion(
       releasePtyCleanup()
     }
     host.log(`Failed to create session for version ${spec.index + 1}`)
+    timing.mark("cleanup")
+    timing.end()
     return null
   }
 
@@ -218,14 +236,21 @@ async function provisionVersion(
   if (!spec.branchName && !spec.worktreeName && host.autoName().enabled) {
     state.armAutoName(wt.worktree.id, session.id)
   }
+  timing.mark("state")
 
   // Sandbox must match the user's choice before this session is exposed or
   // receives its initial prompt. A failed reconciliation aborts this version.
-  if (spec.sandbox !== undefined && !(await reconcileSandbox(host, spec, wt, session.id))) return null
+  if (spec.sandbox !== undefined && !(await reconcileSandbox(host, spec, wt, session.id))) {
+    await done
+    timing.mark("cleanup")
+    timing.end()
+    return null
+  }
 
   host.register(session.id, wt.result.path)
   host.notifyReady(session.id, wt.result, wt.worktree.id)
   host.sessions.register(session)
+  timing.mark("ready")
 
   // Set the per-version model immediately so the UI selector reflects
   // the correct model as soon as the worktree appears, before Phase 2.
@@ -243,6 +268,21 @@ async function provisionVersion(
     })
   }
 
+  const result: CreatedVersion = {
+    worktreeId: wt.worktree.id,
+    sessionId: session.id,
+    path: wt.result.path,
+    branch: wt.result.branch,
+    parentBranch: wt.result.parentBranch,
+    versionIndex: spec.index,
+  }
+  await ready
+  try {
+    initial(result)
+  } finally {
+    await done
+  }
+  const span = timing.end()
   host.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
@@ -252,17 +292,12 @@ async function provisionVersion(
     version: spec.index + 1,
     totalVersions: spec.versions,
     groupId: spec.groupId,
+    durationMs: span.total,
+    ...span.phases,
   })
   host.log(`Version ${spec.index + 1} worktree ready: session=${session.id}`)
 
-  return {
-    worktreeId: wt.worktree.id,
-    sessionId: session.id,
-    path: wt.result.path,
-    branch: wt.result.branch,
-    parentBranch: wt.result.parentBranch,
-    versionIndex: spec.index,
-  }
+  return result
 }
 
 /** Reconcile the sandbox preference for one version; rolls the worktree back on failure. */

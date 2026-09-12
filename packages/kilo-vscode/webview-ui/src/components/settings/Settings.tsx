@@ -54,7 +54,7 @@ export interface SettingsProps {
 
 const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
   const language = useLanguage()
-  const { settings, updateSetting } = useConfig()
+  const { settings, updateSetting, applySetting } = useConfig()
   const vscode = useVSCode()
   const dialog = useDialog()
   const [projects, setProjects] = createSignal<AgentManagerSettingsProject[]>([])
@@ -178,6 +178,18 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
               placeholder="feature/"
               onChange={(value) => updateSetting("agentManager.branchPrefix", value)}
             />
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("agentManager.settings.worktreePool.title")}
+            description={language.t("agentManager.settings.worktreePool.description")}
+          >
+            <Switch
+              checked={(settings()["agentManager.worktreePool"] as boolean | undefined) ?? true}
+              onChange={(value) => applySetting("agentManager.worktreePool", value)}
+              hideLabel
+            >
+              {language.t("agentManager.settings.worktreePool.title")}
+            </Switch>
           </SettingsRow>
           <SettingsRow
             title={language.t("agentManager.settings.project.title")}

@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Prefixo da branch",
   "agentManager.settings.branchPrefix.description":
     "Prefixo para branches nomeadas automaticamente em todos os projetos, por exemplo feature/. Não se aplica a nomes explícitos de branches. Deixe vazio para não usar prefixo.",
+  "agentManager.settings.worktreePool.title": "Pré-aquecimento de worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Prepare um worktree pronto em segundo plano para que novas sessões do Agent Manager iniciem mais rápido. Usa espaço em disco extra para um checkout por projeto aberto.",
   "agentManager.settings.project.title": "Projeto",
   "agentManager.settings.project.description":
     "Escolha o repository cujas configurações de worktree você deseja editar.",

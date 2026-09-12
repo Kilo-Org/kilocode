@@ -1070,6 +1070,12 @@
           "scope": "application",
           "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
         },
+        "kilo-code.new.agentManager.worktreePool": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Pre-warm a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space equal to one checkout per open project. Turn off to create worktrees only on demand."
+        },
         "kilo-code.new.experimental.multiProject": {
           "type": "boolean",
           "default": false,

@@ -42,6 +42,9 @@ export const dict = {
   "agentManager.settings.branchPrefix.title": "Grenprefiks",
   "agentManager.settings.branchPrefix.description":
     "Prefiks for automatisk navngitte grener i alle prosjekter, for eksempel feature/. Gjelder ikke eksplisitte grennavn. La feltet stå tomt for å ikke bruke prefiks.",
+  "agentManager.settings.worktreePool.title": "Forvarm worktrees",
+  "agentManager.settings.worktreePool.description":
+    "Forbered et klart worktree i bakgrunnen slik at nye Agent Manager-økter starter raskere. Bruker ekstra diskplass for én checkout per åpne prosjekt.",
   "agentManager.settings.project.title": "Prosjekt",
   "agentManager.settings.project.description": "Velg repository hvis worktree-innstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Ingen Agent Manager-prosjekter er tilgjengelige.",

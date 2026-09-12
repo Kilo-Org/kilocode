@@ -5,6 +5,7 @@ import * as path from "node:path"
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 import { ProjectContext } from "../../src/agent-manager/project/context"
 import {
+  createLifecycleWorktree,
   deleteLifecycleWorktree,
   removeStaleLifecycleWorktree,
   type LifecycleHost,
@@ -84,6 +85,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     }
     host = {
       createOnDisk: async () => null,
+      hasScript: () => true,
       runSetup: async () => undefined,
       createSession: async () => null,
       notifyReady: () => undefined,
@@ -131,6 +133,36 @@ describe("Agent Manager worktree deletion lifecycle", () => {
   })
 
   const deleteWorktree = async () => deleteLifecycleWorktree(ctx, host, state.getWorktrees()[0]!.id)
+
+  it("does not boot the interactive directory until the setup script finishes", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const entered = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
+    const wt = state.getWorktrees().at(0)!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.runSetup = async () => {
+      calls.push("setup:start")
+      entered.resolve()
+      await gate.promise
+      calls.push("setup:end")
+    }
+    host.metadata = async () => {
+      calls.push("boot")
+      return {}
+    }
+    host.createSession = async (_dir, _branch, _id, boot) => {
+      await boot!.metadata()
+      calls.push("session")
+      return { id: "created" } as never
+    }
+    const pending = createLifecycleWorktree(ctx, host, {})
+    await entered.promise
+    expect(calls).toEqual(["setup:start"])
+    gate.resolve()
+    const result = await pending
+    await result!.ready
+    expect(calls).toEqual(["setup:start", "setup:end", "boot", "session"])
+  })
 
   it("removes and persists a missing stale entry even when backend terminal cleanup fails", async () => {
     const id = state.getWorktrees().at(0)!.id
