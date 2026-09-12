@@ -25,7 +25,7 @@ These terms describe local execution. They are separate from hosted Cloud Agent 
 | Local routing workspace | Optional routing context that can resolve to a local directory or remote target |
 | Worktree directory | Alternate git worktree path used as directory context for isolated concurrent work |
 | Process-shared state | Runtime service state shared by every directory context in one Kilo CLI process |
-| Modes | Configurable agent presets for tools, prompts, restrictions, and behavior |
+| Agents | Configurable presets for tools, prompts, restrictions, and behavior |
 | MCP | Protocol for extending agent tools |
 
 One `kilo serve` process can host several local runtime instances. Directory-keyed state stays isolated. Process-shared service state does not.
