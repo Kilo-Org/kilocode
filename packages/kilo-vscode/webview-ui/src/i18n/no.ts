@@ -280,6 +280,7 @@ export const dict = {
   "ui.permission.reject": "Avvis",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
   "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
+  "ui.permission.reason": "Årsak:",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",

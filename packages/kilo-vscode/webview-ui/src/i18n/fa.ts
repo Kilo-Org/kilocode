@@ -271,6 +271,7 @@ export const dict = {
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
   "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
+  "ui.permission.reason": "دلیل:",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
   "ui.permission.rule.addToAllowed": "افزودن به لیست مجاز",

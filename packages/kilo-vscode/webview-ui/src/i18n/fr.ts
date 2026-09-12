@@ -276,6 +276,7 @@ export const dict = {
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
   "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
+  "ui.permission.reason": "Raison :",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
   "ui.permission.rule.addToAllowed": "Ajouter à la liste des autorisés",
