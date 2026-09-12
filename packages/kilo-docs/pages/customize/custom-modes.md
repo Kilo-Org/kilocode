@@ -1,9 +1,9 @@
 ---
-title: "Custom Modes"
+title: "Custom Agents"
 description: "Create and configure custom modes in Kilo Code"
 ---
 
-# Custom Modes
+# Custom Agents {% #custom-modes %}
 
 Kilo Code allows you to create **custom modes** (also called **agents**) to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be **global** (available across all projects), **project-specific** (defined within a single project), or **organization-managed** (provided by your Kilo organization).
 

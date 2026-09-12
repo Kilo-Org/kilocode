@@ -8,7 +8,7 @@ export const CustomizeNav: NavSection[] = [
       { href: "/customize/marketplace", children: "Marketplace", platform: "new" },
       {
         href: "/customize/custom-modes",
-        children: "Custom Modes",
+        children: "Custom Agents",
       },
       {
         href: "/customize/custom-rules",
