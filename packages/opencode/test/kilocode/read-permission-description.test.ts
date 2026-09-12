@@ -63,9 +63,12 @@ describe("read permission descriptions", () => {
       requests.length = 0
       yield* tool.execute({ filePath: file }, ctx)
       yield* tool.execute({ filePath: file, description: "  " }, ctx)
-      expect(requests.map((request) => request.metadata.description)).toEqual(
-        Array(4).fill("Read content needed for the current task"),
-      )
+      expect(requests.map((request) => request.metadata)).toEqual([
+        { filepath: file, parentDir: dir },
+        {},
+        { filepath: file, parentDir: dir },
+        {},
+      ])
     }),
   )
 })
