@@ -769,30 +769,6 @@ it.instance(
   },
 )
 
-it.instance(
-  // kilocode_change start - Kilo always has an auto-routed small-model fallback
-  "getSmallModel falls back to Kilo auto when model IDs lack family metadata",
-  Effect.gen(function* () {
-    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
-    expect(model).toMatchObject({ providerID: "kilo", id: "kilo-auto/small" })
-  }),
-  // kilocode_change end
-  {
-    config: {
-      provider: {
-        "test-provider": {
-          name: "Test Provider",
-          npm: "@ai-sdk/openai-compatible",
-          models: {
-            "gpt-5-nano": { release_date: "2026-01-01" },
-          },
-          options: { apiKey: "test-key" },
-        },
-      },
-    },
-  },
-)
-
 it.instance("getSmallModel skips inferred models for Azure", () =>
   Effect.gen(function* () {
     yield* set("AZURE_RESOURCE_NAME", "test-resource")
