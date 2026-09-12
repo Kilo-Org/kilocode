@@ -7,7 +7,7 @@
 #
 # Triggers:
 #   - workflow_dispatch: manually from Actions tab (optionally pass a CLI version)
-#   - workflow_call: from publish.yml after draft release assets are uploaded
+#   - workflow_call: reusable by other workflows with an optional CLI version
 #
 # Required secrets:
 #   KILO_API_KEY         — Kilo Gateway key
@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # needed to read draft release assets when called from publish.yml
+  contents: write # needed to read draft release assets when testing an unpublished version
 
 jobs:
   smoke-test:

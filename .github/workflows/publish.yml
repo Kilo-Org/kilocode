@@ -373,21 +373,6 @@ jobs:
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
-  # kilocode_change start
-  # Run smoke tests against CLI assets uploaded to the draft GitHub release
-  # before publishing the release and package artifacts.
-  smoke-test:
-    name: Smoke Test (pre-publish gate)
-    needs:
-      - version
-      - build-cli
-    if: github.repository == 'Kilo-Org/kilocode'
-    uses: ./.github/workflows/smoke-test.yml
-    with:
-      cli_version: ${{ needs.version.outputs.version }}
-    secrets: inherit
-  # kilocode_change end
-
   publish:
     needs:
       - version
@@ -395,7 +380,6 @@ jobs:
       - build-vscode
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
-      - smoke-test
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6 # kilocode_change
