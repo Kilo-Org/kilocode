@@ -1,5 +1,5 @@
 {
-  "derivation": "Derived from the repository layout. A product surface is a package under packages/ that ships a distinct client, plugin, backend, or hosted service: cli = packages/opencode/ + packages/tui/ + packages/server/ + packages/sdk/ + packages/plugin/; vscode = packages/kilo-vscode/ + packages/kilo-web-ui/ + packages/kilo-ui/; jetbrains = packages/kilo-jetbrains/; gateway = packages/kilo-gateway/; web = packages/kilo-console/ + packages/kilo-indexing/ + packages/kilo-memory/ + packages/kilo-sandbox/. Docs route from the IA tree packages/kilo-docs/pages/ plus docs/jetbrains-vscode-settings-parity.md: each surface lists the pages sections that document it, and the per-platform pages under packages/kilo-docs/pages/code-with-ai/platforms/ map to the matching extension surface (the vscode/ directory to vscode, jetbrains.md to jetbrains). A doc path belongs to the surface with the longest matching prefix; a path that matches none of those prefixes falls to `other` (the explicit other prefixes are listed under other.docs).",
+  "derivation": "Derived from the repository layout. A product surface is a package under packages/ that ships a distinct client, plugin, backend, or hosted service: cli = packages/opencode/ + packages/tui/ + packages/server/ + packages/sdk/ + packages/plugin/; vscode = packages/kilo-vscode/ + packages/kilo-web-ui/ + packages/kilo-ui/; jetbrains = packages/kilo-jetbrains/; gateway = packages/kilo-gateway/; web = packages/kilo-console/ + packages/kilo-indexing/ + packages/kilo-memory/ + packages/kilo-sandbox/. Docs route from the IA tree packages/kilo-docs/pages/ plus docs/jetbrains-vscode-settings-parity.md: each surface lists the pages sections that document it, and the per-platform pages under packages/kilo-docs/pages/code-with-ai/platforms/ map to the matching extension surface (the vscode/ directory to vscode, jetbrains.md to jetbrains). A doc path belongs to the surface with the longest matching prefix; a path that matches none of those prefixes falls to `other` (the explicit other prefixes are listed under other.docs). The cloud surfaces are derived the same way from the Kilo-Org/cloud layout: cloud-mobile = apps/mobile/, cloud-web = apps/web/, cloud-extension = apps/extension/, and cloud-agent = the cloud-agent packages under packages/ (packages/cloud-agent-sdk/ + packages/cloud-agent-profile/). A cloud source names its repository while a bare string still means this repository. The pages under packages/kilo-docs/pages/collaborate/ document the cloud web app (app.kilo.ai: teams dashboard, billing, SSO, adoption dashboard), so they route to cloud-web. No page under packages/kilo-docs/pages/ documents the browser side-panel extension yet, so cloud-extension lists no docs prefix.",
   "other": {
     "name": "other",
     "reviewers": ["lambertjosh", "intentionally-left-nil"],
@@ -19,8 +19,7 @@
         "packages/kilo-docs/pages/getting-started/",
         "packages/kilo-docs/pages/code-with-ai/",
         "packages/kilo-docs/pages/customize/",
-        "packages/kilo-docs/pages/automate/",
-        "packages/kilo-docs/pages/collaborate/"
+        "packages/kilo-docs/pages/automate/"
       ]
     },
     {
@@ -47,6 +46,29 @@
         "packages/kilo-sandbox/"
       ],
       "docs": ["packages/kilo-docs/pages/api/", "packages/kilo-docs/pages/deploy-secure/"]
+    },
+    {
+      "name": "cloud-mobile",
+      "sources": [{ "repo": "Kilo-Org/cloud", "prefix": "apps/mobile/" }],
+      "docs": ["packages/kilo-docs/pages/code-with-ai/platforms/mobile.md"]
+    },
+    {
+      "name": "cloud-web",
+      "sources": [{ "repo": "Kilo-Org/cloud", "prefix": "apps/web/" }],
+      "docs": ["packages/kilo-docs/pages/collaborate/"]
+    },
+    {
+      "name": "cloud-extension",
+      "sources": [{ "repo": "Kilo-Org/cloud", "prefix": "apps/extension/" }],
+      "docs": []
+    },
+    {
+      "name": "cloud-agent",
+      "sources": [
+        { "repo": "Kilo-Org/cloud", "prefix": "packages/cloud-agent-sdk/" },
+        { "repo": "Kilo-Org/cloud", "prefix": "packages/cloud-agent-profile/" }
+      ],
+      "docs": ["packages/kilo-docs/pages/code-with-ai/platforms/cloud-agent.md"]
     }
   ]
 }

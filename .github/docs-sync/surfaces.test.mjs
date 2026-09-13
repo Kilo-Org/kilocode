@@ -23,7 +23,10 @@ import {
   surfaceForSource,
   surfaceDocPrefixes,
   surfaceSourcePrefixes,
+  surfaceSourceRepos,
   surfaceReviewers,
+  isSurfaceBranch,
+  surfaceNameFromBranch,
   otherDocPrefixes,
   derivation,
   groupBySurface,
@@ -53,7 +56,18 @@ test("committed map is well formed", () => {
   assert.equal(path.basename(SURFACE_MAP_PATH), "surfaces.json")
   assert.ok(derivation(map).length > 0)
   assert.equal(surfaceNames(map).at(-1), OTHER)
-  assert.deepEqual(surfaceNames(map), ["cli", "vscode", "jetbrains", "gateway", "web", "other"])
+  assert.deepEqual(surfaceNames(map), [
+    "cli",
+    "vscode",
+    "jetbrains",
+    "gateway",
+    "web",
+    "cloud-mobile",
+    "cloud-web",
+    "cloud-extension",
+    "cloud-agent",
+    "other",
+  ])
   assert.deepEqual(surfaceReviewers(OTHER, map), ["lambertjosh", "intentionally-left-nil"])
 })
 
@@ -77,6 +91,43 @@ test("platform pages route to the matching extension surface", () => {
   assert.equal(surfaceForDoc("packages/kilo-docs/pages/code-with-ai/features/autocomplete.md", map), "cli")
   // Longest prefix wins: the specific platform prefix beats the broad cli one.
   assert.equal(surfaceForDoc("packages/kilo-docs/pages/code-with-ai/platforms/vscode/nested/deep.md", map), "vscode")
+})
+
+test("cloud doc pages route to the cloud surfaces, not other", () => {
+  assert.equal(surfaceForDoc("packages/kilo-docs/pages/code-with-ai/platforms/mobile.md", map), "cloud-mobile")
+  assert.equal(surfaceForDoc("packages/kilo-docs/pages/code-with-ai/platforms/cloud-agent.md", map), "cloud-agent")
+  // collaborate/ documents the cloud web app, so it no longer routes to cli.
+  assert.equal(surfaceForDoc("packages/kilo-docs/pages/collaborate/teams/dashboard.md", map), "cloud-web")
+  assert.equal(surfaceForDoc("packages/kilo-docs/pages/collaborate/billing/usage.md", map), "cloud-web")
+})
+
+test("cloud sources are repo-qualified while bare strings still mean this repo", () => {
+  assert.equal(surfaceForSource("apps/web/src/index.ts", map), "cloud-web")
+  assert.equal(surfaceForSource("apps/mobile/src/index.ts", map), "cloud-mobile")
+  assert.equal(surfaceForSource("apps/extension/src/panel.ts", map), "cloud-extension")
+  assert.equal(surfaceForSource("packages/cloud-agent-sdk/src/index.ts", map), "cloud-agent")
+  // The committed bare-string entries keep resolving to this repository.
+  assert.equal(surfaceForSource("packages/opencode/src/index.ts", map), "cli")
+  assert.equal(surfaceForSource("packages/kilo-gateway/src/index.ts", map), "gateway")
+
+  assert.deepEqual(surfaceSourceRepos("cloud-web", map), ["Kilo-Org/cloud"])
+  assert.deepEqual(surfaceSourceRepos("cloud-agent", map), ["Kilo-Org/cloud"])
+  assert.deepEqual(surfaceSourceRepos("gateway", map), [])
+  assert.deepEqual(surfaceSourceRepos(OTHER, map), [])
+})
+
+test("isSurfaceBranch separates surface branches from the integration and dated branches", () => {
+  assert.equal(isSurfaceBranch("docs/auto-sync/cli"), true)
+  assert.equal(surfaceNameFromBranch("docs/auto-sync/cli"), "cli")
+  assert.equal(isSurfaceBranch("docs/auto-sync/other"), true)
+  assert.equal(isSurfaceBranch("docs/auto-sync-2026-09-11"), false)
+  assert.equal(surfaceNameFromBranch("docs/auto-sync-2026-09-11"), null)
+  assert.equal(isSurfaceBranch("docs/auto-sync"), false)
+  assert.equal(surfaceNameFromBranch("docs/auto-sync"), null)
+  assert.equal(isSurfaceBranch("docs/auto-sync/"), false)
+  assert.equal(surfaceNameFromBranch("docs/auto-sync/"), null)
+  assert.equal(isSurfaceBranch("main"), false)
+  assert.equal(surfaceNameFromBranch(undefined), null)
 })
 
 test("unmatched doc and source paths fall to other", () => {
@@ -255,4 +306,83 @@ test("a missing repository is named instead of guessed", async () => {
   const result = await computeSurfaceReviewers("gateway", { api: async () => [], map })
   assert.deepEqual(result.reviewers, [])
   assert.match(result.note, /GITHUB_REPOSITORY/)
+})
+
+test("cloud reviewers are ranked from the named repo's history with its token", async () => {
+  const seen = []
+  const api = async (p, opts) => {
+    seen.push({ p, opts })
+    if (p === "/repos/Kilo-Org/cloud/commits?path=apps%2Fweb%2F&per_page=100") {
+      return [
+        { author: { login: "zoe", type: "User" }, commit: { author: { date: daysAgo(2) } } },
+        { author: { login: "bob", type: "User" }, commit: { author: { date: daysAgo(3) } } },
+      ]
+    }
+    if (p === "/repos/Kilo-Org/cloud/collaborators/zoe/permission") return { permission: "read" }
+    if (p === "/repos/Kilo-Org/cloud/collaborators/bob/permission") return { permission: "write" }
+    throw new Error(`unexpected ${p}`)
+  }
+
+  const result = await computeSurfaceReviewers("cloud-web", {
+    api,
+    repo: "Kilo-Org/kilo",
+    now: NOW,
+    map,
+    cloudToken: "cloud-token",
+  })
+  assert.deepEqual(result.reviewers, ["bob"])
+  assert.equal(result.fallback, undefined)
+  assert.deepEqual(result.sourcePrefixes, ["apps/web/"])
+  const commits = seen.find((c) => c.p.includes("/commits?"))
+  assert.equal(commits.p, "/repos/Kilo-Org/cloud/commits?path=apps%2Fweb%2F&per_page=100")
+  assert.deepEqual(commits.opts, { auth: "cloud-token" })
+  const perm = seen.find((c) => c.p.endsWith("/collaborators/bob/permission"))
+  assert.equal(perm.p, "/repos/Kilo-Org/cloud/collaborators/bob/permission")
+  assert.deepEqual(perm.opts, { auth: "cloud-token" })
+  assert.match(result.note, /ranked from `Kilo-Org\/cloud` git history over `apps\/web\/`/)
+})
+
+test("an unreachable cloud history falls back to the fixed other pair, never throwing", async () => {
+  const api = async () => {
+    throw new Error("403: Resource not accessible by integration")
+  }
+  const result = await computeSurfaceReviewers("cloud-web", {
+    api,
+    repo: "Kilo-Org/kilo",
+    now: NOW,
+    map,
+    cloudToken: "cloud-token",
+  })
+  assert.deepEqual(result.reviewers, ["lambertjosh", "intentionally-left-nil"])
+  assert.equal(result.fallback, true)
+  assert.deepEqual(result.sourcePrefixes, ["apps/web/"])
+  assert.match(result.note, /Kilo-Org\/cloud/)
+  assert.match(result.note, /fixed `other` reviewers/)
+  assert.match(result.note, /DOCS_SYNC_CLOUD_TOKEN/)
+  assert.match(result.note, /CLOUD_REPO_TOKEN/)
+})
+
+test("a cloud surface with no token falls back before making any call", async () => {
+  const saved = process.env.CLOUD_REPO_TOKEN
+  delete process.env.CLOUD_REPO_TOKEN
+  let calls = 0
+  try {
+    const api = async () => {
+      calls++
+      return []
+    }
+    const result = await computeSurfaceReviewers("cloud-mobile", {
+      api,
+      repo: "Kilo-Org/kilo",
+      now: NOW,
+      map,
+    })
+    assert.equal(calls, 0)
+    assert.deepEqual(result.reviewers, ["lambertjosh", "intentionally-left-nil"])
+    assert.equal(result.fallback, true)
+    assert.match(result.note, /DOCS_SYNC_CLOUD_TOKEN/)
+  } finally {
+    if (saved !== undefined) process.env.CLOUD_REPO_TOKEN = saved
+    else delete process.env.CLOUD_REPO_TOKEN
+  }
 })

@@ -33,14 +33,16 @@ export function repo() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function api(path, { method = "GET", body } = {}) {
+export async function api(path, { method = "GET", body, auth } = {}) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let res
     try {
       res = await fetch(`${API}${path}`, {
         method,
         headers: {
-          authorization: `Bearer ${token()}`,
+          // `auth` names a token for a repository this job does not own (the
+          // cloud repo); callers that omit it authenticate as this repo.
+          authorization: `Bearer ${auth ?? token()}`,
           accept: "application/vnd.github+json",
           "x-github-api-version": "2022-11-28",
           "user-agent": "kilo-docs-sync-bot",

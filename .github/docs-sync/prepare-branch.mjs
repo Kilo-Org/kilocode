@@ -9,17 +9,18 @@
  *     from origin/main) and merges origin/main via mergeOrFallback
  *   - merges each open per-surface `docs/auto-sync/<surface>` PR branch
  *     (best effort; a per-branch conflict is aborted and skipped)
- *   - comments on and closes the legacy single rolling PR (head exactly
- *     `DEFAULT_BRANCH`), which the per-surface PRs supersede
  *
- * Outputs: branch, mode (update|fresh|conflict), pr_number (the legacy PR
- * number when one was closed, else empty).
+ * Legacy rolling PRs are ignored completely: a dated branch like
+ * `docs/auto-sync-2026-09-11` is neither a surface branch nor an integration
+ * base, so this step never comments on, closes, or reuses one.
+ *
+ * Outputs: branch, mode (update|fresh|conflict).
  */
 
 import { execFileSync } from "node:child_process"
 import { pathToFileURL } from "node:url"
 import { api, appendOutput, repo, searchIssues } from "./lib.mjs"
-import { surfaceBranchPrefix } from "./surfaces.mjs"
+import { isSurfaceBranch, surfaceNameFromBranch } from "./surfaces.mjs"
 
 export const DEFAULT_BRANCH = "docs/auto-sync"
 // Git refs cannot hold both `docs/auto-sync` and `docs/auto-sync/<surface>`, so
@@ -76,18 +77,6 @@ export function mergeOrFallback({ branch, git = defaultGit }) {
 }
 
 /**
- * The legacy single rolling PR has head exactly `defaultBranch`. A per-surface
- * branch (head under `surfacePrefix`) is never the legacy PR, so the two can
- * never be confused even if `defaultBranch` is a prefix of the branch name.
- */
-export function isLegacyRollingPr(pr, defaultBranch = DEFAULT_BRANCH, surfacePrefix = surfaceBranchPrefix()) {
-  const head = String(pr?.head?.ref ?? "")
-  if (!head) return false
-  if (surfacePrefix && head.startsWith(surfacePrefix)) return false
-  return head === defaultBranch
-}
-
-/**
  * Best-effort merge of one surface branch into the integration branch. The
  * fetched ref lands under `refs/docs-sync/surfaces/` so it cannot collide with
  * the integration branch's own remote-tracking ref (`docs/auto-sync` may not be
@@ -127,7 +116,7 @@ function mergeSurface(git, ref, name) {
 
 async function main() {
   const git = defaultGit
-  // Page or two covers one PR per surface plus the legacy rolling PR.
+  // Page or two covers one PR per surface.
   const prs = await searchIssues(`repo:${repo()} is:pr is:open label:auto-docs sort:created-desc`, { maxPages: 2 })
 
   const details = []
@@ -139,14 +128,16 @@ async function main() {
     }
   }
 
-  const legacy = details.find((pr) => isLegacyRollingPr(pr, DEFAULT_BRANCH, surfaceBranchPrefix())) ?? null
-  const surfacePrs = details.filter((pr) => String(pr?.head?.ref ?? "").startsWith(surfaceBranchPrefix()))
+  // Only `docs/auto-sync/<surface>` heads are this job's own PRs: a legacy
+  // dated branch (`docs/auto-sync-<date>`) and the bare integration ref are not.
+  const surfacePrs = details.filter((pr) => isSurfaceBranch(pr?.head?.ref))
 
   let branch = DEFAULT_BRANCH
   let mode = "fresh"
 
-  // Integration base order: the durability ref, then the legacy rolling branch,
-  // then a fresh checkout of origin/main.
+  // Integration base order: the durability ref, then the bare `docs/auto-sync`
+  // integration ref, then a fresh checkout of origin/main. A dated legacy
+  // branch is never one of these.
   let base = null
   const bases = [
     { remote: INTEGRATION_BRANCH, local: INTEGRATION_BRANCH },
@@ -172,54 +163,42 @@ async function main() {
   // Human commits on a surface PR must stay in the integration tree. A single
   // per-branch conflict warns and continues — it must never fail the run.
   for (const pr of surfacePrs) {
-    const ref = pr.head.ref
-    const name = ref.slice(surfaceBranchPrefix().length) || "unknown"
+    const ref = String(pr.head?.ref ?? "")
+    const name = surfaceNameFromBranch(ref) ?? "unknown"
     if (mergeSurface(git, ref, name)) console.log(`merged ${ref} into ${branch}`)
   }
 
-  // The legacy rolling PR is superseded: its branch content already went into
-  // the integration base above. Comment and close it (best effort) so exactly
-  // one PR per surface plus `other` remain.
-  if (legacy) {
-    try {
-      await api(`/repos/${repo()}/issues/${legacy.number}/comments`, {
-        method: "POST",
-        body: {
-          body: `(bot) This rolling PR is superseded by the per-surface docs-sync PRs (one per product surface plus \`other\`). Its branch \`${DEFAULT_BRANCH}\` is now only the integration base, so please review the per-surface PRs instead.`,
-        },
-      })
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not comment on the legacy rolling PR #${legacy.number}: ${err.message}`)
+  // A ref may not be a path prefix of another ref, so `docs/auto-sync` must be
+  // gone for `docs/auto-sync/<surface>` to exist. Its content already lives in
+  // the integration base and the per-surface branches. Delete it whether or not
+  // an open legacy PR was found: a lingering branch (a closed PR, a partial
+  // cleanup) still blocks every surface push.
+  try {
+    const stale = git(["ls-remote", "--heads", "origin", DEFAULT_BRANCH])
+      .split("\n")
+      .some((line) => line.endsWith(`refs/heads/${DEFAULT_BRANCH}`))
+    if (stale) {
+      try {
+        git(["push", "origin", "--delete", DEFAULT_BRANCH])
+      } catch (err) {
+        console.warn(`::warning::docs-sync: could not delete the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+      }
     }
-    try {
-      await api(`/repos/${repo()}/pulls/${legacy.number}`, { method: "PATCH", body: { state: "closed" } })
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not close the legacy rolling PR #${legacy.number}: ${err.message}`)
-    }
-    // A ref may not be a path prefix of another ref, so `docs/auto-sync` must be
-    // gone for `docs/auto-sync/<surface>` to exist. Its content already lives
-    // in the integration base and the per-surface branches.
-    try {
-      git(["push", "origin", "--delete", DEFAULT_BRANCH])
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not delete the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
-    }
-    // Drop the stale remote-tracking ref too, otherwise fetching a
-    // `docs/auto-sync/<surface>` branch later in the run fails on the
-    // directory/file ref conflict.
-    try {
-      git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not remove the stale ref for ${DEFAULT_BRANCH}: ${err.message}`)
-    }
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not check for the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+  }
+  // Drop the stale remote-tracking ref too, otherwise fetching or pushing a
+  // `docs/auto-sync/<surface>` branch later in the run fails on the
+  // directory/file ref conflict. Deleting a ref that is not present is a no-op.
+  try {
+    git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not remove the stale ref for ${DEFAULT_BRANCH}: ${err.message}`)
   }
 
   appendOutput("branch", branch)
   appendOutput("mode", mode)
-  appendOutput("pr_number", legacy ? String(legacy.number) : "")
-  console.log(
-    `branch ${branch} ready (mode=${mode}, legacyPr=${legacy ? legacy.number : "none"}, surfacePrs=${surfacePrs.length})`,
-  )
+  console.log(`branch ${branch} ready (mode=${mode}, surfacePrs=${surfacePrs.length})`)
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href

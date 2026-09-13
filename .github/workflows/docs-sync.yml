@@ -242,13 +242,15 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
+          # Read-only token for the private Kilo-Org/cloud history; a cloud
+          # surface falls back to the fixed `other` reviewers when it is unset.
+          CLOUD_REPO_TOKEN: ${{ secrets.DOCS_SYNC_CLOUD_TOKEN }}
           LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
           PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
           SINCE: ${{ steps.wm.outputs.since }}
           SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
           BRANCH: ${{ steps.prep.outputs.branch }}
           PREP_MODE: ${{ steps.prep.outputs.mode }}
-          PR_NUMBER: ${{ steps.prep.outputs.pr_number }}
           VERIFIED: ${{ steps.verified.outputs.ok }}
         run: node .github/docs-sync/upsert-pr.mjs
 

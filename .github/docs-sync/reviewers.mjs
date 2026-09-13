@@ -11,7 +11,14 @@
  * workflow needs no extra package.
  */
 
-import { SURFACE_MAP_PATH, OTHER, loadSurfaceMap, surfaceReviewers, surfaceSourcePrefixes } from "./surfaces.mjs"
+import {
+  SURFACE_MAP_PATH,
+  OTHER,
+  loadSurfaceMap,
+  surfaceReviewers,
+  surfaceSourceEntries,
+  surfaceSourceRepos,
+} from "./surfaces.mjs"
 
 const BOT_LOGIN = /\[bot\]$/i
 const DAY_MS = 86_400_000
@@ -58,12 +65,21 @@ export function rankContributors(commits, now, { halfLifeDays = DEFAULT_HALF_LIF
  *
  * `other` has no source paths, so it returns the fixed pair configured in the
  * map without touching the API. Every other surface is ranked from the git
- * history of its source prefixes; candidates are walked in rank order and the
- * first two with admin/write/maintain permission win. On a missing token, a
- * missing repo, or any API failure it returns no reviewers and a `note` naming
- * the reason so the caller can print it in the PR body instead of guessing.
+ * history of its source entries; an entry may name another repository (the
+ * cloud repo), in which case its history is read with the `cloudToken`. The
+ * commits each candidate authored are tagged with the repository they came
+ * from so the permission check asks that same repository.
+ *
+ * Candidates are walked in rank order and the first two with
+ * admin/write/maintain permission win. On a missing token, a missing repo, or
+ * any API failure a local surface returns no reviewers and a `note` naming the
+ * reason. A surface with a cloud entry instead falls back to the fixed `other`
+ * pair (`fallback: true`) and never throws, so its PR is still created.
  */
-export async function computeSurfaceReviewers(surface, { api, repo, now, map } = {}) {
+export async function computeSurfaceReviewers(
+  surface,
+  { api, repo, now, map, cloudToken = process.env.CLOUD_REPO_TOKEN } = {},
+) {
   const m = map ?? loadSurfaceMap()
   const otherName = m?.other?.name ?? OTHER
 
@@ -78,8 +94,9 @@ export async function computeSurfaceReviewers(surface, { api, repo, now, map } =
     }
   }
 
-  const prefixes = surfaceSourcePrefixes(surface, m)
-  if (prefixes.length === 0) {
+  const entries = surfaceSourceEntries(surface, m)
+  const prefixes = entries.map((e) => e.prefix)
+  if (entries.length === 0) {
     return {
       reviewers: [],
       note: `no source prefixes are configured for surface \`${surface}\` in ${SURFACE_MAP_PATH}.`,
@@ -101,12 +118,40 @@ export async function computeSurfaceReviewers(surface, { api, repo, now, map } =
     }
   }
 
+  // A cloud entry names a repository this job does not own; its history is only
+  // reachable with a token that grants `contents: read`.
+  const cloudRepos = surfaceSourceRepos(surface, m).filter((r) => r !== repo)
+  const fallback = surfaceReviewers(otherName, m)
+  const listRepos = (repos) => repos.map((r) => `\`${r}\``).join(", ")
+
   try {
+    if (cloudRepos.length > 0 && !cloudToken) {
+      const err = new Error(
+        `a token with contents: read on ${cloudRepos.join(", ")} is required (repository secret DOCS_SYNC_CLOUD_TOKEN, exposed as CLOUD_REPO_TOKEN)`,
+      )
+      err.code = "CLOUD_TOKEN_REQUIRED"
+      throw err
+    }
+
     const commits = []
-    for (const prefix of prefixes) {
-      const batch = await api(`/repos/${repo}/commits?path=${encodeURIComponent(prefix)}&per_page=100`)
+    // `rankContributors` is pure and returns only `{ login, score, count }`, so
+    // remember where each author's commits came from for the permission check.
+    const origin = new Map()
+    for (const entry of entries) {
+      const remote = Boolean(entry.repo && entry.repo !== repo)
+      const target = entry.repo ?? repo
+      const auth = remote ? cloudToken : undefined
+      const batch = await api(
+        `/repos/${target}/commits?path=${encodeURIComponent(entry.prefix)}&per_page=100`,
+        auth === undefined ? {} : { auth },
+      )
       for (const commit of Array.isArray(batch) ? batch : []) {
-        commits.push({ login: commit?.author?.login, type: commit?.author?.type, date: commit?.commit?.author?.date })
+        const login = commit?.author?.login
+        const date = commit?.commit?.author?.date
+        commits.push({ login, type: commit?.author?.type, date, repo: target, auth })
+        if (!login) continue
+        const seen = origin.get(login)
+        if (!seen || Date.parse(date) > Date.parse(seen.date)) origin.set(login, { repo: target, auth, date })
       }
     }
 
@@ -114,9 +159,13 @@ export async function computeSurfaceReviewers(surface, { api, repo, now, map } =
     const reviewers = []
     for (const candidate of ranked) {
       if (reviewers.length >= 2) break
+      const meta = origin.get(candidate.login) ?? {}
       let level
       try {
-        const perm = await api(`/repos/${repo}/collaborators/${candidate.login}/permission`)
+        const perm = await api(
+          `/repos/${meta.repo ?? repo}/collaborators/${candidate.login}/permission`,
+          meta.auth === undefined ? {} : { auth: meta.auth },
+        )
         level = perm?.permission ?? perm?.role_name
       } catch (err) {
         // 404 = not a collaborator; skip and try the next candidate.
@@ -126,15 +175,28 @@ export async function computeSurfaceReviewers(surface, { api, repo, now, map } =
       if (WRITE_PERMISSIONS.includes(level)) reviewers.push(candidate.login)
     }
 
+    const from = cloudRepos.length > 0 ? `${listRepos(cloudRepos)} git history` : "git history"
     return {
       reviewers,
-      note: `Reviewers for \`${surface}\` are ranked from git history over ${paths(prefixes)} (a commit ${DEFAULT_HALF_LIFE_DAYS} days old counts half as much, half-life ${DEFAULT_HALF_LIFE_DAYS} days). Bots (author type "Bot" or a login matching /\\[bot\\]$/i) and people without admin, write, or maintain permission are excluded.`,
+      note: `Reviewers for \`${surface}\` are ranked from ${from} over ${paths(prefixes)} (a commit ${DEFAULT_HALF_LIFE_DAYS} days old counts half as much, half-life ${DEFAULT_HALF_LIFE_DAYS} days). Bots (author type "Bot" or a login matching /\\[bot\\]$/i) and people without admin, write, or maintain permission are excluded.`,
       sourcePrefixes: prefixes,
     }
   } catch (err) {
+    if (cloudRepos.length === 0) {
+      return {
+        reviewers: [],
+        note: `could not rank reviewers for \`${surface}\` over ${paths(prefixes)}: ${err?.message ?? err}`,
+        sourcePrefixes: prefixes,
+      }
+    }
     return {
-      reviewers: [],
-      note: `could not rank reviewers for \`${surface}\` over ${paths(prefixes)}: ${err?.message ?? err}`,
+      reviewers: [...fallback],
+      fallback: true,
+      note: `could not rank reviewers for \`${surface}\` from ${listRepos(cloudRepos)} over ${paths(prefixes)}: ${err?.message ?? err}. Fell back to the fixed \`${otherName}\` reviewers ${fallback
+        .map((r) => `@${r}`)
+        .join(
+          " and ",
+        )}; set repository secret DOCS_SYNC_CLOUD_TOKEN (exposed as CLOUD_REPO_TOKEN) with contents: read on ${cloudRepos.join(", ")}.`,
       sourcePrefixes: prefixes,
     }
   }

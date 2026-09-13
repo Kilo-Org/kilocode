@@ -35,8 +35,9 @@ import {
   surfaceBranch,
   surfaceDocPrefixes,
   surfaceForDoc,
+  surfaceNameFromBranch,
   surfaceNames,
-  surfaceSourcePrefixes,
+  surfaceSourceEntries,
 } from "./surfaces.mjs"
 import { computeSurfaceReviewers } from "./reviewers.mjs"
 
@@ -359,6 +360,29 @@ export function resolveLearnedThrough({ envValue, prBody }) {
 }
 
 /**
+ * Replace the processed-through marker in an existing PR body. Used to refresh
+ * an open surface PR whose surface produced no changed files this run. Without
+ * it that PR keeps an older marker; since the watermark is read from the latest
+ * auto-docs PR, a skipped surface could regress or pin it.
+ */
+export function patchProcessedThrough(body, through) {
+  const marker = `<!-- docs-sync: processed-through ${through} -->`
+  const re = /<!--\s*docs-sync:\s*processed-through\s+\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/** Replace the learned-through marker in an existing PR body. No-op for an empty marker. */
+export function patchLearnedThrough(body, marker) {
+  if (!marker) return String(body ?? "")
+  const re = /<!--\s*docs-sync:\s*learned-through\s+commit=\S+\s+comment=\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/**
  * No-diff early-return report. Returns summary markdown and an optional
  * replay warning. Warns IFF sinceOverride && uncovered non-empty (no commit
  * happened — that is the caller's situation).
@@ -392,15 +416,23 @@ export function prTitle(name, date) {
 
 /**
  * The per-surface block appended to the rolling body. It states the surface,
- * the derivation and the map file, the source/doc prefixes, the paths that fall
+ * the derivation and the map file, the computed surface map, the source/doc
+ * prefixes (a repo-qualified prefix prints its repository), the paths that fall
  * to `other`, and how the two reviewers were computed (or why they were not).
+ * When any source entry names another repository, it states the token the
+ * workflow needs and where it is set.
  */
 export function surfaceBlock({ name, map, reviewers, note }) {
   const other = map?.other?.name ?? OTHER
-  const sources = surfaceSourcePrefixes(name, map)
+  const sources = surfaceSourceEntries(name, map)
   const docs = surfaceDocPrefixes(name, map)
   const otherPaths = otherDocPrefixes(map)
   const list = (prefixes) => (prefixes.length > 0 ? prefixes.map((p) => `\`${p}\``).join(", ") : "_none_")
+  const sourceList =
+    sources.length > 0
+      ? sources.map((e) => (e.repo ? `\`${e.prefix}\` (${e.repo})` : `\`${e.prefix}\``)).join(", ")
+      : "_none_"
+  const repos = [...new Set(sources.map((e) => e.repo).filter(Boolean))]
   const pair = reviewers.length > 0 ? reviewers.map((r) => `@${r}`).join(" and ") : "_none computed_"
   return [
     `### Surface: \`${name}\``,
@@ -408,16 +440,23 @@ export function surfaceBlock({ name, map, reviewers, note }) {
     `- Assignees / requested reviewers: ${pair}`,
     `- Derivation: ${derivation(map)}`,
     `- Map: \`${MAP_FILE}\``,
-    `- Source prefixes: ${list(sources)}`,
+    `- Surface map: ${list(surfaceNames(map))}`,
+    `- Source prefixes: ${sourceList}`,
     `- Doc prefixes: ${list(docs)}`,
     `- Paths that fall to \`${other}\`: ${list(otherPaths)}`,
+    ...(repos.length > 0
+      ? [
+          `- Reviewers are ranked from ${list(repos)}; the workflow needs a token with \`contents: read\` on that repository (repository secret \`DOCS_SYNC_CLOUD_TOKEN\`, exposed to the upsert step as \`CLOUD_REPO_TOKEN\`).`,
+        ]
+      : []),
     `- How the two were computed: ${note}`,
   ].join("\n")
 }
 
 /**
- * Open auto-docs PRs keyed by surface name. Only `docs/auto-sync/<surface>`
- * heads are considered; the legacy `docs/auto-sync` head is not a surface PR.
+ * Open auto-docs PRs keyed by surface name. A PR is a surface PR only when its
+ * head is a `docs/auto-sync/<surface>` branch naming one of `names`; a legacy
+ * dated head (`docs/auto-sync-<date>`) and the bare integration ref are not.
  */
 async function openSurfacePrs({ api, searchIssues, repo, names }) {
   const prs = await searchIssues(`repo:${repo} is:pr is:open label:auto-docs`, { maxPages: 2 })
@@ -430,10 +469,8 @@ async function openSurfacePrs({ api, searchIssues, repo, names }) {
       console.warn(`::warning::docs-sync: could not read auto-docs PR #${item.number}: ${err.message}`)
       continue
     }
-    const ref = String(detail?.head?.ref ?? "")
-    for (const name of names) {
-      if (ref === surfaceBranch(name)) byName.set(name, detail)
-    }
+    const name = surfaceNameFromBranch(detail?.head?.ref)
+    if (name !== null && names.includes(name)) byName.set(name, detail)
   }
   return byName
 }
@@ -714,6 +751,26 @@ async function main() {
     } catch (err) {
       results.push({ name, error: err })
       console.warn(`::warning::docs-sync: surface ${name} failed: ${err.message}`)
+    }
+  }
+
+  // A surface with no changed files is skipped above, so its open PR keeps its
+  // previous processed-through marker. Refresh that marker to this run's value
+  // so a stale marker on a skipped surface cannot regress or pin the watermark
+  // (which is read from the latest auto-docs PR).
+  for (const name of surfaceNames(map)) {
+    const files = groups.get(name)
+    if (files && files.length > 0) continue
+    const openPr = open.get(name)
+    if (!openPr) continue
+    try {
+      const learned = resolveLearnedThrough({ envValue: process.env.LEARNED_THROUGH, prBody: openPr.body ?? "" })
+      let body = patchProcessedThrough(openPr.body ?? "", through)
+      if (learned) body = patchLearnedThrough(body, learned)
+      await api(`/repos/${repo()}/pulls/${openPr.number}`, { method: "PATCH", body: { body } })
+      console.log(`surface ${name}: refreshed markers on #${openPr.number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not refresh the processed-through marker for ${name}: ${err.message}`)
     }
   }
 

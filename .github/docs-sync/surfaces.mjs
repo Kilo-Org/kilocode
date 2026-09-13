@@ -45,6 +45,24 @@ export function surfaceBranchPrefix() {
   return SURFACE_BRANCH_PREFIX
 }
 
+/**
+ * The surface name encoded in a per-surface branch, or `null` when `ref` is not
+ * one. A surface branch must start with `SURFACE_BRANCH_PREFIX` and carry a
+ * non-empty segment after it, so the bare integration branch `docs/auto-sync`
+ * and a legacy dated branch `docs/auto-sync-2026-09-11` both return `null`.
+ */
+export function surfaceNameFromBranch(ref) {
+  const head = String(ref ?? "")
+  if (!head.startsWith(SURFACE_BRANCH_PREFIX)) return null
+  const name = head.slice(SURFACE_BRANCH_PREFIX.length)
+  return name.length > 0 ? name : null
+}
+
+/** True when `ref` is one of this job's per-surface branches. */
+export function isSurfaceBranch(ref) {
+  return surfaceNameFromBranch(ref) !== null
+}
+
 /** Normalize a repo-relative path for prefix matching. */
 function norm(file) {
   return String(file ?? "")
@@ -76,10 +94,43 @@ export function surfaceDocPrefixes(name, map) {
   return (map?.surfaces ?? []).find((s) => s.name === name)?.docs ?? []
 }
 
-/** Source path prefixes used for git-history ranking (empty for `other`). */
-export function surfaceSourcePrefixes(name, map) {
+/**
+ * Normalize one `sources` entry to `{ prefix, repo }`.
+ *
+ * A bare string is a prefix in THIS repository; an object keeps its `repo`
+ * (`repo: null` or missing also means this repository). This is what lets the
+ * committed bare-string `sources` keep working while a cloud surface names the
+ * repository whose git history ranks its reviewers.
+ */
+export function sourceEntry(entry) {
+  if (typeof entry === "string") return { prefix: entry, repo: null }
+  return { prefix: entry?.prefix, repo: entry?.repo ?? null }
+}
+
+/** Normalized `{ prefix, repo }` source entries for `name` (empty for `other`). */
+export function surfaceSourceEntries(name, map) {
   if (name === (map?.other?.name ?? OTHER)) return []
-  return (map?.surfaces ?? []).find((s) => s.name === name)?.sources ?? []
+  const sources = (map?.surfaces ?? []).find((s) => s.name === name)?.sources ?? []
+  return sources.map(sourceEntry)
+}
+
+/** Unique non-null source repos for `name`, in first-seen order (empty for `other`). */
+export function surfaceSourceRepos(name, map) {
+  const repos = []
+  for (const entry of surfaceSourceEntries(name, map)) {
+    if (entry.repo && !repos.includes(entry.repo)) repos.push(entry.repo)
+  }
+  return repos
+}
+
+/**
+ * Source path prefixes used for git-history ranking (empty for `other`).
+ * Kept as a string list so callers that only print or match prefixes are
+ * unaffected by repo-qualified entries; use `surfaceSourceEntries` for the
+ * repo each prefix belongs to.
+ */
+export function surfaceSourcePrefixes(name, map) {
+  return surfaceSourceEntries(name, map).map((e) => e.prefix)
 }
 
 /** Configured reviewers for `name`; product surfaces compute theirs at runtime. */
@@ -108,8 +159,8 @@ function longestMatch(file, map, key) {
   let name = map?.other?.name ?? OTHER
   let len = -1
   for (const s of map?.surfaces ?? []) {
-    for (const prefix of s[key] ?? []) {
-      const p = norm(prefix)
+    for (const raw of s[key] ?? []) {
+      const p = norm(sourceEntry(raw).prefix)
       if (p.length > len && f.startsWith(p)) {
         name = s.name
         len = p.length

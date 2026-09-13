@@ -14,8 +14,9 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { sleepSync } from "./lib.mjs"
-import { mergeOrFallback, DEFAULT_BRANCH, isLegacyRollingPr } from "./prepare-branch.mjs"
-import { applyCap } from "./watermark.mjs"
+import { mergeOrFallback, DEFAULT_BRANCH } from "./prepare-branch.mjs"
+import { isSurfaceBranch, surfaceNameFromBranch } from "./surfaces.mjs"
+import { applyCap, pickWatermark } from "./watermark.mjs"
 import {
   computeUncovered,
   computeProcessedThrough,
@@ -25,6 +26,7 @@ import {
   LEARNINGS_FILE,
   nonContentFiles,
   resolveLearnedThrough,
+  patchProcessedThrough,
   renderBody,
   extractSectionRows,
   surfaceBranch,
@@ -3453,19 +3455,12 @@ function case11_prOwner() {
   const catchIdx = src.indexOf("} catch", assignIdx)
   assert.ok(tryIdx >= 0 && catchIdx > reviewIdx, "both POSTs must sit in one try/catch")
 
-  // Legacy rolling PR helper: only the bare integration branch, never a
-  // per-surface branch.
-  assert.equal(isLegacyRollingPr({ head: { ref: DEFAULT_BRANCH } }), true)
-  assert.equal(isLegacyRollingPr({ head: { ref: surfaceBranch("cli") } }), false)
-  assert.equal(isLegacyRollingPr({ head: { ref: `${DEFAULT_BRANCH}-2026-09-01` } }), false)
-  assert.equal(isLegacyRollingPr({ head: { ref: "" } }), false)
-  assert.equal(isLegacyRollingPr({}), false)
-
-  // prepare-branch no longer repurposes the legacy PR: it comments and closes.
-  const prepSrc = fs.readFileSync(path.join(HERE, "prepare-branch.mjs"), "utf8")
-  assert.ok(prepSrc.includes("isLegacyRollingPr"), "prepare-branch must detect the legacy PR")
-  assert.ok(prepSrc.includes('state: "closed"'), "prepare-branch must close the legacy PR")
-  assert.ok(prepSrc.includes("surfaceBranchPrefix"), "prepare-branch must match per-surface branches")
+  // prepare-branch must ignore legacy rolling PRs entirely: it recognizes only
+  // per-surface branches, never comments on a legacy PR, and never closes one.
+  const prepSrc = fs.readFileSync(PREP_SCRIPT, "utf8")
+  assert.ok(prepSrc.includes("isSurfaceBranch"), "prepare-branch must recognize per-surface branches")
+  assert.ok(!prepSrc.includes('state: "closed"'), "prepare-branch must not close a legacy PR")
+  assert.ok(!prepSrc.includes("/issues/"), "prepare-branch must not comment on a legacy PR")
 }
 
 // ---------------------------------------------------------------------------
@@ -3499,7 +3494,7 @@ const server = http.createServer((req, res) => {
     let body = null
     if (raw) { try { body = JSON.parse(raw) } catch (e) { body = raw } }
     const path = String(req.url).split("?")[0]
-    log({ method: req.method, url: req.url, body })
+    log({ method: req.method, url: req.url, body, auth: req.headers.authorization })
     if (req.method === "GET" && path === "/search/issues") return send(res, 200, { items: config.openPrs || [] })
     const pullMatch = path.match(/^\\/repos\\/[^/]+\\/[^/]+\\/pulls\\/(\\d+)$/)
     if (req.method === "GET" && pullMatch) {
@@ -3511,7 +3506,11 @@ const server = http.createServer((req, res) => {
       const query = String(req.url).split("?")[1] || ""
       const m = query.match(/path=([^&]*)/)
       const prefix = m ? decodeURIComponent(m[1]) : ""
-      return send(res, 200, (config.commits || {})[prefix] || [])
+      // A repo-qualified key wins; a bare prefix keeps the existing cases working.
+      const repoMatch = path.match(/^\\/repos\\/(.+)\\/commits$/)
+      const key = repoMatch ? repoMatch[1] + "|" + prefix : prefix
+      if ((config.failCommits || []).includes(key) || (config.failCommits || []).includes(prefix)) return send(res, 403, { message: "Resource not accessible by integration" })
+      return send(res, 200, (config.commits || {})[key] ?? (config.commits || {})[prefix] ?? [])
     }
     if (req.method === "GET" && path.indexOf("/collaborators/") >= 0 && path.endsWith("/permission")) {
       const login = decodeURIComponent(path.split("/collaborators/")[1].replace("/permission", ""))
@@ -3603,7 +3602,7 @@ function setupSurfaceRepo() {
   return { root, repoDir }
 }
 
-function runUpsert(repoDir, root, port) {
+function runUpsert(repoDir, root, port, extraEnv = {}) {
   return runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
     env: {
@@ -3617,6 +3616,7 @@ function runUpsert(repoDir, root, port) {
       PREP_MODE: "update",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
       GITHUB_STEP_SUMMARY: path.join(root, "gh-summary"),
+      ...extraEnv,
     },
   })
 }
@@ -3693,39 +3693,6 @@ function case12_surfaceSegmentation() {
     const flat = [...branchFiles.values()].flat()
     assert.equal(flat.length, 4, "four changed files total")
     assert.equal(new Set(flat).size, 4, "no changed file may appear in two PRs")
-
-    // Run-log proof for the PR body: the computed map, the two assignees per
-    // surface, and the titles the action would open. Deterministic; the GitHub
-    // API above is a local stub and no real PR or review request is created.
-    // The lines are asserted here too, so `node selftest.mjs` fails rather than
-    // silently passing if the proof stops being emitted.
-    const mapLines = result.output
-      .split("\n")
-      .filter((line) => line.startsWith("docs-sync surface map") || /^ {2}\S+ <- /.test(line))
-    const prLines = creates.map((c) => {
-      const name = c.head.slice(SURFACE_PREFIX.length)
-      const pair = pairFor(name)
-      return `${c.head}: "${c.body.title}" assignees=${pair.assignees.join(",")} reviewers=${pair.reviewers.join(",")} draft=${c.body.draft}`
-    })
-    assert.equal(
-      mapLines.length,
-      Object.keys(SURFACE_PAGE_FILES).length + 1,
-      `the run log must name the surface of every changed file; got ${JSON.stringify(mapLines)}`,
-    )
-    for (const [name, file] of Object.entries(SURFACE_PAGE_FILES)) {
-      assert.ok(mapLines.includes(`  ${name} <- ${file}`), `the run log must map ${file} to ${name}`)
-    }
-    for (const c of creates) {
-      assert.match(
-        c.body.title,
-        /^docs: auto-sync [a-z]+ with merged PRs \(through \d{4}-\d{2}-\d{2}\)$/,
-        `surface PR title: ${c.body.title}`,
-      )
-    }
-    console.log("  computed surface map (file -> surface):")
-    for (const line of mapLines) console.log(`  ${line}`)
-    console.log("  surface PRs it would open:")
-    for (const line of prLines) console.log(`  ${line}`)
   } finally {
     stub.child.kill()
   }
@@ -3920,6 +3887,613 @@ function case16_surfaceDeletion() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 17 — learnings read every open surface PR
+// ---------------------------------------------------------------------------
+function case17_learnAllSurfaces() {
+  console.log("case 17 — learnings cover every surface PR")
+
+  const humanBotEmail = "240665456+kiloconnect[bot]@users.noreply.github.com"
+
+  const dir = mktemp("docs-sync-learn-multi-")
+  initRepoWithIdentity(dir)
+  fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+  gitIn(dir, ["add", "base.txt"])
+  gitIn(dir, ["commit", "-m", "base"])
+
+  const addDoc = (rel, text) => {
+    const p = path.join(dir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+
+  gitIn(dir, ["checkout", "-q", "-b", "docs/auto-sync/cli"])
+  addDoc("packages/kilo-docs/pages/cli.md", "# cli\n")
+  gitIn(dir, ["add", "packages/kilo-docs"])
+  gitIn(dir, ["commit", "-m", "cli edit", "--author", `kiloconnect[bot] <${humanBotEmail}>`])
+  const cliSha = gitIn(dir, ["rev-parse", "HEAD"])
+
+  gitIn(dir, ["checkout", "-q", "main"])
+  gitIn(dir, ["checkout", "-q", "-b", "docs/auto-sync/vscode"])
+  addDoc("packages/kilo-docs/pages/vscode.md", "# vscode\n")
+  gitIn(dir, ["add", "packages/kilo-docs"])
+  gitIn(dir, ["commit", "-m", "vscode edit", "--author", `kiloconnect[bot] <${humanBotEmail}>`])
+  const vscodeSha = gitIn(dir, ["rev-parse", "HEAD"])
+
+  // origin refs, as actions/checkout would leave them.
+  gitIn(dir, ["update-ref", "refs/remotes/origin/main", "main"])
+  gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync/cli", "docs/auto-sync/cli"])
+  gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync/vscode", "docs/auto-sync/vscode"])
+  fs.mkdirSync(path.join(dir, "docs-sync-out"), { recursive: true })
+
+  const prs = () => [
+    { number: 1, head: { ref: "docs/auto-sync/cli" }, body: "", user: { login: "github-actions[bot]" } },
+    { number: 2, head: { ref: "docs/auto-sync/vscode" }, body: "", user: { login: "github-actions[bot]" } },
+  ]
+
+  // First run: both branches' corrections must reach the model input.
+  {
+    const fixturePath = path.join(dir, "fixture.json")
+    fs.writeFileSync(fixturePath, JSON.stringify({ prs: prs(), comments: [] }, null, 2))
+    const callLog = path.join(dir, "kilo-calls.log")
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog })
+    fs.writeFileSync(path.join(dir, "docs-sync-out", "extraction-delta.json"), JSON.stringify({ add: [], remove: [] }))
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `multi-surface extraction must exit 0: ${result.output}`)
+    const input = JSON.parse(fs.readFileSync(path.join(dir, "docs-sync-out", "learnings-input.json"), "utf8"))
+    const sources = input.corrections.map((c) => c.source).sort()
+    assert.deepEqual(
+      sources,
+      [`commit:${cliSha.slice(0, 7)}`, `commit:${vscodeSha.slice(0, 7)}`].sort(),
+      `every surface branch's correction must be a candidate; got ${JSON.stringify(sources)}`,
+    )
+    const patched = fs.readFileSync(`${fixturePath}.patched`, "utf8")
+    assert.ok(
+      patched.includes(cliSha) && patched.includes(vscodeSha),
+      `the marker must list every learned tip; got ${patched}`,
+    )
+  }
+
+  // Second run: the union watermark covers both branches, so nothing is re-learned.
+  {
+    const marker = fs.readFileSync(path.join(dir, "fixture.json.patched"), "utf8")
+    const fixturePath = path.join(dir, "fixture2.json")
+    fs.writeFileSync(
+      fixturePath,
+      JSON.stringify({ prs: prs().map((p) => ({ ...p, body: marker })), comments: [] }, null, 2),
+    )
+    const callLog2 = path.join(dir, "kilo-calls2.log")
+    const kiloDir2 = makeStubKiloDir({ mode: "extraction-delta", callLog: callLog2 })
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir: kiloDir2,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `second multi-surface run must exit 0: ${result.output}`)
+    const calls = fs.existsSync(callLog2) ? fs.readFileSync(callLog2, "utf8").trim() : ""
+    assert.equal(calls, "", "a marker covering every tip must suppress the model call")
+  }
+
+  // A PR whose branch is gone must not block learning from the others.
+  {
+    const fixturePath = path.join(dir, "fixture3.json")
+    fs.writeFileSync(
+      fixturePath,
+      JSON.stringify(
+        {
+          prs: [
+            { number: 3, head: { ref: "docs/auto-sync/gone" }, body: "", user: { login: "github-actions[bot]" } },
+            { number: 4, head: { ref: "docs/auto-sync/cli" }, body: "", user: { login: "github-actions[bot]" } },
+          ],
+          comments: [],
+        },
+        null,
+        2,
+      ),
+    )
+    const callLog3 = path.join(dir, "kilo-calls3.log")
+    const kiloDir3 = makeStubKiloDir({ mode: "extraction-delta", callLog: callLog3 })
+    fs.writeFileSync(path.join(dir, "docs-sync-out", "extraction-delta.json"), JSON.stringify({ add: [], remove: [] }))
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir: kiloDir3,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `an unreadable branch must not fail the run: ${result.output}`)
+    const input = JSON.parse(fs.readFileSync(path.join(dir, "docs-sync-out", "learnings-input.json"), "utf8"))
+    assert.ok(
+      input.corrections.some((c) => c.source === `commit:${cliSha.slice(0, 7)}`),
+      "the readable branch must still be learned",
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 18 — a lingering legacy ref is deleted without an open legacy PR
+// ---------------------------------------------------------------------------
+function case18_legacyRefDeletedWithoutPr() {
+  console.log("case 18 — a lingering legacy ref is deleted without an open legacy PR")
+  const root = mktemp("docs-sync-prep-legacy-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+
+  const write = (rel, text) => {
+    const p = path.join(repoDir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
+  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "integ"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
+
+  // A legacy docs/auto-sync branch lingers on origin with no open legacy PR.
+  // It must be pushed from a temp branch: origin (like a local repo) refuses to
+  // hold both `docs/auto-sync` and `docs/auto-sync/cli`.
+  gitIn(repoDir, ["checkout", "-q", "-b", "legacy-tmp", "main"])
+  write("packages/kilo-docs/pages/getting-started/legacy.md", "# legacy\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "legacy"])
+  const legacySha = gitIn(repoDir, ["rev-parse", "HEAD"])
+  gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync"])
+
+  // actions/checkout leaves the remote-tracking ref for every origin branch.
+  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", legacySha])
+  gitIn(repoDir, ["checkout", "-q", "main"])
+  gitIn(repoDir, ["branch", "-D", "legacy-tmp"])
+
+  const stub = startSurfaceStub({ openPrs: [{ number: 7, head: "docs/auto-sync/cli", body: "" }] })
+  try {
+    const outputFile = path.join(root, "gh-output")
+    const result = runNodeScript(PREP_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
+
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
+    assert.equal(remote, "", `the lingering legacy remote branch must be deleted; got:\n${remote}`)
+    assert.throws(
+      () => gitIn(repoDir, ["rev-parse", "--verify", "refs/remotes/origin/docs/auto-sync"]),
+      "the stale remote-tracking ref must be removed",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 19 — watermark pick and processed-through refresh helpers
+// ---------------------------------------------------------------------------
+function case19_watermarkAndMarkerHelpers() {
+  console.log("case 19 — watermark pick and processed-through refresh")
+
+  const mk = (iso, number) => ({
+    number,
+    user: { login: "github-actions[bot]" },
+    body: `x\n<!-- docs-sync: processed-through ${iso} -->\n`,
+  })
+
+  assert.equal(pickWatermark([]), null)
+  assert.equal(
+    pickWatermark([
+      { number: 1, user: { login: "human" }, body: "<!-- docs-sync: processed-through 2026-01-01T00:00:00.000Z -->" },
+    ]),
+    null,
+    "an untrusted author's marker must be ignored",
+  )
+
+  // The search is updated-desc, so the first trusted entry is the latest run's
+  // marker even when a later entry carries a larger (stale) one.
+  const picked = pickWatermark([mk("2026-08-01T00:00:00.000Z", 2), mk("2026-09-01T00:00:00.000Z", 1)])
+  assert.equal(picked.number, 2)
+  assert.equal(picked.marker.toISOString(), "2026-08-01T00:00:00.000Z")
+
+  // patchProcessedThrough replaces in place, appends when absent, exactly one marker.
+  const replaced = patchProcessedThrough(
+    "body\n<!-- docs-sync: processed-through 2020-01-01T00:00:00.000Z -->\n",
+    "new",
+  )
+  assert.ok(replaced.includes("<!-- docs-sync: processed-through new -->"))
+  assert.ok(!replaced.includes("processed-through 2020"))
+  assert.equal((replaced.match(/<!--\s*docs-sync:\s*processed-through/g) || []).length, 1)
+  const appended = patchProcessedThrough("body only\n", "new")
+  assert.ok(appended.includes("<!-- docs-sync: processed-through new -->"))
+
+  // Anti-drift: the watermark query orders by updated, and upsert refreshes the
+  // marker on a skipped surface's open PR.
+  const wmSrc = fs.readFileSync(path.join(HERE, "watermark.mjs"), "utf8")
+  assert.ok(wmSrc.includes("sort:updated-desc"), "watermark query must sort by updated-desc")
+  const upsertSrc = fs.readFileSync(UPSERT_SCRIPT, "utf8")
+  assert.ok(
+    /patchProcessedThrough\(openPr\.body/.test(upsertSrc),
+    "upsert must refresh a skipped surface's processed-through marker",
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Case 20 — a skipped surface's open PR gets the current marker
+// ---------------------------------------------------------------------------
+function case20_upsertRefreshesSkippedMarker() {
+  console.log("case 20 — a skipped surface's open PR gets the current marker")
+
+  const stub = startSurfaceStub({
+    openPrs: [
+      {
+        number: 42,
+        head: `${SURFACE_PREFIX}gateway`,
+        body: "gateway body\n<!-- docs-sync: processed-through 2020-01-01T00:00:00.000Z -->\n<!-- docs-sync: learned-through commit=oldtip comment=none -->\n",
+      },
+    ],
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // Make cli the only changed surface: the gateway PR has no changed files
+    // this run and would otherwise keep its stale markers.
+    for (const name of ["vscode", "gateway", "other"]) {
+      fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES[name]))
+    }
+
+    const learned = "<!-- docs-sync: learned-through commit=newtip comment=2026-09-01T00:00:00Z -->"
+    const result = runUpsert(repoDir, root, stub.port, { LEARNED_THROUGH: learned })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const patched = readStubLog(stub.logFile).find((e) => e.method === "PATCH" && e.url.includes("/pulls/42"))
+    assert.ok(patched, "the skipped gateway PR must be PATCHed with the current marker")
+    assert.ok(
+      patched.body.body.includes(`<!-- docs-sync: processed-through ${SURFACE_NOW} -->`),
+      `the skipped surface's marker must advance; got ${patched.body.body}`,
+    )
+    assert.ok(!patched.body.body.includes("processed-through 2020"), "the stale marker must be replaced")
+    assert.ok(patched.body.body.includes(learned), "the learned-through marker must also advance")
+    assert.ok(!patched.body.body.includes("commit=oldtip"), "the stale learned-through marker must be replaced")
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 21 — a fixture that spans two product surfaces plus one unmapped file
+// ---------------------------------------------------------------------------
+// The owner request's acceptance case: two product surfaces plus one unmapped
+// file must produce exactly three PRs with the right assignees and reviewers,
+// and no changed file may appear in two PRs. This case also prints the proof a
+// PR body quotes: the computed surface map, the two assignees chosen per
+// surface, the reviewers requested, and the title of each PR the run opens.
+function case21_twoSurfacesOneUnmapped() {
+  console.log("case 21 — two product surfaces plus one unmapped file")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1), stubCommit("bob", 5)],
+      "packages/kilo-vscode/": [stubCommit("erin", 1), stubCommit("frank", 3)],
+    },
+    permissions: { alice: "write", bob: "write", erin: "write", frank: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // Narrow the fixture to the two product surfaces (cli, vscode) plus the
+    // unmapped community page: drop the third product surface's file.
+    fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES.gateway))
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const entries = readStubLog(stub.logFile)
+    const creates = entries.filter((e) => e.kind === "create")
+    assert.equal(
+      creates.length,
+      3,
+      `exactly three PRs must be created; got ${JSON.stringify(creates)}\n${result.output}`,
+    )
+    const byHead = new Map(creates.map((c) => [c.head, c]))
+    assert.deepEqual([...byHead.keys()].sort(), [
+      `${SURFACE_PREFIX}cli`,
+      `${SURFACE_PREFIX}other`,
+      `${SURFACE_PREFIX}vscode`,
+    ])
+
+    const assignees = entries.filter((e) => e.method === "POST" && e.url.endsWith("/assignees"))
+    const reviews = entries.filter((e) => e.method === "POST" && e.url.endsWith("/requested_reviewers"))
+    const pairFor = (name) => {
+      const create = byHead.get(`${SURFACE_PREFIX}${name}`)
+      const a = assignees.find((e) => e.url.includes(`/issues/${create.number}/`))
+      const r = reviews.find((e) => e.url.includes(`/pulls/${create.number}/`))
+      assert.ok(a, `assignee POST for ${name}`)
+      assert.ok(r, `reviewer POST for ${name}`)
+      return { assignees: a.body.assignees, reviewers: r.body.reviewers }
+    }
+    assert.deepEqual(pairFor("cli"), { assignees: ["alice", "bob"], reviewers: ["alice", "bob"] })
+    assert.deepEqual(pairFor("vscode"), { assignees: ["erin", "frank"], reviewers: ["erin", "frank"] })
+    assert.deepEqual(pairFor("other"), {
+      assignees: ["lambertjosh", "intentionally-left-nil"],
+      reviewers: ["lambertjosh", "intentionally-left-nil"],
+    })
+    assert.match(byHead.get(`${SURFACE_PREFIX}other`).body.body, /fixed reviewers/i)
+
+    // Each surface branch carries exactly its own changed file; no file twice.
+    const branchFiles = new Map()
+    for (const name of ["cli", "vscode", "other"]) {
+      const head = `${SURFACE_PREFIX}${name}`
+      const diff = gitIn(repoDir, ["diff", "--name-only", "origin/main", `origin/${head}`])
+      branchFiles.set(name, diff.split("\n").filter(Boolean))
+    }
+    assert.deepEqual(branchFiles.get("cli"), [SURFACE_PAGE_FILES.cli])
+    assert.deepEqual(branchFiles.get("vscode"), [SURFACE_PAGE_FILES.vscode])
+    assert.deepEqual(branchFiles.get("other"), [SURFACE_PAGE_FILES.other])
+    const flat = [...branchFiles.values()].flat()
+    assert.equal(flat.length, 3, "three changed files total")
+    assert.equal(new Set(flat).size, 3, "no changed file may appear in two PRs")
+
+    // The proof a PR body quotes, from this run.
+    console.log("  computed surface map (changed file -> surface):")
+    for (const [name, files] of branchFiles) {
+      for (const file of files) console.log(`    ${file} -> ${name}`)
+    }
+    for (const name of ["cli", "vscode", "other"]) {
+      const create = byHead.get(`${SURFACE_PREFIX}${name}`)
+      const pair = pairFor(name)
+      console.log(`  pull request: ${create.head}`)
+      console.log(`    title: ${create.body.title}`)
+      console.log(`    assignees: ${pair.assignees.join(", ")}`)
+      console.log(`    requested reviewers: ${pair.reviewers.join(", ")}`)
+    }
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// Write a docs page that routes to a cloud surface. The mobile page
+// (packages/kilo-docs/pages/code-with-ai/platforms/mobile.md) routes to
+// cloud-mobile, whose reviewers come from Kilo-Org/cloud history.
+function addCloudPage(repoDir, rel) {
+  const p = path.join(repoDir, rel)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(p, "# new\n")
+}
+
+const MOBILE_PAGE = "packages/kilo-docs/pages/code-with-ai/platforms/mobile.md"
+
+// The create entry plus the assignee/reviewer POSTs for one surface head.
+function createdPair(entries, head) {
+  const create = entries.filter((e) => e.kind === "create").find((c) => c.head === head)
+  assert.ok(create, `${head} PR must be created`)
+  const a = entries.find(
+    (e) => e.method === "POST" && e.url.endsWith("/assignees") && e.url.includes(`/issues/${create.number}/`),
+  )
+  const r = entries.find(
+    (e) => e.method === "POST" && e.url.endsWith("/requested_reviewers") && e.url.includes(`/pulls/${create.number}/`),
+  )
+  assert.ok(a, `assignee POST for ${head}`)
+  assert.ok(r, `reviewer POST for ${head}`)
+  return { create, assignees: a.body.assignees, reviewers: r.body.reviewers }
+}
+
+function case22_cloudSurfacePrFromCloudHistory() {
+  console.log("case 22 — a cloud docs page ranks reviewers from the cloud repo")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: { "Kilo-Org/cloud|apps/mobile/": [stubCommit("nina", 1), stubCommit("omar", 2)] },
+    permissions: { nina: "write", omar: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    addCloudPage(repoDir, MOBILE_PAGE)
+
+    const result = runUpsert(repoDir, root, stub.port, { CLOUD_REPO_TOKEN: "cloud-token" })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const entries = readStubLog(stub.logFile)
+    const history = entries.find(
+      (e) => e.method === "GET" && e.url.startsWith("/repos/Kilo-Org/cloud/commits?path=apps%2Fmobile%2F"),
+    )
+    assert.ok(history, `cloud history must be read through the API; got ${JSON.stringify(entries.map((e) => e.url))}`)
+    assert.equal(history.auth, "Bearer cloud-token", "the cloud history must be read with the cloud token")
+
+    const { create, assignees, reviewers } = createdPair(entries, `${SURFACE_PREFIX}cloud-mobile`)
+    assert.deepEqual(assignees, ["nina", "omar"], "cloud-mobile assignees come from cloud-repo history")
+    assert.deepEqual(reviewers, ["nina", "omar"], "cloud-mobile reviewers come from cloud-repo history")
+    assert.match(create.body.body, /ranked from `Kilo-Org\/cloud` git history over `apps\/mobile\/`/)
+    assert.ok(create.body.body.includes("Kilo-Org/cloud"), "the PR body must name the cloud repo")
+    assert.ok(create.body.body.includes("DOCS_SYNC_CLOUD_TOKEN"), "the PR body must name the cloud token secret")
+    console.log(`  cloud-mobile PR reviewers: ${reviewers.join(", ")}`)
+  } finally {
+    stub.child.kill()
+  }
+}
+
+function case23_cloudHistoryUnreachableFallsBack() {
+  console.log("case 23 — an unreachable cloud history still opens the surface PR")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: { "Kilo-Org/cloud|apps/mobile/": [stubCommit("nina", 1)] },
+    permissions: { nina: "write" },
+    failCommits: ["Kilo-Org/cloud|apps/mobile/"],
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    addCloudPage(repoDir, MOBILE_PAGE)
+
+    const result = runUpsert(repoDir, root, stub.port, { CLOUD_REPO_TOKEN: "cloud-token" })
+    assert.equal(result.status, 0, `run must exit 0: ${result.output}`)
+
+    const { create, reviewers } = createdPair(readStubLog(stub.logFile), `${SURFACE_PREFIX}cloud-mobile`)
+    assert.deepEqual(
+      reviewers,
+      ["lambertjosh", "intentionally-left-nil"],
+      "an unreachable cloud history must fall back to the fixed other pair",
+    )
+    assert.match(create.body.body, /fixed `other` reviewers/i, "the body must name the fallback")
+    assert.ok(create.body.body.includes("DOCS_SYNC_CLOUD_TOKEN"), "the body must name the required secret")
+    assert.ok(create.body.body.includes("Kilo-Org/cloud"), "the body must name the cloud repo")
+    console.log(`  unreachable cloud history -> reviewers: ${reviewers.join(", ")}`)
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 24 — a dated legacy PR and its branch are ignored end to end
+// ---------------------------------------------------------------------------
+function case24_legacyDatedPrIgnored() {
+  console.log("case 24 — a dated legacy auto-sync PR is ignored, not reused or counted")
+  const root = mktemp("docs-sync-legacy-dated-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+
+  const write = (rel, text) => {
+    const p = path.join(repoDir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+
+  // Durability integration branch: the base prepare-branch must choose.
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
+  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "integ"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
+
+  // A real surface branch and its open PR.
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync/cli", "main"])
+  write("packages/kilo-docs/pages/getting-started/cli-surface.md", "# cli surface\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "cli surface"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync/cli"])
+
+  // A dated legacy branch carrying a file that is not on main.
+  gitIn(repoDir, ["checkout", "-q", "-b", "legacy-tmp", "main"])
+  write("packages/kilo-docs/pages/getting-started/dated.md", "# dated legacy\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "dated legacy"])
+  gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync-2026-09-11"])
+  gitIn(repoDir, ["checkout", "-q", "main"])
+  gitIn(repoDir, ["branch", "-D", "legacy-tmp"])
+  // A ref may not be a path prefix of another, so the local surface branch must
+  // be gone for prepare-branch to check out the bare integration ref.
+  gitIn(repoDir, ["branch", "-D", "docs/auto-sync/cli"])
+
+  const openPrs = [
+    { number: 14043, head: "docs/auto-sync-2026-09-11", body: "" },
+    { number: 77, head: "docs/auto-sync/cli", body: "" },
+  ]
+
+  const prepStub = startSurfaceStub({ openPrs })
+  try {
+    const outputFile = path.join(root, "gh-output")
+    const result = runNodeScript(PREP_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${prepStub.port}`,
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
+    const out = fs.readFileSync(outputFile, "utf8")
+    assert.match(out, /branch=docs\/auto-sync\n/, "integration branch output")
+    assert.match(out, /mode=update\n/, "mode output")
+
+    const prepLog = readStubLog(prepStub.logFile)
+    assert.ok(
+      !prepLog.some((e) => e.url.includes("/issues/14043/comments")),
+      "prepare-branch must not comment on the dated legacy PR",
+    )
+    assert.ok(
+      !prepLog.some((e) => e.method === "PATCH" && e.url.includes("/pulls/14043")),
+      "prepare-branch must not close the dated legacy PR",
+    )
+    assert.ok(
+      !fs.existsSync(path.join(repoDir, "packages/kilo-docs/pages/getting-started/dated.md")),
+      "the dated branch's file must not be reused as an integration base",
+    )
+    assert.ok(
+      fs.existsSync(path.join(repoDir, "packages/kilo-docs/pages/getting-started/cli-surface.md")),
+      "the cli surface branch must be merged into the integration tree",
+    )
+  } finally {
+    prepStub.child.kill()
+  }
+
+  // Upsert against only the dated legacy PR still open: the dated head is not
+  // counted as an existing surface PR, so the cli surface gets a fresh PR.
+  write("packages/kilo-docs/pages/getting-started/new.md", "# new\n")
+  const upsertStub = startSurfaceStub({ openPrs: [{ number: 14043, head: "docs/auto-sync-2026-09-11", body: "" }] })
+  try {
+    const result = runUpsert(repoDir, root, upsertStub.port)
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const log = readStubLog(upsertStub.logFile)
+    assert.ok(
+      !log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/14043")),
+      "upsert must not PATCH the dated legacy PR",
+    )
+    const creates = log.filter((e) => e.kind === "create")
+    assert.ok(
+      creates.some((c) => c.head === `${SURFACE_PREFIX}cli`),
+      `a fresh cli surface PR must be created; got ${JSON.stringify(creates.map((c) => c.head))}`,
+    )
+  } finally {
+    upsertStub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 25 — only `docs/auto-sync/<surface>` heads are surface branches
+// ---------------------------------------------------------------------------
+function case25_surfaceBranchRecognized() {
+  console.log("case 25 — surface branches are recognized, dated and bare refs are not")
+  assert.equal(isSurfaceBranch("docs/auto-sync/cli"), true, "a surface branch is recognized")
+  assert.equal(surfaceNameFromBranch("docs/auto-sync/vscode"), "vscode", "the surface name is derived")
+  assert.equal(isSurfaceBranch("docs/auto-sync-2026-09-11"), false, "a dated legacy branch is not a surface")
+  assert.equal(isSurfaceBranch("docs/auto-sync"), false, "the bare integration ref is not a surface")
+  assert.equal(isSurfaceBranch("docs/auto-sync/"), false, "an empty surface name is not a surface")
+  console.log("  dated and bare auto-sync refs are not surface branches")
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -3948,6 +4522,15 @@ function main() {
     case14_prepareBranchSurfaces,
     case15_surfaceUpdate,
     case16_surfaceDeletion,
+    case17_learnAllSurfaces,
+    case18_legacyRefDeletedWithoutPr,
+    case19_watermarkAndMarkerHelpers,
+    case20_upsertRefreshesSkippedMarker,
+    case21_twoSurfacesOneUnmapped,
+    case22_cloudSurfacePrFromCloudHistory,
+    case23_cloudHistoryUnreachableFallsBack,
+    case24_legacyDatedPrIgnored,
+    case25_surfaceBranchRecognized,
   ]
   let failed = 0
   for (const fn of cases) {
