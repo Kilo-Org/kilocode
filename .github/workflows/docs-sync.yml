@@ -41,8 +41,15 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilo/moonshotai/kimi-k3' }}
-  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
+  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilo/deepseek/deepseek-v4.1-flash' }}
+  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/deepseek/deepseek-v4.1-flash' }}
+  # Model id and reasoning effort are both taken from the Kilo gateway model
+  # list at https://api.kilo.ai/api/openrouter/models (equivalently
+  # `kilo models kilo`), which serves `deepseek/deepseek-v4.1-flash` with
+  # `opencode.variants` none/low/high/max; `kilo run --help` documents the
+  # `--variant` flag that selects one. Overridable, but defaults to `max`: the
+  # whole point of this bot is hard docs reasoning.
+  DOCS_SYNC_VARIANT: "max"
 
 jobs:
   selftest:
@@ -62,6 +69,9 @@ jobs:
 
       - name: Run docs-sync selftest
         run: node .github/docs-sync/selftest.mjs
+
+      - name: Run docs-sync unit tests
+        run: for f in .github/docs-sync/*.test.mjs; do node "$f"; done
 
   sync:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
@@ -200,7 +210,7 @@ jobs:
           # user config granting bash, so without --auto the agent cannot run ordinary
           # shell commands against the repository.
           kilo run --auto "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
-            -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
+            -m "$EDIT_MODEL" --variant "$DOCS_SYNC_VARIANT" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
             | node .github/docs-sync/redact-stream.mjs \
             | tee -a docs-sync-out/edit-log.txt \
             || echo "::warning::kilo fix pass exited nonzero; re-verifying anyway"

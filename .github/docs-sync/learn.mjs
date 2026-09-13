@@ -9,7 +9,8 @@
  *   node learn.mjs           — extraction: fetch corrections, call the model, validate
  *   node learn.mjs --apply   — apply: write learnings.json into LEARNINGS.md
  *
- * Env: TRIAGE_MODEL (provider/model, reused), GH_TOKEN (or GITHUB_TOKEN).
+ * Env: TRIAGE_MODEL (provider/model, reused), DOCS_SYNC_VARIANT (reasoning effort, default max),
+ * GH_TOKEN (or GITHUB_TOKEN).
  * Budget: LEARNINGS_BUDGET_MINUTES (default 10).
  * Test hook: DOCS_SYNC_FIXTURE. When set to a fixture JSON path, skips every
  * GitHub API call and writes any marker PATCH to <fixture>.patched instead of
@@ -350,6 +351,26 @@ function git(args) {
     .trim()
 }
 
+/** Split a learned-through `commit=` token into the individual surface tips. */
+function watermarkTips(commit) {
+  return String(commit ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+/** The tip of a surface branch: its fetched origin ref, else the local ref, else null. */
+function branchTip(branch) {
+  for (const ref of [`origin/${branch}`, branch]) {
+    try {
+      return git(["rev-parse", "--verify", ref])
+    } catch {
+      // try the next ref
+    }
+  }
+  return null
+}
+
 // --- main ---
 
 async function main() {
@@ -400,221 +421,283 @@ async function extract() {
     patchFile = fixturePath + ".patched"
   }
 
-  const { api, repo, searchIssues, appendOutput, appendSummary, backoffMsForAttempt, runKilo, sleepSync } =
-    await import("./lib.mjs")
+  const {
+    api,
+    repo,
+    searchIssues,
+    appendOutput,
+    appendSummary,
+    backoffMsForAttempt,
+    REASONING_VARIANT,
+    runKilo,
+    sleepSync,
+  } = await import("./lib.mjs")
 
-  let prData
-  let prBody = ""
-  let prNumber = ""
-  let branch = ""
-
+  // Step 1: resolve every open auto-docs surface PR. With one PR per surface,
+  // maintainer corrections live on any of them, so learn from all of them
+  // rather than a single rolling PR.
+  const targets = []
   if (fixture) {
     // Fixture mode: skip all API calls.
-    prData = fixture.pr
-    prBody = prData.body ?? ""
-    prNumber = String(prData.number ?? 1)
-    branch = prData.head?.ref ?? "docs/auto-sync"
-  } else {
-    // Step 1: resolve the rolling PR. Use prepare-branch.mjs's selection rule so both
-    // target the same branch. searchIssues takes prs[0] with no author filter (like
-    // prepare-branch.mjs:69). But trust the body marker only when authored by
-    // github-actions[bot] (like watermark.mjs:35). The two rules differ on purpose:
-    // the branch must match what prepare-branch.mjs will check out, but a body is
-    // editable so its marker needs the author filter.
-    const r = repo()
-    const prs = await searchIssues(`repo:${r} is:pr is:open label:auto-docs sort:created-desc`, { maxPages: 1 })
-    if (prs.length === 0) {
-      log("no open rolling pull request — nothing to learn from")
-
-      // Read existing learnings from main for empty-state artifacts.
-      let existing = []
-      try {
-        const existingText = git(["show", `origin/main:${LEARNINGS_FILE}`])
-        existing = parseLearnings(existingText)
-      } catch {
-        existing = []
-      }
-      log(`no-PR existing entries from main: ${existing.length}`)
-      writeEmptyStateArtifacts(existing)
-      appendOutput("count", String(existing.length))
-      appendSummary("### docs-sync learnings\n\nNo open auto-docs pull request; extraction skipped.")
-      return
+    const list = Array.isArray(fixture.prs) ? fixture.prs : fixture.pr ? [fixture.pr] : []
+    for (const pr of list) {
+      targets.push({
+        index: targets.length,
+        prData: pr,
+        prBody: pr.body ?? "",
+        prNumber: String(pr.number ?? ""),
+        branch: pr.head?.ref ?? "docs/auto-sync",
+        comments: Array.isArray(pr.comments) ? pr.comments : list.length === 1 ? (fixture.comments ?? []) : [],
+      })
     }
-    prData = await api(`/repos/${r}/pulls/${prs[0].number}`)
-    prBody = prData.body ?? ""
-    prNumber = String(prData.number)
-    branch = prData.head?.ref ?? "docs/auto-sync"
+  } else {
+    const r = repo()
+    const prs = await searchIssues(`repo:${r} is:pr is:open label:auto-docs sort:created-desc`, { maxPages: 2 })
+    for (const item of prs) {
+      try {
+        const detail = await api(`/repos/${r}/pulls/${item.number}`)
+        targets.push({
+          index: targets.length,
+          prData: detail,
+          prBody: detail.body ?? "",
+          prNumber: String(detail.number),
+          branch: detail.head?.ref ?? "docs/auto-sync",
+          comments: null,
+        })
+      } catch (err) {
+        warn(`could not read auto-docs PR #${item.number}: ${err.message}`)
+      }
+    }
   }
 
-  // Step 2: read existing entries.
+  if (targets.length === 0) {
+    log("no open auto-docs pull request — nothing to learn from")
+
+    // Read existing learnings from main for empty-state artifacts.
+    let existing = []
+    try {
+      const existingText = git(["show", `origin/main:${LEARNINGS_FILE}`])
+      existing = parseLearnings(existingText)
+    } catch {
+      existing = []
+    }
+    log(`no-PR existing entries from main: ${existing.length}`)
+    writeEmptyStateArtifacts(existing)
+    appendOutput("count", String(existing.length))
+    appendSummary("### docs-sync learnings\n\nNo open auto-docs pull request; extraction skipped.")
+    return
+  }
+  log(`open auto-docs PRs: ${targets.map((t) => `#${t.prNumber}`).join(", ")}`)
+
+  // Step 2: read existing entries. Every surface branch carries the integration
+  // tree's copy of LEARNINGS.md, so the first branch is representative.
   let existing = []
   let existingText = ""
   if (fixture) {
     existingText = readFileOrEmpty(LEARNINGS_FILE)
-    existing = parseLearnings(existingText)
   } else {
     try {
-      existingText = git(["show", `origin/${branch}:${LEARNINGS_FILE}`])
+      existingText = git(["show", `origin/${targets[0].branch}:${LEARNINGS_FILE}`])
     } catch {
       // branch copy absent — fall back to main, then empty.
-      // Required for the first live run: the rolling branch predates the seeded file.
+      // Required for the first live run: the surface branch predates the seeded file.
       try {
         existingText = git(["show", `origin/main:${LEARNINGS_FILE}`])
       } catch {
         existingText = ""
       }
     }
-    existing = parseLearnings(existingText)
   }
+  existing = parseLearnings(existingText)
   log(`existing entries: ${existing.length}`)
 
-  // Replace the seed with the rolling-branch copy. Every step below can throw, and
+  // Replace the seed with the branch copy. Every step below can throw, and
   // these two files are all triage and edit read.
   writePromptArtifacts(existing)
 
-  // Step 3: parse marker. Trust only when authored by github-actions[bot] (like watermark.mjs:35).
-  let commitWm = null
-  let commentWm = null
-  const trusted = prData.user?.login === "github-actions[bot]"
-  if (trusted) {
-    ;({ commit: commitWm, comment: commentWm } = parseLearnedThrough(prBody))
-  } else {
-    log("PR author is not github-actions[bot]; ignoring body marker")
+  // Step 3: parse each PR's marker. Trust only when authored by
+  // github-actions[bot] (like watermark.mjs:35). A marker holds the tips of every
+  // surface branch learned so far, comma-separated.
+  for (const t of targets) {
+    if (t.prData.user?.login !== "github-actions[bot]") {
+      log(`PR #${t.prNumber} author is not github-actions[bot]; ignoring body marker`)
+      t.tips = []
+      t.commentWm = null
+      continue
+    }
+    const { commit, comment } = parseLearnedThrough(t.prBody)
+    t.tips = watermarkTips(commit)
+    t.commentWm = comment
   }
-  log(`watermark: commit=${commitWm ?? "none"} comment=${commentWm ?? "none"}`)
+  // The union is safe: a tip that is not an ancestor of a branch removes
+  // nothing from that branch's range.
+  const tips = [...new Set(targets.flatMap((t) => t.tips ?? []))]
+  log(`watermark tips: ${tips.length > 0 ? tips.map((s) => s.slice(0, 7)).join(", ") : "none"}`)
 
-  // Step 4: fetch and tip SHA.
-  let tipSha
-  if (fixture) {
-    tipSha = git(["rev-parse", "HEAD"])
-  } else {
-    git(["fetch", "origin", "main", branch])
-    tipSha = git(["rev-parse", `origin/${branch}`])
-  }
-
-  // Step 5: candidate commits.
-  let rangeArgs = [`origin/main..origin/${branch}`]
-  if (fixture) {
-    // In fixture mode, work from the local repo state.
-    try {
-      git(["rev-parse", "--verify", branch])
-      rangeArgs = [`origin/main..${branch}`]
-    } catch {
-      rangeArgs = [`origin/main..HEAD`]
+  // Step 4: fetch every surface branch and resolve its tip.
+  const branches = [...new Set(targets.map((t) => t.branch))]
+  if (!fixture) {
+    for (const b of branches) {
+      try {
+        git(["fetch", "origin", "main", b])
+      } catch (err) {
+        warn(`could not fetch ${b}: ${err.message}`)
+      }
     }
   }
-
-  if (commitWm) {
-    let wmExists = false
-    try {
-      git(["cat-file", "-e", `${commitWm}^{commit}`])
-      wmExists = true
-    } catch {
-      wmExists = false
-    }
-    if (wmExists) {
-      rangeArgs.push(`^${commitWm}`)
-    }
-    // A missing watermark commit (force-push, rebase) drops the exclusion.
-    // The duplicate-rule-text rejection in validateDelta blocks the re-added duplicate.
+  for (const t of targets) {
+    t.tip = branchTip(t.branch)
+    if (!t.tip) warn(`could not resolve a tip for ${t.branch}; skipping PR #${t.prNumber}`)
   }
+  const currentTips = [...new Set(targets.map((t) => t.tip).filter(Boolean))]
+  const learnedCommit = currentTips.join(",") || null
 
-  const logOut = git(["log", "--no-merges", "--format=%H|%ae|%cI|%s", ...rangeArgs])
-  const rawCommits = logOut ? logOut.split("\n").filter(Boolean) : []
-
+  // Step 5: candidate commits from every surface branch.
   const botEmail = "41898282+github-actions[bot]@users.noreply.github.com"
   const candidates = []
   const candidateSources = []
   const deletedInWindow = []
+  const byTarget = new Map()
+  const seenSha = new Set()
 
-  for (const line of rawCommits) {
-    const [sha, email, dateIso] = line.split("|")
-    // Drop commits authored by the sync job itself (criterion 5).
-    if (email === botEmail) continue
-    // Everything reachable from main is already excluded by the range (criterion 6).
-
-    // Get the full file list.
-    let files = []
-    try {
-      const out = git(["show", "--name-only", "--format=", sha])
-      files = out
-        ? out
-            .split("\n")
-            .filter(Boolean)
-            .filter((f) => f)
-        : []
-    } catch {
+  for (const t of targets) {
+    const list = []
+    if (!t.tip) {
+      byTarget.set(t.index, list)
       continue
     }
-
-    // Get the docs-scoped diff and message.
-    let message = ""
-    let docDiff = ""
-    try {
-      message = git(["show", "--format=%B", "--no-patch", sha]).trim()
-      docDiff = git(["show", "--format=", sha, "--", "packages/kilo-docs"])
-      // Cap diff sizes.
-      if (docDiff.length > 20000) docDiff = docDiff.slice(0, 20000) + "\n[truncated]"
-    } catch {
-      // skip on error
+    // In fixture mode, work from the local repo state when the origin ref is absent.
+    let rangeArgs = [`origin/main..origin/${t.branch}`]
+    if (fixture) {
+      try {
+        git(["rev-parse", "--verify", t.branch])
+        rangeArgs = [`origin/main..${t.branch}`]
+      } catch {
+        rangeArgs = [`origin/main..HEAD`]
+      }
     }
-
-    // Drop commits whose docs-scoped diff is empty.
-    if (!docDiff.trim()) continue
-
-    // Collect deleted rule lines from LEARNINGS.md.
-    for (const dl of docDiff.split("\n")) {
-      if (!dl.startsWith("-")) continue
-      const stripped = dl.slice(1).trim()
-      const parsed = stripped.match(LINE_RE)
-      if (parsed) {
-        deletedInWindow.push(clean(parsed.groups.rule).replaceAll("\n", " "))
+    for (const tip of tips) {
+      try {
+        git(["cat-file", "-e", `${tip}^{commit}`])
+        rangeArgs.push(`^${tip}`)
+      } catch {
+        // A missing watermark commit (force-push, rebase) drops the exclusion.
+        // The duplicate-rule-text rejection in validateDelta blocks a re-added duplicate.
       }
     }
 
-    // Cap total diff data.
-    const totalDiff = candidates.reduce((n, c) => n + (c.diff ? c.diff.length : 0), 0)
-    if (totalDiff > 120000) {
-      log(`diff cap reached at commit ${sha.slice(0, 7)}; truncating`)
-      candidates.push({
+    let rawCommits = []
+    try {
+      const logOut = git(["log", "--no-merges", "--format=%H|%ae|%cI|%s", ...rangeArgs])
+      rawCommits = logOut ? logOut.split("\n").filter(Boolean) : []
+    } catch (err) {
+      warn(`could not read commits for ${t.branch}: ${err.message}`)
+      byTarget.set(t.index, list)
+      continue
+    }
+
+    for (const line of rawCommits) {
+      const [sha, email, dateIso] = line.split("|")
+      // Drop commits authored by the sync job itself (criterion 5).
+      if (email === botEmail) continue
+      if (seenSha.has(sha)) continue
+      // Everything reachable from main is already excluded by the range (criterion 6).
+      seenSha.add(sha)
+
+      // Get the full file list.
+      let files = []
+      try {
+        const out = git(["show", "--name-only", "--format=", sha])
+        files = out
+          ? out
+              .split("\n")
+              .filter(Boolean)
+              .filter((f) => f)
+          : []
+      } catch {
+        continue
+      }
+
+      // Get the docs-scoped diff and message.
+      let message = ""
+      let docDiff = ""
+      try {
+        message = git(["show", "--format=%B", "--no-patch", sha]).trim()
+        docDiff = git(["show", "--format=", sha, "--", "packages/kilo-docs"])
+        // Cap diff sizes.
+        if (docDiff.length > 20000) docDiff = docDiff.slice(0, 20000) + "\n[truncated]"
+      } catch {
+        // skip on error
+      }
+
+      // Drop commits whose docs-scoped diff is empty.
+      if (!docDiff.trim()) continue
+
+      // Collect deleted rule lines from LEARNINGS.md.
+      for (const dl of docDiff.split("\n")) {
+        if (!dl.startsWith("-")) continue
+        const stripped = dl.slice(1).trim()
+        const parsed = stripped.match(LINE_RE)
+        if (parsed) {
+          deletedInWindow.push(clean(parsed.groups.rule).replaceAll("\n", " "))
+        }
+      }
+
+      // Cap total diff data.
+      const totalDiff = candidates.reduce((n, c) => n + (c.diff ? c.diff.length : 0), 0)
+      if (totalDiff > 120000) {
+        log(`diff cap reached at commit ${sha.slice(0, 7)}; truncating`)
+        const capped = {
+          source: `commit:${sha.slice(0, 7)}`,
+          iso: dateIso,
+          date: dateIso.slice(0, 10),
+          message,
+          files,
+          diff: "[truncated]",
+        }
+        candidates.push(capped)
+        list.push(capped)
+        candidateSources.push(`commit:${sha.slice(0, 7)}`)
+        break
+      }
+
+      const cand = {
         source: `commit:${sha.slice(0, 7)}`,
         iso: dateIso,
         date: dateIso.slice(0, 10),
         message,
         files,
-        diff: "[truncated]",
-      })
+        diff: docDiff,
+      }
+      candidates.push(cand)
+      list.push(cand)
       candidateSources.push(`commit:${sha.slice(0, 7)}`)
-      break
     }
-
-    candidates.push({
-      source: `commit:${sha.slice(0, 7)}`,
-      iso: dateIso,
-      date: dateIso.slice(0, 10),
-      message,
-      files,
-      diff: docDiff,
-    })
-    candidateSources.push(`commit:${sha.slice(0, 7)}`)
+    byTarget.set(t.index, list)
   }
 
-  // Step 6: candidate comments.
+  // Step 6: candidate comments from every surface PR.
   let allComments = []
-  let maxCommentAt = "none"
-
-  if (fixture && fixture.comments) {
-    allComments = fixture.comments
-  } else if (prNumber) {
-    const pages = []
-    for (let page = 1; page <= 5; page++) {
-      const batch = await api(`/repos/${repo()}/pulls/${prNumber}/comments?per_page=100&page=${page}`)
-      pages.push(...batch)
-      if (batch.length < 100) break
+  if (fixture) {
+    for (const t of targets) {
+      t.rawComments = t.comments ?? []
+      allComments.push(...t.rawComments)
     }
-    allComments = pages
+  } else {
+    for (const t of targets) {
+      if (!t.prNumber) continue
+      const pages = []
+      for (let page = 1; page <= 5; page++) {
+        const batch = await api(`/repos/${repo()}/pulls/${t.prNumber}/comments?per_page=100&page=${page}`)
+        pages.push(...batch)
+        if (batch.length < 100) break
+      }
+      t.rawComments = pages
+      allComments.push(...pages)
+    }
   }
 
+  let maxCommentAt = "none"
   if (allComments.length > 0) {
     let max = ""
     for (const c of allComments) {
@@ -623,44 +706,44 @@ async function extract() {
     maxCommentAt = max || "none"
   }
 
-  // Filter trusted comments.
-  const trustedComments = allComments.filter((c) => {
-    if (!isTrustedComment(c)) return false
-    if (commentWm && c.created_at <= commentWm) return false
-    return true
-  })
-
-  // Step 7: correlate comments to commits.
+  // Step 7: correlate each PR's trusted comments to that PR's own commits.
   // A comment is a commit's trigger when c.path is in that commit's full file list
   // and c.created_at < commit date. The earliest such commit claims it.
   // Compare parsed timestamps so different timezone offsets do not skew the ordering.
-  for (const c of trustedComments) {
-    let best = null
-    const cTime = Date.parse(c.created_at)
-    for (const cc of candidates) {
-      if (!Array.isArray(cc.files) || !cc.files.includes(c.path)) continue
-      const ccTime = Date.parse(cc.iso)
-      if (cTime < ccTime) {
-        if (!best || ccTime < Date.parse(best.iso)) {
-          best = cc
+  for (const t of targets) {
+    const trustedComments = (t.rawComments ?? []).filter((c) => {
+      if (!isTrustedComment(c)) return false
+      if (t.commentWm && c.created_at <= t.commentWm) return false
+      return true
+    })
+    for (const c of trustedComments) {
+      let best = null
+      const cTime = Date.parse(c.created_at)
+      for (const cc of byTarget.get(t.index) ?? []) {
+        if (!Array.isArray(cc.files) || !cc.files.includes(c.path)) continue
+        const ccTime = Date.parse(cc.iso)
+        if (cTime < ccTime) {
+          if (!best || ccTime < Date.parse(best.iso)) {
+            best = cc
+          }
         }
       }
-    }
-    if (best) {
-      best.comment = {
-        author_association: c.author_association,
-        path: c.path,
-        body: capBody(c.body),
+      if (best) {
+        best.comment = {
+          author_association: c.author_association,
+          path: c.path,
+          body: capBody(c.body),
+        }
+      } else {
+        candidates.push({
+          source: `comment:${c.id}`,
+          date: (c.created_at ?? "").slice(0, 10),
+          path: c.path,
+          body: capBody(c.body),
+          author_association: c.author_association,
+        })
+        candidateSources.push(`comment:${c.id}`)
       }
-    } else {
-      candidates.push({
-        source: `comment:${c.id}`,
-        date: (c.created_at ?? "").slice(0, 10),
-        path: c.path,
-        body: capBody(c.body),
-        author_association: c.author_association,
-      })
-      candidateSources.push(`comment:${c.id}`)
     }
   }
 
@@ -675,8 +758,8 @@ async function extract() {
       `### docs-sync learnings\n\nNo new candidate corrections. Entries: ${existing.length}. Marker route: empty (no candidates).`,
     )
 
-    const marker = renderLearnedThrough({ commit: tipSha, comment: maxCommentAt })
-    await patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile })
+    const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
+    await patchOrLogMarker({ targets, marker, fixture, patchFile })
     return
   }
 
@@ -712,7 +795,7 @@ async function extract() {
     }
 
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", inputFile],
+      args: ["run", prompt, "-m", model, "--variant", REASONING_VARIANT, "--dir", process.cwd(), "-f", inputFile],
       timeoutMs: Math.min(EXTRACTION_TIMEOUT_MS, left),
       streamStdout: false,
       label: "learnings extraction",
@@ -766,7 +849,7 @@ async function extract() {
     // Non-empty validated delta.
     const newEntries = applyDelta(existing, { add: validated.add, remove: validated.remove })
     fs.writeFileSync(`${OUT_DIR}/learnings.json`, JSON.stringify(newEntries, null, 2))
-    const marker = renderLearnedThrough({ commit: tipSha, comment: maxCommentAt })
+    const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
     const suppressed = process.env.DRY_RUN === "true" || process.env.LEARNINGS_NO_PATCH === "1"
     if (!suppressed) appendOutput("learned_through", marker)
     if (suppressed) log(`learned-through output suppressed: ${marker}`)
@@ -790,8 +873,8 @@ async function extract() {
     writePromptArtifacts(existing)
     appendOutput("count", String(existing.length))
 
-    const marker = renderLearnedThrough({ commit: tipSha, comment: maxCommentAt })
-    await patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile })
+    const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
+    await patchOrLogMarker({ targets, marker, fixture, patchFile })
 
     const rejected = validated.rejected.length
     appendSummary(
@@ -827,7 +910,7 @@ function readFileOrEmpty(file) {
   }
 }
 
-async function patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile }) {
+async function patchOrLogMarker({ targets, marker, fixture, patchFile }) {
   const suppressed = process.env.DRY_RUN === "true" || process.env.LEARNINGS_NO_PATCH === "1"
 
   if (suppressed) {
@@ -846,23 +929,25 @@ async function patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile }
   }
 
   // Live PATCH: body-only, one line changed. The job already holds pull-requests: write.
-  // Re-read the body first. The body in hand was fetched before the extraction call, so
+  // Re-read each body first. The body in hand was fetched before the extraction call, so
   // patching that copy would drop any edit made in the minutes since. GitHub has no
   // conditional update for a pull request body, so a short fetch-to-PATCH race remains.
   const { api, repo } = await import("./lib.mjs")
-  let latestBody = prBody
-  try {
-    const fresh = await api(`/repos/${repo()}/pulls/${prNumber}`)
-    latestBody = fresh.body ?? ""
-  } catch (err) {
-    warn(`could not re-read PR #${prNumber} before the marker PATCH: ${err.message}. Using the earlier body.`)
+  for (const t of targets) {
+    let latestBody = t.prBody
+    try {
+      const fresh = await api(`/repos/${repo()}/pulls/${t.prNumber}`)
+      latestBody = fresh.body ?? ""
+    } catch (err) {
+      warn(`could not re-read PR #${t.prNumber} before the marker PATCH: ${err.message}. Using the earlier body.`)
+    }
+    const newBody = patchMarkerIntoBody(latestBody, marker)
+    await api(`/repos/${repo()}/pulls/${t.prNumber}`, {
+      method: "PATCH",
+      body: { body: newBody },
+    })
+    log(`PATCHed learned-through marker on PR #${t.prNumber}`)
   }
-  const newBody = patchMarkerIntoBody(latestBody, marker)
-  await api(`/repos/${repo()}/pulls/${prNumber}`, {
-    method: "PATCH",
-    body: { body: newBody },
-  })
-  log(`PATCHed learned-through marker on PR #${prNumber}`)
 }
 
 // --- entry point ---
