@@ -3693,6 +3693,39 @@ function case12_surfaceSegmentation() {
     const flat = [...branchFiles.values()].flat()
     assert.equal(flat.length, 4, "four changed files total")
     assert.equal(new Set(flat).size, 4, "no changed file may appear in two PRs")
+
+    // Run-log proof for the PR body: the computed map, the two assignees per
+    // surface, and the titles the action would open. Deterministic; the GitHub
+    // API above is a local stub and no real PR or review request is created.
+    // The lines are asserted here too, so `node selftest.mjs` fails rather than
+    // silently passing if the proof stops being emitted.
+    const mapLines = result.output
+      .split("\n")
+      .filter((line) => line.startsWith("docs-sync surface map") || /^ {2}\S+ <- /.test(line))
+    const prLines = creates.map((c) => {
+      const name = c.head.slice(SURFACE_PREFIX.length)
+      const pair = pairFor(name)
+      return `${c.head}: "${c.body.title}" assignees=${pair.assignees.join(",")} reviewers=${pair.reviewers.join(",")} draft=${c.body.draft}`
+    })
+    assert.equal(
+      mapLines.length,
+      Object.keys(SURFACE_PAGE_FILES).length + 1,
+      `the run log must name the surface of every changed file; got ${JSON.stringify(mapLines)}`,
+    )
+    for (const [name, file] of Object.entries(SURFACE_PAGE_FILES)) {
+      assert.ok(mapLines.includes(`  ${name} <- ${file}`), `the run log must map ${file} to ${name}`)
+    }
+    for (const c of creates) {
+      assert.match(
+        c.body.title,
+        /^docs: auto-sync [a-z]+ with merged PRs \(through \d{4}-\d{2}-\d{2}\)$/,
+        `surface PR title: ${c.body.title}`,
+      )
+    }
+    console.log("  computed surface map (file -> surface):")
+    for (const line of mapLines) console.log(`  ${line}`)
+    console.log("  surface PRs it would open:")
+    for (const line of prLines) console.log(`  ${line}`)
   } finally {
     stub.child.kill()
   }
