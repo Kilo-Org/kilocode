@@ -86,15 +86,19 @@ export namespace Wakeup {
         Effect.gen(function* () {
           if (firing.has(info.id)) return
           firing.add(info.id)
-          entries.delete(info.id)
-          timers.delete(info.id)
-          // Drop the persistence before the resume: the model turn can be slow,
-          // and a concurrent `adopt` that still sees the file would fire twice.
-          yield* storage.remove(key(info)).pipe(Effect.ignore)
-          yield* fire
-            .run(info, { inPlace })
-            .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
-        }).pipe(Effect.ensuring(Effect.sync(() => firing.delete(info.id))))
+          // The guard release belongs only to the branch that acquired it: an
+          // early return above must not clear an in-flight fire's guard.
+          yield* Effect.gen(function* () {
+            entries.delete(info.id)
+            timers.delete(info.id)
+            // Drop the persistence before the resume: the model turn can be slow,
+            // and a concurrent `adopt` that still sees the file would fire twice.
+            yield* storage.remove(key(info)).pipe(Effect.ignore)
+            yield* fire
+              .run(info, { inPlace })
+              .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
+          }).pipe(Effect.ensuring(Effect.sync(() => firing.delete(info.id))))
+        })
 
       const arm = (info: Info) =>
         Effect.gen(function* () {

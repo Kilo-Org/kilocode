@@ -308,6 +308,46 @@ describe("Wakeup", () => {
     }),
   )
 
+  it.effect("keeps the in-flight guard while the persisted wakeup is visible again", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const persisted = info({ directory: dir, dueAt: Date.now() - 1_000, created: Date.now() - 2_000 })
+
+      // Re-create the record while the first fire is resuming, then re-enter
+      // adopt: the in-flight guard, not the removed file, must stop a re-fire.
+      recorder.reenter = Effect.suspend(() => {
+        persist(dir, persisted)
+        return wake.adopt(dir)
+      })
+      persist(dir, persisted)
+
+      yield* wake.adopt(dir)
+
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+      expect(recorder.modes).toEqual([{ inPlace: true }])
+    }),
+  )
+
+  it.effect("releases the guard once a fire completes", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const recorder = yield* Recorder
+      const dir = (yield* TestDir).dir
+      const persisted = info({ directory: dir, dueAt: Date.now() - 1_000, created: Date.now() - 2_000 })
+
+      persist(dir, persisted)
+      yield* wake.adopt(dir)
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+
+      // The same id persisted again must fire: a completed fire released its guard.
+      persist(dir, persisted)
+      yield* wake.adopt(dir)
+      expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id, persisted.id])
+    }),
+  )
+
   it.effect("accepts a when sooner than the delay minimum", () =>
     Effect.gen(function* () {
       const now = Date.now()
