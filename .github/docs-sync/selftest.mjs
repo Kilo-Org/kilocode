@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url"
 
 import { sleepSync } from "./lib.mjs"
 import { mergeOrFallback, DEFAULT_BRANCH, isLegacyRollingPr } from "./prepare-branch.mjs"
-import { applyCap } from "./watermark.mjs"
+import { applyCap, pickWatermark } from "./watermark.mjs"
 import {
   computeUncovered,
   computeProcessedThrough,
@@ -25,6 +25,7 @@ import {
   LEARNINGS_FILE,
   nonContentFiles,
   resolveLearnedThrough,
+  patchProcessedThrough,
   renderBody,
   extractSectionRows,
   surfaceBranch,
@@ -3603,7 +3604,7 @@ function setupSurfaceRepo() {
   return { root, repoDir }
 }
 
-function runUpsert(repoDir, root, port) {
+function runUpsert(repoDir, root, port, extraEnv = {}) {
   return runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
     env: {
@@ -3617,6 +3618,7 @@ function runUpsert(repoDir, root, port) {
       PREP_MODE: "update",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
       GITHUB_STEP_SUMMARY: path.join(root, "gh-summary"),
+      ...extraEnv,
     },
   })
 }
@@ -3887,6 +3889,305 @@ function case16_surfaceDeletion() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 17 — learnings read every open surface PR
+// ---------------------------------------------------------------------------
+function case17_learnAllSurfaces() {
+  console.log("case 17 — learnings cover every surface PR")
+
+  const humanBotEmail = "240665456+kiloconnect[bot]@users.noreply.github.com"
+
+  const dir = mktemp("docs-sync-learn-multi-")
+  initRepoWithIdentity(dir)
+  fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+  gitIn(dir, ["add", "base.txt"])
+  gitIn(dir, ["commit", "-m", "base"])
+
+  const addDoc = (rel, text) => {
+    const p = path.join(dir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+
+  gitIn(dir, ["checkout", "-q", "-b", "docs/auto-sync/cli"])
+  addDoc("packages/kilo-docs/pages/cli.md", "# cli\n")
+  gitIn(dir, ["add", "packages/kilo-docs"])
+  gitIn(dir, ["commit", "-m", "cli edit", "--author", `kiloconnect[bot] <${humanBotEmail}>`])
+  const cliSha = gitIn(dir, ["rev-parse", "HEAD"])
+
+  gitIn(dir, ["checkout", "-q", "main"])
+  gitIn(dir, ["checkout", "-q", "-b", "docs/auto-sync/vscode"])
+  addDoc("packages/kilo-docs/pages/vscode.md", "# vscode\n")
+  gitIn(dir, ["add", "packages/kilo-docs"])
+  gitIn(dir, ["commit", "-m", "vscode edit", "--author", `kiloconnect[bot] <${humanBotEmail}>`])
+  const vscodeSha = gitIn(dir, ["rev-parse", "HEAD"])
+
+  // origin refs, as actions/checkout would leave them.
+  gitIn(dir, ["update-ref", "refs/remotes/origin/main", "main"])
+  gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync/cli", "docs/auto-sync/cli"])
+  gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync/vscode", "docs/auto-sync/vscode"])
+  fs.mkdirSync(path.join(dir, "docs-sync-out"), { recursive: true })
+
+  const prs = () => [
+    { number: 1, head: { ref: "docs/auto-sync/cli" }, body: "", user: { login: "github-actions[bot]" } },
+    { number: 2, head: { ref: "docs/auto-sync/vscode" }, body: "", user: { login: "github-actions[bot]" } },
+  ]
+
+  // First run: both branches' corrections must reach the model input.
+  {
+    const fixturePath = path.join(dir, "fixture.json")
+    fs.writeFileSync(fixturePath, JSON.stringify({ prs: prs(), comments: [] }, null, 2))
+    const callLog = path.join(dir, "kilo-calls.log")
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog })
+    fs.writeFileSync(path.join(dir, "docs-sync-out", "extraction-delta.json"), JSON.stringify({ add: [], remove: [] }))
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `multi-surface extraction must exit 0: ${result.output}`)
+    const input = JSON.parse(fs.readFileSync(path.join(dir, "docs-sync-out", "learnings-input.json"), "utf8"))
+    const sources = input.corrections.map((c) => c.source).sort()
+    assert.deepEqual(
+      sources,
+      [`commit:${cliSha.slice(0, 7)}`, `commit:${vscodeSha.slice(0, 7)}`].sort(),
+      `every surface branch's correction must be a candidate; got ${JSON.stringify(sources)}`,
+    )
+    const patched = fs.readFileSync(`${fixturePath}.patched`, "utf8")
+    assert.ok(
+      patched.includes(cliSha) && patched.includes(vscodeSha),
+      `the marker must list every learned tip; got ${patched}`,
+    )
+  }
+
+  // Second run: the union watermark covers both branches, so nothing is re-learned.
+  {
+    const marker = fs.readFileSync(path.join(dir, "fixture.json.patched"), "utf8")
+    const fixturePath = path.join(dir, "fixture2.json")
+    fs.writeFileSync(
+      fixturePath,
+      JSON.stringify({ prs: prs().map((p) => ({ ...p, body: marker })), comments: [] }, null, 2),
+    )
+    const callLog2 = path.join(dir, "kilo-calls2.log")
+    const kiloDir2 = makeStubKiloDir({ mode: "extraction-delta", callLog: callLog2 })
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir: kiloDir2,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `second multi-surface run must exit 0: ${result.output}`)
+    const calls = fs.existsSync(callLog2) ? fs.readFileSync(callLog2, "utf8").trim() : ""
+    assert.equal(calls, "", "a marker covering every tip must suppress the model call")
+  }
+
+  // A PR whose branch is gone must not block learning from the others.
+  {
+    const fixturePath = path.join(dir, "fixture3.json")
+    fs.writeFileSync(
+      fixturePath,
+      JSON.stringify(
+        {
+          prs: [
+            { number: 3, head: { ref: "docs/auto-sync/gone" }, body: "", user: { login: "github-actions[bot]" } },
+            { number: 4, head: { ref: "docs/auto-sync/cli" }, body: "", user: { login: "github-actions[bot]" } },
+          ],
+          comments: [],
+        },
+        null,
+        2,
+      ),
+    )
+    const callLog3 = path.join(dir, "kilo-calls3.log")
+    const kiloDir3 = makeStubKiloDir({ mode: "extraction-delta", callLog: callLog3 })
+    fs.writeFileSync(path.join(dir, "docs-sync-out", "extraction-delta.json"), JSON.stringify({ add: [], remove: [] }))
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir: kiloDir3,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+    assert.equal(result.status, 0, `an unreadable branch must not fail the run: ${result.output}`)
+    const input = JSON.parse(fs.readFileSync(path.join(dir, "docs-sync-out", "learnings-input.json"), "utf8"))
+    assert.ok(
+      input.corrections.some((c) => c.source === `commit:${cliSha.slice(0, 7)}`),
+      "the readable branch must still be learned",
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 18 — a lingering legacy ref is deleted without an open legacy PR
+// ---------------------------------------------------------------------------
+function case18_legacyRefDeletedWithoutPr() {
+  console.log("case 18 — a lingering legacy ref is deleted without an open legacy PR")
+  const root = mktemp("docs-sync-prep-legacy-")
+  const originDir = path.join(root, "origin.git")
+  gitIn(root, ["init", "--bare", "origin.git"])
+  const repoDir = path.join(root, "repo")
+  fs.mkdirSync(repoDir)
+  initRepoWithIdentity(repoDir)
+
+  const write = (rel, text) => {
+    const p = path.join(repoDir, rel)
+    fs.mkdirSync(path.dirname(p), { recursive: true })
+    fs.writeFileSync(p, text)
+  }
+  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "base"])
+  gitIn(repoDir, ["remote", "add", "origin", originDir])
+  gitIn(repoDir, ["push", "-q", "origin", "main"])
+
+  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
+  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "integ"])
+  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
+
+  // A legacy docs/auto-sync branch lingers on origin with no open legacy PR.
+  // It must be pushed from a temp branch: origin (like a local repo) refuses to
+  // hold both `docs/auto-sync` and `docs/auto-sync/cli`.
+  gitIn(repoDir, ["checkout", "-q", "-b", "legacy-tmp", "main"])
+  write("packages/kilo-docs/pages/getting-started/legacy.md", "# legacy\n")
+  gitIn(repoDir, ["add", "packages/kilo-docs"])
+  gitIn(repoDir, ["commit", "-m", "legacy"])
+  const legacySha = gitIn(repoDir, ["rev-parse", "HEAD"])
+  gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync"])
+
+  // actions/checkout leaves the remote-tracking ref for every origin branch.
+  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", legacySha])
+  gitIn(repoDir, ["checkout", "-q", "main"])
+  gitIn(repoDir, ["branch", "-D", "legacy-tmp"])
+
+  const stub = startSurfaceStub({ openPrs: [{ number: 7, head: "docs/auto-sync/cli", body: "" }] })
+  try {
+    const outputFile = path.join(root, "gh-output")
+    const result = runNodeScript(PREP_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
+
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
+    assert.equal(remote, "", `the lingering legacy remote branch must be deleted; got:\n${remote}`)
+    assert.throws(
+      () => gitIn(repoDir, ["rev-parse", "--verify", "refs/remotes/origin/docs/auto-sync"]),
+      "the stale remote-tracking ref must be removed",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 19 — watermark pick and processed-through refresh helpers
+// ---------------------------------------------------------------------------
+function case19_watermarkAndMarkerHelpers() {
+  console.log("case 19 — watermark pick and processed-through refresh")
+
+  const mk = (iso, number) => ({
+    number,
+    user: { login: "github-actions[bot]" },
+    body: `x\n<!-- docs-sync: processed-through ${iso} -->\n`,
+  })
+
+  assert.equal(pickWatermark([]), null)
+  assert.equal(
+    pickWatermark([
+      { number: 1, user: { login: "human" }, body: "<!-- docs-sync: processed-through 2026-01-01T00:00:00.000Z -->" },
+    ]),
+    null,
+    "an untrusted author's marker must be ignored",
+  )
+
+  // The search is updated-desc, so the first trusted entry is the latest run's
+  // marker even when a later entry carries a larger (stale) one.
+  const picked = pickWatermark([mk("2026-08-01T00:00:00.000Z", 2), mk("2026-09-01T00:00:00.000Z", 1)])
+  assert.equal(picked.number, 2)
+  assert.equal(picked.marker.toISOString(), "2026-08-01T00:00:00.000Z")
+
+  // patchProcessedThrough replaces in place, appends when absent, exactly one marker.
+  const replaced = patchProcessedThrough(
+    "body\n<!-- docs-sync: processed-through 2020-01-01T00:00:00.000Z -->\n",
+    "new",
+  )
+  assert.ok(replaced.includes("<!-- docs-sync: processed-through new -->"))
+  assert.ok(!replaced.includes("processed-through 2020"))
+  assert.equal((replaced.match(/<!--\s*docs-sync:\s*processed-through/g) || []).length, 1)
+  const appended = patchProcessedThrough("body only\n", "new")
+  assert.ok(appended.includes("<!-- docs-sync: processed-through new -->"))
+
+  // Anti-drift: the watermark query orders by updated, and upsert refreshes the
+  // marker on a skipped surface's open PR.
+  const wmSrc = fs.readFileSync(path.join(HERE, "watermark.mjs"), "utf8")
+  assert.ok(wmSrc.includes("sort:updated-desc"), "watermark query must sort by updated-desc")
+  const upsertSrc = fs.readFileSync(UPSERT_SCRIPT, "utf8")
+  assert.ok(
+    /patchProcessedThrough\(openPr\.body/.test(upsertSrc),
+    "upsert must refresh a skipped surface's processed-through marker",
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Case 20 — a skipped surface's open PR gets the current marker
+// ---------------------------------------------------------------------------
+function case20_upsertRefreshesSkippedMarker() {
+  console.log("case 20 — a skipped surface's open PR gets the current marker")
+
+  const stub = startSurfaceStub({
+    openPrs: [
+      {
+        number: 42,
+        head: `${SURFACE_PREFIX}gateway`,
+        body: "gateway body\n<!-- docs-sync: processed-through 2020-01-01T00:00:00.000Z -->\n<!-- docs-sync: learned-through commit=oldtip comment=none -->\n",
+      },
+    ],
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // Make cli the only changed surface: the gateway PR has no changed files
+    // this run and would otherwise keep its stale markers.
+    for (const name of ["vscode", "gateway", "other"]) {
+      fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES[name]))
+    }
+
+    const learned = "<!-- docs-sync: learned-through commit=newtip comment=2026-09-01T00:00:00Z -->"
+    const result = runUpsert(repoDir, root, stub.port, { LEARNED_THROUGH: learned })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+
+    const patched = readStubLog(stub.logFile).find((e) => e.method === "PATCH" && e.url.includes("/pulls/42"))
+    assert.ok(patched, "the skipped gateway PR must be PATCHed with the current marker")
+    assert.ok(
+      patched.body.body.includes(`<!-- docs-sync: processed-through ${SURFACE_NOW} -->`),
+      `the skipped surface's marker must advance; got ${patched.body.body}`,
+    )
+    assert.ok(!patched.body.body.includes("processed-through 2020"), "the stale marker must be replaced")
+    assert.ok(patched.body.body.includes(learned), "the learned-through marker must also advance")
+    assert.ok(!patched.body.body.includes("commit=oldtip"), "the stale learned-through marker must be replaced")
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -3915,6 +4216,10 @@ function main() {
     case14_prepareBranchSurfaces,
     case15_surfaceUpdate,
     case16_surfaceDeletion,
+    case17_learnAllSurfaces,
+    case18_legacyRefDeletedWithoutPr,
+    case19_watermarkAndMarkerHelpers,
+    case20_upsertRefreshesSkippedMarker,
   ]
   let failed = 0
   for (const fn of cases) {

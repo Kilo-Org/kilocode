@@ -359,6 +359,29 @@ export function resolveLearnedThrough({ envValue, prBody }) {
 }
 
 /**
+ * Replace the processed-through marker in an existing PR body. Used to refresh
+ * an open surface PR whose surface produced no changed files this run. Without
+ * it that PR keeps an older marker; since the watermark is read from the latest
+ * auto-docs PR, a skipped surface could regress or pin it.
+ */
+export function patchProcessedThrough(body, through) {
+  const marker = `<!-- docs-sync: processed-through ${through} -->`
+  const re = /<!--\s*docs-sync:\s*processed-through\s+\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/** Replace the learned-through marker in an existing PR body. No-op for an empty marker. */
+export function patchLearnedThrough(body, marker) {
+  if (!marker) return String(body ?? "")
+  const re = /<!--\s*docs-sync:\s*learned-through\s+commit=\S+\s+comment=\S+\s*-->/
+  const b = String(body ?? "")
+  if (re.test(b)) return b.replace(re, marker)
+  return b + `\n${marker}\n`
+}
+
+/**
  * No-diff early-return report. Returns summary markdown and an optional
  * replay warning. Warns IFF sinceOverride && uncovered non-empty (no commit
  * happened — that is the caller's situation).
@@ -714,6 +737,26 @@ async function main() {
     } catch (err) {
       results.push({ name, error: err })
       console.warn(`::warning::docs-sync: surface ${name} failed: ${err.message}`)
+    }
+  }
+
+  // A surface with no changed files is skipped above, so its open PR keeps its
+  // previous processed-through marker. Refresh that marker to this run's value
+  // so a stale marker on a skipped surface cannot regress or pin the watermark
+  // (which is read from the latest auto-docs PR).
+  for (const name of surfaceNames(map)) {
+    const files = groups.get(name)
+    if (files && files.length > 0) continue
+    const openPr = open.get(name)
+    if (!openPr) continue
+    try {
+      const learned = resolveLearnedThrough({ envValue: process.env.LEARNED_THROUGH, prBody: openPr.body ?? "" })
+      let body = patchProcessedThrough(openPr.body ?? "", through)
+      if (learned) body = patchLearnedThrough(body, learned)
+      await api(`/repos/${repo()}/pulls/${openPr.number}`, { method: "PATCH", body: { body } })
+      console.log(`surface ${name}: refreshed markers on #${openPr.number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not refresh the processed-through marker for ${name}: ${err.message}`)
     }
   }
 

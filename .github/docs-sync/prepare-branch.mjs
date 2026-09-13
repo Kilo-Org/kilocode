@@ -196,22 +196,34 @@ async function main() {
     } catch (err) {
       console.warn(`::warning::docs-sync: could not close the legacy rolling PR #${legacy.number}: ${err.message}`)
     }
-    // A ref may not be a path prefix of another ref, so `docs/auto-sync` must be
-    // gone for `docs/auto-sync/<surface>` to exist. Its content already lives
-    // in the integration base and the per-surface branches.
-    try {
-      git(["push", "origin", "--delete", DEFAULT_BRANCH])
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not delete the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+  }
+
+  // A ref may not be a path prefix of another ref, so `docs/auto-sync` must be
+  // gone for `docs/auto-sync/<surface>` to exist. Its content already lives in
+  // the integration base and the per-surface branches. Delete it whether or not
+  // an open legacy PR was found: a lingering branch (a closed PR, a partial
+  // cleanup) still blocks every surface push.
+  try {
+    const stale = git(["ls-remote", "--heads", "origin", DEFAULT_BRANCH])
+      .split("\n")
+      .some((line) => line.endsWith(`refs/heads/${DEFAULT_BRANCH}`))
+    if (stale) {
+      try {
+        git(["push", "origin", "--delete", DEFAULT_BRANCH])
+      } catch (err) {
+        console.warn(`::warning::docs-sync: could not delete the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+      }
     }
-    // Drop the stale remote-tracking ref too, otherwise fetching a
-    // `docs/auto-sync/<surface>` branch later in the run fails on the
-    // directory/file ref conflict.
-    try {
-      git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not remove the stale ref for ${DEFAULT_BRANCH}: ${err.message}`)
-    }
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not check for the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+  }
+  // Drop the stale remote-tracking ref too, otherwise fetching or pushing a
+  // `docs/auto-sync/<surface>` branch later in the run fails on the
+  // directory/file ref conflict. Deleting a ref that is not present is a no-op.
+  try {
+    git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not remove the stale ref for ${DEFAULT_BRANCH}: ${err.message}`)
   }
 
   appendOutput("branch", branch)
