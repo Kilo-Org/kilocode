@@ -9,7 +9,7 @@ import { Config } from "@/config/config"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { ConfigErrorV1, FrontmatterError } from "@opencode-ai/core/v1/config/error"
-import { Instance, capture } from "@/kilocode/instance"
+import { capture } from "@/kilocode/instance"
 import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {
@@ -75,7 +75,9 @@ export namespace ConfigValidation {
     try {
       const trusted = path.isAbsolute(filepath) && ConfigProtection.isAbsolute(filepath)
       const ctx = capture()
-      const root = ctx ? (ctx.worktree === "/" ? ctx.directory : ctx.worktree) : process.cwd()
+      const match = filepath.replaceAll("\\", "/").search(/\.(kilo|kilocode)\//)
+      const fallbackRoot = match !== -1 ? filepath.slice(0, match) : process.cwd()
+      const root = ctx ? (ctx.worktree === "/" ? ctx.directory : ctx.worktree) : fallbackRoot
       md = await ConfigMarkdown.parse(filepath, {
         trusted,
         fileScope: trusted ? undefined : { root, source: filepath },
@@ -134,6 +136,13 @@ export namespace ConfigValidation {
       if (!rel.startsWith("..")) return ConfigProtection.isRelative(rel)
     } catch {
       // Not in an Instance context — skip project-relative check
+    }
+
+    const normalized = filepath.replaceAll("\\", "/")
+    const idx = normalized.search(/\.(kilo|kilocode)\//)
+    if (idx !== -1) {
+      const rel = normalized.slice(idx)
+      if (ConfigProtection.isRelative(rel)) return true
     }
     return false
   }
