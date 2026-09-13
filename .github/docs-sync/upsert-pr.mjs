@@ -439,6 +439,19 @@ async function openSurfacePrs({ api, searchIssues, repo, names }) {
 }
 
 /**
+ * Split a surface's changed files by whether they still exist at
+ * `integrationSha`. A path deleted in the integration tree has no blob there,
+ * so `git checkout integrationSha -- <path>` fails with `pathspec ... did not
+ * match any file(s) known to git`, and checkout can only restore paths, never
+ * remove one. Deletions must be removed from the worktree instead.
+ */
+function partitionByPresence(git, sha, files) {
+  if (files.length === 0) return { present: [], removed: [] }
+  const names = new Set(git(["ls-tree", "-r", "--name-only", sha, "--", ...files]).split("\n").filter(Boolean))
+  return { present: files.filter((f) => names.has(f)), removed: files.filter((f) => !names.has(f)) }
+}
+
+/**
  * Build the surface branch in a throwaway worktree and push it. On update the
  * base is the open PR's remote branch (so human commits survive), merged with
  * origin/main; otherwise it is a fresh branch from origin/main.
@@ -457,8 +470,14 @@ function buildSurfaceBranch({ name, files, branch, integrationSha, update, date 
       // Preserve human commits on the open PR branch.
       git(["merge", "origin/main", "--no-edit"], tmp)
     }
-    git(["checkout", integrationSha, "--", ...files], tmp)
-    git(["add", "--", ...files], tmp)
+    // Remove deletions before restoring the rest, so a file→directory change
+    // cannot block the checkout of a path under the removed file.
+    const { present, removed } = partitionByPresence(git, integrationSha, files)
+    if (removed.length > 0) git(["rm", "-rf", "--ignore-unmatch", "--", ...removed], tmp)
+    if (present.length > 0) {
+      git(["checkout", integrationSha, "--", ...present], tmp)
+      git(["add", "--", ...present], tmp)
+    }
     const dirty = git(["status", "--porcelain"], tmp)
     if (dirty !== "") {
       git(["commit", "-m", `docs: sync ${name} with merged PRs (${date})`], tmp)

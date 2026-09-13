@@ -3844,6 +3844,48 @@ function case15_surfaceUpdate() {
   }
 }
 
+function case16_surfaceDeletion() {
+  console.log("case 16 — a deleted doc file reaches its surface PR")
+  const stub = startSurfaceStub({
+    openPrs: [],
+    commits: {
+      "packages/opencode/": [stubCommit("alice", 1)],
+      "packages/kilo-gateway/": [stubCommit("carol", 2), stubCommit("dave", 4)],
+    },
+    permissions: { alice: "write", carol: "write", dave: "write" },
+  })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // The integration tree removes a page that still exists on origin/main.
+    const gone = path.join(repoDir, "packages/kilo-docs/pages/gateway/base.md")
+    assert.ok(fs.existsSync(gone), "fixture must start with the gateway base page")
+    fs.rmSync(gone)
+    gitIn(repoDir, ["rm", "-q", "packages/kilo-docs/pages/gateway/base.md"])
+    gitIn(repoDir, ["commit", "-m", "remove gateway base page"])
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.equal(result.status, 0, `upsert must exit 0 with a deletion: ${result.output}`)
+    assert.ok(!/surface gateway failed/.test(result.output), `a deletion must not fail its surface: ${result.output}`)
+
+    const creates = readStubLog(stub.logFile).filter((e) => e.kind === "create")
+    const gateway = creates.find((c) => c.head === `${SURFACE_PREFIX}gateway`)
+    assert.ok(gateway, "the gateway surface PR must still be created")
+
+    const status = gitIn(repoDir, ["diff", "--name-status", "origin/main", `origin/${SURFACE_PREFIX}gateway`])
+    const lines = status.split("\n").filter(Boolean)
+    assert.ok(
+      lines.includes("D\tpackages/kilo-docs/pages/gateway/base.md"),
+      `the gateway branch must carry the deletion; got:\n${status}`,
+    )
+    assert.ok(
+      lines.includes("A\tpackages/kilo-docs/pages/gateway/new.md"),
+      `the gateway branch must still add its new page; got:\n${status}`,
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -3872,6 +3914,7 @@ function main() {
     case13_surfaceFailureIsolated,
     case14_prepareBranchSurfaces,
     case15_surfaceUpdate,
+    case16_surfaceDeletion,
   ]
   let failed = 0
   for (const fn of cases) {
