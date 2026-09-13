@@ -714,6 +714,15 @@ export class QdrantVectorStore implements IVectorStore {
     }
   }
 
+  async hasPoints(): Promise<boolean> {
+    try {
+      const collectionInfo = await this.client.getCollection(this.collectionName)
+      return (collectionInfo.points_count ?? 0) > 0
+    } catch {
+      return false
+    }
+  }
+
   /**
    * Marks the indexing process as complete by storing metadata
    * Should be called after a successful full workspace scan or incremental scan
